@@ -10,5 +10,4 @@
     <root level="${LOG_LEVEL:-INFO}">
         <appender-ref ref="${DEFAULT_APPENDER}"/>
     </root>
-
 </configuration>

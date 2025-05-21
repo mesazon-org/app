@@ -1,9 +1,10 @@
 package io.rikkos.testkit.base
 
+import org.scalacheck.Arbitrary
+import org.scalatest.*
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.matchers.should
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.{EitherValues, LoneElement, OptionValues}
 
 import scala.concurrent.duration.DurationInt
 
@@ -15,7 +16,13 @@ open class WordSpecBase
     with EitherValues
     with Eventually
     with ScalaFutures
-    with LoneElement {
+    with LoneElement
+    with BeforeAndAfterAll {
 
-  implicit override val patienceConfig: PatienceConfig = PatienceConfig(30.seconds, 200.millis)
+  implicit override val patienceConfig: PatienceConfig = PatienceConfig(40.seconds, 1.second)
+
+  def arbitrarySample[T: Arbitrary]: T = {
+    val arbitrary = implicitly[Arbitrary[T]]
+    arbitrary.arbitrary.sample.getOrElse(throw new NoSuchElementException("No sample available"))
+  }
 }

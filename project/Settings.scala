@@ -17,6 +17,18 @@ object Settings {
   private val ignoreNotUsedAssertion =
     ScalacOptions.other("-Wconf:msg=unused value of type:s")
 
+  /** Discard non-Unit value
+    *
+    * @example
+    *   {{{
+    *    eventually(
+    *       gatewayApiClient.readiness.zioValue shouldBe Status.NoContent
+    *    )
+    *   }}}
+    */
+  private val discardNonUnitAssertion =
+    ScalacOptions.other("-Wconf:msg=discarded non-Unit value of type:s")
+
   lazy val ScalaCompiler = Def.settings(
     tpolecatScalacOptions ++= Set(
       ScalacOptions.other("-no-indent"),
@@ -28,7 +40,8 @@ object Settings {
       ScalacOptions.other("-Wunused:all"),
     ),
     Test / tpolecatScalacOptions ++= Set(
-      ignoreNotUsedAssertion
+      ignoreNotUsedAssertion,
+      discardNonUnitAssertion,
     ),
   )
 }

@@ -1,26 +1,46 @@
 package io.rikkos.gateway.service
 
-import io.rikkos.domain.UserDetails
+import io.rikkos.domain.*
+import io.rikkos.gateway.auth.AuthorizationState
 import io.rikkos.gateway.repository.UserRepository
-import io.rikkos.gateway.smithy
-import io.rikkos.gateway.smithy.UserManagementService
+import io.rikkos.gateway.smithy.OnboardUserDetailsRequest
+import io.rikkos.gateway.validation.RequestValidator.*
+import io.rikkos.gateway.{smithy, HttpErrorHandler}
 import zio.*
 
 object UserManagementService {
 
-  final private class UserManagementServiceImpl(userRepository: UserRepository)
+  final private class UserManagementServiceImpl(userRepository: UserRepository, authorizationState: AuthorizationState)
       extends smithy.UserManagementService[Task] {
 
-    override def onboardUser(request: smithy.OnboardUserRequest): Task[Unit] =
-      userRepository.insertUserDetails(
-        UserDetails(request.firstName, request.lastName, request.companyName)
-      )
+    override def onboardUser(request: smithy.OnboardUserDetailsRequest): Task[Unit] =
+      for {
+        _                  <- ZIO.logDebug(s"Onboarding user with request: $request")
+        authMember         <- authorizationState.get()
+        onboardUserDetails <- request.validate[OnboardUserDetails]
+        userDetails = UserDetails(
+          authMember.memberID,
+          authMember.email,
+          onboardUserDetails.firstName,
+          onboardUserDetails.lastName,
+          onboardUserDetails.organization,
+        )
+        _ <- userRepository.insertUserDetails(userDetails)
+      } yield ()
   }
 
-  val live: ZLayer[UserRepository, Nothing, UserManagementService[Task]] = ZLayer(
-    for {
-      userRepository <- ZIO.service[UserRepository]
-    } yield new UserManagementServiceImpl(userRepository): smithy.UserManagementService[Task]
-  )
+  private def observed(service: smithy.UserManagementService[Task]): smithy.UserManagementService[Task] =
+    new smithy.UserManagementService[Task] {
+      override def onboardUser(request: OnboardUserDetailsRequest): Task[Unit] =
+        HttpErrorHandler
+          .errorResponseHandler(service.onboardUser(request))
+          .tapError(error => ZIO.logError(s"Gamo tin mama sas $error"))
+    }
 
+  val live = ZLayer(
+    for {
+      userRepository     <- ZIO.service[UserRepository]
+      authorizationState <- ZIO.service[AuthorizationState]
+    } yield observed(new UserManagementServiceImpl(userRepository, authorizationState))
+  )
 }
