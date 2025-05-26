@@ -34,7 +34,6 @@ object UserManagementService {
       override def onboardUser(request: OnboardUserDetailsRequest): Task[Unit] =
         HttpErrorHandler
           .errorResponseHandler(service.onboardUser(request))
-          .tapError(error => ZIO.logError(s"Gamo tin mama sas $error"))
     }
 
   val live = ZLayer(

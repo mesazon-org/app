@@ -38,6 +38,6 @@ object AuthorizationService {
   val live = ZLayer {
     for {
       state <- ZIO.service[AuthorizationState]
-    } yield observed(new AuthorizationServiceImpl(state): AuthorizationService)
+    } yield observed(new AuthorizationServiceImpl(state))
   }
 }
