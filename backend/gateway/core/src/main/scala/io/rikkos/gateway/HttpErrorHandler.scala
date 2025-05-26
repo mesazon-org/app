@@ -33,14 +33,18 @@ object HttpErrorHandler {
         )
     )
 
+  // TODO: Exhaustive ServiceError cases not caught by this handler
   def errorResponseHandler[A](response: Task[A])(using trace: Trace): Task[A] =
     response.flatMapError {
-      case error: ServiceError.BadRequestError =>
-        logWarning(error)
-          .map(_ => smithy.BadRequest())
-      case error: ServiceError.UnauthorizedError =>
-        logError(error)
-          .map(_ => smithy.Unauthorized())
+      case serviceError: ServiceError =>
+        serviceError match {
+          case error: ServiceError.BadRequestError =>
+            logWarning(error)
+              .map(_ => smithy.BadRequest())
+          case error: ServiceError.UnauthorizedError =>
+            logError(error)
+              .map(_ => smithy.Unauthorized())
+        }
       case error: Throwable =>
         logThrowable(error)
           .map(_ => smithy.InternalServerError())
