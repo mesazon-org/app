@@ -9,7 +9,7 @@ import zio.interop.catz.*
 
 object ServerMiddleware {
 
-  // TODO: Test this middleware
+  // TODO: Test this middleware (issue https://github.com/eak-cy/app/issues/25)
   final private class ServerMiddlewareImpl(authorizationService: AuthorizationService[Throwable])
       extends ServerEndpointMiddleware.Simple[Task] {
 

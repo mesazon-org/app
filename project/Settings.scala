@@ -21,9 +21,9 @@ object Settings {
     *
     * @example
     *   {{{
-    *    eventually(
-    *       gatewayApiClient.readiness.zioValue shouldBe Status.NoContent
-    *    )
+    *   eventually(
+    *      gatewayApiClient.readiness.zioValue shouldBe Status.NoContent // <- WARN: discarded non-Unit value of type org.scalatest.Assertion
+    *   )
     *   }}}
     */
   private val discardNonUnitAssertion =

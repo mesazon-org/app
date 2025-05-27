@@ -13,7 +13,7 @@ trait RequestValidator[A, B] {
 
 object RequestValidator {
 
-  // TODO: include fieldName in error messages make logs more readable and add more context about where did this came from.
+  // TODO: include fieldName in error messages make logs more readable and add more context about where did this came from (issue https://github.com/eak-cy/app/issues/26)
   given RequestValidator[smithy.OnboardUserDetailsRequest, OnboardUserDetails] =
     (request: smithy.OnboardUserDetailsRequest) =>
       (
