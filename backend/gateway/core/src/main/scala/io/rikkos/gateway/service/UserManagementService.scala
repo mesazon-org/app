@@ -9,11 +9,12 @@ import io.rikkos.gateway.{smithy, HttpErrorHandler}
 import zio.*
 
 object UserManagementService {
+  private type CIO[A] = IO[ServiceError, A]
 
   final private class UserManagementServiceImpl(userRepository: UserRepository, authorizationState: AuthorizationState)
-      extends smithy.UserManagementService[Task] {
+      extends smithy.UserManagementService[CIO] {
 
-    override def onboardUser(request: smithy.OnboardUserDetailsRequest): Task[Unit] =
+    override def onboardUser(request: smithy.OnboardUserDetailsRequest): IO[ServiceError, Unit] =
       for {
         _                  <- ZIO.logDebug(s"Onboarding user with request: $request")
         authMember         <- authorizationState.get()
@@ -29,7 +30,7 @@ object UserManagementService {
       } yield ()
   }
 
-  private def observed(service: smithy.UserManagementService[Task]): smithy.UserManagementService[Task] =
+  private def observed(service: smithy.UserManagementService[CIO]): smithy.UserManagementService[Task] =
     new smithy.UserManagementService[Task] {
       override def onboardUser(request: OnboardUserDetailsRequest): Task[Unit] =
         HttpErrorHandler

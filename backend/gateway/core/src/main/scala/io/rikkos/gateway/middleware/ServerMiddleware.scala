@@ -10,7 +10,7 @@ import zio.interop.catz.*
 object ServerMiddleware {
 
   // TODO: Test this middleware
-  final private class ServerMiddlewareImpl(authorizationService: AuthorizationService)
+  final private class ServerMiddlewareImpl(authorizationService: AuthorizationService[Throwable])
       extends ServerEndpointMiddleware.Simple[Task] {
 
     override def prepareWithHints(serviceHints: Hints, endpointHints: Hints): HttpApp[Task] => HttpApp[Task] =
@@ -27,7 +27,7 @@ object ServerMiddleware {
 
   val live = ZLayer(
     for {
-      authorizationService <- ZIO.service[AuthorizationService]
+      authorizationService <- ZIO.service[AuthorizationService[Throwable]]
     } yield new ServerMiddlewareImpl(authorizationService): ServerEndpointMiddleware.Simple[Task]
   )
 }

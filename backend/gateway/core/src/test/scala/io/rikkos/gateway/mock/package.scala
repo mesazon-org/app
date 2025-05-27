@@ -25,9 +25,9 @@ def authorizationStateMockLive(authMember: AuthMember): ULayer[AuthorizationStat
     }
   )
 
-def authorizationServiceMockLive(maybeError: Option[Throwable] = None): ULayer[AuthorizationService] =
+def authorizationServiceMockLive(maybeError: Option[Throwable] = None): ULayer[AuthorizationService[Throwable]] =
   ZLayer.succeed(
-    new AuthorizationService {
+    new AuthorizationService[Throwable] {
       override def auth(request: Request[Task]): Task[Unit] =
         maybeError.fold(ZIO.unit)(ZIO.fail(_))
     }

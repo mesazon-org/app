@@ -39,8 +39,8 @@ class AuthorizationServiceSpec extends ZWordSpecBase, DomainArbitraries {
   }
 
   trait TestContext {
-    def buildAuthorizationService(authMember: AuthMember): AuthorizationService = ZIO
-      .service[AuthorizationService]
+    def buildAuthorizationService(authMember: AuthMember): AuthorizationService[Throwable] = ZIO
+      .service[AuthorizationService[Throwable]]
       .provide(
         AuthorizationService.live,
         authorizationStateMockLive(authMember),

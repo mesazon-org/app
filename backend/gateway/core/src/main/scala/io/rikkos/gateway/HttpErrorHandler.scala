@@ -24,33 +24,17 @@ object HttpErrorHandler {
         )
     )
 
-  private def logThrowable(throwable: Throwable)(using trace: Trace): UIO[Unit] =
-    ZIO.fiberId.flatMap(fid =>
-      ZIO
-        .logErrorCause(
-          s"$trace: Unexpected error ${throwable.getMessage}",
-          Cause.die(throwable, StackTrace.fromJava(fid, throwable.getStackTrace)),
-        )
-    )
-
-  // TODO: Exhaustive ServiceError cases not caught by this handler
-  def errorResponseHandler[A](response: Task[A])(using trace: Trace): Task[A] =
+  def errorResponseHandler[A](response: IO[ServiceError, A])(using trace: Trace): Task[A] =
     response.flatMapError {
-      case serviceError: ServiceError =>
-        serviceError match {
-          case error: ServiceError.BadRequestError =>
-            logWarning(error)
-              .map(_ => smithy.BadRequest())
-          case error: ServiceError.UnauthorizedError =>
-            logError(error)
-              .map(_ => smithy.Unauthorized())
-        }
-      case error: Throwable =>
-        logThrowable(error)
-          .map(_ => smithy.InternalServerError())
+      case error: ServiceError.BadRequestError =>
+        logWarning(error)
+          .map(_ => smithy.BadRequest())
+      case error: ServiceError.UnauthorizedError =>
+        logError(error)
+          .map(_ => smithy.Unauthorized())
     }.catchSomeCause { case cause: Cause.Die =>
       ZIO
-        .logErrorCause(s"$trace: unexpected failure", cause)
+        .logErrorCause(s"$trace: Unexpected failure", cause)
         .flatMap(_ => ZIO.fail(smithy.InternalServerError()))
     }
 }
