@@ -1,9 +1,11 @@
 package io.rikkos.gateway
 
 import io.rikkos.domain.AppName
-import io.rikkos.gateway.config.GatewayServerConfig
-import io.rikkos.gateway.repository.UserRepository
-import io.rikkos.gateway.service.{HealthCheckService, UserManagementService}
+import io.rikkos.gateway.auth.*
+import io.rikkos.gateway.config.*
+import io.rikkos.gateway.middleware.*
+import io.rikkos.gateway.repository.*
+import io.rikkos.gateway.service.*
 import org.slf4j.bridge.SLF4JBridgeHandler
 import zio.*
 import zio.config.typesafe.TypesafeConfigProvider
@@ -24,11 +26,24 @@ object Main extends ZIOAppDefault {
 
   private val app = HttpApp.serverLayer.launch
     .provide(
+      AppNameLive, // Used across components for metadata
+
+      // Http
       HealthCheckService.live,
       UserManagementService.live,
+
+      // Repository
       UserRepository.layer,
+
+      // Auth
+      AuthorizationService.live,
+      AuthorizationState.live,
+
+      // Middleware
+      ServerMiddleware.live,
+
+      // Config
       GatewayServerConfig.live,
-      AppNameLive,
     )
 
   override def run: URIO[Any, ExitCode] =

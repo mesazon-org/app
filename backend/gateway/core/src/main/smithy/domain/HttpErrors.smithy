@@ -1,6 +1,33 @@
 $version: "2.0"
 namespace io.rikkos.gateway.smithy
 
+@error("client")
+@httpError(400)
+structure BadRequest {
+    @required
+    code: Integer = 400
+    @required
+    message: String = "Bad request."
+}
+
+@error("client")
+@httpError(401)
+structure Unauthorized {
+    @required
+    code: Integer = 401
+    @required
+    message: String = "Unauthorized connection."
+}
+
+@error("server")
+@httpError(500)
+structure InternalServerError {
+    @required
+    code: Integer = 500
+    @required
+    message: String = "Internal server error."
+}
+
 @error("server")
 @httpError(503)
 structure ServiceUnavailable {

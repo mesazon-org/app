@@ -6,9 +6,8 @@ import io.rikkos.gateway.config.GatewayServerConfig.ServerConfig
 import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
 import org.http4s.ember.server.EmberServerBuilder
-import org.http4s.server.Server
 import org.http4s.server.middleware.EntityLimiter
-import smithy4s.http4s.SimpleRestJsonBuilder
+import smithy4s.http4s.*
 import zio.*
 import zio.interop.catz.*
 
@@ -19,13 +18,18 @@ object HttpApp {
   import dsl.*
 
   private val healthRoutesResource = for {
-    probes <- ZIO.service[smithy.HealthCheckService[Task]]
-    routes <- SimpleRestJsonBuilder.routes(probes).resource.toScopedZIO
+    healthCheckService <- ZIO.service[smithy.HealthCheckService[Task]]
+    routes             <- SimpleRestJsonBuilder.routes(healthCheckService).resource.toScopedZIO
   } yield routes
 
   private val serviceRoutesResource = for {
+    serverMiddleware      <- ZIO.service[ServerEndpointMiddleware.Simple[Task]]
     userManagementService <- ZIO.service[smithy.UserManagementService[Task]]
-    userManagementRoutes  <- SimpleRestJsonBuilder.routes(userManagementService).resource.toScopedZIO
+    userManagementRoutes <- SimpleRestJsonBuilder
+      .routes(userManagementService)
+      .middleware(serverMiddleware)
+      .resource
+      .toScopedZIO
   } yield userManagementRoutes
 
   private def server(config: ServerConfig, routes: HttpRoutes[Task]) = for {

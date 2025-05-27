@@ -1,8 +1,6 @@
 package io.rikkos.domain
 
-final case class UserDetails(
-    memberID: MemberID,
-    email: Email,
+final case class OnboardUserDetails(
     firstName: FirstName,
     lastName: LastName,
     organization: Organization,

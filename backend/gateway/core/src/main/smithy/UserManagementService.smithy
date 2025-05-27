@@ -4,6 +4,7 @@ namespace io.rikkos.gateway.smithy
 use alloy#simpleRestJson
 
 @simpleRestJson
+@httpBearerAuth
 service UserManagementService {
     version: "1.0.0",
     operations: [OnboardUser]
@@ -14,15 +15,16 @@ operation OnboardUser {
     input := {
         @required
         @httpPayload
-        request: OnboardUserRequest
+        request: OnboardUserDetailsRequest
     }
+    errors: [BadRequest, Unauthorized, InternalServerError]
 }
 
-structure OnboardUserRequest {
+structure OnboardUserDetailsRequest {
     @required
     firstName: String
     @required
     lastName: String
     @required
-    companyName: String
+    organization: String
 }

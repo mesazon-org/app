@@ -18,11 +18,13 @@ object Dependencies {
   lazy val testContainersScalaV = "0.43.0"
   lazy val testContainersJavaV  = "1.21.0"
   lazy val ironV                = "3.0.1"
+  lazy val circeV               = "0.14.13"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
   lazy val http4sEmberServer = "org.http4s" %% "http4s-ember-server" % http4sV
   lazy val http4sEmberClient = "org.http4s" %% "http4s-ember-client" % http4sV
+  lazy val http4sCirce       = "org.http4s" %% "http4s-circe"        % http4sV
 
   // Smithy
   lazy val smithy4sHttp4s = "com.disneystreaming.smithy4s" %% "smithy4s-http4s" % smithy4sV
@@ -45,7 +47,8 @@ object Dependencies {
   lazy val pureconfigCatsEffect = "com.github.pureconfig" %% "pureconfig-cats-effect" % pureconfigV
 
   // IRON
-  val iron = "io.github.iltotore" %% "iron" % ironV
+  val iron      = "io.github.iltotore" %% "iron"       % ironV
+  val ironCirce = "io.github.iltotore" %% "iron-circe" % ironV
 
   // Logging
   lazy val logback    = "ch.qos.logback" % "logback-classic" % logbackV
@@ -57,4 +60,9 @@ object Dependencies {
   lazy val scalacheck          = "org.scalacheck"    %% "scalacheck"                     % scalacheckV
   lazy val testContainersJava  = "org.testcontainers" % "testcontainers"                 % testContainersJavaV
   lazy val testContainersScala = "com.dimafeng"      %% "testcontainers-scala-scalatest" % testContainersScalaV
+
+  // Circe
+  lazy val circeCore    = "io.circe" %% "circe-core"    % circeV
+  lazy val circeGeneric = "io.circe" %% "circe-generic" % circeV
+  lazy val circeParser  = "io.circe" %% "circe-parser"  % circeV
 }

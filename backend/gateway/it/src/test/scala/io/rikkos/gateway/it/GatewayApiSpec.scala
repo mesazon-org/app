@@ -2,10 +2,13 @@ package io.rikkos.gateway.it
 
 import com.dimafeng.testcontainers.DockerComposeContainer
 import fs2.io.net.Network
+import io.rikkos.domain.FirstName
 import io.rikkos.gateway.it.GatewayApiSpec.Context
 import io.rikkos.gateway.it.client.GatewayApiClient
-import io.rikkos.testkit.base.{DockerComposeBase, ZWordSpecBase}
+import io.rikkos.gateway.it.domain.OnboardUserDetailsRequest
+import io.rikkos.testkit.base.*
 import org.http4s.Status
+import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import zio.*
 import zio.interop.catz.*
 
@@ -24,23 +27,29 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase {
     })
     .zioValue
 
-  "GatewayApi" when {
-    "/liveness" should {
-      "return successfully when service is live" in
-        withContext { case Context(gatewayApiClient) =>
-          eventually {
-            gatewayApiClient.liveness.zioValue shouldBe Status.NoContent
-          }
-        }
-    }
+  override def beforeAll(): Unit = withContext { case Context(gatewayApiClient) =>
+    super.beforeAll()
 
-    "/readiness" should {
-      "return successfully when service is ready" in
-        withContext { case Context(gatewayApiClient) =>
-          eventually {
-            gatewayApiClient.readiness.zioValue shouldBe Status.NoContent
-          }
-        }
+    // Ensure the GatewayApiClient is initialized before running tests
+    eventually(
+      gatewayApiClient.readiness.zioValue shouldBe Status.NoContent
+    )
+  }
+
+  "GatewayApi" when {
+    "/users/onboard" should {
+      "return successfully when onboarding user" in withContext { case Context(gatewayApiClient) =>
+        val onboardUserDetailsRequest = arbitrarySample[OnboardUserDetailsRequest]
+
+        gatewayApiClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
+      }
+
+      "fail with BadRequest when onboarding user details ar invalid" in withContext { case Context(gatewayApiClient) =>
+        val onboardUserDetailsRequest = arbitrarySample[OnboardUserDetailsRequest]
+          .copy(firstName = FirstName.assume(""))
+
+        gatewayApiClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.BadRequest
+      }
     }
   }
 }

@@ -6,7 +6,8 @@ import zio.logging.backend.SLF4J
 
 trait ZIOTestOps {
 
-  private val loggerLayer = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
+  private val loggerLayer = Runtime.removeDefaultLoggers >>>
+    SLF4J.slf4j ++ Runtime.setConfigProvider(TypesafeConfigProvider.fromResourcePath())
 
   private val configProvider = TypesafeConfigProvider.fromResourcePath()
 
