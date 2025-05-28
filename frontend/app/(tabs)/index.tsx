@@ -2,13 +2,13 @@ import React from 'react';
 import useAuth from '@/hooks/useAuth';
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, Platform, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSession } from '@/providers/sessionProvider';
 
 
 export default function HomeScreen() {
-  const { user, loading, needsOnboarding } = useAuth();
+  const { isLoading, needsOnboarding, user } = useSession();
 
-
-  if (loading) {
+  if (isLoading) {
     return (
       <ActivityIndicator />
     );
