@@ -1,13 +1,19 @@
 import React, { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Button, Input } from '@rneui/themed'
-import useAuth from '@/hooks/useAuth';
+import { Redirect } from 'expo-router';
+import { useSession } from '@/providers/sessionProvider';
+
 
 const Login = () => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')  
-  const { login, loading } = useAuth();
-
+  const { user, isLoading, signIn, signUp } = useSession();
+  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState(''); 
+  
+  if (user) {
+    return <Redirect href="/" />
+  }
 
   return (
     <View style={styles.container}>
@@ -33,10 +39,10 @@ const Login = () => {
         />
       </View>
       <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Button title="Sign in" disabled={loading} onPress={() => login(email, password)} />
+        <Button title="Sign in" disabled={isLoading} onPress={() => signIn(email, password)} />
       </View>
       <View style={styles.verticallySpaced}>
-        <Button title="Sign up" disabled={loading} onPress={() => console.log('signing up...')} />
+        <Button title="Sign up" disabled={isLoading} onPress={() => signUp({ email, password, name: "username" })} />
       </View>      
     </View>
   )
