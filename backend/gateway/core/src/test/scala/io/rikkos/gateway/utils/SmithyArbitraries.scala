@@ -1,4 +1,4 @@
-package io.rikkos.gateway.unit.utils
+package io.rikkos.gateway.utils
 
 import io.rikkos.gateway.smithy
 import org.scalacheck.*

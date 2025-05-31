@@ -3,7 +3,7 @@ package io.rikkos.gateway.unit
 import io.rikkos.domain.OnboardUserDetails
 import io.rikkos.domain.ServiceError.BadRequestError
 import io.rikkos.gateway.smithy
-import io.rikkos.gateway.unit.utils.SmithyArbitraries
+import io.rikkos.gateway.utils.SmithyArbitraries
 import io.rikkos.gateway.validation.RequestValidator.*
 import io.rikkos.testkit.base.*
 

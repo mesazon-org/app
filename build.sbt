@@ -54,6 +54,8 @@ lazy val backendTestKitModule = createBackendModule("test-kit")(None)
     Dependencies.testContainersJava,
   )
 
+lazy val backendSchemas = createBackendModule("schemas")(None)
+
 // Gateway
 lazy val createBackendGatewayModule = createBackendModule("gateway") _
 
