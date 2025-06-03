@@ -23,7 +23,7 @@ object AuthorizationState {
 
   val live: ULayer[AuthorizationState] = ZLayer.scoped(
     for {
-      authedMemberDetailsFRef <- FiberRef.make(Option.empty[AuthedUser])
-    } yield new AuthorizationStateImpl(authedMemberDetailsFRef)
+      authedUserDetailsFRef <- FiberRef.make(Option.empty[AuthedUser])
+    } yield new AuthorizationStateImpl(authedUserDetailsFRef)
   )
 }

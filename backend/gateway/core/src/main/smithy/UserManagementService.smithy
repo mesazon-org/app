@@ -31,6 +31,7 @@ structure OnboardUserDetailsRequest {
     phoneNumber: String
     @required
     addressLine1: String
+    @optional
     addressLine2: String
     @required
     city: String
