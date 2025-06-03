@@ -1,6 +1,6 @@
 package io.rikkos.gateway.mock
 
-import io.rikkos.domain.{AuthMember, UserDetails}
+import io.rikkos.domain.{AuthedUser, UserDetails}
 import io.rikkos.gateway.auth.{AuthorizationService, AuthorizationState}
 import io.rikkos.gateway.repository.UserRepository
 import org.http4s.Request
@@ -17,11 +17,11 @@ def userRepositoryMockLive(
     }
   )
 
-def authorizationStateMockLive(authMember: AuthMember): ULayer[AuthorizationState] =
+def authorizationStateMockLive(authedUser: AuthedUser): ULayer[AuthorizationState] =
   ZLayer.succeed(
     new AuthorizationState {
-      override def get(): UIO[AuthMember]                 = ZIO.succeed(authMember)
-      override def set(authMember: AuthMember): UIO[Unit] = ZIO.unit
+      override def get(): UIO[AuthedUser]                 = ZIO.succeed(authedUser)
+      override def set(authedUser: AuthedUser): UIO[Unit] = ZIO.unit
     }
   )
 

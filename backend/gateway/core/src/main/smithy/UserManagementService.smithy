@@ -26,5 +26,16 @@ structure OnboardUserDetailsRequest {
     @required
     lastName: String
     @required
-    organization: String
+    countryCode: String
+    @required
+    phoneNumber: String
+    @required
+    addressLine1: String
+    addressLine2: String
+    @required
+    city: String
+    @required
+    postalCode: String
+    @required
+    company: String
 }

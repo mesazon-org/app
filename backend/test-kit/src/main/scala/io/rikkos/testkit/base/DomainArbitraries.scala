@@ -5,7 +5,7 @@ import org.scalacheck.*
 
 trait DomainArbitraries extends IronRefinedTypeArbitraries {
 
-  given Arbitrary[AuthMember] = Arbitrary(Gen.resultOf(AuthMember.apply))
+  given Arbitrary[AuthedUser] = Arbitrary(Gen.resultOf(AuthedUser.apply))
 
   given Arbitrary[OnboardUserDetails] = Arbitrary(Gen.resultOf(OnboardUserDetails.apply))
 }

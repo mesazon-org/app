@@ -4,44 +4,48 @@ import io.rikkos.domain.*
 import io.rikkos.gateway.mock.*
 import io.rikkos.gateway.service.UserManagementService
 import io.rikkos.gateway.smithy
+import io.rikkos.gateway.utils.GatewayArbitraries
 import io.rikkos.testkit.base.*
 import zio.*
 
-class UserManagementServiceSpec extends ZWordSpecBase, DomainArbitraries {
+class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
   val userManagementServiceEnv = ZIO.service[smithy.UserManagementService[Task]]
 
   "UserManagementService" when {
     "onboardUser" should {
       "insert the user successfully" in new TestContext {
-        val authMember            = arbitrarySample[AuthMember]
-        val userManagementService = buildUserManagementService(authMember)
+        val authedUser                = arbitrarySample[AuthedUser]
+        val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
+        val userManagementService     = buildUserManagementService(authedUser)
 
         userManagementService
-          .onboardUser(smithy.OnboardUserDetailsRequest("rikkos", "mappouros", "rikkosLTD"))
+          .onboardUser(onboardUserDetailsRequest)
           .zioEither
           .isRight shouldBe true
       }
 
       "fail with BadRequest when request validation fail" in new TestContext {
-        val authMember            = arbitrarySample[AuthMember]
-        val userManagementService = buildUserManagementService(authMember)
+        val authedUser                = arbitrarySample[AuthedUser]
+        val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest].copy(firstName = "")
+        val userManagementService     = buildUserManagementService(authedUser)
 
         userManagementService
-          .onboardUser(smithy.OnboardUserDetailsRequest("", "mappouros", "rikkosLTD"))
+          .onboardUser(onboardUserDetailsRequest)
           .zioError
           .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest()
       }
 
       "fail with InternalServerError when repository fail" in new TestContext {
-        val authMember = arbitrarySample[AuthMember]
+        val authedUser                = arbitrarySample[AuthedUser]
+        val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
         val userManagementService = buildUserManagementService(
-          authMember = authMember,
+          authedUser = authedUser,
           userRepositoryMaybeError = Some(new RuntimeException("Repository error")),
         )
 
         userManagementService
-          .onboardUser(smithy.OnboardUserDetailsRequest("rikkos", "mappouros", "rikkosLTD"))
+          .onboardUser(onboardUserDetailsRequest)
           .zioError
           .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
       }
@@ -52,14 +56,14 @@ class UserManagementServiceSpec extends ZWordSpecBase, DomainArbitraries {
     val userRepositoryRef: Ref[Set[UserDetails]] = Ref.make(Set.empty[UserDetails]).zioValue
 
     def buildUserManagementService(
-        authMember: AuthMember,
+        authedUser: AuthedUser,
         userRepositoryMaybeError: Option[Throwable] = None,
     ): smithy.UserManagementService[Task] =
       userManagementServiceEnv
         .provide(
           UserManagementService.live,
           userRepositoryMockLive(userRepositoryRef, userRepositoryMaybeError),
-          authorizationStateMockLive(authMember),
+          authorizationStateMockLive(authedUser),
         )
         .zioValue
   }

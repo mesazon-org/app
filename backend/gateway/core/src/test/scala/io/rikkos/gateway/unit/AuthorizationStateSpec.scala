@@ -1,6 +1,6 @@
 package io.rikkos.gateway.unit
 
-import io.rikkos.domain.AuthMember
+import io.rikkos.domain.AuthedUser
 import io.rikkos.gateway.auth.AuthorizationState
 import io.rikkos.testkit.base.{DomainArbitraries, ZWordSpecBase}
 import org.scalactic.anyvals.PosInt
@@ -12,37 +12,37 @@ class AuthorizationStateSpec extends ZWordSpecBase, DomainArbitraries {
   override def minSuccessful: PosInt = PosInt(1)
 
   "AuthorizationState" should {
-    "return the state set in the same fiber context" in forAll { (authMember: AuthMember) =>
+    "return the state set in the same fiber context" in forAll { (authedUser: AuthedUser) =>
       val stateResult = for {
         authorizationState <- ZIO
           .service[AuthorizationState]
           .provide(AuthorizationState.live)
-        _     <- authorizationState.set(authMember)
+        _     <- authorizationState.set(authedUser)
         state <- authorizationState.get()
       } yield state
 
-      stateResult.zioValue shouldBe authMember
+      stateResult.zioValue shouldBe authedUser
     }
 
-    "return the state if set in parent fiber and get is called in child fiber" in forAll { (authMember: AuthMember) =>
+    "return the state if set in parent fiber and get is called in child fiber" in forAll { (authedUser: AuthedUser) =>
       val stateResult = for {
         authorizationState <- ZIO
           .service[AuthorizationState]
           .provide(AuthorizationState.live)
-        _          <- authorizationState.set(authMember) // Set the state in a main fiber
+        _          <- authorizationState.set(authedUser) // Set the state in a main fiber
         stateFiber <- authorizationState.get().fork      // Get the state in a sub fiber
         state      <- stateFiber.join
       } yield state
 
-      stateResult.zioValue shouldBe authMember
+      stateResult.zioValue shouldBe authedUser
     }
 
-    "return no state if set in different fiber context" in forAll { (authMember: AuthMember) =>
+    "return no state if set in different fiber context" in forAll { (authedUser: AuthedUser) =>
       val stateResult = for {
         authorizationState <- ZIO
           .service[AuthorizationState]
           .provide(AuthorizationState.live)
-        _          <- authorizationState.set(authMember).fork // Set the state in a different fiber
+        _          <- authorizationState.set(authedUser).fork // Set the state in a different fiber
         stateFiber <- authorizationState.get().fork           // Get the state in a different fiber
         state      <- stateFiber.join
       } yield state
