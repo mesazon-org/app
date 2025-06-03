@@ -14,7 +14,7 @@ object AuthorizationState {
   final private class AuthorizationStateImpl(authedUserFRef: FiberRef[Option[AuthedUser]]) extends AuthorizationState {
     def get(): UIO[AuthedUser] =
       authedUserFRef.get.someOrFailException.orDie.tapErrorCause(cause =>
-        ZIO.logErrorCause("Unexpected error failed to get authorized member details", cause)
+        ZIO.logErrorCause("Unexpected error failed to get authorized user details", cause)
       )
 
     def set(authedUser: AuthedUser): UIO[Unit] =
