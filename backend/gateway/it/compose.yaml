@@ -4,3 +4,25 @@ services:
     ports:
       - "8080:8080"
       - "8081:8081"
+
+  postgres:
+    image: postgres:17.5-alpine3.22
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: local_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ../../schemas/local/postgres:/docker-entrypoint-initdb.d
+
+  flyway:
+    image: flyway/flyway:9.14.1
+    restart: on-failure
+    command: -configFiles=/flyway/conf/flyway.config -locations=filesystem:/flyway/sql -schemas=local_schema -connectRetries=60 migrate
+    volumes:
+      - ../../schemas/migrations:/flyway/sql
+      - ../../schemas/local/flyway:/flyway/conf
+    depends_on:
+      - postgres
