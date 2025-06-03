@@ -19,7 +19,13 @@ object RequestValidator {
       (
         FirstName.either(request.firstName).toValidatedNec,
         LastName.either(request.lastName).toValidatedNec,
-        Organization.either(request.organization).toValidatedNec,
+        CountryCode.either(request.countryCode).toValidatedNec,
+        PhoneNumber.either(request.phoneNumber).toValidatedNec,
+        AddressLine1.either(request.addressLine1).toValidatedNec,
+        request.addressLine2.map(AddressLine2.either).sequence.toValidatedNec,
+        City.either(request.city).toValidatedNec,
+        PostalCode.either(request.postalCode).toValidatedNec,
+        Company.either(request.company).toValidatedNec,
       ).mapN(OnboardUserDetails.apply)
 
   extension [A](request: A) {

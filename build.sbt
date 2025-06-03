@@ -52,6 +52,7 @@ lazy val backendTestKitModule = createBackendModule("test-kit")(None)
     Dependencies.scalaTestPlusCheck,
     Dependencies.testContainersScala,
     Dependencies.testContainersJava,
+    Dependencies.chimney,
   )
 
 lazy val backendSchemas = createBackendModule("schemas")(None)

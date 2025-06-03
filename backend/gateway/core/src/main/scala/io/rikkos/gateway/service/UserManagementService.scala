@@ -23,7 +23,13 @@ object UserManagementService {
           authMember.email,
           onboardUserDetails.firstName,
           onboardUserDetails.lastName,
-          onboardUserDetails.organization,
+          onboardUserDetails.countryCode,
+          onboardUserDetails.phoneNumber,
+          onboardUserDetails.addressLine1,
+          onboardUserDetails.addressLine2,
+          onboardUserDetails.city,
+          onboardUserDetails.postalCode,
+          onboardUserDetails.company,
         )
         _ <- userRepository.insertUserDetails(userDetails)
       } yield ()

@@ -1,6 +1,6 @@
 package io.rikkos.domain
 
 final case class AuthMember(
-    memberID: MemberID,
+    memberID: UserID,
     email: Email,
 )

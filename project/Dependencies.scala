@@ -19,6 +19,7 @@ object Dependencies {
   lazy val testContainersJavaV  = "1.21.0"
   lazy val ironV                = "3.0.1"
   lazy val circeV               = "0.14.13"
+  lazy val chimneyV             = "1.8.1"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -65,4 +66,7 @@ object Dependencies {
   lazy val circeCore    = "io.circe" %% "circe-core"    % circeV
   lazy val circeGeneric = "io.circe" %% "circe-generic" % circeV
   lazy val circeParser  = "io.circe" %% "circe-parser"  % circeV
+
+  // Chimney
+  val chimney = "io.scalaland" %% "chimney" % chimneyV
 }
