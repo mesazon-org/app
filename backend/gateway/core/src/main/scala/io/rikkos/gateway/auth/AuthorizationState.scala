@@ -6,19 +6,19 @@ import zio.*
 
 trait AuthorizationState {
   def get(): UIO[AuthedUser]
-  def set(authMember: AuthedUser): UIO[Unit]
+  def set(authedUser: AuthedUser): UIO[Unit]
 }
 
 object AuthorizationState {
 
-  final private class AuthorizationStateImpl(authMemberFRef: FiberRef[Option[AuthedUser]]) extends AuthorizationState {
+  final private class AuthorizationStateImpl(authedUserFRef: FiberRef[Option[AuthedUser]]) extends AuthorizationState {
     def get(): UIO[AuthedUser] =
-      authMemberFRef.get.someOrFailException.orDie.tapErrorCause(cause =>
+      authedUserFRef.get.someOrFailException.orDie.tapErrorCause(cause =>
         ZIO.logErrorCause("Unexpected error failed to get authorized member details", cause)
       )
 
-    def set(authMember: AuthedUser): UIO[Unit] =
-      authMemberFRef.set(authMember.some)
+    def set(authedUser: AuthedUser): UIO[Unit] =
+      authedUserFRef.set(authedUser.some)
   }
 
   val live: ULayer[AuthorizationState] = ZLayer.scoped(

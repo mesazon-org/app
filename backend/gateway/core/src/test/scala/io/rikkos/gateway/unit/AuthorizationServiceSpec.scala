@@ -14,21 +14,21 @@ class AuthorizationServiceSpec extends ZWordSpecBase, DomainArbitraries {
   "AuthorizationService" when {
     "authorize" should {
       "return a successful response" in new TestContext {
-        val authMember = arbitrarySample[AuthedUser]
+        val authedUser = arbitrarySample[AuthedUser]
         val token      = "valid-token"
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
-        val authorizationService = buildAuthorizationService(authMember)
+        val authorizationService = buildAuthorizationService(authedUser)
 
         authorizationService.auth(request).zioEither.isRight shouldBe true
       }
 
       "fail with Unauthorized when token is missing" in new TestContext {
-        val authMember = arbitrarySample[AuthedUser]
+        val authedUser = arbitrarySample[AuthedUser]
         val request    = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
 //          .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token))) //  Missing Authorization header
 
-        val authorizationService = buildAuthorizationService(authMember)
+        val authorizationService = buildAuthorizationService(authedUser)
 
         authorizationService
           .auth(request)
@@ -39,11 +39,11 @@ class AuthorizationServiceSpec extends ZWordSpecBase, DomainArbitraries {
   }
 
   trait TestContext {
-    def buildAuthorizationService(authMember: AuthedUser): AuthorizationService[Throwable] = ZIO
+    def buildAuthorizationService(authedUser: AuthedUser): AuthorizationService[Throwable] = ZIO
       .service[AuthorizationService[Throwable]]
       .provide(
         AuthorizationService.live,
-        authorizationStateMockLive(authMember),
+        authorizationStateMockLive(authedUser),
       )
       .zioValue
   }

@@ -21,8 +21,8 @@ object AuthorizationService {
           .collect { case Authorization(Credentials.Token(AuthScheme.Bearer, token)) => token }
         _          <- ZIO.logDebug(s"Bearer token: [$maybeBearerToken]")
         _          <- ZIO.fromOption(maybeBearerToken).mapError(_ => UnauthorizedError.TokenMissing)
-        authMember <- ZIO.succeed(AuthedUser(UserID.assume("test"), Email.assume("eliot.martel@gmail.com")))
-        _          <- state.set(authMember)
+        authedUser <- ZIO.succeed(AuthedUser(UserID.assume("test"), Email.assume("eliot.martel@gmail.com")))
+        _          <- state.set(authedUser)
       } yield ()
   }
 
