@@ -1,6 +1,6 @@
 package io.rikkos.gateway.unit
 
-import io.rikkos.domain.AuthMember
+import io.rikkos.domain.AuthedUser
 import io.rikkos.gateway.auth.AuthorizationState
 import io.rikkos.testkit.base.{DomainArbitraries, ZWordSpecBase}
 import org.scalactic.anyvals.PosInt
@@ -12,7 +12,7 @@ class AuthorizationStateSpec extends ZWordSpecBase, DomainArbitraries {
   override def minSuccessful: PosInt = PosInt(1)
 
   "AuthorizationState" should {
-    "return the state set in the same fiber context" in forAll { (authMember: AuthMember) =>
+    "return the state set in the same fiber context" in forAll { (authMember: AuthedUser) =>
       val stateResult = for {
         authorizationState <- ZIO
           .service[AuthorizationState]
@@ -24,7 +24,7 @@ class AuthorizationStateSpec extends ZWordSpecBase, DomainArbitraries {
       stateResult.zioValue shouldBe authMember
     }
 
-    "return the state if set in parent fiber and get is called in child fiber" in forAll { (authMember: AuthMember) =>
+    "return the state if set in parent fiber and get is called in child fiber" in forAll { (authMember: AuthedUser) =>
       val stateResult = for {
         authorizationState <- ZIO
           .service[AuthorizationState]
@@ -37,7 +37,7 @@ class AuthorizationStateSpec extends ZWordSpecBase, DomainArbitraries {
       stateResult.zioValue shouldBe authMember
     }
 
-    "return no state if set in different fiber context" in forAll { (authMember: AuthMember) =>
+    "return no state if set in different fiber context" in forAll { (authMember: AuthedUser) =>
       val stateResult = for {
         authorizationState <- ZIO
           .service[AuthorizationState]

@@ -14,7 +14,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, DomainArbitraries {
   "AuthorizationService" when {
     "authorize" should {
       "return a successful response" in new TestContext {
-        val authMember = arbitrarySample[AuthMember]
+        val authMember = arbitrarySample[AuthedUser]
         val token      = "valid-token"
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
@@ -24,7 +24,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, DomainArbitraries {
       }
 
       "fail with Unauthorized when token is missing" in new TestContext {
-        val authMember = arbitrarySample[AuthMember]
+        val authMember = arbitrarySample[AuthedUser]
         val request    = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
 //          .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token))) //  Missing Authorization header
 
@@ -39,7 +39,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, DomainArbitraries {
   }
 
   trait TestContext {
-    def buildAuthorizationService(authMember: AuthMember): AuthorizationService[Throwable] = ZIO
+    def buildAuthorizationService(authMember: AuthedUser): AuthorizationService[Throwable] = ZIO
       .service[AuthorizationService[Throwable]]
       .provide(
         AuthorizationService.live,

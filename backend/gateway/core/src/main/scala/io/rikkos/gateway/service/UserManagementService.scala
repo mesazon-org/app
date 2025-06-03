@@ -16,11 +16,11 @@ object UserManagementService {
     override def onboardUser(request: smithy.OnboardUserDetailsRequest): IO[ServiceError, Unit] =
       for {
         _                  <- ZIO.logDebug(s"Onboarding user with request: $request")
-        authMember         <- authorizationState.get()
+        authedUser         <- authorizationState.get()
         onboardUserDetails <- request.validate[OnboardUserDetails]
         userDetails = UserDetails(
-          authMember.memberID,
-          authMember.email,
+          authedUser.userID,
+          authedUser.email,
           onboardUserDetails.firstName,
           onboardUserDetails.lastName,
           onboardUserDetails.countryCode,

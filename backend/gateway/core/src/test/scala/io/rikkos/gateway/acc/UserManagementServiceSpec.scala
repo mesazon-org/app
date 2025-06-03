@@ -15,7 +15,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
   "UserManagementService" when {
     "onboardUser" should {
       "insert the user successfully" in new TestContext {
-        val authMember                = arbitrarySample[AuthMember]
+        val authMember                = arbitrarySample[AuthedUser]
         val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
         val userManagementService     = buildUserManagementService(authMember)
 
@@ -26,7 +26,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       }
 
       "fail with BadRequest when request validation fail" in new TestContext {
-        val authMember                = arbitrarySample[AuthMember]
+        val authMember                = arbitrarySample[AuthedUser]
         val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest].copy(firstName = "")
         val userManagementService     = buildUserManagementService(authMember)
 
@@ -37,7 +37,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       }
 
       "fail with InternalServerError when repository fail" in new TestContext {
-        val authMember                = arbitrarySample[AuthMember]
+        val authMember                = arbitrarySample[AuthedUser]
         val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
         val userManagementService = buildUserManagementService(
           authMember = authMember,
@@ -56,8 +56,8 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
     val userRepositoryRef: Ref[Set[UserDetails]] = Ref.make(Set.empty[UserDetails]).zioValue
 
     def buildUserManagementService(
-        authMember: AuthMember,
-        userRepositoryMaybeError: Option[Throwable] = None,
+                                    authMember: AuthedUser,
+                                    userRepositoryMaybeError: Option[Throwable] = None,
     ): smithy.UserManagementService[Task] =
       userManagementServiceEnv
         .provide(
