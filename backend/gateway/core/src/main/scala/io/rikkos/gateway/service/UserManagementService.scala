@@ -33,6 +33,8 @@ object UserManagementService {
         )
         _ <- userRepository.insertUserDetails(userDetails)
       } yield ()
+
+    override def editUser(request: OnboardUserDetailsRequest): IO[ServiceError, Unit] = ???
   }
 
   private def observed(

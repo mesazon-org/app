@@ -1,12 +1,13 @@
 package io.rikkos.gateway.repository
 
-import io.rikkos.domain.UserDetails
+import io.rikkos.domain.{EditUserDetails, UserDetails}
 import zio.*
 
 import java.util.UUID
 
 trait UserRepository {
   def insertUserDetails(userDetails: UserDetails): UIO[Unit]
+  def editUserDetails(editUserDetails: EditUserDetails): UIO[Unit]
 }
 
 object UserRepository {
@@ -16,6 +17,8 @@ object UserRepository {
       uuid <- ZIO.succeed(UUID.randomUUID())
       _    <- userDetailsRef.update(_.updated(uuid, userDetails))
     } yield ()
+
+    override def editUserDetails(editUserDetails: EditUserDetails): UIO[Unit] = ???
   }
 
   val layer: ULayer[UserRepository] = ZLayer {

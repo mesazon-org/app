@@ -7,11 +7,21 @@ use alloy#simpleRestJson
 @httpBearerAuth
 service UserManagementService {
     version: "1.0.0",
-    operations: [OnboardUser]
+    operations: [OnboardUser, EditUser]
 }
 
 @http(method: "POST", uri: "/users/onboard", code: 204)
 operation OnboardUser {
+    input := {
+        @required
+        @httpPayload
+        request: OnboardUserDetailsRequest
+    }
+    errors: [BadRequest, Unauthorized, InternalServerError]
+}
+
+@http(method: "POST", uri: "/users/edit", code: 204)
+operation EditUser {
     input := {
         @required
         @httpPayload
