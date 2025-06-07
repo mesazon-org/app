@@ -33,7 +33,8 @@ object Main extends ZIOAppDefault {
       UserManagementService.live,
 
       // Repository
-      UserRepository.layer,
+      PostgresTransactor.live,
+      UserRepository.live,
 
       // Auth
       AuthorizationService.live,
@@ -43,6 +44,7 @@ object Main extends ZIOAppDefault {
       ServerMiddleware.live,
 
       // Config
+      DatabaseConfig.live,
       GatewayServerConfig.live,
     )
 

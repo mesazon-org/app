@@ -85,6 +85,10 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.pureconfigCatsEffect,
     Dependencies.julToSlf4j,
     Dependencies.logback,
+    Dependencies.chimney,
+    Dependencies.doobieCore,
+    Dependencies.doobieHikari,
+    Dependencies.doobiePostgres,
   )
 
 lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))

@@ -1,15 +1,25 @@
 package io.rikkos.gateway.service
 
-import io.rikkos.gateway.smithy
+import io.rikkos.domain.ServiceError
+import io.rikkos.gateway.{smithy, HttpErrorHandler}
 import zio.*
 
 object HealthCheckService {
 
-  final private class HealthCheckServiceImpl extends smithy.HealthCheckService[Task] {
-    override def liveness(): Task[Unit] = ZIO.unit
+  final private case class HealthCheckServiceImpl() extends smithy.HealthCheckService[[A] =>> IO[ServiceError, A]] {
+    override def liveness(): IO[ServiceError, Unit] = ZIO.unit
 
-    override def readiness(): Task[Unit] = ZIO.unit
+    override def readiness(): IO[ServiceError, Unit] = ZIO.unit
   }
 
-  val live = ZLayer.succeed(new HealthCheckServiceImpl(): smithy.HealthCheckService[Task])
+  private def observed(
+      service: smithy.HealthCheckService[[A] =>> IO[ServiceError, A]]
+  ): smithy.HealthCheckService[Task] =
+    new smithy.HealthCheckService[Task] {
+      override def liveness(): Task[Unit] = HttpErrorHandler.errorResponseHandler(service.liveness())
+
+      override def readiness(): Task[Unit] = HttpErrorHandler.errorResponseHandler(service.readiness())
+    }
+
+  val live = ZLayer.succeed(HealthCheckServiceImpl()) >>> ZLayer.fromFunction(observed)
 }

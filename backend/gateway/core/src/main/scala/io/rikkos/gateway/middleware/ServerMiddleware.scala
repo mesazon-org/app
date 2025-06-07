@@ -10,7 +10,7 @@ import zio.interop.catz.*
 object ServerMiddleware {
 
   // TODO: Test this middleware (issue https://github.com/eak-cy/app/issues/25)
-  final private class ServerMiddlewareImpl(authorizationService: AuthorizationService[Throwable])
+  final private case class ServerMiddlewareImpl(authorizationService: AuthorizationService[Throwable])
       extends ServerEndpointMiddleware.Simple[Task] {
 
     override def prepareWithHints(serviceHints: Hints, endpointHints: Hints): HttpApp[Task] => HttpApp[Task] =
@@ -25,9 +25,10 @@ object ServerMiddleware {
         }
   }
 
-  val live = ZLayer(
-    for {
-      authorizationService <- ZIO.service[AuthorizationService[Throwable]]
-    } yield new ServerMiddlewareImpl(authorizationService): ServerEndpointMiddleware.Simple[Task]
-  )
+  private def observed(
+      middleware: ServerEndpointMiddleware.Simple[Task]
+  ): ServerEndpointMiddleware.Simple[Task] = middleware
+
+  val live =
+    ZLayer.fromFunction(ServerMiddlewareImpl.apply) >>> ZLayer.fromFunction(observed)
 }
