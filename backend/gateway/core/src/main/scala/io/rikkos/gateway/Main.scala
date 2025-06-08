@@ -1,6 +1,6 @@
 package io.rikkos.gateway
 
-import io.rikkos.domain.AppName
+import io.rikkos.domain.{AppName, AuthedUser}
 import io.rikkos.gateway.auth.*
 import io.rikkos.gateway.config.*
 import io.rikkos.gateway.middleware.*
@@ -33,7 +33,8 @@ object Main extends ZIOAppDefault {
       UserManagementService.live,
 
       // Repository
-      UserRepository.layer,
+      PostgresTransactor.live,
+      UserRepository.live,
 
       // Auth
       AuthorizationService.live,
@@ -43,7 +44,13 @@ object Main extends ZIOAppDefault {
       ServerMiddleware.live,
 
       // Config
+      DatabaseConfig.live,
       GatewayServerConfig.live,
+
+      // FiberRefs
+      ZLayer
+        .scoped(FiberRef.make(Option.empty[AuthedUser]))
+        .fresh, // `.fresh` is to create a new FiberRef for each component
     )
 
   override def run: URIO[Any, ExitCode] =

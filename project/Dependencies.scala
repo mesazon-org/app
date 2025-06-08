@@ -3,8 +3,8 @@ import sbt.*
 object Dependencies {
 
   lazy val http4sV              = "0.23.30"
-  lazy val smithy4sV            = "0.18.34"
-  lazy val zioV                 = "2.1.17"
+  lazy val smithy4sV            = "0.18.37"
+  lazy val zioV                 = "2.1.19"
   lazy val zioConfigV           = "4.0.4"
   lazy val zioInteropCatsV      = "23.1.0.5"
   lazy val catsV                = "2.13.0"
@@ -16,10 +16,13 @@ object Dependencies {
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
   lazy val scalacheckV          = "1.18.1"
   lazy val testContainersScalaV = "0.43.0"
-  lazy val testContainersJavaV  = "1.21.0"
+  lazy val testContainersJavaV  = "1.21.1"
   lazy val ironV                = "3.0.1"
   lazy val circeV               = "0.14.13"
   lazy val chimneyV             = "1.8.1"
+  lazy val doobieV              = "1.0.0-RC9"
+  lazy val postgresqlV          = "42.7.6"
+  lazy val hikariCPV            = "6.3.0"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -68,5 +71,11 @@ object Dependencies {
   lazy val circeParser  = "io.circe" %% "circe-parser"  % circeV
 
   // Chimney
-  val chimney = "io.scalaland" %% "chimney" % chimneyV
+  lazy val chimney = "io.scalaland" %% "chimney" % chimneyV
+
+  // Quill + Postgresql
+  lazy val doobieCore     = "org.tpolecat" %% "doobie-core"     % doobieV
+  lazy val doobieHikari   = "org.tpolecat" %% "doobie-hikari"   % doobieV
+  lazy val doobiePostgres = "org.tpolecat" %% "doobie-postgres" % doobieV
+  lazy val hikariCP       = "com.zaxxer"    % "HikariCP"        % hikariCPV
 }

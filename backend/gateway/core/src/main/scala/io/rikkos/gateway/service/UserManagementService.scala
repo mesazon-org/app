@@ -3,34 +3,28 @@ package io.rikkos.gateway.service
 import io.rikkos.domain.*
 import io.rikkos.gateway.auth.AuthorizationState
 import io.rikkos.gateway.repository.UserRepository
-import io.rikkos.gateway.smithy.OnboardUserDetailsRequest
 import io.rikkos.gateway.validation.RequestValidator.*
 import io.rikkos.gateway.{smithy, HttpErrorHandler}
+import io.scalaland.chimney.dsl.*
 import zio.*
 
 object UserManagementService {
 
-  final private class UserManagementServiceImpl(userRepository: UserRepository, authorizationState: AuthorizationState)
-      extends smithy.UserManagementService[[A] =>> IO[ServiceError, A]] {
+  final private case class UserManagementServiceImpl(
+      userRepository: UserRepository,
+      authorizationState: AuthorizationState,
+  ) extends smithy.UserManagementService[[A] =>> IO[ServiceError, A]] {
 
     override def onboardUser(request: smithy.OnboardUserDetailsRequest): IO[ServiceError, Unit] =
       for {
         _                  <- ZIO.logDebug(s"Onboarding user with request: $request")
         authedUser         <- authorizationState.get()
         onboardUserDetails <- request.validate[OnboardUserDetails]
-        userDetails = UserDetails(
-          authedUser.userID,
-          authedUser.email,
-          onboardUserDetails.firstName,
-          onboardUserDetails.lastName,
-          onboardUserDetails.countryCode,
-          onboardUserDetails.phoneNumber,
-          onboardUserDetails.addressLine1,
-          onboardUserDetails.addressLine2,
-          onboardUserDetails.city,
-          onboardUserDetails.postalCode,
-          onboardUserDetails.company,
-        )
+        userDetails = onboardUserDetails
+          .into[UserDetails]
+          .withFieldConst(_.userID, authedUser.userID)
+          .withFieldConst(_.email, authedUser.email)
+          .transform
         _ <- userRepository.insertUserDetails(userDetails)
       } yield ()
   }
@@ -39,15 +33,10 @@ object UserManagementService {
       service: smithy.UserManagementService[[A] =>> IO[ServiceError, A]]
   ): smithy.UserManagementService[Task] =
     new smithy.UserManagementService[Task] {
-      override def onboardUser(request: OnboardUserDetailsRequest): Task[Unit] =
+      override def onboardUser(request: smithy.OnboardUserDetailsRequest): Task[Unit] =
         HttpErrorHandler
           .errorResponseHandler(service.onboardUser(request))
     }
 
-  val live = ZLayer(
-    for {
-      userRepository     <- ZIO.service[UserRepository]
-      authorizationState <- ZIO.service[AuthorizationState]
-    } yield observed(new UserManagementServiceImpl(userRepository, authorizationState))
-  )
+  val live = ZLayer.fromFunction(UserManagementServiceImpl.apply) >>> ZLayer.fromFunction(observed)
 }

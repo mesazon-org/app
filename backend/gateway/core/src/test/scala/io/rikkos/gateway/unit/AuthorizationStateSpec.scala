@@ -16,7 +16,10 @@ class AuthorizationStateSpec extends ZWordSpecBase, DomainArbitraries {
       val stateResult = for {
         authorizationState <- ZIO
           .service[AuthorizationState]
-          .provide(AuthorizationState.live)
+          .provide(
+            AuthorizationState.live,
+            ZLayer.scoped(FiberRef.make(Option.empty[AuthedUser])),
+          )
         _     <- authorizationState.set(authedUser)
         state <- authorizationState.get()
       } yield state
@@ -28,7 +31,10 @@ class AuthorizationStateSpec extends ZWordSpecBase, DomainArbitraries {
       val stateResult = for {
         authorizationState <- ZIO
           .service[AuthorizationState]
-          .provide(AuthorizationState.live)
+          .provide(
+            AuthorizationState.live,
+            ZLayer.scoped(FiberRef.make(Option.empty[AuthedUser])),
+          )
         _          <- authorizationState.set(authedUser) // Set the state in a main fiber
         stateFiber <- authorizationState.get().fork      // Get the state in a sub fiber
         state      <- stateFiber.join
@@ -41,7 +47,10 @@ class AuthorizationStateSpec extends ZWordSpecBase, DomainArbitraries {
       val stateResult = for {
         authorizationState <- ZIO
           .service[AuthorizationState]
-          .provide(AuthorizationState.live)
+          .provide(
+            AuthorizationState.live,
+            ZLayer.scoped(FiberRef.make(Option.empty[AuthedUser])),
+          )
         _          <- authorizationState.set(authedUser).fork // Set the state in a different fiber
         stateFiber <- authorizationState.get().fork           // Get the state in a different fiber
         state      <- stateFiber.join

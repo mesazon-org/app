@@ -11,7 +11,8 @@ trait AuthorizationState {
 
 object AuthorizationState {
 
-  final private class AuthorizationStateImpl(authedUserFRef: FiberRef[Option[AuthedUser]]) extends AuthorizationState {
+  final private case class AuthorizationStateImpl(authedUserFRef: FiberRef[Option[AuthedUser]])
+      extends AuthorizationState {
     def get(): UIO[AuthedUser] =
       authedUserFRef.get.someOrFailException.orDie.tapErrorCause(cause =>
         ZIO.logErrorCause("Unexpected error failed to get authorized user details", cause)
@@ -21,9 +22,7 @@ object AuthorizationState {
       authedUserFRef.set(authedUser.some)
   }
 
-  val live: ULayer[AuthorizationState] = ZLayer.scoped(
-    for {
-      authedUserDetailsFRef <- FiberRef.make(Option.empty[AuthedUser])
-    } yield new AuthorizationStateImpl(authedUserDetailsFRef)
-  )
+  private def observed(state: AuthorizationState): AuthorizationState = state
+
+  val live = ZLayer.fromFunction(AuthorizationStateImpl.apply) >>> ZLayer.fromFunction(observed)
 }
