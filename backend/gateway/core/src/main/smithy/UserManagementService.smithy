@@ -25,7 +25,7 @@ operation EditUser {
     input := {
         @required
         @httpPayload
-        request: OnboardUserDetailsRequest
+        request: EditUserDetailsRequest
     }
     errors: [BadRequest, Unauthorized, InternalServerError]
 }
@@ -47,5 +47,17 @@ structure OnboardUserDetailsRequest {
     @required
     postalCode: String
     @required
+    company: String
+}
+
+structure EditUserDetailsRequest {
+    firstName: String
+    lastName: String
+    countryCode: String
+    phoneNumber: String
+    addressLine1: String
+    addressLine2: String
+    city: String
+    postalCode: String
     company: String
 }

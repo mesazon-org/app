@@ -3,7 +3,6 @@ package io.rikkos.gateway.service
 import io.rikkos.domain.*
 import io.rikkos.gateway.auth.AuthorizationState
 import io.rikkos.gateway.repository.UserRepository
-import io.rikkos.gateway.smithy.OnboardUserDetailsRequest
 import io.rikkos.gateway.validation.RequestValidator.*
 import io.rikkos.gateway.{smithy, HttpErrorHandler}
 import zio.*
@@ -34,16 +33,38 @@ object UserManagementService {
         _ <- userRepository.insertUserDetails(userDetails)
       } yield ()
 
-    override def editUser(request: OnboardUserDetailsRequest): IO[ServiceError, Unit] = ???
+    override def editUser(request: smithy.EditUserDetailsRequest): IO[ServiceError, Unit] =
+      for {
+        _               <- ZIO.logDebug(s"Editing user with request: $request")
+        authedUser      <- authorizationState.get()
+        editUserDetails <- request.validate[EditUserDetails]
+        userDetails = EditUserDetails(
+          editUserDetails.userID,
+          editUserDetails.firstName,
+          editUserDetails.lastName,
+          editUserDetails.countryCode,
+          editUserDetails.phoneNumber,
+          editUserDetails.addressLine1,
+          editUserDetails.addressLine2,
+          editUserDetails.city,
+          editUserDetails.postalCode,
+          editUserDetails.company,
+        )
+        _ <- userRepository.editUserDetails(userDetails)
+      } yield ()
   }
 
   private def observed(
       service: smithy.UserManagementService[[A] =>> IO[ServiceError, A]]
   ): smithy.UserManagementService[Task] =
     new smithy.UserManagementService[Task] {
-      override def onboardUser(request: OnboardUserDetailsRequest): Task[Unit] =
+      override def onboardUser(request: smithy.OnboardUserDetailsRequest): Task[Unit] =
         HttpErrorHandler
           .errorResponseHandler(service.onboardUser(request))
+
+      override def editUser(request: smithy.EditUserDetailsRequest): Task[Unit] =
+        HttpErrorHandler
+          .errorResponseHandler(service.editUser(request))
     }
 
   val live = ZLayer(

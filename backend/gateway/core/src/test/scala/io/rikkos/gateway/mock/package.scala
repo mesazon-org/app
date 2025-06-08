@@ -1,6 +1,6 @@
 package io.rikkos.gateway.mock
 
-import io.rikkos.domain.{AuthedUser, UserDetails}
+import io.rikkos.domain.{AuthedUser, EditUserDetails, UserDetails}
 import io.rikkos.gateway.auth.{AuthorizationService, AuthorizationState}
 import io.rikkos.gateway.repository.UserRepository
 import org.http4s.Request
@@ -14,6 +14,8 @@ def userRepositoryMockLive(
     new UserRepository {
       override def insertUserDetails(userDetails: UserDetails): UIO[Unit] =
         maybeError.fold(userDetailsRef.set(Set(userDetails)))(ZIO.fail(_).orDie)
+
+      override def editUserDetails(editUserDetails: EditUserDetails): UIO[Unit] = ???
     }
   )
 
