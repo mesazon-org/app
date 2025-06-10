@@ -33,24 +33,24 @@ object UserManagementService {
         _ <- userRepository.insertUserDetails(userDetails)
       } yield ()
 
-    override def editUser(request: smithy.EditUserDetailsRequest): IO[ServiceError, Unit] =
+    override def updateUser(request: smithy.UpdateUserDetailsRequest): IO[ServiceError, Unit] =
       for {
-        _               <- ZIO.logDebug(s"Editing user with request: $request")
-        authedUser      <- authorizationState.get()
-        editUserDetails <- request.validate[EditUserDetails]
-        userDetails = EditUserDetails(
-          editUserDetails.userID,
-          editUserDetails.firstName,
-          editUserDetails.lastName,
-          editUserDetails.countryCode,
-          editUserDetails.phoneNumber,
-          editUserDetails.addressLine1,
-          editUserDetails.addressLine2,
-          editUserDetails.city,
-          editUserDetails.postalCode,
-          editUserDetails.company,
+        _                 <- ZIO.logDebug(s"Updating user with request: $request")
+        authedUser        <- authorizationState.get()
+        updateUserDetails <- request.validate[UpdateUserDetails]
+        userDetails = UpdateUserDetails(
+          updateUserDetails.userID,
+          updateUserDetails.firstName,
+          updateUserDetails.lastName,
+          updateUserDetails.countryCode,
+          updateUserDetails.phoneNumber,
+          updateUserDetails.addressLine1,
+          updateUserDetails.addressLine2,
+          updateUserDetails.city,
+          updateUserDetails.postalCode,
+          updateUserDetails.company,
         )
-        _ <- userRepository.editUserDetails(userDetails)
+        _ <- userRepository.updateUserDetails(userDetails)
       } yield ()
   }
 
@@ -62,9 +62,9 @@ object UserManagementService {
         HttpErrorHandler
           .errorResponseHandler(service.onboardUser(request))
 
-      override def editUser(request: smithy.EditUserDetailsRequest): Task[Unit] =
+      override def updateUser(request: smithy.UpdateUserDetailsRequest): Task[Unit] =
         HttpErrorHandler
-          .errorResponseHandler(service.editUser(request))
+          .errorResponseHandler(service.updateUser(request))
     }
 
   val live = ZLayer(

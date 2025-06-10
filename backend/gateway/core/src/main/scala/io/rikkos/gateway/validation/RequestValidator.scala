@@ -28,10 +28,10 @@ object RequestValidator {
         Company.either(request.company).toValidatedNec,
       ).mapN(OnboardUserDetails.apply)
 
-  given RequestValidator[smithy.EditUserDetailsRequest, EditUserDetails] =
-    (request: smithy.EditUserDetailsRequest) =>
+  given RequestValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails] =
+    (request: smithy.UpdateUserDetailsRequest) =>
       (
-        UserID.either("").toValidatedNec, //todo
+        UserID.either(request.userId).toValidatedNec,
         request.firstName.map(FirstName.either).sequence.toValidatedNec,
         request.lastName.map(LastName.either).sequence.toValidatedNec,
         request.countryCode.map(CountryCode.either).sequence.toValidatedNec,
@@ -41,7 +41,7 @@ object RequestValidator {
         request.city.map(City.either).sequence.toValidatedNec,
         request.postalCode.map(PostalCode.either).sequence.toValidatedNec,
         request.company.map(Company.either).sequence.toValidatedNec,
-      ).mapN(EditUserDetails.apply)
+      ).mapN(UpdateUserDetails.apply)
 
   extension [A](request: A) {
     def validate[B](using

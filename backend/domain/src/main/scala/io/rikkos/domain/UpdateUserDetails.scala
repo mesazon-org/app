@@ -1,6 +1,6 @@
 package io.rikkos.domain
 
-final case class EditUserDetails(
+final case class UpdateUserDetails(
     userID: UserID,
     firstName: Option[FirstName],
     lastName: Option[LastName],
