@@ -15,8 +15,8 @@ object Dependencies {
   lazy val scalaTestV           = "3.2.19"
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
   lazy val scalacheckV          = "1.18.1"
-  lazy val testContainersScalaV = "0.43.0"
-  lazy val testContainersJavaV  = "1.21.1"
+  lazy val testcontainersScalaV = "0.43.0"
+  lazy val testcontainersV      = "1.21.1"
   lazy val ironV                = "3.0.1"
   lazy val circeV               = "0.14.13"
   lazy val chimneyV             = "1.8.1"
@@ -59,11 +59,12 @@ object Dependencies {
   lazy val julToSlf4j = "org.slf4j"      % "jul-to-slf4j"    % julToSlf4jV
 
   // Test
-  lazy val scalaTest           = "org.scalatest"     %% "scalatest"                      % scalaTestV
-  lazy val scalaTestPlusCheck  = "org.scalatestplus" %% "scalacheck-1-15"                % scalaTestPlusCheckV
-  lazy val scalacheck          = "org.scalacheck"    %% "scalacheck"                     % scalacheckV
-  lazy val testContainersJava  = "org.testcontainers" % "testcontainers"                 % testContainersJavaV
-  lazy val testContainersScala = "com.dimafeng"      %% "testcontainers-scala-scalatest" % testContainersScalaV
+  lazy val scalaTest          = "org.scalatest"     %% "scalatest"       % scalaTestV
+  lazy val scalaTestPlusCheck = "org.scalatestplus" %% "scalacheck-1-15" % scalaTestPlusCheckV
+  lazy val scalacheck         = "org.scalacheck"    %% "scalacheck"      % scalacheckV
+  lazy val testcontainers     = "org.testcontainers" % "testcontainers"  % testcontainersV
+  lazy val testcontainersScalaPostgresql = "com.dimafeng" %% "testcontainers-scala-postgresql" % testcontainersScalaV
+  lazy val testcontainersScalaScalatest  = "com.dimafeng" %% "testcontainers-scala-scalatest"  % testcontainersScalaV
 
   // Circe
   lazy val circeCore    = "io.circe" %% "circe-core"    % circeV

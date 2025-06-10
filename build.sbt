@@ -50,9 +50,18 @@ lazy val backendTestKitModule = createBackendModule("test-kit")(None)
     Dependencies.scalaTest,
     Dependencies.scalacheck,
     Dependencies.scalaTestPlusCheck,
-    Dependencies.testContainersScala,
-    Dependencies.testContainersJava,
+    Dependencies.testcontainers,
+    Dependencies.testcontainersScalaScalatest,
     Dependencies.chimney,
+  )
+
+lazy val backendPostgreSQLTestModule = createBackendModule("postgresql-test")(None)
+  .dependsOn(backendTestKitModule)
+  .withDependencies(
+    Dependencies.testcontainersScalaPostgresql,
+    Dependencies.doobieCore,
+    Dependencies.doobieHikari,
+    Dependencies.doobiePostgres,
   )
 
 lazy val backendSchemas = createBackendModule("schemas")(None)
@@ -67,6 +76,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
   .enablePlugins(Smithy4sCodegenPlugin)
   .enablePlugins(DockerPlugin)
   .dependsOn(backendTestKitModule % Test)
+  .dependsOn(backendPostgreSQLTestModule % Test)
   .dependsOn(backendDomainModule)
   .settings(Docker.settings(docker, Compile))
   .withDependencies(
