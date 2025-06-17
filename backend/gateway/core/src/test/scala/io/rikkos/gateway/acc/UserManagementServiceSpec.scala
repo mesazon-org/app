@@ -53,7 +53,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
   }
 
   trait TestContext {
-    val userRepositoryRef: Ref[Set[UserDetails]] = Ref.make(Set.empty[UserDetails]).zioValue
+    val userRepositoryRef: Ref[Set[OnboardUserDetails]] = Ref.make(Set.empty[OnboardUserDetails]).zioValue
 
     def buildUserManagementService(
         authedUser: AuthedUser,

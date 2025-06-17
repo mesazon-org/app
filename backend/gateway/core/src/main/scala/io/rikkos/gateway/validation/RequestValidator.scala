@@ -31,7 +31,6 @@ object RequestValidator {
   given RequestValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails] =
     (request: smithy.UpdateUserDetailsRequest) =>
       (
-        UserID.either(request.userId).toValidatedNec,
         request.firstName.map(FirstName.either).sequence.toValidatedNec,
         request.lastName.map(LastName.either).sequence.toValidatedNec,
         request.countryCode.map(CountryCode.either).sequence.toValidatedNec,

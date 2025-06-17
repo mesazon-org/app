@@ -17,20 +17,7 @@ object UserManagementService {
         _                  <- ZIO.logDebug(s"Onboarding user with request: $request")
         authedUser         <- authorizationState.get()
         onboardUserDetails <- request.validate[OnboardUserDetails]
-        userDetails = UserDetails(
-          authedUser.userID,
-          authedUser.email,
-          onboardUserDetails.firstName,
-          onboardUserDetails.lastName,
-          onboardUserDetails.countryCode,
-          onboardUserDetails.phoneNumber,
-          onboardUserDetails.addressLine1,
-          onboardUserDetails.addressLine2,
-          onboardUserDetails.city,
-          onboardUserDetails.postalCode,
-          onboardUserDetails.company,
-        )
-        _ <- userRepository.insertUserDetails(userDetails)
+        _                  <- userRepository.insertUserDetails(authedUser.userID, authedUser.email, onboardUserDetails)
       } yield ()
 
     override def updateUser(request: smithy.UpdateUserDetailsRequest): IO[ServiceError, Unit] =
@@ -38,19 +25,7 @@ object UserManagementService {
         _                 <- ZIO.logDebug(s"Updating user with request: $request")
         authedUser        <- authorizationState.get()
         updateUserDetails <- request.validate[UpdateUserDetails]
-        userDetails = UpdateUserDetails(
-          updateUserDetails.userID,
-          updateUserDetails.firstName,
-          updateUserDetails.lastName,
-          updateUserDetails.countryCode,
-          updateUserDetails.phoneNumber,
-          updateUserDetails.addressLine1,
-          updateUserDetails.addressLine2,
-          updateUserDetails.city,
-          updateUserDetails.postalCode,
-          updateUserDetails.company,
-        )
-        _ <- userRepository.updateUserDetails(userDetails)
+        _                 <- userRepository.updateUserDetails(authedUser.userID, updateUserDetails)
       } yield ()
   }
 

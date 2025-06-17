@@ -33,7 +33,7 @@ object Main extends ZIOAppDefault {
       UserManagementService.live,
 
       // Repository
-      UserRepository.layer,
+      UserRepository.live,
 
       // Auth
       AuthorizationService.live,

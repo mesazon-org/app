@@ -1,21 +1,23 @@
 package io.rikkos.gateway.mock
 
-import io.rikkos.domain.{AuthedUser, UpdateUserDetails, UserDetails}
+import io.rikkos.domain.{AuthedUser, Email, OnboardUserDetails, UpdateUserDetails, UserID}
 import io.rikkos.gateway.auth.{AuthorizationService, AuthorizationState}
 import io.rikkos.gateway.repository.UserRepository
 import org.http4s.Request
 import zio.*
 
 def userRepositoryMockLive(
-    userDetailsRef: Ref[Set[UserDetails]],
+    userDetailsRef: Ref[Set[OnboardUserDetails]],
+    // updateUserDetails: Ref[Set[UpdateUserDetails]],
     maybeError: Option[Throwable] = None,
 ): ULayer[UserRepository] =
   ZLayer.succeed(
     new UserRepository {
-      override def insertUserDetails(userDetails: UserDetails): UIO[Unit] =
+      override def insertUserDetails(userID: UserID, email: Email, userDetails: OnboardUserDetails): UIO[Unit] =
         maybeError.fold(userDetailsRef.set(Set(userDetails)))(ZIO.fail(_).orDie)
 
-      override def updateUserDetails(updateUserDetails: UpdateUserDetails): UIO[Unit] = ???
+      override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
+        ZIO.unit
     }
   )
 

@@ -51,8 +51,6 @@ structure OnboardUserDetailsRequest {
 }
 
 structure UpdateUserDetailsRequest {
-    @required
-    userId: String
     firstName: String
     lastName: String
     countryCode: String
