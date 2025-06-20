@@ -1,38 +1,49 @@
 package io.rikkos.gateway.repository
 
-import doobie.*
-import doobie.implicits.*
-import io.rikkos.domain.UserDetails
+import _root_.doobie.*
+import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
+import io.rikkos.clock.TimeProvider
+import io.rikkos.domain.{CreatedAt, ServiceError, UpdatedAt, UserDetails}
+import io.rikkos.gateway.query.UserDetailsQueries
+import org.postgresql.util.PSQLException
 import zio.*
-import zio.interop.catz.*
 
 trait UserRepository {
-  def insertUserDetails(userDetails: UserDetails): UIO[Unit]
+  def insertUserDetails(userDetails: UserDetails): IO[ServiceError.ConflictError.UserAlreadyExists, Unit]
 }
 
 object UserRepository {
 
-  final private case class UserRepositoryPostgreSql(xa: Transactor[Task]) extends UserRepository {
-    val insertInto       = Fragment.const("INSERT INTO")
-    val userDetailsTable = Fragment.const("user_details")
-    val userDetailsCols = Fragment.const(
-      "(user_id, email, first_name, last_name, country_code, phone_number, address_line_1, address_line_2, city, postal_code, company, created_at, updated_at)"
-    )
+  final private case class UserRepositoryPostgreSql(
+      database: DatabaseOps.ServiceOps[Transactor[Task]],
+      timeProvider: TimeProvider,
+  ) extends UserRepository {
 
-    def insertUserDetailsStatement(userDetails: UserDetails) =
-      (insertInto ++ userDetailsTable++ userDetailsCols ++
-        sql"""
-           VALUES (${userDetails.userID}, ${userDetails.email}, ${userDetails.firstName}, ${userDetails.lastName},
-                   ${userDetails.countryCode}, ${userDetails.phoneNumber}, ${userDetails.addressLine1},
-                   ${userDetails.addressLine2}, ${userDetails.city}, ${userDetails.postalCode},
-                   ${userDetails.company}, NOW(), NOW())
-           """).updateWithLabel("insertUserDetails")
-
-    override def insertUserDetails(userDetails: UserDetails): UIO[Unit] =
-      insertUserDetailsStatement(userDetails).run
-        .transact(xa)
-        .unit
-        .orDie
+    override def insertUserDetails(userDetails: UserDetails): IO[ServiceError.ConflictError.UserAlreadyExists, Unit] =
+      (for {
+        instantNow <- timeProvider.instantNow
+        _ <- database
+          .transactionOrDie(
+            UserDetailsQueries.insertUserDetailsQuery(
+              userID = userDetails.userID,
+              email = userDetails.email,
+              firstName = userDetails.firstName,
+              lastName = userDetails.lastName,
+              countryCode = userDetails.countryCode,
+              phoneNumber = userDetails.phoneNumber,
+              addressLine1 = userDetails.addressLine1,
+              addressLine2 = userDetails.addressLine2,
+              city = userDetails.city,
+              postalCode = userDetails.postalCode,
+              company = userDetails.company,
+              createdAt = CreatedAt.apply(instantNow),
+              updatedAt = UpdatedAt.apply(instantNow),
+            )
+          )
+      } yield ()).orDie.catchSomeCause {
+        case Cause.Die(DbException.Wrapped(e: PSQLException), _) if e.getSQLState == "23505" =>
+          ZIO.fail(ServiceError.ConflictError.UserAlreadyExists(userDetails.userID, userDetails.email))
+      }
   }
 
   def observed(repository: UserRepository): UserRepository = repository

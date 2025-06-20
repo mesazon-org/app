@@ -5,7 +5,7 @@ val enableScalaLint = sys.env.getOrElse("ENABLE_SCALA_LINT_ON_COMPILE", "true").
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-ThisBuild / scalaVersion              := "3.6.4"
+ThisBuild / scalaVersion              := "3.7.1"
 ThisBuild / version                   := "local"
 ThisBuild / organization              := "io.rikkos"
 ThisBuild / organizationName          := "Rikkos"
@@ -38,6 +38,9 @@ lazy val backendModule = Project("backend", file("backend"))
 lazy val backendDomainModule = createBackendModule("domain")(None)
   .withDependencies(Dependencies.iron)
 
+lazy val backendClockModule = createBackendModule("clock")(None)
+  .withDependencies(Dependencies.zio)
+
 lazy val backendTestKitModule = createBackendModule("test-kit")(None)
   .dependsOn(backendDomainModule)
   .withDependencies(
@@ -62,6 +65,8 @@ lazy val backendPostgreSQLTestModule = createBackendModule("postgresql-test")(No
     Dependencies.doobieCore,
     Dependencies.doobieHikari,
     Dependencies.doobiePostgres,
+    Dependencies.doobieTranzactio,
+    Dependencies.hikariCP,
   )
 
 lazy val backendSchemas = createBackendModule("schemas")(None)
@@ -75,9 +80,10 @@ lazy val backendGatewayRoot = createBackendGatewayModule(None)
 lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
   .enablePlugins(Smithy4sCodegenPlugin)
   .enablePlugins(DockerPlugin)
+  .dependsOn(backendDomainModule)
+  .dependsOn(backendClockModule)
   .dependsOn(backendTestKitModule % Test)
   .dependsOn(backendPostgreSQLTestModule % Test)
-  .dependsOn(backendDomainModule)
   .settings(Docker.settings(docker, Compile))
   .withDependencies(
     Dependencies.zio,
@@ -99,11 +105,14 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.doobieCore,
     Dependencies.doobieHikari,
     Dependencies.doobiePostgres,
+    Dependencies.doobieTranzactio,
+    Dependencies.hikariCP,
   )
 
 lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
   .dependsOn(backendGatewayCore % Test)
   .dependsOn(backendTestKitModule % Test)
+  .dependsOn(backendPostgreSQLTestModule % Test)
   .withDependencies(
     Dependencies.http4sEmberClient,
     Dependencies.http4sCirce,

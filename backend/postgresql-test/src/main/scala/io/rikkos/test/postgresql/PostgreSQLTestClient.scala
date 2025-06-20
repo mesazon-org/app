@@ -1,19 +1,41 @@
 package io.rikkos.test.postgresql
 
-import com.dimafeng.testcontainers.{DockerComposeContainer, ExposedService}
-import doobie.LogHandler
-import doobie.hikari.HikariTransactor
-import doobie.util.transactor.Transactor
+import com.dimafeng.testcontainers.*
+import com.zaxxer.hikari.*
+import doobie.*
+import doobie.implicits.*
+import io.github.gaelrenoux.tranzactio.doobie.{tzio, Database, DbContext, TranzactIO}
+import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
 import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import zio.*
-import zio.interop.catz.*
 
-final case class PostgreSQLTestClient(config: PostgreSQLTestClientConfig, transactor: Transactor[Task])
+final case class PostgreSQLTestClient(
+    config: PostgreSQLTestClientConfig,
+    database: DatabaseOps.ServiceOps[Transactor[Task]],
+) {
+
+  private def checkIfTableExistsQuery(schema: String, table: String): TranzactIO[Boolean] =
+    tzio {
+      sql"""
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+          WHERE table_schema = $schema AND table_name = $table
+      )
+     """.query[Boolean].unique
+    }
+
+  /** Check if the PostgreSQL database is ready for connections.
+    */
+  def checkIfTableExists(schema: String, table: String): Task[Boolean] =
+    database.transactionOrDie(checkIfTableExistsQuery(schema, table))
+
+  def executeQuery[A](query: ConnectionIO[A]): IO[DbException, A] = database.transactionOrDie(tzio(query))
+}
 
 object PostgreSQLTestClient {
   private lazy val defaultDatabase = "local_db"
-  private lazy val defaultUser     = "postgres"
-  private lazy val defaultPassword = "postgres"
+  private lazy val defaultUsername = "local_user"
+  private lazy val defaultPassword = "local_password"
 
   lazy val ServiceName     = "postgres"
   lazy val ServicePort     = 5432
@@ -23,9 +45,11 @@ object PostgreSQLTestClient {
       host: String = "localhost",
       port: Int = 5432,
       database: String = defaultDatabase,
-      user: String = defaultUser,
+      username: String = defaultUsername,
       password: String = defaultPassword,
   ) {
+    val driver: String = "org.postgresql.Driver"
+    val url: String    = s"jdbc:postgresql://$host:$port/$database"
 
     /** @param containers
       *   Option[DockerComposeContainer] * If provided resolves host and port with testcontainers
@@ -67,7 +91,7 @@ object PostgreSQLTestClient {
         serviceName: String = ServiceName,
         servicePort: Int = ServicePort,
         database: String = defaultDatabase,
-        user: String = defaultUser,
+        user: String = defaultUsername,
         password: String = defaultPassword,
     ): PostgreSQLTestClientConfig = {
       val host = containers.getServiceHost(serviceName, servicePort)
@@ -98,26 +122,21 @@ object PostgreSQLTestClient {
       )
   }
 
-  /** @param config
-    *   PostgreSQLTestClientConfig * config for Transactor[Task]
-    * @return
-    *   Transactor[Task]
-    */
-  val live: RLayer[PostgreSQLTestClientConfig, PostgreSQLTestClient] = ZLayer.scoped {
+  private val datasourceLive = ZLayer {
     for {
       config <- ZIO.service[PostgreSQLTestClientConfig]
-      transactor <- ZIO.executorWith { executor =>
-        HikariTransactor
-          .newHikariTransactor[Task](
-            driverClassName = "org.postgresql.Driver",
-            url = s"jdbc:postgresql://${config.host}:${config.port}/${config.database}",
-            user = config.user,
-            pass = config.password,
-            connectEC = executor.asExecutionContext,
-            logHandler = Some(logHandler),
-          )
-          .toScopedZIO
+      datasource <- ZIO.attemptBlocking {
+        val hikariDataSource = new HikariDataSource()
+        hikariDataSource.setDriverClassName(config.driver)
+        hikariDataSource.setJdbcUrl(config.url)
+        hikariDataSource.setUsername(config.username)
+        hikariDataSource.setPassword(config.password)
+        hikariDataSource
       }
-    } yield PostgreSQLTestClient(config, transactor)
+    } yield datasource
   }
+
+  private given DbContext = DbContext(logHandler)
+
+  val live = datasourceLive >>> Database.fromDatasource >>> ZLayer.fromFunction(PostgreSQLTestClient.apply)
 }

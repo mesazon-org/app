@@ -33,8 +33,7 @@ object Settings {
     tpolecatScalacOptions ++= Set(
       ScalacOptions.other("-no-indent"),
       ScalacOptions.other("-experimental"),
-      ScalacOptions.other("-language:experimental.betterFors"),
-      ScalacOptions.other("-language:experimental.namedTuples"),
+      ScalacOptions.other("--preview"),
       ScalacOptions.other("-old-syntax"),
       ScalacOptions.other("-Wunused:unsafe-warn-patvars"),
       ScalacOptions.other("-Wunused:all"),

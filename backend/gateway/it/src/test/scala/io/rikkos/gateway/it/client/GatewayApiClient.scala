@@ -2,7 +2,6 @@ package io.rikkos.gateway.it.client
 
 import cats.syntax.all.*
 import com.dimafeng.testcontainers.{DockerComposeContainer, ExposedService}
-import fs2.io.net.Network
 import io.rikkos.gateway.it.client.GatewayApiClient.*
 import io.rikkos.gateway.it.domain.OnboardUserDetailsRequest
 import org.http4s.*
@@ -41,22 +40,61 @@ object GatewayApiClient {
     ExposedService(ServiceName, HealthPort),
   )
 
-  final case class GatewayApiClientConfig(serviceUri: Uri, healthUri: Uri, token: String)
+  final case class GatewayApiClientConfig(serviceUri: Uri, healthUri: Uri, token: String) {
 
-  def createClient(container: DockerComposeContainer)(using Network[Task]): ZIO[Scope, Throwable, GatewayApiClient] =
-    for {
-      token       = "valid-token" // TODO: replace with actual token later when authorization service is implemented
-      host        = container.getServiceHost(ServiceName, ServicePort)
-      servicePort = container.getServicePort(ServiceName, ServicePort)
-      healthPort  = container.getServicePort(ServiceName, HealthPort)
-      config = GatewayApiClientConfig(
+    /** @param containers
+      *   Option[DockerComposeContainer] * If provided resolves host and port with testcontainers
+      * @param serviceName
+      *   String container name
+      * @param servicePort
+      *   Int container port
+      * @return
+      *   GatewayApiClientConfig
+      */
+    def adjust(
+        containers: Option[DockerComposeContainer],
+        serviceName: String = ServiceName,
+        servicePort: Int = ServicePort,
+    ): GatewayApiClientConfig = containers match {
+      case Some(containers) =>
+        GatewayApiClientConfig.from(
+          containers,
+          serviceName,
+          servicePort,
+        )
+      case None => this
+    }
+  }
+
+  object GatewayApiClientConfig {
+
+    /** @param containers
+      *   DockerComposeContainer * Resolves host and port with testcontainers
+      * @param serviceName
+      *   String container name
+      * @param servicePort
+      *   Int container port
+      * @return
+      *   GatewayApiClientConfig
+      */
+    def from(
+        containers: DockerComposeContainer,
+        serviceName: String = ServiceName,
+        servicePort: Int = ServicePort,
+        token: String = "valid-token",
+    ): GatewayApiClientConfig = {
+      val host        = containers.getServiceHost(ServiceName, ServicePort)
+      val servicePort = containers.getServicePort(ServiceName, ServicePort)
+      val healthPort  = containers.getServicePort(ServiceName, HealthPort)
+
+      GatewayApiClientConfig(
         Uri.unsafeFromString(s"http://$host:$servicePort"),
         Uri.unsafeFromString(s"http://$host:$healthPort"),
         token,
       )
-      client <- EmberClientBuilder
-        .default[Task]
-        .build
-        .toScopedZIO
-    } yield GatewayApiClient(config, client)
+    }
+  }
+
+  val live =
+    ZLayer.scoped(EmberClientBuilder.default[Task].build.toScopedZIO) >>> ZLayer.fromFunction(GatewayApiClient.apply)
 }

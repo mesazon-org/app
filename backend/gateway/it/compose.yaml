@@ -4,6 +4,12 @@ services:
     ports:
       - "8080:8080"
       - "8081:8081"
+    environment:
+      DATABASE_NAME: local_db
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: local_user
+      DATABASE_PASSWORD: local_password
 
   postgres:
     image: postgres:17.5-alpine3.22
