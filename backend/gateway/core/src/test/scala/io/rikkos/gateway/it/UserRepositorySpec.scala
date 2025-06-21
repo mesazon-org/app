@@ -62,7 +62,6 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
             .withFieldConst(_.createdAt, CreatedAt(now))
             .withFieldConst(_.updatedAt, UpdatedAt(now))
         )
-
       }
 
       "fail with ConflictError when user already exist" in withContext { (client: PostgreSQLTestClient) =>
