@@ -1,10 +1,13 @@
 package io.rikkos.gateway.mock
 
+import io.rikkos.clock.TimeProvider
 import io.rikkos.domain.{AuthedUser, UserDetails}
 import io.rikkos.gateway.auth.{AuthorizationService, AuthorizationState}
 import io.rikkos.gateway.repository.UserRepository
 import org.http4s.Request
 import zio.*
+
+import java.time.Clock
 
 def userRepositoryMockLive(
     userDetailsRef: Ref[Set[UserDetails]],
@@ -32,3 +35,6 @@ def authorizationServiceMockLive(maybeError: Option[Throwable] = None): ULayer[A
         maybeError.fold(ZIO.unit)(ZIO.fail(_))
     }
   )
+
+def timeProviderMockLive(clock: Clock): ULayer[TimeProvider] =
+  ZLayer.succeed(clock) >>> TimeProvider.live

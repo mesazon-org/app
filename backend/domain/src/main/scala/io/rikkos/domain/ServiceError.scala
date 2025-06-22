@@ -20,6 +20,12 @@ object ServiceError {
       override val underlying: Option[Throwable] = None,
   ) extends ServiceError("UnauthorizedError", message, underlying)
 
+  // 409
+  sealed abstract class ConflictError(
+      override val message: String,
+      override val underlying: Option[Throwable] = None,
+  ) extends ServiceError("ConflictError", message, underlying)
+
   object BadRequestError {
     final case class RequestValidationError(errors: Seq[String])
         extends BadRequestError(s"request validation error [${errors.mkString(", ")}]")
@@ -30,5 +36,10 @@ object ServiceError {
 
     final case class TokenFailedAuthorization(throwable: Throwable)
         extends UnauthorizedError("token failed authorization", Some(throwable))
+  }
+
+  object ConflictError {
+    final case class UserAlreadyExists(userID: UserID, email: Email)
+        extends ConflictError(s"user with id [$userID] and email [$email] already exists")
   }
 }

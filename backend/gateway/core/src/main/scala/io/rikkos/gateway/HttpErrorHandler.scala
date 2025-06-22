@@ -32,6 +32,9 @@ object HttpErrorHandler {
       case error: ServiceError.UnauthorizedError =>
         logError(error)
           .map(_ => smithy.Unauthorized())
+      case error: ServiceError.ConflictError =>
+        logWarning(error)
+          .map(_ => smithy.Conflict())
     }.catchSomeCause { case cause: Cause.Die =>
       ZIO
         .logErrorCause(s"$trace: Unexpected failure", cause)

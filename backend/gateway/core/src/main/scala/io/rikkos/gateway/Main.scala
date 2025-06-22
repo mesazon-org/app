@@ -1,5 +1,6 @@
 package io.rikkos.gateway
 
+import io.rikkos.clock.TimeProvider
 import io.rikkos.domain.{AppName, AuthedUser}
 import io.rikkos.gateway.auth.*
 import io.rikkos.gateway.config.*
@@ -27,6 +28,7 @@ object Main extends ZIOAppDefault {
   private val app = HttpApp.serverLayer.launch
     .provide(
       AppNameLive, // Used across components for metadata
+      TimeProvider.liveSystemUTC,
 
       // Http
       HealthCheckService.live,

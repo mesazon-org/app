@@ -19,7 +19,7 @@ open class WordSpecBase
     with LoneElement
     with BeforeAndAfterAll {
 
-  implicit override val patienceConfig: PatienceConfig = PatienceConfig(40.seconds, 1.second)
+  implicit override val patienceConfig: PatienceConfig = PatienceConfig(20.seconds, 1.second)
 
   def arbitrarySample[T: Arbitrary]: T = {
     val arbitrary = implicitly[Arbitrary[T]]

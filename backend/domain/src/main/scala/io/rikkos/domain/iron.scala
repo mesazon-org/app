@@ -3,6 +3,8 @@ package io.rikkos.domain
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.all.*
 
+import java.time.Instant
+
 type NonEmptyTrimmedLowerCase = Trimmed & LettersLowerCase & MinLength[1]
 type NonEmptyTrimmed          = Trimmed & MinLength[1]
 
@@ -41,3 +43,9 @@ type PostalCode = PostalCode.T
 
 object Company extends RefinedType[String, NonEmptyTrimmed]
 type Company = Company.T
+
+object CreatedAt extends RefinedType[Instant, Pure]
+type CreatedAt = CreatedAt.T
+
+object UpdatedAt extends RefinedType[Instant, Pure]
+type UpdatedAt = UpdatedAt.T

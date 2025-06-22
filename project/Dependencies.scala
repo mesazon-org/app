@@ -15,14 +15,15 @@ object Dependencies {
   lazy val scalaTestV           = "3.2.19"
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
   lazy val scalacheckV          = "1.18.1"
-  lazy val testContainersScalaV = "0.43.0"
-  lazy val testContainersJavaV  = "1.21.1"
-  lazy val ironV                = "3.0.1"
-  lazy val circeV               = "0.14.13"
+  lazy val testcontainersScalaV = "0.43.0"
+  lazy val testcontainersV      = "1.21.2"
+  lazy val ironV                = "3.0.2"
+  lazy val circeV               = "0.14.14"
   lazy val chimneyV             = "1.8.1"
   lazy val doobieV              = "1.0.0-RC9"
   lazy val postgresqlV          = "42.7.6"
   lazy val hikariCPV            = "6.3.0"
+  lazy val doobieTranzactioV    = "5.4.0"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -59,11 +60,12 @@ object Dependencies {
   lazy val julToSlf4j = "org.slf4j"      % "jul-to-slf4j"    % julToSlf4jV
 
   // Test
-  lazy val scalaTest           = "org.scalatest"     %% "scalatest"                      % scalaTestV
-  lazy val scalaTestPlusCheck  = "org.scalatestplus" %% "scalacheck-1-15"                % scalaTestPlusCheckV
-  lazy val scalacheck          = "org.scalacheck"    %% "scalacheck"                     % scalacheckV
-  lazy val testContainersJava  = "org.testcontainers" % "testcontainers"                 % testContainersJavaV
-  lazy val testContainersScala = "com.dimafeng"      %% "testcontainers-scala-scalatest" % testContainersScalaV
+  lazy val scalaTest          = "org.scalatest"     %% "scalatest"       % scalaTestV
+  lazy val scalaTestPlusCheck = "org.scalatestplus" %% "scalacheck-1-15" % scalaTestPlusCheckV
+  lazy val scalacheck         = "org.scalacheck"    %% "scalacheck"      % scalacheckV
+  lazy val testcontainers     = "org.testcontainers" % "testcontainers"  % testcontainersV
+  lazy val testcontainersScalaPostgresql = "com.dimafeng" %% "testcontainers-scala-postgresql" % testcontainersScalaV
+  lazy val testcontainersScalaScalatest  = "com.dimafeng" %% "testcontainers-scala-scalatest"  % testcontainersScalaV
 
   // Circe
   lazy val circeCore    = "io.circe" %% "circe-core"    % circeV
@@ -74,8 +76,9 @@ object Dependencies {
   lazy val chimney = "io.scalaland" %% "chimney" % chimneyV
 
   // Quill + Postgresql
-  lazy val doobieCore     = "org.tpolecat" %% "doobie-core"     % doobieV
-  lazy val doobieHikari   = "org.tpolecat" %% "doobie-hikari"   % doobieV
-  lazy val doobiePostgres = "org.tpolecat" %% "doobie-postgres" % doobieV
-  lazy val hikariCP       = "com.zaxxer"    % "HikariCP"        % hikariCPV
+  lazy val doobieCore       = "org.tpolecat"         %% "doobie-core"       % doobieV
+  lazy val doobieHikari     = "org.tpolecat"         %% "doobie-hikari"     % doobieV
+  lazy val doobiePostgres   = "org.tpolecat"         %% "doobie-postgres"   % doobieV
+  lazy val doobieTranzactio = "io.github.gaelrenoux" %% "tranzactio-doobie" % doobieTranzactioV
+  lazy val hikariCP         = "com.zaxxer"            % "HikariCP"          % hikariCPV
 }

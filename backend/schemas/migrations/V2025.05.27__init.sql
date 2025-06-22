@@ -1,4 +1,4 @@
-CREATE TABLE "user_metadata" (
+CREATE TABLE "user_details" (
     "user_id" TEXT PRIMARY KEY NOT NULL,
     "email" TEXT NOT NULL UNIQUE,
     "first_name" TEXT NOT NULL,
@@ -10,6 +10,6 @@ CREATE TABLE "user_metadata" (
     "city" TEXT NOT NULL,
     "postal_code" TEXT NOT NULL,
     "company" TEXT NOT NULL,
-    "created_at" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    "updated_at" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    "created_at" TIMESTAMPTZ NOT NULL,
+    "updated_at" TIMESTAMPTZ NOT NULL
 );
