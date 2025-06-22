@@ -61,10 +61,11 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
             .into[UserDetailsTable]
             .withFieldConst(_.createdAt, CreatedAt(now))
             .withFieldConst(_.updatedAt, UpdatedAt(now))
+            .transform
         )
       }
 
-      "fail with ConflictError when user already exist" in withContext { (client: PostgreSQLTestClient) =>
+      "fail with UserAlreadyExists when user already exist" in withContext { (client: PostgreSQLTestClient) =>
         val userDetails = arbitrarySample[UserDetails]
         val userRepository = ZIO
           .service[UserRepository]

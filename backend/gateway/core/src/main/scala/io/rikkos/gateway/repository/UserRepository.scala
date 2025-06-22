@@ -3,8 +3,9 @@ package io.rikkos.gateway.repository
 import _root_.doobie.*
 import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
 import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.{CreatedAt, ServiceError, UpdatedAt, UserDetails}
+import io.rikkos.domain.{CreatedAt, ServiceError, UpdatedAt, UserDetails, UserDetailsTable}
 import io.rikkos.gateway.query.UserDetailsQueries
+import io.scalaland.chimney.dsl.*
 import org.postgresql.util.PSQLException
 import zio.*
 
@@ -25,19 +26,11 @@ object UserRepository {
         _ <- database
           .transactionOrDie(
             UserDetailsQueries.insertUserDetailsQuery(
-              userID = userDetails.userID,
-              email = userDetails.email,
-              firstName = userDetails.firstName,
-              lastName = userDetails.lastName,
-              countryCode = userDetails.countryCode,
-              phoneNumber = userDetails.phoneNumber,
-              addressLine1 = userDetails.addressLine1,
-              addressLine2 = userDetails.addressLine2,
-              city = userDetails.city,
-              postalCode = userDetails.postalCode,
-              company = userDetails.company,
-              createdAt = CreatedAt.apply(instantNow),
-              updatedAt = UpdatedAt.apply(instantNow),
+              userDetails
+                .into[UserDetailsTable]
+                .withFieldConst(_.createdAt, CreatedAt(instantNow))
+                .withFieldConst(_.updatedAt, UpdatedAt(instantNow))
+                .transform
             )
           )
       } yield ()).orDie.catchSomeCause {

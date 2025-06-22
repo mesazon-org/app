@@ -26,5 +26,4 @@ package object domain extends IronRefinedTypeArbitraries {
 
     given Encoder[OnboardUserDetailsRequest] = deriveEncoder[OnboardUserDetailsRequest]
   }
-
 }

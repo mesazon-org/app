@@ -17,7 +17,7 @@ operation OnboardUser {
         @httpPayload
         request: OnboardUserDetailsRequest
     }
-    errors: [BadRequest, Unauthorized, InternalServerError]
+    errors: [BadRequest, Unauthorized, Conflict, InternalServerError]
 }
 
 structure OnboardUserDetailsRequest {

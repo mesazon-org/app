@@ -19,6 +19,15 @@ structure Unauthorized {
     message: String = "Unauthorized connection."
 }
 
+@error("client")
+@httpError(409)
+structure Conflict {
+    @required
+    code: Integer = 409
+    @required
+    message: String = "Conflict."
+}
+
 @error("server")
 @httpError(500)
 structure InternalServerError {

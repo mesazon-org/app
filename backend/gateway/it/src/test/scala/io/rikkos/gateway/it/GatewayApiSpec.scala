@@ -1,8 +1,7 @@
 package io.rikkos.gateway.it
 
-import com.dimafeng.testcontainers.DockerComposeContainer
 import fs2.io.net.Network
-import io.rikkos.domain.{FirstName, UserDetails, UserID}
+import io.rikkos.domain.*
 import io.rikkos.gateway.it.GatewayApiSpec.Context
 import io.rikkos.gateway.it.client.GatewayApiClient
 import io.rikkos.gateway.it.client.GatewayApiClient.GatewayApiClientConfig
@@ -11,6 +10,7 @@ import io.rikkos.gateway.query.UserDetailsQueries
 import io.rikkos.test.postgresql.PostgreSQLTestClient
 import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.rikkos.testkit.base.*
+import io.scalaland.chimney.dsl.*
 import org.http4s.Status
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import zio.*
@@ -29,14 +29,15 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase {
       postgreSQLClient <- ZIO
         .service[PostgreSQLTestClient]
         .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgreSQLClientConfig))
-      gatewayApiClient <- ZIO.service[GatewayApiClient]
+      gatewayApiClient <- ZIO
+        .service[GatewayApiClient]
         .provide(GatewayApiClient.live, ZLayer.succeed(gatewayApiClientConfig))
     } yield Context(gatewayApiClient, postgreSQLClient)
 
     f(context.zioValue)
   }
 
-  override def beforeAll(): Unit = withContext { case Context(apiClient,_) =>
+  override def beforeAll(): Unit = withContext { case Context(apiClient, _) =>
     super.beforeAll()
 
     // Ensure the GatewayApiClient is initialized before running tests
@@ -52,11 +53,23 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase {
 
         apiClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
 
-        postgresSQLClient.database.transactionOrDie(UserDetailsQueries.getUserDetailsQuery(UserID.assume("test")))
-        .zioValue.value shouldBe
+        val userDetailsTableResponse = postgresSQLClient.database
+          .transactionOrDie(
+            UserDetailsQueries.getUserDetailsQuery(UserID.assume("test"))
+          )
+          .zioValue
+          .value
+
+        userDetailsTableResponse shouldBe onboardUserDetailsRequest
+          .into[UserDetailsTable]
+          .withFieldConst(_.userID, UserID.assume("test"))
+          .withFieldConst(_.email, Email.assume("eliot.martel@gmail.com"))
+          .withFieldConst(_.createdAt, userDetailsTableResponse.createdAt)
+          .withFieldConst(_.updatedAt, userDetailsTableResponse.updatedAt)
+          .transform
       }
 
-      "fail with BadRequest when onboarding user details ar invalid" in withContext { case Context(apiClient,_) =>
+      "fail with BadRequest when onboarding user details ar invalid" in withContext { case Context(apiClient, _) =>
         val onboardUserDetailsRequest = arbitrarySample[OnboardUserDetailsRequest]
           .copy(firstName = FirstName.assume(""))
 
@@ -75,4 +88,4 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase {
 object GatewayApiSpec {
 
   final case class Context(apiClient: GatewayApiClient, postgresSQLClient: PostgreSQLTestClient)
-
+}

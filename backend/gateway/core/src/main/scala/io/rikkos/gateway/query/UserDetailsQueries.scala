@@ -7,21 +7,7 @@ import io.rikkos.domain.*
 
 object UserDetailsQueries {
 
-  def insertUserDetailsQuery(
-      userID: UserID,
-      email: Email,
-      firstName: FirstName,
-      lastName: LastName,
-      countryCode: CountryCode,
-      phoneNumber: PhoneNumber,
-      addressLine1: AddressLine1,
-      addressLine2: Option[AddressLine2],
-      city: City,
-      postalCode: PostalCode,
-      company: Company,
-      createdAt: CreatedAt,
-      updatedAt: UpdatedAt,
-  ): TranzactIO[Unit] =
+  def insertUserDetailsQuery(userDetailsTable: UserDetailsTable): TranzactIO[Unit] =
     tzio {
       sql"""INSERT INTO local_schema.user_details (
           user_id,
@@ -38,19 +24,19 @@ object UserDetailsQueries {
           created_at,
           updated_at
         ) VALUES (
-          $userID,
-          $email,
-          $firstName,
-          $lastName,
-          $countryCode,
-          $phoneNumber,
-          $addressLine1,
-          $addressLine2,
-          $city,
-          $postalCode,
-          $company,
-          $createdAt,
-          $updatedAt
+          ${userDetailsTable.userID},
+          ${userDetailsTable.email},
+          ${userDetailsTable.firstName},
+          ${userDetailsTable.lastName},
+          ${userDetailsTable.countryCode},
+          ${userDetailsTable.phoneNumber},
+          ${userDetailsTable.addressLine1},
+          ${userDetailsTable.addressLine2},
+          ${userDetailsTable.city},
+          ${userDetailsTable.postalCode},
+          ${userDetailsTable.company},
+          ${userDetailsTable.createdAt},
+          ${userDetailsTable.updatedAt}
         )""".update.run.map(_ => ())
     }
 
@@ -67,7 +53,7 @@ object UserDetailsQueries {
               address_line_2,
               city,
               postal_code,
-              company
+              company,
               created_at,
               updated_at
               FROM
