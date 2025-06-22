@@ -37,21 +37,21 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase {
     f(context.zioValue)
   }
 
-  override def beforeAll(): Unit = withContext { case Context(apiClient, _) =>
+  override def beforeAll(): Unit = withContext { case Context(gatewayClient, _) =>
     super.beforeAll()
 
     // Ensure the GatewayApiClient is initialized before running tests
     eventually(
-      apiClient.readiness.zioValue shouldBe Status.NoContent
+      gatewayClient.readiness.zioValue shouldBe Status.NoContent
     )
   }
 
   "GatewayApi" when {
     "/users/onboard" should {
-      "return successfully when onboarding user" in withContext { case Context(apiClient, postgresSQLClient) =>
+      "return successfully when onboarding user" in withContext { case Context(gatewayClient, postgresSQLClient) =>
         val onboardUserDetailsRequest = arbitrarySample[OnboardUserDetailsRequest]
 
-        apiClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
+        gatewayClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
 
         val userDetailsTableResponse = postgresSQLClient.database
           .transactionOrDie(
@@ -69,17 +69,18 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase {
           .transform
       }
 
-      "fail with BadRequest when onboarding user details ar invalid" in withContext { case Context(apiClient, _) =>
+      "fail with BadRequest when onboarding user details ar invalid" in withContext { case Context(gatewayClient, _) =>
         val onboardUserDetailsRequest = arbitrarySample[OnboardUserDetailsRequest]
           .copy(firstName = FirstName.assume(""))
 
-        apiClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.BadRequest
+        gatewayClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.BadRequest
       }
 
-      "fail with Conflict when onboarding user details insert user twice" in withContext { case Context(apiClient, _) =>
-        val onboardUserDetailsRequest = arbitrarySample[OnboardUserDetailsRequest]
+      "fail with Conflict when onboarding user details insert user twice" in withContext {
+        case Context(gatewayClient, _) =>
+          val onboardUserDetailsRequest = arbitrarySample[OnboardUserDetailsRequest]
 
-        apiClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.Conflict
+          gatewayClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.Conflict
       }
     }
   }
@@ -87,5 +88,5 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase {
 
 object GatewayApiSpec {
 
-  final case class Context(apiClient: GatewayApiClient, postgresSQLClient: PostgreSQLTestClient)
+  final case class Context(gatewayClient: GatewayApiClient, postgresSQLClient: PostgreSQLTestClient)
 }
