@@ -9,7 +9,7 @@ object UserDetailsQueries {
 
   def insertUserDetailsQuery(userDetailsTable: UserDetailsTable): TranzactIO[Unit] =
     tzio {
-      sql"""INSERT INTO local_schema.user_details (
+      sql"""INSERT INTO local_schema.users_details (
           user_id,
           email,
           first_name,
@@ -57,7 +57,7 @@ object UserDetailsQueries {
               created_at,
               updated_at
               FROM
-              local_schema.user_details
+              local_schema.users_details
               WHERE user_id = $userID""".query[UserDetailsTable].option
     }
 }

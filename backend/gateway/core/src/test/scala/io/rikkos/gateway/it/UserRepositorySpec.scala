@@ -22,7 +22,7 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 
   val schema           = "local_schema"
-  val userDetailsTable = "user_details"
+  val userDetailsTable = "users_details"
 
   def withContext[A](f: PostgreSQLTestClient => A): A = withContainers { container =>
     val config = PostgreSQLTestClientConfig.from(container)
