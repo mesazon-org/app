@@ -29,5 +29,5 @@ CREATE TABLE "users_contacts" (
     "city" TEXT,
     "postal_code" TEXT,
     "created_at" TIMESTAMPTZ NOT NULL,
-    "updated_at" TIMESTAMPTZ NOT NULL,
+    "updated_at" TIMESTAMPTZ NOT NULL
 );
