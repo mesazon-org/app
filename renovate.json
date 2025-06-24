@@ -1,0 +1,56 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    "scala",
+    ":dependencyDashboard"
+  ],
+  "packageRules": [
+    {
+      "matchPackagePatterns": [
+        "^org.typelevel",
+        "^com.github.pureconfig",
+        "^org.http4s",
+        "^io.circe",
+        "^dev.zio",
+        "^com.disneystreaming.smithy4s"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": true,
+      "groupName": "Dependencies"
+    },
+    {
+      "matchPackagePatterns": [
+        "^org.scalatest",
+        "^org.scalacheck",
+        "^org.scalatestplus",
+        "^org.testcontainers",
+        "^com.dimafeng"
+      ],
+      "automerge": true
+    },
+    {
+      "matchFileNames": [
+        "project/plugins.sbt",
+        "project/*.sbt"
+      ],
+      "groupName": "SBT Plugins"
+    },
+    {
+      "matchPackageNames": [
+        "org.scala-lang:scala-library"
+      ],
+      "groupName": "Scala Version"
+    },
+    {
+      "matchPackagePatterns": [
+        "^org.scalameta",
+        "^com.github.sbt.sbt-scalafmt"
+      ],
+      "groupName": "Scala Code Style"
+    }
+  ]
+}
