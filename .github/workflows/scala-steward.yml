@@ -1,7 +1,8 @@
-on:
-  schedule:
-    - cron: '0 0 * * 0'
 name: Scala Steward
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 */2 * *'
 permissions:
   contents: write
   pull-requests: write
@@ -12,5 +13,3 @@ jobs:
     steps:
       - name: Scala Steward GitHub Action
         uses: scala-steward-org/scala-steward-action@v2.75.0
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
