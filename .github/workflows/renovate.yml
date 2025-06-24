@@ -1,0 +1,22 @@
+name: Renovate Dependencies
+on:
+  workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
+  schedule:
+    # Runs "at minute 0 past every 4th hour" (see https://crontab.guru)
+    - cron: '0 */4 * * *'
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Required for Renovate to be able to push changes to the repository
+          fetch-depth: 0
+      - name: Renovate Bot GitHub Action
+        uses: renovatebot/github-action@v43.0.1
+        with:
+          # This token is required to create pull requests and is automatically
+          # provided by GitHub Actions. You can use a Personal Access Token (PAT)
+          # if you need to trigger other workflows.
+          token: ${{ secrets.GITHUB_TOKEN }}
