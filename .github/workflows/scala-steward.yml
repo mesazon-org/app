@@ -8,8 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     name: Scala Steward
     steps:
-      - name: Print Secret
-        run: echo "SCALA_STEWARD_TOKEN ${{ secrets.SCALA_STEWARD_TOKEN }}"
       - name: Scala Steward GitHub Action
         uses: scala-steward-org/scala-steward-action@v2.75.0
         with:
