@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: Print Secret
         run: echo "SCALA_STEWARD_TOKEN ${{ secrets.SCALA_STEWARD_TOKEN }}"
+      - name: Print Secret
+        run: echo "SCALA_STEWARD_TOKEN ${{ secrets.SCALA_STEWARD_EMAIL }}"
       - name: Scala Steward GitHub Action
         uses: scala-steward-org/scala-steward-action@v2.75.0
         with:
