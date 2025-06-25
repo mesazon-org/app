@@ -2,6 +2,7 @@ name: ci
 on: [push]
 jobs:
   gateway-pr-build:
-    uses: ./.github/workflows/shared-scala-ci.yml
+    uses: ./.github/workflows/scala-ci.yml
+    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
       module: "gateway-pr-build"
