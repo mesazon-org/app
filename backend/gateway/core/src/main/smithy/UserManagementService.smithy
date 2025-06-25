@@ -7,7 +7,7 @@ use alloy#simpleRestJson
 @httpBearerAuth
 service UserManagementService {
     version: "1.0.0",
-    operations: [OnboardUser]
+    operations: [OnboardUser, UpdateUser]
 }
 
 @http(method: "POST", uri: "/users/onboard", code: 204)
@@ -18,6 +18,16 @@ operation OnboardUser {
         request: OnboardUserDetailsRequest
     }
     errors: [BadRequest, Unauthorized, Conflict, InternalServerError]
+}
+
+@http(method: "POST", uri: "/users/update", code: 204)
+operation UpdateUser {
+    input := {
+        @required
+        @httpPayload
+        request: UpdateUserDetailsRequest
+    }
+    errors: [BadRequest, Unauthorized, InternalServerError]
 }
 
 structure OnboardUserDetailsRequest {
@@ -37,5 +47,17 @@ structure OnboardUserDetailsRequest {
     @required
     postalCode: String
     @required
+    company: String
+}
+
+structure UpdateUserDetailsRequest {
+    firstName: String
+    lastName: String
+    countryCode: String
+    phoneNumber: String
+    addressLine1: String
+    addressLine2: String
+    city: String
+    postalCode: String
     company: String
 }

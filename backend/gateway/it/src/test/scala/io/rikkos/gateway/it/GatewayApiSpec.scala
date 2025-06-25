@@ -7,9 +7,11 @@ import io.rikkos.gateway.it.client.GatewayApiClient
 import io.rikkos.gateway.it.client.GatewayApiClient.GatewayApiClientConfig
 import io.rikkos.gateway.it.domain.OnboardUserDetailsRequest
 import io.rikkos.gateway.query.UserDetailsQueries
+import io.rikkos.gateway.smithy.UpdateUserDetailsRequest
 import io.rikkos.test.postgresql.PostgreSQLTestClient
 import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.rikkos.testkit.base.*
+import io.rikkos.testkit.base.IronRefinedTypeArbitraries.given_Arbitrary_WrappedType
 import io.scalaland.chimney.dsl.*
 import org.http4s.Status
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
@@ -69,7 +71,9 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase {
           .transform
       }
 
-      "fail with BadRequest when onboarding user details ar invalid" in withContext { case Context(gatewayClient, _) =>
+      //fail scenario when user doesnt exist ???
+
+      "fail with BadRequest when onboarding user details are invalid" in withContext { case Context(gatewayClient, _) =>
         val onboardUserDetailsRequest = arbitrarySample[OnboardUserDetailsRequest]
           .copy(firstName = FirstName.assume(""))
 
@@ -83,6 +87,29 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase {
           gatewayClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.Conflict
       }
     }
+    "/users/update" should {
+      "return successfully when update user" in withContext { case Context(gatewayClient, postgresSQLClient) =>
+        val updateUserDetailsRequest = arbitrarySample[UpdateUserDetailsRequest]
+
+        gatewayClient.userUpdate(updateUserDetailsRequest).zioValue shouldBe Status.NoContent
+
+        val userDetailsTableResponse = postgresSQLClient.database
+          .transactionOrDie(
+            UserDetailsQueries.getUserDetailsQuery(UserID.assume("test"))
+          )
+          .zioValue
+          .value
+
+        userDetailsTableResponse shouldBe updateUserDetailsRequest
+          .into[UserDetailsTable]
+          .withFieldConst(_.userID, UserID.assume("test"))
+          .withFieldConst(_.email, Email.assume("eliot.martel@gmail.com"))
+          .withFieldConst(_.createdAt, userDetailsTableResponse.createdAt)
+          .withFieldConst(_.updatedAt, userDetailsTableResponse.updatedAt)
+          .transform
+
+    }
+      //fail scenario when user doesnt exist???
   }
 }
 

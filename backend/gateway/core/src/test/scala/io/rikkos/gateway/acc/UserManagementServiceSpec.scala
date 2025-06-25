@@ -51,10 +51,33 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
       }
     }
+    "updateUser" should {
+      "update the user successfully" in new TestContext {
+        val authedUser               = arbitrarySample[AuthedUser]
+        val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
+        val userManagementService    = buildUserManagementService(authedUser)
+
+        userManagementService
+          .updateUser(updateUserDetailsRequest)
+          .zioEither
+          .isRight shouldBe true
+      }
+
+      /*"fail with BadRequest when request validation fail" in new TestContext {
+        val authedUser               = arbitrarySample[AuthedUser]
+        val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest].copy(firstName = Option.empty)
+        val userManagementService    = buildUserManagementService(authedUser)
+
+        userManagementService
+          .updateUser(updateUserDetailsRequest)
+          .zioError
+          .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest()
+      }*/
+    }
   }
 
   trait TestContext {
-    val userRepositoryRef: Ref[Set[UserDetails]] = Ref.make(Set.empty[UserDetails]).zioValue
+    val userRepositoryRef: Ref[Set[OnboardUserDetails]] = Ref.make(Set.empty[OnboardUserDetails]).zioValue
 
     def buildUserManagementService(
         authedUser: AuthedUser,

@@ -3,14 +3,20 @@ package io.rikkos.gateway.repository
 import _root_.doobie.*
 import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
 import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.{CreatedAt, ServiceError, UpdatedAt, UserDetails, UserDetailsTable}
+import io.rikkos.domain.*
 import io.rikkos.gateway.query.UserDetailsQueries
 import io.scalaland.chimney.dsl.*
 import org.postgresql.util.PSQLException
 import zio.*
 
 trait UserRepository {
-  def insertUserDetails(userDetails: UserDetails): IO[ServiceError.ConflictError.UserAlreadyExists, Unit]
+  def insertUserDetails(
+      userID: UserID,
+      email: Email,
+      onboardUserDetails: OnboardUserDetails,
+  ): IO[ServiceError.ConflictError.UserAlreadyExists, Unit]
+  def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit]
+
 }
 
 object UserRepository {
@@ -20,14 +26,20 @@ object UserRepository {
       timeProvider: TimeProvider,
   ) extends UserRepository {
 
-    override def insertUserDetails(userDetails: UserDetails): IO[ServiceError.ConflictError.UserAlreadyExists, Unit] =
+    override def insertUserDetails(
+        userID: UserID,
+        email: Email,
+        onboardUserDetails: OnboardUserDetails,
+    ): IO[ServiceError.ConflictError.UserAlreadyExists, Unit] =
       (for {
         instantNow <- timeProvider.instantNow
         _ <- database
           .transactionOrDie(
             UserDetailsQueries.insertUserDetailsQuery(
-              userDetails
+              onboardUserDetails
                 .into[UserDetailsTable]
+                .withFieldConst(_.userID, userID)
+                .withFieldConst(_.email, email)
                 .withFieldConst(_.createdAt, CreatedAt(instantNow))
                 .withFieldConst(_.updatedAt, UpdatedAt(instantNow))
                 .transform
@@ -35,8 +47,29 @@ object UserRepository {
           )
       } yield ()).orDie.catchSomeCause {
         case Cause.Die(DbException.Wrapped(e: PSQLException), _) if e.getSQLState == "23505" =>
-          ZIO.fail(ServiceError.ConflictError.UserAlreadyExists(userDetails.userID, userDetails.email))
+          ZIO.fail(ServiceError.ConflictError.UserAlreadyExists(userID, email))
       }
+
+    override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
+      (for {
+        instantNow <- timeProvider.instantNow
+        _ <- database
+          .transactionOrDie(
+            UserDetailsQueries.updateUserDetailsQuery(
+              userID,
+              updateUserDetails.firstName,
+              updateUserDetails.lastName,
+              updateUserDetails.countryCode,
+              updateUserDetails.phoneNumber,
+              updateUserDetails.addressLine1,
+              updateUserDetails.addressLine2,
+              updateUserDetails.city,
+              updateUserDetails.postalCode,
+              updateUserDetails.company,
+              UpdatedAt(instantNow),
+            )
+          )
+      } yield ()).orDie
   }
 
   def observed(repository: UserRepository): UserRepository = repository

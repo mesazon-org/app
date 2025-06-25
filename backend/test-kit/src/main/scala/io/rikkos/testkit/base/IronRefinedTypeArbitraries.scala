@@ -4,7 +4,12 @@ import io.github.iltotore.iron.*
 import io.rikkos.domain.{NonEmptyTrimmed, NonEmptyTrimmedLowerCase}
 import org.scalacheck.*
 
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+
 trait IronRefinedTypeArbitraries {
+
+  given Arbitrary[Instant :| Pure] = Arbitrary(Gen.const(Instant.now().truncatedTo(ChronoUnit.MILLIS)))
 
   given arbNonEmptyTrimmedLowerCase: Arbitrary[String :| NonEmptyTrimmedLowerCase] = Arbitrary {
     Gen

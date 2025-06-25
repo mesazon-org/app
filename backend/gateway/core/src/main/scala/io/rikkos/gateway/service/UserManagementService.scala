@@ -21,12 +21,15 @@ object UserManagementService {
         _                  <- ZIO.logDebug(s"Onboarding user with request: $request")
         authedUser         <- authorizationState.get()
         onboardUserDetails <- onboardUserDetailsRequestValidator.validate(request)
-        userDetails = onboardUserDetails
-          .into[UserDetails]
-          .withFieldConst(_.userID, authedUser.userID)
-          .withFieldConst(_.email, authedUser.email)
-          .transform
-        _ <- userRepository.insertUserDetails(userDetails)
+        _ <- userRepository.insertUserDetails(authedUser.userID, authedUser.email, onboardUserDetails)
+      } yield ()
+
+    override def updateUser(request: smithy.UpdateUserDetailsRequest): IO[ServiceError, Unit] =
+      for {
+        _                 <- ZIO.logDebug(s"Updating user with request: $request")
+        authedUser        <- authorizationState.get()
+        updateUserDetails <- request.validate[UpdateUserDetails]
+        _                 <- userRepository.updateUserDetails(authedUser.userID, updateUserDetails)
       } yield ()
   }
 
@@ -37,6 +40,10 @@ object UserManagementService {
       override def onboardUser(request: smithy.OnboardUserDetailsRequest): Task[Unit] =
         HttpErrorHandler
           .errorResponseHandler(service.onboardUser(request))
+
+      override def updateUser(request: smithy.UpdateUserDetailsRequest): Task[Unit] =
+        HttpErrorHandler
+          .errorResponseHandler(service.updateUser(request))
     }
 
   val live = ZLayer.fromFunction(UserManagementServiceImpl.apply) >>> ZLayer.fromFunction(observed)

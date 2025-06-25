@@ -24,10 +24,20 @@ final case class PostgreSQLTestClient(
      """.query[Boolean].unique
     }
 
+  private def truncateTableQuery(schema: String, table: String): TranzactIO[Unit] = {
+    val queryFragment = sql"""TRUNCATE TABLE """ ++ Fragment.const(s"$schema.$table CASCADE")
+    tzio {
+      queryFragment.update.run.map(_ => ())
+    }
+  }
+
   /** Check if the PostgreSQL database is ready for connections.
     */
   def checkIfTableExists(schema: String, table: String): Task[Boolean] =
     database.transactionOrDie(checkIfTableExistsQuery(schema, table))
+
+  def truncateTable(schema: String, table: String): Task[Unit] =
+    database.transactionOrDie(truncateTableQuery(schema, table))
 
   def executeQuery[A](query: ConnectionIO[A]): IO[DbException, A] = database.transactionOrDie(tzio(query))
 }

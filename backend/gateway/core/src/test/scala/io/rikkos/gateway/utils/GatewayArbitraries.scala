@@ -1,6 +1,6 @@
 package io.rikkos.gateway.utils
 
-import io.rikkos.domain.OnboardUserDetails
+import io.rikkos.domain.{OnboardUserDetails, UpdateUserDetails}
 import io.rikkos.gateway.smithy
 import io.rikkos.testkit.base.*
 import io.scalaland.chimney.dsl.*
@@ -12,5 +12,11 @@ trait GatewayArbitraries extends DomainArbitraries, IronRefinedTypeTransformer {
     Arbitrary(
       summon[Arbitrary[OnboardUserDetails]].arbitrary
         .map(_.transformInto[smithy.OnboardUserDetailsRequest])
+    )
+
+  given Arbitrary[smithy.UpdateUserDetailsRequest] =
+    Arbitrary(
+      summon[Arbitrary[UpdateUserDetails]].arbitrary
+        .map(_.transformInto[smithy.UpdateUserDetailsRequest])
     )
 }
