@@ -28,6 +28,8 @@ object RequestValidator {
         Company.either(request.company).toValidatedNec,
       ).mapN(OnboardUserDetails.apply)
 
+  def observed(): =
+
   extension [A](request: A) {
     def validate[B](using
         validator: RequestValidator[A, B],
