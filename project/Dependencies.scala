@@ -18,12 +18,12 @@ object Dependencies {
   lazy val testcontainersScalaV = "0.43.0"
   lazy val testcontainersV      = "1.21.3"
   lazy val ironV                = "3.0.2"
-  lazy val circeV               = "0.14.14"
   lazy val chimneyV             = "1.8.1"
   lazy val doobieV              = "1.0.0-RC9"
   lazy val postgresqlV          = "42.7.3"
   lazy val hikariCPV            = "6.3.0"
   lazy val doobieTranzactioV    = "5.4.0"
+  lazy val libphonenumberV      = "9.0.8"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -53,7 +53,6 @@ object Dependencies {
 
   // IRON
   val iron      = "io.github.iltotore" %% "iron"       % ironV
-  val ironCirce = "io.github.iltotore" %% "iron-circe" % ironV
 
   // Logging
   lazy val logback    = "ch.qos.logback" % "logback-classic" % logbackV
@@ -67,11 +66,6 @@ object Dependencies {
   lazy val testcontainersScalaPostgresql = "com.dimafeng" %% "testcontainers-scala-postgresql" % testcontainersScalaV
   lazy val testcontainersScalaScalatest  = "com.dimafeng" %% "testcontainers-scala-scalatest"  % testcontainersScalaV
 
-  // Circe
-  lazy val circeCore    = "io.circe" %% "circe-core"    % circeV
-  lazy val circeGeneric = "io.circe" %% "circe-generic" % circeV
-  lazy val circeParser  = "io.circe" %% "circe-parser"  % circeV
-
   // Chimney
   lazy val chimney = "io.scalaland" %% "chimney" % chimneyV
 
@@ -81,4 +75,7 @@ object Dependencies {
   lazy val doobiePostgres   = "org.tpolecat"         %% "doobie-postgres"   % doobieV
   lazy val doobieTranzactio = "io.github.gaelrenoux" %% "tranzactio-doobie" % doobieTranzactioV
   lazy val hikariCP         = "com.zaxxer"            % "HikariCP"          % hikariCPV
+
+  // Google
+  val libphonenumber = "com.googlecode.libphonenumber" % "libphonenumber" % libphonenumberV
 }

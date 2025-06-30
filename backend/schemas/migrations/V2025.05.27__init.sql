@@ -1,36 +1,48 @@
 CREATE TABLE users_details (
-    user_id TEXT PRIMARY KEY NOT NULL,
-    email TEXT NOT NULL UNIQUE,
+    user_id TEXT NOT NULL,
+    email TEXT NOT NULL,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
-    phone_region TEXT NOT NULL,
-    phone_national_number TEXT NOT NULL,
+    phone_number TEXT NOT NULL,
     address_line_1 TEXT NOT NULL,
     address_line_2 TEXT,
     city TEXT NOT NULL,
     postal_code TEXT NOT NULL,
     company TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL
+    updated_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY(user_id),
+    UNIQUE(email)
+);
+
+CREATE TABLE contacts (
+    contact_id TEXT NOT NULL,
+    phone_number TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY(contact_id),
+    UNIQUE(phone_number)
 );
 
 CREATE TABLE users_contacts (
-    contact_id TEXT PRIMARY KEY NOT NULL,
+    user_contact_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
+    contact_id TEXT NOT NULL,
     display_name TEXT NOT NULL,
     first_name TEXT NOT NULL,
     last_name TEXT,
     company TEXT,
     email TEXT,
-    phone_region TEXT NOT NULL,
-    phone_national_number TEXT NOT NULL,
     address_line_1 TEXT,
     address_line_2 TEXT,
     city TEXT,
     postal_code TEXT,
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
-    CONSTRAINT user_fk FOREIGN KEY(user_id) REFERENCES users_details(user_id)
+    PRIMARY KEY(user_contact_id),
+    CONSTRAINT user_details_fk FOREIGN KEY(user_id) REFERENCES users_details(user_id),
+    CONSTRAINT contact_fk FOREIGN KEY(contact_id) REFERENCES contacts(contact_id)
 );
 
 CREATE INDEX idx_users_contacts_user_id ON users_contacts(user_id);
+CREATE INDEX idx_users_contacts_contact_id ON contacts(contact_id);

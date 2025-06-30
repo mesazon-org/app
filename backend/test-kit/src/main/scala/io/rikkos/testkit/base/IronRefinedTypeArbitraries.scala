@@ -1,7 +1,7 @@
 package io.rikkos.testkit.base
 
 import io.github.iltotore.iron.*
-import io.rikkos.domain.{NonEmptyTrimmed, NonEmptyTrimmedLowerCase}
+import io.rikkos.domain.*
 import org.scalacheck.*
 
 import java.time.Instant

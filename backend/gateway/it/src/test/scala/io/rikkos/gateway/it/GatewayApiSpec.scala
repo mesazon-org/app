@@ -17,7 +17,7 @@ import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import zio.*
 import zio.interop.catz.*
 
-class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase with GatewayArbitraries {
+class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase with GatewayArbitraries with IronRefinedTypeTransformer {
 
   given Network[Task] = Network.forAsync[Task]
 
@@ -72,6 +72,7 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase with GatewayAr
 
         userDetailsTableResponse shouldBe onboardUserDetailsRequest
           .into[UserDetailsTable]
+          .withFieldConst(_.phoneNumber, onboardUserDetailsRequest.nationalNumber)
           .withFieldConst(_.userID, UserID.assume("test"))
           .withFieldConst(_.email, Email.assume("eliot.martel@gmail.com"))
           .withFieldConst(_.createdAt, userDetailsTableResponse.createdAt)

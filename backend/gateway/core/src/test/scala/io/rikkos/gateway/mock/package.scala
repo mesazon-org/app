@@ -1,10 +1,13 @@
 package io.rikkos.gateway.mock
 
+import cats.data.ValidatedNec
+import cats.syntax.all.*
 import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.*
-import io.rikkos.domain.ServiceError.ConflictError
+import io.rikkos.domain.ServiceError.BadRequestError.InvalidFieldError
+import io.rikkos.domain.{AuthedUser, PhoneNumber, UserDetails}
 import io.rikkos.gateway.auth.{AuthorizationService, AuthorizationState}
 import io.rikkos.gateway.repository.UserRepository
+import io.rikkos.gateway.validation.ServiceValidator.{DomainValidator, PhoneNumberParams}
 import org.http4s.Request
 import zio.*
 
@@ -42,6 +45,14 @@ def authorizationServiceMockLive(maybeError: Option[Throwable] = None): ULayer[A
     new AuthorizationService[Throwable] {
       override def auth(request: Request[Task]): Task[Unit] =
         maybeError.fold(ZIO.unit)(ZIO.fail(_))
+    }
+  )
+
+def phoneNumberValidatorMockLive(): ULayer[DomainValidator[PhoneNumberParams, PhoneNumber]] =
+  ZLayer.succeed(
+    new DomainValidator[PhoneNumberParams, PhoneNumber] {
+      override def validate(rawData: PhoneNumberParams): UIO[ValidatedNec[InvalidFieldError, PhoneNumber]] =
+        ZIO.succeed(PhoneNumber.assume(rawData.phoneNationalNumber).validNec)
     }
   )
 
