@@ -27,8 +27,12 @@ object ServiceError {
   ) extends ServiceError("ConflictError", message, underlying)
 
   object BadRequestError {
-    final case class RequestValidationError(errors: Seq[String])
-        extends BadRequestError(s"request validation error [${errors.mkString(", ")}]")
+    type InvalidFieldError = (fieldName: String, errorMessage: String)
+
+    final case class FormValidationError(invalidFields: Seq[InvalidFieldError])
+        extends BadRequestError(s"request validation error ${invalidFields.mkString("[", ",", "]")}") {
+      lazy val invalidFieldNames: Seq[String] = invalidFields.map(_.fieldName)
+    }
   }
 
   object UnauthorizedError {
