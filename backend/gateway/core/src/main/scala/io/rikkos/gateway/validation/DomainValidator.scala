@@ -33,8 +33,8 @@ object DomainValidator {
     (
       validateRequiredField("firstName", request.firstName, FirstName.either),
       validateRequiredField("lastName", request.lastName, LastName.either),
-      validateRequiredField("countryCode", request.countryCode, CountryCode.either),
-      validateRequiredField("phoneNumber", request.phoneNumber, PhoneNumber.either),
+      validateRequiredField("phoneRegion", request.phoneRegion, PhoneRegion.either),
+      validateRequiredField("phoneNationalNumber", request.phoneNationalNumber, PhoneNationalNumber.either),
       validateRequiredField("addressLine1", request.addressLine1, AddressLine1.either),
       validateOptionalField("addressLine1", request.addressLine2, AddressLine2.either),
       validateRequiredField("city", request.city, City.either),

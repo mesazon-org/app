@@ -3,8 +3,8 @@ package io.rikkos.domain
 final case class OnboardUserDetails(
     firstName: FirstName,
     lastName: LastName,
-    countryCode: CountryCode,
-    phoneNumber: PhoneNumber,
+    phoneRegion: PhoneRegion,
+    phoneNationalNumber: PhoneNationalNumber,
     addressLine1: AddressLine1,
     addressLine2: Option[AddressLine2],
     city: City,
