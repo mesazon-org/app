@@ -7,6 +7,7 @@ import io.rikkos.gateway.config.*
 import io.rikkos.gateway.middleware.*
 import io.rikkos.gateway.repository.*
 import io.rikkos.gateway.service.*
+import io.rikkos.gateway.validation.DomainValidator
 import org.slf4j.bridge.SLF4JBridgeHandler
 import zio.*
 import zio.config.typesafe.TypesafeConfigProvider
@@ -48,6 +49,9 @@ object Main extends ZIOAppDefault {
       // Config
       DatabaseConfig.live,
       GatewayServerConfig.live,
+
+      // Validators
+      DomainValidator.liveOnboardUserDetailsRequestValidator,
 
       // FiberRefs
       ZLayer
