@@ -26,9 +26,9 @@ structure OnboardUserDetailsRequest {
     @required
     lastName: String
     @required
-    countryCode: String
+    phoneRegion: String
     @required
-    phoneNumber: String
+    phoneNationalNumber: String
     @required
     addressLine1: String
     addressLine2: String
