@@ -42,6 +42,21 @@ object DomainValidator {
       validateRequiredField("company", request.company, Company.either),
     ).mapN(OnboardUserDetails.apply)
 
+  private def UpdateUserDetailsRequest(
+      request: smithy.UpdateUserDetailsRequest
+  ): ValidatedNec[InvalidFieldError, UpdateUserDetails] =
+    (
+      validateOptionalField("firstName", request.firstName, FirstName.either),
+      validateOptionalField("lastName", request.lastName, LastName.either),
+      validateOptionalField("phoneRegion", request.phoneRegion, PhoneRegion.either),
+      validateOptionalField("phoneNationalNumber", request.phoneNationalNumber, PhoneNationalNumber.either),
+      validateOptionalField("addressLine1", request.addressLine1, AddressLine1.either),
+      validateOptionalField("addressLine2", request.addressLine2, AddressLine2.either),
+      validateOptionalField("city", request.city, City.either),
+      validateOptionalField("postalCode", request.postalCode, PostalCode.either),
+      validateOptionalField("company", request.company, Company.either),
+    ).mapN(UpdateUserDetails.apply)
+
   private def observed[A, B](
       validator: A => ValidatedNec[InvalidFieldError, B]
   ): DomainValidator[A, B] = rawData =>
@@ -52,4 +67,7 @@ object DomainValidator {
 
   val liveOnboardUserDetailsRequestValidator =
     ZLayer.succeed(observed(onboardUserDetailsRequestValidator))
+
+  val liveUpdateUserDetailsRequestValidator =
+    ZLayer.succeed(observed(UpdateUserDetailsRequest))
 }

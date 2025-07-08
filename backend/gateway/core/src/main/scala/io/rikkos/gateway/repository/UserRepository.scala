@@ -15,8 +15,10 @@ trait UserRepository {
       email: Email,
       onboardUserDetails: OnboardUserDetails,
   ): IO[ServiceError.ConflictError.UserAlreadyExists, Unit]
-  def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit]
-
+  def updateUserDetails(
+      userID: UserID,
+      updateUserDetails: UpdateUserDetails,
+  ): UIO[Unit]
 }
 
 object UserRepository {
@@ -59,8 +61,8 @@ object UserRepository {
               userID,
               updateUserDetails.firstName,
               updateUserDetails.lastName,
-              updateUserDetails.countryCode,
-              updateUserDetails.phoneNumber,
+              updateUserDetails.phoneRegion,
+              updateUserDetails.phoneNationalNumber,
               updateUserDetails.addressLine1,
               updateUserDetails.addressLine2,
               updateUserDetails.city,

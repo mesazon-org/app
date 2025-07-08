@@ -1,8 +1,8 @@
 package io.rikkos.gateway.mock
 
 import io.rikkos.clock.TimeProvider
+import io.rikkos.domain.*
 import io.rikkos.domain.ServiceError.ConflictError
-import io.rikkos.domain.{AuthedUser, Email, OnboardUserDetails, UpdateUserDetails, UserID}
 import io.rikkos.gateway.auth.{AuthorizationService, AuthorizationState}
 import io.rikkos.gateway.repository.UserRepository
 import org.http4s.Request
@@ -25,7 +25,7 @@ def userRepositoryMockLive(
         maybeError.fold(userDetailsRef.set(Set(userDetails)))(ZIO.fail(_).orDie)
 
       override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
-        ZIO.unit
+        maybeError.fold(ZIO.unit)(ZIO.fail(_).orDie)
     }
   )
 

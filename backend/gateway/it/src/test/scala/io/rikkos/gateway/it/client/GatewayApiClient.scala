@@ -4,8 +4,7 @@ import cats.syntax.all.*
 import com.dimafeng.testcontainers.{DockerComposeContainer, ExposedService}
 import fs2.io.net.Network
 import io.rikkos.gateway.it.client.GatewayApiClient.*
-import io.rikkos.gateway.it.domain.OnboardUserDetailsRequest
-import io.rikkos.gateway.smithy.UpdateUserDetailsRequest
+import io.rikkos.gateway.it.domain.{OnboardUserDetailsRequest, UpdateUserDetailsRequest}
 import org.http4s.*
 import org.http4s.client.Client
 import org.http4s.ember.client.EmberClientBuilder
@@ -32,7 +31,9 @@ final case class GatewayApiClient(config: GatewayApiClientConfig, client: Client
       .map(_.status)
   }
 
-  def userUpdate(updateUserDetailsRequest: UpdateUserDetailsRequest)(using EntityDecoder[Task, UpdateUserDetailsRequest]): Task[Status] = {
+  def userUpdate(
+      updateUserDetailsRequest: UpdateUserDetailsRequest
+  )(using EntityEncoder[Task, UpdateUserDetailsRequest]): Task[Status] = {
     val request = Request[Task](Method.POST, serviceUri / "users" / "update")
       .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
       .withEntity(updateUserDetailsRequest)

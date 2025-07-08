@@ -53,8 +53,8 @@ structure OnboardUserDetailsRequest {
 structure UpdateUserDetailsRequest {
     firstName: String
     lastName: String
-    countryCode: String
-    phoneNumber: String
+    phoneRegion: String
+    phoneNationalNumber: String
     addressLine1: String
     addressLine2: String
     city: String

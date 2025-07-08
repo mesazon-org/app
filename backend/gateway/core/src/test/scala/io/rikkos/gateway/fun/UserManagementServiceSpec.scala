@@ -1,4 +1,4 @@
-package io.rikkos.gateway.acc
+package io.rikkos.gateway.fun
 
 import io.rikkos.domain.*
 import io.rikkos.gateway.mock.*
@@ -27,9 +27,10 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       }
 
       "fail with BadRequest when request validation fail" in new TestContext {
-        val authedUser                = arbitrarySample[AuthedUser]
-        val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest].copy(firstName = "")
-        val userManagementService     = buildUserManagementService(authedUser)
+        val authedUser = arbitrarySample[AuthedUser]
+        val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
+          .copy(firstName = "")
+        val userManagementService = buildUserManagementService(authedUser)
 
         userManagementService
           .onboardUser(onboardUserDetailsRequest)
@@ -63,16 +64,31 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .isRight shouldBe true
       }
 
-      /*"fail with BadRequest when request validation fail" in new TestContext {
-        val authedUser               = arbitrarySample[AuthedUser]
-        val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest].copy(firstName = Option.empty)
-        val userManagementService    = buildUserManagementService(authedUser)
+      "fail with BadRequest when request validation fail" in new TestContext {
+        val authedUser = arbitrarySample[AuthedUser]
+        val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
+          .copy(firstName = Some(""))
+        val userManagementService = buildUserManagementService(authedUser)
 
         userManagementService
           .updateUser(updateUserDetailsRequest)
           .zioError
           .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest()
-      }*/
+      }
+
+      "fail with InternalServerError when repository fail" in new TestContext {
+        val authedUser               = arbitrarySample[AuthedUser]
+        val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
+        val userManagementService = buildUserManagementService(
+          authedUser = authedUser,
+          userRepositoryMaybeError = Some(new RuntimeException("Repository error")),
+        )
+
+        userManagementService
+          .updateUser(updateUserDetailsRequest)
+          .zioError
+          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+      }
     }
   }
 
@@ -89,6 +105,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           userRepositoryMockLive(userRepositoryRef, userRepositoryMaybeError),
           authorizationStateMockLive(authedUser),
           DomainValidator.liveOnboardUserDetailsRequestValidator,
+          DomainValidator.liveUpdateUserDetailsRequestValidator,
         )
         .zioValue
   }

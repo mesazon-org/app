@@ -44,8 +44,8 @@ final case class PostgreSQLTestClient(
 
 object PostgreSQLTestClient {
   private lazy val defaultDatabase = "local_db"
-  private lazy val defaultUsername = "local_user"
-  private lazy val defaultPassword = "local_password"
+  private lazy val defaultUsername = "local_test_user"
+  private lazy val defaultPassword = "local_test_password"
 
   lazy val ServiceName     = "postgres"
   lazy val ServicePort     = 5432

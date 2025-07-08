@@ -110,7 +110,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
   )
 
 lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
-  .dependsOn(backendGatewayCore % Test)
+  .dependsOn(backendGatewayCore % "test->test")
   .dependsOn(backendTestKitModule % Test)
   .dependsOn(backendPostgreSQLTestModule % Test)
   .withDependencies(

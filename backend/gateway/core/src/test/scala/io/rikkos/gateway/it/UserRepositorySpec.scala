@@ -115,8 +115,8 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
         val updatedUserDetailsTable = usersDetailsTable.copy(
           firstName = updateUserDetails.firstName.getOrElse(usersDetailsTable.firstName),
           lastName = updateUserDetails.lastName.getOrElse(usersDetailsTable.lastName),
-          countryCode = updateUserDetails.countryCode.getOrElse(usersDetailsTable.countryCode),
-          phoneNumber = updateUserDetails.phoneNumber.getOrElse(usersDetailsTable.phoneNumber),
+          phoneRegion = updateUserDetails.phoneRegion.getOrElse(usersDetailsTable.phoneRegion),
+          phoneNationalNumber = updateUserDetails.phoneNationalNumber.getOrElse(usersDetailsTable.phoneNationalNumber),
           addressLine1 = updateUserDetails.addressLine1.getOrElse(usersDetailsTable.addressLine1),
           addressLine2 = updateUserDetails.addressLine2.orElse(usersDetailsTable.addressLine2),
           city = updateUserDetails.city.getOrElse(usersDetailsTable.city),
@@ -129,21 +129,22 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
           .zioValue shouldBe Some(updatedUserDetailsTable)
       }
 
-      "fail with UserNotExist when user doesn't exist" in withContext { (client: PostgreSQLTestClient) =>
-        val now               = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow          = Clock.fixed(now, ZoneOffset.UTC)
-        val updateUserDetails = arbitrarySample[UpdateUserDetails]
-        val userID            = arbitrarySample[UserID]
-        val userRepository = ZIO
-          .service[UserRepository]
-          .provide(UserRepository.live, ZLayer.succeed(client.database), timeProviderMockLive(clockNow))
-          .zioValue
+      "successfully update occurs on user that is not found, entry should remain empty" in withContext {
+        (client: PostgreSQLTestClient) =>
+          val now               = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val clockNow          = Clock.fixed(now, ZoneOffset.UTC)
+          val updateUserDetails = arbitrarySample[UpdateUserDetails]
+          val userID            = arbitrarySample[UserID]
+          val userRepository = ZIO
+            .service[UserRepository]
+            .provide(UserRepository.live, ZLayer.succeed(client.database), timeProviderMockLive(clockNow))
+            .zioValue
 
-        userRepository.updateUserDetails(userID, updateUserDetails).zioValue
+          userRepository.updateUserDetails(userID, updateUserDetails).zioValue
 
-        client.database
-          .transactionOrDie(UserDetailsQueries.getUserDetailsQuery(userID))
-          .zioValue shouldBe None
+          client.database
+            .transactionOrDie(UserDetailsQueries.getUserDetailsQuery(userID))
+            .zioValue shouldBe None
       }
     }
   }
