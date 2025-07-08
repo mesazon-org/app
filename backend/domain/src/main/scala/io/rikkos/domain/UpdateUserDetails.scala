@@ -10,4 +10,15 @@ final case class UpdateUserDetails(
     city: Option[City],
     postalCode: Option[PostalCode],
     company: Option[Company],
-)
+) {
+  def allEmpty: Boolean =
+    firstName.isEmpty &&
+      lastName.isEmpty &&
+      phoneRegion.isEmpty &&
+      phoneNationalNumber.isEmpty &&
+      addressLine1.isEmpty &&
+      addressLine2.isEmpty &&
+      city.isEmpty &&
+      postalCode.isEmpty &&
+      company.isEmpty
+}

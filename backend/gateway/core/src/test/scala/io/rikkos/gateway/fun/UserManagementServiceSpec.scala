@@ -52,6 +52,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
       }
     }
+
     "updateUser" should {
       "update the user successfully" in new TestContext {
         val authedUser               = arbitrarySample[AuthedUser]
@@ -69,6 +70,17 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
           .copy(firstName = Some(""))
         val userManagementService = buildUserManagementService(authedUser)
+
+        userManagementService
+          .updateUser(updateUserDetailsRequest)
+          .zioError
+          .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest()
+      }
+
+      "fail with BadRequest when request contains no updates" in new TestContext {
+        val authedUser               = arbitrarySample[AuthedUser]
+        val updateUserDetailsRequest = smithy.UpdateUserDetailsRequest()
+        val userManagementService    = buildUserManagementService(authedUser)
 
         userManagementService
           .updateUser(updateUserDetailsRequest)

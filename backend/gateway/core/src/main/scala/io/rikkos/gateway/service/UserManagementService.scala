@@ -1,6 +1,7 @@
 package io.rikkos.gateway.service
 
 import io.rikkos.domain.*
+import io.rikkos.domain.ServiceError.BadRequestError.NoEffect
 import io.rikkos.gateway.auth.AuthorizationState
 import io.rikkos.gateway.repository.UserRepository
 import io.rikkos.gateway.validation.DomainValidator
@@ -29,7 +30,10 @@ object UserManagementService {
         _                 <- ZIO.logDebug(s"Updating user with request: $request")
         authedUser        <- authorizationState.get()
         updateUserDetails <- updateUserDetailsRequestValidator.validate(request)
-        _                 <- userRepository.updateUserDetails(authedUser.userID, updateUserDetails)
+        _ <-
+          if (updateUserDetails.allEmpty) ZIO.fail(NoEffect(s"update user details contains no update $request"))
+          else ZIO.unit
+        _ <- userRepository.updateUserDetails(authedUser.userID, updateUserDetails)
       } yield ()
   }
 
