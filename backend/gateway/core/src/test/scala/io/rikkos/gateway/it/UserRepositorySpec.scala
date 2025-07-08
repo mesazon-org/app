@@ -122,6 +122,7 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
           city = updateUserDetails.city.getOrElse(usersDetailsTable.city),
           postalCode = updateUserDetails.postalCode.getOrElse(usersDetailsTable.postalCode),
           company = updateUserDetails.company.getOrElse(usersDetailsTable.company),
+          updatedAt = UpdatedAt(now),
         )
 
         client.database
