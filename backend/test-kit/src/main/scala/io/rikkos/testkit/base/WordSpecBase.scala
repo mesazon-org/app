@@ -17,7 +17,8 @@ open class WordSpecBase
     with Eventually
     with ScalaFutures
     with LoneElement
-    with BeforeAndAfterAll {
+    with BeforeAndAfterAll
+    with BeforeAndAfterEach {
 
   implicit override val patienceConfig: PatienceConfig = PatienceConfig(20.seconds, 1.second)
 

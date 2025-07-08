@@ -52,6 +52,7 @@ object Main extends ZIOAppDefault {
 
       // Validators
       DomainValidator.liveOnboardUserDetailsRequestValidator,
+      DomainValidator.liveUpdateUserDetailsRequestValidator,
 
       // FiberRefs
       ZLayer

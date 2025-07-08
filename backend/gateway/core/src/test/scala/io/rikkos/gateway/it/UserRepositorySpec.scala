@@ -18,7 +18,8 @@ import java.time.{Clock, Instant, ZoneOffset}
 
 class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerComposeBase {
 
-  override def dockerComposeFile: String            = "./src/test/resources/compose.yaml"
+  override def dockerComposeFile: String = "./src/test/resources/compose.yaml"
+
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 
   val schema           = "local_schema"
@@ -41,24 +42,35 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
     }
   }
 
+  override def beforeEach(): Unit = withContext { client =>
+    super.beforeEach()
+    eventually {
+      client.truncateTable(schema, userDetailsTable).zioValue
+    }
+  }
+
   "UserRepository" when {
     "insertUserDetails" should {
       "successfully insert user details" in withContext { (client: PostgreSQLTestClient) =>
-        val now         = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow    = Clock.fixed(now, ZoneOffset.UTC)
-        val userDetails = arbitrarySample[UserDetails]
+        val now                = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow           = Clock.fixed(now, ZoneOffset.UTC)
+        val onboardUserDetails = arbitrarySample[OnboardUserDetails]
+        val userID             = arbitrarySample[UserID]
+        val email              = arbitrarySample[Email]
         val userRepository = ZIO
           .service[UserRepository]
           .provide(UserRepository.live, ZLayer.succeed(client.database), timeProviderMockLive(clockNow))
           .zioValue
 
-        userRepository.insertUserDetails(userDetails).zioValue
+        userRepository.insertUserDetails(userID, email, onboardUserDetails).zioValue
 
         client.database
-          .transactionOrDie(UserDetailsQueries.getUserDetailsQuery(userDetails.userID))
+          .transactionOrDie(UserDetailsQueries.getUserDetailsQuery(userID))
           .zioValue shouldBe Some(
-          userDetails
+          onboardUserDetails
             .into[UserDetailsTable]
+            .withFieldConst(_.userID, userID)
+            .withFieldConst(_.email, email)
             .withFieldConst(_.createdAt, CreatedAt(now))
             .withFieldConst(_.updatedAt, UpdatedAt(now))
             .transform
@@ -66,19 +78,74 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
       }
 
       "fail with UserAlreadyExists when user already exist" in withContext { (client: PostgreSQLTestClient) =>
-        val userDetails = arbitrarySample[UserDetails]
+        val onboardUserDetails = arbitrarySample[OnboardUserDetails]
+        val userID             = arbitrarySample[UserID]
+        val email              = arbitrarySample[Email]
         val userRepository = ZIO
           .service[UserRepository]
           .provide(UserRepository.live, ZLayer.succeed(client.database), TimeProvider.liveSystemUTC)
           .zioValue
 
-        userRepository.insertUserDetails(userDetails).zioValue
+        userRepository.insertUserDetails(userID, email, onboardUserDetails).zioValue
 
         // Attempt to insert the same user again
-        userRepository.insertUserDetails(userDetails).zioError shouldBe ServiceError.ConflictError.UserAlreadyExists(
-          userDetails.userID,
-          userDetails.email,
+        userRepository.insertUserDetails(userID, email, onboardUserDetails).zioError shouldBe ServiceError.ConflictError
+          .UserAlreadyExists(
+            userID,
+            email,
+          )
+      }
+    }
+
+    "updateUserDetails" should {
+      "successfully update user details" in withContext { (client: PostgreSQLTestClient) =>
+        val usersDetailsTable = arbitrarySample[UserDetailsTable]
+        val now               = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow          = Clock.fixed(now, ZoneOffset.UTC)
+        val updateUserDetails = arbitrarySample[UpdateUserDetails]
+        val userRepository = ZIO
+          .service[UserRepository]
+          .provide(UserRepository.live, ZLayer.succeed(client.database), timeProviderMockLive(clockNow))
+          .zioValue
+
+        client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(usersDetailsTable)).zioValue
+
+        userRepository.updateUserDetails(usersDetailsTable.userID, updateUserDetails).zioValue
+
+        val updatedUserDetailsTable = usersDetailsTable.copy(
+          firstName = updateUserDetails.firstName.getOrElse(usersDetailsTable.firstName),
+          lastName = updateUserDetails.lastName.getOrElse(usersDetailsTable.lastName),
+          phoneRegion = updateUserDetails.phoneRegion.getOrElse(usersDetailsTable.phoneRegion),
+          phoneNationalNumber = updateUserDetails.phoneNationalNumber.getOrElse(usersDetailsTable.phoneNationalNumber),
+          addressLine1 = updateUserDetails.addressLine1.getOrElse(usersDetailsTable.addressLine1),
+          addressLine2 = updateUserDetails.addressLine2.orElse(usersDetailsTable.addressLine2),
+          city = updateUserDetails.city.getOrElse(usersDetailsTable.city),
+          postalCode = updateUserDetails.postalCode.getOrElse(usersDetailsTable.postalCode),
+          company = updateUserDetails.company.getOrElse(usersDetailsTable.company),
+          updatedAt = UpdatedAt(now),
         )
+
+        client.database
+          .transactionOrDie(UserDetailsQueries.getUserDetailsQuery(usersDetailsTable.userID))
+          .zioValue shouldBe Some(updatedUserDetailsTable)
+      }
+
+      "successfully update occurs on user that is not found, entry should remain empty" in withContext {
+        (client: PostgreSQLTestClient) =>
+          val now               = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val clockNow          = Clock.fixed(now, ZoneOffset.UTC)
+          val updateUserDetails = arbitrarySample[UpdateUserDetails]
+          val userID            = arbitrarySample[UserID]
+          val userRepository = ZIO
+            .service[UserRepository]
+            .provide(UserRepository.live, ZLayer.succeed(client.database), timeProviderMockLive(clockNow))
+            .zioValue
+
+          userRepository.updateUserDetails(userID, updateUserDetails).zioValue
+
+          client.database
+            .transactionOrDie(UserDetailsQueries.getUserDetailsQuery(userID))
+            .zioValue shouldBe None
       }
     }
   }

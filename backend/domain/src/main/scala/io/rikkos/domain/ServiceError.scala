@@ -29,10 +29,10 @@ object ServiceError {
   object BadRequestError {
     type InvalidFieldError = (fieldName: String, errorMessage: String)
 
+    final case class NoEffect(error: String) extends BadRequestError(s"request has no effect error: [$error]")
+
     final case class FormValidationError(invalidFields: Seq[InvalidFieldError])
-        extends BadRequestError(s"request validation error ${invalidFields.mkString("[", ",", "]")}") {
-      lazy val invalidFieldNames: Seq[String] = invalidFields.map(_.fieldName)
-    }
+        extends BadRequestError(s"request validation error ${invalidFields.mkString("[", ",", "]")}")
   }
 
   object UnauthorizedError {
