@@ -1,10 +1,9 @@
 package io.rikkos.gateway.service
 
 import io.rikkos.domain.*
-import io.rikkos.domain.ServiceError.BadRequestError.NoEffect
 import io.rikkos.gateway.auth.AuthorizationState
 import io.rikkos.gateway.repository.UserRepository
-import io.rikkos.gateway.validation.DomainValidator
+import io.rikkos.gateway.validation.ServiceValidator
 import io.rikkos.gateway.{smithy, HttpErrorHandler}
 import zio.*
 
@@ -13,9 +12,11 @@ object UserManagementService {
   final private case class UserManagementServiceImpl(
       userRepository: UserRepository,
       authorizationState: AuthorizationState,
-      onboardUserDetailsRequestValidator: DomainValidator[smithy.OnboardUserDetailsRequest, OnboardUserDetails],
-      updateUserDetailsRequestValidator: DomainValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails],
+      onboardUserDetailsRequestValidator: ServiceValidator[smithy.OnboardUserDetailsRequest, OnboardUserDetails],
+      updateUserDetailsRequestValidator: ServiceValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails],
   ) extends smithy.UserManagementService[[A] =>> IO[ServiceError, A]] {
+
+    lazy val emptyUpdateUserDetailsRequest = smithy.UpdateUserDetailsRequest()
 
     override def onboardUser(request: smithy.OnboardUserDetailsRequest): IO[ServiceError, Unit] =
       for {
@@ -27,13 +28,14 @@ object UserManagementService {
 
     override def updateUser(request: smithy.UpdateUserDetailsRequest): IO[ServiceError, Unit] =
       for {
-        _                 <- ZIO.logDebug(s"Updating user with request: $request")
+        _ <- ZIO.logDebug(s"Updating user with request: $request")
+        _ <-
+          if (emptyUpdateUserDetailsRequest == request)
+            ZIO.fail(ServiceError.BadRequestError.NoEffect(s"update user details contains no update $request"))
+          else ZIO.unit
         authedUser        <- authorizationState.get()
         updateUserDetails <- updateUserDetailsRequestValidator.validate(request)
-        _ <-
-          if (updateUserDetails.allEmpty) ZIO.fail(NoEffect(s"update user details contains no update $request"))
-          else ZIO.unit
-        _ <- userRepository.updateUserDetails(authedUser.userID, updateUserDetails)
+        _                 <- userRepository.updateUserDetails(authedUser.userID, updateUserDetails)
       } yield ()
   }
 

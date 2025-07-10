@@ -1,46 +1,100 @@
 package io.rikkos.gateway.unit
 
-import io.rikkos.domain.OnboardUserDetails
-import io.rikkos.domain.ServiceError.BadRequestError
-import io.rikkos.gateway.smithy
-import io.rikkos.gateway.utils.GatewayArbitraries
-import io.rikkos.gateway.validation.DomainValidator
-import io.rikkos.testkit.base.*
-import io.scalaland.chimney.dsl.*
-import zio.ZIO
+import cats.data.NonEmptyChain
+import cats.syntax.all.*
+import com.google.i18n.phonenumbers.PhoneNumberUtil
+import io.rikkos.domain.PhoneNumber
+import io.rikkos.gateway.config.PhoneNumberValidationConfig
+import io.rikkos.gateway.validation.ServiceValidator
+import io.rikkos.gateway.validation.ServiceValidator.{DomainValidator, PhoneNumberParams}
+import io.rikkos.testkit.base.ZWordSpecBase
+import zio.{ZIO, ZLayer}
 
-class DomainValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
+class DomainValidatorSpec extends ZWordSpecBase {
 
-  "DomaintValidator" when {
-    "onboardUserDetailsRequestValidator" should {
-      "return OnboardUserDetails when all fields are valid" in forAll { (onboardUserDetails: OnboardUserDetails) =>
-        val onboardUserDetailsRequest =
-          onboardUserDetails.transformInto[smithy.OnboardUserDetailsRequest]
+  val config          = PhoneNumberValidationConfig(supportedRegions = Set("CY", "GB"))
+  val phoneNumberUtil = PhoneNumberUtil.getInstance()
 
-        val validator = ZIO
-          .service[DomainValidator[smithy.OnboardUserDetailsRequest, OnboardUserDetails]]
-          .provide(DomainValidator.liveOnboardUserDetailsRequestValidator)
+  "DomainValidator" when {
+    "PhoneNumberValidator" should {
+      "return successful phone number when is valid and supported" in {
+        val phoneRegion         = "CY"
+        val phoneNationalNumber = "99135215"
+        val phoneNumberValidator = ZIO
+          .service[DomainValidator[PhoneNumberParams, PhoneNumber]]
+          .provide(ServiceValidator.phoneNumberValidatorLive, ZLayer.succeed(config), ZLayer.succeed(phoneNumberUtil))
           .zioValue
 
-        validator.validate(onboardUserDetailsRequest).zioValue shouldBe onboardUserDetails
+        phoneNumberValidator.validate(phoneRegion, phoneNationalNumber).zioValue shouldBe PhoneNumber
+          .assume(
+            "+35799135215"
+          )
+          .valid
       }
 
-      "return all invalid fields when 1 or more fail validation" in {
-        val onboardUserDetailsRequest =
-          arbitrarySample[smithy.OnboardUserDetailsRequest].copy(firstName = " ", lastName = "")
-
-        val validator = ZIO
-          .service[DomainValidator[smithy.OnboardUserDetailsRequest, OnboardUserDetails]]
-          .provide(DomainValidator.liveOnboardUserDetailsRequestValidator)
+      "return successful phone number when is valid and supported in E164 format" in {
+        val phoneRegion          = "GB"
+        val phoneNationalNumber1 = "07754737552"
+        val phoneNationalNumber2 = "7754737552"
+        val phoneNumberValidator = ZIO
+          .service[DomainValidator[PhoneNumberParams, PhoneNumber]]
+          .provide(ServiceValidator.phoneNumberValidatorLive, ZLayer.succeed(config), ZLayer.succeed(phoneNumberUtil))
           .zioValue
 
-        validator.validate(onboardUserDetailsRequest).zioError shouldBe
-          BadRequestError.FormValidationError(
-            Seq(
-              ("firstName", "Should not have leading or trailing whitespaces & Should have a minimum length of 1"),
-              ("lastName", "Should not have leading or trailing whitespaces & Should have a minimum length of 1"),
+        val expectedResult = PhoneNumber.assume("+447754737552")
+
+        phoneNumberValidator.validate(phoneRegion, phoneNationalNumber1).zioValue shouldBe expectedResult.valid
+        phoneNumberValidator.validate(phoneRegion, phoneNationalNumber2).zioValue shouldBe expectedResult.valid
+      }
+
+      "fail with invalid region and national number if region is not supported" in {
+        val phoneRegion         = "GA"
+        val phoneNationalNumber = "13123123"
+        val phoneNumberValidator = ZIO
+          .service[DomainValidator[PhoneNumberParams, PhoneNumber]]
+          .provide(ServiceValidator.phoneNumberValidatorLive, ZLayer.succeed(config), ZLayer.succeed(phoneNumberUtil))
+          .zioValue
+
+        phoneNumberValidator.validate(phoneRegion, phoneNationalNumber).zioValue shouldBe NonEmptyChain(
+          ("phoneRegion", "Phone region [GA] provided is not supported, supported regions [CY,GB]"),
+          ("phoneNationalNumber", "Phone national number could not be validated"),
+        ).invalid
+      }
+
+      "fail with parse failure when phone national number contains fewer numbers" in {
+        val phoneRegion         = "CY"
+        val phoneNationalNumber = "1"
+        val phoneNumberValidator = ZIO
+          .service[DomainValidator[PhoneNumberParams, PhoneNumber]]
+          .provide(ServiceValidator.phoneNumberValidatorLive, ZLayer.succeed(config), ZLayer.succeed(phoneNumberUtil))
+          .zioValue
+
+        phoneNumberValidator.validate(phoneRegion, phoneNationalNumber).zioValue shouldBe NonEmptyChain
+          .one(
+            (
+              "phoneNationalNumber",
+              "Phone national number [1] provided with region [CY] failed to parse, supported regions [CY,GB]",
             )
           )
+          .invalid
+      }
+
+      "fail with validation failure when phone national number is wrong" in {
+        val phoneRegion         = "CY"
+        val phoneNationalNumber = "93123123"
+        val phoneNumberValidator = ZIO
+          .service[DomainValidator[PhoneNumberParams, PhoneNumber]]
+          .provide(ServiceValidator.phoneNumberValidatorLive, ZLayer.succeed(config), ZLayer.succeed(phoneNumberUtil))
+          .zioValue
+
+        phoneNumberValidator.validate(phoneRegion, phoneNationalNumber).zioValue shouldBe NonEmptyChain
+          .one(
+            (
+              "phoneNationalNumber",
+              "Phone national number [93123123] raw [Country Code: 357 National Number: 93123123] provided with region [CY] failed to be validated, supported regions [CY,GB]",
+            )
+          )
+          .invalid
       }
     }
   }

@@ -107,6 +107,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.doobiePostgres,
     Dependencies.doobieTranzactio,
     Dependencies.hikariCP,
+    Dependencies.libphonenumber,
   )
 
 lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
@@ -114,12 +115,8 @@ lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
   .dependsOn(backendTestKitModule % Test)
   .dependsOn(backendPostgreSQLTestModule % Test)
   .withDependencies(
-    Dependencies.http4sEmberClient,
-    Dependencies.http4sCirce,
-    Dependencies.ironCirce,
-    Dependencies.circeCore,
-    Dependencies.circeGeneric,
-    Dependencies.circeParser,
+    Dependencies.http4sEmberClient % Test,
+    Dependencies.http4sCirce       % Test,
   )
   .settings(
     test := {

@@ -1,6 +1,6 @@
 package io.rikkos.gateway.utils
 
-import io.rikkos.domain.{OnboardUserDetails, UpdateUserDetails}
+import io.rikkos.domain.*
 import io.rikkos.gateway.smithy
 import io.rikkos.testkit.base.*
 import io.scalaland.chimney.dsl.*
@@ -8,15 +8,29 @@ import org.scalacheck.*
 
 trait GatewayArbitraries extends DomainArbitraries, IronRefinedTypeTransformer {
 
-  given Arbitrary[smithy.OnboardUserDetailsRequest] =
-    Arbitrary(
-      summon[Arbitrary[OnboardUserDetails]].arbitrary
-        .map(_.transformInto[smithy.OnboardUserDetailsRequest])
-    )
+  given Arbitrary[smithy.OnboardUserDetailsRequest] = Arbitrary {
+    for {
+      onboardUserDetails  <- Arbitrary.arbitrary[OnboardUserDetails]
+      phoneRegion         <- Gen.oneOf(Seq("CY"))
+      phoneNationalNumber <- Gen.const("99555555")
+      onboardUserDetailsRequest = onboardUserDetails
+        .into[smithy.OnboardUserDetailsRequest]
+        .withFieldConst(_.phoneRegion, phoneRegion)
+        .withFieldConst(_.phoneNationalNumber, phoneNationalNumber)
+        .transform
+    } yield onboardUserDetailsRequest
+  }
 
-  given Arbitrary[smithy.UpdateUserDetailsRequest] =
-    Arbitrary(
-      summon[Arbitrary[UpdateUserDetails]].arbitrary
-        .map(_.transformInto[smithy.UpdateUserDetailsRequest])
-    )
+  given Arbitrary[smithy.UpdateUserDetailsRequest] = Arbitrary {
+    for {
+      updateUserDetails   <- Arbitrary.arbitrary[UpdateUserDetails]
+      phoneRegion         <- Gen.option(Gen.oneOf(Seq("CY")))
+      phoneNationalNumber <- Gen.option(Gen.const("99555555"))
+      updateUserDetailsRequest = updateUserDetails
+        .into[smithy.UpdateUserDetailsRequest]
+        .withFieldConst(_.phoneRegion, phoneRegion)
+        .withFieldConst(_.phoneNationalNumber, phoneNationalNumber)
+        .transform
+    } yield updateUserDetailsRequest
+  }
 }

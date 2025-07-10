@@ -1,5 +1,6 @@
 package io.rikkos.gateway
 
+import com.google.i18n.phonenumbers.PhoneNumberUtil
 import io.rikkos.clock.TimeProvider
 import io.rikkos.domain.{AppName, AuthedUser}
 import io.rikkos.gateway.auth.*
@@ -7,7 +8,7 @@ import io.rikkos.gateway.config.*
 import io.rikkos.gateway.middleware.*
 import io.rikkos.gateway.repository.*
 import io.rikkos.gateway.service.*
-import io.rikkos.gateway.validation.DomainValidator
+import io.rikkos.gateway.validation.ServiceValidator
 import org.slf4j.bridge.SLF4JBridgeHandler
 import zio.*
 import zio.config.typesafe.TypesafeConfigProvider
@@ -49,10 +50,15 @@ object Main extends ZIOAppDefault {
       // Config
       DatabaseConfig.live,
       GatewayServerConfig.live,
+      PhoneNumberValidationConfig.live,
+
+      // Phone Number Util
+      ZLayer.succeed(PhoneNumberUtil.getInstance()),
 
       // Validators
-      DomainValidator.liveOnboardUserDetailsRequestValidator,
-      DomainValidator.liveUpdateUserDetailsRequestValidator,
+      ServiceValidator.phoneNumberValidatorLive,
+      ServiceValidator.onboardUserDetailsRequestValidatorLive,
+      ServiceValidator.updateUserDetailsRequestValidatorLive,
 
       // FiberRefs
       ZLayer

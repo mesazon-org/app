@@ -16,10 +16,9 @@ def deriveConfigLayer[A: {Tag, DeriveConfig}](
 ): ZLayer[AppName, Config.Error, A] =
   ZLayer {
     for {
-      s = path
       appName <- ZIO.service[AppName]
       derivedConfig  = deriveConfig[A]
-      modifiedConfig = derivedConfig.nested(appName, s).mapKey(toKebabCase)
+      modifiedConfig = derivedConfig.nested(appName, path).mapKey(toKebabCase)
       config <- TypesafeConfigProvider.fromResourcePath().load(modifiedConfig)
     } yield config
   }

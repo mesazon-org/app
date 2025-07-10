@@ -7,6 +7,11 @@ trait IronRefinedTypeTransformer {
 
   given [WrappedType](using
       mirror: RefinedType.Mirror[WrappedType]
-  ): Transformer[mirror.FinalType, mirror.BaseType] =
-    (value: mirror.FinalType) => value.asInstanceOf[mirror.BaseType]
+  ): Transformer[WrappedType, mirror.BaseType] =
+    (value: WrappedType) => value.asInstanceOf[mirror.BaseType]
+
+  given [WrappedType](using
+      mirror: RefinedType.Mirror[WrappedType]
+  ): Transformer[mirror.BaseType, WrappedType] =
+    (value: mirror.BaseType) => value.asInstanceOf[WrappedType]
 }

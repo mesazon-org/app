@@ -23,11 +23,8 @@ type FirstName = FirstName.T
 object LastName extends RefinedType[String, NonEmptyTrimmed]
 type LastName = LastName.T
 
-object PhoneRegion extends RefinedType[String, NonEmptyTrimmed]
-type PhoneRegion = PhoneRegion.T
-
-object PhoneNationalNumber extends RefinedType[String, NonEmptyTrimmed]
-type PhoneNationalNumber = PhoneNationalNumber.T
+object PhoneNumber extends RefinedType[String, NonEmptyTrimmed]
+type PhoneNumber = PhoneNumber.T
 
 object AddressLine1 extends RefinedType[String, NonEmptyTrimmed]
 type AddressLine1 = AddressLine1.T
