@@ -31,6 +31,7 @@ class DomainValidatorSpec extends ZWordSpecBase {
           )
           .valid
       }
+
       "return successful phone number when is valid and supported in E164 format" in {
         val phoneRegion          = "GB"
         val phoneNationalNumber1 = "07754737552"
@@ -45,7 +46,8 @@ class DomainValidatorSpec extends ZWordSpecBase {
         phoneNumberValidator.validate(phoneRegion, phoneNationalNumber1).zioValue shouldBe expectedResult.valid
         phoneNumberValidator.validate(phoneRegion, phoneNationalNumber2).zioValue shouldBe expectedResult.valid
       }
-      "fail with invalid region if region is not supported" in {
+
+      "fail with invalid region and national number if region is not supported" in {
         val phoneRegion         = "GA"
         val phoneNationalNumber = "13123123"
         val phoneNumberValidator = ZIO
@@ -53,10 +55,12 @@ class DomainValidatorSpec extends ZWordSpecBase {
           .provide(ServiceValidator.phoneNumberValidatorLive, ZLayer.succeed(config), ZLayer.succeed(phoneNumberUtil))
           .zioValue
 
-        phoneNumberValidator.validate(phoneRegion, phoneNationalNumber).zioValue shouldBe NonEmptyChain
-          .one(("phoneRegion", "Phone region [GA] provided is not supported, supported regions [CY,GB]"))
-          .invalid
+        phoneNumberValidator.validate(phoneRegion, phoneNationalNumber).zioValue shouldBe NonEmptyChain(
+          ("phoneRegion", "Phone region [GA] provided is not supported, supported regions [CY,GB]"),
+          ("phoneNationalNumber", "Phone national number could not be validated"),
+        ).invalid
       }
+
       "fail with parse failure when phone national number contains fewer numbers" in {
         val phoneRegion         = "CY"
         val phoneNationalNumber = "1"
@@ -74,6 +78,7 @@ class DomainValidatorSpec extends ZWordSpecBase {
           )
           .invalid
       }
+
       "fail with validation failure when phone national number is wrong" in {
         val phoneRegion         = "CY"
         val phoneNationalNumber = "93123123"

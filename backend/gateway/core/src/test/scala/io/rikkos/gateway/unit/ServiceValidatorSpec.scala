@@ -32,7 +32,7 @@ class ServiceValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
           .zioValue
 
         validator.validate(onboardUserDetailsRequest).zioValue shouldBe onboardUserDetails.copy(phoneNumber =
-          PhoneNumber(phoneNationalNumber)
+          PhoneNumber.assume(phoneNationalNumber)
         )
       }
 
@@ -74,6 +74,81 @@ class ServiceValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         validator
           .validate(onboardUserDetailsRequest)
+          .zioError
+          .asInstanceOf[BadRequestError.FormValidationError]
+          .invalidFields
+          .map(_.fieldName) shouldBe Seq(
+          "firstName",
+          "lastName",
+          "addressLine1",
+          "addressLine2",
+          "city",
+          "postalCode",
+          "company",
+        )
+      }
+    }
+
+    "updateUserDetailsRequestValidator" should {
+      "return UpdateUserDetails when all fields are valid" in {
+        val updateUserDetails   = arbitrarySample[UpdateUserDetails]
+        val phoneRegion         = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
+        val phoneNationalNumber = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
+        val updateUserDetailsRequest =
+          updateUserDetails
+            .into[smithy.UpdateUserDetailsRequest]
+            .withFieldConst(_.phoneRegion, Some(phoneRegion))
+            .withFieldConst(_.phoneNationalNumber, Some(phoneNationalNumber))
+            .transform
+
+        val validator = ZIO
+          .service[ServiceValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails]]
+          .provide(ServiceValidator.updateUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
+          .zioValue
+
+        validator.validate(updateUserDetailsRequest).zioValue shouldBe updateUserDetails.copy(phoneNumber =
+          Some(PhoneNumber.assume(phoneNationalNumber))
+        )
+      }
+
+      "return all invalid fields when 1 or more fail validation" in {
+        val updateUserDetailsRequest =
+          arbitrarySample[smithy.UpdateUserDetailsRequest].copy(firstName = Some(" "), lastName = Some(""))
+
+        val validator = ZIO
+          .service[ServiceValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails]]
+          .provide(ServiceValidator.updateUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
+          .zioValue
+
+        validator.validate(updateUserDetailsRequest).zioError shouldBe
+          BadRequestError.FormValidationError(
+            Seq(
+              ("firstName", "Should not have leading or trailing whitespaces & Should have a minimum length of 1"),
+              ("lastName", "Should not have leading or trailing whitespaces & Should have a minimum length of 1"),
+            )
+          )
+      }
+
+      "return all invalid fields when all fail validation" in {
+        val updateUserDetailsRequest = smithy.UpdateUserDetailsRequest(
+          firstName = Some(""),
+          lastName = Some(""),
+          phoneRegion = Some(""),
+          phoneNationalNumber = Some(""),
+          addressLine1 = Some(""),
+          city = Some(""),
+          postalCode = Some(""),
+          company = Some(""),
+          addressLine2 = Some(""),
+        )
+
+        val validator = ZIO
+          .service[ServiceValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails]]
+          .provide(ServiceValidator.updateUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
+          .zioValue
+
+        validator
+          .validate(updateUserDetailsRequest)
           .zioError
           .asInstanceOf[BadRequestError.FormValidationError]
           .invalidFields

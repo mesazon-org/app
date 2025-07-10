@@ -52,7 +52,7 @@ object Dependencies {
   lazy val pureconfigCatsEffect = "com.github.pureconfig" %% "pureconfig-cats-effect" % pureconfigV
 
   // IRON
-  val iron      = "io.github.iltotore" %% "iron"       % ironV
+  val iron = "io.github.iltotore" %% "iron" % ironV
 
   // Logging
   lazy val logback    = "ch.qos.logback" % "logback-classic" % logbackV

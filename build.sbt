@@ -116,7 +116,7 @@ lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
   .dependsOn(backendPostgreSQLTestModule % Test)
   .withDependencies(
     Dependencies.http4sEmberClient % Test,
-    Dependencies.http4sCirce % Test,
+    Dependencies.http4sCirce       % Test,
   )
   .settings(
     test := {

@@ -5,19 +5,23 @@ import io.rikkos.domain.*
 import io.rikkos.gateway.it.GatewayApiSpec.Context
 import io.rikkos.gateway.it.client.GatewayApiClient
 import io.rikkos.gateway.it.client.GatewayApiClient.GatewayApiClientConfig
-import io.rikkos.gateway.it.domain.{OnboardUserDetailsRequest, UpdateUserDetailsRequest}
+import io.rikkos.gateway.it.codec.given
 import io.rikkos.gateway.query.UserDetailsQueries
+import io.rikkos.gateway.smithy
 import io.rikkos.gateway.utils.GatewayArbitraries
 import io.rikkos.test.postgresql.PostgreSQLTestClient
 import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.rikkos.testkit.base.*
 import io.scalaland.chimney.dsl.*
 import org.http4s.Status
-import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import zio.*
 import zio.interop.catz.*
 
-class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase with GatewayArbitraries with IronRefinedTypeTransformer {
+class GatewayApiSpec
+    extends ZWordSpecBase
+    with DockerComposeBase
+    with GatewayArbitraries
+    with IronRefinedTypeTransformer {
 
   given Network[Task] = Network.forAsync[Task]
 
@@ -59,7 +63,7 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase with GatewayAr
   "GatewayApi" when {
     "/users/onboard" should {
       "return successfully when onboarding user" in withContext { case Context(gatewayClient, postgresSQLClient) =>
-        val onboardUserDetailsRequest = arbitrarySample[OnboardUserDetailsRequest]
+        val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
 
         gatewayClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
 
@@ -72,7 +76,7 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase with GatewayAr
 
         userDetailsTableResponse shouldBe onboardUserDetailsRequest
           .into[UserDetailsTable]
-          .withFieldConst(_.phoneNumber, onboardUserDetailsRequest.nationalNumber)
+          .withFieldConst(_.phoneNumber, PhoneNumber.assume("+35799555555"))
           .withFieldConst(_.userID, UserID.assume("test"))
           .withFieldConst(_.email, Email.assume("eliot.martel@gmail.com"))
           .withFieldConst(_.createdAt, userDetailsTableResponse.createdAt)
@@ -81,7 +85,7 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase with GatewayAr
       }
 
       "fail with BadRequest when onboarding user details are invalid" in withContext { case Context(gatewayClient, _) =>
-        val onboardUserDetailsRequest = arbitrarySample[OnboardUserDetailsRequest]
+        val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
           .copy(firstName = FirstName.assume(""))
 
         gatewayClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.BadRequest
@@ -89,7 +93,7 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase with GatewayAr
 
       "fail with Conflict when onboarding user details insert user twice" in withContext {
         case Context(gatewayClient, _) =>
-          val onboardUserDetailsRequest = arbitrarySample[OnboardUserDetailsRequest]
+          val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
 
           gatewayClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
 
@@ -99,18 +103,13 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase with GatewayAr
 
     "/users/update" should {
       "return successfully when update user" in withContext { case Context(gatewayClient, postgresSQLClient) =>
-        val onboardUserDetailsRequest = arbitrarySample[OnboardUserDetailsRequest]
-        val updateUserDetailsRequest  = arbitrarySample[UpdateUserDetailsRequest]
+        val userDetailsTable = arbitrarySample[UserDetailsTable]
+          .copy(userID = UserID.assume("test"), email = Email.assume("eliot.martel@gmail.com"))
+        val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
 
-        // TODO: update when tokens contain userID and email generated from each test
-        gatewayClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
-
-        val oldUserDetailsTable = postgresSQLClient.database
-          .transactionOrDie(
-            UserDetailsQueries.getUserDetailsQuery(UserID.assume("test"))
-          )
+        postgresSQLClient.database
+          .transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable))
           .zioValue
-          .value
 
         gatewayClient.userUpdate(updateUserDetailsRequest).zioValue shouldBe Status.NoContent
 
@@ -121,17 +120,17 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase with GatewayAr
           .zioValue
           .value
 
-        val expectedUserDetailsTable = oldUserDetailsTable.copy(
-          firstName = updateUserDetailsRequest.firstName.getOrElse(oldUserDetailsTable.firstName),
-          lastName = updateUserDetailsRequest.lastName.getOrElse(oldUserDetailsTable.lastName),
-          phoneRegion = updateUserDetailsRequest.phoneRegion.getOrElse(oldUserDetailsTable.phoneRegion),
-          phoneNationalNumber =
-            updateUserDetailsRequest.phoneNationalNumber.getOrElse(oldUserDetailsTable.phoneNationalNumber),
-          addressLine1 = updateUserDetailsRequest.addressLine1.getOrElse(oldUserDetailsTable.addressLine1),
-          addressLine2 = updateUserDetailsRequest.addressLine2.orElse(oldUserDetailsTable.addressLine2),
-          city = updateUserDetailsRequest.city.getOrElse(oldUserDetailsTable.city),
-          postalCode = updateUserDetailsRequest.postalCode.getOrElse(oldUserDetailsTable.postalCode),
-          company = updateUserDetailsRequest.company.getOrElse(oldUserDetailsTable.company),
+        val expectedUserDetailsTable = userDetailsTable.copy(
+          firstName = FirstName.assumeAll(updateUserDetailsRequest.firstName).getOrElse(userDetailsTable.firstName),
+          lastName = LastName.assumeAll(updateUserDetailsRequest.lastName).getOrElse(userDetailsTable.lastName),
+          phoneNumber = PhoneNumber.assume("+35799555555"),
+          addressLine1 =
+            AddressLine1.assumeAll(updateUserDetailsRequest.addressLine1).getOrElse(userDetailsTable.addressLine1),
+          addressLine2 =
+            AddressLine2.assumeAll(updateUserDetailsRequest.addressLine2).orElse(userDetailsTable.addressLine2),
+          city = City.assumeAll(updateUserDetailsRequest.city).getOrElse(userDetailsTable.city),
+          postalCode = PostalCode.assumeAll(updateUserDetailsRequest.postalCode).getOrElse(userDetailsTable.postalCode),
+          company = Company.assumeAll(updateUserDetailsRequest.company).getOrElse(userDetailsTable.company),
           updatedAt = updatedUserDetailsTable.updatedAt, // This should be updated to the current time
         )
 
@@ -139,7 +138,7 @@ class GatewayApiSpec extends ZWordSpecBase with DockerComposeBase with GatewayAr
       }
 
       "fail with BadRequest when update user details are invalid" in withContext { case Context(gatewayClient, _) =>
-        val updateUserDetailsRequest = arbitrarySample[UpdateUserDetailsRequest]
+        val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
           .copy(firstName = Some(FirstName.assume("")))
 
         gatewayClient.userUpdate(updateUserDetailsRequest).zioValue shouldBe Status.BadRequest

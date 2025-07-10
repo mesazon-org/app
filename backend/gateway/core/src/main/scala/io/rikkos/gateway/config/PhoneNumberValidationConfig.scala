@@ -24,7 +24,7 @@ object PhoneNumberValidationConfig {
           ZIO.fail(
             Config.Error.Unsupported(
               path = Chunk("validation", "supported-regions"),
-              s"Config pass unsupported regions ${unsupportedRegions.mkString("[", ",", "]")}",
+              s"Config pass unsupported regions ${unsupportedRegions.mkString("[", ", ", "]")}",
             )
           )
     } yield config)
