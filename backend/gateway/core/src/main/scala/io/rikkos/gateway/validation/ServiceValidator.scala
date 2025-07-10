@@ -17,7 +17,7 @@ trait ServiceValidator[A, B] {
 
 object ServiceValidator {
 
-  private[gateway] type PhoneNumberParams = (phoneRegion: String, phoneNationalNumber: String)
+  type PhoneNumberParams = (phoneRegion: String, phoneNationalNumber: String)
 
   private inline val phoneRegionFieldName         = "phoneRegion"
   private inline val phoneNationalNumberFieldName = "phoneNationalNumber"
@@ -48,7 +48,7 @@ object ServiceValidator {
     value.traverse(constructor).left.map(errorMessage => (fieldName, errorMessage)).toValidatedNec
 
   // format: off
-  private[validation] def phoneNumberValidator(
+  private def phoneNumberValidator(
       config: PhoneNumberValidationConfig,
       phoneNumberUtil: PhoneNumberUtil,
   ): DomainValidator[PhoneNumberParams, PhoneNumber] = {
@@ -89,7 +89,7 @@ object ServiceValidator {
   }
   // format: on
 
-  private[validation] def onboardUserDetailsRequestValidator(
+  private def onboardUserDetailsRequestValidator(
       phoneNumberValidator: DomainValidator[PhoneNumberParams, PhoneNumber]
   ): DomainValidator[smithy.OnboardUserDetailsRequest, OnboardUserDetails] = { request =>
     phoneNumberValidator
@@ -108,7 +108,7 @@ object ServiceValidator {
       )
   }
 
-  private[validation] def updateUserDetailsRequestValidator(
+  private def updateUserDetailsRequestValidator(
       phoneNumberValidator: DomainValidator[PhoneNumberParams, PhoneNumber]
   ): DomainValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails] = { request =>
     for {
