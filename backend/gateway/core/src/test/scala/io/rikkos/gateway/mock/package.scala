@@ -3,11 +3,11 @@ package io.rikkos.gateway.mock
 import cats.data.ValidatedNec
 import cats.syntax.all.*
 import io.rikkos.clock.TimeProvider
+import io.rikkos.domain.*
 import io.rikkos.domain.ServiceError.BadRequestError.InvalidFieldError
-import io.rikkos.domain.{AuthedUser, PhoneNumber, UserDetails}
-import io.rikkos.gateway.auth.{AuthorizationService, AuthorizationState}
+import io.rikkos.gateway.auth.*
 import io.rikkos.gateway.repository.UserRepository
-import io.rikkos.gateway.validation.ServiceValidator.{DomainValidator, PhoneNumberParams}
+import io.rikkos.gateway.validation.ServiceValidator.*
 import org.http4s.Request
 import zio.*
 
@@ -24,7 +24,7 @@ def userRepositoryMockLive(
           userID: UserID,
           email: Email,
           userDetails: OnboardUserDetails,
-      ): IO[ConflictError.UserAlreadyExists, Unit] =
+      ): IO[ServiceError.ConflictError.UserAlreadyExists, Unit] =
         maybeError.fold(userDetailsRef.set(Set(userDetails)))(ZIO.fail(_).orDie)
 
       override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =

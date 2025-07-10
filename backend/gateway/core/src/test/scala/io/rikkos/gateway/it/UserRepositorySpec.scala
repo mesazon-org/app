@@ -115,8 +115,7 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
         val updatedUserDetailsTable = usersDetailsTable.copy(
           firstName = updateUserDetails.firstName.getOrElse(usersDetailsTable.firstName),
           lastName = updateUserDetails.lastName.getOrElse(usersDetailsTable.lastName),
-          phoneRegion = updateUserDetails.phoneRegion.getOrElse(usersDetailsTable.phoneRegion),
-          phoneNationalNumber = updateUserDetails.phoneNationalNumber.getOrElse(usersDetailsTable.phoneNationalNumber),
+          phoneNumber = updateUserDetails.phoneNumber.getOrElse(usersDetailsTable.phoneNumber),
           addressLine1 = updateUserDetails.addressLine1.getOrElse(usersDetailsTable.addressLine1),
           addressLine2 = updateUserDetails.addressLine2.orElse(usersDetailsTable.addressLine2),
           city = updateUserDetails.city.getOrElse(usersDetailsTable.city),

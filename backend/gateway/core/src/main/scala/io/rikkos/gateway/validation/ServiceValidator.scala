@@ -9,6 +9,7 @@ import io.rikkos.domain.ServiceError.BadRequestError.InvalidFieldError
 import io.rikkos.gateway.config.PhoneNumberValidationConfig
 import io.rikkos.gateway.smithy
 import zio.*
+import zio.interop.catz.*
 
 trait ServiceValidator[A, B] {
   def validate(rawData: A): IO[ServiceError.BadRequestError, B]
@@ -90,6 +91,27 @@ object ServiceValidator {
       )
   }
 
+  private[validation] def updateUserDetailsRequestValidator(
+      phoneNumberValidator: DomainValidator[PhoneNumberParams, PhoneNumber]
+  ): DomainValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails] = { request =>
+    for {
+      maybeValidatedPhoneNumber <-
+        (request.phoneRegion zip request.phoneNationalNumber).traverse(phoneNumberValidator.validate)
+      validatedPhoneNumber = maybeValidatedPhoneNumber
+        .fold(Option.empty[PhoneNumber].validNec[InvalidFieldError])(_.map(Some(_)))
+      validatedRequest = (
+        validateOptionalField(firstNameFieldName, request.firstName, FirstName.either),
+        validateOptionalField(lastNameFieldName, request.lastName, LastName.either),
+        validatedPhoneNumber,
+        validateOptionalField(addressLine1FieldName, request.addressLine1, AddressLine1.either),
+        validateOptionalField(addressLine2FieldName, request.addressLine2, AddressLine2.either),
+        validateOptionalField(cityFieldName, request.city, City.either),
+        validateOptionalField(postalCodeFieldName, request.postalCode, PostalCode.either),
+        validateOptionalField(companyFieldName, request.company, Company.either),
+      ).mapN(UpdateUserDetails.apply)
+    } yield validatedRequest
+  }
+
   private def toServiceValidator[A, B](
       domainValidator: DomainValidator[A, B]
   ): ServiceValidator[A, B] = rawData =>
@@ -103,4 +125,7 @@ object ServiceValidator {
 
   val onboardUserDetailsRequestValidatorLive =
     ZLayer.fromFunction(onboardUserDetailsRequestValidator andThen toServiceValidator)
+
+  val updateUserDetailsRequestValidatorLive =
+    ZLayer.fromFunction(updateUserDetailsRequestValidator andThen toServiceValidator)
 }

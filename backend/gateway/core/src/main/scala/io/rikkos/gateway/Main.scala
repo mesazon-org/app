@@ -58,6 +58,7 @@ object Main extends ZIOAppDefault {
       // Validators
       ServiceValidator.phoneNumberValidatorLive,
       ServiceValidator.onboardUserDetailsRequestValidatorLive,
+      ServiceValidator.updateUserDetailsRequestValidatorLive,
 
       // FiberRefs
       ZLayer
