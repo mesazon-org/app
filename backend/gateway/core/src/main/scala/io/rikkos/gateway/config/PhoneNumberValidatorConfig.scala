@@ -6,16 +6,16 @@ import zio.Config.Error
 
 import scala.jdk.CollectionConverters.SetHasAsScala
 
-final case class PhoneNumberValidationConfig(
+final case class PhoneNumberValidatorConfig(
     supportedRegions: Set[String]
 )
 
-object PhoneNumberValidationConfig {
+object PhoneNumberValidatorConfig {
 
   private[gateway] val supportedRegionsConfig
-      : ZLayer[PhoneNumberUtil & PhoneNumberValidationConfig, Error.Unsupported, PhoneNumberValidationConfig] =
+      : ZLayer[PhoneNumberUtil & PhoneNumberValidatorConfig, Error.Unsupported, PhoneNumberValidatorConfig] =
     ZLayer(for {
-      config          <- ZIO.service[PhoneNumberValidationConfig]
+      config          <- ZIO.service[PhoneNumberValidatorConfig]
       phoneNumberUtil <- ZIO.service[PhoneNumberUtil]
       unsupportedRegions = config.supportedRegions.diff(phoneNumberUtil.getSupportedRegions.asScala.toSet)
       _ <-
@@ -29,5 +29,5 @@ object PhoneNumberValidationConfig {
           )
     } yield config)
 
-  val live = deriveConfigLayer[PhoneNumberValidationConfig]("validation") >>> supportedRegionsConfig
+  val live = deriveConfigLayer[PhoneNumberValidatorConfig]("validation") >>> supportedRegionsConfig
 }

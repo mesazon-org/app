@@ -15,21 +15,12 @@ CREATE TABLE users_details (
     UNIQUE(email)
 );
 
-CREATE TABLE contacts (
-    contact_id TEXT NOT NULL,
-    phone_number TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL,
-    PRIMARY KEY(contact_id),
-    UNIQUE(phone_number)
-);
-
 CREATE TABLE users_contacts (
     user_contact_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
-    contact_id TEXT NOT NULL,
     display_name TEXT NOT NULL,
     first_name TEXT NOT NULL,
+    phone_number TEXT NOT NULL,
     last_name TEXT,
     company TEXT,
     email TEXT,
@@ -40,9 +31,7 @@ CREATE TABLE users_contacts (
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
     PRIMARY KEY(user_contact_id),
-    CONSTRAINT user_details_fk FOREIGN KEY(user_id) REFERENCES users_details(user_id),
-    CONSTRAINT contact_fk FOREIGN KEY(contact_id) REFERENCES contacts(contact_id)
+    CONSTRAINT user_details_fk FOREIGN KEY(user_id) REFERENCES users_details(user_id)
 );
 
 CREATE INDEX idx_users_contacts_user_id ON users_contacts(user_id);
-CREATE INDEX idx_users_contacts_contact_id ON contacts(contact_id);

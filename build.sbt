@@ -25,6 +25,9 @@ def createBackendModule(root: String)(subModule: Option[String]): Project = {
   val directory  = subModule.map(sm => s"$root/$sm").getOrElse(root)
   Project(moduleName, file(s"$backendDirName/$directory"))
     .settings(Settings.ScalaCompiler)
+    .settings(
+      libraryDependencies += compilerPlugin("org.polyvariant" % "better-tostring" % "0.3.17" cross CrossVersion.full)
+    )
 }
 
 lazy val root = Project("app", file("."))
@@ -33,12 +36,22 @@ lazy val root = Project("app", file("."))
 
 // Backend modules
 lazy val backendModule = Project("backend", file("backend"))
-  .aggregate(backendDomainModule, backendTestKitModule, backendGatewayRoot)
+  .aggregate(
+    backendDomainModule,
+    backendClockModule,
+    backendGeneratorModule,
+    backendTestKitModule,
+    backendPostgreSQLTestModule,
+    backendGatewayRoot,
+  )
 
 lazy val backendDomainModule = createBackendModule("domain")(None)
   .withDependencies(Dependencies.iron)
 
 lazy val backendClockModule = createBackendModule("clock")(None)
+  .withDependencies(Dependencies.zio)
+
+lazy val backendGeneratorModule = createBackendModule("generator")(None)
   .withDependencies(Dependencies.zio)
 
 lazy val backendTestKitModule = createBackendModule("test-kit")(None)
@@ -82,6 +95,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
   .enablePlugins(DockerPlugin)
   .dependsOn(backendDomainModule)
   .dependsOn(backendClockModule)
+  .dependsOn(backendGeneratorModule)
   .dependsOn(backendTestKitModule % Test)
   .dependsOn(backendPostgreSQLTestModule % Test)
   .settings(Docker.settings(docker, Compile))

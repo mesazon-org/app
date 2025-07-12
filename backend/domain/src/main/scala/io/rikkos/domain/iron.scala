@@ -11,8 +11,11 @@ type NonEmptyTrimmed          = Trimmed & MinLength[1]
 object AppName extends RefinedType[String, Pure]
 type AppName = AppName.T
 
-object UserID extends RefinedType[String, NonEmptyTrimmedLowerCase]
+object UserID extends RefinedType[String, NonEmptyTrimmed]
 type UserID = UserID.T
+
+object UserContactID extends RefinedType[String, NonEmptyTrimmed]
+type UserContactID = UserContactID.T
 
 object Email extends RefinedType[String, NonEmptyTrimmedLowerCase]
 type Email = Email.T
@@ -40,6 +43,9 @@ type PostalCode = PostalCode.T
 
 object Company extends RefinedType[String, NonEmptyTrimmed]
 type Company = Company.T
+
+object DisplayName extends RefinedType[String, NonEmptyTrimmed]
+type DisplayName = DisplayName.T
 
 object CreatedAt extends RefinedType[Instant, Pure]
 type CreatedAt = CreatedAt.T

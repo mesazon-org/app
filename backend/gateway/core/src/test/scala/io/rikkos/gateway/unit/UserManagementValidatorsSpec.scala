@@ -6,14 +6,14 @@ import io.rikkos.domain.ServiceError.BadRequestError
 import io.rikkos.gateway.mock.phoneNumberValidatorMockLive
 import io.rikkos.gateway.smithy
 import io.rikkos.gateway.utils.GatewayArbitraries
-import io.rikkos.gateway.validation.ServiceValidator
+import io.rikkos.gateway.validation.{ServiceValidator, UserManagementValidators}
 import io.rikkos.testkit.base.*
 import io.scalaland.chimney.dsl.*
 import zio.ZIO
 
-class ServiceValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
+class UserManagementValidatorsSpec extends ZWordSpecBase, GatewayArbitraries {
 
-  "ServiceValidator" when {
+  "UserManagementValidators" when {
     "onboardUserDetailsRequestValidator" should {
       "return OnboardUserDetails when all fields are valid" in {
         val onboardUserDetails  = arbitrarySample[OnboardUserDetails]
@@ -28,7 +28,7 @@ class ServiceValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         val validator = ZIO
           .service[ServiceValidator[smithy.OnboardUserDetailsRequest, OnboardUserDetails]]
-          .provide(ServiceValidator.onboardUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
+          .provide(UserManagementValidators.onboardUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
           .zioValue
 
         validator.validate(onboardUserDetailsRequest).zioValue shouldBe onboardUserDetails.copy(phoneNumber =
@@ -42,7 +42,7 @@ class ServiceValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         val validator = ZIO
           .service[ServiceValidator[smithy.OnboardUserDetailsRequest, OnboardUserDetails]]
-          .provide(ServiceValidator.onboardUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
+          .provide(UserManagementValidators.onboardUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
           .zioValue
 
         validator.validate(onboardUserDetailsRequest).zioError shouldBe
@@ -69,7 +69,7 @@ class ServiceValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         val validator = ZIO
           .service[ServiceValidator[smithy.OnboardUserDetailsRequest, OnboardUserDetails]]
-          .provide(ServiceValidator.onboardUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
+          .provide(UserManagementValidators.onboardUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
           .zioValue
 
         validator
@@ -103,7 +103,7 @@ class ServiceValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         val validator = ZIO
           .service[ServiceValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails]]
-          .provide(ServiceValidator.updateUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
+          .provide(UserManagementValidators.updateUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
           .zioValue
 
         validator.validate(updateUserDetailsRequest).zioValue shouldBe updateUserDetails.copy(phoneNumber =
@@ -117,7 +117,7 @@ class ServiceValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         val validator = ZIO
           .service[ServiceValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails]]
-          .provide(ServiceValidator.updateUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
+          .provide(UserManagementValidators.updateUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
           .zioValue
 
         validator.validate(updateUserDetailsRequest).zioError shouldBe
@@ -144,7 +144,7 @@ class ServiceValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         val validator = ZIO
           .service[ServiceValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails]]
-          .provide(ServiceValidator.updateUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
+          .provide(UserManagementValidators.updateUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
           .zioValue
 
         validator

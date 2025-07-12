@@ -5,7 +5,7 @@ import io.rikkos.gateway.mock.*
 import io.rikkos.gateway.service.UserManagementService
 import io.rikkos.gateway.smithy
 import io.rikkos.gateway.utils.GatewayArbitraries
-import io.rikkos.gateway.validation.ServiceValidator
+import io.rikkos.gateway.validation.*
 import io.rikkos.testkit.base.*
 import zio.*
 
@@ -117,8 +117,8 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           userRepositoryMockLive(userRepositoryRef, userRepositoryMaybeError),
           authorizationStateMockLive(authedUser),
           phoneNumberValidatorMockLive(),
-          ServiceValidator.onboardUserDetailsRequestValidatorLive,
-          ServiceValidator.updateUserDetailsRequestValidatorLive,
+          UserManagementValidators.onboardUserDetailsRequestValidatorLive,
+          UserManagementValidators.updateUserDetailsRequestValidatorLive,
         )
         .zioValue
   }

@@ -33,4 +33,17 @@ trait GatewayArbitraries extends DomainArbitraries, IronRefinedTypeTransformer {
         .transform
     } yield updateUserDetailsRequest
   }
+
+  given Arbitrary[smithy.UpsertUserContactRequest] = Arbitrary {
+    for {
+      upsertUserContact   <- Arbitrary.arbitrary[UpsertUserContact]
+      phoneRegion         <- Gen.oneOf(Seq("CY"))
+      phoneNationalNumber <- Gen.const("99555555")
+      upsertUserContactRequest = upsertUserContact
+        .into[smithy.UpsertUserContactRequest]
+        .withFieldConst(_.phoneRegion, phoneRegion)
+        .withFieldConst(_.phoneNationalNumber, phoneNationalNumber)
+        .transform
+    } yield upsertUserContactRequest
+  }
 }

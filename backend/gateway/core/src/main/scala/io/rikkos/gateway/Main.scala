@@ -8,7 +8,8 @@ import io.rikkos.gateway.config.*
 import io.rikkos.gateway.middleware.*
 import io.rikkos.gateway.repository.*
 import io.rikkos.gateway.service.*
-import io.rikkos.gateway.validation.ServiceValidator
+import io.rikkos.gateway.validation.*
+import io.rikkos.generator.IDGenerator
 import org.slf4j.bridge.SLF4JBridgeHandler
 import zio.*
 import zio.config.typesafe.TypesafeConfigProvider
@@ -31,10 +32,12 @@ object Main extends ZIOAppDefault {
     .provide(
       AppNameLive, // Used across components for metadata
       TimeProvider.liveSystemUTC,
+      IDGenerator.uuidGeneratorLive,
 
       // Http
       HealthCheckService.live,
       UserManagementService.live,
+      UserContactsService.live,
 
       // Repository
       PostgresTransactor.live,
@@ -50,15 +53,16 @@ object Main extends ZIOAppDefault {
       // Config
       DatabaseConfig.live,
       GatewayServerConfig.live,
-      PhoneNumberValidationConfig.live,
+      PhoneNumberValidatorConfig.live,
 
       // Phone Number Util
       ZLayer.succeed(PhoneNumberUtil.getInstance()),
 
       // Validators
-      ServiceValidator.phoneNumberValidatorLive,
-      ServiceValidator.onboardUserDetailsRequestValidatorLive,
-      ServiceValidator.updateUserDetailsRequestValidatorLive,
+      PhoneNumberValidator.phoneNumberValidatorLive,
+      UserManagementValidators.onboardUserDetailsRequestValidatorLive,
+      UserManagementValidators.updateUserDetailsRequestValidatorLive,
+      UserContactsValidators.upsertUserContactsValidatorLive,
 
       // FiberRefs
       ZLayer

@@ -7,11 +7,14 @@ import io.rikkos.domain.*
 import io.rikkos.domain.ServiceError.BadRequestError.InvalidFieldError
 import io.rikkos.gateway.auth.*
 import io.rikkos.gateway.repository.UserRepository
-import io.rikkos.gateway.validation.ServiceValidator.*
+import io.rikkos.gateway.validation.*
+import io.rikkos.gateway.validation.PhoneNumberValidator.PhoneNumberParams
+import io.rikkos.generator.IDGenerator
 import org.http4s.Request
 import zio.*
 
 import java.time.Clock
+import java.util.concurrent.atomic.AtomicInteger
 
 def userRepositoryMockLive(
     userDetailsRef: Ref[Set[OnboardUserDetails]],
@@ -55,6 +58,15 @@ def phoneNumberValidatorMockLive(): ULayer[DomainValidator[PhoneNumberParams, Ph
         ZIO.succeed(PhoneNumber.assume(rawData.phoneNationalNumber).validNec)
     }
   )
+
+def idGeneratorMockLive: ULayer[IDGenerator] =
+  ZLayer.succeed {
+    val atomicInt = new AtomicInteger(0)
+
+    new IDGenerator {
+      override def generate: UIO[String] = ZIO.succeed(atomicInt.incrementAndGet().toString)
+    }
+  }
 
 def timeProviderMockLive(clock: Clock): ULayer[TimeProvider] =
   ZLayer.succeed(clock) >>> TimeProvider.live
