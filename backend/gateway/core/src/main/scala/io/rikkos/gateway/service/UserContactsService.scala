@@ -4,7 +4,7 @@ import io.rikkos.domain.*
 import io.rikkos.gateway.auth.AuthorizationState
 import io.rikkos.gateway.repository.UserContactsRepository
 import io.rikkos.gateway.validation.ServiceValidator
-import io.rikkos.gateway.{HttpErrorHandler, smithy}
+import io.rikkos.gateway.{smithy, HttpErrorHandler}
 import zio.*
 
 object UserContactsService {

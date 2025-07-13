@@ -2,7 +2,7 @@ package io.rikkos.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
 import io.rikkos.domain.*
-import io.rikkos.gateway.mock.timeProviderMockLive
+import io.rikkos.gateway.mock.*
 import io.rikkos.gateway.query.{UserContactsQueries, UserDetailsQueries}
 import io.rikkos.gateway.repository.UserContactsRepository
 import io.rikkos.gateway.utils.GatewayArbitraries
@@ -58,13 +58,18 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
         val upsertUserContacts = arbitrarySample[UpsertUserContact](5)
         val userContactsRepository = ZIO
           .service[UserContactsRepository]
-          .provide(UserContactsRepository.live, ZLayer.succeed(client.database), timeProviderMockLive(clockNow))
+          .provide(
+            UserContactsRepository.live,
+            ZLayer.succeed(client.database),
+            timeProviderMockLive(clockNow),
+            idGeneratorMockLive,
+          )
           .zioValue
 
         // Insert user for user_id foreign key constraint
         client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable)).zioValue
 
-        userContactsRepository.upsertUserContacts(userID, upsertUserContacts).zioValue shouldBe true
+        userContactsRepository.upsertUserContacts(userID, upsertUserContacts).zioValue
 
         client.database
           .transactionOrDie(UserContactsQueries.getUserContacts(userID))

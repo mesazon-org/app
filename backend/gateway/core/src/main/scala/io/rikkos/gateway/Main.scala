@@ -21,7 +21,7 @@ object Main extends ZIOAppDefault {
 
   // Preconfigure the logger to use SLF4J
   // Preconfigure to use typesafe config reader(application.conf)
-  // Preconfigure to use SLF4JBridgeHandler this is to connect jul with SLF4J
+  // Preconfigure to use SLF4JBridgeHandler this is to route jul to SLF4J
   override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] = Runtime.removeDefaultLoggers >>>
     SLF4J.slf4j ++ ZLayer(ZIO.succeedBlocking {
       SLF4JBridgeHandler.removeHandlersForRootLogger()
@@ -42,6 +42,7 @@ object Main extends ZIOAppDefault {
       // Repository
       PostgresTransactor.live,
       UserRepository.live,
+      UserContactsRepository.live,
 
       // Auth
       AuthorizationService.live,

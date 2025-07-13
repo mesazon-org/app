@@ -1,5 +1,6 @@
 package io.rikkos.gateway
 
+import cats.syntax.all.*
 import fs2.io.net.Network
 import io.rikkos.gateway.config.GatewayServerConfig
 import io.rikkos.gateway.config.GatewayServerConfig.ServerConfig
@@ -25,12 +26,18 @@ object HttpApp {
   private val serviceRoutesResource = for {
     serverMiddleware      <- ZIO.service[ServerEndpointMiddleware.Simple[Task]]
     userManagementService <- ZIO.service[smithy.UserManagementService[Task]]
+    userContactsService   <- ZIO.service[smithy.UserContactsService[Task]]
     userManagementRoutes <- SimpleRestJsonBuilder
       .routes(userManagementService)
       .middleware(serverMiddleware)
       .resource
       .toScopedZIO
-  } yield userManagementRoutes
+    userContactsRoutes <- SimpleRestJsonBuilder
+      .routes(userContactsService)
+      .middleware(serverMiddleware)
+      .resource
+      .toScopedZIO
+  } yield userManagementRoutes <+> userContactsRoutes
 
   private def server(config: ServerConfig, routes: HttpRoutes[Task]) = for {
     emberServer <- EmberServerBuilder
