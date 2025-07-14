@@ -12,7 +12,9 @@ object UserContactsService {
   final case class UserContactsServiceImpl(
       authorizationState: AuthorizationState,
       userContactsRepository: UserContactsRepository,
-      upsertUserContactsValidator: ServiceValidator[Set[smithy.UpsertUserContactRequest], Vector[UpsertUserContact]],
+      upsertUserContactsValidator: ServiceValidator[Set[smithy.UpsertUserContactRequest], NonEmptyChunk[
+        UpsertUserContact
+      ]],
   ) extends smithy.UserContactsService[[A] =>> IO[ServiceError, A]] {
 
     override def upsertContacts(request: Set[smithy.UpsertUserContactRequest]): IO[ServiceError, Unit] =

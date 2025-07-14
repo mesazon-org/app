@@ -24,6 +24,7 @@ object Dependencies {
   lazy val hikariCPV            = "6.3.0"
   lazy val doobieTranzactioV    = "5.4.0"
   lazy val libphonenumberV      = "9.0.8"
+  lazy val circeV               = "0.14.14"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -51,8 +52,13 @@ object Dependencies {
   lazy val pureconfigCats       = "com.github.pureconfig" %% "pureconfig-cats"        % pureconfigV
   lazy val pureconfigCatsEffect = "com.github.pureconfig" %% "pureconfig-cats-effect" % pureconfigV
 
-  // IRON
+  // Iron
   val iron = "io.github.iltotore" %% "iron" % ironV
+
+  // Circe
+  lazy val circeCore    = "io.circe" %% "circe-core"    % circeV
+  lazy val circeGeneric = "io.circe" %% "circe-generic" % circeV
+  lazy val circeParser  = "io.circe" %% "circe-parser"  % circeV
 
   // Logging
   lazy val logback    = "ch.qos.logback" % "logback-classic" % logbackV

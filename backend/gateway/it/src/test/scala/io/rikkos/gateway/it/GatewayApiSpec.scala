@@ -6,7 +6,7 @@ import io.rikkos.gateway.it.GatewayApiSpec.Context
 import io.rikkos.gateway.it.client.GatewayApiClient
 import io.rikkos.gateway.it.client.GatewayApiClient.GatewayApiClientConfig
 import io.rikkos.gateway.it.codec.given
-import io.rikkos.gateway.query.UserDetailsQueries
+import io.rikkos.gateway.query.{UserContactsQueries, UserDetailsQueries}
 import io.rikkos.gateway.smithy
 import io.rikkos.gateway.utils.GatewayArbitraries
 import io.rikkos.test.postgresql.PostgreSQLTestClient
@@ -16,6 +16,9 @@ import io.scalaland.chimney.dsl.*
 import org.http4s.Status
 import zio.*
 import zio.interop.catz.*
+
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 class GatewayApiSpec
     extends ZWordSpecBase
@@ -55,9 +58,10 @@ class GatewayApiSpec
     super.beforeEach()
 
     // Truncate the table before each test to ensure a clean state
-    eventually(
+    eventually {
       postgresSQLClient.truncateTable("local_schema", "users_details").zioValue
-    )
+      postgresSQLClient.truncateTable("local_schema", "users_contacts").zioValue
+    }
   }
 
   "GatewayApi" when {
@@ -65,7 +69,7 @@ class GatewayApiSpec
       "return successfully when onboarding user" in withContext { case Context(gatewayClient, postgresSQLClient) =>
         val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
 
-        gatewayClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
+        gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
 
         val userDetailsTableResponse = postgresSQLClient.database
           .transactionOrDie(
@@ -76,7 +80,7 @@ class GatewayApiSpec
 
         userDetailsTableResponse shouldBe onboardUserDetailsRequest
           .into[UserDetailsTable]
-          .withFieldConst(_.phoneNumber, PhoneNumber.assume("+35799555555"))
+          .withFieldConst(_.phoneNumber, PhoneNumber.cy(onboardUserDetailsRequest.phoneNationalNumber))
           .withFieldConst(_.userID, UserID.assume("test"))
           .withFieldConst(_.email, Email.assume("eliot.martel@gmail.com"))
           .withFieldConst(_.createdAt, userDetailsTableResponse.createdAt)
@@ -88,16 +92,16 @@ class GatewayApiSpec
         val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
           .copy(firstName = FirstName.assume(""))
 
-        gatewayClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.BadRequest
+        gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe Status.BadRequest
       }
 
       "fail with Conflict when onboarding user details insert user twice" in withContext {
         case Context(gatewayClient, _) =>
           val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
 
-          gatewayClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
+          gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
 
-          gatewayClient.userOnboard(onboardUserDetailsRequest).zioValue shouldBe Status.Conflict
+          gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe Status.Conflict
       }
     }
 
@@ -111,7 +115,7 @@ class GatewayApiSpec
           .transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable))
           .zioValue
 
-        gatewayClient.userUpdate(updateUserDetailsRequest).zioValue shouldBe Status.NoContent
+        gatewayClient.updateUser(updateUserDetailsRequest).zioValue shouldBe Status.NoContent
 
         val updatedUserDetailsTable = postgresSQLClient.database
           .transactionOrDie(
@@ -123,7 +127,9 @@ class GatewayApiSpec
         val expectedUserDetailsTable = userDetailsTable.copy(
           firstName = FirstName.assumeAll(updateUserDetailsRequest.firstName).getOrElse(userDetailsTable.firstName),
           lastName = LastName.assumeAll(updateUserDetailsRequest.lastName).getOrElse(userDetailsTable.lastName),
-          phoneNumber = PhoneNumber.assume("+35799555555"),
+          phoneNumber = updateUserDetailsRequest.phoneNationalNumber
+            .map(PhoneNumber.cy)
+            .getOrElse(userDetailsTable.phoneNumber),
           addressLine1 =
             AddressLine1.assumeAll(updateUserDetailsRequest.addressLine1).getOrElse(userDetailsTable.addressLine1),
           addressLine2 =
@@ -141,7 +147,82 @@ class GatewayApiSpec
         val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
           .copy(firstName = Some(FirstName.assume("")))
 
-        gatewayClient.userUpdate(updateUserDetailsRequest).zioValue shouldBe Status.BadRequest
+        gatewayClient.updateUser(updateUserDetailsRequest).zioValue shouldBe Status.BadRequest
+      }
+    }
+
+    "/contacts/upsert" should {
+      "return successfully when upserting user contacts" in withContext {
+        case Context(gatewayClient, postgresSQLClient) =>
+          val now               = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val userID            = UserID.assume("test")
+          val userContactID     = arbitrarySample[UserContactID]
+          val updateDisplayName = DisplayName.assume("dummy")
+          val userDetailsTable  = arbitrarySample[UserDetailsTable].copy(userID = userID)
+          val existingUserContact = arbitrarySample[smithy.UpsertUserContactRequest]
+            .copy(userContactID = Some(userContactID))
+          val updateUserContact = existingUserContact
+            .copy(displayName = updateDisplayName.value)
+          val insertUserContact = arbitrarySample[smithy.UpsertUserContactRequest]
+            .copy(userContactID = None)
+
+          val insertUserContactsTable = existingUserContact
+            .into[UserContactTable]
+            .withFieldComputed(_.userContactID, uc => UserContactID.assume(uc.userContactID.value))
+            .withFieldConst(_.phoneNumber, PhoneNumber.cy(existingUserContact.phoneNationalNumber))
+            .withFieldConst(_.userID, userID)
+            .withFieldConst(_.createdAt, CreatedAt(now))
+            .withFieldConst(_.updatedAt, UpdatedAt(now))
+            .transform
+
+          postgresSQLClient.database
+            .transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable))
+            .zioValue
+
+          postgresSQLClient.database
+            .transactionOrDie(UserContactsQueries.insertUserContacts(NonEmptyChunk(insertUserContactsTable)))
+            .zioValue
+
+          gatewayClient
+            .upsertUserContacts(NonEmptyChunk(updateUserContact, insertUserContact))
+            .zioValue shouldBe Status.NoContent
+
+          val userContactsTable = postgresSQLClient.database
+            .transactionOrDie(UserContactsQueries.getUserContacts(userID))
+            .zioValue
+
+          userContactsTable should have size 2
+
+          val updatedUserContactTable = userContactsTable
+            .filter(_.userContactID == insertUserContactsTable.userContactID)
+            .head
+
+          val newUserContactTable = userContactsTable
+            .filter(_.userContactID != insertUserContactsTable.userContactID)
+            .head
+
+          updatedUserContactTable shouldBe insertUserContactsTable.copy(
+            displayName = updateDisplayName,
+            updatedAt = updatedUserContactTable.updatedAt,
+          )
+
+          newUserContactTable shouldBe insertUserContact
+            .into[UserContactTable]
+            .withFieldConst(_.userContactID, newUserContactTable.userContactID)
+            .withFieldConst(_.userID, userID)
+            .withFieldConst(_.phoneNumber, PhoneNumber.cy(insertUserContact.phoneNationalNumber))
+            .withFieldConst(_.createdAt, newUserContactTable.createdAt)
+            .withFieldConst(_.updatedAt, newUserContactTable.updatedAt)
+            .transform
+      }
+
+      "fail with BadRequest user contacts are invalid" in withContext { case Context(gatewayClient, _) =>
+        val invalidUpsertUserContactRequest = arbitrarySample[smithy.UpsertUserContactRequest]
+          .copy(firstName = "")
+
+        gatewayClient
+          .upsertUserContacts(NonEmptyChunk(invalidUpsertUserContactRequest))
+          .zioValue shouldBe Status.BadRequest
       }
     }
   }

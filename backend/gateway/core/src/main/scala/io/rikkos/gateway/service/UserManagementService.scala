@@ -16,8 +16,6 @@ object UserManagementService {
       updateUserDetailsRequestValidator: ServiceValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails],
   ) extends smithy.UserManagementService[[A] =>> IO[ServiceError, A]] {
 
-    lazy val emptyUpdateUserDetailsRequest = smithy.UpdateUserDetailsRequest()
-
     override def onboardUser(request: smithy.OnboardUserDetailsRequest): IO[ServiceError, Unit] =
       for {
         _                  <- ZIO.logDebug(s"Onboarding user with request: $request")
@@ -28,11 +26,7 @@ object UserManagementService {
 
     override def updateUser(request: smithy.UpdateUserDetailsRequest): IO[ServiceError, Unit] =
       for {
-        _ <- ZIO.logDebug(s"Updating user with request: $request")
-        _ <-
-          if (emptyUpdateUserDetailsRequest == request)
-            ZIO.fail(ServiceError.BadRequestError.NoEffect(s"update user details contains no update $request"))
-          else ZIO.unit
+        _                 <- ZIO.logDebug(s"Updating user with request: $request")
         authedUser        <- authorizationState.get()
         updateUserDetails <- updateUserDetailsRequestValidator.validate(request)
         _                 <- userRepository.updateUserDetails(authedUser.userID, updateUserDetails)

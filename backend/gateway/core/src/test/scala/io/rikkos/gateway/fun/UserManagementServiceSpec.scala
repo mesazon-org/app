@@ -11,11 +11,9 @@ import zio.*
 
 class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
-  val userManagementServiceEnv = ZIO.service[smithy.UserManagementService[Task]]
-
   "UserManagementService" when {
     "onboardUser" should {
-      "insert the user successfully" in new TestContext {
+      "successfully insert the user" in new TestContext {
         val authedUser                = arbitrarySample[AuthedUser]
         val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
         val userManagementService     = buildUserManagementService(authedUser)
@@ -24,6 +22,8 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .onboardUser(onboardUserDetailsRequest)
           .zioEither
           .isRight shouldBe true
+
+        insertUserDetailsCounterRef.get.zioValue shouldBe 1
       }
 
       "fail with BadRequest when request validation fail" in new TestContext {
@@ -34,8 +34,9 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         userManagementService
           .onboardUser(onboardUserDetailsRequest)
-          .zioError
-          .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest()
+          .zioError shouldBe a[smithy.BadRequest]
+
+        insertUserDetailsCounterRef.get.zioValue shouldBe 0
       }
 
       "fail with InternalServerError when repository fail" in new TestContext {
@@ -48,8 +49,9 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         userManagementService
           .onboardUser(onboardUserDetailsRequest)
-          .zioError
-          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+          .zioError shouldBe a[smithy.InternalServerError]
+
+        insertUserDetailsCounterRef.get.zioValue shouldBe 0
       }
     }
 
@@ -63,6 +65,8 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .updateUser(updateUserDetailsRequest)
           .zioEither
           .isRight shouldBe true
+
+        updateUserDetailsCounterRef.get.zioValue shouldBe 1
       }
 
       "fail with BadRequest when request validation fail" in new TestContext {
@@ -73,8 +77,9 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         userManagementService
           .updateUser(updateUserDetailsRequest)
-          .zioError
-          .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest()
+          .zioError shouldBe a[smithy.BadRequest]
+
+        updateUserDetailsCounterRef.get.zioValue shouldBe 0
       }
 
       "fail with BadRequest when request contains no updates" in new TestContext {
@@ -84,8 +89,9 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         userManagementService
           .updateUser(updateUserDetailsRequest)
-          .zioError
-          .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest()
+          .zioError shouldBe a[smithy.BadRequest]
+
+        updateUserDetailsCounterRef.get.zioValue shouldBe 0
       }
 
       "fail with InternalServerError when repository fail" in new TestContext {
@@ -98,23 +104,30 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         userManagementService
           .updateUser(updateUserDetailsRequest)
-          .zioError
-          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+          .zioError shouldBe a[smithy.InternalServerError]
+
+        updateUserDetailsCounterRef.get.zioValue shouldBe 0
       }
     }
   }
 
   trait TestContext {
-    val userRepositoryRef: Ref[Set[OnboardUserDetails]] = Ref.make(Set.empty[OnboardUserDetails]).zioValue
+    val insertUserDetailsCounterRef = Ref.make(0).zioValue
+    val updateUserDetailsCounterRef = Ref.make(0).zioValue
 
     def buildUserManagementService(
         authedUser: AuthedUser,
         userRepositoryMaybeError: Option[Throwable] = None,
     ): smithy.UserManagementService[Task] =
-      userManagementServiceEnv
+      ZIO
+        .service[smithy.UserManagementService[Task]]
         .provide(
           UserManagementService.live,
-          userRepositoryMockLive(userRepositoryRef, userRepositoryMaybeError),
+          userRepositoryMockLive(
+            insertUserDetailsCounterRef,
+            updateUserDetailsCounterRef,
+            userRepositoryMaybeError,
+          ),
           authorizationStateMockLive(authedUser),
           phoneNumberValidatorMockLive(),
           UserManagementValidators.onboardUserDetailsRequestValidatorLive,

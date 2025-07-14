@@ -6,7 +6,7 @@ import io.rikkos.clock.TimeProvider
 import io.rikkos.domain.*
 import io.rikkos.domain.ServiceError.BadRequestError.InvalidFieldError
 import io.rikkos.gateway.auth.*
-import io.rikkos.gateway.repository.UserRepository
+import io.rikkos.gateway.repository.{UserContactsRepository, UserRepository}
 import io.rikkos.gateway.validation.*
 import io.rikkos.gateway.validation.PhoneNumberValidator.PhoneNumberParams
 import io.rikkos.generator.IDGenerator
@@ -17,7 +17,8 @@ import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 
 def userRepositoryMockLive(
-    userDetailsRef: Ref[Set[OnboardUserDetails]],
+    insertUserDetailsCounterRef: Ref[Int],
+    updateUserDetailsCounterRef: Ref[Int],
     maybeError: Option[Throwable] = None,
 ): ULayer[UserRepository] =
   ZLayer.succeed(
@@ -28,12 +29,22 @@ def userRepositoryMockLive(
           email: Email,
           userDetails: OnboardUserDetails,
       ): IO[ServiceError.ConflictError.UserAlreadyExists, Unit] =
-        maybeError.fold(userDetailsRef.set(Set(userDetails)))(ZIO.fail(_).orDie)
+        maybeError.fold(insertUserDetailsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
 
       override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
-        maybeError.fold(ZIO.unit)(ZIO.fail(_).orDie)
+        maybeError.fold(updateUserDetailsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
     }
   )
+
+def userContactsRepositoryMockLive(
+    upsertUserContactsCounterRef: Ref[Int],
+    maybeError: Option[Throwable] = None,
+): ULayer[UserContactsRepository] = ZLayer.succeed(
+  new UserContactsRepository {
+    override def upsertUserContacts(userID: UserID, upsertUserContacts: NonEmptyChunk[UpsertUserContact]): UIO[Unit] =
+      maybeError.fold(upsertUserContactsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
+  }
+)
 
 def authorizationStateMockLive(authedUser: AuthedUser): ULayer[AuthorizationState] =
   ZLayer.succeed(

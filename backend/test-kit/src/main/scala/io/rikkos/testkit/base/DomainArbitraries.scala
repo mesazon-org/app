@@ -14,5 +14,4 @@ trait DomainArbitraries extends IronRefinedTypeArbitraries {
   given Arbitrary[UserDetailsTable] = Arbitrary(Gen.resultOf(UserDetailsTable.apply))
 
   given Arbitrary[UpsertUserContact] = Arbitrary(Gen.resultOf(UpsertUserContact.apply))
-
 }

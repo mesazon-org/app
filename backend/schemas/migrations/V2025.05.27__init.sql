@@ -31,6 +31,7 @@ CREATE TABLE users_contacts (
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
     PRIMARY KEY(user_contact_id),
+    UNIQUE(phone_number, user_id),
     CONSTRAINT user_details_fk FOREIGN KEY(user_id) REFERENCES users_details(user_id)
 );
 

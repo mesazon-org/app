@@ -26,7 +26,10 @@ type FirstName = FirstName.T
 object LastName extends RefinedType[String, NonEmptyTrimmed]
 type LastName = LastName.T
 
-object PhoneNumber extends RefinedType[String, NonEmptyTrimmed]
+object PhoneNumber extends RefinedType[String, NonEmptyTrimmed] {
+  def cy(phoneNationalNumber: String): PhoneNumber.T =
+    assume(s"+357$phoneNationalNumber")
+}
 type PhoneNumber = PhoneNumber.T
 
 object AddressLine1 extends RefinedType[String, NonEmptyTrimmed]

@@ -30,13 +30,18 @@ class UserContactsValidatorsSpec extends ZWordSpecBase, GatewayArbitraries {
             .toSet
 
         val validator = ZIO
-          .service[ServiceValidator[Set[smithy.UpsertUserContactRequest], Vector[UpsertUserContact]]]
+          .service[ServiceValidator[Set[smithy.UpsertUserContactRequest], NonEmptyChunk[UpsertUserContact]]]
           .provide(UserContactsValidators.upsertUserContactsValidatorLive, phoneNumberValidatorMockLive())
           .zioValue
 
-        validator.validate(upsertUserContactsRequest).zioValue should contain theSameElementsAs upsertUserContacts.map(
-          _.copy(phoneNumber = PhoneNumber.assume(phoneNationalNumber))
-        )
+        validator
+          .validate(upsertUserContactsRequest)
+          .zioValue
+          .toList should contain theSameElementsAs upsertUserContacts
+          .map(
+            _.copy(phoneNumber = PhoneNumber.assume(phoneNationalNumber))
+          )
+          .toList
       }
 
       "return all invalid fields when 1 or more fail validation" in {
@@ -60,7 +65,7 @@ class UserContactsValidatorsSpec extends ZWordSpecBase, GatewayArbitraries {
             .toSet
 
         val validator = ZIO
-          .service[ServiceValidator[Set[smithy.UpsertUserContactRequest], Vector[UpsertUserContact]]]
+          .service[ServiceValidator[Set[smithy.UpsertUserContactRequest], NonEmptyChunk[UpsertUserContact]]]
           .provide(UserContactsValidators.upsertUserContactsValidatorLive, phoneNumberValidatorMockLive())
           .zioValue
 
@@ -92,7 +97,7 @@ class UserContactsValidatorsSpec extends ZWordSpecBase, GatewayArbitraries {
         )
 
         val validator = ZIO
-          .service[ServiceValidator[Set[smithy.UpsertUserContactRequest], Vector[UpsertUserContact]]]
+          .service[ServiceValidator[Set[smithy.UpsertUserContactRequest], NonEmptyChunk[UpsertUserContact]]]
           .provide(UserContactsValidators.upsertUserContactsValidatorLive, phoneNumberValidatorMockLive())
           .zioValue
 
@@ -114,6 +119,21 @@ class UserContactsValidatorsSpec extends ZWordSpecBase, GatewayArbitraries {
             "postalCode",
             "company",
           )
+      }
+
+      "return failure when request set is empty" in {
+        val validator = ZIO
+          .service[ServiceValidator[Set[smithy.UpsertUserContactRequest], NonEmptyChunk[UpsertUserContact]]]
+          .provide(UserContactsValidators.upsertUserContactsValidatorLive, phoneNumberValidatorMockLive())
+          .zioValue
+
+        validator
+          .validate(Set.empty)
+          .zioError
+          .asInstanceOf[BadRequestError.FormValidationError]
+          .invalidFields shouldBe Seq(
+          ("upsertUserContactRequest", "request received contained empty collection")
+        )
       }
     }
   }

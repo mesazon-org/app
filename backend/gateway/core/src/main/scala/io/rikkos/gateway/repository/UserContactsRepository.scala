@@ -3,16 +3,18 @@ package io.rikkos.gateway.repository
 import cats.syntax.all.*
 import doobie.Transactor
 import io.github.gaelrenoux.tranzactio.DatabaseOps
+import io.github.gaelrenoux.tranzactio.doobie.Connection
 import io.rikkos.clock.TimeProvider
 import io.rikkos.domain.*
 import io.rikkos.gateway.query.UserContactsQueries
+import io.rikkos.gateway.query.UserContactsQueries.UpdateUserContact
 import io.rikkos.generator.IDGenerator
 import io.scalaland.chimney.dsl.*
 import zio.*
 import zio.interop.catz.*
 
 trait UserContactsRepository {
-  def upsertUserContacts(userID: UserID, upsertUserContacts: Vector[UpsertUserContact]): UIO[Unit]
+  def upsertUserContacts(userID: UserID, upsertUserContacts: NonEmptyChunk[UpsertUserContact]): UIO[Unit]
 }
 
 object UserContactsRepository {
@@ -23,43 +25,52 @@ object UserContactsRepository {
       idGenerator: IDGenerator,
   ) extends UserContactsRepository {
 
-    override def upsertUserContacts(userID: UserID, upsertUserContacts: Vector[UpsertUserContact]): UIO[Unit] =
+    override def upsertUserContacts(userID: UserID, upsertUserContacts: NonEmptyChunk[UpsertUserContact]): UIO[Unit] =
       (for {
         now <- timeProvider.instantNow
-        userContactsTable <- upsertUserContacts.traverse(upsertUserContact =>
+        (updateUserContactsRaw, insertUserContactsRaw) = upsertUserContacts.partition(_.userContactID.nonEmpty)
+        updateUserContacts = updateUserContactsRaw
+          .map(updateUserContact =>
+            updateUserContact.userContactID.map(userContactID =>
+              updateUserContact
+                .into[UpdateUserContact]
+                .withFieldConst(_.userContactID, userContactID)
+                .withFieldConst(_.updateAt, UpdatedAt(now))
+                .transform
+            )
+          )
+          .flatten
+        insertUserContacts <- insertUserContactsRaw.traverse(insertUserContact =>
           idGenerator.generate
             .map(UserContactID.applyUnsafe)
             .map(userContactID =>
-              upsertUserContact
+              insertUserContact
                 .into[UserContactTable]
-                .withFieldComputed(_.userContactID, _.userContactID.getOrElse(userContactID))
+                .withFieldConst(_.userContactID, userContactID)
                 .withFieldConst(_.userID, userID)
                 .withFieldConst(_.createdAt, CreatedAt(now))
                 .withFieldConst(_.updatedAt, UpdatedAt(now))
                 .transform
             )
         )
+        nonEmptyUpdateUserContacts = NonEmptyChunk.fromChunk(updateUserContacts)
+        nonEmptyInsertUserContacts = NonEmptyChunk.fromChunk(insertUserContacts)
+        updateUserContactsTrans = nonEmptyUpdateUserContacts
+          .fold(ZIO.service[Connection].unit)(
+            UserContactsQueries.updateUserContacts
+          )
+        insertUserContactsTrans = nonEmptyInsertUserContacts
+          .fold(ZIO.service[Connection].unit)(
+            UserContactsQueries.insertUserContacts
+          )
+        // IMPORTANT !!
+        // Order of execution matters if a user performs an update on unique elements
+        // (phone_number) and at the same time inserts a user with the conflicted phone_number
+        // then if update executes first, users would not receive an error
         _ <- database
-          .transactionOrDie(UserContactsQueries.upsertUserContacts(userContactsTable))
+          .transactionOrDie(updateUserContactsTrans zip insertUserContactsTrans)
       } yield ()).orDie
-//      (for {
-//        instantNow <- timeProvider.instantNow
-//        _ <- database
-//          .transactionOrDie(
-//            UserDetailsQueries.insertUserDetailsQuery(
-//              onboardUserDetails
-//                .into[UserDetailsTable]
-//                .withFieldConst(_.userID, userID)
-//                .withFieldConst(_.email, email)
-//                .withFieldConst(_.createdAt, CreatedAt(instantNow))
-//                .withFieldConst(_.updatedAt, UpdatedAt(instantNow))
-//                .transform
-//            )
-//          )
-//      } yield ()).orDie.catchSomeCause {
-//        case Cause.Die(DbException.Wrapped(e: PSQLException), _) if e.getSQLState == "23505" =>
-//          ZIO.fail(ServiceError.ConflictError.UserAlreadyExists(userID, email))
-//      }
+
   }
 
   def observed(repository: UserContactsRepository): UserContactsRepository = repository

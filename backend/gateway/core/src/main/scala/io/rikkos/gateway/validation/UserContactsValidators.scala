@@ -33,11 +33,13 @@ object UserContactsValidators {
 
   private def upsertUserContactsValidator(
       userContactValidator: DomainValidator[smithy.UpsertUserContactRequest, UpsertUserContact]
-  ): DomainValidator[Set[smithy.UpsertUserContactRequest], Vector[UpsertUserContact]] =
+  ): DomainValidator[Set[smithy.UpsertUserContactRequest], NonEmptyChunk[UpsertUserContact]] =
     requests =>
-      requests.toVector
-        .traverse(userContactValidator.validate)
+      ZIO
+        .fromOption(NonEmptyChunk.fromIterableOption(requests))
+        .flatMap(_.traverse(userContactValidator.validate))
         .map(_.sequence)
+        .fold(_ => ("upsertUserContactRequest", "request received contained empty collection").invalidNec, identity)
 
   val upsertUserContactsValidatorLive =
     ZLayer.fromFunction(upsertUserContactValidator) >>> ZLayer.fromFunction(

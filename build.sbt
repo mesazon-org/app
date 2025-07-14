@@ -131,6 +131,9 @@ lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
   .withDependencies(
     Dependencies.http4sEmberClient % Test,
     Dependencies.http4sCirce       % Test,
+    Dependencies.circeCore         % Test,
+    Dependencies.circeParser       % Test,
+    Dependencies.circeGeneric      % Test,
   )
   .settings(
     test := {

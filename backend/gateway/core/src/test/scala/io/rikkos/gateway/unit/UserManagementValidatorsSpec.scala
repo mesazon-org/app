@@ -129,6 +129,23 @@ class UserManagementValidatorsSpec extends ZWordSpecBase, GatewayArbitraries {
           )
       }
 
+      "return failure when request fields are all empty" in {
+        val updateUserDetailsRequest = smithy.UpdateUserDetailsRequest()
+
+        val validator = ZIO
+          .service[ServiceValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails]]
+          .provide(UserManagementValidators.updateUserDetailsRequestValidatorLive, phoneNumberValidatorMockLive())
+          .zioValue
+
+        validator
+          .validate(updateUserDetailsRequest)
+          .zioError
+          .asInstanceOf[BadRequestError.FormValidationError]
+          .invalidFields shouldBe Seq(
+          ("updateUserDetailsRequest", "request received all fields are empty")
+        )
+      }
+
       "return all invalid fields when all fail validation" in {
         val updateUserDetailsRequest = smithy.UpdateUserDetailsRequest(
           firstName = Some(""),

@@ -32,7 +32,12 @@ object UserManagementValidators {
   private def updateUserDetailsRequestValidator(
       phoneNumberValidator: DomainValidator[PhoneNumberParams, PhoneNumber]
   ): DomainValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails] = { request =>
-    for {
+    (for {
+      emptyUpdateUserDetailsRequest = smithy.UpdateUserDetailsRequest()
+      _ <-
+        if (emptyUpdateUserDetailsRequest == request)
+          ZIO.fail(("updateUserDetailsRequest", "request received all fields are empty"))
+        else ZIO.unit
       maybeValidatedPhoneNumber <-
         (request.phoneRegion zip request.phoneNationalNumber).traverse(phoneNumberValidator.validate)
       validatedPhoneNumber = maybeValidatedPhoneNumber
@@ -47,7 +52,7 @@ object UserManagementValidators {
         validateOptionalField(postalCodeFieldName, request.postalCode, PostalCode.either),
         validateOptionalField(companyFieldName, request.company, Company.either),
       ).mapN(UpdateUserDetails.apply)
-    } yield validatedRequest
+    } yield validatedRequest).fold(_.invalidNec, identity)
   }
 
   val onboardUserDetailsRequestValidatorLive =
