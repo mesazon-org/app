@@ -8,7 +8,7 @@ object Dependencies {
   lazy val zioConfigV           = "4.0.4"
   lazy val zioInteropCatsV      = "23.1.0.5"
   lazy val catsV                = "2.13.0"
-  lazy val zioLoggingV          = "2.5.0"
+  lazy val zioLoggingV          = "2.5.1"
   lazy val logbackV             = "1.5.18"
   lazy val julToSlf4jV          = "2.0.17"
   lazy val pureconfigV          = "0.17.9"
@@ -18,12 +18,12 @@ object Dependencies {
   lazy val testcontainersScalaV = "0.43.0"
   lazy val testcontainersV      = "1.21.3"
   lazy val ironV                = "3.0.2"
-  lazy val chimneyV             = "1.8.1"
+  lazy val chimneyV             = "1.8.2"
   lazy val doobieV              = "1.0.0-RC9"
   lazy val postgresqlV          = "42.7.3"
   lazy val hikariCPV            = "6.3.0"
   lazy val doobieTranzactioV    = "5.4.0"
-  lazy val libphonenumberV      = "9.0.8"
+  lazy val libphonenumberV      = "9.0.9"
   lazy val circeV               = "0.14.14"
 
   // Http4s
