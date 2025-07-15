@@ -19,7 +19,7 @@ object Dependencies {
   lazy val testcontainersV      = "1.21.3"
   lazy val ironV                = "3.0.2"
   lazy val chimneyV             = "1.8.2"
-  lazy val doobieV              = "1.0.0-RC9"
+  lazy val doobieV              = "1.0.0-RC10"
   lazy val postgresqlV          = "42.7.3"
   lazy val hikariCPV            = "6.3.0"
   lazy val doobieTranzactioV    = "5.4.0"
