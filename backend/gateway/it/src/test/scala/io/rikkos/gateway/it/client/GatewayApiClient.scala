@@ -3,9 +3,11 @@ package io.rikkos.gateway.it.client
 import cats.syntax.all.*
 import com.dimafeng.testcontainers.*
 import fs2.io.net.Network
+import io.circe.Encoder
 import io.rikkos.gateway.it.client.GatewayApiClient.*
 import io.rikkos.gateway.smithy
 import org.http4s.*
+import org.http4s.circe.CirceEntityCodec.given
 import org.http4s.client.Client
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.headers.Authorization
@@ -19,9 +21,9 @@ final case class GatewayApiClient(config: GatewayApiClientConfig, client: Client
 
   def readiness: Task[Status] = client.get(healthUri / "readiness")(_.status.pure[Task])
 
-  def userOnboard(
+  def onboardUser(
       onboardUserDetailsRequest: smithy.OnboardUserDetailsRequest
-  )(using EntityEncoder[Task, smithy.OnboardUserDetailsRequest]): Task[Status] = {
+  )(using Encoder[smithy.OnboardUserDetailsRequest]): Task[Status] = {
     val request = Request[Task](Method.POST, serviceUri / "users" / "onboard")
       .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
       .withEntity(onboardUserDetailsRequest)
@@ -31,12 +33,24 @@ final case class GatewayApiClient(config: GatewayApiClientConfig, client: Client
       .map(_.status)
   }
 
-  def userUpdate(
+  def updateUser(
       updateUserDetailsRequest: smithy.UpdateUserDetailsRequest
-  )(using EntityEncoder[Task, smithy.UpdateUserDetailsRequest]): Task[Status] = {
+  )(using Encoder[smithy.UpdateUserDetailsRequest]): Task[Status] = {
     val request = Request[Task](Method.POST, serviceUri / "users" / "update")
       .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
       .withEntity(updateUserDetailsRequest)
+
+    ZIO
+      .scoped(client.run(request).toScopedZIO)
+      .map(_.status)
+  }
+
+  def upsertUserContacts(
+      upsertUserContactsRequest: NonEmptyChunk[smithy.UpsertUserContactRequest]
+  )(using Encoder[NonEmptyChunk[smithy.UpsertUserContactRequest]]): Task[Status] = {
+    val request = Request[Task](Method.POST, serviceUri / "contacts" / "upsert")
+      .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
+      .withEntity(upsertUserContactsRequest)
 
     ZIO
       .scoped(client.run(request).toScopedZIO)

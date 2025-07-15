@@ -1,10 +1,11 @@
 package io.rikkos.testkit.base
 
-import org.scalacheck.Arbitrary
+import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.*
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.matchers.should
 import org.scalatest.wordspec.AnyWordSpec
+import zio.NonEmptyChunk
 
 import scala.concurrent.duration.DurationInt
 
@@ -24,4 +25,15 @@ open class WordSpecBase
 
   def arbitrarySample[T: Arbitrary as arb]: T =
     arb.arbitrary.sample.getOrElse(throw new NoSuchElementException("No sample available"))
+
+  def arbitrarySample[T: Arbitrary as arb](number: Int): NonEmptyChunk[T] =
+    NonEmptyChunk
+      .fromIterableOption(
+        Gen
+          .listOfN(number, arb.arbitrary)
+          .sample
+          .getOrElse(throw new NoSuchElementException("No sample available"))
+      )
+      .get
+
 }

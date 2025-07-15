@@ -30,6 +30,15 @@ trait ZIOTestOps {
           .getOrThrowFiberFailure()
       }
 
+    def zioCause: Cause[E] =
+      Unsafe.unsafe { implicit unsafe =>
+        Runtime.default.unsafe
+          .run[Nothing, Cause[E]](
+            zioEnv.cause
+          )
+          .getOrThrowFiberFailure()
+      }
+
     def zioError: E =
       Unsafe.unsafe { implicit unsafe =>
         Runtime.default.unsafe

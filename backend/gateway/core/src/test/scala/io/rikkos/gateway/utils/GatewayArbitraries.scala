@@ -8,11 +8,16 @@ import org.scalacheck.*
 
 trait GatewayArbitraries extends DomainArbitraries, IronRefinedTypeTransformer {
 
+  val genCyPhoneNationalNumber: Gen[String] = for {
+    phoneNumberPrefix <- Gen.oneOf("99", "97", "96")
+    phoneNumberSuffix <- Gen.choose(100000, 999999)
+  } yield s"$phoneNumberPrefix$phoneNumberSuffix"
+
   given Arbitrary[smithy.OnboardUserDetailsRequest] = Arbitrary {
     for {
       onboardUserDetails  <- Arbitrary.arbitrary[OnboardUserDetails]
       phoneRegion         <- Gen.oneOf(Seq("CY"))
-      phoneNationalNumber <- Gen.const("99555555")
+      phoneNationalNumber <- genCyPhoneNationalNumber
       onboardUserDetailsRequest = onboardUserDetails
         .into[smithy.OnboardUserDetailsRequest]
         .withFieldConst(_.phoneRegion, phoneRegion)
@@ -25,12 +30,25 @@ trait GatewayArbitraries extends DomainArbitraries, IronRefinedTypeTransformer {
     for {
       updateUserDetails   <- Arbitrary.arbitrary[UpdateUserDetails]
       phoneRegion         <- Gen.option(Gen.oneOf(Seq("CY")))
-      phoneNationalNumber <- Gen.option(Gen.const("99555555"))
+      phoneNationalNumber <- Gen.option(genCyPhoneNationalNumber)
       updateUserDetailsRequest = updateUserDetails
         .into[smithy.UpdateUserDetailsRequest]
         .withFieldConst(_.phoneRegion, phoneRegion)
         .withFieldConst(_.phoneNationalNumber, phoneNationalNumber)
         .transform
     } yield updateUserDetailsRequest
+  }
+
+  given Arbitrary[smithy.UpsertUserContactRequest] = Arbitrary {
+    for {
+      upsertUserContact   <- Arbitrary.arbitrary[UpsertUserContact]
+      phoneRegion         <- Gen.oneOf(Seq("CY"))
+      phoneNationalNumber <- genCyPhoneNationalNumber
+      upsertUserContactRequest = upsertUserContact
+        .into[smithy.UpsertUserContactRequest]
+        .withFieldConst(_.phoneRegion, phoneRegion)
+        .withFieldConst(_.phoneNationalNumber, phoneNationalNumber)
+        .transform
+    } yield upsertUserContactRequest
   }
 }

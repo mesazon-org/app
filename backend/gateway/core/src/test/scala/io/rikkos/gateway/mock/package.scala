@@ -6,15 +6,19 @@ import io.rikkos.clock.TimeProvider
 import io.rikkos.domain.*
 import io.rikkos.domain.ServiceError.BadRequestError.InvalidFieldError
 import io.rikkos.gateway.auth.*
-import io.rikkos.gateway.repository.UserRepository
-import io.rikkos.gateway.validation.ServiceValidator.*
+import io.rikkos.gateway.repository.{UserContactsRepository, UserRepository}
+import io.rikkos.gateway.validation.*
+import io.rikkos.gateway.validation.PhoneNumberValidator.PhoneNumberParams
+import io.rikkos.generator.IDGenerator
 import org.http4s.Request
 import zio.*
 
 import java.time.Clock
+import java.util.concurrent.atomic.AtomicInteger
 
 def userRepositoryMockLive(
-    userDetailsRef: Ref[Set[OnboardUserDetails]],
+    insertUserDetailsCounterRef: Ref[Int],
+    updateUserDetailsCounterRef: Ref[Int],
     maybeError: Option[Throwable] = None,
 ): ULayer[UserRepository] =
   ZLayer.succeed(
@@ -25,12 +29,22 @@ def userRepositoryMockLive(
           email: Email,
           userDetails: OnboardUserDetails,
       ): IO[ServiceError.ConflictError.UserAlreadyExists, Unit] =
-        maybeError.fold(userDetailsRef.set(Set(userDetails)))(ZIO.fail(_).orDie)
+        maybeError.fold(insertUserDetailsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
 
       override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
-        maybeError.fold(ZIO.unit)(ZIO.fail(_).orDie)
+        maybeError.fold(updateUserDetailsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
     }
   )
+
+def userContactsRepositoryMockLive(
+    upsertUserContactsCounterRef: Ref[Int],
+    maybeError: Option[Throwable] = None,
+): ULayer[UserContactsRepository] = ZLayer.succeed(
+  new UserContactsRepository {
+    override def upsertUserContacts(userID: UserID, upsertUserContacts: NonEmptyChunk[UpsertUserContact]): UIO[Unit] =
+      maybeError.fold(upsertUserContactsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
+  }
+)
 
 def authorizationStateMockLive(authedUser: AuthedUser): ULayer[AuthorizationState] =
   ZLayer.succeed(
@@ -55,6 +69,15 @@ def phoneNumberValidatorMockLive(): ULayer[DomainValidator[PhoneNumberParams, Ph
         ZIO.succeed(PhoneNumber.assume(rawData.phoneNationalNumber).validNec)
     }
   )
+
+def idGeneratorMockLive: ULayer[IDGenerator] =
+  ZLayer.succeed {
+    val atomicInt = new AtomicInteger(0)
+
+    new IDGenerator {
+      override def generate: UIO[String] = ZIO.succeed(atomicInt.incrementAndGet().toString)
+    }
+  }
 
 def timeProviderMockLive(clock: Clock): ULayer[TimeProvider] =
   ZLayer.succeed(clock) >>> TimeProvider.live

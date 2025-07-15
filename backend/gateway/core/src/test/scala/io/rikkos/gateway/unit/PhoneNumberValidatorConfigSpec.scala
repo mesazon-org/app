@@ -1,21 +1,21 @@
 package io.rikkos.gateway.unit
 
 import com.google.i18n.phonenumbers.PhoneNumberUtil
-import io.rikkos.gateway.config.PhoneNumberValidationConfig
+import io.rikkos.gateway.config.PhoneNumberValidatorConfig
 import io.rikkos.testkit.base.ZWordSpecBase
 import zio.*
 
-class PhoneNumberValidationConfigSpec extends ZWordSpecBase {
+class PhoneNumberValidatorConfigSpec extends ZWordSpecBase {
 
   "PhoneNumberValidatorConfig" when {
     "supportedRegionsConfig" should {
       "return valid config with all supported regions that are provided" in {
-        val config = PhoneNumberValidationConfig(supportedRegions = Set("US", "GB", "CY"))
+        val config = PhoneNumberValidatorConfig(supportedRegions = Set("US", "GB", "CY"))
 
         val resConfig = ZIO
-          .service[PhoneNumberValidationConfig]
+          .service[PhoneNumberValidatorConfig]
           .provide(
-            ZLayer.succeed(config) >>> PhoneNumberValidationConfig.supportedRegionsConfig,
+            ZLayer.succeed(config) >>> PhoneNumberValidatorConfig.supportedRegionsConfig,
             ZLayer.succeed(PhoneNumberUtil.getInstance()),
           )
           .zioValue
@@ -24,12 +24,12 @@ class PhoneNumberValidationConfigSpec extends ZWordSpecBase {
       }
 
       "fail with unsupported regions that have been provided" in {
-        val config = PhoneNumberValidationConfig(supportedRegions = Set("UU", "GAMW", "CY"))
+        val config = PhoneNumberValidatorConfig(supportedRegions = Set("UU", "GAMW", "CY"))
 
         val error = ZIO
-          .service[PhoneNumberValidationConfig]
+          .service[PhoneNumberValidatorConfig]
           .provide(
-            ZLayer.succeed(config) >>> PhoneNumberValidationConfig.supportedRegionsConfig,
+            ZLayer.succeed(config) >>> PhoneNumberValidatorConfig.supportedRegionsConfig,
             ZLayer.succeed(PhoneNumberUtil.getInstance()),
           )
           .zioError

@@ -5,6 +5,7 @@ import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
 import io.rikkos.clock.TimeProvider
 import io.rikkos.domain.*
 import io.rikkos.gateway.query.UserDetailsQueries
+import io.rikkos.gateway.query.UserDetailsQueries.UpdateUserDetailsQuery
 import io.scalaland.chimney.dsl.*
 import org.postgresql.util.PSQLException
 import zio.*
@@ -58,16 +59,11 @@ object UserRepository {
         _ <- database
           .transactionOrDie(
             UserDetailsQueries.updateUserDetailsQuery(
-              userID,
-              updateUserDetails.firstName,
-              updateUserDetails.lastName,
-              updateUserDetails.phoneNumber,
-              updateUserDetails.addressLine1,
-              updateUserDetails.addressLine2,
-              updateUserDetails.city,
-              updateUserDetails.postalCode,
-              updateUserDetails.company,
-              UpdatedAt(instantNow),
+              updateUserDetails
+                .into[UpdateUserDetailsQuery]
+                .withFieldConst(_.userID, userID)
+                .withFieldConst(_.updatedAt, UpdatedAt(instantNow))
+                .transform
             )
           )
       } yield ()).orDie

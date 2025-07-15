@@ -8,7 +8,8 @@ import io.rikkos.gateway.config.*
 import io.rikkos.gateway.middleware.*
 import io.rikkos.gateway.repository.*
 import io.rikkos.gateway.service.*
-import io.rikkos.gateway.validation.ServiceValidator
+import io.rikkos.gateway.validation.*
+import io.rikkos.generator.IDGenerator
 import org.slf4j.bridge.SLF4JBridgeHandler
 import zio.*
 import zio.config.typesafe.TypesafeConfigProvider
@@ -20,7 +21,7 @@ object Main extends ZIOAppDefault {
 
   // Preconfigure the logger to use SLF4J
   // Preconfigure to use typesafe config reader(application.conf)
-  // Preconfigure to use SLF4JBridgeHandler this is to connect jul with SLF4J
+  // Preconfigure to use SLF4JBridgeHandler this is to route jul to SLF4J
   override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] = Runtime.removeDefaultLoggers >>>
     SLF4J.slf4j ++ ZLayer(ZIO.succeedBlocking {
       SLF4JBridgeHandler.removeHandlersForRootLogger()
@@ -31,14 +32,17 @@ object Main extends ZIOAppDefault {
     .provide(
       AppNameLive, // Used across components for metadata
       TimeProvider.liveSystemUTC,
+      IDGenerator.uuidGeneratorLive,
 
       // Http
       HealthCheckService.live,
       UserManagementService.live,
+      UserContactsService.live,
 
       // Repository
       PostgresTransactor.live,
       UserRepository.live,
+      UserContactsRepository.live,
 
       // Auth
       AuthorizationService.live,
@@ -50,15 +54,16 @@ object Main extends ZIOAppDefault {
       // Config
       DatabaseConfig.live,
       GatewayServerConfig.live,
-      PhoneNumberValidationConfig.live,
+      PhoneNumberValidatorConfig.live,
 
       // Phone Number Util
       ZLayer.succeed(PhoneNumberUtil.getInstance()),
 
       // Validators
-      ServiceValidator.phoneNumberValidatorLive,
-      ServiceValidator.onboardUserDetailsRequestValidatorLive,
-      ServiceValidator.updateUserDetailsRequestValidatorLive,
+      PhoneNumberValidator.phoneNumberValidatorLive,
+      UserManagementValidators.onboardUserDetailsRequestValidatorLive,
+      UserManagementValidators.updateUserDetailsRequestValidatorLive,
+      UserContactsValidators.upsertUserContactsValidatorLive,
 
       // FiberRefs
       ZLayer
