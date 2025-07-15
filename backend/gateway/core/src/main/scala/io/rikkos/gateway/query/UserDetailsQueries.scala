@@ -7,6 +7,19 @@ import io.rikkos.domain.*
 
 object UserDetailsQueries {
 
+  final case class UpdateUserDetailsQuery(
+      userID: UserID,
+      firstName: Option[FirstName],
+      lastName: Option[LastName],
+      phoneNumber: Option[PhoneNumber],
+      addressLine1: Option[AddressLine1],
+      addressLine2: Option[AddressLine2],
+      city: Option[City],
+      postalCode: Option[PostalCode],
+      company: Option[Company],
+      updatedAt: UpdatedAt,
+  )
+
   def insertUserDetailsQuery(userDetailsTable: UserDetailsTable): TranzactIO[Unit] =
     tzio {
       sql"""INSERT INTO local_schema.users_details (
@@ -58,33 +71,22 @@ object UserDetailsQueries {
               WHERE user_id = $userID""".query[UserDetailsTable].option
     }
 
-  def updateUserDetailsQuery(
-      userID: UserID,
-      firstName: Option[FirstName],
-      lastName: Option[LastName],
-      phoneNumber: Option[PhoneNumber],
-      addressLine1: Option[AddressLine1],
-      addressLine2: Option[AddressLine2],
-      city: Option[City],
-      postalCode: Option[PostalCode],
-      company: Option[Company],
-      updatedAt: UpdatedAt,
-  ): TranzactIO[Unit] =
+  def updateUserDetailsQuery(query: UpdateUserDetailsQuery): TranzactIO[Unit] =
     tzio {
       sql"""
       UPDATE local_schema.users_details
       SET
-        first_name            = COALESCE($firstName, first_name),
-        last_name             = COALESCE($lastName, last_name),
-        phone_number          = COALESCE($phoneNumber, phone_number),
-        address_line_1        = COALESCE($addressLine1, address_line_1),
-        address_line_2        = COALESCE($addressLine2, address_line_2),
-        city                  = COALESCE($city, city),
-        postal_code           = COALESCE($postalCode, postal_code),
-        company               = COALESCE($company, company),
-        updated_at            = $updatedAt
+        first_name            = COALESCE(${query.firstName}, first_name),
+        last_name             = COALESCE(${query.lastName}, last_name),
+        phone_number          = COALESCE(${query.phoneNumber}, phone_number),
+        address_line_1        = COALESCE(${query.addressLine1}, address_line_1),
+        address_line_2        = COALESCE(${query.addressLine2}, address_line_2),
+        city                  = COALESCE(${query.city}, city),
+        postal_code           = COALESCE(${query.postalCode}, postal_code),
+        company               = COALESCE(${query.company}, company),
+        updated_at            = ${query.updatedAt}
       WHERE
-        user_id = $userID
+        user_id = ${query.userID}
     """.update.run.map(_ => ())
     }
 }

@@ -7,7 +7,7 @@ import io.github.gaelrenoux.tranzactio.doobie.Connection
 import io.rikkos.clock.TimeProvider
 import io.rikkos.domain.*
 import io.rikkos.gateway.query.UserContactsQueries
-import io.rikkos.gateway.query.UserContactsQueries.UpdateUserContact
+import io.rikkos.gateway.query.UserContactsQueries.UpdateUserContactQuery
 import io.rikkos.generator.IDGenerator
 import io.scalaland.chimney.dsl.*
 import zio.*
@@ -33,7 +33,7 @@ object UserContactsRepository {
           .map(updateUserContact =>
             updateUserContact.userContactID.map(userContactID =>
               updateUserContact
-                .into[UpdateUserContact]
+                .into[UpdateUserContactQuery]
                 .withFieldConst(_.userContactID, userContactID)
                 .withFieldConst(_.updateAt, UpdatedAt(now))
                 .transform

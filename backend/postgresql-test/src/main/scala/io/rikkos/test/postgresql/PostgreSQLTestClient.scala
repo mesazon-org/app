@@ -46,6 +46,7 @@ object PostgreSQLTestClient {
   private lazy val defaultDatabase = "local_db"
   private lazy val defaultUsername = "local_test_user"
   private lazy val defaultPassword = "local_test_password"
+  private lazy val maxPoolSize     = 3
 
   lazy val ServiceName     = "postgres"
   lazy val ServicePort     = 5432
@@ -141,6 +142,7 @@ object PostgreSQLTestClient {
         hikariDataSource.setJdbcUrl(config.url)
         hikariDataSource.setUsername(config.username)
         hikariDataSource.setPassword(config.password)
+        hikariDataSource.setMaximumPoolSize(maxPoolSize)
         hikariDataSource
       }
     } yield datasource

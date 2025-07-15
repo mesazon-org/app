@@ -270,7 +270,37 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
           }
       }
 
-      "fail to insert new user contact when a user contact with the same phone number and user id already exist" in withContext {
+      "successfully update occurs on user contact that is not found, entry should remain empty" in withContext {
+        (client: PostgreSQLTestClient) =>
+          val userID        = arbitrarySample[UserID]
+          val userContactID = arbitrarySample[UserContactID]
+          val userDetailsTable = arbitrarySample[UserDetailsTable]
+            .copy(userID = userID)
+          val upsertUserContact = arbitrarySample[UpsertUserContact]
+            .copy(userContactID = Some(userContactID))
+          val userContactsRepository = ZIO
+            .service[UserContactsRepository]
+            .provide(
+              UserContactsRepository.live,
+              ZLayer.succeed(client.database),
+              timeProviderMockLive(Clock.systemUTC()),
+              idGeneratorMockLive,
+            )
+            .zioValue
+
+          // Insert user for user_id foreign key constraint
+          client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable)).zioValue
+
+          userContactsRepository
+            .upsertUserContacts(userID, NonEmptyChunk(upsertUserContact))
+            .zioValue
+
+          client.database
+            .transactionOrDie(UserContactsQueries.getUserContacts(userID))
+            .zioValue shouldBe empty
+      }
+
+      "fail to insert new user contacts when a user contact with the same phone number and user id already exist" in withContext {
         (client: PostgreSQLTestClient) =>
           val now           = Instant.now().truncatedTo(ChronoUnit.MILLIS)
           val userID        = arbitrarySample[UserID]
@@ -398,6 +428,31 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
           client.database
             .transactionOrDie(UserContactsQueries.getUserContacts(userID))
             .zioValue should contain theSameElementsAs Vector(insertUserContactsTable)
+      }
+
+      "fail to insert user contact for a user with user id that doesn't existing" in withContext {
+        (client: PostgreSQLTestClient) =>
+          val userID = arbitrarySample[UserID]
+          val upsertUserContact = arbitrarySample[UpsertUserContact]
+            .copy(userContactID = None)
+
+          val userContactsRepository = ZIO
+            .service[UserContactsRepository]
+            .provide(
+              UserContactsRepository.live,
+              ZLayer.succeed(client.database),
+              timeProviderMockLive(Clock.systemUTC()),
+              idGeneratorMockLive,
+            )
+            .zioValue
+
+          userContactsRepository
+            .upsertUserContacts(userID, NonEmptyChunk(upsertUserContact))
+            .zioCause
+            .dieOption
+            .get
+            .asInstanceOf[DbException.Wrapped]
+            .cause shouldBe a[java.sql.BatchUpdateException]
       }
     }
   }

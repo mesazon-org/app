@@ -11,7 +11,7 @@ import zio.*
 object UserContactsQueries {
 
   // TODO: use named tuples when supported from chimney and doobie
-  final case class UpdateUserContact(
+  final case class UpdateUserContactQuery(
       displayName: DisplayName,
       firstName: FirstName,
       phoneNumber: PhoneNumber,
@@ -25,60 +25,6 @@ object UserContactsQueries {
       updateAt: UpdatedAt,
       userContactID: UserContactID,
   )
-
-//  def upsertUserContacts(
-//      userContactsTable: NonEmptyChunk[UserContactTable]
-//  ): TranzactIO[Unit] = {
-//    val query =
-//      show"""INSERT INTO local_schema.users_contacts(
-//        |   user_contact_id,
-//        |   user_id,
-//        |   display_name,
-//        |   first_name,
-//        |   phone_number,
-//        |   last_name,
-//        |   email,
-//        |   address_line_1,
-//        |   address_line_2,
-//        |   city,
-//        |   postal_code,
-//        |   company,
-//        |   created_at,
-//        |   updated_at
-//        | ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-//        | ON CONFLICT (user_contact_id) DO UPDATE SET (
-//        | display_name,
-//        | first_name,
-//        | phone_number,
-//        | last_name,
-//        | company,
-//        | email,
-//        | address_line_1,
-//        | address_line_2,
-//        | city,
-//        | postal_code,
-//        | updated_at
-//        | ) = (
-//        | EXCLUDED.display_name,
-//        | EXCLUDED.first_name,
-//        | EXCLUDED.phone_number,
-//        | EXCLUDED.last_name,
-//        | EXCLUDED.company,
-//        | EXCLUDED.email,
-//        | EXCLUDED.address_line_1,
-//        | EXCLUDED.address_line_2,
-//        | EXCLUDED.city,
-//        | EXCLUDED.postal_code,
-//        | EXCLUDED.updated_at
-//        | )
-//        |""".stripMargin
-//
-//    tzio(
-//      Update[UserContactTable](query)
-//        .updateMany(userContactsTable.toList)
-//        .map(_ => ())
-//    )
-//  }
 
   def insertUserContacts(userContactsTable: NonEmptyChunk[UserContactTable]): TranzactIO[Unit] = {
     val query = show"""
@@ -108,7 +54,7 @@ object UserContactsQueries {
     )
   }
 
-  def updateUserContacts(updateUserContacts: NonEmptyChunk[UpdateUserContact]): TranzactIO[Unit] = {
+  def updateUserContacts(updateUserContacts: NonEmptyChunk[UpdateUserContactQuery]): TranzactIO[Unit] = {
     val query = show"""
         | UPDATE local_schema.users_contacts
         | SET
@@ -127,7 +73,7 @@ object UserContactsQueries {
         |""".stripMargin
 
     tzio(
-      Update[UpdateUserContact](query)
+      Update[UpdateUserContactQuery](query)
         .updateMany(updateUserContacts.toList)
         .map(_ => ())
     )

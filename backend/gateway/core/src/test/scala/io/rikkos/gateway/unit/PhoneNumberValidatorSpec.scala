@@ -25,7 +25,7 @@ class PhoneNumberValidatorSpec extends ZWordSpecBase {
         .zioValue
 
       phoneNumberValidator.validate(phoneRegion, phoneNationalNumber).zioValue shouldBe PhoneNumber
-        .cy("+35799135215")
+        .assume("+35799135215")
         .valid
     }
 
