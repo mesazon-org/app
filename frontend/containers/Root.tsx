@@ -5,7 +5,12 @@ import SignIn from "./SignIn";
 
 const RootStack = createNativeStackNavigator({
   screens: {
-    SignIn: SignIn,
+    SignIn: {
+      screen: SignIn,
+      options: {
+        headerShown: false,
+      },
+    },
   },
 });
 
