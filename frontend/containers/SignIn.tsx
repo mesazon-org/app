@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useForm, Controller } from "react-hook-form";
 
 interface SignInFormData {
   email: string;
@@ -20,18 +21,16 @@ interface SignInFormData {
 
 export default function SignIn() {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState<SignInFormData>({
-    email: "",
-    password: "",
+  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignInFormData>({
+    defaultValues: {
+      email: "",
+      password: "",
+    },
   });
 
-  const handleInputChange = (field: keyof SignInFormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSignIn = () => {
+  const onSubmit = (data: SignInFormData) => {
     // TODO: Implement sign in logic
-    console.log("Sign in with:", formData);
+    console.log("Sign in with:", data);
   };
 
   const handleForgotPassword = () => {
@@ -41,11 +40,11 @@ export default function SignIn() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoidingView}
       >
-        <ScrollView
+        <ScrollView 
           style={styles.scrollView}
           contentContainerStyle={styles.scrollViewContent}
           showsVerticalScrollIndicator={false}
@@ -63,28 +62,68 @@ export default function SignIn() {
             <View style={styles.form}>
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>{t("email")}</Text>
-                <TextInput
-                  value={formData.email}
-                  onChangeText={(value) => handleInputChange("email", value)}
-                  placeholder={t("email")}
-                  style={styles.input}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
+                <Controller
+                  control={control}
+                  name="email"
+                  rules={{
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: "Invalid email address"
+                    }
+                  }}
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder={t("email")}
+                      style={[
+                        styles.input,
+                        errors.email && styles.inputError
+                      ]}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  )}
                 />
+                {errors.email && (
+                  <Text style={styles.errorText}>{errors.email.message}</Text>
+                )}
               </View>
 
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>{t("password")}</Text>
-                <TextInput
-                  value={formData.password}
-                  onChangeText={(value) => handleInputChange("password", value)}
-                  placeholder={t("password")}
-                  style={styles.input}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
+                <Controller
+                  control={control}
+                  name="password"
+                  rules={{
+                    required: "Password is required",
+                    minLength: {
+                      value: 6,
+                      message: "Password must be at least 6 characters"
+                    }
+                  }}
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder={t("password")}
+                      style={[
+                        styles.input,
+                        errors.password && styles.inputError
+                      ]}
+                      secureTextEntry
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  )}
                 />
+                {errors.password && (
+                  <Text style={styles.errorText}>{errors.password.message}</Text>
+                )}
                 <TouchableOpacity
                   style={styles.forgotPasswordContainer}
                   onPress={handleForgotPassword}
@@ -96,11 +135,17 @@ export default function SignIn() {
               </View>
 
               <TouchableOpacity
-                style={styles.signInButton}
-                onPress={handleSignIn}
+                style={[
+                  styles.signInButton,
+                  isSubmitting && styles.signInButtonDisabled
+                ]}
+                onPress={handleSubmit(onSubmit)}
                 activeOpacity={0.8}
+                disabled={isSubmitting}
               >
-                <Text style={styles.signInButtonText}>{t("sign-in")}</Text>
+                <Text style={styles.signInButtonText}>
+                  {isSubmitting ? "Signing in..." : t("sign-in")}
+                </Text>
               </TouchableOpacity>
 
               <View style={styles.orContainer}>
@@ -181,6 +226,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 16,
   },
+  inputError: {
+    borderColor: "#FF4444",
+  },
+  errorText: {
+    color: "#FF4444",
+    fontSize: 12,
+    marginTop: 4,
+  },
   forgotPasswordContainer: {
     alignItems: "flex-end",
   },
@@ -196,6 +249,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 8,
     marginTop: 20,
+  },
+  signInButtonDisabled: {
+    backgroundColor: "#CCCCCC",
   },
   signInButtonText: {
     color: "#FFFFFF",
