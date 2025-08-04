@@ -1,16 +1,20 @@
-import "../i18n";
+import "@/i18n";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createStaticNavigation } from "@react-navigation/native";
-import SignIn from "./SignIn";
+import { SCREEN_NAMES, RootStackParamList, screenOptions } from "@/services/navigation";
+import SignIn from "@/containers/SignIn/SignIn";
+import CreateUserDetails from "@/containers/SignIn/CreateUserDetails";
 
-const RootStack = createNativeStackNavigator({
+const RootStack = createNativeStackNavigator<RootStackParamList>({
   screens: {
-    SignIn: {
+    [SCREEN_NAMES.SIGN_IN]: {
       screen: SignIn,
-      options: {
-        headerShown: false,
-      },
+      options: screenOptions,
     },
+    [SCREEN_NAMES.CREATE_USER_DETAILS]: {
+      screen: CreateUserDetails,
+      options: screenOptions,
+    }   
   },
 });
 
