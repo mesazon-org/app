@@ -49,6 +49,7 @@ export default function CreateUserDetails() {
   });
 
   const onSubmit = (data: CreateUserDetailsFormData) => {
+    console.log('Submitting')
     // Combine country code with phone number
     const fullPhoneNumber = `${selectedCountryCode}${data.phoneNumber}`;
     const formData = {
@@ -59,7 +60,7 @@ export default function CreateUserDetails() {
     
     console.log("Create user details:", formData);
     // TODO: Implement user details creation
-    // navigation.navigate(SCREEN_NAMES.DASHBOARD);
+    navigation.navigate(SCREEN_NAMES.CONTACTS_REQUEST_PERMISSION);
   };
 
   return (

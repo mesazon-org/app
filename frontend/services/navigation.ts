@@ -1,9 +1,7 @@
-// React Native Navigation Service
-// This replaces the web-based react-router navigation
-
 export enum SCREEN_NAMES {
   SIGN_IN = 'SignIn',
   CREATE_USER_DETAILS = 'CreateUserDetails',
+  CONTACTS_REQUEST_PERMISSION = 'ContactsRequestPermission',
   // Add more screens as you create them
   // DASHBOARD = 'Dashboard',
   // PROFILE = 'Profile',
@@ -13,6 +11,7 @@ export enum SCREEN_NAMES {
 export type RootStackParamList = {
   [SCREEN_NAMES.SIGN_IN]: undefined;
   [SCREEN_NAMES.CREATE_USER_DETAILS]: undefined;
+  [SCREEN_NAMES.CONTACTS_REQUEST_PERMISSION]: undefined;
   // Add more screen types as you create them
   // [SCREEN_NAMES.DASHBOARD]: undefined;
   // [SCREEN_NAMES.PROFILE]: { userId?: string };

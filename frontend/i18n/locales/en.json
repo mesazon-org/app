@@ -52,5 +52,13 @@
   "retry": "Retry",
   "close": "Close",
   "select-country": "Select Country",
-  "address-line-1-is-required": "Address line 1 is required"
+  "address-line-1-is-required": "Address line 1 is required",
+  "select-contact": "Select Contact",
+  "loading-contacts": "Loading contacts...",
+  "contacts-permission-required": "Contacts Permission Required",
+  "contacts-permission-message": "This app needs access to your contacts to help you select phone numbers. Please grant permission in your device settings.",
+  "try-again": "Try Again",
+  "failed-to-load-contacts": "Failed to load contacts. Please try again.",
+  "ok": "OK",
+  "add-contact": "Add Contact"
 } 

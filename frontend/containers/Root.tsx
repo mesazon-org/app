@@ -4,6 +4,7 @@ import { createStaticNavigation } from "@react-navigation/native";
 import { SCREEN_NAMES, RootStackParamList, screenOptions } from "@/services/navigation";
 import SignIn from "@/containers/SignIn/SignIn";
 import CreateUserDetails from "@/containers/SignIn/CreateUserDetails";
+import ContactsRequestPermission from "@/containers/SignIn/ContactsRequestPermission";
 
 const RootStack = createNativeStackNavigator<RootStackParamList>({
   screens: {
@@ -14,7 +15,11 @@ const RootStack = createNativeStackNavigator<RootStackParamList>({
     [SCREEN_NAMES.CREATE_USER_DETAILS]: {
       screen: CreateUserDetails,
       options: screenOptions,
-    }   
+    },
+    [SCREEN_NAMES.CONTACTS_REQUEST_PERMISSION]: {
+      screen: ContactsRequestPermission,
+      options: screenOptions,
+    },
   },
 });
 
