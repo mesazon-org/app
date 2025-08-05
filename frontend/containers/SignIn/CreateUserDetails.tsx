@@ -159,7 +159,6 @@ export default function CreateUserDetails() {
                 selectedCountryCode={selectedCountryCode}
                 onCountryCodeChange={(countryCode) => {
                   setSelectedCountryCode(countryCode);
-                  // Update the form value for countryCode
                   control._formValues.countryCode = countryCode;
                 }}
               />
