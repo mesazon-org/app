@@ -170,8 +170,8 @@ export default function SignIn() {
 
 const styles = StyleSheet.create({
   logo: {
-    width: 360,
-    height: 294,
+    width: 180,
+    height: 180,
     alignSelf: "center",
     marginBottom: 20
   },

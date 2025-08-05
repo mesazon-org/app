@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { RootStackParamList, SCREEN_NAMES } from "@/services/navigation";
 import { useNavigation } from "@react-navigation/native";
 import Layout from "@/containers/Layout";
 import Header from "@/components/Header";
+import PhoneNumberInput from "@/components/PhoneNumberInput";
 
 type CreateUserDetailsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, typeof SCREEN_NAMES.CREATE_USER_DETAILS>;
 
@@ -20,6 +21,7 @@ interface CreateUserDetailsFormData {
   firstName: string;
   lastName: string;
   phoneNumber: string;
+  countryCode: string;
   addressLine1: string;
   addressLine2: string;
   city: string;
@@ -30,11 +32,14 @@ interface CreateUserDetailsFormData {
 export default function CreateUserDetails() {
   const { t } = useTranslation();
   const navigation = useNavigation<CreateUserDetailsScreenNavigationProp>();
+  const [selectedCountryCode, setSelectedCountryCode] = useState("+357");
+  
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<CreateUserDetailsFormData>({
     defaultValues: {
       firstName: "",
       lastName: "",
       phoneNumber: "",
+      countryCode: "+357",
       addressLine1: "",
       addressLine2: "",
       city: "",
@@ -44,7 +49,15 @@ export default function CreateUserDetails() {
   });
 
   const onSubmit = (data: CreateUserDetailsFormData) => {
-    console.log("Create user details:", data);
+    // Combine country code with phone number
+    const fullPhoneNumber = `${selectedCountryCode}${data.phoneNumber}`;
+    const formData = {
+      ...data,
+      phoneNumber: fullPhoneNumber,
+      countryCode: selectedCountryCode,
+    };
+    
+    console.log("Create user details:", formData);
     // TODO: Implement user details creation
     // navigation.navigate(SCREEN_NAMES.DASHBOARD);
   };
@@ -57,8 +70,7 @@ export default function CreateUserDetails() {
         showBackButton={true}
       />
 
-      <Text style={styles.title}>{t("complete-your-profile")}</Text>
-      <Text style={styles.subtitle}>{t("please-provide-your-details-to-continue")}</Text>
+      <Text style={styles.title}>{t("set-details")}</Text>
 
       <View style={styles.form}>
         <View style={styles.inputContainer}>
@@ -132,23 +144,24 @@ export default function CreateUserDetails() {
             name="phoneNumber"
             rules={{
               required: t("phone-number-is-required"),
-              pattern: {
-                value: /^\+?[\d\s\-\(\)]+$/,
-                message: t("phone-number-is-required")
+              minLength: {
+                value: 6,
+                message: t("phone-number-must-be-at-least-10-characters")
               }
-            }}
+            }}            
             render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
+              <PhoneNumberInput
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
-                placeholder={t("phone-number")}
-                style={[
-                  styles.input,
-                  errors.phoneNumber && styles.inputError
-                ]}
-                keyboardType="phone-pad"
-                autoCorrect={false}
+                placeholder="00 000000"                
+                error={!!errors.phoneNumber}
+                selectedCountryCode={selectedCountryCode}
+                onCountryCodeChange={(countryCode) => {
+                  setSelectedCountryCode(countryCode);
+                  // Update the form value for countryCode
+                  control._formValues.countryCode = countryCode;
+                }}
               />
             )}
           />
@@ -313,10 +326,10 @@ export default function CreateUserDetails() {
 
 const styles = StyleSheet.create({
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: "bold",
     letterSpacing: 1,
-    marginBottom: 10,
+    marginBottom: 20,
   },
   subtitle: {
     fontSize: 16,

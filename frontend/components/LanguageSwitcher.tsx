@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import Layout from '@/containers/Layout';
 
 const LanguageSwitcher: React.FC = () => {
   const { i18n, t } = useTranslation();
@@ -16,30 +17,35 @@ const LanguageSwitcher: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t('language')}</Text>
-      <View style={styles.languageContainer}>
-        {languages.map((language) => (
-          <TouchableOpacity
-            key={language.code}
-            style={[
-              styles.languageButton,
-              i18n.language === language.code && styles.activeLanguage,
-            ]}
-            onPress={() => changeLanguage(language.code)}
-          >
-            <Text
+    <Layout>
+      <View style={styles.container}>
+        <Text style={styles.title}>{t('language')}</Text>
+        <View style={styles.languageContainer}>
+          {languages.map((language) => (
+            <TouchableOpacity
+              key={language.code}
               style={[
-                styles.languageText,
-                i18n.language === language.code && styles.activeLanguageText,
+                styles.languageButton,
+                i18n.language === language.code && styles.activeLanguage,
               ]}
+              onPress={() => changeLanguage(language.code)}
             >
-              {language.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[
+                  styles.languageText,
+                  i18n.language === language.code && styles.activeLanguageText,
+                ]}
+              >
+                {language.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+
+
+          <Text style={styles.title}>{t('language')}</Text>
+        </View>
       </View>
-    </View>
+    </Layout>
   );
 };
 

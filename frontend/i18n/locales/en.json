@@ -2,8 +2,7 @@
   "welcome": "Welcome to your app!",
   "effortlessly-manage-your-orders": "Effortlessly manage your orders",
   "startWorking": "Open up App.tsx to start working on your app!",
-  "complete-your-profile": "Complete Your Profile",
-  "please-provide-your-details-to-continue": "Please provide your details to continue",
+  "set-details": "Set Details",
   "first-name": "First Name",
   "last-name": "Last Name",
   "phone-number": "Phone Number",
@@ -51,5 +50,7 @@
   "sort": "Sort",
   "refresh": "Refresh",
   "retry": "Retry",
-  "close": "Close"
+  "close": "Close",
+  "select-country": "Select Country",
+  "address-line-1-is-required": "Address line 1 is required"
 } 

@@ -76,10 +76,10 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "flex-start",
   },
   backIcon: {
-    fontSize: 32,
+    fontSize: 46,
     fontWeight: "bold",
     color: "#000",
   },
