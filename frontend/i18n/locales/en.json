@@ -60,5 +60,6 @@
   "try-again": "Try Again",
   "failed-to-load-contacts": "Failed to load contacts. Please try again.",
   "ok": "OK",
-  "add-contact": "Add Contact"
+  "add-contact": "Add Contact",
+  "select-contacts": "Select Contacts"
 } 

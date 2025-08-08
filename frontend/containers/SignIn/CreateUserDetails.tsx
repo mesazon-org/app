@@ -14,6 +14,8 @@ import { useNavigation } from "@react-navigation/native";
 import Layout from "@/containers/Layout";
 import Header from "@/components/Header";
 import PhoneNumberInput from "@/components/PhoneNumberInput";
+import Title from "@/components/Title";
+import FormButton from "@/components/FormButton";
 
 type CreateUserDetailsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, typeof SCREEN_NAMES.CREATE_USER_DETAILS>;
 
@@ -71,7 +73,7 @@ export default function CreateUserDetails() {
         showBackButton={true}
       />
 
-      <Text style={styles.title}>{t("set-details")}</Text>
+      <Title>{t("set-details")}</Title>
 
       <View style={styles.form}>
         <View style={styles.inputContainer}>
@@ -306,19 +308,9 @@ export default function CreateUserDetails() {
           )}
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            isSubmitting && styles.submitButtonDisabled
-          ]}
-          onPress={handleSubmit(onSubmit)}
-          activeOpacity={0.8}
-          disabled={isSubmitting}
-        >
-          <Text style={styles.submitButtonText}>
-            {isSubmitting ? t("setting") : t("continue")}
-          </Text>
-        </TouchableOpacity>
+        <FormButton onPress={handleSubmit(onSubmit)} disabled={isSubmitting}>
+          {isSubmitting ? t("setting") : t("continue")}
+        </FormButton>            
       </View>
     </Layout>   
   );
@@ -367,21 +359,5 @@ const styles = StyleSheet.create({
     color: "#FF4444",
     fontSize: 12,
     marginTop: 4,
-  },
-  submitButton: {
-    backgroundColor: "#6DBE45",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    borderRadius: 8,
-    marginTop: 20,
-  },
-  submitButtonDisabled: {
-    backgroundColor: "#CCCCCC",
-  },
-  submitButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+  }
 });
