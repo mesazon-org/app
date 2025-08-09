@@ -137,8 +137,10 @@ lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
     Dependencies.circeGeneric      % Test,
   )
   .settings(
-    test := {
-      (backendGatewayCore / Docker / publishLocal).value
-      (Test / test).value
-    }
+    test := Def
+      .sequential(
+        backendGatewayCore / Docker / publishLocal,
+        Test / test,
+      )
+      .value
   )
