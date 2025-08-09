@@ -1,9 +1,9 @@
 import Header from "@/components/Header";
 import Layout from "../Layout";
 import useContacts, { Contact } from "@/hooks/useContacts";
-import { FlatList } from "react-native";
+import { FlatList, View, TextInput, StyleSheet } from "react-native";
 import ContactsListItem from "./ContactsListItem";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Title from "@/components/Title";
 import { useTranslation } from "react-i18next";
 import FormButton from "@/components/FormButton";
@@ -13,6 +13,19 @@ export default function SelectContacts() {
     const { t } = useTranslation();
 
     const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const filteredContacts = useMemo(() => {
+        if (!searchQuery.trim()) return contacts.sort((a, b) => a.name.localeCompare(b.name, "en"));
+        
+        const query = searchQuery.toLowerCase();
+        return contacts.filter(contact => 
+            contact.name.toLowerCase().includes(query) ||
+            contact.phoneNumbers?.some(phone => 
+                phone.number.replace(/\s/g, "").includes(query.replace(/\s/g, ""))
+            )
+        ).sort((a, b) => a.name.localeCompare(b.name, "en"));
+    }, [contacts, searchQuery]);
 
     const handleToggleContact = (contact: Contact) => {
         setSelectedContacts(prev => [...prev, contact]);
@@ -22,23 +35,54 @@ export default function SelectContacts() {
         setSelectedContacts(prev => prev.filter(c => c.id !== contact.id));
     };
 
-  return (
-    <Layout>
-      <Header currentStep={2} totalSteps={3} showBackButton={true} />
+    return (
+        <Layout>
+            <Header currentStep={2} totalSteps={3} showBackButton={true} />
 
-      <Title>{t("select-contacts")}</Title>
+            <Title>{t("select-contacts")}</Title>
 
-      <FlatList
-        data={contacts}
-        renderItem={({ item }) => <ContactsListItem contact={item} isSelected={selectedContacts.includes(item)} onToggle={() => selectedContacts.includes(item) ? handleRemoveContact(item) : handleToggleContact(item)}  />}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-      />
-      
-      <FormButton onPress={() => {}} disabled={false}>
-        {t("continue")}
-      </FormButton>
+            <View style={styles.searchContainer}>
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder={t("search-contacts")}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholderTextColor="#888888"
+                />
+            </View>
 
-    </Layout>
-  );
+            <View style={styles.listContainer}>
+                <FlatList
+                    data={filteredContacts}
+                    renderItem={({ item }) => <ContactsListItem contact={item} isSelected={selectedContacts.includes(item)} onToggle={() => selectedContacts.includes(item) ? handleRemoveContact(item) : handleToggleContact(item)}  />}
+                    keyExtractor={(item) => item.id}
+                    showsVerticalScrollIndicator={false}
+                />
+            </View>
+            
+            <FormButton onPress={() => {}} disabled={false}>
+                {t("continue")}
+            </FormButton>
+        </Layout>
+    );
 }
+
+const styles = StyleSheet.create({
+    searchContainer: {
+        marginBottom: 16,
+    },
+    searchInput: {
+        height: 48,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 8,
+        paddingHorizontal: 16,
+        fontSize: 16,
+        backgroundColor: 'white',
+        color: '#333333',
+    },
+    listContainer: {
+        flex: 1,
+        maxHeight: 400, 
+    },
+});
