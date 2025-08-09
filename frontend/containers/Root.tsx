@@ -5,6 +5,7 @@ import { SCREEN_NAMES, RootStackParamList, screenOptions } from "@/services/navi
 import SignIn from "@/containers/SignIn/SignIn";
 import CreateUserDetails from "@/containers/SignIn/CreateUserDetails";
 import ContactsRequestPermission from "@/containers/SignIn/ContactsRequestPermission";
+import SelectContacts from "./SignIn/SelectContacts";
 
 const RootStack = createNativeStackNavigator<RootStackParamList>({
   screens: {
@@ -18,6 +19,10 @@ const RootStack = createNativeStackNavigator<RootStackParamList>({
     },
     [SCREEN_NAMES.CONTACTS_REQUEST_PERMISSION]: {
       screen: ContactsRequestPermission,
+      options: screenOptions,
+    },
+    [SCREEN_NAMES.SELECT_CONTACTS]: {
+      screen: SelectContacts,
       options: screenOptions,
     },
   },
