@@ -4,15 +4,18 @@ import com.typesafe.sbt.packager.docker.DockerPlugin.autoImport.Docker
 import sbt.*
 import sbt.Keys.*
 
-import java.nio.file.Paths
-
 object DockerSettings {
 
-  private val baseImage  = "gcr.io/distroless/java21-debian12:nonroot"
-  private val dockerUser = "nonroot"
+  private lazy val dockerRepositoryEnv = sys.env.get("DOCKER_REPOSITORY") orElse Some("local")
 
-  private val dockerRegistry  = sys.env.get("CONTAINER_REGISTRY_HOST") orElse None
-  private val dockerNamespace = sys.env.get("CONTAINER_NAMESPACE") orElse Some("eak")
+  private lazy val daemonUser = "nonroot"
+  private lazy val baseImage  = s"gcr.io/distroless/java21-debian12:$daemonUser"
+
+  private lazy val appDir       = "/app"
+  private lazy val workDir      = "/opt/docker"
+  private lazy val pasteJarsDir = "jars/"
+  private lazy val copyJarsDir1 = "2/opt/docker/lib/"
+  private lazy val copyJarsDir2 = "4/opt/docker/lib/"
 
 // Commented out code is not used but reference
 //  private def getAllSubDirs(dir: File): Seq[File] = {
@@ -28,23 +31,21 @@ object DockerSettings {
 //    relative.toString
 //  }
 
-  val compileScope = Seq(
-    Docker / packageName := "eak-" + name.value,
-    Docker / version     := "latest",
-    dockerExposedPorts   := Seq(8080, 8081),
+  val compileScope: Seq[Def.Setting[?]] = Def.settings(
+    dockerRepository     := dockerRepositoryEnv,
+    Docker / packageName := s"eak-${name.value}",
+    dockerUpdateLatest := true,
+    Docker / version     := version.value,
+    dockerExposedPorts   := Seq(8080),
     dockerCommands := {
-      val appDir   = "/app"
-      val workDir  = "/opt/docker"
-      val jarsDir1 = "2/opt/docker/lib/"
-      val jarsDir2 = "4/opt/docker/lib/"
-      val main     = (Compile / packageBin / mainClass).value.getOrElse(sys.error("Expected exactly one main class"))
-      val entry    = "java" +: javaOptions.value :+ "-cp" :+ "jars/*" :+ main
+      val main  = (Compile / packageBin / mainClass).value.getOrElse(sys.error("Unspecified main class"))
+      val entry = "java" +: javaOptions.value :+ "-cp" :+ "jars/*" :+ main
       Seq(
-        Cmd("FROM", "gcr.io/distroless/java21-debian12:nonroot"),
-        Cmd("USER", "nonroot"),
+        Cmd("FROM", baseImage),
+        Cmd("USER", daemonUser),
         Cmd("WORKDIR", workDir),
-        Cmd("COPY", jarsDir1, "jars/"),
-        Cmd("COPY", jarsDir2, "jars/"),
+        Cmd("COPY", copyJarsDir1, pasteJarsDir),
+        Cmd("COPY", copyJarsDir2, pasteJarsDir),
         ExecCmd("ENTRYPOINT", entry*),
       )
     },
