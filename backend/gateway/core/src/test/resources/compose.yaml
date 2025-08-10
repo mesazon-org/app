@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17.5-alpine3.22
+    image: postgres:17.5-alpine
     restart: always
 #    ports:
 #      - "5432:5432"
@@ -12,7 +12,7 @@ services:
       - ../../../../../schemas/local/postgres:/docker-entrypoint-initdb.d
 
   flyway:
-    image: flyway/flyway:9.14.1
+    image: flyway/flyway:11.10.5-alpine
     restart: on-failure
     command: -configFiles=/flyway/conf/flyway.config -locations=filesystem:/flyway/sql -schemas=local_schema -connectRetries=60 migrate
     volumes:

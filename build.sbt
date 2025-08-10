@@ -92,13 +92,13 @@ lazy val backendGatewayRoot = createBackendGatewayModule(None)
 
 lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
   .enablePlugins(Smithy4sCodegenPlugin)
-  .enablePlugins(DockerPlugin)
+  .enablePlugins(JavaAppPackaging, DockerPlugin)
   .dependsOn(backendDomainModule)
   .dependsOn(backendClockModule)
   .dependsOn(backendGeneratorModule)
   .dependsOn(backendTestKitModule % Test)
   .dependsOn(backendPostgreSQLTestModule % Test)
-  .settings(Docker.settings(docker, Compile))
+  .settings(DockerSettings.compileScope)
   .withDependencies(
     Dependencies.zio,
     Dependencies.zioConfig,
@@ -136,8 +136,10 @@ lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
     Dependencies.circeGeneric      % Test,
   )
   .settings(
-    test := {
-      val testResult = (backendGatewayCore / docker).value
-      (Test / test).value
-    }
+    test := Def
+      .sequential(
+        backendGatewayCore / Docker / publishLocal,
+        Test / test,
+      )
+      .value
   )
