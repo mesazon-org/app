@@ -99,7 +99,6 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
   .dependsOn(backendTestKitModule % Test)
   .dependsOn(backendPostgreSQLTestModule % Test)
   .settings(DockerSettings.compileScope)
-//  .settings(Docker.settings(docker, Compile))
   .withDependencies(
     Dependencies.zio,
     Dependencies.zioConfig,
