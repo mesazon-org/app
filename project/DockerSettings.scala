@@ -34,7 +34,7 @@ object DockerSettings {
   val compileScope: Seq[Def.Setting[?]] = Def.settings(
     dockerRepository     := dockerRepositoryEnv,
     Docker / packageName := s"eak-${name.value}",
-    dockerUpdateLatest := true,
+    dockerUpdateLatest   := true,
     Docker / version     := version.value,
     dockerExposedPorts   := Seq(8080),
     dockerCommands := {
