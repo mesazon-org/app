@@ -65,6 +65,8 @@ export default function CreateUserDetails() {
     navigation.navigate(SCREEN_NAMES.CONTACTS_REQUEST_PERMISSION);
   };
 
+
+  // TODO: CUMULATIVE LAYOUT SHIFT ON ERROR
   return (
     <Layout>
       <Header
@@ -137,6 +139,31 @@ export default function CreateUserDetails() {
           />
           {errors.lastName && (
             <Text style={styles.errorText}>{errors.lastName.message}</Text>
+          )}
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Company</Text>
+          <Controller
+            control={control}
+            name="company"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                placeholder={t("company")}
+                style={[
+                  styles.input,
+                  errors.company && styles.inputError
+                ]}
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
+            )}
+          />
+          {errors.company && (
+            <Text style={styles.errorText}>{errors.company.message}</Text>
           )}
         </View>
 
@@ -281,31 +308,6 @@ export default function CreateUserDetails() {
               <Text style={styles.errorText}>{errors.postalCode.message}</Text>
             )}
           </View>
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Company</Text>
-          <Controller
-            control={control}
-            name="company"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                placeholder={t("company")}
-                style={[
-                  styles.input,
-                  errors.company && styles.inputError
-                ]}
-                autoCapitalize="words"
-                autoCorrect={false}
-              />
-            )}
-          />
-          {errors.company && (
-            <Text style={styles.errorText}>{errors.company.message}</Text>
-          )}
         </View>
 
         <FormButton onPress={handleSubmit(onSubmit)} disabled={isSubmitting}>

@@ -67,6 +67,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   header: {
+    display: 'flex',
     flexDirection: "row",
     alignItems: "center",
     height: 56,
@@ -74,20 +75,19 @@ const styles = StyleSheet.create({
   },
   backButton: {
     width: 56,
-    height: 56,
-    justifyContent: "center",
-    alignItems: "flex-start",
+    display: 'flex',
+    alignItems: "flex-start"
   },
   backIcon: {
     fontSize: 46,
-    fontWeight: "bold",
-    color: "#000",
+    fontWeight: "300",
+    color: "#000"
   },
   progressContainer: {
     flex: 1,
-    height: 8,
     justifyContent: "center",
     marginLeft: 16,
+    marginTop: 9
   },
   progressBar: {
     height: 8,
