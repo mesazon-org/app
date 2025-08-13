@@ -109,6 +109,9 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         updateUserDetailsCounterRef.get.zioValue shouldBe 0
       }
     }
+    "getUser" should {
+      "successfully get the user" in new TestContext {}
+    }
   }
 
   trait TestContext {

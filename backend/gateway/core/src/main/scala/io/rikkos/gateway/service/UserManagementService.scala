@@ -33,11 +33,26 @@ object UserManagementService {
         _                 <- userRepository.updateUserDetails(authedUser.userID, updateUserDetails)
       } yield ()
 
-    override def getUser(userID: String): IO[ServiceError, GetUserDetailsResponse] =
+    override def getUser(userID: String): IO[ServiceError, smithy.GetUserDetailsResponse] =
       for {
-        _           <- ZIO.logDebug(s"Get user with userID: $userID")
-        userDetails <- userRepository.getUserDetails(userID)
-      } yield userDetails
+        authedUser       <- authorizationState.get()
+        _                <- ZIO.logDebug(s"Get user with userID: $userID")
+        userDetailsTable <- userRepository.getUserDetails(authedUser.userID)
+        userDetailsResponse = smithy.GetUserDetailsResponse(
+          userDetailsTable.userID.value,
+          userDetailsTable.email.value,
+          userDetailsTable.firstName,
+          userDetailsTable.lastName,
+          userDetailsTable.phoneNumber,
+          userDetailsTable.addressLine1,
+          userDetailsTable.city,
+          userDetailsTable.postalCode,
+          userDetailsTable.company,
+          userDetailsTable.createdAt,
+          userDetailsTable.updatedAt,
+          userDetailsTable.addressLine2,
+        )
+      } yield userDetailsResponse
   }
 
   private def observed(

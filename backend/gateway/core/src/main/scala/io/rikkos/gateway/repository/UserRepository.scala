@@ -23,8 +23,8 @@ trait UserRepository {
   ): UIO[Unit]
 
   def getUserDetails(
-      userID: String
-  ): UIO[GetUserDetailsResponse]
+      userID: UserID
+  ): UIO[UserDetailsTable]
 }
 
 object UserRepository {
@@ -73,7 +73,7 @@ object UserRepository {
           )
       } yield ()).orDie
 
-    override def getUserDetails(userID: String): UIO[GetUserDetailsResponse] = ???
+    override def getUserDetails(userID: UserID): UIO[GetUserDetailsResponse] = ???
   }
 
   def observed(repository: UserRepository): UserRepository = repository
