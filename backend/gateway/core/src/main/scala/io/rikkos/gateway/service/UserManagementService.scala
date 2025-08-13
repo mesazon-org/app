@@ -3,6 +3,7 @@ package io.rikkos.gateway.service
 import io.rikkos.domain.*
 import io.rikkos.gateway.auth.AuthorizationState
 import io.rikkos.gateway.repository.UserRepository
+import io.rikkos.gateway.smithy.GetUserDetailsResponse
 import io.rikkos.gateway.validation.ServiceValidator
 import io.rikkos.gateway.{smithy, HttpErrorHandler}
 import zio.*
@@ -31,6 +32,12 @@ object UserManagementService {
         updateUserDetails <- updateUserDetailsRequestValidator.validate(request)
         _                 <- userRepository.updateUserDetails(authedUser.userID, updateUserDetails)
       } yield ()
+
+    override def getUser(userID: String): IO[ServiceError, GetUserDetailsResponse] =
+      for {
+        _           <- ZIO.logDebug(s"Get user with userID: $userID")
+        userDetails <- userRepository.getUserDetails(userID)
+      } yield userDetails
   }
 
   private def observed(
@@ -44,6 +51,8 @@ object UserManagementService {
       override def updateUser(request: smithy.UpdateUserDetailsRequest): Task[Unit] =
         HttpErrorHandler
           .errorResponseHandler(service.updateUser(request))
+
+      override def getUser(userID: String): Task[GetUserDetailsResponse] = ???
     }
 
   val live = ZLayer.fromFunction(UserManagementServiceImpl.apply) >>> ZLayer.fromFunction(observed)

@@ -6,6 +6,7 @@ import io.rikkos.clock.TimeProvider
 import io.rikkos.domain.*
 import io.rikkos.gateway.query.UserDetailsQueries
 import io.rikkos.gateway.query.UserDetailsQueries.UpdateUserDetailsQuery
+import io.rikkos.gateway.smithy.GetUserDetailsResponse
 import io.scalaland.chimney.dsl.*
 import org.postgresql.util.PSQLException
 import zio.*
@@ -20,6 +21,10 @@ trait UserRepository {
       userID: UserID,
       updateUserDetails: UpdateUserDetails,
   ): UIO[Unit]
+
+  def getUserDetails(
+      userID: String
+  ): UIO[GetUserDetailsResponse]
 }
 
 object UserRepository {
@@ -67,6 +72,8 @@ object UserRepository {
             )
           )
       } yield ()).orDie
+
+    override def getUserDetails(userID: String): UIO[GetUserDetailsResponse] = ???
   }
 
   def observed(repository: UserRepository): UserRepository = repository

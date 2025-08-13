@@ -45,3 +45,12 @@ structure ServiceUnavailable {
     @required
     message: String = "The server is currently unavailable."
 }
+
+@error("client")
+@httpError(404)
+structure NotFound {
+    @required
+    code: Integer = 404
+    @required
+    message: String = "Not found."
+}
