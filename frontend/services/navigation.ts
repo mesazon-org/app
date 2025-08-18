@@ -4,6 +4,11 @@ export enum SCREEN_NAMES {
   CONTACTS_REQUEST_PERMISSION = 'ContactsRequestPermission',
   SELECT_CONTACTS = 'SelectContacts',
   WELCOME_USER = 'WelcomeUser',
+  FORGOT_PASSWORD = 'ForgotPassword',
+  CHECK_EMAIL = 'CheckEmail',
+  RESET_PASSWORD = 'ResetPassword',
+  PASSWORD_RESET_SUCCESS = 'PasswordResetSuccess',
+  PASSWORD_RESET_FAILED = 'PasswordResetFailed',
   // Add more screens as you create them
   // DASHBOARD = 'Dashboard',
   // PROFILE = 'Profile',
@@ -16,6 +21,11 @@ export type RootStackParamList = {
   [SCREEN_NAMES.CONTACTS_REQUEST_PERMISSION]: undefined;
   [SCREEN_NAMES.SELECT_CONTACTS]: undefined;
   [SCREEN_NAMES.WELCOME_USER]: undefined;
+  [SCREEN_NAMES.FORGOT_PASSWORD]: undefined;
+  [SCREEN_NAMES.CHECK_EMAIL]: undefined;
+  [SCREEN_NAMES.RESET_PASSWORD]: undefined;
+  [SCREEN_NAMES.PASSWORD_RESET_SUCCESS]: undefined;
+  // [SCREEN_NAMES.PASSWORD_RESET_FAILED]: undefined;
   // Add more screen types as you create them
   // [SCREEN_NAMES.DASHBOARD]: undefined;
   // [SCREEN_NAMES.PROFILE]: { userId?: string };

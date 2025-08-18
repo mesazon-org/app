@@ -6,9 +6,10 @@ export default function Title({ children, style }: { children: React.ReactNode, 
 
 const styles = StyleSheet.create({
     title: {
-      fontSize: 24,
+      fontSize: 36,
+      lineHeight: 40,
       fontWeight: "bold",
-      letterSpacing: 1,
+      letterSpacing: 1.5,
       marginBottom: 20,
     },
 });

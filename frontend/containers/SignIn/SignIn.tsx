@@ -3,16 +3,16 @@ import {
   View,
   Text,
   Image,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
 import { useTranslation } from "react-i18next";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList, SCREEN_NAMES } from "@/services/navigation";
 import { useNavigation } from "@react-navigation/native";
 import Layout from "@/containers/Layout";
+import Input from "@/components/Input";
 
 type SignInScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -58,9 +58,8 @@ export default function SignIn() {
     navigation.navigate(SCREEN_NAMES.CREATE_USER_DETAILS);
   };
 
-  const handleForgotPassword = () => {
-    // TODO: Implement forgot password logic
-    console.log("Forgot password");
+  const handleForgotPassword = () => {    
+    navigation.navigate(SCREEN_NAMES.FORGOT_PASSWORD);
   };
 
   return (
@@ -74,112 +73,69 @@ export default function SignIn() {
       <Text style={styles.title}>{t("sign-in")}</Text>
 
       <View style={styles.form}>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>{t("email")}</Text>
-          <Controller
-            control={control}
-            name="email"
-            rules={{
-              required: "Email is required",
-              pattern: {
-                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: "Invalid email address",
-              },
-            }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                placeholder={t("email")}
-                style={[styles.input, errors.email && styles.inputError]}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            )}
-          />
-          {errors.email && (
-            <Text style={styles.errorText}>{errors.email.message}</Text>
-          )}
-        </View>
+        <Input
+          label={t("email")}
+          name="email"
+          control={control}
+          rules={{
+            required: "Email is required",
+            pattern: {
+              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+              message: "Invalid email address",
+            },
+          }}
+          error={errors.email}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>{t("password")}</Text>
-          <Controller
-            control={control}
-            name="password"
-            rules={{
-              required: "Password is required",
-              minLength: {
-                value: 8,
-                message: "Password must be at least 8 characters",
-              },
-            }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                placeholder={t("password")}
-                style={[styles.input, errors.password && styles.inputError]}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            )}
-          />
-          {errors.password && (
-            <Text style={styles.errorText}>{errors.password.message}</Text>
-          )}
-          {!isSigningUp && (
-            <TouchableOpacity
-              style={styles.forgotPasswordContainer}
-              onPress={handleForgotPassword}
-            >
-              <Text style={styles.forgotPasswordText}>
-                {t("forgot-password")}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        <Input
+          label={t("password")}
+          name="password"
+          control={control}
+          rules={{
+            required: "Password is required",
+            minLength: {
+              value: 8,
+              message: "Password must be at least 8 characters",
+            },
+          }}
+          error={errors.password}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+
+        {!isSigningUp && (
+          <TouchableOpacity
+            style={styles.forgotPasswordContainer}
+            onPress={handleForgotPassword}
+          >
+            <Text style={styles.forgotPasswordText}>
+              {t("forgot-password")}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {isSigningUp && (
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>{t("confirm-password")}</Text>
-            <Controller
-              control={control}
-              name="confirmPassword"
-              rules={{
-                required: "Confirm password is required",                
-                validate: (value) => {
-                  if (!isSigningUp) return true;
-                  const password = watch("password");
-                  return value === password || "Passwords do not match";
-                },
-              }}
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  placeholder={t("confirm-password")}
-                  style={[
-                    styles.input,
-                    errors.confirmPassword && styles.inputError,
-                  ]}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              )}
-            />
-            {errors.confirmPassword && (
-              <Text style={styles.errorText}>
-                {errors.confirmPassword.message}
-              </Text>
-            )}
-          </View>
+          <Input
+            label={t("confirm-password")}
+            name="confirmPassword"
+            control={control}
+            rules={{
+              required: "Confirm password is required",
+              validate: (value: string) => {
+                if (!isSigningUp) return true;
+                const password = watch("password");
+                return value === password || "Passwords do not match";
+              },
+            }}
+            error={errors.confirmPassword}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
         )}
 
         <TouchableOpacity
@@ -249,28 +205,6 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: 16,
-  },
-  inputContainer: {
-    gap: 8,
-  },
-  label: {
-    fontWeight: "500",
-    color: "#333",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#6DBE45",
-    padding: 12,
-    borderRadius: 8,
-    fontSize: 16,
-  },
-  inputError: {
-    borderColor: "#FF4444",
-  },
-  errorText: {
-    color: "#FF4444",
-    fontSize: 12,
-    marginTop: 4,
   },
   forgotPasswordContainer: {
     alignItems: "flex-end",

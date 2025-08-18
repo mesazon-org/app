@@ -7,6 +7,10 @@ import CreateUserDetails from "@/containers/SignIn/CreateUserDetails";
 import ContactsRequestPermission from "@/containers/SignIn/ContactsRequestPermission";
 import SelectContacts from "./SignIn/SelectContacts";
 import WelcomeUser from "./SignIn/WelcomeUser";
+import ForgotPassword from "./SignIn/ForgotPassword";
+import CheckMail from "./SignIn/CheckMail";
+import ResetPassword from "./SignIn/ResetPassword";
+import PasswordResetSuccess from "./SignIn/PasswordResetSuccess";
 
 const RootStack = createNativeStackNavigator<RootStackParamList>({
   screens: {
@@ -30,6 +34,26 @@ const RootStack = createNativeStackNavigator<RootStackParamList>({
       screen: WelcomeUser,
       options: screenOptions,
     },
+    [SCREEN_NAMES.FORGOT_PASSWORD]: {
+      screen: ForgotPassword,
+      options: screenOptions,
+    },
+    [SCREEN_NAMES.CHECK_EMAIL]: {
+      screen: CheckMail,
+      options: screenOptions,
+    },
+    [SCREEN_NAMES.RESET_PASSWORD]: {
+      screen: ResetPassword,
+      options: screenOptions,
+    },
+    [SCREEN_NAMES.PASSWORD_RESET_SUCCESS]: {
+      screen: PasswordResetSuccess,
+      options: screenOptions,
+    },
+    // [SCREEN_NAMES.PASSWORD_RESET_FAILED]: {
+    //   screen: PasswordResetFailed,
+    //   options: screenOptions,
+    // },
   },
 });
 
