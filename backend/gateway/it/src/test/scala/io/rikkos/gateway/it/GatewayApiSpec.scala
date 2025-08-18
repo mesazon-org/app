@@ -109,7 +109,12 @@ class GatewayApiSpec
       "return successfully when update user" in withContext { case Context(gatewayClient, postgresSQLClient) =>
         val userDetailsTable = arbitrarySample[UserDetailsTable]
           .copy(userID = UserID.assume("test"), email = Email.assume("eliot.martel@gmail.com"))
+        val phoneNationalNumber = "99123123"
+        val phoneRegion         = "CY"
+        val phoneNumber         = PhoneNumber.cy(phoneNationalNumber)
         val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
+          .copy(phoneNationalNumber = Some(phoneNationalNumber))
+          .copy(phoneRegion = Some(phoneRegion))
 
         postgresSQLClient.database
           .transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable))
@@ -127,9 +132,7 @@ class GatewayApiSpec
         val expectedUserDetailsTable = userDetailsTable.copy(
           firstName = FirstName.assumeAll(updateUserDetailsRequest.firstName).getOrElse(userDetailsTable.firstName),
           lastName = LastName.assumeAll(updateUserDetailsRequest.lastName).getOrElse(userDetailsTable.lastName),
-          phoneNumber = updateUserDetailsRequest.phoneNationalNumber
-            .map(PhoneNumber.cy)
-            .getOrElse(userDetailsTable.phoneNumber),
+          phoneNumber = phoneNumber,
           addressLine1 =
             AddressLine1.assumeAll(updateUserDetailsRequest.addressLine1).getOrElse(userDetailsTable.addressLine1),
           addressLine2 =

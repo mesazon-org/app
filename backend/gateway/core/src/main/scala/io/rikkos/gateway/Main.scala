@@ -28,7 +28,7 @@ object Main extends ZIOAppDefault {
       SLF4JBridgeHandler.install()
     }) ++ Runtime.setConfigProvider(TypesafeConfigProvider.fromResourcePath())
 
-  private val app = HttpApp.serverLayer.launch
+  private val app: Task[Any] = HttpApp.serverLayer.launch
     .provide(
       AppNameLive, // Used across components for metadata
       TimeProvider.liveSystemUTC,
@@ -71,7 +71,7 @@ object Main extends ZIOAppDefault {
         .fresh, // `.fresh` is to create a new FiberRef for each component
     )
 
-  override def run: URIO[Any, ExitCode] =
+  override def run: ZIO[ZIOAppArgs & Scope, Any, Any] =
     app
       .flatMapError(error =>
         ZIO.fiberId.flatMap(fid =>
@@ -91,5 +91,4 @@ object Main extends ZIOAppDefault {
           )
         )
       )
-      .exitCode
 }
