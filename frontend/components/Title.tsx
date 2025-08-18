@@ -1,7 +1,7 @@
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, StyleProp, TextStyle  } from "react-native";
 
-export default function Title({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.title}>{children}</Text>;
+export default function Title({ children, style }: { children: React.ReactNode, style?: StyleProp<TextStyle> }) {
+  return <Text style={[styles.title, style]}>{children}</Text>;
 }
 
 const styles = StyleSheet.create({

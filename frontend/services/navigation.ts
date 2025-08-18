@@ -3,6 +3,7 @@ export enum SCREEN_NAMES {
   CREATE_USER_DETAILS = 'CreateUserDetails',
   CONTACTS_REQUEST_PERMISSION = 'ContactsRequestPermission',
   SELECT_CONTACTS = 'SelectContacts',
+  WELCOME_USER = 'WelcomeUser',
   // Add more screens as you create them
   // DASHBOARD = 'Dashboard',
   // PROFILE = 'Profile',
@@ -14,6 +15,7 @@ export type RootStackParamList = {
   [SCREEN_NAMES.CREATE_USER_DETAILS]: undefined;
   [SCREEN_NAMES.CONTACTS_REQUEST_PERMISSION]: undefined;
   [SCREEN_NAMES.SELECT_CONTACTS]: undefined;
+  [SCREEN_NAMES.WELCOME_USER]: undefined;
   // Add more screen types as you create them
   // [SCREEN_NAMES.DASHBOARD]: undefined;
   // [SCREEN_NAMES.PROFILE]: { userId?: string };

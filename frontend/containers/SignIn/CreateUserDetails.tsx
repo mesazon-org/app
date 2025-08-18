@@ -16,6 +16,7 @@ import Header from "@/components/Header";
 import PhoneNumberInput from "@/components/PhoneNumberInput";
 import Title from "@/components/Title";
 import FormButton from "@/components/FormButton";
+import useUser from "@/providers/User/useUser";
 
 type CreateUserDetailsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -39,6 +40,7 @@ export default function CreateUserDetails() {
   const navigation = useNavigation<CreateUserDetailsScreenNavigationProp>();
   const [selectedCountryCode, setSelectedCountryCode] = useState("+357");
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
+  const { setUser } = useUser();
 
   const {
     control,
@@ -84,6 +86,12 @@ export default function CreateUserDetails() {
     };
 
     console.log("Create user details:", formData);
+    setUser({
+      id: "1",
+      name: `${data.firstName} ${data.lastName}`,
+      email: "",
+      phone: fullPhoneNumber,
+    });
     // TODO: Implement user details creation
     navigation.navigate(SCREEN_NAMES.CONTACTS_REQUEST_PERMISSION);
   };

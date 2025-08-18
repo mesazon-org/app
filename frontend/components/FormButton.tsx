@@ -1,17 +1,19 @@
-import { TouchableOpacity, Text, StyleSheet } from "react-native";
+import { TouchableOpacity, Text, StyleSheet, StyleProp, ViewStyle } from "react-native";
 
 export default function FormButton({
   children,
   onPress,
   disabled,
+  style,
 }: {
   children: React.ReactNode;
   onPress: () => void;
   disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
     <TouchableOpacity
-      style={styles.button}
+      style={[styles.button, style]}
       onPress={onPress}
       disabled={disabled}
     >
