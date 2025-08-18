@@ -14,26 +14,46 @@ import { RootStackParamList, SCREEN_NAMES } from "@/services/navigation";
 import { useNavigation } from "@react-navigation/native";
 import Layout from "@/containers/Layout";
 
-type SignInScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, typeof SCREEN_NAMES.SIGN_IN>;
-type CreateUserDetailsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, typeof SCREEN_NAMES.CREATE_USER_DETAILS>;
+type SignInScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  typeof SCREEN_NAMES.SIGN_IN
+>;
+type CreateUserDetailsScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  typeof SCREEN_NAMES.CREATE_USER_DETAILS
+>;
 
 interface SignInFormData {
   email: string;
   password: string;
+  confirmPassword: string;
+  isNewUser: boolean;
 }
 
 export default function SignIn() {
   const { t } = useTranslation();
-  const navigation = useNavigation<SignInScreenNavigationProp & CreateUserDetailsScreenNavigationProp>();
-  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignInFormData>({
+  const navigation = useNavigation<
+    SignInScreenNavigationProp & CreateUserDetailsScreenNavigationProp
+  >();
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    watch,
+    setValue,
+  } = useForm<SignInFormData>({
     defaultValues: {
       email: "",
       password: "",
+      confirmPassword: "",
+      isNewUser: false,
     },
   });
 
+  const isSigningUp = watch("isNewUser");
+
   const onSubmit = (data: SignInFormData) => {
-    console.log("Sign in with:", data);    
+    console.log("Sign in with:", data);
     // TODO: Implement conditional signing in, if new user.. then createUserDetails otherwise dashboard
     navigation.navigate(SCREEN_NAMES.CREATE_USER_DETAILS);
   };
@@ -46,7 +66,7 @@ export default function SignIn() {
   return (
     <Layout>
       <Image
-        source={require('@/assets/Farmers.png')}
+        source={require("@/assets/Farmers.png")}
         style={styles.logo}
         resizeMode="contain"
       />
@@ -63,8 +83,8 @@ export default function SignIn() {
               required: "Email is required",
               pattern: {
                 value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: "Invalid email address"
-              }
+                message: "Invalid email address",
+              },
             }}
             render={({ field: { onChange, onBlur, value } }) => (
               <TextInput
@@ -72,10 +92,7 @@ export default function SignIn() {
                 onChangeText={onChange}
                 onBlur={onBlur}
                 placeholder={t("email")}
-                style={[
-                  styles.input,
-                  errors.email && styles.inputError
-                ]}
+                style={[styles.input, errors.email && styles.inputError]}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -96,8 +113,8 @@ export default function SignIn() {
               required: "Password is required",
               minLength: {
                 value: 8,
-                message: "Password must be at least 8 characters"
-              }
+                message: "Password must be at least 8 characters",
+              },
             }}
             render={({ field: { onChange, onBlur, value } }) => (
               <TextInput
@@ -105,10 +122,7 @@ export default function SignIn() {
                 onChangeText={onChange}
                 onBlur={onBlur}
                 placeholder={t("password")}
-                style={[
-                  styles.input,
-                  errors.password && styles.inputError
-                ]}
+                style={[styles.input, errors.password && styles.inputError]}
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -118,51 +132,103 @@ export default function SignIn() {
           {errors.password && (
             <Text style={styles.errorText}>{errors.password.message}</Text>
           )}
-          <TouchableOpacity
-            style={styles.forgotPasswordContainer}
-            onPress={handleForgotPassword}
-          >
-            <Text style={styles.forgotPasswordText}>
-              {t("forgot-password")}
-            </Text>
-          </TouchableOpacity>
+          {!isSigningUp && (
+            <TouchableOpacity
+              style={styles.forgotPasswordContainer}
+              onPress={handleForgotPassword}
+            >
+              <Text style={styles.forgotPasswordText}>
+                {t("forgot-password")}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
+
+        {isSigningUp && (
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>{t("confirm-password")}</Text>
+            <Controller
+              control={control}
+              name="confirmPassword"
+              rules={{
+                required: "Confirm password is required",                
+                validate: (value) => {
+                  if (!isSigningUp) return true;
+                  const password = watch("password");
+                  return value === password || "Passwords do not match";
+                },
+              }}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  placeholder={t("confirm-password")}
+                  style={[
+                    styles.input,
+                    errors.confirmPassword && styles.inputError,
+                  ]}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              )}
+            />
+            {errors.confirmPassword && (
+              <Text style={styles.errorText}>
+                {errors.confirmPassword.message}
+              </Text>
+            )}
+          </View>
+        )}
 
         <TouchableOpacity
           style={[
             styles.signInButton,
-            isSubmitting && styles.signInButtonDisabled
+            isSubmitting && styles.signInButtonDisabled,
           ]}
           onPress={handleSubmit(onSubmit)}
           activeOpacity={0.8}
           disabled={isSubmitting}
         >
           <Text style={styles.signInButtonText}>
-            {isSubmitting ? "Signing in..." : t("sign-in")}
+            {isSubmitting ? t("loading") : isSigningUp ? t("sign-up") : t("sign-in")}
           </Text>
         </TouchableOpacity>
 
-        <View style={styles.orContainer}>
-          <View style={styles.orLine} />
-          <Text style={styles.orText}>Or</Text>
-          <View style={styles.orLine} />
-        </View>
+        {isSigningUp && <>          
+          <View style={styles.signUpContainer}>
+            <Text style={styles.signUpText}>{t("already-have-an-account")} </Text>
+            <TouchableOpacity onPress={() => setValue("isNewUser", false)}>
+              <Text style={styles.signUpLink}>{t("sign-in")}</Text>
+            </TouchableOpacity>
+          </View>      
+        </>}
+        
+        {!isSigningUp && <>
+          <View style={styles.orContainer}>
+            <View style={styles.orLine} />
+            <Text style={styles.orText}>{t("or")}</Text>
+            <View style={styles.orLine} />
+          </View>
 
-        <View style={styles.socialButtonsContainer}>
-          <TouchableOpacity>
-            <Image source={require('@/assets/Google.png')} />
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Image source={require('@/assets/Facebook.png')} />
-          </TouchableOpacity>
-        </View>
+          <View style={styles.socialButtonsContainer}>
+            <TouchableOpacity>
+              <Image source={require("@/assets/Google.png")} />
+            </TouchableOpacity>
+            <TouchableOpacity>
+              <Image source={require("@/assets/Facebook.png")} />
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>
-            Don't have an account?{" "}
-            <Text style={styles.signUpLink}>Sign Up</Text>
-          </Text>
-        </View>
+          <View style={styles.signUpContainer}>
+            <Text style={styles.signUpText}>{t("dont-have-an-account")} </Text>
+            <TouchableOpacity onPress={() => setValue("isNewUser", true)}>
+              <Text style={styles.signUpLink}>{t("sign-up")}</Text>
+            </TouchableOpacity>
+          </View>      
+        </>}
+        
       </View>
     </Layout>
   );
@@ -173,7 +239,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     alignSelf: "center",
-    marginBottom: 20
+    marginBottom: 20,
   },
   title: {
     fontSize: 46,
@@ -212,7 +278,7 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     fontSize: 14,
     color: "#6DBE45",
-    fontWeight: 'medium',
+    fontWeight: "medium",
   },
   signInButton: {
     backgroundColor: "#6DBE45",
@@ -270,6 +336,9 @@ const styles = StyleSheet.create({
   },
   signUpContainer: {
     alignItems: "center",
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "center",
     marginTop: 10,
   },
   signUpText: {

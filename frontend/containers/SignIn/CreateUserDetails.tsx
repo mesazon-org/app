@@ -17,7 +17,10 @@ import PhoneNumberInput from "@/components/PhoneNumberInput";
 import Title from "@/components/Title";
 import FormButton from "@/components/FormButton";
 
-type CreateUserDetailsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, typeof SCREEN_NAMES.CREATE_USER_DETAILS>;
+type CreateUserDetailsScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  typeof SCREEN_NAMES.CREATE_USER_DETAILS
+>;
 
 interface CreateUserDetailsFormData {
   firstName: string;
@@ -35,8 +38,13 @@ export default function CreateUserDetails() {
   const { t } = useTranslation();
   const navigation = useNavigation<CreateUserDetailsScreenNavigationProp>();
   const [selectedCountryCode, setSelectedCountryCode] = useState("+357");
-  
-  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<CreateUserDetailsFormData>({
+  const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<CreateUserDetailsFormData>({
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -50,8 +58,23 @@ export default function CreateUserDetails() {
     },
   });
 
+  const handlePhoneVerification = async () => {
+    setIsVerifyingPhone(true);
+    try {
+      // TODO: Implement actual phone verification logic
+      // This could be sending an SMS, WhatsApp message, or calling a verification API
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
+      console.log("Phone verification initiated");
+      // You could show a success message or navigate to verification code input
+    } catch (error) {
+      console.error("Phone verification failed:", error);
+    } finally {
+      setIsVerifyingPhone(false);
+    }
+  };
+
   const onSubmit = (data: CreateUserDetailsFormData) => {
-    console.log('Submitting')
+    console.log("Submitting");
     // Combine country code with phone number
     const fullPhoneNumber = `${selectedCountryCode}${data.phoneNumber}`;
     const formData = {
@@ -59,89 +82,20 @@ export default function CreateUserDetails() {
       phoneNumber: fullPhoneNumber,
       countryCode: selectedCountryCode,
     };
-    
+
     console.log("Create user details:", formData);
     // TODO: Implement user details creation
     navigation.navigate(SCREEN_NAMES.CONTACTS_REQUEST_PERMISSION);
   };
 
-
   // TODO: CUMULATIVE LAYOUT SHIFT ON ERROR
   return (
     <Layout>
-      <Header
-        currentStep={1}
-        totalSteps={3}
-        showBackButton={true}
-      />
+      <Header currentStep={1} totalSteps={3} showBackButton={true} />
 
       <Title>{t("set-details")}</Title>
 
       <View style={styles.form}>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>{t("first-name")}</Text>
-          <Controller
-            control={control}
-            name="firstName"
-            rules={{
-              required: t("first-name-is-required"),
-              minLength: {
-                value: 2,
-                message: t("first-name-must-be-at-least-2-characters")
-              }
-            }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                placeholder={t("first-name")}
-                style={[
-                  styles.input,
-                  errors.firstName && styles.inputError
-                ]}
-                autoCapitalize="words"
-                autoCorrect={false}
-              />
-            )}
-          />
-          {errors.firstName && (
-            <Text style={styles.errorText}>{errors.firstName.message}</Text>
-          )}
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>{t("last-name")}</Text>
-          <Controller
-            control={control}
-            name="lastName"
-            rules={{
-              required: t("last-name-is-required"),
-              minLength: {
-                value: 2,
-                message: t("last-name-must-be-at-least-2-characters")
-              }
-            }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                placeholder={t("last-name")}
-                style={[
-                  styles.input,
-                  errors.lastName && styles.inputError
-                ]}
-                autoCapitalize="words"
-                autoCorrect={false}
-              />
-            )}
-          />
-          {errors.lastName && (
-            <Text style={styles.errorText}>{errors.lastName.message}</Text>
-          )}
-        </View>
-
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Company</Text>
           <Controller
@@ -153,18 +107,79 @@ export default function CreateUserDetails() {
                 onChangeText={onChange}
                 onBlur={onBlur}
                 placeholder={t("company")}
-                style={[
-                  styles.input,
-                  errors.company && styles.inputError
-                ]}
+                style={[styles.input, errors.company && styles.inputError]}
                 autoCapitalize="words"
                 autoCorrect={false}
               />
             )}
           />
-          {errors.company && (
-            <Text style={styles.errorText}>{errors.company.message}</Text>
-          )}
+          <View style={styles.errorContainer}>
+            {errors.company && (
+              <Text style={styles.errorText}>{errors.company.message}</Text>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>{t("first-name")}</Text>
+          <Controller
+            control={control}
+            name="firstName"
+            rules={{
+              required: t("first-name-is-required"),
+              minLength: {
+                value: 2,
+                message: t("first-name-must-be-at-least-2-characters"),
+              },
+            }}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                placeholder={t("first-name")}
+                style={[styles.input, errors.firstName && styles.inputError]}
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
+            )}
+          />
+          <View style={styles.errorContainer}>
+            {errors.firstName && (
+              <Text style={styles.errorText}>{errors.firstName.message}</Text>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>{t("last-name")}</Text>
+          <Controller
+            control={control}
+            name="lastName"
+            rules={{
+              required: t("last-name-is-required"),
+              minLength: {
+                value: 2,
+                message: t("last-name-must-be-at-least-2-characters"),
+              },
+            }}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                placeholder={t("last-name")}
+                style={[styles.input, errors.lastName && styles.inputError]}
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
+            )}
+          />
+          <View style={styles.errorContainer}>
+            {errors.lastName && (
+              <Text style={styles.errorText}>{errors.lastName.message}</Text>
+            )}
+          </View>
         </View>
 
         <View style={styles.inputContainer}>
@@ -176,27 +191,31 @@ export default function CreateUserDetails() {
               required: t("phone-number-is-required"),
               minLength: {
                 value: 6,
-                message: t("phone-number-must-be-at-least-10-characters")
-              }
-            }}            
+                message: t("phone-number-must-be-at-least-10-characters"),
+              },
+            }}
             render={({ field: { onChange, onBlur, value } }) => (
               <PhoneNumberInput
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
-                placeholder="00 000000"                
+                placeholder="00 000000"
                 error={!!errors.phoneNumber}
                 selectedCountryCode={selectedCountryCode}
                 onCountryCodeChange={(countryCode) => {
                   setSelectedCountryCode(countryCode);
                   control._formValues.countryCode = countryCode;
                 }}
+                onVerify={handlePhoneVerification}
+                isVerifying={isVerifyingPhone}
               />
             )}
           />
-          {errors.phoneNumber && (
-            <Text style={styles.errorText}>{errors.phoneNumber.message}</Text>
-          )}
+          <View style={styles.errorContainer}>
+            {errors.phoneNumber && (
+              <Text style={styles.errorText}>{errors.phoneNumber.message}</Text>
+            )}
+          </View>
         </View>
 
         <View style={styles.inputContainer}>
@@ -213,18 +232,19 @@ export default function CreateUserDetails() {
                 onChangeText={onChange}
                 onBlur={onBlur}
                 placeholder={t("address-line-1")}
-                style={[
-                  styles.input,
-                  errors.addressLine1 && styles.inputError
-                ]}
+                style={[styles.input, errors.addressLine1 && styles.inputError]}
                 autoCapitalize="words"
                 autoCorrect={false}
               />
             )}
           />
-          {errors.addressLine1 && (
-            <Text style={styles.errorText}>{errors.addressLine1.message}</Text>
-          )}
+          <View style={styles.errorContainer}>
+            {errors.addressLine1 && (
+              <Text style={styles.errorText}>
+                {errors.addressLine1.message}
+              </Text>
+            )}
+          </View>
         </View>
 
         <View style={styles.inputContainer}>
@@ -238,18 +258,19 @@ export default function CreateUserDetails() {
                 onChangeText={onChange}
                 onBlur={onBlur}
                 placeholder={t("address-line-2")}
-                style={[
-                  styles.input,
-                  errors.addressLine2 && styles.inputError
-                ]}
+                style={[styles.input, errors.addressLine2 && styles.inputError]}
                 autoCapitalize="words"
                 autoCorrect={false}
               />
             )}
           />
-          {errors.addressLine2 && (
-            <Text style={styles.errorText}>{errors.addressLine2.message}</Text>
-          )}
+          <View style={styles.errorContainer}>
+            {errors.addressLine2 && (
+              <Text style={styles.errorText}>
+                {errors.addressLine2.message}
+              </Text>
+            )}
+          </View>
         </View>
 
         <View style={styles.rowContainer}>
@@ -267,18 +288,17 @@ export default function CreateUserDetails() {
                   onChangeText={onChange}
                   onBlur={onBlur}
                   placeholder={t("city")}
-                  style={[
-                    styles.input,
-                    errors.city && styles.inputError
-                  ]}
+                  style={[styles.input, errors.city && styles.inputError]}
                   autoCapitalize="words"
                   autoCorrect={false}
                 />
               )}
             />
-            {errors.city && (
-              <Text style={styles.errorText}>{errors.city.message}</Text>
-            )}
+            <View style={styles.errorContainer}>
+              {errors.city && (
+                <Text style={styles.errorText}>{errors.city.message}</Text>
+              )}
+            </View>
           </View>
 
           <View style={[styles.inputContainer, styles.halfWidth]}>
@@ -295,26 +315,27 @@ export default function CreateUserDetails() {
                   onChangeText={onChange}
                   onBlur={onBlur}
                   placeholder={t("postal-code")}
-                  style={[
-                    styles.input,
-                    errors.postalCode && styles.inputError
-                  ]}
+                  style={[styles.input, errors.postalCode && styles.inputError]}
                   autoCapitalize="characters"
                   autoCorrect={false}
                 />
               )}
             />
-            {errors.postalCode && (
-              <Text style={styles.errorText}>{errors.postalCode.message}</Text>
-            )}
+            <View style={styles.errorContainer}>
+              {errors.postalCode && (
+                <Text style={styles.errorText}>
+                  {errors.postalCode.message}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
 
         <FormButton onPress={handleSubmit(onSubmit)} disabled={isSubmitting}>
           {isSubmitting ? t("setting") : t("continue")}
-        </FormButton>            
+        </FormButton>
       </View>
-    </Layout>   
+    </Layout>
   );
 }
 
@@ -331,14 +352,14 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   form: {
-    gap: 16,
+    gap: 12,
   },
   inputContainer: {
-    gap: 8,
+    gap: 6,
   },
   rowContainer: {
     flexDirection: "row",
-    gap: 16,
+    gap: 12,
   },
   halfWidth: {
     flex: 1,
@@ -360,6 +381,9 @@ const styles = StyleSheet.create({
   errorText: {
     color: "#FF4444",
     fontSize: 12,
-    marginTop: 4,
-  }
+    marginTop: 2,
+  },
+  errorContainer: {
+    minHeight: 4,
+  },
 });

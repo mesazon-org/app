@@ -8,9 +8,11 @@ import {
   Modal,
   FlatList,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { countryCodes, CountryCode } from "@/constants"
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 interface PhoneNumberInputProps {
   value: string;
@@ -21,6 +23,8 @@ interface PhoneNumberInputProps {
   error?: boolean;
   selectedCountryCode?: string;
   onCountryCodeChange?: (countryCode: string) => void;
+  onVerify?: () => void;
+  isVerifying?: boolean;
 }
 
 export default function PhoneNumberInput({
@@ -32,6 +36,8 @@ export default function PhoneNumberInput({
   error,
   selectedCountryCode = '+357',
   onCountryCodeChange,
+  onVerify,
+  isVerifying = false,
 }: PhoneNumberInputProps) {
   const { t } = useTranslation();
   const [showCountryPicker, setShowCountryPicker] = useState(false);
@@ -41,6 +47,12 @@ export default function PhoneNumberInput({
   const handleCountrySelect = (country: CountryCode) => {
     onCountryCodeChange?.(country.dialCode);
     setShowCountryPicker(false);
+  };
+
+  const handleVerify = () => {
+    if (onVerify && value.trim().length > 0) {
+      onVerify();
+    }
   };
 
   const renderCountryItem = ({ item }: { item: CountryCode }) => (
@@ -78,6 +90,21 @@ export default function PhoneNumberInput({
           keyboardType="phone-pad"
           autoCorrect={false}
         />
+
+        {onVerify && (
+          <TouchableOpacity
+            style={[
+              styles.verifyButton,
+              (!value.trim() || isVerifying) && styles.verifyButtonDisabled
+            ]}
+            onPress={handleVerify}
+            disabled={!value.trim() || isVerifying}
+            activeOpacity={0.7}
+          >
+              {!isVerifying && <Icon name="whatsapp" size={20} color="#25D366" />}
+            {isVerifying ? <ActivityIndicator size="small" color="#ffffff" /> : <Text style={styles.verifyText}>{t("verify")}</Text>}
+          </TouchableOpacity>
+        )}
       </View>
 
       <Modal
@@ -203,5 +230,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 2,
+  },
+  verifyButton: {
+    backgroundColor: '#000000',
+    borderRadius: 4,
+    paddingVertical: 0,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 40,
+    minHeight: 30,
+    marginRight: 8,
+    gap: 2
+  },
+  verifyButtonDisabled: {
+    backgroundColor: '#000000',
+    opacity: 0.7,
+  },
+  whatsappIcon: {
+    fontSize: 20,
+  },  
+  verifyText: {
+    fontSize: 14,
+    color: '#ffffff',
+    marginLeft: 4,
   },
 }); 
