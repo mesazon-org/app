@@ -22,7 +22,7 @@ object Dependencies {
   lazy val doobieV              = "1.0.0-RC9"
   lazy val postgresqlV          = "42.7.3"
   lazy val hikariCPV            = "7.0.2"
-  lazy val doobieTranzactioV    = "5.4.0"
+  lazy val doobieTranzactioV    = "5.5.0"
   lazy val libphonenumberV      = "9.0.13"
   lazy val circeV               = "0.14.14"
 
