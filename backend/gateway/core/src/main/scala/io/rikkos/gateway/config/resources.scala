@@ -18,7 +18,7 @@ def deriveConfigLayer[A: {Tag, DeriveConfig}](
     for {
       appName <- ZIO.service[AppName]
       derivedConfig  = deriveConfig[A]
-      modifiedConfig = derivedConfig.nested(appName, path).mapKey(toKebabCase)
+      modifiedConfig = derivedConfig.nested(appName.value, path).mapKey(toKebabCase)
       config <- TypesafeConfigProvider.fromResourcePath().load(modifiedConfig)
     } yield config
   }

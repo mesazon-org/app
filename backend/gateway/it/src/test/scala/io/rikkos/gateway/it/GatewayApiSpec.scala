@@ -90,7 +90,7 @@ class GatewayApiSpec
 
       "fail with BadRequest when onboarding user details are invalid" in withContext { case Context(gatewayClient, _) =>
         val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
-          .copy(firstName = FirstName.assume(""))
+          .copy(firstName = "")
 
         gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe Status.BadRequest
       }
@@ -148,7 +148,7 @@ class GatewayApiSpec
 
       "fail with BadRequest when update user details are invalid" in withContext { case Context(gatewayClient, _) =>
         val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
-          .copy(firstName = Some(FirstName.assume("")))
+          .copy(firstName = Some(""))
 
         gatewayClient.updateUser(updateUserDetailsRequest).zioValue shouldBe Status.BadRequest
       }
@@ -163,7 +163,7 @@ class GatewayApiSpec
           val updateDisplayName = DisplayName.assume("dummy")
           val userDetailsTable  = arbitrarySample[UserDetailsTable].copy(userID = userID)
           val existingUserContact = arbitrarySample[smithy.UpsertUserContactRequest]
-            .copy(userContactID = Some(userContactID))
+            .copy(userContactID = Some(userContactID.value))
           val updateUserContact = existingUserContact
             .copy(displayName = updateDisplayName.value)
           val insertUserContact = arbitrarySample[smithy.UpsertUserContactRequest]
