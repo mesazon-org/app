@@ -14,7 +14,7 @@ object Dependencies {
   lazy val pureconfigV          = "0.17.9"
   lazy val scalaTestV           = "3.2.17"
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
-  lazy val scalacheckV          = "1.18.1"
+  lazy val scalacheckV          = "1.19.0"
   lazy val testcontainersScalaV = "0.43.0"
   lazy val testcontainersV      = "1.21.3"
   lazy val ironV                = "3.0.4"
@@ -22,7 +22,7 @@ object Dependencies {
   lazy val doobieV              = "1.0.0-RC10"
   lazy val postgresqlV          = "42.7.3"
   lazy val hikariCPV            = "7.0.2"
-  lazy val doobieTranzactioV    = "5.5.0"
+  lazy val doobieTranzactioV    = "5.5.2"
   lazy val libphonenumberV      = "9.0.13"
   lazy val circeV               = "0.14.14"
 
