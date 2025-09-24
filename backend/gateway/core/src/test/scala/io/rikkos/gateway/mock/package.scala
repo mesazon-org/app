@@ -36,8 +36,10 @@ def userRepositoryMockLive(
       override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
         maybeError.fold(updateUserDetailsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
 
-      override def getUserDetails(userID: UserID): UIO[UserDetailsTable] =
-        maybeError.fold(getUserDetailsCounterRef.incrementAndGet *> ZIO.succeed(userRepositoryState(userID)))(ZIO.fail(_).orDie)
+      override def getUserDetails(userID: UserID): UIO[Option[UserDetailsTable]] =
+        maybeError.fold(getUserDetailsCounterRef.incrementAndGet *> ZIO.succeed(userRepositoryState.get(userID)))(
+          ZIO.fail(_).orDie
+        )
     }
   )
 

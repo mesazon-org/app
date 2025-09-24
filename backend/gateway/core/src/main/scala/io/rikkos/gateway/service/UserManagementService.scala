@@ -6,6 +6,7 @@ import io.rikkos.gateway.repository.UserRepository
 import io.rikkos.gateway.smithy.GetUserDetailsResponse
 import io.rikkos.gateway.validation.ServiceValidator
 import io.rikkos.gateway.{smithy, HttpErrorHandler}
+import smithy4s.Timestamp
 import zio.*
 
 object UserManagementService {
@@ -35,23 +36,29 @@ object UserManagementService {
 
     override def getUser(userID: String): IO[ServiceError, smithy.GetUserDetailsResponse] =
       for {
-        authedUser       <- authorizationState.get()
-        _                <- ZIO.logDebug(s"Get user with userID: $userID")
-        userDetailsTable <- userRepository.getUserDetails(authedUser.userID)
-        userDetailsResponse = smithy.GetUserDetailsResponse(
-          userDetailsTable.userID.value,
-          userDetailsTable.email.value,
-          userDetailsTable.firstName,
-          userDetailsTable.lastName,
-          userDetailsTable.phoneNumber,
-          userDetailsTable.addressLine1,
-          userDetailsTable.city,
-          userDetailsTable.postalCode,
-          userDetailsTable.company,
-          userDetailsTable.createdAt,
-          userDetailsTable.updatedAt,
-          userDetailsTable.addressLine2,
-        )
+        authedUser            <- authorizationState.get()
+        _                     <- ZIO.logDebug(s"Get user with userID: $userID")
+        maybeUserDetailsTable <- userRepository.getUserDetails(authedUser.userID)
+        userDetailsResponse <- maybeUserDetailsTable match {
+          case Some(userDetailsTable) =>
+            ZIO.succeed(
+              smithy.GetUserDetailsResponse(
+                userDetailsTable.userID.value,
+                userDetailsTable.email.value,
+                userDetailsTable.firstName,
+                userDetailsTable.lastName,
+                userDetailsTable.phoneNumber,
+                userDetailsTable.addressLine1,
+                userDetailsTable.city,
+                userDetailsTable.postalCode,
+                userDetailsTable.company,
+                Timestamp.fromInstant(userDetailsTable.createdAt.value),
+                Timestamp.fromInstant(userDetailsTable.updatedAt.value),
+                userDetailsTable.addressLine2,
+              )
+            )
+          case None => ZIO.fail(ServiceError.NotFoundError.UserNotFound(authedUser.userID, authedUser.email))
+        }
       } yield userDetailsResponse
   }
 

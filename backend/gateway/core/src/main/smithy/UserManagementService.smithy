@@ -34,7 +34,7 @@ operation UpdateUser {
 operation GetUser {
     input : GetUserDetailsRequest
     output : GetUserDetailsResponse
-    errors: [NotFound]
+    errors: [Unauthorized, NotFound, InternalServerError]
 }
 
 structure OnboardUserDetailsRequest {
@@ -98,8 +98,8 @@ structure GetUserDetailsResponse {
     @required
     company: String
     @required
-    createdAt: String
+    createdAt: Timestamp
     @required
-    updatedAt: String
+    updatedAt: Timestamp
 
 }

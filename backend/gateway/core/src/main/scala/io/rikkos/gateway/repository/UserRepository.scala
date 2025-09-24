@@ -6,7 +6,6 @@ import io.rikkos.clock.TimeProvider
 import io.rikkos.domain.*
 import io.rikkos.gateway.query.UserDetailsQueries
 import io.rikkos.gateway.query.UserDetailsQueries.UpdateUserDetailsQuery
-import io.rikkos.gateway.smithy.GetUserDetailsResponse
 import io.scalaland.chimney.dsl.*
 import org.postgresql.util.PSQLException
 import zio.*
@@ -24,7 +23,7 @@ trait UserRepository {
 
   def getUserDetails(
       userID: UserID
-  ): UIO[UserDetailsTable]
+  ): UIO[Option[UserDetailsTable]]
 }
 
 object UserRepository {
@@ -73,7 +72,12 @@ object UserRepository {
           )
       } yield ()).orDie
 
-    override def getUserDetails(userID: UserID): UIO[GetUserDetailsResponse] = ???
+    override def getUserDetails(userID: UserID): UIO[Option[UserDetailsTable]] =
+      database
+        .transactionOrDie(
+          UserDetailsQueries.getUserDetailsQuery(userID)
+        )
+        .orDie
   }
 
   def observed(repository: UserRepository): UserRepository = repository

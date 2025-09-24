@@ -117,9 +117,11 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
   trait TestContext {
     val insertUserDetailsCounterRef = Ref.make(0).zioValue
     val updateUserDetailsCounterRef = Ref.make(0).zioValue
+    val getUserDetailsCounterRef    = Ref.make(0).zioValue
 
     def buildUserManagementService(
         authedUser: AuthedUser,
+        userRepositoryState: Map[UserID, UserDetailsTable] = Map.empty,
         userRepositoryMaybeError: Option[Throwable] = None,
     ): smithy.UserManagementService[Task] =
       ZIO
@@ -127,8 +129,10 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         .provide(
           UserManagementService.live,
           userRepositoryMockLive(
+            userRepositoryState,
             insertUserDetailsCounterRef,
             updateUserDetailsCounterRef,
+            getUserDetailsCounterRef,
             userRepositoryMaybeError,
           ),
           authorizationStateMockLive(authedUser),
