@@ -13,6 +13,7 @@ import { RootStackParamList, SCREEN_NAMES } from "@/services/navigation";
 import { useNavigation } from "@react-navigation/native";
 import Layout from "@/containers/Layout";
 import Input from "@/components/Input";
+import { supabase } from "@/services/supabase";
 
 type SignInScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -53,12 +54,20 @@ export default function SignIn() {
   const isSigningUp = watch("isNewUser");
 
   const onSubmit = (data: SignInFormData) => {
-    console.log("Sign in with:", data);
-    // TODO: Implement conditional signing in, if new user.. then createUserDetails otherwise dashboard
-    navigation.navigate(SCREEN_NAMES.CREATE_USER_DETAILS);
+    supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    }).then(({ data, error }) => {
+      if (error) {
+        console.log("Error signing in:", error);
+      } else {
+        console.log("Signed in:", data);
+        navigation.navigate(SCREEN_NAMES.CREATE_USER_DETAILS);
+      }
+    });    
   };
 
-  const handleForgotPassword = () => {    
+  const onForgotPassword = () => {    
     navigation.navigate(SCREEN_NAMES.FORGOT_PASSWORD);
   };
 
@@ -97,8 +106,8 @@ export default function SignIn() {
           rules={{
             required: "Password is required",
             minLength: {
-              value: 8,
-              message: "Password must be at least 8 characters",
+              value: 6,
+              message: "Password must be at least 6 characters",
             },
           }}
           error={errors.password}
@@ -110,7 +119,7 @@ export default function SignIn() {
         {!isSigningUp && (
           <TouchableOpacity
             style={styles.forgotPasswordContainer}
-            onPress={handleForgotPassword}
+            onPress={onForgotPassword}
           >
             <Text style={styles.forgotPasswordText}>
               {t("forgot-password")}

@@ -6,6 +6,7 @@ null
 # local env files
 .env.local
 .env.*.local
+**/.env
 
 # Log files
 npm-debug.log*
@@ -59,3 +60,41 @@ metals.sbt
 
 build/
 dashboards/imported
+
+# Supabase Docker build and runtime files
+supabase/.env
+supabase/docker-compose.override.yml
+supabase/volumes/db/*
+!supabase/volumes/db/.gitkeep
+supabase/volumes/storage/*
+!supabase/volumes/storage/.gitkeep
+supabase/volumes/logs/*
+!supabase/volumes/logs/.gitkeep
+supabase/volumes/functions/_shared/*
+!supabase/volumes/functions/_shared/.gitkeep
+supabase/volumes/analytics/*
+!supabase/volumes/analytics/.gitkeep
+supabase/volumes/edge-runtime/*
+!supabase/volumes/edge-runtime/.gitkeep
+
+# Supabase CLI generated files
+supabase/.temp/
+supabase/migrations/
+supabase/seed.sql
+
+# Docker volumes and data
+supabase/data/
+supabase/postgres-data/
+supabase/storage-data/
+supabase/analytics-data/
+
+# Supabase logs
+supabase/logs/
+*.log
+
+# Supabase backups
+supabase/backups/
+*.dump
+*.sql.gz
+
+
