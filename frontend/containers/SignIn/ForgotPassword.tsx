@@ -10,6 +10,8 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { RootStackParamList, SCREEN_NAMES } from "@/services/navigation";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { supabase } from "@/services/supabase";
+import env from "@/config/env";
 
 type SignInScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -25,9 +27,15 @@ export default function ForgotPassword() {
     formState: { errors },
   } = useForm({ defaultValues: { email: "" } });
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
     console.log(data);
     navigation.navigate(SCREEN_NAMES.CHECK_EMAIL);
+
+    const res = await supabase.auth.resetPasswordForEmail(data.email, {
+      redirectTo: `${env.EXPO_PUBLIC_APP_URL}/reset-password`,
+    }); 
+
+    console.log(res);
   };
 
   return (
