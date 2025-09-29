@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
   Image,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
@@ -42,6 +43,9 @@ export default function SignIn() {
     formState: { errors, isSubmitting },
     watch,
     setValue,
+    getValues,
+    register,
+    unregister
   } = useForm<SignInFormData>({
     defaultValues: {
       email: "",
@@ -54,22 +58,58 @@ export default function SignIn() {
   const isSigningUp = watch("isNewUser");
 
   const onSubmit = (data: SignInFormData) => {
+
+    if (getValues('isNewUser')) {
+      supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+      }).then(({ data, error }) => {
+        if (error) {
+          console.log("Error signing up:", error);
+
+          Alert.alert("Error", error.message);
+
+          return;
+        }
+
+        console.log("Signed up:", data);
+        setValue("isNewUser", false);
+      });
+
+     
+      return;
+    }
+
     supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     }).then(({ data, error }) => {
       if (error) {
         console.log("Error signing in:", error);
-      } else {
-        console.log("Signed in:", data);
-        navigation.navigate(SCREEN_NAMES.CREATE_USER_DETAILS);
+
+        Alert.alert("Error", error.message);
+
+        return;
       }
+      
+      console.log("Signed in:", data);
+      navigation.navigate(SCREEN_NAMES.CREATE_USER_DETAILS);
     });    
   };
 
   const onForgotPassword = () => {    
     navigation.navigate(SCREEN_NAMES.FORGOT_PASSWORD);
   };
+
+  useEffect(() => {
+    if (!getValues('isNewUser')) {
+      unregister('confirmPassword');
+      
+      return;
+    }
+
+    register('confirmPassword');
+  }, [getValues('isNewUser')])
 
   return (
     <Layout>
