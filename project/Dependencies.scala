@@ -15,7 +15,7 @@ object Dependencies {
   lazy val scalaTestV           = "3.2.17"
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
   lazy val scalacheckV          = "1.19.0"
-  lazy val testcontainersScalaV = "0.43.0"
+  lazy val testcontainersScalaV = "0.43.6"
   lazy val testcontainersV      = "1.21.3"
   lazy val ironV                = "3.2.0"
   lazy val chimneyV             = "1.8.2"
