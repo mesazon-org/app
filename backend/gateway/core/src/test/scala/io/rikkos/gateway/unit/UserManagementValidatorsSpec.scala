@@ -16,9 +16,9 @@ class UserManagementValidatorsSpec extends ZWordSpecBase, GatewayArbitraries {
   "UserManagementValidators" when {
     "onboardUserDetailsRequestValidator" should {
       "return OnboardUserDetails when all fields are valid" in {
-        val onboardUserDetails  = arbitrarySample[OnboardUserDetails]
-        val phoneRegion         = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
-        val phoneNationalNumber = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
+        val onboardUserDetails        = arbitrarySample[OnboardUserDetails]
+        val phoneRegion               = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
+        val phoneNationalNumber       = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
         val onboardUserDetailsRequest =
           onboardUserDetails
             .into[smithy.OnboardUserDetailsRequest]
@@ -91,9 +91,9 @@ class UserManagementValidatorsSpec extends ZWordSpecBase, GatewayArbitraries {
 
     "updateUserDetailsRequestValidator" should {
       "return UpdateUserDetails when all fields are valid" in {
-        val updateUserDetails   = arbitrarySample[UpdateUserDetails]
-        val phoneRegion         = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
-        val phoneNationalNumber = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
+        val updateUserDetails        = arbitrarySample[UpdateUserDetails]
+        val phoneRegion              = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
+        val phoneNationalNumber      = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
         val updateUserDetailsRequest =
           updateUserDetails
             .into[smithy.UpdateUserDetailsRequest]

@@ -16,9 +16,9 @@ class UserContactsValidatorsSpec extends ZWordSpecBase, GatewayArbitraries {
   "UserContactsValidators" when {
     "upsertUserContactsValidator" should {
       "return UpsertUserContacts when all fields are valid" in {
-        val upsertUserContacts  = arbitrarySample[UpsertUserContact](5).toVector
-        val phoneRegion         = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
-        val phoneNationalNumber = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
+        val upsertUserContacts        = arbitrarySample[UpsertUserContact](5).toVector
+        val phoneRegion               = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
+        val phoneNationalNumber       = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
         val upsertUserContactsRequest =
           upsertUserContacts
             .map(
@@ -51,9 +51,9 @@ class UserContactsValidatorsSpec extends ZWordSpecBase, GatewayArbitraries {
           .copy(firstName = FirstName.assume(" "), lastName = Some(LastName.assume(" ")))
         val upsertUserContact3 = arbitrarySample[UpsertUserContact]
           .copy(userContactID = Some(UserContactID.assume("")))
-        val phoneRegion         = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
-        val phoneNationalNumber = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
-        val upsertUserContacts  = Vector(upsertUserContact1, upsertUserContact2, upsertUserContact3)
+        val phoneRegion               = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
+        val phoneNationalNumber       = arbitrarySample[String :| NonEmptyTrimmedLowerCase]
+        val upsertUserContacts        = Vector(upsertUserContact1, upsertUserContact2, upsertUserContact3)
         val upsertUserContactsRequest =
           upsertUserContacts
             .map(

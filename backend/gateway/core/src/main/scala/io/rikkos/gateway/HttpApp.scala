@@ -27,7 +27,7 @@ object HttpApp {
     serverMiddleware      <- ZIO.service[ServerEndpointMiddleware.Simple[Task]]
     userManagementService <- ZIO.service[smithy.UserManagementService[Task]]
     userContactsService   <- ZIO.service[smithy.UserContactsService[Task]]
-    userManagementRoutes <- SimpleRestJsonBuilder
+    userManagementRoutes  <- SimpleRestJsonBuilder
       .routes(userManagementService)
       .middleware(serverMiddleware)
       .resource

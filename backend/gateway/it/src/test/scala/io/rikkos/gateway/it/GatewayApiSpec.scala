@@ -109,9 +109,9 @@ class GatewayApiSpec
       "return successfully when update user" in withContext { case Context(gatewayClient, postgresSQLClient) =>
         val userDetailsTable = arbitrarySample[UserDetailsTable]
           .copy(userID = UserID.assume("test"), email = Email.assume("eliot.martel@gmail.com"))
-        val phoneNationalNumber = "99123123"
-        val phoneRegion         = "CY"
-        val phoneNumber         = PhoneNumber.cy(phoneNationalNumber)
+        val phoneNationalNumber      = "99123123"
+        val phoneRegion              = "CY"
+        val phoneNumber              = PhoneNumber.cy(phoneNationalNumber)
         val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
           .copy(phoneNationalNumber = Some(phoneNationalNumber))
           .copy(phoneRegion = Some(phoneRegion))
@@ -157,11 +157,11 @@ class GatewayApiSpec
     "/contacts/upsert" should {
       "return successfully when upserting user contacts" in withContext {
         case Context(gatewayClient, postgresSQLClient) =>
-          val now               = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val userID            = UserID.assume("test")
-          val userContactID     = arbitrarySample[UserContactID]
-          val updateDisplayName = DisplayName.assume("dummy")
-          val userDetailsTable  = arbitrarySample[UserDetailsTable].copy(userID = userID)
+          val now                 = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val userID              = UserID.assume("test")
+          val userContactID       = arbitrarySample[UserContactID]
+          val updateDisplayName   = DisplayName.assume("dummy")
+          val userDetailsTable    = arbitrarySample[UserDetailsTable].copy(userID = userID)
           val existingUserContact = arbitrarySample[smithy.UpsertUserContactRequest]
             .copy(userContactID = Some(userContactID.value))
           val updateUserContact = existingUserContact

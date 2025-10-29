@@ -29,7 +29,7 @@ object UserContactsRepository {
       (for {
         now <- timeProvider.instantNow
         (updateUserContactsRaw, insertUserContactsRaw) = upsertUserContacts.partition(_.userContactID.nonEmpty)
-        updateUserContacts = updateUserContactsRaw
+        updateUserContacts                             = updateUserContactsRaw
           .map(updateUserContact =>
             updateUserContact.userContactID.map(userContactID =>
               updateUserContact
@@ -55,7 +55,7 @@ object UserContactsRepository {
         )
         nonEmptyUpdateUserContacts = NonEmptyChunk.fromChunk(updateUserContacts)
         nonEmptyInsertUserContacts = NonEmptyChunk.fromChunk(insertUserContacts)
-        updateUserContactsTrans = nonEmptyUpdateUserContacts
+        updateUserContactsTrans    = nonEmptyUpdateUserContacts
           .fold(ZIO.service[Connection].unit)(
             UserContactsQueries.updateUserContacts
           )
