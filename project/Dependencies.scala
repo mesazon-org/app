@@ -3,7 +3,7 @@ import sbt.*
 object Dependencies {
 
   lazy val http4sV              = "0.23.32"
-  lazy val smithy4sV            = "0.18.42"
+  lazy val smithy4sV            = "0.18.44"
   lazy val zioV                 = "2.1.22"
   lazy val zioConfigV           = "4.0.5"
   lazy val zioInteropCatsV      = "23.1.0.5"
