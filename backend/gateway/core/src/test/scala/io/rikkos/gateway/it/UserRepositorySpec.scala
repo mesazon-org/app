@@ -26,7 +26,7 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
   val userDetailsTable = "users_details"
 
   def withContext[A](f: PostgreSQLTestClient => A): A = withContainers { container =>
-    val config = PostgreSQLTestClientConfig.from(container)
+    val config               = PostgreSQLTestClientConfig.from(container)
     val postgreSQLTestClient = ZIO
       .service[PostgreSQLTestClient]
       .provide(PostgreSQLTestClient.live, ZLayer.succeed(config))
@@ -57,7 +57,7 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
         val onboardUserDetails = arbitrarySample[OnboardUserDetails]
         val userID             = arbitrarySample[UserID]
         val email              = arbitrarySample[Email]
-        val userRepository = ZIO
+        val userRepository     = ZIO
           .service[UserRepository]
           .provide(UserRepository.live, ZLayer.succeed(client.database), timeProviderMockLive(clockNow))
           .zioValue
@@ -81,7 +81,7 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
         val onboardUserDetails = arbitrarySample[OnboardUserDetails]
         val userID             = arbitrarySample[UserID]
         val email              = arbitrarySample[Email]
-        val userRepository = ZIO
+        val userRepository     = ZIO
           .service[UserRepository]
           .provide(UserRepository.live, ZLayer.succeed(client.database), TimeProvider.liveSystemUTC)
           .zioValue
@@ -103,7 +103,7 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
         val now               = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow          = Clock.fixed(now, ZoneOffset.UTC)
         val updateUserDetails = arbitrarySample[UpdateUserDetails]
-        val userRepository = ZIO
+        val userRepository    = ZIO
           .service[UserRepository]
           .provide(UserRepository.live, ZLayer.succeed(client.database), timeProviderMockLive(clockNow))
           .zioValue
@@ -135,7 +135,7 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
           val clockNow          = Clock.fixed(now, ZoneOffset.UTC)
           val updateUserDetails = arbitrarySample[UpdateUserDetails]
           val userID            = arbitrarySample[UserID]
-          val userRepository = ZIO
+          val userRepository    = ZIO
             .service[UserRepository]
             .provide(UserRepository.live, ZLayer.succeed(client.database), timeProviderMockLive(clockNow))
             .zioValue

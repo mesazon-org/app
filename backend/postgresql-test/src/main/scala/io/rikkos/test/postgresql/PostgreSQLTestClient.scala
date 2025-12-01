@@ -135,7 +135,7 @@ object PostgreSQLTestClient {
 
   private val datasourceLive = ZLayer {
     for {
-      config <- ZIO.service[PostgreSQLTestClientConfig]
+      config     <- ZIO.service[PostgreSQLTestClientConfig]
       datasource <- ZIO.attemptBlocking {
         val hikariDataSource = new HikariDataSource()
         hikariDataSource.setDriverClassName(config.driver)

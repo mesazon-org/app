@@ -59,9 +59,9 @@ final case class GatewayApiClient(config: GatewayApiClientConfig, client: Client
 }
 
 object GatewayApiClient {
-  lazy val ServiceName = "gateway"
-  lazy val ServicePort = 8080
-  lazy val HealthPort  = 8081
+  lazy val ServiceName     = "gateway"
+  lazy val ServicePort     = 8080
+  lazy val HealthPort      = 8081
   lazy val ExposedServices = Set(
     ExposedService(ServiceName, ServicePort),
     ExposedService(ServiceName, HealthPort),
