@@ -9,7 +9,7 @@ object Dependencies {
   lazy val zioInteropCatsV      = "23.1.0.11"
   lazy val catsV                = "2.13.0"
   lazy val zioLoggingV          = "2.5.1"
-  lazy val logbackV             = "1.5.20"
+  lazy val logbackV             = "1.5.21"
   lazy val julToSlf4jV          = "2.0.17"
   lazy val pureconfigV          = "0.17.9"
   lazy val scalaTestV           = "3.2.17"
