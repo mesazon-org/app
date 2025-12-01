@@ -31,7 +31,7 @@ object PostgresTransactor {
 
   private val datasourceLive = ZLayer {
     for {
-      config <- ZIO.service[DatabaseConfig]
+      config     <- ZIO.service[DatabaseConfig]
       datasource <- ZIO.attemptBlocking {
         val hikariDataSource = new HikariDataSource()
         hikariDataSource.setDriverClassName(config.driver)

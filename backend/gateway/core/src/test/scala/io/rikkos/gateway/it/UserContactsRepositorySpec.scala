@@ -26,7 +26,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
   val userDetailsTable   = "users_details"
 
   def withContext[A](f: PostgreSQLTestClient => A): A = withContainers { container =>
-    val config = PostgreSQLTestClientConfig.from(container)
+    val config               = PostgreSQLTestClientConfig.from(container)
     val postgreSQLTestClient = ZIO
       .service[PostgreSQLTestClient]
       .provide(PostgreSQLTestClient.live, ZLayer.succeed(config))
@@ -53,11 +53,11 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
   "UserContactsRepository" when {
     "upsertUserContacts" should {
       "successfully upsert user contacts" in withContext { (client: PostgreSQLTestClient) =>
-        val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow       = Clock.fixed(now, ZoneOffset.UTC)
-        val userID         = arbitrarySample[UserID]
-        val userContactID1 = arbitrarySample[UserContactID]
-        val userContactID2 = arbitrarySample[UserContactID]
+        val now              = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow         = Clock.fixed(now, ZoneOffset.UTC)
+        val userID           = arbitrarySample[UserID]
+        val userContactID1   = arbitrarySample[UserContactID]
+        val userContactID2   = arbitrarySample[UserContactID]
         val userDetailsTable = arbitrarySample[UserDetailsTable]
           .copy(userID = userID)
         val upsertUserContact1 = arbitrarySample[UpsertUserContact]
@@ -135,9 +135,9 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
 
       "successfully update only relevant fields when receive an update" in withContext {
         (client: PostgreSQLTestClient) =>
-          val now           = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val userID        = arbitrarySample[UserID]
-          val userContactID = arbitrarySample[UserContactID]
+          val now              = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val userID           = arbitrarySample[UserID]
+          val userContactID    = arbitrarySample[UserContactID]
           val userDetailsTable = arbitrarySample[UserDetailsTable]
             .copy(userID = userID)
           val upsertUserContact = arbitrarySample[UpsertUserContact]
@@ -210,10 +210,10 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
 
       "successfully update user contacts when update for user contact phone number occurs along with insert of new user contact with already inserted phone number" in withContext {
         (client: PostgreSQLTestClient) =>
-          val now           = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val clockNow      = Clock.fixed(now, ZoneOffset.UTC)
-          val userID        = arbitrarySample[UserID]
-          val userContactID = arbitrarySample[UserContactID]
+          val now              = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val clockNow         = Clock.fixed(now, ZoneOffset.UTC)
+          val userID           = arbitrarySample[UserID]
+          val userContactID    = arbitrarySample[UserContactID]
           val userDetailsTable = arbitrarySample[UserDetailsTable]
             .copy(userID = userID)
           val upsertUserContact = arbitrarySample[UpsertUserContact]
@@ -272,8 +272,8 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
 
       "successfully update occurs on user contact that is not found, entry should remain empty" in withContext {
         (client: PostgreSQLTestClient) =>
-          val userID        = arbitrarySample[UserID]
-          val userContactID = arbitrarySample[UserContactID]
+          val userID           = arbitrarySample[UserID]
+          val userContactID    = arbitrarySample[UserContactID]
           val userDetailsTable = arbitrarySample[UserDetailsTable]
             .copy(userID = userID)
           val upsertUserContact = arbitrarySample[UpsertUserContact]
@@ -302,9 +302,9 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
 
       "fail to insert new user contacts when a user contact with the same phone number and user id already exist" in withContext {
         (client: PostgreSQLTestClient) =>
-          val now           = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val userID        = arbitrarySample[UserID]
-          val userContactID = arbitrarySample[UserContactID]
+          val now              = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val userID           = arbitrarySample[UserID]
+          val userContactID    = arbitrarySample[UserContactID]
           val userDetailsTable = arbitrarySample[UserDetailsTable]
             .copy(userID = userID)
           val upsertUserContact = arbitrarySample[UpsertUserContact]
@@ -348,7 +348,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
 
       "fail to insert multiple user contact with the same phone number and user in one query" in withContext {
         (client: PostgreSQLTestClient) =>
-          val userID = arbitrarySample[UserID]
+          val userID           = arbitrarySample[UserID]
           val userDetailsTable = arbitrarySample[UserDetailsTable]
             .copy(userID = userID)
           val conflictUserContact1 = arbitrarySample[UpsertUserContact]
@@ -380,9 +380,9 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
 
       "fail to update user contact if conflicted user contact is received" in withContext {
         (client: PostgreSQLTestClient) =>
-          val now           = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val userID        = arbitrarySample[UserID]
-          val userContactID = arbitrarySample[UserContactID]
+          val now              = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val userID           = arbitrarySample[UserID]
+          val userContactID    = arbitrarySample[UserContactID]
           val userDetailsTable = arbitrarySample[UserDetailsTable]
             .copy(userID = userID)
           val upsertUserContact1 = arbitrarySample[UpsertUserContact]
@@ -432,7 +432,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
 
       "fail to insert user contact for a user with user id that doesn't existing" in withContext {
         (client: PostgreSQLTestClient) =>
-          val userID = arbitrarySample[UserID]
+          val userID            = arbitrarySample[UserID]
           val upsertUserContact = arbitrarySample[UpsertUserContact]
             .copy(userContactID = None)
 

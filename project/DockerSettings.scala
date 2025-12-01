@@ -37,7 +37,7 @@ object DockerSettings {
     dockerUpdateLatest   := true,
     Docker / version     := version.value,
     dockerExposedPorts   := Seq(8080),
-    dockerCommands := {
+    dockerCommands       := {
       val main  = (Compile / packageBin / mainClass).value.getOrElse(sys.error("Unspecified main class"))
       val entry = "java" +: javaOptions.value :+ "-cp" :+ "jars/*" :+ main
       Seq(
