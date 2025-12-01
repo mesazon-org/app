@@ -36,7 +36,7 @@ object UserRepository {
     ): IO[ServiceError.ConflictError.UserAlreadyExists, Unit] =
       (for {
         instantNow <- timeProvider.instantNow
-        _ <- database
+        _          <- database
           .transactionOrDie(
             UserDetailsQueries.insertUserDetailsQuery(
               onboardUserDetails
@@ -56,7 +56,7 @@ object UserRepository {
     override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
       (for {
         instantNow <- timeProvider.instantNow
-        _ <- database
+        _          <- database
           .transactionOrDie(
             UserDetailsQueries.updateUserDetailsQuery(
               updateUserDetails

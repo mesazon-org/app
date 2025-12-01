@@ -27,7 +27,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       }
 
       "fail with BadRequest when request validation fail" in new TestContext {
-        val authedUser = arbitrarySample[AuthedUser]
+        val authedUser                = arbitrarySample[AuthedUser]
         val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
           .copy(firstName = "")
         val userManagementService = buildUserManagementService(authedUser)
@@ -42,7 +42,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       "fail with InternalServerError when repository fail" in new TestContext {
         val authedUser                = arbitrarySample[AuthedUser]
         val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
-        val userManagementService = buildUserManagementService(
+        val userManagementService     = buildUserManagementService(
           authedUser = authedUser,
           userRepositoryMaybeError = Some(new RuntimeException("Repository error")),
         )
@@ -70,7 +70,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       }
 
       "fail with BadRequest when request validation fail" in new TestContext {
-        val authedUser = arbitrarySample[AuthedUser]
+        val authedUser               = arbitrarySample[AuthedUser]
         val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
           .copy(firstName = Some(""))
         val userManagementService = buildUserManagementService(authedUser)
@@ -97,7 +97,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       "fail with InternalServerError when repository fail" in new TestContext {
         val authedUser               = arbitrarySample[AuthedUser]
         val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
-        val userManagementService = buildUserManagementService(
+        val userManagementService    = buildUserManagementService(
           authedUser = authedUser,
           userRepositoryMaybeError = Some(new RuntimeException("Repository error")),
         )

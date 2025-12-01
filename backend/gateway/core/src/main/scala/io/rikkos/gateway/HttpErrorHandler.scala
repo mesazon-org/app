@@ -8,7 +8,7 @@ object HttpErrorHandler {
   private def logWarning(serviceError: ServiceError)(using trace: Trace): UIO[Unit] =
     for {
       fiberID <- ZIO.fiberId
-      _ <- ZIO
+      _       <- ZIO
         .logWarningCause(
           s"$trace: ${serviceError.message}",
           Cause.die(serviceError, StackTrace.fromJava(fiberID, serviceError.getStackTrace)),
