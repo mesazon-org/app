@@ -24,7 +24,7 @@ object Dependencies {
   lazy val hikariCPV            = "7.0.2"
   lazy val doobieTranzactioV    = "5.5.2"
   lazy val libphonenumberV      = "9.0.17"
-  lazy val circeV               = "0.14.14"
+  lazy val circeV               = "0.14.15"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
