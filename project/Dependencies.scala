@@ -4,9 +4,9 @@ object Dependencies {
 
   lazy val http4sV              = "0.23.32"
   lazy val smithy4sV            = "0.18.42"
-  lazy val zioV                 = "2.1.22"
+  lazy val zioV                 = "2.1.23"
   lazy val zioConfigV           = "4.0.6"
-  lazy val zioInteropCatsV      = "23.1.0.5"
+  lazy val zioInteropCatsV      = "23.1.0.11"
   lazy val catsV                = "2.13.0"
   lazy val zioLoggingV          = "2.5.1"
   lazy val logbackV             = "1.5.20"
@@ -17,14 +17,14 @@ object Dependencies {
   lazy val scalacheckV          = "1.19.0"
   lazy val testcontainersScalaV = "0.43.6"
   lazy val testcontainersV      = "1.21.3"
-  lazy val ironV                = "3.2.0"
+  lazy val ironV                = "3.2.1"
   lazy val chimneyV             = "1.8.2"
   lazy val doobieV              = "1.0.0-RC10"
   lazy val postgresqlV          = "42.7.3"
   lazy val hikariCPV            = "7.0.2"
   lazy val doobieTranzactioV    = "5.5.2"
   lazy val libphonenumberV      = "9.0.17"
-  lazy val circeV               = "0.14.14"
+  lazy val circeV               = "0.14.15"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
