@@ -16,7 +16,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, DomainArbitraries {
       "return a successful response" in new TestContext {
         val authedUser = arbitrarySample[AuthedUser]
         val token      = "valid-token"
-        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+        val request    = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
         val authorizationService = buildAuthorizationService(authedUser)
 

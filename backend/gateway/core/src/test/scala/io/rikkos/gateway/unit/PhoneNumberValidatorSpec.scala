@@ -17,8 +17,8 @@ class PhoneNumberValidatorSpec extends ZWordSpecBase {
 
   "PhoneNumberValidator" should {
     "return successful phone number when is valid and supported" in {
-      val phoneRegion         = "CY"
-      val phoneNationalNumber = "99135215"
+      val phoneRegion          = "CY"
+      val phoneNationalNumber  = "99135215"
       val phoneNumberValidator = ZIO
         .service[DomainValidator[PhoneNumberParams, PhoneNumber]]
         .provide(PhoneNumberValidator.phoneNumberValidatorLive, ZLayer.succeed(config), ZLayer.succeed(phoneNumberUtil))
@@ -45,8 +45,8 @@ class PhoneNumberValidatorSpec extends ZWordSpecBase {
     }
 
     "fail with invalid region and national number if region is not supported" in {
-      val phoneRegion         = "GA"
-      val phoneNationalNumber = "13123123"
+      val phoneRegion          = "GA"
+      val phoneNationalNumber  = "13123123"
       val phoneNumberValidator = ZIO
         .service[DomainValidator[PhoneNumberParams, PhoneNumber]]
         .provide(PhoneNumberValidator.phoneNumberValidatorLive, ZLayer.succeed(config), ZLayer.succeed(phoneNumberUtil))
@@ -59,8 +59,8 @@ class PhoneNumberValidatorSpec extends ZWordSpecBase {
     }
 
     "fail with parse failure when phone national number contains fewer numbers" in {
-      val phoneRegion         = "CY"
-      val phoneNationalNumber = "1"
+      val phoneRegion          = "CY"
+      val phoneNationalNumber  = "1"
       val phoneNumberValidator = ZIO
         .service[DomainValidator[PhoneNumberParams, PhoneNumber]]
         .provide(PhoneNumberValidator.phoneNumberValidatorLive, ZLayer.succeed(config), ZLayer.succeed(phoneNumberUtil))
@@ -77,8 +77,8 @@ class PhoneNumberValidatorSpec extends ZWordSpecBase {
     }
 
     "fail with validation failure when phone national number is wrong" in {
-      val phoneRegion         = "CY"
-      val phoneNationalNumber = "93123123"
+      val phoneRegion          = "CY"
+      val phoneNationalNumber  = "93123123"
       val phoneNumberValidator = ZIO
         .service[DomainValidator[PhoneNumberParams, PhoneNumber]]
         .provide(PhoneNumberValidator.phoneNumberValidatorLive, ZLayer.succeed(config), ZLayer.succeed(phoneNumberUtil))
