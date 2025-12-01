@@ -26,7 +26,7 @@ class UserContactsServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       }
 
       "fail with BadRequest when request validation fail" in new TestContext {
-        val authedUser = arbitrarySample[AuthedUser]
+        val authedUser               = arbitrarySample[AuthedUser]
         val upsertUserContactRequest = arbitrarySample[smithy.UpsertUserContactRequest]
           .copy(displayName = "")
 
