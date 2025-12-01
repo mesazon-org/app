@@ -5,7 +5,7 @@ object Dependencies {
   lazy val http4sV              = "0.23.33"
   lazy val smithy4sV            = "0.18.42"
   lazy val zioV                 = "2.1.23"
-  lazy val zioConfigV           = "4.0.5"
+  lazy val zioConfigV           = "4.0.6"
   lazy val zioInteropCatsV      = "23.1.0.11"
   lazy val catsV                = "2.13.0"
   lazy val zioLoggingV          = "2.5.1"
