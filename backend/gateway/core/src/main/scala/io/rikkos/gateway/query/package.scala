@@ -1,6 +1,7 @@
 package io.rikkos.gateway
 
-import doobie.util.{Get, Put}
+import doobie.util.Get
+import doobie.util.Put
 import io.github.iltotore.iron.RefinedType
 
 package object query {

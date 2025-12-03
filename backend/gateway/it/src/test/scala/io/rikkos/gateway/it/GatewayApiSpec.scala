@@ -6,7 +6,8 @@ import io.rikkos.gateway.it.GatewayApiSpec.Context
 import io.rikkos.gateway.it.client.GatewayApiClient
 import io.rikkos.gateway.it.client.GatewayApiClient.GatewayApiClientConfig
 import io.rikkos.gateway.it.codec.given
-import io.rikkos.gateway.query.{UserContactsQueries, UserDetailsQueries}
+import io.rikkos.gateway.query.UserContactsQueries
+import io.rikkos.gateway.query.UserDetailsQueries
 import io.rikkos.gateway.smithy
 import io.rikkos.gateway.utils.GatewayArbitraries
 import io.rikkos.test.postgresql.PostgreSQLTestClient

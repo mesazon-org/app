@@ -2,7 +2,8 @@ package io.rikkos.gateway.unit
 
 import io.rikkos.domain.AuthedUser
 import io.rikkos.gateway.auth.AuthorizationState
-import io.rikkos.testkit.base.{DomainArbitraries, ZWordSpecBase}
+import io.rikkos.testkit.base.DomainArbitraries
+import io.rikkos.testkit.base.ZWordSpecBase
 import org.scalactic.anyvals.PosInt
 import zio.*
 

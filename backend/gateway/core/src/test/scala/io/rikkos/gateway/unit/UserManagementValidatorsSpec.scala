@@ -6,7 +6,8 @@ import io.rikkos.domain.ServiceError.BadRequestError
 import io.rikkos.gateway.mock.phoneNumberValidatorMockLive
 import io.rikkos.gateway.smithy
 import io.rikkos.gateway.utils.GatewayArbitraries
-import io.rikkos.gateway.validation.{ServiceValidator, UserManagementValidators}
+import io.rikkos.gateway.validation.ServiceValidator
+import io.rikkos.gateway.validation.UserManagementValidators
 import io.rikkos.testkit.base.*
 import io.scalaland.chimney.dsl.*
 import zio.ZIO

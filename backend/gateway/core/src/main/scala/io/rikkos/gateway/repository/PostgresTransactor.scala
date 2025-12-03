@@ -2,7 +2,8 @@ package io.rikkos.gateway.repository
 
 import com.zaxxer.hikari.HikariDataSource
 import doobie.LogHandler
-import io.github.gaelrenoux.tranzactio.doobie.{Database, DbContext}
+import io.github.gaelrenoux.tranzactio.doobie.Database
+import io.github.gaelrenoux.tranzactio.doobie.DbContext
 import io.rikkos.gateway.config.DatabaseConfig
 import zio.*
 

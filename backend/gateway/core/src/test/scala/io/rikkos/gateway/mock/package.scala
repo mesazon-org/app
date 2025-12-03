@@ -6,7 +6,8 @@ import io.rikkos.clock.TimeProvider
 import io.rikkos.domain.*
 import io.rikkos.domain.ServiceError.BadRequestError.InvalidFieldError
 import io.rikkos.gateway.auth.*
-import io.rikkos.gateway.repository.{UserContactsRepository, UserRepository}
+import io.rikkos.gateway.repository.UserContactsRepository
+import io.rikkos.gateway.repository.UserRepository
 import io.rikkos.gateway.validation.*
 import io.rikkos.gateway.validation.PhoneNumberValidator.PhoneNumberParams
 import io.rikkos.generator.IDGenerator

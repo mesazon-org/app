@@ -1,7 +1,8 @@
 package io.rikkos.gateway.service
 
 import io.rikkos.domain.ServiceError
-import io.rikkos.gateway.{smithy, HttpErrorHandler}
+import io.rikkos.gateway.smithy
+import io.rikkos.gateway.HttpErrorHandler
 import zio.*
 
 object HealthCheckService {

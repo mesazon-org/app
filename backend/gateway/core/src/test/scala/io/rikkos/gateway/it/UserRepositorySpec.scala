@@ -14,7 +14,9 @@ import io.scalaland.chimney.dsl.*
 import zio.{Clock as _, *}
 
 import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant, ZoneOffset}
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 
 class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerComposeBase {
 
