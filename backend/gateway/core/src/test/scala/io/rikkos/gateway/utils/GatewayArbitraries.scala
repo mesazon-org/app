@@ -51,4 +51,14 @@ trait GatewayArbitraries extends DomainArbitraries, IronRefinedTypeTransformer {
         .transform
     } yield upsertUserContactRequest
   }
+
+  given Arbitrary[smithy.GetUserDetailsRequest] = Arbitrary {
+    for {
+      userDetails <- Arbitrary.arbitrary[UserDetails]
+      userID <- Some(String())
+      userDetailsRequest = userDetails
+        .into[smithy.GetUserDetailsRequest]
+        .withFieldConst(_.userID, userID)
+    } yield userDetailsRequest
+  }
 }

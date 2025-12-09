@@ -110,7 +110,31 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       }
     }
     "getUser" should {
-      "successfully get the user" in new TestContext {}
+      "successfully get the user" in new TestContext {
+        val authedUser            = arbitrarySample[AuthedUser]
+        val getUserDetailsRequest = arbitrarySample[smithy.GetUserDetailsRequest]
+        val userManagementService = buildUserManagementService(authedUser)
+
+        userManagementService
+          .getUser(getUserDetailsRequest.userID)
+          .zioEither
+          .isRight shouldBe true
+
+        getUserDetailsCounterRef.get.zioValue shouldBe 1
+      }
+
+      "fail with BadRequest when request validation fail" in new TestContext {
+        val authedUser = arbitrarySample[AuthedUser]
+        val getUserDetailsRequest = arbitrarySample[smithy.GetUserDetailsRequest]
+          .copy(userID = "")
+        val userManagementService = buildUserManagementService(authedUser)
+
+        userManagementService
+          .getUser(getUserDetailsRequest.userID)
+          .zioError shouldBe a[smithy.BadRequest]
+
+        updateUserDetailsCounterRef.get.zioValue shouldBe 0
+      }
     }
   }
 
