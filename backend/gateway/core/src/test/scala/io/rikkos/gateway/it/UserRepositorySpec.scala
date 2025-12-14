@@ -150,8 +150,8 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
     "getUserDetails" should {
       "successfully get user details" in withContext { (client: PostgreSQLTestClient) =>
         val usersDetailsTable = arbitrarySample[UserDetailsTable]
-        val now = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow = Clock.fixed(now, ZoneOffset.UTC)
+        val now               = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow          = Clock.fixed(now, ZoneOffset.UTC)
         val userRepository = ZIO
           .service[UserRepository]
           .provide(UserRepository.live, ZLayer.succeed(client.database), timeProviderMockLive(clockNow))
@@ -161,21 +161,9 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
 
         userRepository.getUserDetails(usersDetailsTable.userID).zioValue
 
-        val userDetailsTable = usersDetailsTable.copy(
-          firstName = usersDetailsTable.firstName,
-          lastName = usersDetailsTable.lastName,
-          phoneNumber = usersDetailsTable.phoneNumber,
-          addressLine1 = usersDetailsTable.addressLine1,
-          addressLine2 = usersDetailsTable.addressLine2,
-          city = usersDetailsTable.city,
-          postalCode = usersDetailsTable.postalCode,
-          company = usersDetailsTable.company,
-          updatedAt = UpdatedAt(now),
-        )
-
         client.database
           .transactionOrDie(UserDetailsQueries.getUserDetailsQuery(usersDetailsTable.userID))
-          .zioValue shouldBe Some(userDetailsTable)
+          .zioValue shouldBe Some(usersDetailsTable)
       }
     }
   }

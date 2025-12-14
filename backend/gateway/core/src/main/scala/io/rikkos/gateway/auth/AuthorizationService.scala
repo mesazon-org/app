@@ -18,7 +18,7 @@ object AuthorizationService {
     override def auth(request: Request[Task]): IO[ServiceError, Unit] =
       for {
         maybeBearerToken = request.headers
-          .get[`Authorization`]
+          .get[Authorization]
           .collect { case Authorization(Credentials.Token(AuthScheme.Bearer, token)) => token }
         _          <- ZIO.logDebug(s"Bearer token: [$maybeBearerToken]")
         _          <- ZIO.fromOption(maybeBearerToken).mapError(_ => UnauthorizedError.TokenMissing)

@@ -113,7 +113,9 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       "successfully get the user" in new TestContext {
         val authedUser            = arbitrarySample[AuthedUser]
         val getUserDetailsRequest = arbitrarySample[smithy.GetUserDetailsRequest]
-        val userManagementService = buildUserManagementService(authedUser)
+        val userDetailsTable      = arbitrarySample[UserDetailsTable]
+        val userRepositoryState   = Map(authedUser.userID -> userDetailsTable)
+        val userManagementService = buildUserManagementService(authedUser, userRepositoryState)
 
         userManagementService
           .getUser(getUserDetailsRequest.userID)
@@ -123,15 +125,17 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         getUserDetailsCounterRef.get.zioValue shouldBe 1
       }
 
-      "fail with BadRequest when request validation fail" in new TestContext {
-        val authedUser = arbitrarySample[AuthedUser]
+      "fail with InternalServerError when request validation fail" in new TestContext {
+        val authedUser            = arbitrarySample[AuthedUser]
         val getUserDetailsRequest = arbitrarySample[smithy.GetUserDetailsRequest]
-          .copy(userID = "")
-        val userManagementService = buildUserManagementService(authedUser)
+        val userManagementService = buildUserManagementService(
+          authedUser = authedUser,
+          userRepositoryMaybeError = Some(new RuntimeException("Repository error")),
+        )
 
         userManagementService
           .getUser(getUserDetailsRequest.userID)
-          .zioError shouldBe a[smithy.BadRequest]
+          .zioError shouldBe a[smithy.InternalServerError]
 
         updateUserDetailsCounterRef.get.zioValue shouldBe 0
       }

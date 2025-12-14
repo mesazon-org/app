@@ -7,7 +7,7 @@ import io.rikkos.gateway.smithy.GetUserDetailsResponse
 import io.rikkos.gateway.validation.ServiceValidator
 import io.rikkos.gateway.{smithy, HttpErrorHandler}
 import smithy4s.Timestamp
-import zio.*
+import zio.{Task, *}
 
 object UserManagementService {
 
@@ -37,7 +37,7 @@ object UserManagementService {
     override def getUser(userID: String): IO[ServiceError, smithy.GetUserDetailsResponse] =
       for {
         authedUser            <- authorizationState.get()
-        _                     <- ZIO.logDebug(s"Get user with userID: $userID")
+        _                     <- ZIO.logDebug(s"Get user with userID: ${authedUser.userID}")
         maybeUserDetailsTable <- userRepository.getUserDetails(authedUser.userID)
         userDetailsResponse <- maybeUserDetailsTable match {
           case Some(userDetailsTable) =>
@@ -74,7 +74,9 @@ object UserManagementService {
         HttpErrorHandler
           .errorResponseHandler(service.updateUser(request))
 
-      override def getUser(userID: String): Task[GetUserDetailsResponse] = ???
+      override def getUser(userID: String): Task[GetUserDetailsResponse] =
+        HttpErrorHandler
+          .errorResponseHandler(service.getUser(userID))
     }
 
   val live = ZLayer.fromFunction(UserManagementServiceImpl.apply) >>> ZLayer.fromFunction(observed)
