@@ -4,12 +4,8 @@ import com.dimafeng.testcontainers.*
 import com.zaxxer.hikari.*
 import doobie.*
 import doobie.implicits.*
-import io.github.gaelrenoux.tranzactio.doobie.tzio
-import io.github.gaelrenoux.tranzactio.doobie.Database
-import io.github.gaelrenoux.tranzactio.doobie.DbContext
-import io.github.gaelrenoux.tranzactio.doobie.TranzactIO
-import io.github.gaelrenoux.tranzactio.DatabaseOps
-import io.github.gaelrenoux.tranzactio.DbException
+import io.github.gaelrenoux.tranzactio.doobie.{tzio, Database, DbContext, TranzactIO}
+import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
 import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import zio.*
 

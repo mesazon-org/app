@@ -4,21 +4,17 @@ import com.dimafeng.testcontainers.ExposedService
 import io.github.gaelrenoux.tranzactio.DbException
 import io.rikkos.domain.*
 import io.rikkos.gateway.mock.*
-import io.rikkos.gateway.query.UserContactsQueries
-import io.rikkos.gateway.query.UserDetailsQueries
+import io.rikkos.gateway.query.{UserContactsQueries, UserDetailsQueries}
 import io.rikkos.gateway.repository.UserContactsRepository
 import io.rikkos.gateway.utils.GatewayArbitraries
 import io.rikkos.test.postgresql.PostgreSQLTestClient
 import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
-import io.rikkos.testkit.base.DockerComposeBase
-import io.rikkos.testkit.base.ZWordSpecBase
+import io.rikkos.testkit.base.{DockerComposeBase, ZWordSpecBase}
 import io.scalaland.chimney.dsl.*
 import zio.*
 
 import java.time.temporal.ChronoUnit
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
+import java.time.{Clock, Instant, ZoneOffset}
 
 class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerComposeBase {
   override def dockerComposeFile: String = "./src/test/resources/compose.yaml"

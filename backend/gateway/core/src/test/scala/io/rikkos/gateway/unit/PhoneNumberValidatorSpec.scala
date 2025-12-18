@@ -8,8 +8,7 @@ import io.rikkos.gateway.config.PhoneNumberValidatorConfig
 import io.rikkos.gateway.validation.*
 import io.rikkos.gateway.validation.PhoneNumberValidator.PhoneNumberParams
 import io.rikkos.testkit.base.ZWordSpecBase
-import zio.ZIO
-import zio.ZLayer
+import zio.{ZIO, ZLayer}
 
 class PhoneNumberValidatorSpec extends ZWordSpecBase {
 

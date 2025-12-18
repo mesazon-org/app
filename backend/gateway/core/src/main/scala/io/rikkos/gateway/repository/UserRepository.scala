@@ -1,8 +1,7 @@
 package io.rikkos.gateway.repository
 
 import _root_.doobie.*
-import io.github.gaelrenoux.tranzactio.DatabaseOps
-import io.github.gaelrenoux.tranzactio.DbException
+import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
 import io.rikkos.clock.TimeProvider
 import io.rikkos.domain.*
 import io.rikkos.gateway.query.UserDetailsQueries

@@ -4,8 +4,7 @@ import com.comcast.ip4s.*
 import io.rikkos.domain.AppName
 import zio.*
 import zio.config.*
-import zio.config.magnolia.deriveConfig
-import zio.config.magnolia.DeriveConfig
+import zio.config.magnolia.{deriveConfig, DeriveConfig}
 import zio.config.typesafe.TypesafeConfigProvider
 
 given DeriveConfig[Host] = DeriveConfig[String].mapAttempt(string => Host.fromString(string).get)
