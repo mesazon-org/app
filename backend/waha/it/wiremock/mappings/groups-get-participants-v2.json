@@ -1,0 +1,39 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/api/.*/groups/.*/participants/v2"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": [
+      {
+        "id": "1000@lid",
+        "pn": "1000@c.us",
+        "role": "superadmin"
+      },
+      {
+        "id": "1001@lid",
+        "pn": "1001@c.us",
+        "role": "admin"
+      },
+      {
+        "id": "1002@lid",
+        "pn": "1002@c.us",
+        "role": "Participant"
+      },
+      {
+        "id": "1003@lid",
+        "pn": "1003@c.us",
+        "role": "left"
+      },
+      {
+        "id": "1004@lid",
+        "pn": "1004@c.us",
+        "role": "member"
+      }
+    ]
+  }
+}

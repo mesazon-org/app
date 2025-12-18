@@ -29,19 +29,19 @@ object ServiceError {
   object BadRequestError {
     type InvalidFieldError = (fieldName: String, errorMessage: String)
 
-    final case class FormValidationError(invalidFields: Seq[InvalidFieldError])
+    case class FormValidationError(invalidFields: Seq[InvalidFieldError])
         extends BadRequestError(s"request validation error ${invalidFields.mkString("[", ",", "]")}")
   }
 
   object UnauthorizedError {
     case object TokenMissing extends UnauthorizedError("token is missing from request")
 
-    final case class TokenFailedAuthorization(throwable: Throwable)
+    case class TokenFailedAuthorization(throwable: Throwable)
         extends UnauthorizedError("token failed authorization", Some(throwable))
   }
 
   object ConflictError {
-    final case class UserAlreadyExists(userID: UserID, email: Email)
+    case class UserAlreadyExists(userID: UserID, email: Email)
         extends ConflictError(s"user with id [$userID] and email [$email] already exists")
   }
 }

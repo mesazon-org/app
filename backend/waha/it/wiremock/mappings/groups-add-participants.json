@@ -1,0 +1,39 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPattern": "/api/.*/groups/.*/participants/add",
+    "headers": {
+      "Content-Type": {
+        "contains": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.participants"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": [
+      {
+        "JID": "1000@lid",
+        "PhoneNumber": "2000@s.whatsapp.net",
+        "Error": 0
+      },
+      {
+        "JID": "1001@lid",
+        "PhoneNumber": "2001@s.whatsapp.net",
+        "Error": 1
+      },
+      {
+        "JID": "1002@lid",
+        "PhoneNumber": "2002@s.whatsapp.net",
+        "Error": 409
+      }
+    ]
+  }
+}

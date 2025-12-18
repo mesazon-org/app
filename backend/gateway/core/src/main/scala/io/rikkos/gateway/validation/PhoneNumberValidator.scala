@@ -29,7 +29,7 @@ object PhoneNumberValidator {
             )
           )
       phoneNumberRaw <- ZIO
-        .blocking(ZIO.attempt(phoneNumberUtil.parse(phoneNationalNumber, phoneRegion)))
+        .attemptBlocking(phoneNumberUtil.parse(phoneNationalNumber, phoneRegion))
         .flatMapError(error =>
           ZIO.fiberId.flatMap(fid =>
             ZIO.logDebugCause(

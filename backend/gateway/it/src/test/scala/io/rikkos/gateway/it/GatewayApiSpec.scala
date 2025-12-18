@@ -233,5 +233,5 @@ class GatewayApiSpec
 
 object GatewayApiSpec {
 
-  final case class Context(gatewayClient: GatewayApiClient, postgresSQLClient: PostgreSQLTestClient)
+  case class Context(gatewayClient: GatewayApiClient, postgresSQLClient: PostgreSQLTestClient)
 }

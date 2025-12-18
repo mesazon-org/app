@@ -7,7 +7,7 @@ import io.rikkos.domain.*
 
 object UserDetailsQueries {
 
-  final case class UpdateUserDetailsQuery(
+  case class UpdateUserDetailsQuery(
       userID: UserID,
       firstName: Option[FirstName],
       lastName: Option[LastName],

@@ -9,7 +9,7 @@ import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
 import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import zio.*
 
-final case class PostgreSQLTestClient(
+case class PostgreSQLTestClient(
     config: PostgreSQLTestClientConfig,
     database: DatabaseOps.ServiceOps[Transactor[Task]],
 ) {
@@ -52,7 +52,7 @@ object PostgreSQLTestClient {
   lazy val ServicePort     = 5432
   lazy val ExposedServices = Set(ExposedService(ServiceName, ServicePort))
 
-  final case class PostgreSQLTestClientConfig(
+  case class PostgreSQLTestClientConfig(
       host: String = "localhost",
       port: Int = 5432,
       database: String = defaultDatabase,

@@ -12,7 +12,7 @@ object Dependencies {
   lazy val logbackV             = "1.5.23"
   lazy val julToSlf4jV          = "2.0.17"
   lazy val pureconfigV          = "0.17.9"
-  lazy val scalaTestV           = "3.2.17"
+  lazy val scalaTestV           = "3.2.19"
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
   lazy val scalacheckV          = "1.19.0"
   lazy val testcontainersScalaV = "0.44.1"
@@ -25,6 +25,8 @@ object Dependencies {
   lazy val doobieTranzactioV    = "5.6.0"
   lazy val libphonenumberV      = "9.0.21"
   lazy val circeV               = "0.14.15"
+  lazy val sttpV                = "4.0.13"
+  lazy val jsoniterV            = "2.38.6"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -53,7 +55,8 @@ object Dependencies {
   lazy val pureconfigCatsEffect = "com.github.pureconfig" %% "pureconfig-cats-effect" % pureconfigV
 
   // Iron
-  val iron = "io.github.iltotore" %% "iron" % ironV
+  val iron         = "io.github.iltotore" %% "iron"          % ironV
+  val ironJsoniter = "io.github.iltotore" %% "iron-jsoniter" % ironV
 
   // Circe
   lazy val circeCore    = "io.circe" %% "circe-core"    % circeV
@@ -75,7 +78,7 @@ object Dependencies {
   // Chimney
   lazy val chimney = "io.scalaland" %% "chimney" % chimneyV
 
-  // Quill + Postgresql
+  // Doobie + Postgresql
   lazy val doobieCore       = "org.tpolecat"         %% "doobie-core"       % doobieV
   lazy val doobieHikari     = "org.tpolecat"         %% "doobie-hikari"     % doobieV
   lazy val doobiePostgres   = "org.tpolecat"         %% "doobie-postgres"   % doobieV
@@ -84,4 +87,14 @@ object Dependencies {
 
   // Google
   val libphonenumber = "com.googlecode.libphonenumber" % "libphonenumber" % libphonenumberV
+
+  // STTP Client4
+  lazy val sttpClient4Core     = "com.softwaremill.sttp.client4" %% "core"          % sttpV
+  lazy val sttpClient4Slf4j    = "com.softwaremill.sttp.client4" %% "slf4j-backend" % sttpV
+  lazy val sttpClient4ZIO      = "com.softwaremill.sttp.client4" %% "zio"           % sttpV
+  lazy val sttpClient4Jsoniter = "com.softwaremill.sttp.client4" %% "jsoniter"      % sttpV
+
+  // jsoniter
+  lazy val jsoniterScalaCore  = "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core"   % jsoniterV
+  lazy val jsoniterScalaMacro = "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterV
 }

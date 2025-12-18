@@ -1,0 +1,26 @@
+{
+  "request": {
+    "method": "PUT",
+    "urlPattern": "/api/.*/groups/.*/description",
+    "headers": {
+      "Content-Type": {
+        "contains": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.description"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "success": true,
+      "description": "New Group Description Mocked"
+    }
+  }
+}

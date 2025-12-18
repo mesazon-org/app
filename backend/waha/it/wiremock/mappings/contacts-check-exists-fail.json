@@ -1,0 +1,24 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/api/contacts/check-exists",
+    "queryParameters": {
+      "phone": {
+        "equalTo": "6666@c.us"
+      },
+      "session": {
+        "matches": ".*"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "numberExists": false
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPattern": "/api/.*/groups",
+    "headers": {
+      "Content-Type": {
+        "contains": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.name"
+      }
+    ]
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "JID": "0000@g.us",
+      "Name": "{{jsonPath request.body '$.name'}}",
+      "Participants": [
+        {
+          "JID": "1000@lid",
+          "PhoneNumber": "2000@c.us",
+          "Error": 0
+        },
+        {
+          "JID": "1001@lid",
+          "PhoneNumber": "2001@c.us",
+          "Error": 1
+        },
+        {
+          "JID": "1002@lid",
+          "PhoneNumber": "2002@c.us",
+          "Error": 409
+        }
+      ]
+    }
+  }
+}

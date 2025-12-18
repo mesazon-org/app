@@ -11,7 +11,7 @@ import zio.*
 object UserContactsQueries {
 
   // TODO: use named tuples when supported from chimney and doobie
-  final case class UpdateUserContactQuery(
+  case class UpdateUserContactQuery(
       displayName: DisplayName,
       firstName: FirstName,
       phoneNumber: PhoneNumber,

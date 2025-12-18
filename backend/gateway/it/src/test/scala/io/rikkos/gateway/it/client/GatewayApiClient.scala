@@ -14,7 +14,7 @@ import org.http4s.headers.Authorization
 import zio.*
 import zio.interop.catz.*
 
-final case class GatewayApiClient(config: GatewayApiClientConfig, client: Client[Task]) {
+case class GatewayApiClient(config: GatewayApiClientConfig, client: Client[Task]) {
   import config.*
 
   def liveness: Task[Status] = client.get(healthUri / "liveness")(_.status.pure[Task])
@@ -69,7 +69,7 @@ object GatewayApiClient {
 
   given Network[Task] = Network.forAsync[Task]
 
-  final case class GatewayApiClientConfig(serviceUri: Uri, healthUri: Uri, token: String) {
+  case class GatewayApiClientConfig(serviceUri: Uri, healthUri: Uri, token: String) {
 
     /** @param containers
       *   Option[DockerComposeContainer] * If provided resolves host and port with testcontainers

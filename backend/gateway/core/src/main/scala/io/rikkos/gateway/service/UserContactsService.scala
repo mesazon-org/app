@@ -9,7 +9,7 @@ import zio.*
 
 object UserContactsService {
 
-  final case class UserContactsServiceImpl(
+  case class UserContactsServiceImpl(
       authorizationState: AuthorizationState,
       userContactsRepository: UserContactsRepository,
       upsertUserContactsValidator: ServiceValidator[Set[smithy.UpsertUserContactRequest], NonEmptyChunk[

@@ -15,7 +15,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Set up ASDF tools
-        uses: asdf-vm/actions/setup@v3
+        uses: asdf-vm/actions/setup@v4
+      - name: Install ASDF tools
+        uses: asdf-vm/actions/install@v4
       - name: Cache ASDF installs
         uses: actions/cache@v4
         with:
