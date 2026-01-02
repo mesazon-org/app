@@ -23,7 +23,7 @@ object Dependencies {
   lazy val postgresqlV          = "42.7.3"
   lazy val hikariCPV            = "7.0.2"
   lazy val doobieTranzactioV    = "5.6.0"
-  lazy val libphonenumberV      = "9.0.20"
+  lazy val libphonenumberV      = "9.0.21"
   lazy val circeV               = "0.14.15"
 
   // Http4s
