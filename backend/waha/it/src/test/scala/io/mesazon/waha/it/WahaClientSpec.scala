@@ -434,6 +434,18 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
 
         requestMappings.size shouldBe 3
 
+        requestMappings(0).mapping.method shouldBe "GET"
+        requestMappings(0).mapping.url shouldBe s"/api/$sessionID/groups/$groupID"
+        requestMappings(0).count shouldBe 1
+
+        requestMappings(1).mapping.method shouldBe "GET"
+        requestMappings(1).mapping.url shouldBe s"/api/$sessionID/groups/$groupID/participants/v2"
+        requestMappings(1).count shouldBe 1
+
+        requestMappings(2).mapping.method shouldBe "GET"
+        requestMappings(2).mapping.url shouldBe s"/api/$sessionID/groups/$groupID/picture"
+        requestMappings(2).count shouldBe 1
+
         groupsGetInfoOutput shouldBe expectedGroupsGetInfoOutput
       }
     }
