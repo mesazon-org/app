@@ -381,6 +381,11 @@ object WahaClient {
         input.sessionID,
         input.addParticipants,
       )
+      _ <- ZIO.when(nonRegisteredAddUserAccountIDs.nonEmpty)(
+        ZIO.logError(
+          s"Some addParticipants were not registered: [$nonRegisteredAddUserAccountIDs]. They will be invited privately."
+        )
+      )
       maybeAddGroupParticipantsResponse <- NonEmptyList
         .fromList(registeredAddUserAccountIDs)
         .traverse(addParticipants => addGroupParticipants(input.sessionID, input.groupID, addParticipants))
@@ -405,8 +410,10 @@ object WahaClient {
       _ <- NonEmptyList
         .fromList(registeredRemoveUserAccountIDs)
         .traverse(removeParticipants => removeGroupParticipants(input.sessionID, input.groupID, removeParticipants))
-      _ <- ZIO.logError(
-        s"Some removeParticipants were not registered: [$nonRegisteredRemoveUserAccountIDs]. Cannot remove unregistered participants from group."
+      _ <- ZIO.when(nonRegisteredRemoveUserAccountIDs.nonEmpty)(
+        ZIO.logError(
+          s"Some removeParticipants were not registered: [$nonRegisteredRemoveUserAccountIDs]. Cannot remove unregistered participants from group."
+        )
       )
       (registeredPromoteUserAccountIDs, nonRegisteredPromoteUserAccountIDs) <- checkUserAccountIsRegistered(
         input.sessionID,
@@ -415,8 +422,10 @@ object WahaClient {
       _ <- NonEmptyList
         .fromList(registeredPromoteUserAccountIDs)
         .traverse(promoteParticipants => promoteGroupParticipants(input.sessionID, input.groupID, promoteParticipants))
-      _ <- ZIO.logError(
-        s"Some promoteParticipants were not registered: [$nonRegisteredPromoteUserAccountIDs]. Cannot promote unregistered participants in group."
+      _ <- ZIO.when(nonRegisteredPromoteUserAccountIDs.nonEmpty)(
+        ZIO.logError(
+          s"Some promoteParticipants were not registered: [$nonRegisteredPromoteUserAccountIDs]. Cannot promote unregistered participants in group."
+        )
       )
       (registeredDemoteUserAccountIDs, nonRegisteredDemoteUserAccountIDs) <- checkUserAccountIsRegistered(
         input.sessionID,
@@ -425,8 +434,10 @@ object WahaClient {
       _ <- NonEmptyList
         .fromList(registeredDemoteUserAccountIDs)
         .traverse(demoteParticipants => demoteGroupParticipants(input.sessionID, input.groupID, demoteParticipants))
-      _ <- ZIO.logError(
-        s"Some demoteParticipants were not registered: [$nonRegisteredDemoteUserAccountIDs]. Cannot demote unregistered participants in group."
+      _ <- ZIO.when(nonRegisteredDemoteUserAccountIDs.nonEmpty)(
+        ZIO.logError(
+          s"Some demoteParticipants were not registered: [$nonRegisteredDemoteUserAccountIDs]. Cannot demote unregistered participants in group."
+        )
       )
     } yield GroupsUpdateOutput(
       nonRegisteredUserAccountIDs = nonRegisteredAddUserAccountIDs
