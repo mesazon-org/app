@@ -77,7 +77,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
 
   "WahaClient" when {
     "Chatting API" should {
-      "chattingSendMessage send text" in withContext { case Context(wiremockClient) =>
+      "chattingSendMessage send all types of messages" in withContext { case Context(wiremockClient) =>
         val wahaClient = ZIO
           .service[WahaClient]
           .provide(
