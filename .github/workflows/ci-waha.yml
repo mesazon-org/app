@@ -1,4 +1,4 @@
-name: ci
+name: ci-waha
 on:
   push:
     branches: [ main ]

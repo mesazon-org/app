@@ -1,4 +1,4 @@
-name: ci
+name: ci-backend
 on:
   push:
     branches: [main]
