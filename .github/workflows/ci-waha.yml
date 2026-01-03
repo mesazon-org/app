@@ -1,7 +1,6 @@
-name: ci-waha
+name: Waha CI
 on:
   push:
-    branches: [ main ]
     paths:
       - 'backend/waha/**'
       - 'project/**'
