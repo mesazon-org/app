@@ -33,7 +33,7 @@ object WahaClient {
 
     private val apiKeyHeader = getApiKeyHeader(config.apiKey)
 
-    private def humanoidBehaviour: UIO[Unit] = Random
+    private def simulateHumanDelay: UIO[Unit] = Random
       .nextLongBetween(config.humanDelayMin.toMillis, config.humanDelayMax.toMillis)
       .flatMap(int => ZIO.sleep(int.millis))
 
@@ -55,7 +55,7 @@ object WahaClient {
         _ <- ZIO.logDebug(
           s"Setting group name for sessionID: [$sessionID], groupID [$groupID], name: [$name]"
         )
-        _        <- humanoidBehaviour
+        _        <- simulateHumanDelay
         response <- GroupsRequests.setName(
           config.baseUri,
           apiKeyHeader,
@@ -74,7 +74,7 @@ object WahaClient {
       _ <- ZIO.logDebug(
         s"Setting group description for sessionID: [$sessionID], groupID [$groupID], description: [$description]"
       )
-      _        <- humanoidBehaviour
+      _        <- simulateHumanDelay
       response <- GroupsRequests.setDescription(
         config.baseUri,
         apiKeyHeader,
@@ -90,7 +90,7 @@ object WahaClient {
         _ <- ZIO.logDebug(
           s"Setting group picture for sessionID: [$sessionID], groupID [$groupID], picture: [$picture]"
         )
-        _        <- humanoidBehaviour
+        _        <- simulateHumanDelay
         response <- GroupsRequests.setPicture(
           config.baseUri,
           apiKeyHeader,
@@ -106,7 +106,7 @@ object WahaClient {
     inline private def getInviteCode(sessionID: SessionID, groupID: GroupID): IO[WahaError, Response[GroupInviteUrl]] =
       for {
         _        <- ZIO.logDebug(s"Getting invite code for sessionID: [$sessionID], groupID [$groupID]")
-        _        <- humanoidBehaviour
+        _        <- simulateHumanDelay
         response <- GroupsRequests.getInviteCode(
           config.baseUri,
           apiKeyHeader,
@@ -121,7 +121,7 @@ object WahaClient {
         chatID: ChatID,
         messageText: MessageText,
     ): IO[WahaError, Unit] = for {
-      _             <- humanoidBehaviour
+      _             <- simulateHumanDelay
       startResponse <- ChattingRequests.startTyping(
         config.baseUri,
         apiKeyHeader,
@@ -140,7 +140,7 @@ object WahaClient {
     inline private def sendMessage(input: ChattingMessageInput): IO[WahaError, Unit] =
       for {
         _        <- ZIO.logDebug(s"Sending message [$input]")
-        _        <- humanoidBehaviour
+        _        <- simulateHumanDelay
         response <- input match {
           case input: ChattingMessageInput.Text =>
             for {
@@ -224,7 +224,7 @@ object WahaClient {
       _ <- ZIO.logDebug(
         s"Adding participants to group for sessionID: [$sessionID], groupID [$groupID], participants: [$participants]"
       )
-      _        <- humanoidBehaviour
+      _        <- simulateHumanDelay
       response <- GroupsRequests.addParticipants(
         config.baseUri,
         apiKeyHeader,
@@ -243,7 +243,7 @@ object WahaClient {
       _ <- ZIO.logDebug(
         s"Removing participants from group for sessionID: [$sessionID], groupID [$groupID], participants: [$participants]"
       )
-      _        <- humanoidBehaviour
+      _        <- simulateHumanDelay
       response <- GroupsRequests.removeParticipants(
         config.baseUri,
         apiKeyHeader,
@@ -264,7 +264,7 @@ object WahaClient {
       _ <- ZIO.logDebug(
         s"Promoting participants in group for sessionID: [$sessionID], groupID [$groupID], participants: [$participants]"
       )
-      _        <- humanoidBehaviour
+      _        <- simulateHumanDelay
       response <- GroupsRequests.promoteParticipants(
         config.baseUri,
         apiKeyHeader,
@@ -285,7 +285,7 @@ object WahaClient {
       _ <- ZIO.logDebug(
         s"Demoting participants in group for sessionID: [$sessionID], groupID [$groupID], participants: [$participants]"
       )
-      _        <- humanoidBehaviour
+      _        <- simulateHumanDelay
       response <- GroupsRequests.demoteParticipants(
         config.baseUri,
         apiKeyHeader,
