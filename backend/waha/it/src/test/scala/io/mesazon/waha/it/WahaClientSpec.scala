@@ -59,7 +59,6 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
   override def beforeAll(): Unit = withContext { case Context(wiremockClient) =>
     super.beforeAll()
 
-    // Ensure the GatewayApiClient is initialized before running tests
     eventually {
       val healthCheckStatusResponse = wiremockClient.healthCheck.zioValue
 
@@ -69,7 +68,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
   }
 
   override def afterEach(): Unit = withContext { case Context(wiremockClient) =>
-    super.beforeEach()
+    super.afterEach()
 
     eventually {
       wiremockClient.reset.zioValue.code shouldBe StatusCode.Ok

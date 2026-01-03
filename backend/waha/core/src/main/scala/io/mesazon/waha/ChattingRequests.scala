@@ -26,13 +26,13 @@ object ChattingRequests {
   sealed trait ChattingFileType
 
   object ChattingFileType {
-    final case class Url(
+    case class Url(
         @named("mimetype") mimeType: FileTypeMimeType,
         @named("filename") fileName: FileTypeFileName,
         url: FileTypeURL,
     ) extends ChattingFileType
 
-    final case class Data(
+    case class Data(
         @named("mimetype") mimeType: FileTypeMimeType,
         @named("filename") fileName: FileTypeFileName,
         data: FileTypeData,
@@ -40,12 +40,12 @@ object ChattingRequests {
   }
 
   // Request Bodies
-  final case class ChattingTypingRequestBody(
+  case class ChattingTypingRequestBody(
       @named("session") sessionID: SessionID,
       @named("chatId") chatID: ChatID,
   )
 
-  final case class ChattingSendTextRequestBody(
+  case class ChattingSendTextRequestBody(
       @named("session") sessionID: SessionID,
       @named("chatId") chatID: ChatID,
       text: MessageText,
@@ -54,7 +54,7 @@ object ChattingRequests {
       @named("reply_to") replyToMessageID: Option[MessageID] = None,
   )
 
-  final case class ChattingSendImageRequestBody(
+  case class ChattingSendImageRequestBody(
       @named("session") sessionID: SessionID,
       @named("chatId") chatID: ChatID,
       file: ChattingFileType,
@@ -62,7 +62,7 @@ object ChattingRequests {
       @named("reply_to") replyToMessageID: Option[MessageID] = None,
   )
 
-  final case class ChattingSendFileRequestBody(
+  case class ChattingSendFileRequestBody(
       @named("session") sessionID: SessionID,
       @named("chatId") chatID: ChatID,
       file: ChattingFileType,
@@ -70,7 +70,7 @@ object ChattingRequests {
       @named("reply_to") replyToMessageID: Option[MessageID] = None,
   )
 
-  final case class ChattingSendVoiceRequestBody(
+  case class ChattingSendVoiceRequestBody(
       @named("session") sessionID: SessionID,
       @named("chatId") chatID: ChatID,
       file: ChattingFileType,
@@ -78,7 +78,7 @@ object ChattingRequests {
       @named("reply_to") replyToMessageID: Option[MessageID] = None,
   )
 
-  final case class ChattingSendVideoRequestBody(
+  case class ChattingSendVideoRequestBody(
       @named("session") sessionID: SessionID,
       @named("chatId") chatID: ChatID,
       file: ChattingFileType,

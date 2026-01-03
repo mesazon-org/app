@@ -81,87 +81,87 @@ object GroupsRequests {
   sealed trait GroupsFileType
 
   object GroupsFileType {
-    final case class Url(
+     case class Url(
         @named("mimetype") mimeType: FileTypeMimeType,
         @named("filename") fileName: FileTypeFileName,
         url: FileTypeURL,
     ) extends GroupsFileType
 
-    final case class Data(
+     case class Data(
         @named("mimetype") mimeType: FileTypeMimeType,
         @named("filename") fileName: FileTypeFileName,
         data: FileTypeData,
     ) extends GroupsFileType
   }
 
-  final case class GroupsParticipant(
+   case class GroupsParticipant(
       @named("id") userAccountID: UserAccountID
   )
 
-  final case class GroupsParticipantV2(
+   case class GroupsParticipantV2(
       @named("id") userID: UserID,
       @named("pn") userAccountID: UserAccountID,
       role: GroupParticipantRole,
   )
 
-  final case class GroupNewParticipant(
+   case class GroupNewParticipant(
       @named("JID") userID: UserID,
       @named("PhoneNumber") phoneNumber: WhatsAppPhoneNumber,
       @named("Error") errorCode: GroupParticipantError,
   )
 
   // Request Bodies
-  final case class GroupsCreateRequestBody(
+   case class GroupsCreateRequestBody(
       name: GroupName,
       participants: List[GroupsParticipant],
   )
 
-  final case class GroupsSetDescriptionRequestBody(
+   case class GroupsSetDescriptionRequestBody(
       description: GroupDescription
   )
 
-  final case class GroupsSetNameRequestBody(
+   case class GroupsSetNameRequestBody(
       @named("subject") name: GroupName
   )
 
-  final case class GroupsSetPictureBody(file: GroupsFileType)
+   case class GroupsSetPictureBody(file: GroupsFileType)
 
-  final case class GroupsAddParticipantsRequestBody(
+   case class GroupsAddParticipantsRequestBody(
       participants: List[GroupsParticipant]
   )
 
-  final case class GroupsRemoveParticipantsRequestBody(
+   case class GroupsRemoveParticipantsRequestBody(
       participants: List[GroupsParticipant]
   )
 
-  final case class GroupsPromoteParticipantsRequestBody(
+   case class GroupsPromoteParticipantsRequestBody(
       participants: List[GroupsParticipant]
   )
 
-  final case class GroupsDemoteParticipantsRequestBody(
+   case class GroupsDemoteParticipantsRequestBody(
       participants: List[GroupsParticipant]
   )
 
   // Response Bodies
-  final case class GroupsCreateResponseBody(
+   case class GroupsCreateResponseBody(
       @named("JID") groupID: GroupID,
       @named("Name") name: GroupName,
       @named("Participants") participants: List[GroupNewParticipant],
   )
 
-  final case class GroupsGetPictureResponseBody(
+   case class GroupsGetPictureResponseBody(
       @named("url") pictureUrl: Option[GroupPictureUrl]
   )
 
-  final case class GroupsGetParticipantsV2ResponseBody(
+   case class GroupsGetParticipantsV2ResponseBody(
       participants: List[GroupsParticipantV2]
   )
 
-  final case class GroupsAddParticipantsResponseBody(
+   case class GroupsAddParticipantsResponseBody(
       participants: List[GroupNewParticipant]
   )
 
-  final case class GroupsGetGroupResponseBody(
+   case class GroupsGetGroupResponseBody(
       @named("JID") groupID: GroupID,
       @named("OwnerJID") ownerUserID: UserID,
       @named("OwnerPN") ownerPhoneNumber: WhatsAppPhoneNumber,
