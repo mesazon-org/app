@@ -26,7 +26,7 @@ trait WahaClient {
 
 object WahaClient {
 
-  type UserAccountsStatus = (registered: List[UserAccountID], nonRegistered: List[UserAccountID])
+  type UserAccountsCheckResult = (registered: List[UserAccountID], nonRegistered: List[UserAccountID])
 
   private final class WahaClientImpl(config: WahaConfig)(using Backend[Task]) extends WahaClient {
     inline private val charactersPerWord = 5.0
@@ -35,7 +35,7 @@ object WahaClient {
 
     private def simulateHumanDelay: UIO[Unit] = Random
       .nextLongBetween(config.humanDelayMin.toMillis, config.humanDelayMax.toMillis)
-      .flatMap(int => ZIO.sleep(int.millis))
+      .flatMap(millisLong => ZIO.sleep(millisLong.millis))
 
     private def typingTimer(messageText: MessageText): IO[WahaError, Unit] =
       for {
@@ -301,7 +301,7 @@ object WahaClient {
     private def checkUserAccountIsRegistered(
         sessionID: SessionID,
         userAccountIDs: List[UserAccountID],
-    ): IO[WahaError, UserAccountsStatus] =
+    ): IO[WahaError, UserAccountsCheckResult] =
       for {
         checkIfUserAccountsExist <- ZIO.foreachPar(userAccountIDs)(participant =>
           ContactsRequests
