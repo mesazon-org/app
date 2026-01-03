@@ -11,13 +11,13 @@ trait TimeProvider {
 
 object TimeProvider {
 
-  final private case class TimeProviderImpl(clock: Clock) extends TimeProvider {
+  private final class TimeProviderImpl(clock: Clock) extends TimeProvider {
 
     override def instantNow: UIO[Instant] =
       ZIO.attempt(Instant.now(clock).truncatedTo(ChronoUnit.MILLIS)).orDie
   }
 
-  val live: URLayer[Clock, TimeProvider] = ZLayer.fromFunction(TimeProviderImpl.apply)
+  val live: URLayer[Clock, TimeProvider] = ZLayer.derive[TimeProviderImpl]
 
   val liveSystemUTC: ULayer[TimeProvider] = ZLayer.succeed(Clock.systemUTC()) >>> live
 }

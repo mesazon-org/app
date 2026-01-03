@@ -77,7 +77,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
 
   "WahaClient" when {
     "Chatting API" should {
-      "chattingSendMessage send message" in withContext { case Context(wiremockClient) =>
+      "chattingSendMessage send text" in withContext { case Context(wiremockClient) =>
         val wahaClient = ZIO
           .service[WahaClient]
           .provide(
@@ -87,15 +87,35 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
           )
           .zioValue
 
-        val input = arbitrarySample[ChattingMessageInput.Text]
+        val chattingMessageInputText = arbitrarySample[ChattingMessageInput.Text]
           .copy(sessionID = sessionID)
 
-        wahaClient.chattingSendMessage(input).zioValue
+        wahaClient.chattingSendMessage(chattingMessageInputText).zioValue
+
+        val chattingMessageInputImage = arbitrarySample[ChattingMessageInput.Image]
+          .copy(sessionID = sessionID)
+
+        wahaClient.chattingSendMessage(chattingMessageInputImage).zioValue
+
+        val chattingMessageInputFile = arbitrarySample[ChattingMessageInput.File]
+          .copy(sessionID = sessionID)
+
+        wahaClient.chattingSendMessage(chattingMessageInputFile).zioValue
+
+        val chattingMessageInputVideo = arbitrarySample[ChattingMessageInput.Video]
+          .copy(sessionID = sessionID)
+
+        wahaClient.chattingSendMessage(chattingMessageInputVideo).zioValue
+
+        val chattingMessageInputVoice = arbitrarySample[ChattingMessageInput.Voice]
+          .copy(sessionID = sessionID)
+
+        wahaClient.chattingSendMessage(chattingMessageInputVoice).zioValue
 
         val requestMappings =
           wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
 
-        requestMappings.size shouldBe 3
+        requestMappings.size shouldBe 7
 
         requestMappings(0).mapping.method shouldBe "POST"
         requestMappings(0).mapping.url shouldBe "/api/startTyping"
@@ -108,6 +128,22 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
         requestMappings(2).mapping.method shouldBe "POST"
         requestMappings(2).mapping.url shouldBe "/api/sendText"
         requestMappings(2).count shouldBe 1
+
+        requestMappings(3).mapping.method shouldBe "POST"
+        requestMappings(3).mapping.url shouldBe "/api/sendImage"
+        requestMappings(3).count shouldBe 1
+
+        requestMappings(4).mapping.method shouldBe "POST"
+        requestMappings(4).mapping.url shouldBe "/api/sendFile"
+        requestMappings(4).count shouldBe 1
+
+        requestMappings(5).mapping.method shouldBe "POST"
+        requestMappings(5).mapping.url shouldBe "/api/sendVideo"
+        requestMappings(5).count shouldBe 1
+
+        requestMappings(6).mapping.method shouldBe "POST"
+        requestMappings(6).mapping.url shouldBe "/api/sendVoice"
+        requestMappings(6).count shouldBe 1
       }
     }
 
@@ -451,7 +487,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
   }
 }
 object WahaClientSpec {
-  final case class Context(
+  case class Context(
       wiremockClient: WiremockClient
   )
 }

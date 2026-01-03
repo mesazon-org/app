@@ -6,7 +6,7 @@ import zio.*
 
 object HealthCheckService {
 
-  final private case class HealthCheckServiceImpl() extends smithy.HealthCheckService[[A] =>> IO[ServiceError, A]] {
+  private final class HealthCheckServiceImpl() extends smithy.HealthCheckService[[A] =>> IO[ServiceError, A]] {
     override def liveness(): IO[ServiceError, Unit] = ZIO.unit
 
     override def readiness(): IO[ServiceError, Unit] = ZIO.unit
@@ -21,5 +21,5 @@ object HealthCheckService {
       override def readiness(): Task[Unit] = HttpErrorHandler.errorResponseHandler(service.readiness())
     }
 
-  val live = ZLayer.succeed(HealthCheckServiceImpl()) >>> ZLayer.fromFunction(observed)
+  val live = ZLayer.derive[HealthCheckServiceImpl] >>> ZLayer.fromFunction(observed)
 }

@@ -172,7 +172,7 @@ object ChattingRequests {
   )(using Backend[Task]): IO[WahaError, Response[String]] =
     basicRequest
       .body(asJson(body))
-      .post(baseUri.withPath("api", "sendVoice"))
+      .post(baseUri.withPath("api", "sendVideo"))
       .headers(apiKeyHeader)
       .response(asString)
       .standardSendRequestString(WahaErrorCode.CHATTING_SEND_VIDEO_ERROR)

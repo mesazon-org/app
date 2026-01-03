@@ -4,7 +4,7 @@ import sttp.model.Uri
 
 import scala.concurrent.duration.Duration
 
-final case class WahaConfig(
+case class WahaConfig(
     scheme: String,
     host: String,
     port: Int,

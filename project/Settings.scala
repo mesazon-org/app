@@ -17,6 +17,21 @@ object Settings {
   private val ignoreNotUsedAssertion =
     ScalacOptions.other("-Wconf:msg=unused value of type:s")
 
+  /** Ignore couldn't resolve a member for the given link query
+   * *
+    * @example
+    *   {{{
+    *   val doc = JsObject(
+    *     "data" -> JsArray(entities.map(_.toJson).toVector)
+    *   )
+    *
+    *   doc.hcursor.downField("data").as[List[Entity]] // <- WARN: Couldn't resolve a member for the given link query
+    *   }}}
+   */
+  private val ignore =  ScalacOptions.other(
+    "-Wconf:msg=Couldn't resolve a member for the given link query:s"
+  )
+
   /** Discard non-Unit value
     *
     * @example
