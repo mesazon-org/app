@@ -158,16 +158,10 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
           )
           .zioValue
 
-        val groupDescription         = arbitrarySample[GroupDescription]
-        val groupName                = arbitrarySample[GroupName]
-        val fileType                 = arbitrarySample[FileType]
-        val nonRegisteredParticipant = UserAccountID.assume("6666@c.us")
-        val participants             = List(
-          UserAccountID.assume("1000@c.us"),
-          UserAccountID.assume("1001@c.us"),
-          UserAccountID.assume("1002@c.us"),
-          nonRegisteredParticipant,
-        )
+        val groupDescription = arbitrarySample[GroupDescription]
+        val groupName        = arbitrarySample[GroupName]
+        val fileType         = arbitrarySample[FileType]
+
         val input = GroupsCreateInput(
           sessionID = sessionID,
           name = groupName,
@@ -443,7 +437,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
           GroupParticipant(
             userID = UserID.assume("1003@lid"),
             userAccountID = UserAccountID.assume("1003@c.us"),
-            role = GroupParticipantRole.Left,
+            role = GroupParticipantRole.LeftGroup,
           ),
           GroupParticipant(
             userID = UserID.assume("1004@lid"),

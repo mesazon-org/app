@@ -9,7 +9,7 @@ object GroupParticipantRole {
   case object SuperAdmin            extends GroupParticipantRole
   case object Admin                 extends GroupParticipantRole
   case object Participant           extends GroupParticipantRole
-  case object Left                  extends GroupParticipantRole
+  case object LeftGroup             extends GroupParticipantRole
   case class Unknown(value: String) extends GroupParticipantRole
 
   given JsonValueCodec[GroupParticipantRole] = new JsonValueCodec[GroupParticipantRole] {
@@ -19,15 +19,15 @@ object GroupParticipantRole {
         case "superadmin"  => SuperAdmin
         case "admin"       => Admin
         case "participant" => Participant
-        case "left"        => Left
+        case "left"        => LeftGroup
         case other         => Unknown(other)
       }
 
     override def encodeValue(x: GroupParticipantRole, out: JsonWriter): Unit =
       x match {
-        case Left           => out.writeVal("left")
+        case LeftGroup      => out.writeVal("left")
         case Admin          => out.writeVal("admin")
-        case SuperAdmin     => out.writeVal("super_admin")
+        case SuperAdmin     => out.writeVal("superadmin")
         case Participant    => out.writeVal("participant")
         case Unknown(value) => out.writeVal(value)
       }
