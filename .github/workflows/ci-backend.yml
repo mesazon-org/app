@@ -1,5 +1,10 @@
 name: ci
-on: [push]
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+        - 'docs/**'
+        - 'frontend/**'
 jobs:
   gateway-pr-build:
     uses: ./.github/workflows/scala-ci.yml

@@ -6,7 +6,7 @@ on:
         required: true
         type: string
 env:
-  ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE }}
+  ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
 jobs:
   build:
     name: Build ${{ inputs.module }}

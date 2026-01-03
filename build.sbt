@@ -42,7 +42,6 @@ lazy val backendModule = Project("backend", file("backend"))
     backendGeneratorModule,
     backendTestKitModule,
     backendPostgreSQLTestModule,
-    backendWahaModuleRoot,
     backendGatewayRoot,
   )
 
