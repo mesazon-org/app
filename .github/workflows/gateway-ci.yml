@@ -1,4 +1,4 @@
-name: Backend CI
+name: Gateway CI
 on:
   push:
     paths-ignore:

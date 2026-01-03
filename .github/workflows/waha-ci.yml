@@ -5,7 +5,7 @@ on:
       - 'backend/waha/**'
       - 'project/**'
       - 'build.sbt'
-      - '.github/workflows/ci-waha.yml'
+      - '.github/workflows/waha-ci.yml'
       - '.scalafix.conf'
       - '.scalafmt.conf'
       - '.tool-versions'
