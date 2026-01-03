@@ -32,8 +32,8 @@ def createBackendModule(root: String)(subModule: Option[String]): Project = {
 
 lazy val root = Project("app", file("."))
   .aggregate(
-      backendModule,
-      backendWahaModuleRoot,
+    backendModule,
+    backendWahaModuleRoot,
   )
   .settings(Aliases.all)
 
