@@ -13,8 +13,7 @@ trait AuthorizationService[E] {
 
 object AuthorizationService {
 
-  final private case class AuthorizationServiceImpl(state: AuthorizationState)
-      extends AuthorizationService[ServiceError] {
+  private final class AuthorizationServiceImpl(state: AuthorizationState) extends AuthorizationService[ServiceError] {
     override def auth(request: Request[Task]): IO[ServiceError, Unit] =
       for {
         maybeBearerToken = request.headers
@@ -30,5 +29,5 @@ object AuthorizationService {
   private def observed(service: AuthorizationService[ServiceError]): AuthorizationService[Throwable] =
     (request: Request[Task]) => HttpErrorHandler.errorResponseHandler(service.auth(request))
 
-  val live = ZLayer.fromFunction(AuthorizationServiceImpl.apply) >>> ZLayer.fromFunction(observed)
+  val live = ZLayer.derive[AuthorizationServiceImpl] >>> ZLayer.fromFunction(observed)
 }

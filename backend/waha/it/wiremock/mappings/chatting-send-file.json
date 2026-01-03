@@ -1,0 +1,29 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/sendFile",
+    "headers": {
+      "Content-Type": {
+        "contains": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.session"
+      },
+      {
+        "matchesJsonPath": "$.chatId"
+      },
+      {
+        "matchesJsonPath": "$.file"
+      }
+    ]
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": ""
+  }
+}

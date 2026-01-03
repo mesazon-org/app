@@ -24,7 +24,7 @@ trait UserRepository {
 
 object UserRepository {
 
-  final private case class UserRepositoryPostgreSql(
+  private final class UserRepositoryPostgreSql(
       database: DatabaseOps.ServiceOps[Transactor[Task]],
       timeProvider: TimeProvider,
   ) extends UserRepository {
@@ -71,5 +71,5 @@ object UserRepository {
 
   def observed(repository: UserRepository): UserRepository = repository
 
-  val live = ZLayer.fromFunction(UserRepositoryPostgreSql.apply) >>> ZLayer.fromFunction(observed)
+  val live = ZLayer.derive[UserRepositoryPostgreSql] >>> ZLayer.fromFunction(observed)
 }

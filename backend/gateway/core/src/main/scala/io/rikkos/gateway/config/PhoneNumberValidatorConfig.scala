@@ -6,7 +6,7 @@ import zio.Config.Error
 
 import scala.jdk.CollectionConverters.SetHasAsScala
 
-final case class PhoneNumberValidatorConfig(
+case class PhoneNumberValidatorConfig(
     supportedRegions: Set[String]
 )
 

@@ -1,0 +1,29 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/sendText",
+    "headers": {
+      "Content-Type": {
+        "contains": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.chatId"
+      },
+      {
+        "matchesJsonPath": "$.text"
+      },
+      {
+        "matchesJsonPath": "$.session"
+      }
+    ]
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": ""
+  }
+}

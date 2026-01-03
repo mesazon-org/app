@@ -9,7 +9,7 @@ import zio.*
 
 object UserManagementService {
 
-  final private case class UserManagementServiceImpl(
+  private final class UserManagementServiceImpl(
       userRepository: UserRepository,
       authorizationState: AuthorizationState,
       onboardUserDetailsRequestValidator: ServiceValidator[smithy.OnboardUserDetailsRequest, OnboardUserDetails],
@@ -46,5 +46,5 @@ object UserManagementService {
           .errorResponseHandler(service.updateUser(request))
     }
 
-  val live = ZLayer.fromFunction(UserManagementServiceImpl.apply) >>> ZLayer.fromFunction(observed)
+  val live = ZLayer.derive[UserManagementServiceImpl] >>> ZLayer.fromFunction(observed)
 }

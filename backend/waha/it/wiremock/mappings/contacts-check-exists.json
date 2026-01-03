@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/api/contacts/check-exists",
+    "queryParameters": {
+      "phone": {
+        "matches": ".*"
+      },
+      "session": {
+        "matches": ".*"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "transformers": ["response-template"],
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "numberExists": true,
+      "chatId": "{{request.query.phone}}"
+    }
+  }
+}

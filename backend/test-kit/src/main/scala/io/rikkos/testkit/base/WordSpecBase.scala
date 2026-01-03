@@ -21,7 +21,7 @@ open class WordSpecBase
     with BeforeAndAfterAll
     with BeforeAndAfterEach {
 
-  implicit override val patienceConfig: PatienceConfig = PatienceConfig(20.seconds, 1.second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(20.seconds, 1.second)
 
   def arbitrarySample[T: Arbitrary as arb]: T =
     arb.arbitrary.sample.getOrElse(throw new NoSuchElementException("No sample available"))

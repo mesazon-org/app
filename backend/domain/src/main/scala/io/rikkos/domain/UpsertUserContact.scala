@@ -1,6 +1,6 @@
 package io.rikkos.domain
 
-final case class UpsertUserContact(
+case class UpsertUserContact(
     userContactID: Option[UserContactID],
     displayName: DisplayName,
     firstName: FirstName,

@@ -19,7 +19,7 @@ trait UserContactsRepository {
 
 object UserContactsRepository {
 
-  final case class UserContactsPostgreSql(
+  case class UserContactsPostgreSql(
       database: DatabaseOps.ServiceOps[Transactor[Task]],
       timeProvider: TimeProvider,
       idGenerator: IDGenerator,

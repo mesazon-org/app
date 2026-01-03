@@ -5,10 +5,10 @@ import io.rikkos.gateway.config.GatewayServerConfig.ServerConfig
 import zio.config.*
 import zio.config.magnolia.*
 
-final case class GatewayServerConfig(service: ServerConfig, health: ServerConfig)
+case class GatewayServerConfig(service: ServerConfig, health: ServerConfig)
 
 object GatewayServerConfig {
-  final case class ServerConfig(host: Host, port: Port)
+  case class ServerConfig(host: Host, port: Port)
 
   val live = deriveConfigLayer[GatewayServerConfig]("server")
 }

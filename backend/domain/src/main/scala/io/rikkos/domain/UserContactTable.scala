@@ -1,6 +1,6 @@
 package io.rikkos.domain
 
-final case class UserContactTable(
+case class UserContactTable(
     userContactID: UserContactID,
     userID: UserID,
     displayName: DisplayName,

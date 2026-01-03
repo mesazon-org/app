@@ -1,6 +1,6 @@
 package io.rikkos.gateway.config
 
-final case class DatabaseConfig(
+case class DatabaseConfig(
     name: String,
     driver: String,
     host: String,

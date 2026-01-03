@@ -8,15 +8,15 @@ import zio.ZIO
 
 package object validation {
 
-  private[validation] inline val phoneRegionFieldName         = "phoneRegion"
-  private[validation] inline val phoneNationalNumberFieldName = "phoneNationalNumber"
-  private[validation] inline val firstNameFieldName           = "firstName"
-  private[validation] inline val lastNameFieldName            = "lastName"
-  private[validation] inline val addressLine1FieldName        = "addressLine1"
-  private[validation] inline val addressLine2FieldName        = "addressLine2"
-  private[validation] inline val cityFieldName                = "city"
-  private[validation] inline val postalCodeFieldName          = "postalCode"
-  private[validation] inline val companyFieldName             = "company"
+  inline private[validation] val phoneRegionFieldName         = "phoneRegion"
+  inline private[validation] val phoneNationalNumberFieldName = "phoneNationalNumber"
+  inline private[validation] val firstNameFieldName           = "firstName"
+  inline private[validation] val lastNameFieldName            = "lastName"
+  inline private[validation] val addressLine1FieldName        = "addressLine1"
+  inline private[validation] val addressLine2FieldName        = "addressLine2"
+  inline private[validation] val cityFieldName                = "city"
+  inline private[validation] val postalCodeFieldName          = "postalCode"
+  inline private[validation] val companyFieldName             = "company"
 
   private[validation] def validateRequiredField[A, T](
       fieldName: String,

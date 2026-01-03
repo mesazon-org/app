@@ -8,9 +8,9 @@ trait IDGenerator {
 
 object IDGenerator {
 
-  final private class UUIDGenerator extends IDGenerator {
+  private object UUIDGenerator extends IDGenerator {
     override def generate: UIO[String] = Random.nextUUID.map(_.toString)
   }
 
-  val uuidGeneratorLive: ULayer[IDGenerator] = ZLayer.succeed(new UUIDGenerator())
+  val uuidGeneratorLive: ULayer[IDGenerator] = ZLayer.succeed(UUIDGenerator)
 }

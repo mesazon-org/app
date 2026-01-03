@@ -31,7 +31,10 @@ def createBackendModule(root: String)(subModule: Option[String]): Project = {
 }
 
 lazy val root = Project("app", file("."))
-  .aggregate(backendModule)
+  .aggregate(
+    backendModule,
+    backendWahaModuleRoot,
+  )
   .settings(Aliases.all)
 
 // Backend modules
@@ -60,6 +63,7 @@ lazy val backendTestKitModule = createBackendModule("test-kit")(None)
     Dependencies.zio,
     Dependencies.zioConfig,
     Dependencies.zioConfigTypesafe,
+    Dependencies.zioConfigMagnolia,
     Dependencies.zioLogging,
     Dependencies.zioLoggingSL4J,
     Dependencies.zioInteropCats,
@@ -83,6 +87,40 @@ lazy val backendPostgreSQLTestModule = createBackendModule("postgresql-test")(No
   )
 
 lazy val backendSchemas = createBackendModule("schemas")(None)
+
+// Waha
+lazy val createBackendWahaModule = createBackendModule("waha") _
+
+lazy val backendWahaModuleRoot = createBackendWahaModule(None)
+  .aggregate(backendWahaModuleCore, backendWahaModuleIt)
+
+lazy val backendWahaModuleCore = createBackendWahaModule(Some("core"))
+  .withDependencies(
+    Dependencies.chimney,
+    Dependencies.iron,
+    Dependencies.ironJsoniter,
+    Dependencies.zio,
+    Dependencies.zioInteropCats,
+    Dependencies.cats,
+    Dependencies.jsoniterScalaCore,
+    Dependencies.jsoniterScalaMacro,
+    Dependencies.sttpClient4Core,
+    Dependencies.sttpClient4Slf4j,
+    Dependencies.sttpClient4ZIO,
+    Dependencies.sttpClient4Jsoniter,
+  )
+
+lazy val backendWahaModuleIt = createBackendWahaModule(Some("it"))
+  .dependsOn(backendTestKitModule)
+  .dependsOn(backendWahaModuleCore % Test)
+  .settings(
+    test := Def
+      .sequential(
+        backendGatewayCore / Docker / publishLocal,
+        Test / test,
+      )
+      .value
+  )
 
 // Gateway
 lazy val createBackendGatewayModule = createBackendModule("gateway") _

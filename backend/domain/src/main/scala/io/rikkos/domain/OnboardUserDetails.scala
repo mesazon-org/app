@@ -1,6 +1,6 @@
 package io.rikkos.domain
 
-final case class OnboardUserDetails(
+case class OnboardUserDetails(
     firstName: FirstName,
     lastName: LastName,
     phoneNumber: PhoneNumber,

@@ -7,5 +7,5 @@ trait PropertyBase extends ScalaCheckPropertyChecks {
 
   def minSuccessful: PosInt = PosInt(10)
 
-  implicit override val generatorDrivenConfig: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful)
+  override implicit val generatorDrivenConfig: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful)
 }

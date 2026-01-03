@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/api/.*/groups/[^/]+"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "JID": "0000@g.us",
+      "Name": "Waha Group",
+      "OwnerJID": "1000@lid",
+      "OwnerPN": "1000@s.whatsapp.net",
+      "Topic": "Waha Description"
+    }
+  }
+}

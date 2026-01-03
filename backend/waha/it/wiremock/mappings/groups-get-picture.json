@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/api/.*/groups/.*/picture"
+  },
+  "response": {
+    "status": 200,
+    "transformers": ["response-template"],
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "url": "http://chat.com/image.jpg"
+    }
+  }
+}
