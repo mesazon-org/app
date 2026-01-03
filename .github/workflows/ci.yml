@@ -1,6 +1,0 @@
-name: ci-backend
-on:
-  push: [main]
-jobs:
-  gateway-pr-build:
-    uses: ./.github/workflows/scala-ci.yml
