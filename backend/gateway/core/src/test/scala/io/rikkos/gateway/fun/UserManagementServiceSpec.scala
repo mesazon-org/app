@@ -109,14 +109,47 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         updateUserDetailsCounterRef.get.zioValue shouldBe 0
       }
     }
+    "getUser" should {
+      "successfully get the user" in new TestContext {
+        val authedUser            = arbitrarySample[AuthedUser]
+        val getUserDetailsRequest = arbitrarySample[smithy.GetUserDetailsRequest]
+        val userDetailsTable      = arbitrarySample[UserDetailsTable]
+        val userRepositoryState   = Map(authedUser.userID -> userDetailsTable)
+        val userManagementService = buildUserManagementService(authedUser, userRepositoryState)
+
+        userManagementService
+          .getUser(getUserDetailsRequest.userID)
+          .zioEither
+          .isRight shouldBe true
+
+        getUserDetailsCounterRef.get.zioValue shouldBe 1
+      }
+
+      "fail with InternalServerError when request validation fail" in new TestContext {
+        val authedUser            = arbitrarySample[AuthedUser]
+        val getUserDetailsRequest = arbitrarySample[smithy.GetUserDetailsRequest]
+        val userManagementService = buildUserManagementService(
+          authedUser = authedUser,
+          userRepositoryMaybeError = Some(new RuntimeException("Repository error")),
+        )
+
+        userManagementService
+          .getUser(getUserDetailsRequest.userID)
+          .zioError shouldBe a[smithy.InternalServerError]
+
+        updateUserDetailsCounterRef.get.zioValue shouldBe 0
+      }
+    }
   }
 
   trait TestContext {
     val insertUserDetailsCounterRef = Ref.make(0).zioValue
     val updateUserDetailsCounterRef = Ref.make(0).zioValue
+    val getUserDetailsCounterRef    = Ref.make(0).zioValue
 
     def buildUserManagementService(
         authedUser: AuthedUser,
+        userRepositoryState: Map[UserID, UserDetailsTable] = Map.empty,
         userRepositoryMaybeError: Option[Throwable] = None,
     ): smithy.UserManagementService[Task] =
       ZIO
@@ -124,8 +157,10 @@ class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         .provide(
           UserManagementService.live,
           userRepositoryMockLive(
+            userRepositoryState,
             insertUserDetailsCounterRef,
             updateUserDetailsCounterRef,
+            getUserDetailsCounterRef,
             userRepositoryMaybeError,
           ),
           authorizationStateMockLive(authedUser),

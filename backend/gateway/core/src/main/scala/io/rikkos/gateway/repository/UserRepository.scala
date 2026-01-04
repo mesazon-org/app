@@ -20,6 +20,10 @@ trait UserRepository {
       userID: UserID,
       updateUserDetails: UpdateUserDetails,
   ): UIO[Unit]
+
+  def getUserDetails(
+      userID: UserID
+  ): UIO[Option[UserDetailsTable]]
 }
 
 object UserRepository {
@@ -67,6 +71,13 @@ object UserRepository {
             )
           )
       } yield ()).orDie
+
+    override def getUserDetails(userID: UserID): UIO[Option[UserDetailsTable]] =
+      database
+        .transactionOrDie(
+          UserDetailsQueries.getUserDetailsQuery(userID)
+        )
+        .orDie
   }
 
   def observed(repository: UserRepository): UserRepository = repository

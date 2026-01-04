@@ -17,8 +17,10 @@ import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 
 def userRepositoryMockLive(
+    userRepositoryState: Map[UserID, UserDetailsTable],
     insertUserDetailsCounterRef: Ref[Int],
     updateUserDetailsCounterRef: Ref[Int],
+    getUserDetailsCounterRef: Ref[Int],
     maybeError: Option[Throwable] = None,
 ): ULayer[UserRepository] =
   ZLayer.succeed(
@@ -33,6 +35,11 @@ def userRepositoryMockLive(
 
       override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
         maybeError.fold(updateUserDetailsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
+
+      override def getUserDetails(userID: UserID): UIO[Option[UserDetailsTable]] =
+        maybeError.fold(getUserDetailsCounterRef.incrementAndGet *> ZIO.succeed(userRepositoryState.get(userID)))(
+          ZIO.fail(_).orDie
+        )
     }
   )
 

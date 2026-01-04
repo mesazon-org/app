@@ -3,9 +3,11 @@ package io.rikkos.gateway.service
 import io.rikkos.domain.*
 import io.rikkos.gateway.auth.AuthorizationState
 import io.rikkos.gateway.repository.UserRepository
+import io.rikkos.gateway.smithy.GetUserDetailsResponse
 import io.rikkos.gateway.validation.ServiceValidator
 import io.rikkos.gateway.{smithy, HttpErrorHandler}
-import zio.*
+import smithy4s.Timestamp
+import zio.{Task, *}
 
 object UserManagementService {
 
@@ -31,6 +33,33 @@ object UserManagementService {
         updateUserDetails <- updateUserDetailsRequestValidator.validate(request)
         _                 <- userRepository.updateUserDetails(authedUser.userID, updateUserDetails)
       } yield ()
+
+    override def getUser(userID: String): IO[ServiceError, smithy.GetUserDetailsResponse] =
+      for {
+        authedUser            <- authorizationState.get()
+        _                     <- ZIO.logDebug(s"Get user with userID: ${authedUser.userID}")
+        maybeUserDetailsTable <- userRepository.getUserDetails(authedUser.userID)
+        userDetailsResponse <- maybeUserDetailsTable match {
+          case Some(userDetailsTable) =>
+            ZIO.succeed(
+              smithy.GetUserDetailsResponse(
+                userDetailsTable.userID.value,
+                userDetailsTable.email.value,
+                userDetailsTable.firstName,
+                userDetailsTable.lastName,
+                userDetailsTable.phoneNumber,
+                userDetailsTable.addressLine1,
+                userDetailsTable.city,
+                userDetailsTable.postalCode,
+                userDetailsTable.company,
+                Timestamp.fromInstant(userDetailsTable.createdAt.value),
+                Timestamp.fromInstant(userDetailsTable.updatedAt.value),
+                userDetailsTable.addressLine2,
+              )
+            )
+          case None => ZIO.fail(ServiceError.NotFoundError.UserNotFound(authedUser.userID, authedUser.email))
+        }
+      } yield userDetailsResponse
   }
 
   private def observed(
@@ -44,6 +73,10 @@ object UserManagementService {
       override def updateUser(request: smithy.UpdateUserDetailsRequest): Task[Unit] =
         HttpErrorHandler
           .errorResponseHandler(service.updateUser(request))
+
+      override def getUser(userID: String): Task[GetUserDetailsResponse] =
+        HttpErrorHandler
+          .errorResponseHandler(service.getUser(userID))
     }
 
   val live = ZLayer.derive[UserManagementServiceImpl] >>> ZLayer.fromFunction(observed)

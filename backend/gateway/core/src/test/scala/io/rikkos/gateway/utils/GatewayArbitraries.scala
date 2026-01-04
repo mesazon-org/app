@@ -51,4 +51,6 @@ trait GatewayArbitraries extends DomainArbitraries, IronRefinedTypeTransformer {
         .transform
     } yield upsertUserContactRequest
   }
+
+  given Arbitrary[smithy.GetUserDetailsRequest] = Arbitrary(Gen.resultOf(smithy.GetUserDetailsRequest.apply))
 }
