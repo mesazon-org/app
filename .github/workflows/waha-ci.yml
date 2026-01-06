@@ -1,6 +1,6 @@
 name: Waha CI
 on:
-  push:
+  pull_request:
     paths:
       - 'backend/waha/**'
       - 'project/**'
