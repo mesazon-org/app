@@ -1,12 +1,16 @@
 import com.typesafe.sbt.packager.Keys.*
 import com.typesafe.sbt.packager.docker.*
-import com.typesafe.sbt.packager.docker.DockerPlugin.autoImport.Docker
+import com.typesafe.sbt.packager.docker.DockerPlugin.autoImport.*
 import sbt.*
 import sbt.Keys.*
+
+import scala.collection.compat.*
 
 object DockerSettings {
 
   private lazy val dockerRepositoryEnv = sys.env.get("DOCKER_REPOSITORY") orElse Some("local")
+  private lazy val dockerTagEnv = sys.env.get("DOCKER_IMAGE_TAG")
+  private lazy val isCIPublish = sys.env.contains("IS_CI_PUBLISH")
 
   private lazy val daemonUser = "nonroot"
   private lazy val baseImage  = s"gcr.io/distroless/java21-debian12:$daemonUser"
@@ -33,10 +37,11 @@ object DockerSettings {
 
   val compileScope: Seq[Def.Setting[?]] = Def.settings(
     dockerRepository     := dockerRepositoryEnv,
-    Docker / packageName := s"eak-${name.value}",
-    dockerUpdateLatest   := true,
-    Docker / version     := version.value,
+    Docker / packageName := s"mesazon-${name.value}",
+    dockerUpdateLatest   := !isCIPublish,
+    Docker / version     := dockerTagEnv.getOrElse(version.value),
     dockerExposedPorts   := Seq(8080),
+    dockerBuildxPlatforms ++= Option.when(isCIPublish)(Seq("linux/amd64")).toSeq.flatten,
     dockerCommands       := {
       val main  = (Compile / packageBin / mainClass).value.getOrElse(sys.error("Unspecified main class"))
       val entry = "java" +: javaOptions.value :+ "-cp" :+ "jars/*" :+ main

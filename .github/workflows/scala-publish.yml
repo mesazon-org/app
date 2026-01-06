@@ -1,0 +1,55 @@
+name: scala-publish
+on:
+  workflow_call:
+    inputs:
+      module:
+        description: "Module name"
+        type: string
+        required: true
+env:
+  ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
+  DOCKER_REPOSITORY: ${{ vars.DOCKER_REPOSITORY }}
+  IS_CI_PUBLISH: true
+jobs:
+  build:
+    environment: docker-publish-approval
+    name: Build ${{ inputs.module }}
+    runs-on: ubuntu-latest
+    env:
+      JAVA_OPTS: >
+        -Xms2048M
+        -Xmx2048M
+        -Xss6M
+        -XX:ReservedCodeCacheSize=256M
+        -Dfile.encoding=UTF-8
+        -XX:+UseZGC
+        -XX:+ZGenerational
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: sbt
+      - name: Set Git Based Tags
+        id: vars
+        run: |
+          RAW_SHA=$(git rev-parse --short HEAD)
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            TAG="pr-${{ github.event.pull_request.number }}-$RAW_SHA"
+          else
+            TAG="main-$RAW_SHA"
+          fi
+          echo "DOCKER_IMAGE_TAG=$TAG" >> $GITHUB_ENV
+      - name: Setup SBT
+        uses: sbt/setup-sbt@v1
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_API_KEY }}
+      - name: Log in to DigitalOcean Container Registry with short-lived credentials
+        run: doctl registry login --expiry-seconds 600
+      - name: Build ${{ inputs.module }}-publish
+        run: sbt ${{ inputs.module }}-publish
