@@ -19,7 +19,5 @@ jobs:
     needs: [ "gateway-build" ]
     uses: ./.github/workflows/scala-publish.yml
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
-    environment:
-      name: production
     with:
       module: "gateway"
