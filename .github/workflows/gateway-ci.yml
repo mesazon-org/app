@@ -1,4 +1,4 @@
-name: Scala PR Build
+name: Gateway CI
 on:
   push:
     branches:
@@ -11,14 +11,16 @@ on:
         - 'docs/**'
         - 'frontend/**'
 jobs:
-  gateway-build:
-    uses: ./.github/workflows/scala-build.yml
-    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
-    with:
-      module: "gateway"
+#  gateway-build:
+#    uses: ./.github/workflows/scala-build.yml
+#    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
+#    with:
+#      module: "gateway"
   gateway-publish:
     needs: ["gateway-build"]
     uses: ./.github/workflows/scala-publish.yml
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
+    environment:
+      name: production
     with:
       module: "gateway"

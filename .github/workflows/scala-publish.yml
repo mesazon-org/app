@@ -35,5 +35,7 @@ jobs:
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DIGITAL_OCEAN_CONTAINER_REGISTRY_API_KEY }}
+      - name: Login doctl
+        run: doctl registry login
       - name: Build ${{ inputs.module }}-publish
         run: sbt ${{ inputs.module }}-publish
