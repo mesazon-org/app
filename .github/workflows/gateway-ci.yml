@@ -1,15 +1,14 @@
 name: Gateway CI
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
     paths-ignore:
       - 'docs/**'
       - 'frontend/**'
   pull_request:
     paths-ignore:
-        - 'docs/**'
-        - 'frontend/**'
+      - 'docs/**'
+      - 'frontend/**'
 jobs:
   gateway-build:
     uses: ./.github/workflows/scala-build.yml
@@ -17,7 +16,7 @@ jobs:
     with:
       module: "gateway"
   gateway-publish:
-    needs: ["gateway-build"]
+    needs: [ "gateway-build" ]
     uses: ./.github/workflows/scala-publish.yml
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     environment:
