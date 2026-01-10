@@ -1,11 +1,11 @@
 name: scala-publish
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       module:
-        required: true
-        type: string
         description: "Module name"
+        type: string
+        required: true
 env:
   ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
 jobs:

@@ -9,6 +9,13 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'frontend/**'
+  workflow_dispatch:
+    inputs:
+      publish_artifacts:
+        description: 'Publish Artifacts?'
+        type: boolean
+        required: false
+        default: false
 jobs:
   gateway-build:
     uses: ./.github/workflows/scala-build.yml
@@ -17,8 +24,8 @@ jobs:
       module: "gateway"
   gateway-publish:
     needs: [ "gateway-build" ]
+    if: ${{ inputs.publish_artifacts == true }}
     uses: ./.github/workflows/scala-publish.yml
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
       module: "gateway"
-      environment: "production"
