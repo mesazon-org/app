@@ -8,9 +8,9 @@ on:
 env:
   ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
 jobs:
-  environment:
-    name: production
   build:
+    environment:
+      name: production
     name: Build ${{ inputs.module }}
     runs-on: ubuntu-latest
     env:
