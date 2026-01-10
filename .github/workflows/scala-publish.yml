@@ -10,6 +10,8 @@ env:
   ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
 jobs:
   build:
+    environment:
+      name: docker-publish-approval
     name: Build ${{ inputs.module }}
     runs-on: ubuntu-latest
     env:
