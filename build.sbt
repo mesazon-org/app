@@ -25,6 +25,7 @@ def createBackendModule(root: String)(subModule: Option[String]): Project = {
   val directory  = subModule.map(sm => s"$root/$sm").getOrElse(root)
   Project(moduleName, file(s"$backendDirName/$directory"))
     .settings(Settings.ScalaCompiler)
+    .settings(Settings.JavaOptions)
     .settings(
       libraryDependencies += compilerPlugin("org.polyvariant" % "better-tostring" % "0.3.17" cross CrossVersion.full)
     )

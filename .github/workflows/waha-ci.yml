@@ -1,5 +1,8 @@
 name: Waha CI
 on:
+  push:
+    branches:
+      - main
   pull_request:
     paths:
       - 'backend/waha/**'
@@ -10,8 +13,8 @@ on:
       - '.scalafmt.conf'
       - '.tool-versions'
 jobs:
-  waha-pr-build:
-    uses: ./.github/workflows/scala-ci.yml
+  waha-build:
+    uses: ./.github/workflows/jobs/scala-build.yml
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
-      module: "waha-pr-build"
+      module: "waha-build"
