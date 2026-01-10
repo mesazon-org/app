@@ -5,10 +5,15 @@ on:
       module:
         required: true
         type: string
+      environment:
+        type: string
+        required: false
+        default: ''
 env:
   ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
 jobs:
   build:
+    environment: ${{ inputs.environment }} # Use it here
     name: Build ${{ inputs.module }}
     runs-on: ubuntu-latest
     env:
