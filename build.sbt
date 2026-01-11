@@ -147,6 +147,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.zioLoggingSL4J,
     Dependencies.zioInteropCats,
     Dependencies.smithy4sHttp4s,
+    Dependencies.smithy4sHttp4sSwagger,
     Dependencies.http4sDsl,
     Dependencies.http4sEmberServer,
     Dependencies.pureconfig,

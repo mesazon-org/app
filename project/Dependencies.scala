@@ -3,13 +3,13 @@ import sbt.*
 object Dependencies {
 
   lazy val http4sV              = "0.23.33"
-  lazy val smithy4sV            = "0.18.45"
+  lazy val smithy4sV            = "0.18.46"
   lazy val zioV                 = "2.1.24"
   lazy val zioConfigV           = "4.0.6"
   lazy val zioInteropCatsV      = "23.1.0.13"
   lazy val catsV                = "2.13.0"
   lazy val zioLoggingV          = "2.5.2"
-  lazy val logbackV             = "1.5.23"
+  lazy val logbackV             = "1.5.24"
   lazy val julToSlf4jV          = "2.0.17"
   lazy val pureconfigV          = "0.17.9"
   lazy val scalaTestV           = "3.2.19"
@@ -35,7 +35,8 @@ object Dependencies {
   lazy val http4sCirce       = "org.http4s" %% "http4s-circe"        % http4sV
 
   // Smithy
-  lazy val smithy4sHttp4s = "com.disneystreaming.smithy4s" %% "smithy4s-http4s" % smithy4sV
+  lazy val smithy4sHttp4s        = "com.disneystreaming.smithy4s" %% "smithy4s-http4s"         % smithy4sV
+  lazy val smithy4sHttp4sSwagger = "com.disneystreaming.smithy4s" %% "smithy4s-http4s-swagger" % smithy4sV
 
   // Typelevel
   val cats = "org.typelevel" %% "cats-core" % catsV

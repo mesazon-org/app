@@ -9,6 +9,7 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.EntityLimiter
 import smithy4s.http4s.*
+import smithy4s.http4s.swagger.docs
 import zio.*
 import zio.interop.catz.*
 
@@ -27,7 +28,8 @@ object HttpApp {
     serverMiddleware      <- ZIO.service[ServerEndpointMiddleware.Simple[Task]]
     userManagementService <- ZIO.service[smithy.UserManagementService[Task]]
     userContactsService   <- ZIO.service[smithy.UserContactsService[Task]]
-    userManagementRoutes  <- SimpleRestJsonBuilder
+    docRoutes = docs[Task](smithy.UserManagementService, smithy.UserContactsService)
+    userManagementRoutes <- SimpleRestJsonBuilder
       .routes(userManagementService)
       .middleware(serverMiddleware)
       .resource
@@ -37,7 +39,7 @@ object HttpApp {
       .middleware(serverMiddleware)
       .resource
       .toScopedZIO
-  } yield userManagementRoutes <+> userContactsRoutes
+  } yield userManagementRoutes <+> userContactsRoutes <+> docRoutes
 
   private def server(config: ServerConfig, routes: HttpRoutes[Task]) = for {
     emberServer <- EmberServerBuilder
