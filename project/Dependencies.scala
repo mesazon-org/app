@@ -35,7 +35,8 @@ object Dependencies {
   lazy val http4sCirce       = "org.http4s" %% "http4s-circe"        % http4sV
 
   // Smithy
-  lazy val smithy4sHttp4s = "com.disneystreaming.smithy4s" %% "smithy4s-http4s" % smithy4sV
+  lazy val smithy4sHttp4s        = "com.disneystreaming.smithy4s" %% "smithy4s-http4s"         % smithy4sV
+  lazy val smithy4sHttp4sSwagger = "com.disneystreaming.smithy4s" %% "smithy4s-http4s-swagger" % smithy4sV
 
   // Typelevel
   val cats = "org.typelevel" %% "cats-core" % catsV
