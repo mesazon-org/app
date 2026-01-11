@@ -1,0 +1,36 @@
+name: scala-build
+on:
+  workflow_call:
+    inputs:
+      module:
+        description: "Module name"
+        type: string
+        required: true
+env:
+  ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
+jobs:
+  build:
+    name: Build ${{ inputs.module }}
+    runs-on: ubuntu-latest
+    env:
+      JAVA_OPTS: >
+        -Xms2048M
+        -Xmx2048M
+        -Xss6M
+        -XX:ReservedCodeCacheSize=256M
+        -Dfile.encoding=UTF-8
+        -XX:+UseZGC
+        -XX:+ZGenerational
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: sbt
+      - name: Setup SBT
+        uses: sbt/setup-sbt@v1
+      - name: Build ${{ inputs.module }}-build
+        run: sbt ${{ inputs.module }}-build
