@@ -8,6 +8,7 @@ on:
         required: true
 env:
   ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
+  DOCKER_REPOSITORY: ${{ vars.DOCKER_REPOSITORY }}
 jobs:
   build:
     environment: docker-publish-approval
