@@ -9,7 +9,7 @@ object GroupParticipantError {
   /* Not found error code indicates that either the group or the participant does not exist.
    * This is considered a non-retryable error because retrying will not change the fact that
    * the group or participant is missing.
-   * 
+   *
    * Example scenarios:
    * 1. Trying to promote participant in a group that doesn't belong.
    */
@@ -18,7 +18,7 @@ object GroupParticipantError {
   /* Already exists error code indicates that the participant is already in the group.
    * This is considered a non-retryable error because retrying will not change the fact that
    * the participant is already a member of the group.
-   * 
+   *
    * Example scenarios:
    * 1. Trying to add a participant who is already in the group.
    */
