@@ -9,9 +9,9 @@ object Dependencies {
   lazy val zioInteropCatsV      = "23.1.0.13"
   lazy val catsV                = "2.13.0"
   lazy val zioLoggingV          = "2.5.3"
-  lazy val logbackV             = "1.5.25"
+  lazy val logbackV             = "1.5.26"
   lazy val julToSlf4jV          = "2.0.17"
-  lazy val pureconfigV          = "0.17.9"
+  lazy val pureconfigV          = "0.17.10"
   lazy val scalaTestV           = "3.2.19"
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
   lazy val scalacheckV          = "1.19.0"
@@ -25,7 +25,7 @@ object Dependencies {
   lazy val doobieTranzactioV    = "5.6.0"
   lazy val libphonenumberV      = "9.0.22"
   lazy val circeV               = "0.14.15"
-  lazy val sttpV                = "4.0.14"
+  lazy val sttpV                = "4.0.15"
   lazy val jsoniterV            = "2.38.8"
 
   // Http4s
