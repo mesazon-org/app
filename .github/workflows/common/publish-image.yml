@@ -2,20 +2,20 @@ name: publish-image
 on:
   workflow_call:
     inputs:
-      image-name:
-        description: "Image name"
+      docker-image-name:
+        description: "Docker image name"
         type: string
         required: true
-      image-tag:
-        description: "Image tag"
+      docker-image-tag:
+        description: "Docker image tag"
         type: string
         required: true
 env:
-  DOCKER_IMAGE: ${{ vars.DOCKER_REPOSITORY }}/${{ inputs.image-name }}:${{ inputs.image-tag }}
+  DOCKER_IMAGE: ${{ vars.DOCKER_REPOSITORY }}/${{ inputs.docker-image-name }}:${{ inputs.docker-image-tag }}
 jobs:
   build:
     environment: docker-publish-approval
-    name: Publish ${{ inputs.image-name }}:${{ inputs.image-tag }}
+    name: Publish ${{ inputs.docker-image-name }}:${{ inputs.docker-image-tag }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

@@ -11,18 +11,18 @@ on:
       - 'frontend/**'
 jobs:
   gateway-build:
-    uses: ./.github/workflows/scala-build-and-upload-image.yml
+    uses: ./.github/workflows/common/scala-build.yml
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
       module: "gateway"
-      image-name: "mesazon-gateway-core"
+      docker-image-name: "mesazon-gateway-core"
   gateway-publish:
     needs: [ "gateway-build" ]
-    uses: ./.github/workflows/download-and-publish-image.yml
+    uses: ./.github/workflows/common/publish-image.yml
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
-      image-name: ${{ needs.gateway-build.outputs.image-name }}
-      image-tag: ${{ needs.gateway-build.outputs.image-tag }}
+      docker-image-name: ${{ needs.gateway-build.outputs.docker-image-name }}
+      docker-image-tag: ${{ needs.gateway-build.outputs.docker-image-tag }}
   gateway-deploy-dev-plan:
     needs: [ "gateway-publish" ]
     uses: mesazon-org/mesazon-tf-do/.github/workflows/tf-plan.yml@main
