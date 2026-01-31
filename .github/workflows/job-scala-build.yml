@@ -24,7 +24,7 @@ jobs:
     name: Build ${{ inputs.module }}
     runs-on: ubuntu-latest
     outputs:
-      docker-image-tag: ${{ steps.vars.outputs.TAG }}
+      docker-image-tag: ${{ steps.set-image-tag.outputs.TAG }}
     env:
       JAVA_OPTS: >
         -Xms2048M
