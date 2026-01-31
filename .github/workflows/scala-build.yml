@@ -6,6 +6,10 @@ on:
         description: "Module name"
         type: string
         required: true
+      image-name:
+        description: "Image name"
+        type: string
+        required: true
 env:
   ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
   DOCKER_REPOSITORY: ${{ vars.DOCKER_REPOSITORY }}

@@ -3,7 +3,7 @@ on:
   workflow_call:
     inputs:
       image-name:
-        description: "Module name"
+        description: "Image name"
         type: string
         required: true
 env:
