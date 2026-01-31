@@ -53,4 +53,4 @@ jobs:
       - name: Upload image
         uses: ishworkh/container-image-artifact-upload@v2.0.0
         with:
-          image: "$DOCKER_REPOSITORY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG"
+          image: "${{ env.DOCKER_REPOSITORY }}/${{ env.DOCKER_IMAGE_NAME }}:${{ env.DOCKER_IMAGE_TAG }}"
