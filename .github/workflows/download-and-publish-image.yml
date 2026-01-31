@@ -15,7 +15,7 @@ env:
 jobs:
   build:
     environment: docker-publish-approval
-    name: Publish ${{ env.DOCKER_IMAGE }}
+    name: Publish ${{ inputs.image-name }}:${{ inputs.image-tag }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
