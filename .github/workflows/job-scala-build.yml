@@ -24,7 +24,7 @@ jobs:
     name: Build ${{ inputs.module }}
     runs-on: ubuntu-latest
     outputs:
-      docker-image-tag: ${{ steps.vars.outputs.DOCKER_IMAGE_TAG }}
+      docker-image-tag: ${{ steps.vars.outputs.TAG }}
     env:
       JAVA_OPTS: >
         -Xms2048M
@@ -52,7 +52,7 @@ jobs:
           else
             TAG="main-$RAW_SHA"
           fi
-          echo "DOCKER_IMAGE_TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
           echo "DOCKER_IMAGE_TAG=$TAG" >> $GITHUB_ENV
       - name: Setup SBT
         uses: sbt/setup-sbt@v1
