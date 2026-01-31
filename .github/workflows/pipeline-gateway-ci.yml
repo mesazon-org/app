@@ -11,14 +11,14 @@ on:
       - 'frontend/**'
 jobs:
   gateway-build:
-    uses: ./.github/workflows/common/scala-build.yml
+    uses: ./.github/workflows/job-scala-build.yml
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
       module: "gateway"
       docker-image-name: "mesazon-gateway-core"
   gateway-publish:
     needs: [ "gateway-build" ]
-    uses: ./.github/workflows/common/publish-image.yml
+    uses: ./.github/workflows/job-publish-image.yml
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
       docker-image-name: ${{ needs.gateway-build.outputs.docker-image-name }}

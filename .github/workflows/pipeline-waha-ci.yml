@@ -8,13 +8,13 @@
 #      - 'backend/waha/**'
 #      - 'project/**'
 #      - 'build.sbt'
-#      - '.github/workflows/waha-ci.yml'
+#      - '.github/workflows/pipeline-waha-ci.yml'
 #      - '.scalafix.conf'
 #      - '.scalafmt.conf'
 #      - '.tool-versions'
 #jobs:
 #  waha-build:
-#    uses: ./.github/workflows/scala-build.yml
+#    uses: ./.github/workflows/job-scala-build.yml
 #    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
 #    with:
 #      module: "waha"
