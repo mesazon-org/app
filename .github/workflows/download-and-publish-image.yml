@@ -1,4 +1,4 @@
-name: scala-publish
+name: publish-image
 on:
   workflow_call:
     inputs:
@@ -6,31 +6,24 @@ on:
         description: "Image name"
         type: string
         required: true
+      image-tag:
+        description: "Image tag"
+        type: string
+        required: true
 env:
-  DOCKER_REPOSITORY: ${{ vars.DOCKER_REPOSITORY }}
-  DOCKER_IMAGE_NAME: ${{ inputs.image-name }}
+  DOCKER_IMAGE: ${{ vars.DOCKER_REPOSITORY }}/${{ inputs.image-name }}:${{ inputs.image-tag }}
 jobs:
   build:
     environment: docker-publish-approval
-    name: Build ${{ inputs.module }}
+    name: Publish ${{ env.DOCKER_IMAGE }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
-      - name: Set Git Based Tags
-        id: vars
-        run: |
-          RAW_SHA=$(git rev-parse --short HEAD)
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            TAG="pr-${{ github.event.pull_request.number }}-$RAW_SHA"
-          else
-            TAG="main-$RAW_SHA"
-          fi
-          echo "DOCKER_IMAGE_TAG=$TAG" >> $GITHUB_ENV
       - name: Download image
         uses: ishworkh/container-image-artifact-download@v2.0.0
         with:
-          image: "${{ env.DOCKER_REPOSITORY }}/${{ env.DOCKER_IMAGE_NAME }}:${{ env.DOCKER_IMAGE_TAG }}"
+          image: ${{ env.DOCKER_IMAGE }}
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
@@ -38,4 +31,4 @@ jobs:
       - name: Log in to DigitalOcean Container Registry with short-lived credentials
         run: doctl registry login --expiry-seconds 600
       - name: Build ${{ inputs.module }}-publish
-        run: docker push $DOCKER_REPOSITORY/${{ inputs.image-name }}:$DOCKER_IMAGE_TAG
+        run: docker push $DOCKER_IMAGE

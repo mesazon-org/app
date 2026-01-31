@@ -10,6 +10,10 @@ on:
         description: "Image name"
         type: string
         required: true
+    outputs:
+      image-tag:
+        description: "The generated git-based tag"
+        value: ${{ jobs.build.outputs.tag }}
 env:
   ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
   DOCKER_REPOSITORY: ${{ vars.DOCKER_REPOSITORY }}
@@ -45,6 +49,7 @@ jobs:
           else
             TAG="main-$RAW_SHA"
           fi
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
           echo "DOCKER_IMAGE_TAG=$TAG" >> $GITHUB_ENV
       - name: Setup SBT
         uses: sbt/setup-sbt@v1
