@@ -8,6 +8,7 @@ on:
         required: true
 env:
   ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
+  DOCKER_REPOSITORY: ${{ vars.DOCKER_REPOSITORY }}
 jobs:
   build:
     name: Build ${{ inputs.module }}
@@ -30,7 +31,21 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: sbt
+      - name: Set Git Based Tags
+        id: vars
+        run: |
+          RAW_SHA=$(git rev-parse --short HEAD)
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            TAG="pr-${{ github.event.pull_request.number }}-$RAW_SHA"
+          else
+            TAG="main-$RAW_SHA"
+          fi
+          echo "DOCKER_IMAGE_TAG=$TAG" >> $GITHUB_ENV
       - name: Setup SBT
         uses: sbt/setup-sbt@v1
       - name: Build ${{ inputs.module }}-build
         run: sbt ${{ inputs.module }}-build
+      - name: Upload image
+        uses: ishworkh/container-image-artifact-upload@v2.0.0
+        with:
+          image: "$DOCKER_REPOSITORY/mesazon-gateway-core:$DOCKER_IMAGE_TAG"

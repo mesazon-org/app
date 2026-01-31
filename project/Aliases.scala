@@ -14,7 +14,7 @@ object Aliases {
     addCommandAlias("runFix", "scalafixAll")
 
   lazy val gatewayCi = Seq(
-    addCommandAlias("gateway-build", "clean;"),
+    addCommandAlias("gateway-build", "clean; project gateway-core; Docker/publishLocal"),
 //    addCommandAlias("gateway-build", "clean; project backend; checkLint; test"),
     addCommandAlias("gateway-publish", "clean; project gateway-core; Docker/publish"),
   ).flatten
