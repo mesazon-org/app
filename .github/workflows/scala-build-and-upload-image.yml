@@ -13,7 +13,7 @@ on:
     outputs:
       image-tag:
         description: "The generated git-based tag"
-        value: ${{ jobs.build.outputs.tag }}
+        value: ${{ jobs.build.outputs.image-tag }}
       image-name:
         value: ${{ inputs.image-name }}
 env:
@@ -24,6 +24,8 @@ jobs:
   build:
     name: Build ${{ inputs.module }}
     runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.vars.outputs.TAG }}
     env:
       JAVA_OPTS: >
         -Xms2048M
