@@ -14,6 +14,8 @@ on:
       image-tag:
         description: "The generated git-based tag"
         value: ${{ jobs.build.outputs.tag }}
+      image-name:
+        value: ${{ inputs.image-name }}
 env:
   ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
   DOCKER_REPOSITORY: ${{ vars.DOCKER_REPOSITORY }}

@@ -21,7 +21,7 @@ jobs:
     uses: ./.github/workflows/download-and-publish-image.yml
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
-      image-name: ${{ needs.gateway-build.inputs.image-name }}
+      image-name: ${{ needs.gateway-build.outputs.image-name }}
       image-tag: ${{ needs.gateway-build.outputs.image-tag }}
   gateway-deploy-dev-plan:
     needs: [ "gateway-publish" ]
