@@ -9,6 +9,7 @@ on:
 env:
   ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
   DOCKER_REPOSITORY: ${{ vars.DOCKER_REPOSITORY }}
+  DOCKER_IMAGE_NAME: ${{ inputs.image-name }}
 jobs:
   build:
     name: Build ${{ inputs.module }}
@@ -48,4 +49,4 @@ jobs:
       - name: Upload image
         uses: ishworkh/container-image-artifact-upload@v2.0.0
         with:
-          image: "$DOCKER_REPOSITORY/mesazon-gateway-core:$DOCKER_IMAGE_TAG"
+          image: "$DOCKER_REPOSITORY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG"

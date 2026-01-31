@@ -15,21 +15,26 @@ jobs:
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
       module: "gateway"
+      image-name: "mesazon-gateway-core"
   gateway-publish:
     needs: [ "gateway-build" ]
-    uses: ./.github/workflows/scala-publish.yml
+    uses: ./.github/workflows/docker-publish.yml
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
-      module: "gateway"
+      image-name: "mesazon-gateway-core"
   gateway-deploy-dev-plan:
     needs: [ "gateway-publish" ]
-    uses: mesazon-org/mesazon-tf-do/.github/workflows/tf-apply.yml@main
+    uses: mesazon-org/mesazon-tf-do/.github/workflows/tf-plan.yml@main
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
-      module: "gateway"
+      project-id: "8a8c246e-2057-46b7-a01a-04cbbbf0b8d9"
+      working-directory: "terraform/environments/dev"
+      module: "gateway-deploy-dev-plan"
   gateway-deploy-dev-apply:
-    needs: [ "gateway-publish" ]
+    needs: [ "gateway-deploy-dev-plan" ]
     uses: mesazon-org/mesazon-tf-do/.github/workflows/tf-apply.yml@main
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
-      module: "gateway"
+      project-id: "8a8c246e-2057-46b7-a01a-04cbbbf0b8d9"
+      working-directory: "terraform/environments/dev"
+      module: "gateway-deploy-dev-apply"
