@@ -8,6 +8,8 @@ terraform {
 }
 
 resource "digitalocean_app" "app" {
+  project_id = var.project_id
+
   spec {
     name   = var.app_name
     region = var.region

@@ -11,5 +11,4 @@ module "gateway_app" {
   region   = "fra1"
   replicas = 1
   app_size = "s-1vcpu-1gb"
-
 }
