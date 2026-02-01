@@ -1,0 +1,15 @@
+name: mesazon-tf-ci
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
+      - '.github/**'
+  pull_request:
+    paths:
+      - 'terraform/**'
+      - '.github/**'
+jobs:
+  tf-fmt:
+    uses: ./.github/workflows/job-tf-fmt.yml
+    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets

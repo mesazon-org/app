@@ -7,6 +7,7 @@ import sbt.Keys.*
 object DockerSettings {
 
   private lazy val dockerRepositoryEnv = sys.env.get("DOCKER_REPOSITORY") orElse Some("local")
+  private lazy val dockerTagEnv = sys.env.get("DOCKER_IMAGE_TAG")
 
   private lazy val daemonUser = "nonroot"
   private lazy val baseImage  = s"gcr.io/distroless/java21-debian12:$daemonUser"
@@ -33,9 +34,9 @@ object DockerSettings {
 
   val compileScope: Seq[Def.Setting[?]] = Def.settings(
     dockerRepository     := dockerRepositoryEnv,
-    Docker / packageName := s"eak-${name.value}",
+    Docker / packageName := s"mesazon-${name.value}",
     dockerUpdateLatest   := true,
-    Docker / version     := version.value,
+    Docker / version     := dockerTagEnv.getOrElse(version.value),
     dockerExposedPorts   := Seq(8080),
     dockerCommands       := {
       val main  = (Compile / packageBin / mainClass).value.getOrElse(sys.error("Unspecified main class"))

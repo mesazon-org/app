@@ -1,0 +1,43 @@
+name: publish-image
+on:
+  workflow_call:
+    inputs:
+      docker-image-name:
+        description: "Docker image name"
+        type: string
+        required: true
+      docker-image-tag:
+        description: "Docker image tag"
+        type: string
+        required: true
+      environment:
+        description: "Deployment environment name"
+        type: string
+        required: true
+    outputs:
+      docker-image-tag:
+        value: ${{ inputs.docker-image-tag }}
+      docker-image-name:
+        value: ${{ inputs.docker-image-name }}
+env:
+  DOCKER_IMAGE: ${{ vars.DOCKER_REPOSITORY }}/${{ inputs.docker-image-name }}:${{ inputs.docker-image-tag }}
+jobs:
+  build:
+    environment: ${{ github.event_name == 'pull_request' && 'dev_pr' || inputs.environment || 'prod' }}
+    name: Publish ${{ inputs.docker-image-name }}:${{ inputs.docker-image-tag }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Download image
+        uses: ishworkh/container-image-artifact-download@v2.0.0
+        with:
+          image: ${{ env.DOCKER_IMAGE }}
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DO_API_KEY }}
+      - name: Log in to DigitalOcean Container Registry with short-lived credentials
+        run: doctl registry login --expiry-seconds 600
+      - name: Build ${{ inputs.module }}-publish
+        run: docker push $DOCKER_IMAGE

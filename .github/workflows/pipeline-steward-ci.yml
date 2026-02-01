@@ -1,4 +1,4 @@
-name: scala-steward
+name: Scala Steward CI
 on:
   workflow_dispatch:
   schedule:

@@ -1,0 +1,16 @@
+name: tf-fmt
+on: [ workflow_call ]
+jobs:
+  build:
+    name: tf-fmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.3
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive
