@@ -17,7 +17,7 @@ on:
       environment:
         description: "Deployment environment name"
         type: string
-        required: false
+        required: true
       docker-image-name:
         description: "Docker image name"
         type: string
@@ -40,7 +40,7 @@ env:
   TF_VAR_image_tag: ${{ inputs.docker-image-tag }}
 jobs:
   build:
-    environment: ${{ github.event_name == 'pull_request' && 'dev_pr' || inputs.environment || 'production' }}
+    environment: ${{ github.event_name == 'pull_request' && 'dev_pr' || inputs.environment || 'prod' }}
     name: tf-apply
     runs-on: ubuntu-latest
     defaults:
