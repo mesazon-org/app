@@ -10,6 +10,11 @@ on:
         description: "Docker image tag"
         type: string
         required: true
+    outputs:
+      docker-image-tag:
+        value: ${{ inputs.docker-image-tag }}
+      docker-image-name:
+        value: ${{ inputs.docker-image-name }}
 env:
   DOCKER_IMAGE: ${{ vars.DOCKER_REPOSITORY }}/${{ inputs.docker-image-name }}:${{ inputs.docker-image-tag }}
 jobs:

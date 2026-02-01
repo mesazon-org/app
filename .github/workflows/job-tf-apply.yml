@@ -26,6 +26,11 @@ on:
         description: "Docker image tag"
         type: string
         required: true
+    outputs:
+      docker-image-tag:
+        value: ${{ inputs.docker-image-tag }}
+      docker-image-name:
+        value: ${{ inputs.docker-image-name }}
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
