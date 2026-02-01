@@ -12,3 +12,13 @@ variable "environment" {
   type    = string
   default = "mesazon-dev"
 }
+
+variable "image_name" {
+  description = "The Docker image name."
+  type        = string
+}
+
+variable "image_tag" {
+  description = "The Docker image tag."
+  type        = string
+}

@@ -25,17 +25,21 @@ jobs:
       docker-image-tag: ${{ needs.gateway-build.outputs.docker-image-tag }}
   gateway-deploy-dev-plan:
     needs: [ "gateway-publish" ]
-    uses: mesazon-org/mesazon-tf-do/.github/workflows/tf-plan.yml@main
+    uses: ./.github/workflows/job-tf-plan.yml@main
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
       project-id: "8a8c246e-2057-46b7-a01a-04cbbbf0b8d9"
-      working-directory: "terraform/environments/dev"
-      module: "gateway-deploy-dev-plan"
+      working-directory: "terraform/dev/gateway"
+      module: "gateway-dev"
+      docker-image-name: ${{ needs.gateway-build.outputs.docker-image-name }}
+      docker-image-tag: ${{ needs.gateway-build.outputs.docker-image-tag }}
   gateway-deploy-dev-apply:
     needs: [ "gateway-deploy-dev-plan" ]
-    uses: mesazon-org/mesazon-tf-do/.github/workflows/tf-apply.yml@main
+    uses: ./.github/workflows/job-tf-apply.yml@main
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
       project-id: "8a8c246e-2057-46b7-a01a-04cbbbf0b8d9"
-      working-directory: "terraform/environments/dev"
-      module: "gateway-deploy-dev-apply"
+      working-directory: "terraform/dev/gateway"
+      module: "gateway-dev"
+      docker-image-name: ${{ needs.gateway-build.outputs.docker-image-name }}
+      docker-image-tag: ${{ needs.gateway-build.outputs.docker-image-tag }}
