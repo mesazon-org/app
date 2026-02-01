@@ -21,8 +21,8 @@ jobs:
     uses: ./.github/workflows/job-publish-image.yml
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
-      docker-image-name: ${{ needs.gateway-build.outputs.docker-image-name }}
-      docker-image-tag: ${{ needs.gateway-build.outputs.docker-image-tag }}
+      docker-image-name: ${{ jobs.gateway-build.outputs.docker-image-name }}
+      docker-image-tag: ${{ jobs.gateway-build.outputs.docker-image-tag }}
   gateway-deploy-dev-plan:
     needs: [ "gateway-publish" ]
     uses: ./.github/workflows/job-tf-plan.yml
