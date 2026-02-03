@@ -24,12 +24,12 @@ module "gateway_flyway_app" {
   wait_for_deployment = false
 
   env_vars = {
-    FLYWAY_URL = "jdbc:postgresql://${data.digitalocean_database_cluster.postgres_cluster.private_host}:${data.digitalocean_database_cluster.postgres_cluster.port}/${local.database_name}?sslmode=require"
+    FLYWAY_URL                 = "jdbc:postgresql://${data.digitalocean_database_cluster.postgres_cluster.private_host}:${data.digitalocean_database_cluster.postgres_cluster.port}/${local.database_name}?sslmode=require"
     FLYWAY_BASELINE_ON_MIGRATE = "true"
   }
 
   secret_vars = {
-    FLYWAY_USER = data.digitalocean_database_user.database_user.name
+    FLYWAY_USER     = data.digitalocean_database_user.database_user.name
     FLYWAY_PASSWORD = data.digitalocean_database_user.database_user.password
   }
 }
