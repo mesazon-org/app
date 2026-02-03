@@ -7,6 +7,19 @@ data "digitalocean_database_user" "database_user" {
   name       = local.database_user
 }
 
+data "digitalocean_vpc" "database_vpc" {
+  id = data.digitalocean_database_cluster.postgres_cluster.private_network_uuid
+}
+
+resource "digitalocean_database_firewall" "postgres_fw" {
+  cluster_id = data.digitalocean_database_cluster.postgres_cluster.id
+
+  rule {
+    type  = "ip_address"
+    value = data.digitalocean_vpc.database_vpc.ip_range
+  }
+}
+
 module "gateway_flyway_app" {
   source = "../../modules/app-job"
 
@@ -23,6 +36,8 @@ module "gateway_flyway_app" {
 
   wait_for_deployment = false
 
+  vpc_id = data.digitalocean_database_cluster.postgres_cluster.private_network_uuid
+
   env_vars = {
     FLYWAY_URL                 = "jdbc:postgresql://${data.digitalocean_database_cluster.postgres_cluster.private_host}:${data.digitalocean_database_cluster.postgres_cluster.port}/${local.database_name}?sslmode=require"
     FLYWAY_BASELINE_ON_MIGRATE = "true"
@@ -32,14 +47,7 @@ module "gateway_flyway_app" {
     FLYWAY_USER     = data.digitalocean_database_user.database_user.name
     FLYWAY_PASSWORD = data.digitalocean_database_user.database_user.password
   }
-}
 
-resource "digitalocean_database_firewall" "postgres_fw" {
-  cluster_id = data.digitalocean_database_cluster.postgres_cluster.id
-
-  rule {
-    type  = "app"
-    value = module.gateway_flyway_app.app_id
-  }
+  depends_on = [digitalocean_database_firewall.postgres_fw]
 }
 

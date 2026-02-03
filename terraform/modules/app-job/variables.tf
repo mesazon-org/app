@@ -57,3 +57,9 @@ variable "wait_for_deployment" {
   default     = true
 }
 
+variable "vpc_id" {
+  description = "The VPC UUID to deploy the app into."
+  type        = string
+  default     = null
+}
+

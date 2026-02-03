@@ -16,6 +16,10 @@ resource "digitalocean_app" "app" {
     name   = local.app_name
     region = var.region
 
+    vpc {
+      id = var.vpc_id
+    }
+
     job {
       name               = local.service_name
       instance_count     = var.replicas
