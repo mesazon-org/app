@@ -24,8 +24,11 @@ module "gateway_flyway_app" {
   vpc_id = data.digitalocean_database_cluster.postgres_cluster.private_network_uuid
 
   env_vars = {
-    FLYWAY_URL                 = "jdbc:postgresql://${data.digitalocean_database_cluster.postgres_cluster.private_host}:${data.digitalocean_database_cluster.postgres_cluster.port}/${local.database_name}?sslmode=require"
+    FLYWAY_LOCATIONS           = "filesystem:./sql"
+    FLYWAY_SCHEMAS             = "gateway_fra1_dev" # TODO: Add schema in name
+    FLYWAY_CONNECT_RETRIES     = "60"
     FLYWAY_BASELINE_ON_MIGRATE = "true"
+    FLYWAY_URL                 = "jdbc:postgresql://${data.digitalocean_database_cluster.postgres_cluster.private_host}:${data.digitalocean_database_cluster.postgres_cluster.port}/${local.database_name}?sslmode=require"
   }
 
   secret_vars = {
