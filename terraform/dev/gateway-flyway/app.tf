@@ -7,7 +7,7 @@ data "digitalocean_database_user" "database_user" {
   name       = local.database_user
 }
 
-module "gateway_app" {
+module "gateway_flyway_app" {
   source = "../../modules/app-job"
 
   project_id  = var.project_id
@@ -29,5 +29,14 @@ module "gateway_app" {
   secret_vars = {
     FLYWAY_USER = data.digitalocean_database_user.database_user.name
     FLYWAY_PASSWORD = data.digitalocean_database_user.database_user.password
+  }
+}
+
+resource "digitalocean_database_firewall" "postgres_fw" {
+  cluster_id = data.digitalocean_database_cluster.postgres_cluster.id
+
+  rule {
+    type  = "app"
+    value = module.gateway_flyway_app.app_id
   }
 }
