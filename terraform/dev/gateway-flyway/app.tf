@@ -7,10 +7,6 @@ data "digitalocean_database_user" "database_user" {
   name       = local.database_user
 }
 
-data "digitalocean_vpc" "database_vpc" {
-  id = data.digitalocean_database_cluster.postgres_cluster.private_network_uuid
-}
-
 module "gateway_flyway_app" {
   source = "../../modules/app-job"
 
@@ -36,7 +32,5 @@ module "gateway_flyway_app" {
     FLYWAY_USER     = data.digitalocean_database_user.database_user.name
     FLYWAY_PASSWORD = data.digitalocean_database_user.database_user.password
   }
-
-  depends_on = [digitalocean_database_firewall.postgres_fw]
 }
 
