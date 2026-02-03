@@ -19,7 +19,7 @@ jobs:
       docker-build-directory: "backend/schemas"
       working-directory: "terraform/dev/gateway-flyway"
       docker-image-name: "gateway-flyway"
-      docker-image-tag: latest
+      docker-image-tag: "latest"
       environment: "dev"
 #  gateway-build:
 #    uses: ./.github/workflows/job-scala-build.yml

@@ -25,9 +25,9 @@ module "gateway_flyway_app" {
 
   env_vars = {
     FLYWAY_LOCATIONS           = "filesystem:/flyway/sql"
-    FLYWAY_SCHEMAS             = "gateway_fra1_dev" # TODO: Add schema in name
+    FLYWAY_SCHEMAS             = "gateway_schema_fra1_dev"
     FLYWAY_CONNECT_RETRIES     = "5"
-    FLYWAY_BASELINE_ON_MIGRATE = "true"
+    FLYWAY_BASELINE_ON_MIGRATE = "true" # When run for the first time against an existing DB should be set to true.
     FLYWAY_URL                 = "jdbc:postgresql://${data.digitalocean_database_cluster.postgres_cluster.private_host}:${data.digitalocean_database_cluster.postgres_cluster.port}/${local.database_name}?sslmode=require"
   }
 
