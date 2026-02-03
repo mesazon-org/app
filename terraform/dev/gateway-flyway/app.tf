@@ -11,15 +11,6 @@ data "digitalocean_vpc" "database_vpc" {
   id = data.digitalocean_database_cluster.postgres_cluster.private_network_uuid
 }
 
-resource "digitalocean_database_firewall" "postgres_fw" {
-  cluster_id = data.digitalocean_database_cluster.postgres_cluster.id
-
-  rule {
-    type  = "ip_address"
-    value = data.digitalocean_vpc.database_vpc.ip_range
-  }
-}
-
 module "gateway_flyway_app" {
   source = "../../modules/app-job"
 
