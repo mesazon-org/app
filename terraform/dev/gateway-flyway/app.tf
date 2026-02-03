@@ -21,6 +21,8 @@ module "gateway_flyway_app" {
   replicas     = 1
   app_size     = "apps-s-1vcpu-0.5gb"
 
+  wait_for_deployment = false
+
   env_vars = {
     FLYWAY_URL = "jdbc:postgresql://${data.digitalocean_database_cluster.postgres_cluster.private_host}:${data.digitalocean_database_cluster.postgres_cluster.port}/${local.database_name}?sslmode=require"
     FLYWAY_BASELINE_ON_MIGRATE = "true"
@@ -40,3 +42,4 @@ resource "digitalocean_database_firewall" "postgres_fw" {
     value = module.gateway_flyway_app.app_id
   }
 }
+

@@ -50,3 +50,10 @@ variable "secret_vars" {
   description = "A map of environment variables for the service"
   default     = {}
 }
+
+variable "wait_for_deployment" {
+  description = "Whether to wait for the app deployment to complete."
+  type        = bool
+  default     = true
+}
+

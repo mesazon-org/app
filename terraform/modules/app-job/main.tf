@@ -10,6 +10,8 @@ terraform {
 resource "digitalocean_app" "app" {
   project_id = var.project_id
 
+  wait_for_deployment = var.wait_for_deployment
+
   spec {
     name   = local.app_name
     region = var.region
@@ -18,6 +20,7 @@ resource "digitalocean_app" "app" {
       name               = local.service_name
       instance_count     = var.replicas
       instance_size_slug = var.app_size
+      kind               = "POST_DEPLOY"
 
       image {
         registry_type = "DOCR"
