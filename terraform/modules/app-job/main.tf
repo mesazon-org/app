@@ -10,8 +10,6 @@ terraform {
 resource "digitalocean_app" "app" {
   project_id = var.project_id
 
-  wait_for_deployment = var.wait_for_deployment
-
   spec {
     name   = local.app_name
     region = var.region

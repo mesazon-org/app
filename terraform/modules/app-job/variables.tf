@@ -51,12 +51,6 @@ variable "secret_vars" {
   default     = {}
 }
 
-variable "wait_for_deployment" {
-  description = "Whether to wait for the app deployment to complete."
-  type        = bool
-  default     = true
-}
-
 variable "vpc_id" {
   description = "The VPC UUID to deploy the app into."
   type        = string
