@@ -10,13 +10,15 @@ data "digitalocean_database_user" "database_user" {
 module "gateway_flyway_app" {
   source = "../../modules/app-job"
 
+  is_first_deployment = true
+
   project_id  = var.project_id
   environment = local.environment
 
   image_name = var.image_name
   image_tag  = var.image_tag
 
-  app_name_raw = local.app_name
+  app_name_raw = local.app_name_raw
   region       = local.region
   replicas     = 1
   app_size     = "apps-s-1vcpu-0.5gb"

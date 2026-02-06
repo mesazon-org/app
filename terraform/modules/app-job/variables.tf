@@ -8,6 +8,12 @@ variable "environment" {
   type        = string
 }
 
+variable "is_first_deployment" {
+  description = "Flag to indicate if this is the first deployment of the app."
+  type        = bool
+  default     = false
+}
+
 variable "app_name_raw" {
   description = "The name of the application."
   type        = string

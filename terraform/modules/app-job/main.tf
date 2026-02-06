@@ -7,7 +7,9 @@ terraform {
   }
 }
 
-resource "digitalocean_app" "app" {
+resource "digitalocean_app" "app_job" {
+  count         = var.is_first_deployment ? 0 : 1
+
   project_id = var.project_id
 
   spec {
@@ -35,8 +37,8 @@ resource "digitalocean_app" "app" {
         content {
           key   = env.key
           value = env.value
-          scope = "RUN_AND_BUILD_TIME" # Optional: default
-          type  = "GENERAL"            # Optional: use "SECRET" for encrypted vars
+          scope = "RUN_AND_BUILD_TIME"
+          type  = "GENERAL"
         }
       }
 
@@ -47,6 +49,31 @@ resource "digitalocean_app" "app" {
           value = env.value
           type  = "SECRET"
         }
+      }
+    }
+  }
+}
+
+resource "digitalocean_app" "app_noop_job" {
+  count         = var.is_first_deployment ? 1 : 0
+
+  project_id = var.project_id
+
+  spec {
+    name   = local.app_name
+    region = var.region
+
+    job {
+      name               = local.service_name
+      instance_size_slug = local.noop_app_size
+
+      run_command = "true"
+
+      image {
+        registry_type        = local.noop_registry
+        repository           = local.noop_image_name
+        # registry_credentials = "sagging:${var.docker_token}"
+        tag                  = local.noop_image_tag
       }
     }
   }
