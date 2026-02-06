@@ -10,8 +10,6 @@ data "digitalocean_database_user" "database_user" {
 module "gateway_flyway_app" {
   source = "../../modules/app-job"
 
-  is_first_deployment = true
-
   project_id  = var.project_id
   environment = local.environment
 
