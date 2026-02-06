@@ -1,0 +1,64 @@
+name: tf-apply
+on:
+  workflow_call:
+    inputs:
+      project-id:
+        description: "Project ID (The environment you want to create resources in)"
+        type: string
+        required: true
+      working-directory:
+        description: "Working directory"
+        type: string
+        required: true
+      module:
+        description: "Usually module name + environment (mesazon-shared-dev, etc)"
+        type: string
+        required: true
+      environment:
+        description: "Deployment environment name"
+        type: string
+        required: true
+      docker-image-name:
+        description: "Docker image name"
+        type: string
+        required: true
+      docker-image-tag:
+        description: "Docker image tag"
+        type: string
+        required: true
+    outputs:
+      docker-image-tag:
+        value: ${{ inputs.docker-image-tag }}
+      docker-image-name:
+        value: ${{ inputs.docker-image-name }}
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  TF_VAR_do_token: ${{ secrets.DO_API_KEY }}
+  TF_VAR_project_id: ${{ inputs.project-id }}
+  TF_VAR_image_name: ${{ inputs.docker-image-name }}
+  TF_VAR_image_tag: ${{ inputs.docker-image-tag }}
+jobs:
+  build:
+    environment: ${{ github.event_name == 'pull_request' && 'dev_pr' || inputs.environment || 'prod' }}
+    name: tf-apply
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.3
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.DO_SPACES_BUCKET }}" \
+            -backend-config="key=${{ inputs.module }}-tf-state/terraform.tfstate" \
+            -backend-config="endpoints={s3=\"https://${{ secrets.DO_SPACES_REGION }}.digitaloceanspaces.com\"}"
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -input=false

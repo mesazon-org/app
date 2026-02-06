@@ -1,0 +1,20 @@
+# .sbtopts
+# Memory: Give sbt enough room. 2GB is a conservative start; 4GB+ is better for large projects.
+-J-Xmx4G
+-J-Xms2G
+
+# GC: JDK 21 introduces Generational ZGC, which is excellent for keeping the sbt shell responsive.
+# If you prefer the standard stable default, stick to G1GC (-J-XX:+UseG1GC).
+-J-XX:+UseZGC
+-J-XX:+ZGenerational
+
+# Module Access: Prevent "Illegal Access" warnings typical in JDK 17+ and 21
+# These are necessary because many sbt plugins still use internal JDK APIs.
+-J--add-opens=java.base/java.util=ALL-UNNAMED
+-J--add-opens=java.base/java.lang=ALL-UNNAMED
+-J--add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+-J--add-opens=java.base/java.nio=ALL-UNNAMED
+-J--add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+
+# Misc: useful for compatibility
+-J-XX:+IgnoreUnrecognizedVMOptions
