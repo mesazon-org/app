@@ -39,3 +39,12 @@ module "gateway_flyway_app" {
   }
 }
 
+resource "digitalocean_database_firewall" "gateway_flyway_firewall" {
+  cluster_id = data.digitalocean_database_cluster.postgres_cluster.id
+
+  rule {
+    type  = "app"
+    value = module.gateway_flyway_app.app_id
+  }
+}
+
