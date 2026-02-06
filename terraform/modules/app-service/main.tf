@@ -9,7 +9,7 @@ terraform {
 
 
 resource "digitalocean_app" "app_service" {
-  count         = var.is_first_deployment ? 0 : 1
+  count      = var.is_first_deployment ? 0 : 1
   project_id = var.project_id
 
   spec {
@@ -50,7 +50,7 @@ resource "digitalocean_app" "app_service" {
 }
 
 resource "digitalocean_app" "app_noop_service" {
-  count         = var.is_first_deployment ? 1 : 0
+  count = var.is_first_deployment ? 1 : 0
 
   project_id = var.project_id
 
@@ -66,10 +66,10 @@ resource "digitalocean_app" "app_noop_service" {
       run_command = "sh -c 'while true; do printf \"HTTP/1.1 200 OK\\n\\n OK\" | nc -l -p 8080; done'"
 
       image {
-        registry_type        = local.noop_registry
-        repository           = local.noop_image_name
+        registry_type = local.noop_registry
+        repository    = local.noop_image_name
         # registry_credentials = "sagging:${var.docker_token}"
-        tag                  = local.noop_image_tag
+        tag = local.noop_image_tag
       }
 
       internal_ports = [8080]

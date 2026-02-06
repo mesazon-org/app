@@ -1,7 +1,7 @@
 locals {
   region                    = "fra1"
   environment               = "dev"
-  app_name_raw                  = "gateway-core"
+  app_name_raw              = "gateway-core"
   database_cluster_name_raw = "gateway"
   database_cluster_name     = "${local.database_cluster_name_raw}-${local.region}-${local.environment}"
   database_name_raw         = "gateway_db"

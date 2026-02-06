@@ -8,7 +8,7 @@ terraform {
 }
 
 resource "digitalocean_app" "app_job" {
-  count         = var.is_first_deployment ? 0 : 1
+  count = var.is_first_deployment ? 0 : 1
 
   project_id = var.project_id
 
@@ -55,7 +55,7 @@ resource "digitalocean_app" "app_job" {
 }
 
 resource "digitalocean_app" "app_noop_job" {
-  count         = var.is_first_deployment ? 1 : 0
+  count = var.is_first_deployment ? 1 : 0
 
   project_id = var.project_id
 
@@ -70,10 +70,10 @@ resource "digitalocean_app" "app_noop_job" {
       run_command = "true"
 
       image {
-        registry_type        = local.noop_registry
-        repository           = local.noop_image_name
+        registry_type = local.noop_registry
+        repository    = local.noop_image_name
         # registry_credentials = "sagging:${var.docker_token}"
-        tag                  = local.noop_image_tag
+        tag = local.noop_image_tag
       }
     }
   }
