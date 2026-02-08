@@ -47,5 +47,9 @@ resource "digitalocean_app" "app_job" {
         }
       }
     }
+
+    vpc {
+      id = var.vpc_id
+    }
   }
 }

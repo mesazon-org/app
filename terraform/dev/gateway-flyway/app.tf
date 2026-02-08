@@ -21,6 +21,8 @@ module "gateway_flyway_app" {
   replicas     = 1
   app_size     = "apps-s-1vcpu-0.5gb"
 
+  vpc_id = data.digitalocean_database_cluster.postgres_cluster.private_network_uuid
+
   env_vars = {
     FLYWAY_LOCATIONS           = "filesystem:/flyway/sql"
     FLYWAY_SCHEMAS             = "gateway_schema_fra1_dev"
@@ -32,14 +34,5 @@ module "gateway_flyway_app" {
   secret_vars = {
     FLYWAY_USER     = data.digitalocean_database_user.database_user.name
     FLYWAY_PASSWORD = data.digitalocean_database_user.database_user.password
-  }
-}
-
-resource "digitalocean_database_firewall" "gateway_flyway_firewall" {
-  cluster_id = data.digitalocean_database_cluster.postgres_cluster.id
-
-  rule {
-    type  = "app"
-    value = module.gateway_flyway_app.app_id
   }
 }

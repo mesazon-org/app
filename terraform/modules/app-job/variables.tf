@@ -68,3 +68,9 @@ variable "secret_vars" {
   description = "A map of environment variables for the service"
   default     = {}
 }
+
+variable "vpc_id" {
+  description = "The VPC ID to deploy the app within."
+  type        = string
+  default     = null
+}
