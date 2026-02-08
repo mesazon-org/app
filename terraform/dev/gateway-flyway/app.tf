@@ -27,6 +27,7 @@ module "gateway_flyway_app" {
     FLYWAY_CONNECT_RETRIES     = "5"
     FLYWAY_BASELINE_ON_MIGRATE = "true" # When run for the first time against an existing DB should be set to true.
     FLYWAY_URL                 = "jdbc:postgresql://${data.digitalocean_database_cluster.postgres_cluster.private_host}:${data.digitalocean_database_cluster.postgres_cluster.port}/${local.database_name}?sslmode=require"
+    FLYWAY_COMMAND = "migrate || true"
   }
 
   secret_vars = {
