@@ -20,6 +20,8 @@ resource "digitalocean_app" "app_job" {
       instance_size_slug = var.app_size
       kind               = var.job_kind
 
+      run_command = var.is_first_deployment ? "true" : null
+
       image {
         registry_type = var.registry_type
         repository    = var.image_name
