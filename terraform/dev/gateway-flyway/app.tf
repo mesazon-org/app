@@ -21,8 +21,6 @@ module "gateway_flyway_app" {
   replicas     = 1
   app_size     = "apps-s-1vcpu-0.5gb"
 
-  is_first_deployment     = true
-
   env_vars = {
     FLYWAY_LOCATIONS           = "filesystem:/flyway/sql"
     FLYWAY_SCHEMAS             = "gateway_schema_fra1_dev"
