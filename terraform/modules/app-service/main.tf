@@ -17,21 +17,21 @@ resource "digitalocean_app" "app_service" {
 
     service {
       name               = local.service_name
-      instance_count     = var.is_first_deployment? local.noop_replicas : var.replicas
-      instance_size_slug = var.is_first_deployment? local.noop_app_size : var.app_size
+      instance_count     = var.replicas
+      instance_size_slug = var.app_size
 
       run_command = var.is_first_deployment ? "sh -c 'while true; do printf \"HTTP/1.1 200 OK\\n\\n OK\" | nc -l -p 8080; done'" : null
 
       image {
-        registry_type = var.is_first_deployment ? local.noop_registry : "DOCR"
-        repository = var.is_first_deployment ? local.noop_image_name : var.image_name
-        tag = var.is_first_deployment ? local.noop_image_tag : var.image_tag
+        registry_type = "DOCR"
+        repository    = var.image_name
+        tag           = var.image_tag
       }
 
-      internal_ports = var.is_first_deployment ? [8080] : null
+      internal_ports = [8080]
 
       dynamic "env" {
-        for_each = var.is_first_deployment? {} : var.env_vars
+        for_each = var.env_vars
         content {
           key   = env.key
           value = env.value
@@ -41,7 +41,7 @@ resource "digitalocean_app" "app_service" {
       }
 
       dynamic "env" {
-        for_each = var.is_first_deployment? {} : var.secret_vars
+        for_each = var.secret_vars
         content {
           key   = env.key
           value = env.value
@@ -50,8 +50,8 @@ resource "digitalocean_app" "app_service" {
       }
 
       health_check {
-        http_path             = var.is_first_deployment ? "/" : null
-        port                  = 8080
+        http_path             = "/liveness"
+        port                  = 8081
         initial_delay_seconds = 5
         period_seconds        = 10
       }

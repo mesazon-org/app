@@ -21,8 +21,6 @@ module "gateway_flyway_app" {
   replicas     = 1
   app_size     = "apps-s-1vcpu-0.5gb"
 
-  vpc_id = data.digitalocean_database_cluster.postgres_cluster.private_network_uuid
-
   env_vars = {
     FLYWAY_LOCATIONS           = "filesystem:/flyway/sql"
     FLYWAY_SCHEMAS             = "gateway_schema_fra1_dev"
