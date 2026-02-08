@@ -20,6 +20,15 @@ structure Unauthorized {
 }
 
 @error("client")
+@httpError(404)
+structure NotFound {
+    @required
+    code: Integer = 404
+    @required
+    message: String = "Not found."
+}
+
+@error("client")
 @httpError(409)
 structure Conflict {
     @required
@@ -45,3 +54,4 @@ structure ServiceUnavailable {
     @required
     message: String = "The server is currently unavailable."
 }
+

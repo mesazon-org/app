@@ -20,6 +20,12 @@ object ServiceError {
       override val underlying: Option[Throwable] = None,
   ) extends ServiceError("UnauthorizedError", message, underlying)
 
+  // 404
+  sealed abstract class NotFoundError(
+      override val message: String,
+      override val underlying: Option[Throwable] = None,
+  ) extends ServiceError("NotFoundError", message, underlying)
+
   // 409
   sealed abstract class ConflictError(
       override val message: String,
@@ -44,4 +50,10 @@ object ServiceError {
     case class UserAlreadyExists(userID: UserID, email: Email)
         extends ConflictError(s"user with id [$userID] and email [$email] already exists")
   }
+
+  object NotFoundError {
+    final case class UserNotFound(userID: UserID, email: Email)
+        extends NotFoundError(s"user with id [$userID] and email [$email] does not exist")
+  }
+
 }

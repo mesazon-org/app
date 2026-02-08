@@ -35,6 +35,9 @@ object HttpErrorHandler {
       case error: ServiceError.ConflictError =>
         logWarning(error)
           .map(_ => smithy.Conflict())
+      case error: ServiceError.NotFoundError =>
+        logWarning(error)
+          .map(_ => smithy.NotFound())
     }.catchSomeCause { case cause: Cause.Die =>
       ZIO
         .logErrorCause(s"$trace: Unexpected failure", cause)
