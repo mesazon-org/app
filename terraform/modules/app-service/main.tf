@@ -24,7 +24,7 @@ resource "digitalocean_app" "app_service" {
       instance_size_slug = var.app_size
       http_port          = 8080
 
-      internal_ports     = [8081]
+      internal_ports = [8081]
 
       image {
         registry_type = var.registry_type
