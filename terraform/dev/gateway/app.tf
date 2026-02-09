@@ -16,7 +16,7 @@ module "gateway_core_app" {
   image_name = var.image_name
   image_tag  = var.image_tag
 
-  vpc_name_row = "gateway-vpc"
+  vpc_name_raw = "gateway-vpc"
 
   app_name_raw = local.app_name_raw
   region       = local.region

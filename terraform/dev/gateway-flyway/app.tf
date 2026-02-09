@@ -21,7 +21,7 @@ module "gateway_flyway_app" {
   replicas     = 1
   app_size     = "apps-s-1vcpu-0.5gb"
 
-  vpc_name_row = "gateway-vpc"
+  vpc_name_raw = "gateway-vpc"
 
   env_vars = {
     FLYWAY_LOCATIONS           = "filesystem:/flyway/sql"

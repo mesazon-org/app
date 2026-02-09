@@ -1,4 +1,4 @@
-name: Gateway CI
+name: gateway-ci
 on:
   push:
     branches: [ main ]

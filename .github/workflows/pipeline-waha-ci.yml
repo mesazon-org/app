@@ -1,4 +1,4 @@
-#name: Waha CI
+#name: waha-ci
 #on:
 #  push:
 #    branches:
