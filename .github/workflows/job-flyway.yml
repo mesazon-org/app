@@ -42,7 +42,7 @@ env:
   DOCKER_IMAGE: ${{ vars.DOCKER_REPOSITORY }}/${{ inputs.docker-image-name }}:${{ inputs.docker-image-tag }}
 jobs:
   build:
-#    environment: ${{ github.event_name == 'pull_request' && 'dev_pr' || inputs.environment || 'prod' }}
+    environment: ${{ github.event_name == 'pull_request' && 'dev_pr' || inputs.environment || 'prod' }}
     name: flyway-migration ${{ inputs.module }}
     runs-on: ubuntu-latest
     steps:
