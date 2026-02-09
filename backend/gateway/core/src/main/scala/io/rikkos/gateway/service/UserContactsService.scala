@@ -9,7 +9,7 @@ import zio.*
 
 object UserContactsService {
 
-  case class UserContactsServiceImpl(
+  private final class UserContactsServiceImpl(
       authorizationState: AuthorizationState,
       userContactsRepository: UserContactsRepository,
       upsertUserContactsValidator: ServiceValidator[Set[smithy.UpsertUserContactRequest], NonEmptyChunk[
@@ -35,5 +35,5 @@ object UserContactsService {
           .errorResponseHandler(service.upsertContacts(request))
     }
 
-  val live = ZLayer.fromFunction(UserContactsServiceImpl.apply) >>> ZLayer.fromFunction(observed)
+  val live = ZLayer.derive[UserContactsServiceImpl] >>> ZLayer.fromFunction(observed)
 }

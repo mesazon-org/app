@@ -7,15 +7,6 @@ data "digitalocean_database_user" "database_user" {
   name       = local.database_user
 }
 
-resource "digitalocean_database_firewall" "pg_firewall" {
-  cluster_id = data.digitalocean_database_cluster.postgres_cluster.id
-
-  rule {
-    type  = "app"
-    value = "fdd26e75-7a6f-4597-bae3-2729bc1a2cf2"
-  }
-}
-
 module "gateway_flyway_app" {
   source = "../../modules/app-job"
 
