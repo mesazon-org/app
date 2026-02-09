@@ -42,14 +42,15 @@ resource "digitalocean_app" "app_service" {
         failure_threshold     = 3
       }
 
-      liveness_health_check {
-        http_path             = "/liveness"
-        port                  = 8081
-        initial_delay_seconds = 10
-        period_seconds        = 15
-        timeout_seconds       = 5
-        failure_threshold     = 3
-      }
+      # Only directly through app platform is available, until new release contains those features
+      # liveness_health_check {
+      #   http_path             = "/liveness"
+      #   port                  = 8081
+      #   initial_delay_seconds = 10
+      #   period_seconds        = 15
+      #   timeout_seconds       = 5
+      #   failure_threshold     = 3
+      # }
 
       dynamic "env" {
         for_each = var.env_vars

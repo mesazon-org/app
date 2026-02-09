@@ -47,7 +47,11 @@ jobs:
       docker-image-tag: ${{ needs.gateway-deploy-dev-plan.outputs.docker-image-tag }}
       environment: "dev"
   gateway-deploy-dev-apply:
-    needs: [ "gateway-deploy-dev-plan" ]
+    needs: [ "gateway-deploy-dev-plan", "gateway-flyway-deploy-dev-apply" ]
+    if: |
+      always() && 
+            needs.gateway-deploy-dev-plan.result == 'success' &&
+      (needs.gateway-flyway-deploy-dev-apply.result == 'success' || needs.gateway-flyway-deploy-dev-apply.result == 'skipped')
     uses: ./.github/workflows/job-tf-apply.yml
     secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
     with:
