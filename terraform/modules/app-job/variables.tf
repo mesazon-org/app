@@ -8,12 +8,6 @@ variable "environment" {
   type        = string
 }
 
-variable "is_first_deployment" {
-  description = "Indicates if this is the first deployment of the application. Allowing subsequent deployments to continue"
-  type        = bool
-  default     = false
-}
-
 variable "app_name_raw" {
   description = "The name of the application."
   type        = string
@@ -69,8 +63,7 @@ variable "secret_vars" {
   default     = {}
 }
 
-variable "vpc_id" {
-  description = "The VPC ID to deploy the app within."
+variable "vpc_name_raw" {
+  description = "The raw name for the VPC, which will be combined with the environment and region to create the final name."
   type        = string
-  default     = null
 }

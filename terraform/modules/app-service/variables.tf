@@ -8,12 +8,6 @@ variable "environment" {
   type        = string
 }
 
-variable "is_first_deployment" {
-  description = "Flag to indicate if this is the first deployment of the app."
-  type        = bool
-  default     = false
-}
-
 variable "app_name_raw" {
   description = "The name of the application."
   type        = string
@@ -33,6 +27,12 @@ variable "replicas" {
 variable "app_size" {
   description = "The size of the Droplet (e.g., s-1vcpu-1gb)."
   type        = string
+}
+
+variable "registry_type" {
+  description = "The type of registry (e.g., DOCKER_HUB, GITHUB_CONTAINER_REGISTRY)."
+  type        = string
+  default     = "DOCR"
 }
 
 variable "image_name" {
@@ -55,4 +55,9 @@ variable "secret_vars" {
   type        = map(string)
   description = "A map of environment variables for the service"
   default     = {}
+}
+
+variable "vpc_name_raw" {
+  description = "The raw name for the VPC, which will be combined with the environment and region to create the final name."
+  type        = string
 }

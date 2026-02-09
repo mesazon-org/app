@@ -21,13 +21,13 @@ module "gateway_flyway_app" {
   replicas     = 1
   app_size     = "apps-s-1vcpu-0.5gb"
 
-  vpc_id = data.digitalocean_database_cluster.postgres_cluster.private_network_uuid
+  vpc_name_row = "gateway-vpc"
 
   env_vars = {
     FLYWAY_LOCATIONS           = "filesystem:/flyway/sql"
     FLYWAY_SCHEMAS             = "gateway_schema_fra1_dev"
     FLYWAY_CONNECT_RETRIES     = "5"
-    FLYWAY_BASELINE_ON_MIGRATE = "true" # When run for the first time against an existing DB should be set to true.
+    FLYWAY_BASELINE_ON_MIGRATE = "true" # This is important to avoid errors when running Flyway for the first time on an existing database
     FLYWAY_URL                 = "jdbc:postgresql://${data.digitalocean_database_cluster.postgres_cluster.private_host}:${data.digitalocean_database_cluster.postgres_cluster.port}/${local.database_name}?sslmode=require"
   }
 

@@ -7,6 +7,10 @@ terraform {
   }
 }
 
+data "digitalocean_vpc" "vpc" {
+  name = local.vpc_name
+}
+
 resource "digitalocean_app" "app_job" {
   project_id = var.project_id
 
@@ -19,8 +23,6 @@ resource "digitalocean_app" "app_job" {
       instance_count     = var.replicas
       instance_size_slug = var.app_size
       kind               = var.job_kind
-
-      run_command = var.is_first_deployment ? "true" : null
 
       image {
         registry_type = var.registry_type
@@ -49,7 +51,7 @@ resource "digitalocean_app" "app_job" {
     }
 
     vpc {
-      id = var.vpc_id
+      id = data.digitalocean_vpc.vpc.id
     }
   }
 }

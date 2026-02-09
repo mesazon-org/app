@@ -10,13 +10,13 @@ data "digitalocean_database_user" "database_user" {
 module "gateway_core_app" {
   source = "../../modules/app-service"
 
-  is_first_deployment = true
-
   project_id  = var.project_id
   environment = local.environment
 
   image_name = var.image_name
   image_tag  = var.image_tag
+
+  vpc_name_row = "gateway-vpc"
 
   app_name_raw = local.app_name_raw
   region       = local.region
