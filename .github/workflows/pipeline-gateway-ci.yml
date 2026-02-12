@@ -16,48 +16,48 @@ jobs:
     with:
       module: "gateway"
       docker-image-name: "gateway-core"
-  gateway-publish:
-    needs: [ "gateway-build" ]
-    uses: ./.github/workflows/job-publish-image.yml
-    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
-    with:
-      docker-image-name: ${{ needs.gateway-build.outputs.docker-image-name }}
-      docker-image-tag: ${{ needs.gateway-build.outputs.docker-image-tag }}
-      environment: "prod"
-  gateway-deploy-dev-plan:
-    needs: [ "gateway-publish" ]
-    uses: ./.github/workflows/job-tf-plan.yml
-    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
-    with:
-      project-id: "5d792a15-cf5f-46c7-ab46-425f64c52ea4"
-      working-directory: "terraform/dev/gateway"
-      module: "gateway-dev"
-      docker-image-name: ${{ needs.gateway-publish.outputs.docker-image-name }}
-      docker-image-tag: ${{ needs.gateway-publish.outputs.docker-image-tag }}
-  gateway-flyway-deploy-dev-apply:
-    needs: [ "gateway-deploy-dev-plan" ]
-    uses: ./.github/workflows/job-flyway.yml
-    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
-    with:
-      module: "gateway-flyway-dev"
-      project-id: "5d792a15-cf5f-46c7-ab46-425f64c52ea4"
-      docker-build-directory: "backend/schemas"
-      working-directory: "terraform/dev/gateway-flyway"
-      docker-image-name: "gateway-flyway"
-      docker-image-tag: ${{ needs.gateway-deploy-dev-plan.outputs.docker-image-tag }}
-      environment: "dev"
-  gateway-deploy-dev-apply:
-    needs: [ "gateway-deploy-dev-plan", "gateway-flyway-deploy-dev-apply" ]
-    if: |
-      always() && 
-            needs.gateway-deploy-dev-plan.result == 'success' &&
-      (needs.gateway-flyway-deploy-dev-apply.result == 'success' || needs.gateway-flyway-deploy-dev-apply.result == 'skipped')
-    uses: ./.github/workflows/job-tf-apply.yml
-    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
-    with:
-      project-id: "5d792a15-cf5f-46c7-ab46-425f64c52ea4"
-      working-directory: "terraform/dev/gateway"
-      module: "gateway-dev"
-      docker-image-name: ${{ needs.gateway-deploy-dev-plan.outputs.docker-image-name }}
-      docker-image-tag: ${{ needs.gateway-deploy-dev-plan.outputs.docker-image-tag }}
-      environment: "dev"
+#  gateway-publish:
+#    needs: [ "gateway-build" ]
+#    uses: ./.github/workflows/job-publish-image.yml
+#    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
+#    with:
+#      docker-image-name: ${{ needs.gateway-build.outputs.docker-image-name }}
+#      docker-image-tag: ${{ needs.gateway-build.outputs.docker-image-tag }}
+#      environment: "prod"
+#  gateway-deploy-dev-plan:
+#    needs: [ "gateway-publish" ]
+#    uses: ./.github/workflows/job-tf-plan.yml
+#    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
+#    with:
+#      project-id: "5d792a15-cf5f-46c7-ab46-425f64c52ea4"
+#      working-directory: "terraform/dev/gateway"
+#      module: "gateway-dev"
+#      docker-image-name: ${{ needs.gateway-publish.outputs.docker-image-name }}
+#      docker-image-tag: ${{ needs.gateway-publish.outputs.docker-image-tag }}
+#  gateway-flyway-deploy-dev-apply:
+#    needs: [ "gateway-deploy-dev-plan" ]
+#    uses: ./.github/workflows/job-flyway.yml
+#    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
+#    with:
+#      module: "gateway-flyway-dev"
+#      project-id: "5d792a15-cf5f-46c7-ab46-425f64c52ea4"
+#      docker-build-directory: "backend/schemas"
+#      working-directory: "terraform/dev/gateway-flyway"
+#      docker-image-name: "gateway-flyway"
+#      docker-image-tag: ${{ needs.gateway-deploy-dev-plan.outputs.docker-image-tag }}
+#      environment: "dev"
+#  gateway-deploy-dev-apply:
+#    needs: [ "gateway-deploy-dev-plan", "gateway-flyway-deploy-dev-apply" ]
+#    if: |
+#      always() &&
+#            needs.gateway-deploy-dev-plan.result == 'success' &&
+#      (needs.gateway-flyway-deploy-dev-apply.result == 'success' || needs.gateway-flyway-deploy-dev-apply.result == 'skipped')
+#    uses: ./.github/workflows/job-tf-apply.yml
+#    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
+#    with:
+#      project-id: "5d792a15-cf5f-46c7-ab46-425f64c52ea4"
+#      working-directory: "terraform/dev/gateway"
+#      module: "gateway-dev"
+#      docker-image-name: ${{ needs.gateway-deploy-dev-plan.outputs.docker-image-name }}
+#      docker-image-tag: ${{ needs.gateway-deploy-dev-plan.outputs.docker-image-tag }}
+#      environment: "dev"
