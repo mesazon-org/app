@@ -33,3 +33,21 @@ services:
       - ../backend/schemas/local/flyway:/flyway/conf
     depends_on:
       - postgres
+
+  waha:
+    hostname: waha
+    image: devlikeapro/waha-plus:gows-arm
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3000:3000/tcp'
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '100m'
+        max-file: '10'
+    env_file: ./waha-data/.env
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    environment:
+      - WHATSAPP_SESSIONS_POSTGRESQL_URL=postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable
