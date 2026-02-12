@@ -1,20 +1,21 @@
-#name: waha-ci
-#on:
-#  push:
-#    branches:
-#      - main
-#  pull_request:
-#    paths:
-#      - 'backend/waha/**'
-#      - 'project/**'
-#      - 'build.sbt'
-#      - '.github/workflows/pipeline-waha-ci.yml'
-#      - '.scalafix.conf'
-#      - '.scalafmt.conf'
-#      - '.tool-versions'
-#jobs:
-#  waha-build:
-#    uses: ./.github/workflows/job-scala-build.yml
-#    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
-#    with:
-#      module: "waha"
+name: waha-ci
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'backend/waha/**'
+      - 'project/**'
+      - 'build.sbt'
+      - '.github/workflows/pipeline-waha-ci.yml'
+      - '.scalafix.conf'
+      - '.scalafmt.conf'
+      - '.tool-versions'
+jobs:
+  waha-build:
+    uses: ./.github/workflows/job-scala-build.yml
+    secrets: inherit # Inherit secrets from the parent workflow https://stackoverflow.com/questions/66113900/github-actions-not-receiving-secrets
+    with:
+      module: "waha"
+      is-service-build: false

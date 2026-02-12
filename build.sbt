@@ -47,6 +47,7 @@ lazy val backendModule = Project("backend", file("backend"))
     backendTestKitModule,
     backendPostgreSQLTestModule,
     backendGatewayRoot,
+    backendSchemas,
   )
 
 lazy val backendDomainModule = createBackendModule("domain")(None)

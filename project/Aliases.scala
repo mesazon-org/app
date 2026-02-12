@@ -13,11 +13,7 @@ object Aliases {
   lazy val scalaFix = addCommandAlias("checkFix", "scalafixAll --check") ++
     addCommandAlias("runFix", "scalafixAll")
 
-  lazy val gatewayCi = Seq(
-    addCommandAlias("gateway-build", "clean; project gateway-core; Docker/publishLocal"),
-//    addCommandAlias("gateway-build", "clean; project backend; checkLint; test"),
-    addCommandAlias("gateway-publish", "clean; project gateway-core; Docker/publish"),
-  ).flatten
+  lazy val gatewayCi = addCommandAlias("gateway-build", "clean; project backend; checkLint; test")
 
   lazy val wahaCI = addCommandAlias("waha-build", "clean; project waha; checkLint; test")
 }
