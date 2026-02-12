@@ -1,6 +1,6 @@
 services:
   gateway:
-    image: local/eak-gateway-core:latest
+    image: local/gateway-core:latest
     restart: always
 #    ports:
 #      - "8080:8080"
