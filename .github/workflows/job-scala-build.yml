@@ -9,7 +9,6 @@ on:
       docker-image-name:
         description: "Docker image name"
         type: string
-        required: true
       is-service-build:
         description: "Whether this build is for service build (e.g. for pull requests) or not."
         type: boolean
