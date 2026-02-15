@@ -19,13 +19,13 @@ variable "region" {
 }
 
 variable "replicas" {
-  description = "Number of Droplet instances."
+  description = "Number of app instances."
   type        = number
   default     = 1
 }
 
 variable "app_size" {
-  description = "The size of the Droplet (e.g., s-1vcpu-1gb)."
+  description = "The size of the app (e.g., s-1vcpu-1gb)."
   type        = string
 }
 
@@ -53,7 +53,7 @@ variable "env_vars" {
 
 variable "secret_vars" {
   type        = map(string)
-  description = "A map of environment variables for the service"
+  description = "A map of secret variables for the service"
   default     = {}
 }
 

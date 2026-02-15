@@ -39,5 +39,5 @@ jobs:
           token: ${{ secrets.DO_API_KEY }}
       - name: Log in to DigitalOcean Container Registry with short-lived credentials
         run: doctl registry login --expiry-seconds 600
-      - name: Build ${{ inputs.module }}-publish
+      - name: Publish ${{ env.DOCKER_IMAGE }}
         run: docker push $DOCKER_IMAGE

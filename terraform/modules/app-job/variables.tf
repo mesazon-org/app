@@ -25,12 +25,12 @@ variable "replicas" {
 }
 
 variable "app_size" {
-  description = "The size of the Droplet (e.g., s-1vcpu-1gb)."
+  description = "The size of the App (e.g., s-1vcpu-1gb)."
   type        = string
 }
 
 variable "job_kind" {
-  description = "The size of the Droplet (e.g., s-1vcpu-1gb)."
+  description = "The size of the App (e.g., s-1vcpu-1gb)."
   type        = string
   default     = "PRE_DEPLOY"
 }
@@ -59,7 +59,7 @@ variable "env_vars" {
 
 variable "secret_vars" {
   type        = map(string)
-  description = "A map of environment variables for the service"
+  description = "A map of secret variables for the service"
   default     = {}
 }
 

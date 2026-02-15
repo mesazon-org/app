@@ -47,7 +47,7 @@ jobs:
           java-version: 21
           cache: sbt
       - name: Set Git Image Tags
-        if: inputs.is-service-build == 'true'
+        if: inputs.is-service-build == true
         id: set-image-tag
         run: |
           RAW_SHA=$(git rev-parse --short HEAD)
@@ -63,7 +63,7 @@ jobs:
       - name: Build ${{ inputs.module }}-build
         run: sbt ${{ inputs.module }}-build
       - name: Upload image
-        if: inputs.is-service-build == 'true'
+        if: inputs.is-service-build == true
         uses: ishworkh/container-image-artifact-upload@v2.0.0
         with:
           image: "${{ vars.DOCKER_REPOSITORY }}/${{ inputs.docker-image-name }}:${{ env.DOCKER_IMAGE_TAG }}"
