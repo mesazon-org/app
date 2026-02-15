@@ -41,6 +41,7 @@ object Main extends ZIOAppDefault {
 
       // Repository
       PostgresTransactor.live,
+      PingRepository.live,
       UserRepository.live,
       UserContactsRepository.live,
 

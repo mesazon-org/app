@@ -6,7 +6,7 @@ val enableScalaLint = sys.env.getOrElse("ENABLE_SCALA_LINT_ON_COMPILE", "true").
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 ThisBuild / scalaVersion              := "3.7.4"
-ThisBuild / version                   := "local"
+ThisBuild / version                   := "latest"
 ThisBuild / organization              := "io.rikkos"
 ThisBuild / organizationName          := "Rikkos"
 ThisBuild / scalafixOnCompile         := enableScalaLint
@@ -25,6 +25,7 @@ def createBackendModule(root: String)(subModule: Option[String]): Project = {
   val directory  = subModule.map(sm => s"$root/$sm").getOrElse(root)
   Project(moduleName, file(s"$backendDirName/$directory"))
     .settings(Settings.ScalaCompiler)
+    .settings(Settings.JavaOptions)
     .settings(
       libraryDependencies += compilerPlugin("org.polyvariant" % "better-tostring" % "0.3.17" cross CrossVersion.full)
     )
@@ -46,6 +47,7 @@ lazy val backendModule = Project("backend", file("backend"))
     backendTestKitModule,
     backendPostgreSQLTestModule,
     backendGatewayRoot,
+    backendSchemas,
   )
 
 lazy val backendDomainModule = createBackendModule("domain")(None)

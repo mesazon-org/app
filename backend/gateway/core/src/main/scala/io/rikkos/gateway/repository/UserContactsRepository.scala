@@ -19,7 +19,7 @@ trait UserContactsRepository {
 
 object UserContactsRepository {
 
-  case class UserContactsPostgreSql(
+  private final class UserContactsPostgres(
       database: DatabaseOps.ServiceOps[Transactor[Task]],
       timeProvider: TimeProvider,
       idGenerator: IDGenerator,
@@ -70,10 +70,9 @@ object UserContactsRepository {
         _ <- database
           .transactionOrDie(updateUserContactsTrans zip insertUserContactsTrans)
       } yield ()).orDie
-
   }
 
-  def observed(repository: UserContactsRepository): UserContactsRepository = repository
+  private def observed(repository: UserContactsRepository): UserContactsRepository = repository
 
-  val live = ZLayer.fromFunction(UserContactsPostgreSql.apply) >>> ZLayer.fromFunction(observed)
+  val live = ZLayer.derive[UserContactsPostgres] >>> ZLayer.fromFunction(observed)
 }

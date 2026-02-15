@@ -1,4 +1,4 @@
-name: scala-steward
+name: scala-steward-ci
 on:
   workflow_dispatch:
   schedule:

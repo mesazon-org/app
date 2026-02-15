@@ -26,6 +26,12 @@ object ServiceError {
       override val underlying: Option[Throwable] = None,
   ) extends ServiceError("ConflictError", message, underlying)
 
+  // 503
+  sealed abstract class ServiceUnavailableError(
+      override val message: String,
+      override val underlying: Option[Throwable] = None,
+  ) extends ServiceError("Unavailable", message, underlying)
+
   object BadRequestError {
     type InvalidFieldError = (fieldName: String, errorMessage: String)
 
@@ -43,5 +49,10 @@ object ServiceError {
   object ConflictError {
     case class UserAlreadyExists(userID: UserID, email: Email)
         extends ConflictError(s"user with id [$userID] and email [$email] already exists")
+  }
+
+  object ServiceUnavailableError {
+    case class DatabaseUnavailableError(throwable: Throwable)
+        extends ServiceUnavailableError("database is currently unavailable", Some(throwable))
   }
 }

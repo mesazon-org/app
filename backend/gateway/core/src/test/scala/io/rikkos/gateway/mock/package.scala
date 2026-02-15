@@ -6,7 +6,7 @@ import io.rikkos.clock.TimeProvider
 import io.rikkos.domain.*
 import io.rikkos.domain.ServiceError.BadRequestError.InvalidFieldError
 import io.rikkos.gateway.auth.*
-import io.rikkos.gateway.repository.{UserContactsRepository, UserRepository}
+import io.rikkos.gateway.repository.{PingRepository, UserContactsRepository, UserRepository}
 import io.rikkos.gateway.validation.*
 import io.rikkos.gateway.validation.PhoneNumberValidator.PhoneNumberParams
 import io.rikkos.generator.IDGenerator
@@ -15,6 +15,12 @@ import zio.*
 
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
+
+def pingRepositoryMockLive(): ULayer[PingRepository] = ZLayer.succeed(
+  new PingRepository {
+    override def ping(): IO[ServiceError.ServiceUnavailableError.DatabaseUnavailableError, Unit] = ZIO.unit
+  }
+)
 
 def userRepositoryMockLive(
     insertUserDetailsCounterRef: Ref[Int],

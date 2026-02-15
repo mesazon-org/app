@@ -1,6 +1,6 @@
 services:
   gateway:
-    image: local/eak-gateway-core:latest
+    image: local/gateway-core:latest
     restart: always
 #    ports:
 #      - "8080:8080"
@@ -25,7 +25,7 @@ services:
       - ../../schemas/local/postgres:/docker-entrypoint-initdb.d
 
   flyway:
-    image: flyway/flyway:11.10.5-alpine
+    image: flyway/flyway:12.0.0-alpine
     restart: on-failure
     command: -configFiles=/flyway/conf/flyway.config -locations=filesystem:/flyway/sql -schemas=local_schema -connectRetries=60 migrate
     volumes:
