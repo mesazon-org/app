@@ -30,7 +30,7 @@ variable "app_size" {
 }
 
 variable "job_kind" {
-  description = "The size of the App (e.g., s-1vcpu-1gb)."
+  description = "The kind of job (e.g., PRE_DEPLOY, POST_DEPLOY)."
   type        = string
   default     = "PRE_DEPLOY"
 }
