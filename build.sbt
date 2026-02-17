@@ -5,7 +5,7 @@ val enableScalaLint = sys.env.getOrElse("ENABLE_SCALA_LINT_ON_COMPILE", "true").
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-ThisBuild / scalaVersion              := "3.7.4"
+ThisBuild / scalaVersion              := "3.8.1"
 ThisBuild / version                   := "latest"
 ThisBuild / organization              := "io.rikkos"
 ThisBuild / organizationName          := "Rikkos"
