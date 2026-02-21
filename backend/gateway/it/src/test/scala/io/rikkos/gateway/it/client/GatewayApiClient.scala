@@ -24,7 +24,7 @@ case class GatewayApiClient(config: GatewayApiClientConfig, client: Client[Task]
   def onboardUser(
       onboardUserDetailsRequest: smithy.OnboardUserDetailsRequest
   )(using Encoder[smithy.OnboardUserDetailsRequest]): Task[Status] = {
-    val request = Request[Task](Method.POST, serviceUri / "users" / "onboard")
+    val request = Request[Task](Method.POST, externalUri / "users" / "onboard")
       .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
       .withEntity(onboardUserDetailsRequest)
 
@@ -36,7 +36,7 @@ case class GatewayApiClient(config: GatewayApiClientConfig, client: Client[Task]
   def updateUser(
       updateUserDetailsRequest: smithy.UpdateUserDetailsRequest
   )(using Encoder[smithy.UpdateUserDetailsRequest]): Task[Status] = {
-    val request = Request[Task](Method.POST, serviceUri / "users" / "update")
+    val request = Request[Task](Method.POST, externalUri / "users" / "update")
       .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
       .withEntity(updateUserDetailsRequest)
 
@@ -48,7 +48,7 @@ case class GatewayApiClient(config: GatewayApiClientConfig, client: Client[Task]
   def upsertUserContacts(
       upsertUserContactsRequest: NonEmptyChunk[smithy.UpsertUserContactRequest]
   )(using Encoder[NonEmptyChunk[smithy.UpsertUserContactRequest]]): Task[Status] = {
-    val request = Request[Task](Method.POST, serviceUri / "contacts" / "upsert")
+    val request = Request[Task](Method.POST, externalUri / "contacts" / "upsert")
       .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
       .withEntity(upsertUserContactsRequest)
 
@@ -59,37 +59,44 @@ case class GatewayApiClient(config: GatewayApiClientConfig, client: Client[Task]
 }
 
 object GatewayApiClient {
+  // Remove stupid warning that can't execute bin/sh in distroless images
   lazy val ServiceName     = "gateway"
-  lazy val ServicePort     = 8080
-  lazy val HealthPort      = 8081
+  lazy val ExternalPort    = 8080
+  lazy val InternalPort    = 8081
+  lazy val HealthPort      = 8082
   lazy val ExposedServices = Set(
-    ExposedService(ServiceName, ServicePort),
+    ExposedService(ServiceName, ExternalPort),
+    ExposedService(ServiceName, InternalPort),
     ExposedService(ServiceName, HealthPort),
   )
 
   given Network[Task] = Network.forAsync[Task]
 
-  case class GatewayApiClientConfig(serviceUri: Uri, healthUri: Uri, token: String) {
+  case class GatewayApiClientConfig(externalUri: Uri, internalUri: Uri, healthUri: Uri, token: String) {
 
     /** @param containers
       *   Option[DockerComposeContainer] * If provided resolves host and port with testcontainers
       * @param serviceName
       *   String container name
-      * @param servicePort
-      *   Int container port
+      * @param externalPort
+      *   Int container service external port
+      * @param internalPort
+      *   Int container service internal port
       * @return
       *   GatewayApiClientConfig
       */
     def adjust(
         containers: Option[DockerComposeContainer],
         serviceName: String = ServiceName,
-        servicePort: Int = ServicePort,
+        externalPort: Int = ExternalPort,
+        internalPort: Int = InternalPort,
     ): GatewayApiClientConfig = containers match {
       case Some(containers) =>
         GatewayApiClientConfig.from(
           containers,
           serviceName,
-          servicePort,
+          externalPort,
+          internalPort,
         )
       case None => this
     }
@@ -101,8 +108,10 @@ object GatewayApiClient {
       *   DockerComposeContainer * Resolves host and port with testcontainers
       * @param serviceName
       *   String container name
-      * @param servicePort
-      *   Int container service port
+      * @param externalPort
+      *   Int container service external port
+      * @param internalPort
+      *   Int container service internal port
       * @param healthPort
       *   Int container health port
       * @return
@@ -111,16 +120,19 @@ object GatewayApiClient {
     def from(
         containers: DockerComposeContainer,
         serviceName: String = ServiceName,
-        servicePort: Int = ServicePort,
+        externalPort: Int = ExternalPort,
+        internalPort: Int = InternalPort,
         healthPort: Int = HealthPort,
         token: String = "valid-token",
     ): GatewayApiClientConfig = {
-      val adjustedHost        = containers.getServiceHost(serviceName, servicePort)
-      val adjustedServicePort = containers.getServicePort(serviceName, servicePort)
-      val adjustedHealthPort  = containers.getServicePort(serviceName, healthPort)
+      val adjustedHost         = containers.getServiceHost(serviceName, externalPort)
+      val adjustedExternalPort = containers.getServicePort(serviceName, externalPort)
+      val adjustedInternalPort = containers.getServicePort(serviceName, internalPort)
+      val adjustedHealthPort   = containers.getServicePort(serviceName, healthPort)
 
       GatewayApiClientConfig(
-        Uri.unsafeFromString(s"http://$adjustedHost:$adjustedServicePort"),
+        Uri.unsafeFromString(s"http://$adjustedHost:$adjustedExternalPort"),
+        Uri.unsafeFromString(s"http://$adjustedHost:$adjustedInternalPort"),
         Uri.unsafeFromString(s"http://$adjustedHost:$adjustedHealthPort"),
         token,
       )

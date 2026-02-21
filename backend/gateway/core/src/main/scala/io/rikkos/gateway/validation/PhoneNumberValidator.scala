@@ -4,28 +4,35 @@ import cats.data.*
 import cats.syntax.all.*
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
+import io.rikkos.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.rikkos.domain.waha
 import io.rikkos.gateway.config.PhoneNumberValidatorConfig
 import zio.*
 
 object PhoneNumberValidator {
-  type PhoneNumberParams = (phoneRegion: String, phoneNationalNumber: String)
+  type PhoneNumberRegion = (phoneRegion: String, phoneNationalNumber: String)
 
-  private def phoneNumberValidator(
+  private def phoneNumberRegionValidator(
       config: PhoneNumberValidatorConfig,
       phoneNumberUtil: PhoneNumberUtil,
-  ): DomainValidator[PhoneNumberParams, PhoneNumber] = { case (phoneRegion, phoneNationalNumber) =>
+  ): DomainValidator[PhoneNumberRegion, PhoneNumberE164] = { case (phoneRegion, phoneNationalNumber) =>
     (for {
       _ <-
         if (config.supportedRegions.contains(phoneRegion.trim.toUpperCase)) ZIO.unit
         else
           ZIO.fail(
             NonEmptyChain(
-              (
-                phoneRegionFieldName,
+              InvalidFieldError(
+                "phoneRegion",
                 s"Phone region [$phoneRegion] provided is not supported, supported regions ${config.supportedRegions.mkString("[", ",", "]")}",
+                phoneRegion,
               ),
-              (phoneNationalNumberFieldName, "Phone national number could not be validated"),
+              InvalidFieldError(
+                "phoneNationalNumber",
+                "Phone national number could not be validated",
+                phoneNationalNumber,
+              ),
             )
           )
       phoneNumberRaw <- ZIO
@@ -38,9 +45,10 @@ object PhoneNumberValidator {
             )
           ) *> ZIO.succeed(
             NonEmptyChain(
-              (
-                phoneNationalNumberFieldName,
+              InvalidFieldError(
+                "phoneNationalNumber",
                 s"Phone national number [$phoneNationalNumber] provided with region [$phoneRegion] failed to parse, supported regions ${config.supportedRegions.mkString("[", ",", "]")}",
+                phoneNationalNumber,
               )
             )
           )
@@ -51,21 +59,84 @@ object PhoneNumberValidator {
         else
           ZIO.fail(
             NonEmptyChain(
-              (
-                phoneNationalNumberFieldName,
+              InvalidFieldError(
+                "phoneNationalNumber",
                 s"Phone national number [$phoneNationalNumber] raw [${phoneNumberRaw}] provided with region [$phoneRegion] failed to be validated, supported regions ${config.supportedRegions.mkString("[", ",", "]")}",
+                phoneNationalNumber,
               )
             )
           )
       phoneNumber <- ZIO
-        .fromEither(PhoneNumber.either(phoneNumberE164))
+        .fromEither(PhoneNumberE164.either(phoneNumberE164))
         .mapError(errorMessage =>
           NonEmptyChain(
-            (phoneNationalNumberFieldName, errorMessage)
+            InvalidFieldError("phoneNationalNumber", errorMessage, phoneNationalNumber)
           )
         )
     } yield phoneNumber).fold(_.invalid, _.valid)
   }
 
-  val phoneNumberValidatorLive = ZLayer.fromFunction(phoneNumberValidator)
+  private def wahaPhoneNumberValidator(
+      config: PhoneNumberValidatorConfig,
+      phoneNumberUtil: PhoneNumberUtil,
+  ): DomainValidator[waha.WahaPhone, PhoneNumberE164] = { wahaPhoneNumber =>
+    (for {
+      phoneNumberProto <- ZIO
+        .attemptBlocking(phoneNumberUtil.parse(s"+${wahaPhoneNumber.value}", null))
+        .flatMapError(error =>
+          ZIO.fiberId.flatMap(fid =>
+            ZIO.logDebugCause(
+              s"Failed waha phone number [${wahaPhoneNumber.value}] validation, supported regions ${config.supportedRegions.mkString("[", ",", "]")}",
+              Cause.die(error, StackTrace.fromJava(fid, error.getStackTrace)),
+            )
+          ) *> ZIO.succeed(
+            NonEmptyChain(
+              InvalidFieldError(
+                "phoneNumber",
+                s"Waha phone number [${wahaPhoneNumber.value}] provided failed to parse, supported regions ${config.supportedRegions.mkString("[", ",", "]")}",
+                wahaPhoneNumber.value,
+              )
+            )
+          )
+        )
+      phoneNumberE164 <-
+        if (phoneNumberUtil.isValidNumber(phoneNumberProto))
+          ZIO.attempt(phoneNumberUtil.format(phoneNumberProto, PhoneNumberFormat.E164)).orDie
+        else
+          ZIO.fail(
+            NonEmptyChain(
+              InvalidFieldError(
+                "phoneNumber",
+                s"Waha phone number [${wahaPhoneNumber.value}] raw [$phoneNumberProto] provided failed to be validated, supported regions ${config.supportedRegions.mkString("[", ",", "]")}",
+                wahaPhoneNumber.value,
+              )
+            )
+          )
+      phoneRegion = phoneNumberUtil.getRegionCodeForNumber(phoneNumberProto)
+      _ <-
+        if (config.supportedRegions.contains(phoneRegion))
+          ZIO.unit
+        else
+          ZIO.fail(
+            NonEmptyChain(
+              InvalidFieldError(
+                "phoneNumber",
+                s"Waha phone number [${wahaPhoneNumber.value}] raw [$phoneNumberProto] provided with region [$phoneRegion] failed to be validated, supported regions ${config.supportedRegions.mkString("[", ",", "]")}",
+                wahaPhoneNumber.value,
+              )
+            )
+          )
+      phoneNumber <- ZIO
+        .fromEither(PhoneNumberE164.either(phoneNumberE164))
+        .mapError(errorMessage =>
+          NonEmptyChain(
+            InvalidFieldError("phoneNumber", errorMessage, wahaPhoneNumber.value)
+          )
+        )
+    } yield phoneNumber).fold(_.invalid, _.valid)
+  }
+
+  val phoneNumberRegionValidatorLive = ZLayer.fromFunction(phoneNumberRegionValidator)
+
+  val wahaPhoneNumberValidatorLive = ZLayer.fromFunction(wahaPhoneNumberValidator)
 }

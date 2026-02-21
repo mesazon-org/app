@@ -1,36 +1,66 @@
 package io.rikkos.gateway
 
+import cats.Show
 import cats.data.*
 import cats.syntax.all.*
-import io.rikkos.domain.ServiceError
-import io.rikkos.domain.ServiceError.BadRequestError.InvalidFieldError
+import io.rikkos.domain.gateway.ServiceError
+import io.rikkos.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import zio.ZIO
+
+import scala.util.chaining.scalaUtilChainingOps
 
 package object validation {
 
-  inline private[validation] val phoneRegionFieldName         = "phoneRegion"
-  inline private[validation] val phoneNationalNumberFieldName = "phoneNationalNumber"
-  inline private[validation] val firstNameFieldName           = "firstName"
-  inline private[validation] val lastNameFieldName            = "lastName"
-  inline private[validation] val addressLine1FieldName        = "addressLine1"
-  inline private[validation] val addressLine2FieldName        = "addressLine2"
-  inline private[validation] val cityFieldName                = "city"
-  inline private[validation] val postalCodeFieldName          = "postalCode"
-  inline private[validation] val companyFieldName             = "company"
-
-  private[validation] def validateRequiredField[A, T](
+  private[validation] def validateRequiredField[A: Show, T](
       fieldName: String,
       value: A,
       constructor: A => Either[String, T],
   ): ValidatedNec[InvalidFieldError, T] =
-    constructor(value).left.map(errorMessage => (fieldName, errorMessage)).toValidatedNec
+    constructor(value).left
+      .map(errorMessage => InvalidFieldError(fieldName, errorMessage, Seq(value.show)))
+      .toValidatedNec
 
-  private[validation] def validateOptionalField[A, T](
+  private[validation] def validateRequiredFields[A: Show, T](
+      fieldName: String,
+      values: Seq[A],
+      constructor: A => Either[String, T],
+  ): ValidatedNec[InvalidFieldError, T] =
+    values.partitionMap(constructor).pipe { case (errors, validated) =>
+      validated.headOption
+        .toRight(
+          errors.headOption
+            .map(errorMessage => InvalidFieldError(fieldName, errorMessage, values.map(_.show)))
+            .getOrElse(InvalidFieldError(fieldName, "Unexpected error", values.map(_.show)))
+        )
+        .toValidatedNec
+    }
+
+  private[validation] def validateOptionalField[A: Show, T](
       fieldName: String,
       value: Option[A],
       constructor: A => Either[String, T],
   ): ValidatedNec[InvalidFieldError, Option[T]] =
-    value.traverse(constructor).left.map(errorMessage => (fieldName, errorMessage)).toValidatedNec
+    value
+      .traverse(constructor)
+      .left
+      .map(errorMessage => InvalidFieldError(fieldName, errorMessage, value.map(_.show).toList))
+      .toValidatedNec
+
+  private[validation] def validateOptionalFields[A: Show, T](
+      fieldName: String,
+      values: Seq[Option[A]],
+      constructor: A => Either[String, T],
+  ): ValidatedNec[InvalidFieldError, Option[T]] = values
+    .partitionMap(_.traverse(constructor))
+    .pipe { case (errors, validated) =>
+      validated.headOption
+        .toRight(
+          errors.headOption
+            .map(errorMessage => InvalidFieldError(fieldName, errorMessage, values.map(_.show)))
+            .getOrElse(InvalidFieldError(fieldName, "Unexpected error", values.map(_.show)))
+        )
+    }
+    .toValidatedNec
 
   private[validation] def toServiceValidator[A, B](
       domainValidator: DomainValidator[A, B]

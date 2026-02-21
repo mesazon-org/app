@@ -26,7 +26,9 @@ object Dependencies {
   lazy val libphonenumberV      = "9.0.26"
   lazy val circeV               = "0.14.15"
   lazy val sttpV                = "4.0.19"
+  lazy val sttpIronV            = "1.13.9"
   lazy val jsoniterV            = "2.38.9"
+  lazy val sttpAIV              = "0.4.6"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -57,6 +59,7 @@ object Dependencies {
 
   // Iron
   val iron         = "io.github.iltotore" %% "iron"          % ironV
+  val ironChimney  = "io.github.iltotore" %% "iron-chimney"  % ironV
   val ironJsoniter = "io.github.iltotore" %% "iron-jsoniter" % ironV
 
   // Circe
@@ -98,4 +101,11 @@ object Dependencies {
   // jsoniter
   lazy val jsoniterScalaCore  = "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core"   % jsoniterV
   lazy val jsoniterScalaMacro = "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterV
+
+  // STTP Iron
+  val sttpIron = "com.softwaremill.sttp.tapir" %% "tapir-iron" % sttpIronV
+
+  // STTP AI
+  lazy val sttpOpenAI    = "com.softwaremill.sttp.ai" %% "openai" % sttpAIV
+  lazy val sttpOpenAIZIO = "com.softwaremill.sttp.ai" %% "zio"    % sttpAIV
 }

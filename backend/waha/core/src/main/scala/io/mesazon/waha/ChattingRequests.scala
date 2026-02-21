@@ -3,7 +3,7 @@ package io.mesazon.waha
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import io.github.iltotore.iron.jsoniter.given
-import io.mesazon.waha.domain.*
+import io.rikkos.domain.waha.*
 import sttp.client4.*
 import sttp.client4.jsoniter.*
 import sttp.model.*
@@ -19,8 +19,9 @@ object ChattingRequests {
   given JsonValueCodec[ChattingSendFileRequestBody]  = JsonCodecMaker.make
   given JsonValueCodec[ChattingSendVoiceRequestBody] = JsonCodecMaker.make
   given JsonValueCodec[ChattingSendVideoRequestBody] = JsonCodecMaker.make
+  given JsonValueCodec[ChattingSendSeenRequestBody]  = JsonCodecMaker.make
 
-  given JsonValueCodec[ChattingSendTextResponseBody] = JsonCodecMaker.make
+  given JsonValueCodec[ChattingSendMessageResponseBody] = JsonCodecMaker.make
 
   // Common
   sealed trait ChattingFileType
@@ -43,6 +44,12 @@ object ChattingRequests {
   case class ChattingTypingRequestBody(
       @named("session") sessionID: SessionID,
       @named("chatId") chatID: ChatID,
+  )
+
+  case class ChattingSendSeenRequestBody(
+      @named("session") sessionID: SessionID,
+      @named("chatId") chatID: ChatID,
+      @named("messageIds") messageIDs: List[MessageID],
   )
 
   case class ChattingSendTextRequestBody(
@@ -89,9 +96,21 @@ object ChattingRequests {
   )
 
   // Response Bodies
-  case class ChattingSendTextResponseBody(
+  case class ChattingSendMessageResponseBody(
       @named("id") messageID: MessageID
   )
+
+  def sendSeen(
+      baseUri: Uri,
+      apiKeyHeader: Header,
+      body: ChattingSendSeenRequestBody,
+  )(using Backend[Task]): IO[WahaError, Response[String]] =
+    basicRequest
+      .body(asJson(body))
+      .post(baseUri.withPath("api", "sendSeen"))
+      .headers(apiKeyHeader)
+      .response(asString)
+      .standardSendRequestString(WahaErrorCode.CHATTING_SEND_SEEN_ERROR)
 
   def startTyping(
       baseUri: Uri,
@@ -121,59 +140,59 @@ object ChattingRequests {
       baseUri: Uri,
       apiKeyHeader: Header,
       body: ChattingSendTextRequestBody,
-  )(using Backend[Task]): IO[WahaError, Response[String]] =
+  )(using Backend[Task]): IO[WahaError, Response[ChattingSendMessageResponseBody]] =
     basicRequest
       .body(asJson(body))
       .post(baseUri.withPath("api", "sendText"))
       .headers(apiKeyHeader)
-      .response(asString)
-      .standardSendRequestString(WahaErrorCode.CHATTING_SEND_TEXT_ERROR)
+      .response(asJson[ChattingSendMessageResponseBody])
+      .standardSendRequest(WahaErrorCode.CHATTING_SEND_TEXT_ERROR)
 
   def sendImage(
       baseUri: Uri,
       apiKeyHeader: Header,
       body: ChattingSendImageRequestBody,
-  )(using Backend[Task]): IO[WahaError, Response[String]] =
+  )(using Backend[Task]): IO[WahaError, Response[ChattingSendMessageResponseBody]] =
     basicRequest
       .body(asJson(body))
       .post(baseUri.withPath("api", "sendImage"))
       .headers(apiKeyHeader)
-      .response(asString)
-      .standardSendRequestString(WahaErrorCode.CHATTING_SEND_IMAGE_ERROR)
+      .response(asJson[ChattingSendMessageResponseBody])
+      .standardSendRequest(WahaErrorCode.CHATTING_SEND_IMAGE_ERROR)
 
   def sendFile(
       baseUri: Uri,
       apiKeyHeader: Header,
       body: ChattingSendFileRequestBody,
-  )(using Backend[Task]): IO[WahaError, Response[String]] =
+  )(using Backend[Task]): IO[WahaError, Response[ChattingSendMessageResponseBody]] =
     basicRequest
       .body(asJson(body))
       .post(baseUri.withPath("api", "sendFile"))
       .headers(apiKeyHeader)
-      .response(asString)
-      .standardSendRequestString(WahaErrorCode.CHATTING_SEND_FILE_ERROR)
+      .response(asJson[ChattingSendMessageResponseBody])
+      .standardSendRequest(WahaErrorCode.CHATTING_SEND_FILE_ERROR)
 
   def sendVoice(
       baseUri: Uri,
       apiKeyHeader: Header,
       body: ChattingSendVoiceRequestBody,
-  )(using Backend[Task]): IO[WahaError, Response[String]] =
+  )(using Backend[Task]): IO[WahaError, Response[ChattingSendMessageResponseBody]] =
     basicRequest
       .body(asJson(body))
       .post(baseUri.withPath("api", "sendVoice"))
       .headers(apiKeyHeader)
-      .response(asString)
-      .standardSendRequestString(WahaErrorCode.CHATTING_SEND_VOICE_ERROR)
+      .response(asJson[ChattingSendMessageResponseBody])
+      .standardSendRequest(WahaErrorCode.CHATTING_SEND_VOICE_ERROR)
 
   def sendVideo(
       baseUri: Uri,
       apiKeyHeader: Header,
       body: ChattingSendVideoRequestBody,
-  )(using Backend[Task]): IO[WahaError, Response[String]] =
+  )(using Backend[Task]): IO[WahaError, Response[ChattingSendMessageResponseBody]] =
     basicRequest
       .body(asJson(body))
       .post(baseUri.withPath("api", "sendVideo"))
       .headers(apiKeyHeader)
-      .response(asString)
-      .standardSendRequestString(WahaErrorCode.CHATTING_SEND_VIDEO_ERROR)
+      .response(asJson[ChattingSendMessageResponseBody])
+      .standardSendRequest(WahaErrorCode.CHATTING_SEND_VIDEO_ERROR)
 }
