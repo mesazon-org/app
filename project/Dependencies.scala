@@ -25,7 +25,7 @@ object Dependencies {
   lazy val doobieTranzactioV    = "5.6.0"
   lazy val libphonenumberV      = "9.0.24"
   lazy val circeV               = "0.14.15"
-  lazy val sttpV                = "4.0.18"
+  lazy val sttpV                = "4.0.19"
   lazy val jsoniterV            = "2.38.8"
 
   // Http4s
