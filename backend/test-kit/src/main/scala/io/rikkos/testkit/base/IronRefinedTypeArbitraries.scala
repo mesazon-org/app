@@ -11,6 +11,12 @@ trait IronRefinedTypeArbitraries {
 
   given Arbitrary[Instant :| Pure] = Arbitrary(Gen.const(Instant.now().truncatedTo(ChronoUnit.MILLIS)))
 
+  given arbNonEmpty: Arbitrary[String :| NonEmpty] = Arbitrary {
+    Gen
+      .nonEmptyStringOf(Gen.alphaNumChar)
+      .map(_.refineUnsafe[NonEmpty])
+  }
+
   given arbNonEmptyTrimmedLowerCase: Arbitrary[String :| NonEmptyTrimmedLowerCase] = Arbitrary {
     Gen
       .nonEmptyStringOf(Gen.alphaNumChar)
@@ -23,6 +29,38 @@ trait IronRefinedTypeArbitraries {
       .nonEmptyStringOf(Gen.alphaNumChar)
       .map(_.trim)
       .map(_.refineUnsafe[NonEmptyTrimmed])
+  }
+
+  given arbWahaIDPredicate: Arbitrary[String :| WahaIDPredicate] = Arbitrary {
+    Gen
+      .nonEmptyStringOf(Gen.alphaNumChar)
+      .map(_.trim.toLowerCase)
+      .map(_ + "@c.us")
+      .map(_.refineUnsafe[WahaIDPredicate])
+  }
+
+  given arbWahaGroupIDPredicate: Arbitrary[String :| WahaGroupIDPredicate] = Arbitrary {
+    Gen
+      .nonEmptyStringOf(Gen.alphaNumChar)
+      .map(_.trim)
+      .map(_ + "@g.us")
+      .map(_.refineUnsafe[WahaGroupIDPredicate])
+  }
+
+  given arbWahaUserIDPredicate: Arbitrary[String :| WahaUserIDPredicate] = Arbitrary {
+    Gen
+      .nonEmptyStringOf(Gen.numChar)
+      .map(_.trim)
+      .map(_ + "@lid")
+      .map(_.refineUnsafe[WahaUserIDPredicate])
+  }
+
+  given arbWhatsappIDPredicate: Arbitrary[String :| WhatsappIDPredicate] = Arbitrary {
+    Gen
+      .nonEmptyStringOf(Gen.alphaNumChar)
+      .map(_.trim.toLowerCase)
+      .map(_ + "@s.whatsapp.net")
+      .map(_.refineUnsafe[WhatsappIDPredicate])
   }
 
   given [WrappedType](using

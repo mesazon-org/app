@@ -2,13 +2,13 @@ package io.rikkos.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
 import io.rikkos.gateway.repository.PingRepository
-import io.rikkos.gateway.utils.GatewayArbitraries
+import io.rikkos.gateway.utils.SmithyArbitraries
 import io.rikkos.test.postgresql.PostgreSQLTestClient
 import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.rikkos.testkit.base.*
 import zio.{Clock as _, *}
 
-class PingRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerComposeBase {
+class PingRepositorySpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBase {
 
   override def dockerComposeFile: String = "./src/test/resources/compose.yaml"
 

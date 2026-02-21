@@ -10,8 +10,11 @@ import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.EntityLimiter
 import smithy4s.http4s.*
 import smithy4s.http4s.swagger.docs
+import smithy4s.kinds.FunctorAlgebra
 import zio.*
 import zio.interop.catz.*
+
+import scala.util.chaining.scalaUtilChainingOps
 
 object HttpApp {
 
@@ -19,29 +22,44 @@ object HttpApp {
   private val dsl     = Http4sDsl[Task]
   import dsl.*
 
+  private def buildRoutes[Alg[_[_, _, _, _, _]]](
+      impl: FunctorAlgebra[Alg, Task],
+      middleware: Option[ServerEndpointMiddleware[Task]] = None,
+  )(using smithy4s.Service[Alg]): ZIO[Scope, Throwable, HttpRoutes[Task]] =
+    SimpleRestJsonBuilder
+      .routes(impl)
+      .pipe(builder => middleware.fold(builder)(builder.middleware))
+      .resource
+      .toScopedZIO
+
   private val healthRoutesResource = for {
     healthCheckService <- ZIO.service[smithy.HealthCheckService[Task]]
-    routes             <- SimpleRestJsonBuilder.routes(healthCheckService).resource.toScopedZIO
-  } yield routes
+    healthCheckRoute   <- buildRoutes(healthCheckService)
+  } yield healthCheckRoute
 
-  private val serviceRoutesResource = for {
+  private val externalRoutesResource = for {
     serverMiddleware      <- ZIO.service[ServerEndpointMiddleware.Simple[Task]]
     userManagementService <- ZIO.service[smithy.UserManagementService[Task]]
     userContactsService   <- ZIO.service[smithy.UserContactsService[Task]]
-    docRoutes = docs[Task](smithy.UserManagementService, smithy.UserContactsService)
-    userManagementRoutes <- SimpleRestJsonBuilder
-      .routes(userManagementService)
-      .middleware(serverMiddleware)
-      .resource
-      .toScopedZIO
-    userContactsRoutes <- SimpleRestJsonBuilder
-      .routes(userContactsService)
-      .middleware(serverMiddleware)
-      .resource
-      .toScopedZIO
-  } yield userManagementRoutes <+> userContactsRoutes <+> docRoutes
+    userManagementRoute   <- buildRoutes(userManagementService, Some(serverMiddleware))
+    userContactsRoute     <- buildRoutes(userContactsService, Some(serverMiddleware))
+  } yield userManagementRoute <+> userContactsRoute
 
-  private def server(config: ServerConfig, routes: HttpRoutes[Task]) = for {
+  private val internalRoutesResource = for {
+    wahaService <- ZIO.service[smithy.WahaService[Task]]
+    routes      <- buildRoutes(wahaService)
+  } yield routes
+
+  private val docsRoutes = docs[Task](
+    smithy.UserManagementService,
+    smithy.UserContactsService,
+    smithy.WahaService,
+  )
+
+  private def server(
+      config: ServerConfig,
+      routes: HttpRoutes[Task],
+  ) = for {
     emberServer <- EmberServerBuilder
       .default[Task]
       .withHost(config.host)
@@ -58,10 +76,15 @@ object HttpApp {
 
   val serverLayer = ZLayer.scoped {
     (for {
-      config        <- ZIO.service[GatewayServerConfig]
-      healthRoutes  <- healthRoutesResource
-      serviceRoutes <- serviceRoutesResource
-      servers       <- server(config.health, healthRoutes) &> server(config.service, serviceRoutes)
+      config         <- ZIO.service[GatewayServerConfig]
+      healthRoutes   <- healthRoutesResource
+      externalRoutes <- externalRoutesResource
+      internalRoutes <- internalRoutesResource
+      servers        <-
+        server(config.health, healthRoutes) &>
+          server(config.external, externalRoutes) &>
+          server(config.internal, internalRoutes) &>
+          server(config.docs, docsRoutes)
     } yield servers).forkScoped
   }
 }

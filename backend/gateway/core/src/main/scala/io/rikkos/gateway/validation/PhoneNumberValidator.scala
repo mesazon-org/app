@@ -4,7 +4,8 @@ import cats.data.*
 import cats.syntax.all.*
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
+import io.rikkos.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.rikkos.gateway.config.PhoneNumberValidatorConfig
 import zio.*
 
@@ -14,18 +15,23 @@ object PhoneNumberValidator {
   private def phoneNumberValidator(
       config: PhoneNumberValidatorConfig,
       phoneNumberUtil: PhoneNumberUtil,
-  ): DomainValidator[PhoneNumberParams, PhoneNumber] = { case (phoneRegion, phoneNationalNumber) =>
+  ): DomainValidator[PhoneNumberParams, PhoneNumberE164] = { case (phoneRegion, phoneNationalNumber) =>
     (for {
       _ <-
         if (config.supportedRegions.contains(phoneRegion.trim.toUpperCase)) ZIO.unit
         else
           ZIO.fail(
             NonEmptyChain(
-              (
-                phoneRegionFieldName,
+              InvalidFieldError(
+                "phoneRegion",
                 s"Phone region [$phoneRegion] provided is not supported, supported regions ${config.supportedRegions.mkString("[", ",", "]")}",
+                phoneRegion,
               ),
-              (phoneNationalNumberFieldName, "Phone national number could not be validated"),
+              InvalidFieldError(
+                "phoneNationalNumber",
+                "Phone national number could not be validated",
+                phoneNationalNumber,
+              ),
             )
           )
       phoneNumberRaw <- ZIO
@@ -38,9 +44,10 @@ object PhoneNumberValidator {
             )
           ) *> ZIO.succeed(
             NonEmptyChain(
-              (
-                phoneNationalNumberFieldName,
+              InvalidFieldError(
+                "phoneNationalNumber",
                 s"Phone national number [$phoneNationalNumber] provided with region [$phoneRegion] failed to parse, supported regions ${config.supportedRegions.mkString("[", ",", "]")}",
+                phoneNationalNumber,
               )
             )
           )
@@ -51,17 +58,18 @@ object PhoneNumberValidator {
         else
           ZIO.fail(
             NonEmptyChain(
-              (
-                phoneNationalNumberFieldName,
+              InvalidFieldError(
+                "phoneNationalNumber",
                 s"Phone national number [$phoneNationalNumber] raw [${phoneNumberRaw}] provided with region [$phoneRegion] failed to be validated, supported regions ${config.supportedRegions.mkString("[", ",", "]")}",
+                phoneNationalNumber,
               )
             )
           )
       phoneNumber <- ZIO
-        .fromEither(PhoneNumber.either(phoneNumberE164))
+        .fromEither(PhoneNumberE164.either(phoneNumberE164))
         .mapError(errorMessage =>
           NonEmptyChain(
-            (phoneNationalNumberFieldName, errorMessage)
+            InvalidFieldError("phoneNationalNumber", errorMessage, phoneNationalNumber)
           )
         )
     } yield phoneNumber).fold(_.invalid, _.valid)

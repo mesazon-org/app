@@ -3,10 +3,10 @@ package io.mesazon.waha
 import cats.data.NonEmptyList
 import cats.syntax.all.*
 import io.mesazon.waha.GroupsRequests.GroupNewParticipant
-import io.mesazon.waha.config.WahaConfig
-import io.mesazon.waha.domain.*
-import io.mesazon.waha.domain.input.*
-import io.mesazon.waha.domain.output.*
+import io.mesazon.waha.config.WahaClientConfig
+import io.rikkos.domain.waha.*
+import io.rikkos.domain.waha.input.*
+import io.rikkos.domain.waha.output.*
 import io.scalaland.chimney.dsl.*
 import sttp.client4.*
 import zio.*
@@ -14,7 +14,8 @@ import zio.interop.catz.*
 
 trait WahaClient {
   // Chatting API
-  def chattingSendMessage(input: ChattingMessageInput): IO[WahaError, Unit]
+  def chattingSendMessage(input: ChattingMessageInput): IO[WahaError, ChattingSendMessageOutput]
+  def chattingSendSeen(input: ChattingSeenInput): IO[WahaError, Unit]
 
   // Groups API
   def groupsCreate(input: GroupsCreateInput): IO[WahaError, GroupsCreateOutput]
@@ -28,7 +29,7 @@ object WahaClient {
 
   type UserAccountsCheckResult = (registered: List[UserAccountID], nonRegistered: List[UserAccountID])
 
-  private final class WahaClientImpl(config: WahaConfig)(using Backend[Task]) extends WahaClient {
+  private final class WahaClientImpl(config: WahaClientConfig)(using Backend[Task]) extends WahaClient {
     inline private val charactersPerWord = 5.0
 
     private val apiKeyHeader = getApiKeyHeader(config.apiKey)
@@ -121,6 +122,9 @@ object WahaClient {
         chatID: ChatID,
         messageText: MessageText,
     ): IO[WahaError, Unit] = for {
+      _ <- ZIO.logDebug(
+        s"Simulating typing for sessionID: [$sessionID], chatID [$chatID], messageText: [$messageText]"
+      )
       _             <- simulateHumanDelay
       startResponse <- ChattingRequests.startTyping(
         config.baseUri,
@@ -137,7 +141,7 @@ object WahaClient {
       _ <- ZIO.logDebug(s"Stop typing response: [$stopResponse]")
     } yield ()
 
-    inline private def sendMessage(input: ChattingMessageInput): IO[WahaError, Unit] =
+    inline private def sendMessage(input: ChattingMessageInput): IO[WahaError, ChattingSendMessageOutput] =
       for {
         _        <- ZIO.logDebug(s"Sending message [$input]")
         _        <- simulateHumanDelay
@@ -177,7 +181,7 @@ object WahaClient {
             )
         }
         _ <- ZIO.logDebug(s"Send message response: [$response]")
-      } yield ()
+      } yield response.body.transformInto[ChattingSendMessageOutput]
 
     inline private def inviteParticipantsPrivately(
         sessionID: SessionID,
@@ -367,7 +371,7 @@ object WahaClient {
         nonRegisteredUserAccountIDs = nonRegisteredUserAccountIDs,
       )
 
-    override def chattingSendMessage(input: ChattingMessageInput): IO[WahaError, Unit] = for {
+    override def chattingSendMessage(input: ChattingMessageInput): IO[WahaError, ChattingSendMessageOutput] = for {
       _      <- ZIO.logDebug(s"WahaClient.sendMessage called with input: [$input]")
       result <- sendMessage(input)
     } yield result
@@ -498,6 +502,17 @@ object WahaClient {
       groupsGetPictureResponse.body.pictureUrl,
       groupsGetParticipantsV2Response.body.participants.map(_.transformInto[GroupParticipant]),
     )
+
+    override def chattingSendSeen(input: ChattingSeenInput): IO[WahaError, Unit] = for {
+      _        <- ZIO.logDebug(s"Sending seen with input: [$input]")
+      _        <- simulateHumanDelay
+      response <- ChattingRequests.sendSeen(
+        config.baseUri,
+        apiKeyHeader,
+        ChattingRequests.ChattingSendSeenRequestBody(input.sessionID, input.chatID, input.messageIDs),
+      )
+      _ <- ZIO.logDebug(s"Send seen response: [$response]")
+    } yield ()
   }
 
   private def observed(service: WahaClient): WahaClient = service

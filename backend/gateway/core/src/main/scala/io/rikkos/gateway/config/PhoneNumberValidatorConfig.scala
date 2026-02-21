@@ -27,7 +27,7 @@ object PhoneNumberValidatorConfig {
               s"Config pass unsupported regions ${unsupportedRegions.mkString("[", ", ", "]")}",
             )
           )
-    } yield config)
+    } yield config.copy(supportedRegions = config.supportedRegions.map(_.trim.toUpperCase)))
 
   val live = deriveConfigLayer[PhoneNumberValidatorConfig]("validation") >>> supportedRegionsConfig
 }

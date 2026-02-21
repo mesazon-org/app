@@ -8,6 +8,8 @@ null
 .env.*.local
 **/.env
 
+**/postgres_data
+
 # Log files
 npm-debug.log*
 yarn-debug.log*
