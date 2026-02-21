@@ -3,9 +3,10 @@ package io.rikkos.gateway.repository
 import _root_.doobie.*
 import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
 import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.*
-import io.rikkos.gateway.query.UserDetailsQueries
-import io.rikkos.gateway.query.UserDetailsQueries.UpdateUserDetailsQuery
+import io.rikkos.domain.gateway.*
+import io.rikkos.gateway.repository.domain.UserDetailsRow
+import io.rikkos.gateway.repository.queries.UserDetailsQueries
+import io.rikkos.gateway.repository.queries.UserDetailsQueries.UpdateUserDetailsQuery
 import io.scalaland.chimney.dsl.*
 import org.postgresql.util.PSQLException
 import zio.*
@@ -16,6 +17,7 @@ trait UserRepository {
       email: Email,
       onboardUserDetails: OnboardUserDetails,
   ): IO[ServiceError.ConflictError.UserAlreadyExists, Unit]
+
   def updateUserDetails(
       userID: UserID,
       updateUserDetails: UpdateUserDetails,
@@ -40,7 +42,7 @@ object UserRepository {
           .transactionOrDie(
             UserDetailsQueries.insertUserDetailsQuery(
               onboardUserDetails
-                .into[UserDetailsTable]
+                .into[UserDetailsRow]
                 .withFieldConst(_.userID, userID)
                 .withFieldConst(_.email, email)
                 .withFieldConst(_.createdAt, CreatedAt(instantNow))

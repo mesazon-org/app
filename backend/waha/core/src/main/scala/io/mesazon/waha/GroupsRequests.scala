@@ -3,7 +3,8 @@ package io.mesazon.waha
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import io.github.iltotore.iron.jsoniter.given
-import io.mesazon.waha.domain.*
+import io.mesazon.waha.json.given
+import io.rikkos.domain.waha.*
 import sttp.client4.*
 import sttp.client4.jsoniter.*
 import sttp.model.*

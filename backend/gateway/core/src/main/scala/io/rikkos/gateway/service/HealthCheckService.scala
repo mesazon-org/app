@@ -1,6 +1,6 @@
 package io.rikkos.gateway.service
 
-import io.rikkos.domain.ServiceError
+import io.rikkos.domain.gateway.ServiceError
 import io.rikkos.gateway.repository.PingRepository
 import io.rikkos.gateway.{smithy, HttpErrorHandler}
 import zio.*

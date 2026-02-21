@@ -1,14 +1,15 @@
 package io.rikkos.gateway.it
 
 import fs2.io.net.Network
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
 import io.rikkos.gateway.it.GatewayApiSpec.Context
 import io.rikkos.gateway.it.client.GatewayApiClient
 import io.rikkos.gateway.it.client.GatewayApiClient.GatewayApiClientConfig
 import io.rikkos.gateway.it.codec.given
-import io.rikkos.gateway.query.{UserContactsQueries, UserDetailsQueries}
+import io.rikkos.gateway.repository.domain.{UserContactRow, UserDetailsRow}
+import io.rikkos.gateway.repository.queries.{UserContactsQueries, UserDetailsQueries}
 import io.rikkos.gateway.smithy
-import io.rikkos.gateway.utils.GatewayArbitraries
+import io.rikkos.gateway.utils.*
 import io.rikkos.test.postgresql.PostgreSQLTestClient
 import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.rikkos.testkit.base.*
@@ -21,10 +22,11 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 class GatewayApiSpec
-    extends ZWordSpecBase
-    with DockerComposeBase
-    with GatewayArbitraries
-    with IronRefinedTypeTransformer {
+    extends ZWordSpecBase,
+      DockerComposeBase,
+      SmithyArbitraries,
+      RepositoryArbitraries,
+      IronRefinedTypeTransformer {
 
   given Network[Task] = Network.forAsync[Task]
 
@@ -79,7 +81,7 @@ class GatewayApiSpec
           .value
 
         userDetailsTableResponse shouldBe onboardUserDetailsRequest
-          .into[UserDetailsTable]
+          .into[UserDetailsRow]
           .withFieldConst(_.phoneNumber, PhoneNumber.cy(onboardUserDetailsRequest.phoneNationalNumber))
           .withFieldConst(_.userID, UserID.assume("test"))
           .withFieldConst(_.email, Email.assume("eliot.martel@gmail.com"))
@@ -107,7 +109,7 @@ class GatewayApiSpec
 
     "/users/update" should {
       "return successfully when update user" in withContext { case Context(gatewayClient, postgresSQLClient) =>
-        val userDetailsTable = arbitrarySample[UserDetailsTable]
+        val userDetailsTable = arbitrarySample[UserDetailsRow]
           .copy(userID = UserID.assume("test"), email = Email.assume("eliot.martel@gmail.com"))
         val phoneNationalNumber      = "99123123"
         val phoneRegion              = "CY"
@@ -161,7 +163,7 @@ class GatewayApiSpec
           val userID              = UserID.assume("test")
           val userContactID       = arbitrarySample[UserContactID]
           val updateDisplayName   = DisplayName.assume("dummy")
-          val userDetailsTable    = arbitrarySample[UserDetailsTable].copy(userID = userID)
+          val userDetailsTable    = arbitrarySample[UserDetailsRow].copy(userID = userID)
           val existingUserContact = arbitrarySample[smithy.UpsertUserContactRequest]
             .copy(userContactID = Some(userContactID.value))
           val updateUserContact = existingUserContact
@@ -170,7 +172,7 @@ class GatewayApiSpec
             .copy(userContactID = None)
 
           val insertUserContactsTable = existingUserContact
-            .into[UserContactTable]
+            .into[UserContactRow]
             .withFieldComputed(_.userContactID, uc => UserContactID.assume(uc.userContactID.value))
             .withFieldConst(_.phoneNumber, PhoneNumber.cy(existingUserContact.phoneNationalNumber))
             .withFieldConst(_.userID, userID)
@@ -210,7 +212,7 @@ class GatewayApiSpec
           )
 
           newUserContactTable shouldBe insertUserContact
-            .into[UserContactTable]
+            .into[UserContactRow]
             .withFieldConst(_.userContactID, newUserContactTable.userContactID)
             .withFieldConst(_.userID, userID)
             .withFieldConst(_.phoneNumber, PhoneNumber.cy(insertUserContact.phoneNationalNumber))

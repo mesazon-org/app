@@ -2,11 +2,12 @@ package io.rikkos.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
 import io.github.gaelrenoux.tranzactio.DbException
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
 import io.rikkos.gateway.mock.*
-import io.rikkos.gateway.query.{UserContactsQueries, UserDetailsQueries}
 import io.rikkos.gateway.repository.UserContactsRepository
-import io.rikkos.gateway.utils.GatewayArbitraries
+import io.rikkos.gateway.repository.domain.{UserContactRow, UserDetailsRow}
+import io.rikkos.gateway.repository.queries.{UserContactsQueries, UserDetailsQueries}
+import io.rikkos.gateway.utils.RepositoryArbitraries
 import io.rikkos.test.postgresql.PostgreSQLTestClient
 import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.rikkos.testkit.base.{DockerComposeBase, ZWordSpecBase}
@@ -16,7 +17,7 @@ import zio.*
 import java.time.temporal.ChronoUnit
 import java.time.{Clock, Instant, ZoneOffset}
 
-class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerComposeBase {
+class UserContactsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
   override def dockerComposeFile: String = "./src/test/resources/compose.yaml"
 
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
@@ -58,7 +59,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
         val userID           = arbitrarySample[UserID]
         val userContactID1   = arbitrarySample[UserContactID]
         val userContactID2   = arbitrarySample[UserContactID]
-        val userDetailsTable = arbitrarySample[UserDetailsTable]
+        val userDetailsTable = arbitrarySample[UserDetailsRow]
           .copy(userID = userID)
         val upsertUserContact1 = arbitrarySample[UpsertUserContact]
           .copy(userContactID = Some(userContactID1))
@@ -84,7 +85,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
           .zioValue
 
         val insertUserContactsTable = NonEmptyChunk(upsertUserContact1, upsertUserContact2).map(
-          _.into[UserContactTable]
+          _.into[UserContactRow]
             .withFieldComputed(_.userContactID, _.userContactID.value)
             .withFieldConst(_.userID, userID)
             .withFieldConst(_.createdAt, CreatedAt(now))
@@ -124,7 +125,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
           upsertUserContact3_1,
           upsertUserContact4_1,
         ).map {
-          _.into[UserContactTable]
+          _.into[UserContactRow]
             .withFieldComputed(_.userContactID, _.userContactID.value)
             .withFieldConst(_.userID, userID)
             .withFieldConst(_.createdAt, CreatedAt(now))
@@ -138,7 +139,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
           val now              = Instant.now().truncatedTo(ChronoUnit.MILLIS)
           val userID           = arbitrarySample[UserID]
           val userContactID    = arbitrarySample[UserContactID]
-          val userDetailsTable = arbitrarySample[UserDetailsTable]
+          val userDetailsTable = arbitrarySample[UserDetailsRow]
             .copy(userID = userID)
           val upsertUserContact = arbitrarySample[UpsertUserContact]
             .copy(userContactID = Some(userContactID))
@@ -153,7 +154,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
             .zioValue
 
           val insertUserContact = upsertUserContact
-            .into[UserContactTable]
+            .into[UserContactRow]
             .withFieldComputed(_.userContactID, _.userContactID.value)
             .withFieldConst(_.userID, userID)
             .withFieldConst(_.createdAt, CreatedAt(now))
@@ -214,7 +215,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
           val clockNow         = Clock.fixed(now, ZoneOffset.UTC)
           val userID           = arbitrarySample[UserID]
           val userContactID    = arbitrarySample[UserContactID]
-          val userDetailsTable = arbitrarySample[UserDetailsTable]
+          val userDetailsTable = arbitrarySample[UserDetailsRow]
             .copy(userID = userID)
           val upsertUserContact = arbitrarySample[UpsertUserContact]
             .copy(userContactID = Some(userContactID))
@@ -234,7 +235,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
             .zioValue
 
           val insertUserContactsTable = upsertUserContact
-            .into[UserContactTable]
+            .into[UserContactRow]
             .withFieldComputed(_.userContactID, _.userContactID.value)
             .withFieldConst(_.userID, userID)
             .withFieldConst(_.createdAt, CreatedAt(now))
@@ -261,7 +262,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
             updatePhoneNumberUserContact,
             insertedNonConflictedUserContact,
           ).map {
-            _.into[UserContactTable]
+            _.into[UserContactRow]
               .withFieldComputed(_.userContactID, _.userContactID.value)
               .withFieldConst(_.userID, userID)
               .withFieldConst(_.createdAt, CreatedAt(now))
@@ -274,7 +275,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
         (client: PostgreSQLTestClient) =>
           val userID           = arbitrarySample[UserID]
           val userContactID    = arbitrarySample[UserContactID]
-          val userDetailsTable = arbitrarySample[UserDetailsTable]
+          val userDetailsTable = arbitrarySample[UserDetailsRow]
             .copy(userID = userID)
           val upsertUserContact = arbitrarySample[UpsertUserContact]
             .copy(userContactID = Some(userContactID))
@@ -305,7 +306,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
           val now              = Instant.now().truncatedTo(ChronoUnit.MILLIS)
           val userID           = arbitrarySample[UserID]
           val userContactID    = arbitrarySample[UserContactID]
-          val userDetailsTable = arbitrarySample[UserDetailsTable]
+          val userDetailsTable = arbitrarySample[UserDetailsRow]
             .copy(userID = userID)
           val upsertUserContact = arbitrarySample[UpsertUserContact]
             .copy(userContactID = Some(userContactID))
@@ -323,7 +324,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
             .zioValue
 
           val insertUserContactsTable = upsertUserContact
-            .into[UserContactTable]
+            .into[UserContactRow]
             .withFieldComputed(_.userContactID, _.userContactID.value)
             .withFieldConst(_.userID, userID)
             .withFieldConst(_.createdAt, CreatedAt(now))
@@ -349,7 +350,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
       "fail to insert multiple user contact with the same phone number and user in one query" in withContext {
         (client: PostgreSQLTestClient) =>
           val userID           = arbitrarySample[UserID]
-          val userDetailsTable = arbitrarySample[UserDetailsTable]
+          val userDetailsTable = arbitrarySample[UserDetailsRow]
             .copy(userID = userID)
           val conflictUserContact1 = arbitrarySample[UpsertUserContact]
             .copy(userContactID = None)
@@ -383,7 +384,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
           val now              = Instant.now().truncatedTo(ChronoUnit.MILLIS)
           val userID           = arbitrarySample[UserID]
           val userContactID    = arbitrarySample[UserContactID]
-          val userDetailsTable = arbitrarySample[UserDetailsTable]
+          val userDetailsTable = arbitrarySample[UserDetailsRow]
             .copy(userID = userID)
           val upsertUserContact1 = arbitrarySample[UpsertUserContact]
             .copy(userContactID = Some(userContactID))
@@ -403,7 +404,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Dock
             .zioValue
 
           val insertUserContactsTable = upsertUserContact1
-            .into[UserContactTable]
+            .into[UserContactRow]
             .withFieldComputed(_.userContactID, _.userContactID.value)
             .withFieldConst(_.userID, userID)
             .withFieldConst(_.createdAt, CreatedAt(now))

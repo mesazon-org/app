@@ -5,9 +5,10 @@ import doobie.Transactor
 import io.github.gaelrenoux.tranzactio.DatabaseOps
 import io.github.gaelrenoux.tranzactio.doobie.Connection
 import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.*
-import io.rikkos.gateway.query.UserContactsQueries
-import io.rikkos.gateway.query.UserContactsQueries.UpdateUserContactQuery
+import io.rikkos.domain.gateway.*
+import io.rikkos.gateway.repository.domain.UserContactRow
+import io.rikkos.gateway.repository.queries.UserContactsQueries
+import io.rikkos.gateway.repository.queries.UserContactsQueries.UpdateUserContactQuery
 import io.rikkos.generator.IDGenerator
 import io.scalaland.chimney.dsl.*
 import zio.*
@@ -45,7 +46,7 @@ object UserContactsRepository {
             .map(UserContactID.applyUnsafe)
             .map(userContactID =>
               insertUserContact
-                .into[UserContactTable]
+                .into[UserContactRow]
                 .withFieldConst(_.userContactID, userContactID)
                 .withFieldConst(_.userID, userID)
                 .withFieldConst(_.createdAt, CreatedAt(now))

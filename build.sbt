@@ -97,6 +97,7 @@ lazy val backendWahaModuleRoot = createBackendWahaModule(None)
   .aggregate(backendWahaModuleCore, backendWahaModuleIt)
 
 lazy val backendWahaModuleCore = createBackendWahaModule(Some("core"))
+  .dependsOn(backendDomainModule)
   .withDependencies(
     Dependencies.chimney,
     Dependencies.iron,
@@ -136,6 +137,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
   .dependsOn(backendDomainModule)
   .dependsOn(backendClockModule)
   .dependsOn(backendGeneratorModule)
+  .dependsOn(backendWahaModuleCore)
   .dependsOn(backendTestKitModule % Test)
   .dependsOn(backendPostgreSQLTestModule % Test)
   .settings(DockerSettings.compileScope)

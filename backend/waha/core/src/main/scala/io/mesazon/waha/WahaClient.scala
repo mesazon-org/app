@@ -4,9 +4,9 @@ import cats.data.NonEmptyList
 import cats.syntax.all.*
 import io.mesazon.waha.GroupsRequests.GroupNewParticipant
 import io.mesazon.waha.config.WahaConfig
-import io.mesazon.waha.domain.*
-import io.mesazon.waha.domain.input.*
-import io.mesazon.waha.domain.output.*
+import io.rikkos.domain.waha.*
+import io.rikkos.domain.waha.input.*
+import io.rikkos.domain.waha.output.*
 import io.scalaland.chimney.dsl.*
 import sttp.client4.*
 import zio.*

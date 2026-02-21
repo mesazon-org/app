@@ -2,8 +2,8 @@ package io.rikkos.gateway
 
 import cats.data.*
 import cats.syntax.all.*
-import io.rikkos.domain.ServiceError
-import io.rikkos.domain.ServiceError.BadRequestError.InvalidFieldError
+import io.rikkos.domain.gateway.ServiceError
+import io.rikkos.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import zio.ZIO
 
 package object validation {

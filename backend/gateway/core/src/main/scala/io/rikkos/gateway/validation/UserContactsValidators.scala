@@ -1,7 +1,7 @@
 package io.rikkos.gateway.validation
 
 import cats.syntax.all.*
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
 import io.rikkos.gateway.smithy
 import io.rikkos.gateway.validation.PhoneNumberValidator.PhoneNumberParams
 import zio.*

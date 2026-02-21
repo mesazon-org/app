@@ -1,6 +1,6 @@
 package io.rikkos.gateway.unit
 
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
 import io.rikkos.gateway.auth.AuthorizationService
 import io.rikkos.gateway.mock.*
 import io.rikkos.gateway.smithy
@@ -9,7 +9,7 @@ import org.http4s.*
 import org.http4s.headers.Authorization
 import zio.*
 
-class AuthorizationServiceSpec extends ZWordSpecBase, DomainArbitraries {
+class AuthorizationServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
   "AuthorizationService" when {
     "authorize" should {

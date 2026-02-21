@@ -3,8 +3,8 @@ package io.rikkos.gateway.mock
 import cats.data.ValidatedNec
 import cats.syntax.all.*
 import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.*
-import io.rikkos.domain.ServiceError.BadRequestError.InvalidFieldError
+import io.rikkos.domain.gateway.*
+import io.rikkos.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.rikkos.gateway.auth.*
 import io.rikkos.gateway.repository.{PingRepository, UserContactsRepository, UserRepository}
 import io.rikkos.gateway.validation.*
@@ -82,6 +82,13 @@ def idGeneratorMockLive: ULayer[IDGenerator] =
 
     new IDGenerator {
       override def generate: UIO[String] = ZIO.succeed(atomicInt.incrementAndGet().toString)
+    }
+  }
+
+def idGeneratorMockConstLive(id: String): ULayer[IDGenerator] =
+  ZLayer.succeed {
+    new IDGenerator {
+      override def generate: UIO[String] = ZIO.succeed(id)
     }
   }
 

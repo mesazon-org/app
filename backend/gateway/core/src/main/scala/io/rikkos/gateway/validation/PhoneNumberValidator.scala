@@ -4,7 +4,7 @@ import cats.data.*
 import cats.syntax.all.*
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
 import io.rikkos.gateway.config.PhoneNumberValidatorConfig
 import zio.*
 

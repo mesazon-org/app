@@ -2,16 +2,17 @@ package io.rikkos.gateway.unit
 
 import io.github.iltotore.iron.*
 import io.rikkos.domain.*
-import io.rikkos.domain.ServiceError.BadRequestError
+import io.rikkos.domain.gateway.*
+import io.rikkos.domain.gateway.ServiceError.BadRequestError
 import io.rikkos.gateway.mock.phoneNumberValidatorMockLive
 import io.rikkos.gateway.smithy
-import io.rikkos.gateway.utils.GatewayArbitraries
+import io.rikkos.gateway.utils.SmithyArbitraries
 import io.rikkos.gateway.validation.{ServiceValidator, UserManagementValidators}
 import io.rikkos.testkit.base.*
 import io.scalaland.chimney.dsl.*
 import zio.ZIO
 
-class UserManagementValidatorsSpec extends ZWordSpecBase, GatewayArbitraries {
+class UserManagementValidatorsSpec extends ZWordSpecBase, SmithyArbitraries {
 
   "UserManagementValidators" when {
     "onboardUserDetailsRequestValidator" should {

@@ -25,6 +25,38 @@ trait IronRefinedTypeArbitraries {
       .map(_.refineUnsafe[NonEmptyTrimmed])
   }
 
+  given arbWahaIDPredicate: Arbitrary[String :| WahaIDPredicate] = Arbitrary {
+    Gen
+      .nonEmptyStringOf(Gen.alphaNumChar)
+      .map(_.trim.toLowerCase)
+      .map(_ + "@c.us")
+      .map(_.refineUnsafe[WahaIDPredicate])
+  }
+
+  given arbWahaGroupIDPredicate: Arbitrary[String :| WahaGroupIDPredicate] = Arbitrary {
+    Gen
+      .nonEmptyStringOf(Gen.alphaNumChar)
+      .map(_.trim)
+      .map(_ + "@g.us")
+      .map(_.refineUnsafe[WahaGroupIDPredicate])
+  }
+
+  given arbWahaUserIDPredicate: Arbitrary[String :| WahaUserIDPredicate] = Arbitrary {
+    Gen
+      .nonEmptyStringOf(Gen.alphaNumChar)
+      .map(_.trim)
+      .map(_ + "@lid")
+      .map(_.refineUnsafe[WahaUserIDPredicate])
+  }
+
+  given arbWhatsappIDPredicate: Arbitrary[String :| WhatsappIDPredicate] = Arbitrary {
+    Gen
+      .nonEmptyStringOf(Gen.alphaNumChar)
+      .map(_.trim.toLowerCase)
+      .map(_ + "@s.whatsapp.net")
+      .map(_.refineUnsafe[WhatsappIDPredicate])
+  }
+
   given [WrappedType](using
       mirror: RefinedType.Mirror[WrappedType],
       arb: Arbitrary[mirror.IronType],

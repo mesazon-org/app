@@ -1,7 +1,7 @@
 package io.rikkos.gateway.config
 
 import com.comcast.ip4s.*
-import io.rikkos.domain.AppName
+import io.rikkos.domain.gateway.AppName
 import zio.*
 import zio.config.*
 import zio.config.magnolia.{deriveConfig, DeriveConfig}

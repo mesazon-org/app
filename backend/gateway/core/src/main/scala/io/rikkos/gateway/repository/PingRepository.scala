@@ -4,7 +4,7 @@ import doobie.Transactor
 import doobie.implicits.*
 import io.github.gaelrenoux.tranzactio.DatabaseOps
 import io.github.gaelrenoux.tranzactio.doobie.{tzio, TranzactIO}
-import io.rikkos.domain.ServiceError
+import io.rikkos.domain.gateway.ServiceError
 import zio.*
 
 trait PingRepository {

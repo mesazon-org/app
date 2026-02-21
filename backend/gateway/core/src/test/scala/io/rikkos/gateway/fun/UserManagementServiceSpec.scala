@@ -1,15 +1,15 @@
 package io.rikkos.gateway.fun
 
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
 import io.rikkos.gateway.mock.*
 import io.rikkos.gateway.service.UserManagementService
 import io.rikkos.gateway.smithy
-import io.rikkos.gateway.utils.GatewayArbitraries
+import io.rikkos.gateway.utils.SmithyArbitraries
 import io.rikkos.gateway.validation.*
 import io.rikkos.testkit.base.*
 import zio.*
 
-class UserManagementServiceSpec extends ZWordSpecBase, GatewayArbitraries {
+class UserManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries {
 
   "UserManagementService" when {
     "onboardUser" should {

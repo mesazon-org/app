@@ -1,6 +1,6 @@
 package io.rikkos.gateway
 
-import io.rikkos.domain.ServiceError
+import io.rikkos.domain.gateway.ServiceError
 import zio.*
 
 object HttpErrorHandler {

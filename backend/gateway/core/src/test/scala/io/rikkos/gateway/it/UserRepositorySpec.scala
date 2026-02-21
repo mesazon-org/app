@@ -2,11 +2,12 @@ package io.rikkos.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
 import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
 import io.rikkos.gateway.mock.timeProviderMockLive
-import io.rikkos.gateway.query.*
 import io.rikkos.gateway.repository.UserRepository
-import io.rikkos.gateway.utils.GatewayArbitraries
+import io.rikkos.gateway.repository.domain.UserDetailsRow
+import io.rikkos.gateway.repository.queries.UserDetailsQueries
+import io.rikkos.gateway.utils.RepositoryArbitraries
 import io.rikkos.test.postgresql.PostgreSQLTestClient
 import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.rikkos.testkit.base.*
@@ -16,7 +17,7 @@ import zio.{Clock as _, *}
 import java.time.temporal.ChronoUnit
 import java.time.{Clock, Instant, ZoneOffset}
 
-class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerComposeBase {
+class UserRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
 
   override def dockerComposeFile: String = "./src/test/resources/compose.yaml"
 
@@ -68,7 +69,7 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
           .transactionOrDie(UserDetailsQueries.getUserDetailsQuery(userID))
           .zioValue shouldBe Some(
           onboardUserDetails
-            .into[UserDetailsTable]
+            .into[UserDetailsRow]
             .withFieldConst(_.userID, userID)
             .withFieldConst(_.email, email)
             .withFieldConst(_.createdAt, CreatedAt(now))
@@ -99,7 +100,7 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
 
     "updateUserDetails" should {
       "successfully update user details" in withContext { (client: PostgreSQLTestClient) =>
-        val usersDetailsTable = arbitrarySample[UserDetailsTable]
+        val usersDetailsTable = arbitrarySample[UserDetailsRow]
         val now               = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow          = Clock.fixed(now, ZoneOffset.UTC)
         val updateUserDetails = arbitrarySample[UpdateUserDetails]

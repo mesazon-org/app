@@ -2,7 +2,7 @@ package io.rikkos.gateway
 
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.{AppName, AuthedUser}
+import io.rikkos.domain.gateway.{AppName, AuthedUser}
 import io.rikkos.gateway.auth.*
 import io.rikkos.gateway.config.*
 import io.rikkos.gateway.middleware.*
