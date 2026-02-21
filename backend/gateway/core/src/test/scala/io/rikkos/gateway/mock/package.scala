@@ -1,89 +1,237 @@
-package io.rikkos.gateway.mock
+package io.rikkos.gateway
 
 import cats.data.ValidatedNec
 import cats.syntax.all.*
+import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
+import io.github.gaelrenoux.tranzactio.DbException
+import io.mesazon.waha.WahaClient
 import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.*
-import io.rikkos.domain.ServiceError.BadRequestError.InvalidFieldError
+import io.rikkos.domain.gateway.*
+import io.rikkos.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.rikkos.domain.waha
+import io.rikkos.domain.waha.WahaError
+import io.rikkos.domain.waha.input.ChattingSeenInput
 import io.rikkos.gateway.auth.*
-import io.rikkos.gateway.repository.{PingRepository, UserContactsRepository, UserRepository}
+import io.rikkos.gateway.clients.OpenAIClient
+import io.rikkos.gateway.repository.*
+import io.rikkos.gateway.repository.domain.*
 import io.rikkos.gateway.validation.*
 import io.rikkos.gateway.validation.PhoneNumberValidator.PhoneNumberParams
 import io.rikkos.generator.IDGenerator
+import io.rikkos.testkit.base.ZIOTestOps
 import org.http4s.Request
+import sttp.ai.openai.requests.completions.chat.message
+import sttp.tapir.Schema
 import zio.*
+import zio.stream.*
 
-import java.time.Clock
+import java.time.{Clock, Instant}
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
-def pingRepositoryMockLive(): ULayer[PingRepository] = ZLayer.succeed(
-  new PingRepository {
-    override def ping(): IO[ServiceError.ServiceUnavailableError.DatabaseUnavailableError, Unit] = ZIO.unit
-  }
-)
+package object mock extends ZIOTestOps {
 
-def userRepositoryMockLive(
-    insertUserDetailsCounterRef: Ref[Int],
-    updateUserDetailsCounterRef: Ref[Int],
-    maybeError: Option[Throwable] = None,
-): ULayer[UserRepository] =
-  ZLayer.succeed(
-    new UserRepository {
-
-      override def insertUserDetails(
-          userID: UserID,
-          email: Email,
-          userDetails: OnboardUserDetails,
-      ): IO[ServiceError.ConflictError.UserAlreadyExists, Unit] =
-        maybeError.fold(insertUserDetailsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
-
-      override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
-        maybeError.fold(updateUserDetailsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
+  def pingRepositoryMockLive(): ULayer[PingRepository] = ZLayer.succeed(
+    new PingRepository {
+      override def ping(): IO[ServiceError.ServiceUnavailableError.DatabaseUnavailableError, Unit] = ZIO.unit
     }
   )
 
-def userContactsRepositoryMockLive(
-    upsertUserContactsCounterRef: Ref[Int],
-    maybeError: Option[Throwable] = None,
-): ULayer[UserContactsRepository] = ZLayer.succeed(
-  new UserContactsRepository {
-    override def upsertUserContacts(userID: UserID, upsertUserContacts: NonEmptyChunk[UpsertUserContact]): UIO[Unit] =
-      maybeError.fold(upsertUserContactsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
-  }
-)
+  def userRepositoryMockLive(
+      insertUserDetailsCounterRef: Ref[Int],
+      updateUserDetailsCounterRef: Ref[Int],
+      maybeError: Option[Throwable] = None,
+  ): ULayer[UserRepository] =
+    ZLayer.succeed(
+      new UserRepository {
 
-def authorizationStateMockLive(authedUser: AuthedUser): ULayer[AuthorizationState] =
-  ZLayer.succeed(
-    new AuthorizationState {
-      override def get(): UIO[AuthedUser]                 = ZIO.succeed(authedUser)
-      override def set(authedUser: AuthedUser): UIO[Unit] = ZIO.unit
+        override def insertUserDetails(
+            userID: UserID,
+            email: Email,
+            userDetails: OnboardUserDetails,
+        ): IO[ServiceError.ConflictError.UserAlreadyExists, Unit] =
+          maybeError.fold(insertUserDetailsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
+
+        override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
+          maybeError.fold(updateUserDetailsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
+      }
+    )
+
+  def userContactsRepositoryMockLive(
+      upsertUserContactsCounterRef: Ref[Int],
+      maybeError: Option[Throwable] = None,
+  ): ULayer[UserContactsRepository] = ZLayer.succeed(
+    new UserContactsRepository {
+      override def upsertUserContacts(userID: UserID, upsertUserContacts: NonEmptyChunk[UpsertUserContact]): UIO[Unit] =
+        maybeError.fold(upsertUserContactsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
     }
   )
 
-def authorizationServiceMockLive(maybeError: Option[Throwable] = None): ULayer[AuthorizationService[Throwable]] =
-  ZLayer.succeed(
-    new AuthorizationService[Throwable] {
-      override def auth(request: Request[Task]): Task[Unit] =
-        maybeError.fold(ZIO.unit)(ZIO.fail(_))
+  def authorizationStateMockLive(authedUser: AuthedUser): ULayer[AuthorizationState] =
+    ZLayer.succeed(
+      new AuthorizationState {
+        override def get(): UIO[AuthedUser] = ZIO.succeed(authedUser)
+
+        override def set(authedUser: AuthedUser): UIO[Unit] = ZIO.unit
+      }
+    )
+
+  def authorizationServiceMockLive(maybeError: Option[Throwable] = None): ULayer[AuthorizationService[Throwable]] =
+    ZLayer.succeed(
+      new AuthorizationService[Throwable] {
+        override def auth(request: Request[Task]): Task[Unit] =
+          maybeError.fold(ZIO.unit)(ZIO.fail(_))
+      }
+    )
+
+  def phoneNumberValidatorMockLive(): ULayer[DomainValidator[PhoneNumberParams, PhoneNumber]] =
+    ZLayer.succeed(
+      new DomainValidator[PhoneNumberParams, PhoneNumber] {
+        override def validate(rawData: PhoneNumberParams): UIO[ValidatedNec[InvalidFieldError, PhoneNumber]] =
+          ZIO.succeed(PhoneNumber.assume(rawData.phoneNationalNumber).validNec)
+      }
+    )
+
+  def idGeneratorMockLive: ULayer[IDGenerator] =
+    ZLayer.succeed {
+      val atomicInt = new AtomicInteger(0)
+
+      new IDGenerator {
+        override def generate: UIO[String] = ZIO.succeed(atomicInt.incrementAndGet().toString)
+      }
     }
-  )
 
-def phoneNumberValidatorMockLive(): ULayer[DomainValidator[PhoneNumberParams, PhoneNumber]] =
-  ZLayer.succeed(
-    new DomainValidator[PhoneNumberParams, PhoneNumber] {
-      override def validate(rawData: PhoneNumberParams): UIO[ValidatedNec[InvalidFieldError, PhoneNumber]] =
-        ZIO.succeed(PhoneNumber.assume(rawData.phoneNationalNumber).validNec)
+  def idGeneratorMockConstLive(id: String): ULayer[IDGenerator] =
+    ZLayer.succeed {
+      new IDGenerator {
+        override def generate: UIO[String] = ZIO.succeed(id)
+      }
     }
-  )
 
-def idGeneratorMockLive: ULayer[IDGenerator] =
-  ZLayer.succeed {
-    val atomicInt = new AtomicInteger(0)
+  def timeProviderMockLive(clock: Clock): ULayer[TimeProvider] =
+    ZLayer.succeed(clock) >>> TimeProvider.live
 
-    new IDGenerator {
-      override def generate: UIO[String] = ZIO.succeed(atomicInt.incrementAndGet().toString)
-    }
-  }
+  def wahaClientMockLive(
+      chattingSendSeenCounterRef: Ref[Int] = Ref.make(0).zioValue,
+      chattingSendMessageCounterRef: Ref[Int] = Ref.make(0).zioValue,
+  ): ULayer[WahaClient] =
+    ZLayer.succeed(
+      new WahaClient {
+        override def chattingSendSeen(input: ChattingSeenInput): IO[WahaError, Unit] =
+          chattingSendSeenCounterRef.incrementAndGet *> ZIO.unit
 
-def timeProviderMockLive(clock: Clock): ULayer[TimeProvider] =
-  ZLayer.succeed(clock) >>> TimeProvider.live
+        override def chattingSendMessage(input: waha.input.ChattingMessageInput): IO[waha.WahaError, Unit] =
+          chattingSendMessageCounterRef.incrementAndGet.unit
+
+        override def groupsCreate(
+            input: waha.input.GroupsCreateInput
+        ): IO[waha.WahaError, waha.output.GroupsCreateOutput] = ???
+
+        override def groupsUpdate(
+            input: waha.input.GroupsUpdateInput
+        ): IO[waha.WahaError, waha.output.GroupsUpdateOutput] = ???
+
+        override def groupsLeave(input: waha.input.GroupsLeaveInput): IO[waha.WahaError, Unit] = ???
+
+        override def groupsInviteCode(
+            input: waha.input.GroupsInviteCodeInput
+        ): IO[waha.WahaError, waha.output.GroupsInviteCodeOutput] = ???
+
+        override def groupsGetInfo(
+            input: waha.input.GroupsGetInfoInput
+        ): IO[waha.WahaError, waha.output.GroupsGetInfoOutput] = ???
+
+      }
+    )
+
+  def wahaRepositoryMockLive(
+      wahaUserRows: Map[UserID, WahaUserRow] = Map.empty,
+      wahaUserActivityRows: Map[UserID, WahaUserActivityRow] = Map.empty,
+      wahaUserMessageRows: Map[UserID, List[WahaUserMessageRow]] = Map.empty,
+      createOrGetWahaUserCounterRef: Ref[Int] = Ref.make(0).zioValue,
+      getWahaUserWithWahaUserIdCounterRef: Ref[Int] = Ref.make(0).zioValue,
+      getWahaUserCounterRef: Ref[Int] = Ref.make(0).zioValue,
+      upsertWahaUserActivityCounterRef: Ref[Int] = Ref.make(0).zioValue,
+      getUserWahaUserActivityCounterRef: Ref[Int] = Ref.make(0).zioValue,
+      insertWahaUserMessageCounterRef: Ref[Int] = Ref.make(0).zioValue,
+      getWahaUserMessagesCounterRef: Ref[Int] = Ref.make(0).zioValue,
+      getWahaUsersActivityWaitingForAssistantReplyCounterRef: Ref[Int] = Ref.make(0).zioValue,
+  ): ULayer[WahaRepository] =
+    ZLayer.succeed(
+      new WahaRepository {
+        override def createOrGetWahaUser(
+            wahaUserID: waha.UserID,
+            fullName: FullName,
+            wahaUserAccountID: waha.UserAccountID,
+            wahaChatID: waha.ChatID,
+            phoneNumber: PhoneNumber,
+        ): IO[DbException, WahaUserRow] =
+          createOrGetWahaUserCounterRef.incrementAndGet *> ZIO.succeed(
+            WahaUserRow(
+              UserID.assume(UUID.randomUUID().toString),
+              fullName,
+              wahaUserID,
+              wahaUserAccountID,
+              wahaChatID,
+              phoneNumber,
+              CreatedAt.assume(Instant.now()),
+              UpdatedAt.assume(Instant.now()),
+            )
+          )
+
+        override def getWahaUserWithWahaUserId(
+            wahaUserID: waha.UserID
+        ): IO[DbException, Option[WahaUserRow]] =
+          getWahaUserWithWahaUserIdCounterRef.incrementAndGet *> ZIO.succeed(
+            wahaUserRows.collectFirst { case (_, row) if row.wahaUserID == wahaUserID => row }
+          )
+
+        override def getWahaUser(userID: UserID): IO[DbException, Option[WahaUserRow]] =
+          getWahaUserCounterRef.incrementAndGet *> ZIO.succeed(
+            wahaUserRows.get(userID)
+          )
+
+        override def upsertWahaUserActivity(
+            userID: UserID,
+            lastMessageID: Option[waha.MessageID],
+            isWaitingAssistantReply: Boolean,
+            forceUpdate: Boolean,
+        ): IO[DbException, Unit] = upsertWahaUserActivityCounterRef.incrementAndGet *> ZIO.unit
+
+        override def getUserWahaUserActivity(userID: UserID): IO[DbException, Option[WahaUserActivityRow]] =
+          getUserWahaUserActivityCounterRef.incrementAndGet *> ZIO.succeed(wahaUserActivityRows.get(userID))
+
+        override def insertWahaUserMessage(
+            userID: UserID,
+            messageID: waha.MessageID,
+            message: String,
+            isAssistant: Boolean,
+        ): IO[DbException, Unit] = insertWahaUserMessageCounterRef.incrementAndGet *> ZIO.unit
+
+        override def getWahaUserMessages(userID: UserID): Stream[DbException, WahaUserMessageRow] =
+          ZStream.fromZIO(getWahaUserMessagesCounterRef.incrementAndGet) *> ZStream.fromIterable(
+            wahaUserMessageRows.get(userID).toList.flatten
+          )
+
+        override def getWahaUsersActivityWaitingForAssistantReply: Stream[DbException, WahaUserActivityRow] =
+          ZStream.fromZIO(getWahaUsersActivityWaitingForAssistantReplyCounterRef.incrementAndGet) *> ZStream
+            .fromIterable(wahaUserActivityRows.values.filter(_.isWaitingAssistantReply))
+      }
+    )
+
+  def openAIClientMockLive(
+      assistantResponse: AssistantResponse,
+      sendMessageCounterRef: Ref[Int] = Ref.make(0).zioValue,
+      messagesCounterRef: Ref[Int] = Ref.make(0).zioValue,
+  ): ULayer[OpenAIClient] =
+    ZLayer.succeed(
+      new OpenAIClient {
+        override def sendMessage[A](
+            messages: Seq[message.Message]
+        )(using Schema[A], JsonValueCodec[A]): IO[ServiceError, A] =
+          messagesCounterRef.set(messages.size) *> sendMessageCounterRef.incrementAndGet *> ZIO.succeed(
+            assistantResponse.asInstanceOf[A]
+          )
+      }
+    )
+}

@@ -1,7 +1,7 @@
 package io.rikkos.gateway.auth
 
-import io.rikkos.domain.*
-import io.rikkos.domain.ServiceError.*
+import io.rikkos.domain.gateway.*
+import io.rikkos.domain.gateway.ServiceError.*
 import io.rikkos.gateway.HttpErrorHandler
 import org.http4s.*
 import org.http4s.headers.Authorization

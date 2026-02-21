@@ -18,6 +18,8 @@ ThisBuild / run / fork                := true
 ThisBuild / Test / parallelExecution  := true
 ThisBuild / Test / testForkedParallel := true
 
+ThisBuild / resolvers ++= CustomResolvers.resolvers
+
 lazy val backendDirName = "backend"
 
 def createBackendModule(root: String)(subModule: Option[String]): Project = {
@@ -97,6 +99,7 @@ lazy val backendWahaModuleRoot = createBackendWahaModule(None)
   .aggregate(backendWahaModuleCore, backendWahaModuleIt)
 
 lazy val backendWahaModuleCore = createBackendWahaModule(Some("core"))
+  .dependsOn(backendDomainModule)
   .withDependencies(
     Dependencies.chimney,
     Dependencies.iron,
@@ -115,14 +118,6 @@ lazy val backendWahaModuleCore = createBackendWahaModule(Some("core"))
 lazy val backendWahaModuleIt = createBackendWahaModule(Some("it"))
   .dependsOn(backendTestKitModule)
   .dependsOn(backendWahaModuleCore % Test)
-  .settings(
-    test := Def
-      .sequential(
-        backendGatewayCore / Docker / publishLocal,
-        Test / test,
-      )
-      .value
-  )
 
 // Gateway
 lazy val createBackendGatewayModule = createBackendModule("gateway") _
@@ -136,6 +131,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
   .dependsOn(backendDomainModule)
   .dependsOn(backendClockModule)
   .dependsOn(backendGeneratorModule)
+  .dependsOn(backendWahaModuleCore)
   .dependsOn(backendTestKitModule % Test)
   .dependsOn(backendPostgreSQLTestModule % Test)
   .settings(DockerSettings.compileScope)
@@ -163,6 +159,14 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.doobieTranzactio,
     Dependencies.hikariCP,
     Dependencies.libphonenumber,
+    Dependencies.sttpOpenAI,
+    Dependencies.sttpOpenAIZIO,
+    Dependencies.sttpIron,
+    Dependencies.sttpClient4Core,
+    Dependencies.sttpClient4Slf4j,
+    Dependencies.sttpClient4ZIO,
+    Dependencies.sttpClient4Jsoniter,
+    Dependencies.libSignalClient,
   )
 
 lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))

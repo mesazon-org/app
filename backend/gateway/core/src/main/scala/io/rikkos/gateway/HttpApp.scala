@@ -28,6 +28,7 @@ object HttpApp {
     serverMiddleware      <- ZIO.service[ServerEndpointMiddleware.Simple[Task]]
     userManagementService <- ZIO.service[smithy.UserManagementService[Task]]
     userContactsService   <- ZIO.service[smithy.UserContactsService[Task]]
+    wahaService           <- ZIO.service[smithy.WahaService[Task]]
     docRoutes = docs[Task](smithy.UserManagementService, smithy.UserContactsService)
     userManagementRoutes <- SimpleRestJsonBuilder
       .routes(userManagementService)
@@ -39,7 +40,12 @@ object HttpApp {
       .middleware(serverMiddleware)
       .resource
       .toScopedZIO
-  } yield userManagementRoutes <+> userContactsRoutes <+> docRoutes
+    wahaRoutes <- SimpleRestJsonBuilder
+      .routes(wahaService)
+      .middleware(serverMiddleware)
+      .resource
+      .toScopedZIO
+  } yield userManagementRoutes <+> userContactsRoutes <+> wahaRoutes <+> docRoutes
 
   private def server(config: ServerConfig, routes: HttpRoutes[Task]) = for {
     emberServer <- EmberServerBuilder

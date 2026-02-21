@@ -3,7 +3,7 @@ package io.rikkos.gateway.unit
 import cats.data.NonEmptyChain
 import cats.syntax.all.*
 import com.google.i18n.phonenumbers.PhoneNumberUtil
-import io.rikkos.domain.PhoneNumber
+import io.rikkos.domain.gateway.PhoneNumber
 import io.rikkos.gateway.config.PhoneNumberValidatorConfig
 import io.rikkos.gateway.validation.*
 import io.rikkos.gateway.validation.PhoneNumberValidator.PhoneNumberParams

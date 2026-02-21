@@ -1,13 +1,17 @@
 package io.rikkos.gateway
 
-import com.google.i18n.phonenumbers.PhoneNumberUtil
+import com.google.i18n.phonenumbers.*
+import io.mesazon.waha.WahaClient
 import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.{AppName, AuthedUser}
+import io.rikkos.domain.gateway.*
 import io.rikkos.gateway.auth.*
+import io.rikkos.gateway.clients.*
 import io.rikkos.gateway.config.*
 import io.rikkos.gateway.middleware.*
 import io.rikkos.gateway.repository.*
+import io.rikkos.gateway.repository.queries.WahaQueries
 import io.rikkos.gateway.service.*
+import io.rikkos.gateway.stream.*
 import io.rikkos.gateway.validation.*
 import io.rikkos.generator.IDGenerator
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -28,22 +32,30 @@ object Main extends ZIOAppDefault {
       SLF4JBridgeHandler.install()
     }) ++ Runtime.setConfigProvider(TypesafeConfigProvider.fromResourcePath())
 
-  private val app: Task[Any] = HttpApp.serverLayer.launch
+  private val app: Task[Any] = (HttpApp.serverLayer.launch &> StreamApp.streamsLayer.launch)
     .provide(
       AppNameLive, // Used across components for metadata
+
+      // Utils
       TimeProvider.liveSystemUTC,
       IDGenerator.uuidGeneratorLive,
+      ZLayer.succeed(PhoneNumberUtil.getInstance()),
 
-      // Http
+      // Services
       HealthCheckService.live,
       UserManagementService.live,
       UserContactsService.live,
+      WahaService.live,
 
       // Repository
       PostgresTransactor.live,
       PingRepository.live,
       UserRepository.live,
       UserContactsRepository.live,
+      WahaRepository.live,
+
+      // Queries
+      WahaQueries.live,
 
       // Auth
       AuthorizationService.live,
@@ -56,15 +68,26 @@ object Main extends ZIOAppDefault {
       DatabaseConfig.live,
       GatewayServerConfig.live,
       PhoneNumberValidatorConfig.live,
-
-      // Phone Number Util
-      ZLayer.succeed(PhoneNumberUtil.getInstance()),
+      ReplyingToMessagesCronJobConfig.live,
+      wahaConfigLive,
+      RepositoryConfig.live,
+      HttpClientConfig.live,
+      OpenAIConfig.live,
 
       // Validators
       PhoneNumberValidator.phoneNumberValidatorLive,
       UserManagementValidators.onboardUserDetailsRequestValidatorLive,
       UserManagementValidators.updateUserDetailsRequestValidatorLive,
       UserContactsValidators.upsertUserContactsValidatorLive,
+
+      // Clients
+      SttpBackend.live,
+      WahaClient.live,
+      OpenAIClient.openAILive,
+      OpenAIClient.live,
+
+      // Streams
+      ReplyingToMessagesCronJobStream.live,
 
       // FiberRefs
       ZLayer
