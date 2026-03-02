@@ -27,7 +27,7 @@ object UserContactsQueries {
       userContactID: UserContactID,
   )
 
-  def insertUserContacts(userContactsTable: NonEmptyChunk[UserContactRow]): TranzactIO[Unit] = {
+  def insertUserContacts(userContactsRow: NonEmptyChunk[UserContactRow]): TranzactIO[Unit] = {
     val query = show"""
       | INSERT INTO
       | local_schema.users_contacts(
