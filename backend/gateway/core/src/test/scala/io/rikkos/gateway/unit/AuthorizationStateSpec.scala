@@ -1,12 +1,12 @@
 package io.rikkos.gateway.unit
 
-import io.rikkos.domain.AuthedUser
+import io.rikkos.domain.gateway.AuthedUser
 import io.rikkos.gateway.auth.AuthorizationState
-import io.rikkos.testkit.base.{DomainArbitraries, ZWordSpecBase}
+import io.rikkos.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import org.scalactic.anyvals.PosInt
 import zio.*
 
-class AuthorizationStateSpec extends ZWordSpecBase, DomainArbitraries {
+class AuthorizationStateSpec extends ZWordSpecBase, GatewayArbitraries {
 
   // Overriding the default value of minSuccessful to 1 generated state doesn't affect Authorization results at all.
   override def minSuccessful: PosInt = PosInt(1)

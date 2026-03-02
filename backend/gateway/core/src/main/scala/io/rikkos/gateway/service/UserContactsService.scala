@@ -1,6 +1,6 @@
 package io.rikkos.gateway.service
 
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
 import io.rikkos.gateway.auth.AuthorizationState
 import io.rikkos.gateway.repository.UserContactsRepository
 import io.rikkos.gateway.validation.ServiceValidator

@@ -1,6 +1,6 @@
 package io.rikkos.gateway
 
-import io.rikkos.domain.ServiceError
+import io.rikkos.domain.gateway.ServiceError
 import zio.*
 
 object HttpErrorHandler {
@@ -35,6 +35,9 @@ object HttpErrorHandler {
       case error: ServiceError.ConflictError =>
         logWarning(error)
           .map(_ => smithy.Conflict())
+      case error: ServiceError.InternalServerError =>
+        logWarning(error)
+          .map(_ => smithy.InternalServerError())
       case error: ServiceError.ServiceUnavailableError =>
         logWarning(error)
           .map(_ => smithy.ServiceUnavailable())
