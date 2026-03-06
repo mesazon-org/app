@@ -20,7 +20,7 @@
     "envalid": "^8.1.0",
     "expo": "~53.0.27",
     "expo-contacts": "~14.2.6",
-    "expo-dev-client": "~5.2.4",
+    "expo-dev-client": "^55.0.11",
     "expo-status-bar": "~2.2.3",
     "expo-system-ui": "~5.0.11",
     "i18next": "^25.3.2",
@@ -31,7 +31,8 @@
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-url-polyfill": "^3.0.0",
-    "react-native-vector-icons": "^10.3.0"
+    "react-native-vector-icons": "^10.3.0",
+    "tamagui": "^2.0.0-rc.22"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
