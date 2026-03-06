@@ -26,6 +26,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "74bbe689-4a7e-4c70-95d8-71583245635c"
+      }
+    },
+    "owner": "eak-cy"
   }
 }
