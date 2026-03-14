@@ -18,8 +18,6 @@ ThisBuild / run / fork                := true
 ThisBuild / Test / parallelExecution  := true
 ThisBuild / Test / testForkedParallel := true
 
-ThisBuild / resolvers ++= CustomResolvers.resolvers
-
 lazy val backendDirName = "backend"
 
 def createBackendModule(root: String)(subModule: Option[String]): Project = {
@@ -167,7 +165,6 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.sttpClient4Slf4j,
     Dependencies.sttpClient4ZIO,
     Dependencies.sttpClient4Jsoniter,
-    Dependencies.libSignalClient,
   )
 
 lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))

@@ -1,8 +1,5 @@
 package io.rikkos.domain.gateway
 
-import cats.Show
-import cats.implicits.showInterpolator
-
 sealed abstract class ServiceError(
     val errorType: String,
     val message: String,
@@ -50,7 +47,7 @@ object ServiceError {
     }
 
     case class FormValidationError(invalidFields: Seq[InvalidFieldError])
-        extends BadRequestError(show"request validation error ${invalidFields.mkString("[", ",", "]")}")
+        extends BadRequestError(s"request validation error ${invalidFields.mkString("[", ",", "]")}")
   }
 
   object UnauthorizedError {

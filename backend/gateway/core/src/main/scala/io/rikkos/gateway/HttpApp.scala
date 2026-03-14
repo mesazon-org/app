@@ -22,7 +22,7 @@ object HttpApp {
   private val dsl     = Http4sDsl[Task]
   import dsl.*
 
-  private def buildRoutes[Alg[_[_, _, _, _, _]]](
+  private def buildRoute[Alg[_[_, _, _, _, _]]](
       impl: FunctorAlgebra[Alg, Task],
       middleware: Option[ServerEndpointMiddleware[Task]] = None,
   )(using smithy4s.Service[Alg]): ZIO[Scope, Throwable, HttpRoutes[Task]] =
@@ -34,20 +34,20 @@ object HttpApp {
 
   private val healthRoutesResource = for {
     healthCheckService <- ZIO.service[smithy.HealthCheckService[Task]]
-    healthCheckRoute   <- buildRoutes(healthCheckService)
+    healthCheckRoute   <- buildRoute(healthCheckService)
   } yield healthCheckRoute
 
   private val externalRoutesResource = for {
     serverMiddleware      <- ZIO.service[ServerEndpointMiddleware.Simple[Task]]
     userManagementService <- ZIO.service[smithy.UserManagementService[Task]]
     userContactsService   <- ZIO.service[smithy.UserContactsService[Task]]
-    userManagementRoute   <- buildRoutes(userManagementService, Some(serverMiddleware))
-    userContactsRoute     <- buildRoutes(userContactsService, Some(serverMiddleware))
+    userManagementRoute   <- buildRoute(userManagementService, Some(serverMiddleware))
+    userContactsRoute     <- buildRoute(userContactsService, Some(serverMiddleware))
   } yield userManagementRoute <+> userContactsRoute
 
   private val internalRoutesResource = for {
     wahaService <- ZIO.service[smithy.WahaService[Task]]
-    routes      <- buildRoutes(wahaService)
+    routes      <- buildRoute(wahaService)
   } yield routes
 
   private val docsRoutes = docs[Task](

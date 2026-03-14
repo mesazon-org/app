@@ -100,7 +100,7 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, RepositoryAr
 
     "updateUserDetails" should {
       "successfully update user details" in withContext { (client: PostgreSQLTestClient) =>
-        val usersDetailsTable = arbitrarySample[UserDetailsRow]
+        val usersDetailsRow   = arbitrarySample[UserDetailsRow]
         val now               = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow          = Clock.fixed(now, ZoneOffset.UTC)
         val updateUserDetails = arbitrarySample[UpdateUserDetails]
@@ -109,25 +109,25 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, RepositoryAr
           .provide(UserRepository.live, ZLayer.succeed(client.database), timeProviderMockLive(clockNow))
           .zioValue
 
-        client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(usersDetailsTable)).zioValue
+        client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(usersDetailsRow)).zioValue
 
-        userRepository.updateUserDetails(usersDetailsTable.userID, updateUserDetails).zioValue
+        userRepository.updateUserDetails(usersDetailsRow.userID, updateUserDetails).zioValue
 
-        val updatedUserDetailsTable = usersDetailsTable.copy(
-          firstName = updateUserDetails.firstName.getOrElse(usersDetailsTable.firstName),
-          lastName = updateUserDetails.lastName.getOrElse(usersDetailsTable.lastName),
-          phoneNumber = updateUserDetails.phoneNumber.getOrElse(usersDetailsTable.phoneNumber),
-          addressLine1 = updateUserDetails.addressLine1.getOrElse(usersDetailsTable.addressLine1),
-          addressLine2 = updateUserDetails.addressLine2.orElse(usersDetailsTable.addressLine2),
-          city = updateUserDetails.city.getOrElse(usersDetailsTable.city),
-          postalCode = updateUserDetails.postalCode.getOrElse(usersDetailsTable.postalCode),
-          company = updateUserDetails.company.getOrElse(usersDetailsTable.company),
+        val updatedUserDetailsRow = usersDetailsRow.copy(
+          firstName = updateUserDetails.firstName.getOrElse(usersDetailsRow.firstName),
+          lastName = updateUserDetails.lastName.getOrElse(usersDetailsRow.lastName),
+          phoneNumber = updateUserDetails.phoneNumber.getOrElse(usersDetailsRow.phoneNumber),
+          addressLine1 = updateUserDetails.addressLine1.getOrElse(usersDetailsRow.addressLine1),
+          addressLine2 = updateUserDetails.addressLine2.orElse(usersDetailsRow.addressLine2),
+          city = updateUserDetails.city.getOrElse(usersDetailsRow.city),
+          postalCode = updateUserDetails.postalCode.getOrElse(usersDetailsRow.postalCode),
+          company = updateUserDetails.company.getOrElse(usersDetailsRow.company),
           updatedAt = UpdatedAt(now),
         )
 
         client.database
-          .transactionOrDie(UserDetailsQueries.getUserDetailsQuery(usersDetailsTable.userID))
-          .zioValue shouldBe Some(updatedUserDetailsTable)
+          .transactionOrDie(UserDetailsQueries.getUserDetailsQuery(usersDetailsRow.userID))
+          .zioValue shouldBe Some(updatedUserDetailsRow)
       }
 
       "successfully update occurs on user that is not found, entry should remain empty" in withContext {

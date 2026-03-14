@@ -10,5 +10,5 @@ case class WahaMessage(
     wahaWhatsAppPhoneNumber: waha.WhatsAppPhoneNumber,
     wahaFullName: waha.FullName,
     wahaMessageText: waha.MessageText,
-    phoneNumberE164: PhoneNumberE164,
+    phoneNumber: PhoneNumberE164,
 )

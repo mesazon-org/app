@@ -29,7 +29,6 @@ object Dependencies {
   lazy val sttpIronV            = "1.13.9"
   lazy val jsoniterV            = "2.38.9"
   lazy val sttpAIV              = "0.4.6"
-  lazy val signalV              = "0.87.5"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -109,7 +108,4 @@ object Dependencies {
   // STTP AI
   lazy val sttpOpenAI    = "com.softwaremill.sttp.ai" %% "openai" % sttpAIV
   lazy val sttpOpenAIZIO = "com.softwaremill.sttp.ai" %% "zio"    % sttpAIV
-
-  // Signal Client
-  lazy val libSignalClient = "org.signal" % "libsignal-client" % signalV
 }

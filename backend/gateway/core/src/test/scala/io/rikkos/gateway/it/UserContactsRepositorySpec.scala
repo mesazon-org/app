@@ -54,12 +54,12 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
   "UserContactsRepository" when {
     "upsertUserContacts" should {
       "successfully upsert user contacts" in withContext { (client: PostgreSQLTestClient) =>
-        val now              = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow         = Clock.fixed(now, ZoneOffset.UTC)
-        val userID           = arbitrarySample[UserID]
-        val userContactID1   = arbitrarySample[UserContactID]
-        val userContactID2   = arbitrarySample[UserContactID]
-        val userDetailsTable = arbitrarySample[UserDetailsRow]
+        val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow       = Clock.fixed(now, ZoneOffset.UTC)
+        val userID         = arbitrarySample[UserID]
+        val userContactID1 = arbitrarySample[UserContactID]
+        val userContactID2 = arbitrarySample[UserContactID]
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(userID = userID)
         val upsertUserContact1 = arbitrarySample[UpsertUserContact]
           .copy(userContactID = Some(userContactID1))
@@ -84,7 +84,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
           )
           .zioValue
 
-        val insertUserContactsTable = NonEmptyChunk(upsertUserContact1, upsertUserContact2).map(
+        val insertUserContactRows = NonEmptyChunk(upsertUserContact1, upsertUserContact2).map(
           _.into[UserContactRow]
             .withFieldComputed(_.userContactID, _.userContactID.value)
             .withFieldConst(_.userID, userID)
@@ -94,10 +94,10 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
         )
 
         // Insert user for user_id foreign key constraint
-        client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable)).zioValue
+        client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
         client.database
-          .transactionOrDie(UserContactsQueries.insertUserContacts(insertUserContactsTable))
+          .transactionOrDie(UserContactsQueries.insertUserContacts(insertUserContactRows))
           .zioValue
 
         userContactsRepository
@@ -136,10 +136,10 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
 
       "successfully update only relevant fields when receive an update" in withContext {
         (client: PostgreSQLTestClient) =>
-          val now              = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val userID           = arbitrarySample[UserID]
-          val userContactID    = arbitrarySample[UserContactID]
-          val userDetailsTable = arbitrarySample[UserDetailsRow]
+          val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val userID         = arbitrarySample[UserID]
+          val userContactID  = arbitrarySample[UserContactID]
+          val userDetailsRow = arbitrarySample[UserDetailsRow]
             .copy(userID = userID)
           val upsertUserContact = arbitrarySample[UpsertUserContact]
             .copy(userContactID = Some(userContactID))
@@ -162,13 +162,13 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
             .transform
 
           // Insert user for user_id foreign key constraint
-          client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable)).zioValue
+          client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
           client.database
             .transactionOrDie(UserContactsQueries.insertUserContacts(NonEmptyChunk(insertUserContact)))
             .zioValue
 
-          val insertedUserContactTable = client.database
+          val insertedUserContactRow = client.database
             .transactionOrDie(UserContactsQueries.getUserContacts(userID))
             .zioValue
             .head
@@ -189,33 +189,33 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
           // Upsert user contact with updated fields
           userContactsRepository.upsertUserContacts(userID, NonEmptyChunk(updatedUpsertUserContact)).zioValue
 
-          val updatedUserContactTable = client.database
+          val updatedUserContactRow = client.database
             .transactionOrDie(UserContactsQueries.getUserContacts(userID))
             .zioValue
             .head
 
-          updatedUserContactTable shouldBe insertedUserContactTable.copy(
-            displayName = updatedUserContactTable.displayName,
-            firstName = updatedUserContactTable.firstName,
-            phoneNumber = updatedUserContactTable.phoneNumber,
-            lastName = updatedUserContactTable.lastName,
-            company = updatedUserContactTable.company,
-            email = updatedUserContactTable.email,
-            addressLine1 = updatedUserContactTable.addressLine1,
-            addressLine2 = updatedUserContactTable.addressLine2,
-            city = updatedUserContactTable.city,
-            postalCode = updatedUserContactTable.postalCode,
-            updatedAt = updatedUserContactTable.updatedAt,
+          updatedUserContactRow shouldBe insertedUserContactRow.copy(
+            displayName = updatedUserContactRow.displayName,
+            firstName = updatedUserContactRow.firstName,
+            phoneNumber = updatedUserContactRow.phoneNumber,
+            lastName = updatedUserContactRow.lastName,
+            company = updatedUserContactRow.company,
+            email = updatedUserContactRow.email,
+            addressLine1 = updatedUserContactRow.addressLine1,
+            addressLine2 = updatedUserContactRow.addressLine2,
+            city = updatedUserContactRow.city,
+            postalCode = updatedUserContactRow.postalCode,
+            updatedAt = updatedUserContactRow.updatedAt,
           )
       }
 
       "successfully update user contacts when update for user contact phone number occurs along with insert of new user contact with already inserted phone number" in withContext {
         (client: PostgreSQLTestClient) =>
-          val now              = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val clockNow         = Clock.fixed(now, ZoneOffset.UTC)
-          val userID           = arbitrarySample[UserID]
-          val userContactID    = arbitrarySample[UserContactID]
-          val userDetailsTable = arbitrarySample[UserDetailsRow]
+          val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val clockNow       = Clock.fixed(now, ZoneOffset.UTC)
+          val userID         = arbitrarySample[UserID]
+          val userContactID  = arbitrarySample[UserContactID]
+          val userDetailsRow = arbitrarySample[UserDetailsRow]
             .copy(userID = userID)
           val upsertUserContact = arbitrarySample[UpsertUserContact]
             .copy(userContactID = Some(userContactID))
@@ -234,7 +234,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
             )
             .zioValue
 
-          val insertUserContactsTable = upsertUserContact
+          val insertUserContactsRow = upsertUserContact
             .into[UserContactRow]
             .withFieldComputed(_.userContactID, _.userContactID.value)
             .withFieldConst(_.userID, userID)
@@ -243,10 +243,10 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
             .transform
 
           // Insert user for user_id foreign key constraint
-          client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable)).zioValue
+          client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
           client.database
-            .transactionOrDie(UserContactsQueries.insertUserContacts(NonEmptyChunk(insertUserContactsTable)))
+            .transactionOrDie(UserContactsQueries.insertUserContacts(NonEmptyChunk(insertUserContactsRow)))
             .zioValue
 
           userContactsRepository
@@ -273,9 +273,9 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
 
       "successfully update occurs on user contact that is not found, entry should remain empty" in withContext {
         (client: PostgreSQLTestClient) =>
-          val userID           = arbitrarySample[UserID]
-          val userContactID    = arbitrarySample[UserContactID]
-          val userDetailsTable = arbitrarySample[UserDetailsRow]
+          val userID         = arbitrarySample[UserID]
+          val userContactID  = arbitrarySample[UserContactID]
+          val userDetailsRow = arbitrarySample[UserDetailsRow]
             .copy(userID = userID)
           val upsertUserContact = arbitrarySample[UpsertUserContact]
             .copy(userContactID = Some(userContactID))
@@ -290,7 +290,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
             .zioValue
 
           // Insert user for user_id foreign key constraint
-          client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable)).zioValue
+          client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
           userContactsRepository
             .upsertUserContacts(userID, NonEmptyChunk(upsertUserContact))
@@ -303,10 +303,10 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
 
       "fail to insert new user contacts when a user contact with the same phone number and user id already exist" in withContext {
         (client: PostgreSQLTestClient) =>
-          val now              = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val userID           = arbitrarySample[UserID]
-          val userContactID    = arbitrarySample[UserContactID]
-          val userDetailsTable = arbitrarySample[UserDetailsRow]
+          val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val userID         = arbitrarySample[UserID]
+          val userContactID  = arbitrarySample[UserContactID]
+          val userDetailsRow = arbitrarySample[UserDetailsRow]
             .copy(userID = userID)
           val upsertUserContact = arbitrarySample[UpsertUserContact]
             .copy(userContactID = Some(userContactID))
@@ -323,7 +323,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
             )
             .zioValue
 
-          val insertUserContactsTable = upsertUserContact
+          val insertUserContactsRow = upsertUserContact
             .into[UserContactRow]
             .withFieldComputed(_.userContactID, _.userContactID.value)
             .withFieldConst(_.userID, userID)
@@ -332,10 +332,10 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
             .transform
 
           // Insert user for user_id foreign key constraint
-          client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable)).zioValue
+          client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
           client.database
-            .transactionOrDie(UserContactsQueries.insertUserContacts(NonEmptyChunk(insertUserContactsTable)))
+            .transactionOrDie(UserContactsQueries.insertUserContacts(NonEmptyChunk(insertUserContactsRow)))
             .zioValue
 
           userContactsRepository
@@ -349,8 +349,8 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
 
       "fail to insert multiple user contact with the same phone number and user in one query" in withContext {
         (client: PostgreSQLTestClient) =>
-          val userID           = arbitrarySample[UserID]
-          val userDetailsTable = arbitrarySample[UserDetailsRow]
+          val userID         = arbitrarySample[UserID]
+          val userDetailsRow = arbitrarySample[UserDetailsRow]
             .copy(userID = userID)
           val conflictUserContact1 = arbitrarySample[UpsertUserContact]
             .copy(userContactID = None)
@@ -368,7 +368,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
             .zioValue
 
           // Insert user for user_id foreign key constraint
-          client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable)).zioValue
+          client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
           userContactsRepository
             .upsertUserContacts(userID, NonEmptyChunk(conflictUserContact1, conflictUserContact2))
@@ -381,10 +381,10 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
 
       "fail to update user contact if conflicted user contact is received" in withContext {
         (client: PostgreSQLTestClient) =>
-          val now              = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val userID           = arbitrarySample[UserID]
-          val userContactID    = arbitrarySample[UserContactID]
-          val userDetailsTable = arbitrarySample[UserDetailsRow]
+          val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val userID         = arbitrarySample[UserID]
+          val userContactID  = arbitrarySample[UserContactID]
+          val userDetailsRow = arbitrarySample[UserDetailsRow]
             .copy(userID = userID)
           val upsertUserContact1 = arbitrarySample[UpsertUserContact]
             .copy(userContactID = Some(userContactID))
@@ -403,7 +403,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
             )
             .zioValue
 
-          val insertUserContactsTable = upsertUserContact1
+          val insertUserContactsRow = upsertUserContact1
             .into[UserContactRow]
             .withFieldComputed(_.userContactID, _.userContactID.value)
             .withFieldConst(_.userID, userID)
@@ -412,10 +412,10 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
             .transform
 
           // Insert user for user_id foreign key constraint
-          client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable)).zioValue
+          client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
           client.database
-            .transactionOrDie(UserContactsQueries.insertUserContacts(NonEmptyChunk(insertUserContactsTable)))
+            .transactionOrDie(UserContactsQueries.insertUserContacts(NonEmptyChunk(insertUserContactsRow)))
             .zioValue
 
           userContactsRepository
@@ -428,7 +428,7 @@ class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repo
 
           client.database
             .transactionOrDie(UserContactsQueries.getUserContacts(userID))
-            .zioValue should contain theSameElementsAs Vector(insertUserContactsTable)
+            .zioValue should contain theSameElementsAs Vector(insertUserContactsRow)
       }
 
       "fail to insert user contact for a user with user id that doesn't existing" in withContext {
