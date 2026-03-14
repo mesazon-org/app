@@ -2,11 +2,12 @@ package io.rikkos.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
 import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
 import io.rikkos.gateway.mock.timeProviderMockLive
-import io.rikkos.gateway.query.*
 import io.rikkos.gateway.repository.UserRepository
-import io.rikkos.gateway.utils.GatewayArbitraries
+import io.rikkos.gateway.repository.domain.UserDetailsRow
+import io.rikkos.gateway.repository.queries.UserDetailsQueries
+import io.rikkos.gateway.utils.RepositoryArbitraries
 import io.rikkos.test.postgresql.PostgreSQLTestClient
 import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.rikkos.testkit.base.*
@@ -16,7 +17,7 @@ import zio.{Clock as _, *}
 import java.time.temporal.ChronoUnit
 import java.time.{Clock, Instant, ZoneOffset}
 
-class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerComposeBase {
+class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, RepositoryArbitraries, DockerComposeBase {
 
   override def dockerComposeFile: String = "./src/test/resources/compose.yaml"
 
@@ -68,7 +69,7 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
           .transactionOrDie(UserDetailsQueries.getUserDetailsQuery(userID))
           .zioValue shouldBe Some(
           onboardUserDetails
-            .into[UserDetailsTable]
+            .into[UserDetailsRow]
             .withFieldConst(_.userID, userID)
             .withFieldConst(_.email, email)
             .withFieldConst(_.createdAt, CreatedAt(now))
@@ -99,7 +100,7 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
 
     "updateUserDetails" should {
       "successfully update user details" in withContext { (client: PostgreSQLTestClient) =>
-        val usersDetailsTable = arbitrarySample[UserDetailsTable]
+        val usersDetailsRow   = arbitrarySample[UserDetailsRow]
         val now               = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow          = Clock.fixed(now, ZoneOffset.UTC)
         val updateUserDetails = arbitrarySample[UpdateUserDetails]
@@ -108,25 +109,25 @@ class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, DockerCompos
           .provide(UserRepository.live, ZLayer.succeed(client.database), timeProviderMockLive(clockNow))
           .zioValue
 
-        client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(usersDetailsTable)).zioValue
+        client.database.transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(usersDetailsRow)).zioValue
 
-        userRepository.updateUserDetails(usersDetailsTable.userID, updateUserDetails).zioValue
+        userRepository.updateUserDetails(usersDetailsRow.userID, updateUserDetails).zioValue
 
-        val updatedUserDetailsTable = usersDetailsTable.copy(
-          firstName = updateUserDetails.firstName.getOrElse(usersDetailsTable.firstName),
-          lastName = updateUserDetails.lastName.getOrElse(usersDetailsTable.lastName),
-          phoneNumber = updateUserDetails.phoneNumber.getOrElse(usersDetailsTable.phoneNumber),
-          addressLine1 = updateUserDetails.addressLine1.getOrElse(usersDetailsTable.addressLine1),
-          addressLine2 = updateUserDetails.addressLine2.orElse(usersDetailsTable.addressLine2),
-          city = updateUserDetails.city.getOrElse(usersDetailsTable.city),
-          postalCode = updateUserDetails.postalCode.getOrElse(usersDetailsTable.postalCode),
-          company = updateUserDetails.company.getOrElse(usersDetailsTable.company),
+        val updatedUserDetailsRow = usersDetailsRow.copy(
+          firstName = updateUserDetails.firstName.getOrElse(usersDetailsRow.firstName),
+          lastName = updateUserDetails.lastName.getOrElse(usersDetailsRow.lastName),
+          phoneNumber = updateUserDetails.phoneNumber.getOrElse(usersDetailsRow.phoneNumber),
+          addressLine1 = updateUserDetails.addressLine1.getOrElse(usersDetailsRow.addressLine1),
+          addressLine2 = updateUserDetails.addressLine2.orElse(usersDetailsRow.addressLine2),
+          city = updateUserDetails.city.getOrElse(usersDetailsRow.city),
+          postalCode = updateUserDetails.postalCode.getOrElse(usersDetailsRow.postalCode),
+          company = updateUserDetails.company.getOrElse(usersDetailsRow.company),
           updatedAt = UpdatedAt(now),
         )
 
         client.database
-          .transactionOrDie(UserDetailsQueries.getUserDetailsQuery(usersDetailsTable.userID))
-          .zioValue shouldBe Some(updatedUserDetailsTable)
+          .transactionOrDie(UserDetailsQueries.getUserDetailsQuery(usersDetailsRow.userID))
+          .zioValue shouldBe Some(updatedUserDetailsRow)
       }
 
       "successfully update occurs on user that is not found, entry should remain empty" in withContext {
