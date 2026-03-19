@@ -1,7 +1,7 @@
 package io.rikkos.gateway.repository.domain
 
-import io.rikkos.domain.gateway.*
-import io.rikkos.domain.waha
+import io.mesazon.domain.gateway.*
+import io.mesazon.domain.waha
 
 case class WahaUserMessageRow(
     userID: UserID,

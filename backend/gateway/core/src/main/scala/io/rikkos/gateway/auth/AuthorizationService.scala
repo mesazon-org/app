@@ -1,7 +1,6 @@
 package io.rikkos.gateway.auth
 
-import io.rikkos.domain.gateway.*
-import io.rikkos.domain.gateway.ServiceError.*
+import io.mesazon.domain.gateway.*
 import io.rikkos.gateway.HttpErrorHandler
 import org.http4s.*
 import org.http4s.headers.Authorization
@@ -20,7 +19,7 @@ object AuthorizationService {
           .get[`Authorization`]
           .collect { case Authorization(Credentials.Token(AuthScheme.Bearer, token)) => token }
         _          <- ZIO.logDebug(s"Bearer token: [$maybeBearerToken]")
-        _          <- ZIO.fromOption(maybeBearerToken).mapError(_ => UnauthorizedError.TokenMissing)
+        _          <- ZIO.fromOption(maybeBearerToken).mapError(_ => ServiceError.UnauthorizedError.TokenMissing)
         authedUser <- ZIO.succeed(AuthedUser(UserID.assume("test"), Email.assume("eliot.martel@gmail.com")))
         _          <- state.set(authedUser)
       } yield ()

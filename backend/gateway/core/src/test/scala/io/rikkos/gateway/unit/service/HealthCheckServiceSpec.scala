@@ -1,9 +1,9 @@
 package io.rikkos.gateway.unit.service
 
+import io.mesazon.testkit.base.ZWordSpecBase
 import io.rikkos.gateway.mock.*
 import io.rikkos.gateway.service.HealthCheckService
 import io.rikkos.gateway.smithy
-import io.rikkos.testkit.base.ZWordSpecBase
 import zio.*
 
 class HealthCheckServiceSpec extends ZWordSpecBase {

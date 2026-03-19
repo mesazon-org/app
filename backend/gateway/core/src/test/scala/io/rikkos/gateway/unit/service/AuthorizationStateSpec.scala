@@ -1,8 +1,8 @@
 package io.rikkos.gateway.unit.service
 
-import io.rikkos.domain.gateway.AuthedUser
+import io.mesazon.domain.gateway.AuthedUser
+import io.mesazon.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import io.rikkos.gateway.auth.AuthorizationState
-import io.rikkos.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import org.scalactic.anyvals.PosInt
 import zio.*
 

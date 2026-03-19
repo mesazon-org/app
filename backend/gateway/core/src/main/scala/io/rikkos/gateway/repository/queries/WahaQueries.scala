@@ -4,8 +4,8 @@ import doobie.implicits.*
 import doobie.postgres.implicits.*
 import doobie.util.fragment.Fragment
 import io.github.gaelrenoux.tranzactio.doobie.*
-import io.rikkos.domain.gateway.*
-import io.rikkos.domain.waha
+import io.mesazon.domain.gateway.*
+import io.mesazon.domain.waha
 import io.rikkos.gateway.config.RepositoryConfig
 import io.rikkos.gateway.repository.domain.*
 import zio.*

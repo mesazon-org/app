@@ -1,7 +1,7 @@
 package io.rikkos.gateway.utils
 
+import io.mesazon.testkit.base.IronRefinedTypeArbitraries
 import io.rikkos.gateway.repository.domain.*
-import io.rikkos.testkit.base.IronRefinedTypeArbitraries
 import org.scalacheck.{Arbitrary, Gen}
 
 trait RepositoryArbitraries extends IronRefinedTypeArbitraries {

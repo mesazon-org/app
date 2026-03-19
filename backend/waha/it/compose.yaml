@@ -10,5 +10,8 @@ services:
       "--global-response-templating",
       "--disable-gzip",
       "--async-response-enabled" ,
+      "--no-request-journal",
+      "--disable-request-logging",
+      "--disable-banner",
       "--verbose"
     ]

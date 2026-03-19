@@ -1,12 +1,12 @@
 package io.rikkos.gateway.unit.stream
 
-import io.rikkos.domain.gateway.*
+import io.mesazon.domain.gateway.*
+import io.mesazon.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import io.rikkos.gateway.config.ReplyingToMessagesCronJobConfig
 import io.rikkos.gateway.mock.*
 import io.rikkos.gateway.repository.domain.*
 import io.rikkos.gateway.stream.ReplyingToMessagesCronJobStream
 import io.rikkos.gateway.utils.RepositoryArbitraries
-import io.rikkos.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import zio.{Clock as _, *}
 
 import java.time.temporal.ChronoUnit

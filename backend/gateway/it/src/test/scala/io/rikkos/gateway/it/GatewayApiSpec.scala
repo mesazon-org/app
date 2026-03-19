@@ -1,7 +1,10 @@
 package io.rikkos.gateway.it
 
 import fs2.io.net.Network
-import io.rikkos.domain.gateway.*
+import io.mesazon.domain.*
+import io.mesazon.domain.gateway.*
+import io.mesazon.test.postgresql.PostgreSQLTestClient
+import io.mesazon.testkit.base.{DockerComposeBase, IronRefinedTypeTransformer, ZWordSpecBase}
 import io.rikkos.gateway.it.GatewayApiSpec.Context
 import io.rikkos.gateway.it.client.GatewayApiClient
 import io.rikkos.gateway.it.client.GatewayApiClient.GatewayApiClientConfig
@@ -10,9 +13,6 @@ import io.rikkos.gateway.repository.domain.{UserContactRow, UserDetailsRow}
 import io.rikkos.gateway.repository.queries.{UserContactsQueries, UserDetailsQueries}
 import io.rikkos.gateway.smithy
 import io.rikkos.gateway.utils.*
-import io.rikkos.test.postgresql.PostgreSQLTestClient
-import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
-import io.rikkos.testkit.base.*
 import io.scalaland.chimney.dsl.*
 import org.http4s.Status
 import zio.*
@@ -20,6 +20,8 @@ import zio.interop.catz.*
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+
+import PostgreSQLTestClient.PostgreSQLTestClientConfig
 
 class GatewayApiSpec
     extends ZWordSpecBase,

@@ -1,10 +1,9 @@
 package io.rikkos.gateway.stream
 
+import io.mesazon.clock.TimeProvider
+import io.mesazon.domain.gateway.{AssistantResponse, ServiceError}
+import io.mesazon.domain.waha
 import io.mesazon.waha.WahaClient
-import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.gateway.{AssistantResponse, ServiceError}
-import io.rikkos.domain.waha
-import io.rikkos.domain.waha.input.{ChattingMessageInput, ChattingSeenInput}
 import io.rikkos.gateway.clients.OpenAIClient
 import io.rikkos.gateway.config.ReplyingToMessagesCronJobConfig
 import io.rikkos.gateway.json.given
@@ -12,6 +11,8 @@ import io.rikkos.gateway.repository.WahaRepository
 import sttp.ai.openai.requests.completions.chat.message.{Content, Message}
 import zio.*
 import zio.stream.*
+
+import waha.input.{ChattingMessageInput, ChattingSeenInput}
 
 trait ReplyingToMessagesCronJobStream {
   def stream: Stream[Throwable, Unit]

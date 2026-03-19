@@ -1,8 +1,8 @@
 package io.rikkos.gateway.validation
 
 import cats.syntax.all.*
-import io.rikkos.domain.gateway.*
-import io.rikkos.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.domain.gateway.*
+import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.rikkos.gateway.smithy
 import io.rikkos.gateway.validation.PhoneNumberValidator.PhoneNumberRegion
 import zio.*

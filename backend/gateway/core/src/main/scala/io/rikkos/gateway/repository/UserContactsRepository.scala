@@ -4,12 +4,12 @@ import cats.syntax.all.*
 import doobie.Transactor
 import io.github.gaelrenoux.tranzactio.DatabaseOps
 import io.github.gaelrenoux.tranzactio.doobie.Connection
-import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.gateway.*
+import io.mesazon.clock.TimeProvider
+import io.mesazon.domain.gateway.*
+import io.mesazon.generator.IDGenerator
 import io.rikkos.gateway.repository.domain.UserContactRow
 import io.rikkos.gateway.repository.queries.UserContactsQueries
 import io.rikkos.gateway.repository.queries.UserContactsQueries.UpdateUserContactQuery
-import io.rikkos.generator.IDGenerator
 import io.scalaland.chimney.dsl.*
 import zio.*
 import zio.interop.catz.*

@@ -1,8 +1,8 @@
 package io.rikkos.gateway.unit.config
 
 import com.google.i18n.phonenumbers.PhoneNumberUtil
+import io.mesazon.testkit.base.ZWordSpecBase
 import io.rikkos.gateway.config.PhoneNumberValidatorConfig
-import io.rikkos.testkit.base.ZWordSpecBase
 import zio.*
 
 class PhoneNumberE164ValidatorConfigSpec extends ZWordSpecBase {

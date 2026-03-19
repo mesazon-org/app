@@ -1,14 +1,14 @@
 package io.rikkos.gateway.unit.validation
 
-import io.rikkos.domain.gateway.*
-import io.rikkos.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
-import io.rikkos.domain.waha
+import io.mesazon.domain.gateway.*
+import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.domain.waha
+import io.mesazon.testkit.base.{IronRefinedTypeArbitraries, ZWordSpecBase}
 import io.rikkos.gateway.mock.*
 import io.rikkos.gateway.smithy
 import io.rikkos.gateway.smithy.{InternalData, InternalInfo}
 import io.rikkos.gateway.utils.SmithyArbitraries
 import io.rikkos.gateway.validation.*
-import io.rikkos.testkit.base.{IronRefinedTypeArbitraries, ZWordSpecBase}
 import zio.*
 
 class WahaValidatorSpec extends ZWordSpecBase, SmithyArbitraries, IronRefinedTypeArbitraries {

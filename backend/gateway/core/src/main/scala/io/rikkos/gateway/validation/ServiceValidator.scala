@@ -1,6 +1,6 @@
 package io.rikkos.gateway.validation
 
-import io.rikkos.domain.gateway.*
+import io.mesazon.domain.gateway.*
 import zio.*
 
 trait ServiceValidator[A, B] {

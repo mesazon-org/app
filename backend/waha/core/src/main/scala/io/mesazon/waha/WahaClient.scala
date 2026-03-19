@@ -2,11 +2,11 @@ package io.mesazon.waha
 
 import cats.data.NonEmptyList
 import cats.syntax.all.*
+import io.mesazon.domain.waha.*
+import io.mesazon.domain.waha.input.*
+import io.mesazon.domain.waha.output.*
 import io.mesazon.waha.GroupsRequests.GroupNewParticipant
 import io.mesazon.waha.config.WahaClientConfig
-import io.rikkos.domain.waha.*
-import io.rikkos.domain.waha.input.*
-import io.rikkos.domain.waha.output.*
 import io.scalaland.chimney.dsl.*
 import sttp.client4.*
 import zio.*
