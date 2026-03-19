@@ -1,7 +1,7 @@
 package io.rikkos.gateway.clients
 
 import com.github.plokhotnyuk.jsoniter_scala.core.*
-import io.rikkos.domain.gateway.ServiceError
+import io.mesazon.domain.gateway.ServiceError
 import io.rikkos.gateway.config.OpenAIClientConfig
 import sttp.ai.openai.OpenAI
 import sttp.ai.openai.requests.completions.chat.ChatRequestBody.{ChatBody, ChatCompletionModel, ResponseFormat}

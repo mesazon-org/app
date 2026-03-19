@@ -3,11 +3,12 @@ package io.rikkos.gateway
 import cats.Show
 import cats.data.*
 import cats.syntax.all.*
-import io.rikkos.domain.gateway.ServiceError
-import io.rikkos.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.domain.gateway.ServiceError
 import zio.ZIO
 
 import scala.util.chaining.scalaUtilChainingOps
+
+import ServiceError.BadRequestError.InvalidFieldError
 
 package object validation {
 

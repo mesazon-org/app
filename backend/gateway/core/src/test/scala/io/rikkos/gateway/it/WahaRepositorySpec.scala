@@ -2,21 +2,22 @@ package io.rikkos.gateway.it
 
 import cats.syntax.all.*
 import com.dimafeng.testcontainers.ExposedService
-import io.rikkos.domain.gateway.*
-import io.rikkos.domain.waha
+import io.mesazon.domain.gateway.*
+import io.mesazon.domain.waha
+import io.mesazon.test.postgresql.PostgreSQLTestClient
+import io.mesazon.testkit.base.{DockerComposeBase, ZWordSpecBase}
 import io.rikkos.gateway.config.RepositoryConfig
 import io.rikkos.gateway.mock.*
 import io.rikkos.gateway.repository.WahaRepository
 import io.rikkos.gateway.repository.domain.{WahaUserActivityRow, WahaUserMessageRow, WahaUserRow}
 import io.rikkos.gateway.repository.queries.WahaQueries
 import io.rikkos.gateway.utils.RepositoryArbitraries
-import io.rikkos.test.postgresql.PostgreSQLTestClient
-import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
-import io.rikkos.testkit.base.{DockerComposeBase, ZWordSpecBase}
 import zio.{Clock as _, *}
 
 import java.time.temporal.ChronoUnit
 import java.time.{Clock, Instant, ZoneOffset}
+
+import PostgreSQLTestClient.PostgreSQLTestClientConfig
 
 class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
 

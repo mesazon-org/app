@@ -1,6 +1,6 @@
 package io.rikkos.gateway.service
 
-import io.rikkos.domain.gateway.*
+import io.mesazon.domain.gateway.*
 import io.rikkos.gateway.repository.WahaRepository
 import io.rikkos.gateway.validation.ServiceValidator
 import io.rikkos.gateway.{smithy, HttpErrorHandler}

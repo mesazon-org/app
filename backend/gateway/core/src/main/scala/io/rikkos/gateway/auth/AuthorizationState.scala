@@ -1,7 +1,7 @@
 package io.rikkos.gateway.auth
 
 import cats.syntax.all.*
-import io.rikkos.domain.gateway.AuthedUser
+import io.mesazon.domain.gateway.AuthedUser
 import zio.*
 
 trait AuthorizationState {

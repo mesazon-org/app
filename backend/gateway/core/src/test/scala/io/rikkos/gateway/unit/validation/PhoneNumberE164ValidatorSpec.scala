@@ -3,13 +3,13 @@ package io.rikkos.gateway.unit.validation
 import cats.data.NonEmptyChain
 import cats.syntax.all.*
 import com.google.i18n.phonenumbers.PhoneNumberUtil
-import io.rikkos.domain.gateway.PhoneNumberE164
-import io.rikkos.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
-import io.rikkos.domain.waha
+import io.mesazon.domain.gateway.*
+import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.domain.waha
+import io.mesazon.testkit.base.ZWordSpecBase
 import io.rikkos.gateway.config.PhoneNumberValidatorConfig
 import io.rikkos.gateway.validation.*
 import io.rikkos.gateway.validation.PhoneNumberValidator.PhoneNumberRegion
-import io.rikkos.testkit.base.ZWordSpecBase
 import zio.{ZIO, ZLayer}
 
 class PhoneNumberE164ValidatorSpec extends ZWordSpecBase {

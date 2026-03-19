@@ -1,15 +1,15 @@
 package io.rikkos.gateway.unit.validation
 
 import io.github.iltotore.iron.:|
-import io.rikkos.domain.*
-import io.rikkos.domain.gateway.*
-import io.rikkos.domain.gateway.ServiceError.BadRequestError
-import io.rikkos.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.domain.*
+import io.mesazon.domain.gateway.*
+import io.mesazon.domain.gateway.ServiceError.BadRequestError
+import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.testkit.base.ZWordSpecBase
 import io.rikkos.gateway.mock.phoneNumberRegionValidatorMockLive
 import io.rikkos.gateway.smithy
 import io.rikkos.gateway.utils.SmithyArbitraries
 import io.rikkos.gateway.validation.*
-import io.rikkos.testkit.base.ZWordSpecBase
 import io.scalaland.chimney.dsl.into
 import zio.*
 

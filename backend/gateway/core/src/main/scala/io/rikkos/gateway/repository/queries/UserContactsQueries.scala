@@ -5,7 +5,7 @@ import doobie.Update
 import doobie.implicits.*
 import doobie.postgres.implicits.*
 import io.github.gaelrenoux.tranzactio.doobie.*
-import io.rikkos.domain.gateway.*
+import io.mesazon.domain.gateway.*
 import io.rikkos.gateway.repository.domain.UserContactRow
 import zio.*
 

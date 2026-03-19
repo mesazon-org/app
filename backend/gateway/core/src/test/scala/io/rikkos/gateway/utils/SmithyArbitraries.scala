@@ -1,9 +1,9 @@
 package io.rikkos.gateway.utils
 
-import io.rikkos.domain.gateway.*
-import io.rikkos.domain.waha
+import io.mesazon.domain.gateway.*
+import io.mesazon.domain.waha
+import io.mesazon.testkit.base.{GatewayArbitraries, IronRefinedTypeTransformer}
 import io.rikkos.gateway.smithy
-import io.rikkos.testkit.base.*
 import io.scalaland.chimney.dsl.*
 import org.scalacheck.*
 

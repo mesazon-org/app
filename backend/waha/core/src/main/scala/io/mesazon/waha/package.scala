@@ -1,6 +1,6 @@
 package io.mesazon
 
-import io.rikkos.domain.waha.{WahaError, WahaErrorCode}
+import io.mesazon.domain.waha.{WahaError, WahaErrorCode}
 import sttp.client4.{Backend, Request, Response, ResponseException}
 import sttp.model.Header
 import zio.*

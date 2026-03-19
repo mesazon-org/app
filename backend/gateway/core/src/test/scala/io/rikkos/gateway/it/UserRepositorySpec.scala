@@ -1,21 +1,22 @@
 package io.rikkos.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
-import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.gateway.*
+import io.mesazon.clock.TimeProvider
+import io.mesazon.domain.gateway.*
+import io.mesazon.test.postgresql.PostgreSQLTestClient
+import io.mesazon.testkit.base.{DockerComposeBase, GatewayArbitraries, ZWordSpecBase}
 import io.rikkos.gateway.mock.timeProviderMockLive
 import io.rikkos.gateway.repository.UserRepository
 import io.rikkos.gateway.repository.domain.UserDetailsRow
 import io.rikkos.gateway.repository.queries.UserDetailsQueries
 import io.rikkos.gateway.utils.RepositoryArbitraries
-import io.rikkos.test.postgresql.PostgreSQLTestClient
-import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
-import io.rikkos.testkit.base.*
 import io.scalaland.chimney.dsl.*
 import zio.{Clock as _, *}
 
 import java.time.temporal.ChronoUnit
 import java.time.{Clock, Instant, ZoneOffset}
+
+import PostgreSQLTestClient.PostgreSQLTestClientConfig
 
 class UserRepositorySpec extends ZWordSpecBase, GatewayArbitraries, RepositoryArbitraries, DockerComposeBase {
 

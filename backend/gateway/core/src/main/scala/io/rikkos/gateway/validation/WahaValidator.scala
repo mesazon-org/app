@@ -2,9 +2,9 @@ package io.rikkos.gateway.validation
 
 import cats.data.NonEmptyChain
 import cats.syntax.all.*
-import io.rikkos.domain.gateway.*
-import io.rikkos.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
-import io.rikkos.domain.waha
+import io.mesazon.domain.gateway.*
+import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.domain.waha
 import io.rikkos.gateway.smithy
 import zio.*
 

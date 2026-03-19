@@ -2,11 +2,11 @@ package io.rikkos.gateway.repository
 
 import doobie.Transactor
 import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
-import io.rikkos.clock.TimeProvider
-import io.rikkos.domain.gateway.*
-import io.rikkos.domain.waha
+import io.mesazon.clock.TimeProvider
+import io.mesazon.domain.gateway.*
+import io.mesazon.domain.waha
+import io.mesazon.generator.IDGenerator
 import io.rikkos.gateway.repository.domain.*
-import io.rikkos.generator.IDGenerator
 import zio.*
 import zio.stream.*
 

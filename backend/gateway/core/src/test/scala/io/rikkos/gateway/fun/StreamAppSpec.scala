@@ -1,8 +1,8 @@
 package io.rikkos.gateway.fun
 
+import io.mesazon.testkit.base.ZWordSpecBase
 import io.rikkos.gateway.StreamApp
 import io.rikkos.gateway.stream.ReplyingToMessagesCronJobStream
-import io.rikkos.testkit.base.ZWordSpecBase
 import zio.*
 import zio.stream.*
 

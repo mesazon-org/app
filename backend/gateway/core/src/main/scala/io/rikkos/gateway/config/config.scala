@@ -1,8 +1,8 @@
 package io.rikkos.gateway
 
 import com.comcast.ip4s.*
+import io.mesazon.domain.gateway.AppName
 import io.mesazon.waha.config.WahaClientConfig
-import io.rikkos.domain.gateway.AppName
 import zio.*
 import zio.config.*
 import zio.config.magnolia.{deriveConfig, DeriveConfig}

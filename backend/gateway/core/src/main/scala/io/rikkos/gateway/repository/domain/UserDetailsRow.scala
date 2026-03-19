@@ -1,5 +1,5 @@
 package io.rikkos.gateway.repository.domain
-import io.rikkos.domain.gateway.*
+import io.mesazon.domain.gateway.*
 
 case class UserDetailsRow(
     userID: UserID,

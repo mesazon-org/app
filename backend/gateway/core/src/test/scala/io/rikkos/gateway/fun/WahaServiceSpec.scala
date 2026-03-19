@@ -1,11 +1,11 @@
 package io.rikkos.gateway.fun
 
+import io.mesazon.testkit.base.ZWordSpecBase
 import io.rikkos.gateway.mock.*
 import io.rikkos.gateway.service.WahaService
 import io.rikkos.gateway.smithy
 import io.rikkos.gateway.utils.SmithyArbitraries
 import io.rikkos.gateway.validation.WahaValidator
-import io.rikkos.testkit.base.*
 import zio.*
 
 class WahaServiceSpec extends ZWordSpecBase, SmithyArbitraries {

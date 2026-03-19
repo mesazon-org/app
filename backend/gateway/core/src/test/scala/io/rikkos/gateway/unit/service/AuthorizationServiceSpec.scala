@@ -1,10 +1,10 @@
 package io.rikkos.gateway.unit.service
 
-import io.rikkos.domain.gateway.*
+import io.mesazon.domain.gateway.*
+import io.mesazon.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import io.rikkos.gateway.auth.AuthorizationService
 import io.rikkos.gateway.mock.*
 import io.rikkos.gateway.smithy
-import io.rikkos.testkit.base.*
 import org.http4s.*
 import org.http4s.headers.Authorization
 import zio.*

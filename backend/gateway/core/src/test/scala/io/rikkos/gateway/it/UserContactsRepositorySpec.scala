@@ -2,20 +2,21 @@ package io.rikkos.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
 import io.github.gaelrenoux.tranzactio.DbException
-import io.rikkos.domain.gateway.*
+import io.mesazon.domain.gateway.*
+import io.mesazon.test.postgresql.PostgreSQLTestClient
+import io.mesazon.testkit.base.{DockerComposeBase, GatewayArbitraries, ZWordSpecBase}
 import io.rikkos.gateway.mock.*
 import io.rikkos.gateway.repository.UserContactsRepository
 import io.rikkos.gateway.repository.domain.{UserContactRow, UserDetailsRow}
 import io.rikkos.gateway.repository.queries.{UserContactsQueries, UserDetailsQueries}
 import io.rikkos.gateway.utils.RepositoryArbitraries
-import io.rikkos.test.postgresql.PostgreSQLTestClient
-import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
-import io.rikkos.testkit.base.*
 import io.scalaland.chimney.dsl.*
 import zio.*
 
 import java.time.temporal.ChronoUnit
 import java.time.{Clock, Instant, ZoneOffset}
+
+import PostgreSQLTestClient.PostgreSQLTestClientConfig
 
 class UserContactsRepositorySpec extends ZWordSpecBase, GatewayArbitraries, RepositoryArbitraries, DockerComposeBase {
   override def dockerComposeFile: String = "./src/test/resources/compose.yaml"

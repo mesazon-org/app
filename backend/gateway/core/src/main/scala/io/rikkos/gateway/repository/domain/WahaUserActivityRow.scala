@@ -1,7 +1,7 @@
 package io.rikkos.gateway.repository.domain
 
-import io.rikkos.domain.gateway.{UpdatedAt, UserID}
-import io.rikkos.domain.waha
+import io.mesazon.domain.gateway.{UpdatedAt, UserID}
+import io.mesazon.domain.waha
 
 case class WahaUserActivityRow(
     userID: UserID,

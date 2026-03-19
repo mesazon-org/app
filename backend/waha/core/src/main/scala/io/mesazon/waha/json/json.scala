@@ -1,7 +1,7 @@
 package io.mesazon.waha
 
 import com.github.plokhotnyuk.jsoniter_scala.core.{JsonReader, JsonValueCodec, JsonWriter}
-import io.rikkos.domain.waha.GroupParticipantRole
+import io.mesazon.domain.waha.GroupParticipantRole
 
 package object json {
 
