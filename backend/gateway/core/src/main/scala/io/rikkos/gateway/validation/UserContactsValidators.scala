@@ -1,16 +1,17 @@
 package io.rikkos.gateway.validation
 
 import cats.syntax.all.*
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
+import io.rikkos.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.rikkos.gateway.smithy
-import io.rikkos.gateway.validation.PhoneNumberValidator.PhoneNumberParams
+import io.rikkos.gateway.validation.PhoneNumberValidator.PhoneNumberRegion
 import zio.*
 import zio.interop.catz.*
 
 object UserContactsValidators {
 
   private def upsertUserContactValidator(
-      phoneNumberValidator: DomainValidator[PhoneNumberParams, PhoneNumber]
+      phoneNumberValidator: DomainValidator[PhoneNumberRegion, PhoneNumberE164]
   ): DomainValidator[smithy.UpsertUserContactRequest, UpsertUserContact] = { request =>
     phoneNumberValidator
       .validate(request.phoneRegion, request.phoneNationalNumber)
@@ -39,7 +40,15 @@ object UserContactsValidators {
         .fromOption(NonEmptyChunk.fromIterableOption(requests))
         .flatMap(_.traverse(userContactValidator.validate))
         .map(_.sequence)
-        .fold(_ => ("upsertUserContactRequest", "request received contained empty collection").invalidNec, identity)
+        .fold(
+          _ =>
+            InvalidFieldError(
+              "upsertUserContactRequest",
+              "request received contained empty collection",
+              Seq.empty,
+            ).invalidNec,
+          identity,
+        )
 
   val upsertUserContactsValidatorLive =
     ZLayer.fromFunction(upsertUserContactValidator) >>> ZLayer.fromFunction(

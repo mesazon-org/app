@@ -5,7 +5,12 @@ import io.rikkos.gateway.config.GatewayServerConfig.ServerConfig
 import zio.config.*
 import zio.config.magnolia.*
 
-case class GatewayServerConfig(service: ServerConfig, health: ServerConfig)
+case class GatewayServerConfig(
+    internal: ServerConfig,
+    external: ServerConfig,
+    health: ServerConfig,
+    docs: ServerConfig,
+)
 
 object GatewayServerConfig {
   case class ServerConfig(host: Host, port: Port)

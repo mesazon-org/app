@@ -1,15 +1,15 @@
 package io.rikkos.gateway.fun
 
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
 import io.rikkos.gateway.mock.*
 import io.rikkos.gateway.service.*
 import io.rikkos.gateway.smithy
-import io.rikkos.gateway.utils.GatewayArbitraries
+import io.rikkos.gateway.utils.SmithyArbitraries
 import io.rikkos.gateway.validation.*
 import io.rikkos.testkit.base.ZWordSpecBase
 import zio.*
 
-class UserContactsServiceSpec extends ZWordSpecBase, GatewayArbitraries {
+class UserContactsServiceSpec extends ZWordSpecBase, SmithyArbitraries {
 
   "UserContactService" when {
     "upsertContacts" should {
@@ -67,7 +67,7 @@ class UserContactsServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           UserContactsService.live,
           userContactsRepositoryMockLive(upsertUserContactsCounterRef, userRepositoryMaybeError),
           authorizationStateMockLive(authedUser),
-          phoneNumberValidatorMockLive(),
+          phoneNumberRegionValidatorMockLive(),
           UserContactsValidators.upsertUserContactsValidatorLive,
         )
         .zioValue

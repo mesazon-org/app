@@ -8,9 +8,15 @@
       }
     },
     "bodyPatterns": [
-      { "matchesJsonPath": "$.session" },
-      { "matchesJsonPath": "$.chatId" },
-      { "matchesJsonPath": "$.file" }
+      {
+        "matchesJsonPath": "$.session"
+      },
+      {
+        "matchesJsonPath": "$.chatId"
+      },
+      {
+        "matchesJsonPath": "$.file"
+      }
     ]
   },
   "response": {
@@ -18,6 +24,67 @@
     "headers": {
       "Content-Type": "application/json"
     },
-    "body": ""
+    "jsonBody": {
+      "id": "true_447754737452@c.us_3EB04B5BFD2DD1C7E28AF2",
+      "_data": {
+        "Info": {
+          "Chat": "447754737452@s.whatsapp.net",
+          "Sender": "12135332733:16@s.whatsapp.net",
+          "IsFromMe": true,
+          "IsGroup": false,
+          "AddressingMode": "",
+          "SenderAlt": "",
+          "RecipientAlt": "",
+          "BroadcastListOwner": "",
+          "BroadcastRecipients": null,
+          "ID": "3EB04B5BFD2DD1C7E28AF2",
+          "ServerID": 0,
+          "Type": "",
+          "PushName": "",
+          "Timestamp": "2026-03-01T23:17:26Z",
+          "Category": "",
+          "Multicast": false,
+          "MediaType": "",
+          "Edit": "",
+          "MsgBotInfo": {
+            "EditType": "",
+            "EditTargetID": "",
+            "EditSenderTimestampMS": "0001-01-01T00:00:00Z"
+          },
+          "MsgMetaInfo": {
+            "TargetID": "",
+            "TargetSender": "",
+            "TargetChat": "",
+            "DeprecatedLIDSession": null,
+            "ThreadMessageID": "",
+            "ThreadMessageSenderJID": ""
+          },
+          "VerifiedName": null,
+          "DeviceSentMeta": null
+        },
+        "Message": {
+          "extendedTextMessage": {
+            "text": "Hey, how can I help? Do you want an overview of the US-Iran situation (up to June 2024), a timeline of events, live sources to follow, or a summary of a specific article? Tell me which."
+          }
+        },
+        "IsEphemeral": false,
+        "IsViewOnce": false,
+        "IsViewOnceV2": false,
+        "IsViewOnceV2Extension": false,
+        "IsDocumentWithCaption": false,
+        "IsLottieSticker": false,
+        "IsBotInvoke": false,
+        "IsEdit": false,
+        "SourceWebMsg": null,
+        "UnavailableRequestID": "",
+        "RetryCount": 0,
+        "NewsletterMeta": null,
+        "RawMessage": {
+          "extendedTextMessage": {
+            "text": "Hey, how can I help? Do you want an overview of the US-Iran situation (up to June 2024), a timeline of events, live sources to follow, or a summary of a specific article? Tell me which."
+          }
+        }
+      }
+    }
   }
 }

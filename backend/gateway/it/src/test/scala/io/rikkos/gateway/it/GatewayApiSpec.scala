@@ -1,14 +1,15 @@
 package io.rikkos.gateway.it
 
 import fs2.io.net.Network
-import io.rikkos.domain.*
+import io.rikkos.domain.gateway.*
 import io.rikkos.gateway.it.GatewayApiSpec.Context
 import io.rikkos.gateway.it.client.GatewayApiClient
 import io.rikkos.gateway.it.client.GatewayApiClient.GatewayApiClientConfig
 import io.rikkos.gateway.it.codec.given
-import io.rikkos.gateway.query.{UserContactsQueries, UserDetailsQueries}
+import io.rikkos.gateway.repository.domain.{UserContactRow, UserDetailsRow}
+import io.rikkos.gateway.repository.queries.{UserContactsQueries, UserDetailsQueries}
 import io.rikkos.gateway.smithy
-import io.rikkos.gateway.utils.GatewayArbitraries
+import io.rikkos.gateway.utils.*
 import io.rikkos.test.postgresql.PostgreSQLTestClient
 import io.rikkos.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.rikkos.testkit.base.*
@@ -21,10 +22,11 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 class GatewayApiSpec
-    extends ZWordSpecBase
-    with DockerComposeBase
-    with GatewayArbitraries
-    with IronRefinedTypeTransformer {
+    extends ZWordSpecBase,
+      DockerComposeBase,
+      SmithyArbitraries,
+      RepositoryArbitraries,
+      IronRefinedTypeTransformer {
 
   given Network[Task] = Network.forAsync[Task]
 
@@ -71,20 +73,20 @@ class GatewayApiSpec
 
         gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
 
-        val userDetailsTableResponse = postgresSQLClient.database
+        val userDetailsRowResponse = postgresSQLClient.database
           .transactionOrDie(
             UserDetailsQueries.getUserDetailsQuery(UserID.assume("test"))
           )
           .zioValue
           .value
 
-        userDetailsTableResponse shouldBe onboardUserDetailsRequest
-          .into[UserDetailsTable]
-          .withFieldConst(_.phoneNumber, PhoneNumber.cy(onboardUserDetailsRequest.phoneNationalNumber))
+        userDetailsRowResponse shouldBe onboardUserDetailsRequest
+          .into[UserDetailsRow]
+          .withFieldConst(_.phoneNumber, PhoneNumberE164.cy(onboardUserDetailsRequest.phoneNationalNumber))
           .withFieldConst(_.userID, UserID.assume("test"))
           .withFieldConst(_.email, Email.assume("eliot.martel@gmail.com"))
-          .withFieldConst(_.createdAt, userDetailsTableResponse.createdAt)
-          .withFieldConst(_.updatedAt, userDetailsTableResponse.updatedAt)
+          .withFieldConst(_.createdAt, userDetailsRowResponse.createdAt)
+          .withFieldConst(_.updatedAt, userDetailsRowResponse.updatedAt)
           .transform
       }
 
@@ -107,43 +109,43 @@ class GatewayApiSpec
 
     "/users/update" should {
       "return successfully when update user" in withContext { case Context(gatewayClient, postgresSQLClient) =>
-        val userDetailsTable = arbitrarySample[UserDetailsTable]
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(userID = UserID.assume("test"), email = Email.assume("eliot.martel@gmail.com"))
         val phoneNationalNumber      = "99123123"
         val phoneRegion              = "CY"
-        val phoneNumber              = PhoneNumber.cy(phoneNationalNumber)
+        val phoneNumber              = PhoneNumberE164.cy(phoneNationalNumber)
         val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
           .copy(phoneNationalNumber = Some(phoneNationalNumber))
           .copy(phoneRegion = Some(phoneRegion))
 
         postgresSQLClient.database
-          .transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable))
+          .transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsRow))
           .zioValue
 
         gatewayClient.updateUser(updateUserDetailsRequest).zioValue shouldBe Status.NoContent
 
-        val updatedUserDetailsTable = postgresSQLClient.database
+        val updatedUserDetailsRow = postgresSQLClient.database
           .transactionOrDie(
             UserDetailsQueries.getUserDetailsQuery(UserID.assume("test"))
           )
           .zioValue
           .value
 
-        val expectedUserDetailsTable = userDetailsTable.copy(
-          firstName = FirstName.assumeAll(updateUserDetailsRequest.firstName).getOrElse(userDetailsTable.firstName),
-          lastName = LastName.assumeAll(updateUserDetailsRequest.lastName).getOrElse(userDetailsTable.lastName),
+        val expectedUserDetailsRow = userDetailsRow.copy(
+          firstName = FirstName.assumeAll(updateUserDetailsRequest.firstName).getOrElse(userDetailsRow.firstName),
+          lastName = LastName.assumeAll(updateUserDetailsRequest.lastName).getOrElse(userDetailsRow.lastName),
           phoneNumber = phoneNumber,
           addressLine1 =
-            AddressLine1.assumeAll(updateUserDetailsRequest.addressLine1).getOrElse(userDetailsTable.addressLine1),
+            AddressLine1.assumeAll(updateUserDetailsRequest.addressLine1).getOrElse(userDetailsRow.addressLine1),
           addressLine2 =
-            AddressLine2.assumeAll(updateUserDetailsRequest.addressLine2).orElse(userDetailsTable.addressLine2),
-          city = City.assumeAll(updateUserDetailsRequest.city).getOrElse(userDetailsTable.city),
-          postalCode = PostalCode.assumeAll(updateUserDetailsRequest.postalCode).getOrElse(userDetailsTable.postalCode),
-          company = Company.assumeAll(updateUserDetailsRequest.company).getOrElse(userDetailsTable.company),
-          updatedAt = updatedUserDetailsTable.updatedAt, // This should be updated to the current time
+            AddressLine2.assumeAll(updateUserDetailsRequest.addressLine2).orElse(userDetailsRow.addressLine2),
+          city = City.assumeAll(updateUserDetailsRequest.city).getOrElse(userDetailsRow.city),
+          postalCode = PostalCode.assumeAll(updateUserDetailsRequest.postalCode).getOrElse(userDetailsRow.postalCode),
+          company = Company.assumeAll(updateUserDetailsRequest.company).getOrElse(userDetailsRow.company),
+          updatedAt = updatedUserDetailsRow.updatedAt, // This should be updated to the current time
         )
 
-        updatedUserDetailsTable shouldBe expectedUserDetailsTable
+        updatedUserDetailsRow shouldBe expectedUserDetailsRow
       }
 
       "fail with BadRequest when update user details are invalid" in withContext { case Context(gatewayClient, _) =>
@@ -161,7 +163,7 @@ class GatewayApiSpec
           val userID              = UserID.assume("test")
           val userContactID       = arbitrarySample[UserContactID]
           val updateDisplayName   = DisplayName.assume("dummy")
-          val userDetailsTable    = arbitrarySample[UserDetailsTable].copy(userID = userID)
+          val userDetailsRow      = arbitrarySample[UserDetailsRow].copy(userID = userID)
           val existingUserContact = arbitrarySample[smithy.UpsertUserContactRequest]
             .copy(userContactID = Some(userContactID.value))
           val updateUserContact = existingUserContact
@@ -169,53 +171,53 @@ class GatewayApiSpec
           val insertUserContact = arbitrarySample[smithy.UpsertUserContactRequest]
             .copy(userContactID = None)
 
-          val insertUserContactsTable = existingUserContact
-            .into[UserContactTable]
+          val insertUserContactsRow = existingUserContact
+            .into[UserContactRow]
             .withFieldComputed(_.userContactID, uc => UserContactID.assume(uc.userContactID.value))
-            .withFieldConst(_.phoneNumber, PhoneNumber.cy(existingUserContact.phoneNationalNumber))
+            .withFieldConst(_.phoneNumber, PhoneNumberE164.cy(existingUserContact.phoneNationalNumber))
             .withFieldConst(_.userID, userID)
             .withFieldConst(_.createdAt, CreatedAt(now))
             .withFieldConst(_.updatedAt, UpdatedAt(now))
             .transform
 
           postgresSQLClient.database
-            .transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsTable))
+            .transactionOrDie(UserDetailsQueries.insertUserDetailsQuery(userDetailsRow))
             .zioValue
 
           postgresSQLClient.database
-            .transactionOrDie(UserContactsQueries.insertUserContacts(NonEmptyChunk(insertUserContactsTable)))
+            .transactionOrDie(UserContactsQueries.insertUserContacts(NonEmptyChunk(insertUserContactsRow)))
             .zioValue
 
           gatewayClient
             .upsertUserContacts(NonEmptyChunk(updateUserContact, insertUserContact))
             .zioValue shouldBe Status.NoContent
 
-          val userContactsTable = postgresSQLClient.database
+          val userContactsRow = postgresSQLClient.database
             .transactionOrDie(UserContactsQueries.getUserContacts(userID))
             .zioValue
 
-          userContactsTable should have size 2
+          userContactsRow should have size 2
 
-          val updatedUserContactTable = userContactsTable
-            .filter(_.userContactID == insertUserContactsTable.userContactID)
+          val updatedUserContactRow = userContactsRow
+            .filter(_.userContactID == insertUserContactsRow.userContactID)
             .head
 
-          val newUserContactTable = userContactsTable
-            .filter(_.userContactID != insertUserContactsTable.userContactID)
+          val newUserContactRow = userContactsRow
+            .filter(_.userContactID != insertUserContactsRow.userContactID)
             .head
 
-          updatedUserContactTable shouldBe insertUserContactsTable.copy(
+          updatedUserContactRow shouldBe insertUserContactsRow.copy(
             displayName = updateDisplayName,
-            updatedAt = updatedUserContactTable.updatedAt,
+            updatedAt = updatedUserContactRow.updatedAt,
           )
 
-          newUserContactTable shouldBe insertUserContact
-            .into[UserContactTable]
-            .withFieldConst(_.userContactID, newUserContactTable.userContactID)
+          newUserContactRow shouldBe insertUserContact
+            .into[UserContactRow]
+            .withFieldConst(_.userContactID, newUserContactRow.userContactID)
             .withFieldConst(_.userID, userID)
-            .withFieldConst(_.phoneNumber, PhoneNumber.cy(insertUserContact.phoneNationalNumber))
-            .withFieldConst(_.createdAt, newUserContactTable.createdAt)
-            .withFieldConst(_.updatedAt, newUserContactTable.updatedAt)
+            .withFieldConst(_.phoneNumber, PhoneNumberE164.cy(insertUserContact.phoneNationalNumber))
+            .withFieldConst(_.createdAt, newUserContactRow.createdAt)
+            .withFieldConst(_.updatedAt, newUserContactRow.updatedAt)
             .transform
       }
 

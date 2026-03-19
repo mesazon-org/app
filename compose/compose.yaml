@@ -3,14 +3,22 @@ services:
     image: local/gateway-core:latest
     restart: always
     ports:
-      - "8080:8080"
-      - "8081:8081"
+      - "8080:8080" # External
+      - "8081:8081" # Internal
+      - "8082:8082" # Health
+      - "8083:8083" # Docs
     environment:
+      LOG_LEVEL: INFO
       DATABASE_NAME: local_db
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
       DATABASE_USERNAME: local_user
       DATABASE_PASSWORD: local_password
+
+#  ubuntu:
+#    image: michaelirey/ubuntu-with-tools:latest
+#    restart: on-failure
+#    command: sleep infinity
 
   postgres:
     image: postgres:17.5-alpine
@@ -23,6 +31,7 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - ../backend/schemas/local/postgres:/docker-entrypoint-initdb.d
+      - ./postgres_data:/var/lib/postgresql/data
 
   flyway:
     image: flyway/flyway:12.0.0-alpine
@@ -39,15 +48,15 @@ services:
     image: devlikeapro/waha-plus:gows-arm
     restart: unless-stopped
     ports:
-      - '127.0.0.1:3000:3000/tcp'
+      - "3000:3000"
     logging:
       driver: 'json-file'
       options:
         max-size: '100m'
         max-file: '10'
-    env_file: ./waha-data/.env
+    env_file: waha-data/waha-env
     dns:
       - 1.1.1.1
       - 8.8.8.8
     environment:
-      - WHATSAPP_SESSIONS_POSTGRESQL_URL=postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable
+      - WHATSAPP_SESSIONS_POSTGRESQL_URL=postgres://postgres:postgres@postgres:5432/local_db?sslmode=disable
