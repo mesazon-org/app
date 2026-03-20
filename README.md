@@ -1,4 +1,4 @@
-# Rikkos App
+# Mesazon App
 
 ### Table of Contents
 

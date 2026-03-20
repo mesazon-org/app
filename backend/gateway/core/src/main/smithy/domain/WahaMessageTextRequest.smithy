@@ -1,6 +1,6 @@
 $version: "2.0"
 
-namespace io.rikkos.gateway.smithy
+namespace io.mesazon.gateway.smithy
 
 structure WahaMessageTextRequest {
     @required

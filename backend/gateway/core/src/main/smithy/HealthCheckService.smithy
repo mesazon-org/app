@@ -1,5 +1,5 @@
 $version: "2"
-namespace io.rikkos.gateway.smithy
+namespace io.mesazon.gateway.smithy
 
 use alloy#simpleRestJson
 
