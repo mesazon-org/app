@@ -28,7 +28,7 @@ object Dependencies {
   lazy val sttpV                = "4.0.19"
   lazy val sttpIronV            = "1.13.9"
   lazy val jsoniterV            = "2.38.9"
-  lazy val sttpAIV              = "0.4.6"
+  lazy val sttpAIV              = "0.4.8"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
