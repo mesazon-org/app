@@ -54,7 +54,7 @@ final class UserManagementQueries(
   def updateOnboardUser(
       userID: UserID,
       fullName: Option[FullName],
-      phoneNumberE164: Option[PhoneNumberE164],
+      phoneNumber: Option[PhoneNumberE164],
       passwordHash: Option[PasswordHash],
       stage: OnboardStage,
       updatedAt: UpdatedAt,
@@ -64,7 +64,7 @@ final class UserManagementQueries(
            |UPDATE $frSchema.$frUserOnboardTable
            |SET
            |  full_name = COALESCE($fullName, $frUserOnboardTable.full_name),
-           |  phone_number = COALESCE($phoneNumberE164, $frUserOnboardTable.phone_number),
+           |  phone_number = COALESCE($phoneNumber, $frUserOnboardTable.phone_number),
            |  password_hash = COALESCE($passwordHash, $frUserOnboardTable.password_hash),
            |  stage = $stage,
            |  updated_at = $updatedAt

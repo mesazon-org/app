@@ -44,7 +44,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries {
         val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
         val userManagementService     = buildUserManagementService(
           authedUser = authedUser,
-          userRepositoryMaybeError = Some(new RuntimeException("Repository error")),
+          userManagementRepositoryMaybeError = Some(new RuntimeException("Repository error")),
         )
 
         userManagementService
@@ -99,7 +99,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries {
         val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
         val userManagementService    = buildUserManagementService(
           authedUser = authedUser,
-          userRepositoryMaybeError = Some(new RuntimeException("Repository error")),
+          userManagementRepositoryMaybeError = Some(new RuntimeException("Repository error")),
         )
 
         userManagementService
@@ -117,7 +117,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries {
 
     def buildUserManagementService(
         authedUser: AuthedUser,
-        userRepositoryMaybeError: Option[Throwable] = None,
+        userManagementRepositoryMaybeError: Option[Throwable] = None,
     ): smithy.UserManagementService[Task] =
       ZIO
         .service[smithy.UserManagementService[Task]]
@@ -126,7 +126,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries {
           userManagementRepositoryMockLive(
             insertUserDetailsCounterRef = insertUserDetailsCounterRef,
             updateUserDetailsCounterRef = updateUserDetailsCounterRef,
-            maybeError = userRepositoryMaybeError,
+            maybeError = userManagementRepositoryMaybeError,
           ),
           authorizationStateMockLive(authedUser),
           phoneNumberRegionValidatorMockLive(),

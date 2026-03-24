@@ -44,7 +44,7 @@ class UserContactsServiceSpec extends ZWordSpecBase, SmithyArbitraries {
 
         buildUserContactsService(
           authedUser = authedUser,
-          userRepositoryMaybeError = Some(new RuntimeException("Repository error")),
+          userManagementRepositoryMaybeError = Some(new RuntimeException("Repository error")),
         )
           .upsertContacts(Set(upsertUserContactRequest))
           .zioError shouldBe a[smithy.InternalServerError]
@@ -59,13 +59,13 @@ class UserContactsServiceSpec extends ZWordSpecBase, SmithyArbitraries {
 
     def buildUserContactsService(
         authedUser: AuthedUser,
-        userRepositoryMaybeError: Option[Throwable] = None,
+        userManagementRepositoryMaybeError: Option[Throwable] = None,
     ): smithy.UserContactsService[Task] =
       ZIO
         .service[smithy.UserContactsService[Task]]
         .provide(
           UserContactsService.live,
-          userContactsRepositoryMockLive(upsertUserContactsCounterRef, userRepositoryMaybeError),
+          userContactsRepositoryMockLive(upsertUserContactsCounterRef, userManagementRepositoryMaybeError),
           authorizationStateMockLive(authedUser),
           phoneNumberRegionValidatorMockLive(),
           UserContactsValidators.upsertUserContactsValidatorLive,

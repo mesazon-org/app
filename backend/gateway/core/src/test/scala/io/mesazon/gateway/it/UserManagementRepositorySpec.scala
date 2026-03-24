@@ -276,12 +276,12 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
 
     "insertUserDetails" should {
       "successfully insert user details" in withContext { (postgresClient, userManagementQueries) =>
-        val now                = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow           = Clock.fixed(now, ZoneOffset.UTC)
-        val onboardUserDetails = arbitrarySample[OnboardUserDetails]
-        val userID             = arbitrarySample[UserID]
-        val email              = arbitrarySample[Email]
-        val userRepository     = ZIO
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val onboardUserDetails       = arbitrarySample[OnboardUserDetails]
+        val userID                   = arbitrarySample[UserID]
+        val email                    = arbitrarySample[Email]
+        val userManagementRepository = ZIO
           .service[UserManagementRepository]
           .provide(
             UserManagementRepository.live,
@@ -292,7 +292,7 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           )
           .zioValue
 
-        userRepository.insertUserDetails(userID, email, onboardUserDetails).zioValue
+        userManagementRepository.insertUserDetails(userID, email, onboardUserDetails).zioValue
 
         postgresClient
           .executeQuery(userManagementQueries.getUserDetailsQuery(userID))
@@ -307,32 +307,31 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
         )
       }
 
-      "fail with UserAlreadyExists when user already exist" in withContext {
-        (postgresClient, userManagementRepository) =>
-          val onboardUserDetails = arbitrarySample[OnboardUserDetails]
-          val userID             = arbitrarySample[UserID]
-          val email              = arbitrarySample[Email]
-          val userRepository     = ZIO
-            .service[UserManagementRepository]
-            .provide(
-              UserManagementRepository.live,
-              ZLayer.succeed(postgresClient.database),
-              TimeProvider.liveSystemUTC,
-              idGeneratorMockLive,
-              ZLayer.succeed(userManagementRepository),
-            )
-            .zioValue
+      "fail with UserAlreadyExists when user already exist" in withContext { (postgresClient, userManagementQueries) =>
+        val onboardUserDetails       = arbitrarySample[OnboardUserDetails]
+        val userID                   = arbitrarySample[UserID]
+        val email                    = arbitrarySample[Email]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            TimeProvider.liveSystemUTC,
+            idGeneratorMockLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
 
-          userRepository.insertUserDetails(userID, email, onboardUserDetails).zioValue
+        userManagementRepository.insertUserDetails(userID, email, onboardUserDetails).zioValue
 
-          // Attempt to insert the same user again
-          userRepository
-            .insertUserDetails(userID, email, onboardUserDetails)
-            .zioError shouldBe ServiceError.ConflictError
-            .UserAlreadyExists(
-              userID,
-              email,
-            )
+        // Attempt to insert the same user again
+        userManagementRepository
+          .insertUserDetails(userID, email, onboardUserDetails)
+          .zioError shouldBe ServiceError.ConflictError
+          .UserAlreadyExists(
+            userID,
+            email,
+          )
       }
     }
 
