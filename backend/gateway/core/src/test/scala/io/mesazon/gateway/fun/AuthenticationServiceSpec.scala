@@ -10,7 +10,7 @@ import io.mesazon.gateway.utils.{RepositoryArbitraries, SmithyArbitraries}
 import io.mesazon.testkit.base.*
 import zio.*
 
-class AuthenticationServiceSpec extends ZWordSpecBase, GatewayArbitraries, SmithyArbitraries, RepositoryArbitraries {
+class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries {
 
   "AuthenticationService" when {
     "signUpEmail" should {
@@ -19,7 +19,9 @@ class AuthenticationServiceSpec extends ZWordSpecBase, GatewayArbitraries, Smith
         val userOnboardRow     = arbitrarySample[UserOnboardRow]
           .copy(email = Email.assume(signUpEmailRequest.email))
         val authenticationService =
-          buildAuthenticationService(userOnboardRows = Map(userOnboardRow.userID -> userOnboardRow))
+          buildAuthenticationService(
+            userOnboardRows = Map(userOnboardRow.userID -> userOnboardRow)
+          )
 
         authenticationService.signUpEmail(signUpEmailRequest).zioValue
 
@@ -47,6 +49,22 @@ class AuthenticationServiceSpec extends ZWordSpecBase, GatewayArbitraries, Smith
 
         insertUserOnboardEmailRef.get.zioValue shouldBe 0
       }
+
+      "fail with InternalServer when fail unexpectedly" in new TestContext {
+        val signUpEmailRequest    = arbitrarySample[smithy.SignUpEmailRequest]
+        val authenticationService = buildAuthenticationService(
+          maybeUserManagementRepositoryError = Some(new RuntimeException("Database connection failed"))
+        )
+
+        authenticationService
+          .signUpEmail(signUpEmailRequest)
+          .zioEither
+          .left
+          .value
+          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+
+        insertUserOnboardEmailRef.get.zioValue shouldBe 0
+      }
     }
   }
 
@@ -55,7 +73,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, GatewayArbitraries, Smith
 
     def buildAuthenticationService(
         userOnboardRows: Map[UserID, UserOnboardRow] = Map.empty,
-        userRepositoryMaybeError: Option[Throwable] = None,
+        maybeUserManagementRepositoryError: Option[Throwable] = None,
         emailValidatorMaybeError: Option[InvalidFieldError] = None,
     ): smithy.AuthenticationService[Task] =
       ZIO
@@ -66,10 +84,9 @@ class AuthenticationServiceSpec extends ZWordSpecBase, GatewayArbitraries, Smith
           userManagementRepositoryMockLive(
             userOnboardRows = userOnboardRows,
             insertUserOnboardEmailRef = insertUserOnboardEmailRef,
-            maybeError = userRepositoryMaybeError,
+            maybeError = maybeUserManagementRepositoryError,
           ),
         )
         .zioValue
   }
-
 }

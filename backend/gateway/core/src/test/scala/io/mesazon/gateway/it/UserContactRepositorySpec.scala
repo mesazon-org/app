@@ -35,11 +35,13 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
 
   def withContext[A](f: (PostgreSQLTestClient, UserContactQueries, UserManagementQueries) => A): A = withContainers {
     container =>
-      val config               = PostgreSQLTestClientConfig.from(container)
+      val config = PostgreSQLTestClientConfig.from(container)
+
       val postgreSQLTestClient = ZIO
         .service[PostgreSQLTestClient]
         .provide(PostgreSQLTestClient.live, ZLayer.succeed(config))
         .zioValue
+
       val userContactQueries =
         ZIO
           .service[UserContactQueries]
@@ -116,13 +118,9 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
           )
 
           // Insert user for user_id foreign key constraint
-          postgresClient.database
-            .transactionOrDie(userManagementQueries.insertUserDetailsQuery(userDetailsRow))
-            .zioValue
+          postgresClient.executeQuery(userManagementQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
-          postgresClient.database
-            .transactionOrDie(userContactQueries.insertUserContacts(insertUserContactRows))
-            .zioValue
+          postgresClient.executeQuery(userContactQueries.insertUserContacts(insertUserContactRows)).zioValue
 
           userContactsRepository
             .upsertUserContacts(
@@ -141,8 +139,10 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
           val upsertUserContact4_1 = upsertUserContact4
             .copy(userContactID = Some(UserContactID.assume("2")))
 
-          postgresClient.database
-            .transactionOrDie(userContactQueries.getUserContacts(userID))
+          postgresClient
+            .executeQuery(
+              userContactQueries.getUserContacts(userID)
+            )
             .zioValue should contain theSameElementsAs Vector(
             upsertUserContact1_1,
             upsertUserContact2_1,
@@ -187,18 +187,12 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .transform
 
           // Insert user for user_id foreign key constraint
-          postgresClient.database
-            .transactionOrDie(userManagementQueries.insertUserDetailsQuery(userDetailsRow))
-            .zioValue
+          postgresClient.executeQuery(userManagementQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
-          postgresClient.database
-            .transactionOrDie(userContactQueries.insertUserContacts(NonEmptyChunk(insertUserContact)))
-            .zioValue
+          postgresClient.executeQuery(userContactQueries.insertUserContacts(NonEmptyChunk(insertUserContact))).zioValue
 
-          val insertedUserContactRow = postgresClient.database
-            .transactionOrDie(userContactQueries.getUserContacts(userID))
-            .zioValue
-            .head
+          val insertedUserContactRow =
+            postgresClient.executeQuery(userContactQueries.getUserContacts(userID)).zioValue.head
 
           val updatedUpsertUserContact = upsertUserContact.copy(
             displayName = DisplayName.assume("displayName"),
@@ -216,10 +210,8 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
           // Upsert user contact with updated fields
           userContactsRepository.upsertUserContacts(userID, NonEmptyChunk(updatedUpsertUserContact)).zioValue
 
-          val updatedUserContactRow = postgresClient.database
-            .transactionOrDie(userContactQueries.getUserContacts(userID))
-            .zioValue
-            .head
+          val updatedUserContactRow =
+            postgresClient.executeQuery(userContactQueries.getUserContacts(userID)).zioValue.head
 
           updatedUserContactRow shouldBe insertedUserContactRow.copy(
             displayName = updatedUserContactRow.displayName,
@@ -271,12 +263,12 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .transform
 
           // Insert user for user_id foreign key constraint
-          postgresClient.database
-            .transactionOrDie(userManagementQueries.insertUserDetailsQuery(userDetailsRow))
-            .zioValue
+          postgresClient.executeQuery(userManagementQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
-          postgresClient.database
-            .transactionOrDie(userContactQueries.insertUserContacts(NonEmptyChunk(insertUserContactsRow)))
+          postgresClient
+            .executeQuery(
+              userContactQueries.insertUserContacts(NonEmptyChunk(insertUserContactsRow))
+            )
             .zioValue
 
           userContactsRepository
@@ -286,8 +278,10 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
           val insertedNonConflictedUserContact = insertSamePhoneNumberUserContact
             .copy(userContactID = Some(UserContactID.assume("1")))
 
-          postgresClient.database
-            .transactionOrDie(userContactQueries.getUserContacts(userID))
+          postgresClient
+            .executeQuery(
+              userContactQueries.getUserContacts(userID)
+            )
             .zioValue should contain theSameElementsAs Vector(
             updatePhoneNumberUserContact,
             insertedNonConflictedUserContact,
@@ -321,17 +315,13 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .zioValue
 
           // Insert user for user_id foreign key constraint
-          postgresClient.database
-            .transactionOrDie(userManagementQueries.insertUserDetailsQuery(userDetailsRow))
-            .zioValue
+          postgresClient.executeQuery(userManagementQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
           userContactsRepository
             .upsertUserContacts(userID, NonEmptyChunk(upsertUserContact))
             .zioValue
 
-          postgresClient.database
-            .transactionOrDie(userContactQueries.getUserContacts(userID))
-            .zioValue shouldBe empty
+          postgresClient.executeQuery(userContactQueries.getUserContacts(userID)).zioValue shouldBe empty
       }
 
       "fail to insert new user contacts when a user contact with the same phone number and user id already exist" in withContext {
@@ -366,12 +356,12 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .transform
 
           // Insert user for user_id foreign key constraint
-          postgresClient.database
-            .transactionOrDie(userManagementQueries.insertUserDetailsQuery(userDetailsRow))
-            .zioValue
+          postgresClient.executeQuery(userManagementQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
-          postgresClient.database
-            .transactionOrDie(userContactQueries.insertUserContacts(NonEmptyChunk(insertUserContactsRow)))
+          postgresClient
+            .executeQuery(
+              userContactQueries.insertUserContacts(NonEmptyChunk(insertUserContactsRow))
+            )
             .zioValue
 
           userContactsRepository
@@ -405,9 +395,7 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .zioValue
 
           // Insert user for user_id foreign key constraint
-          postgresClient.database
-            .transactionOrDie(userManagementQueries.insertUserDetailsQuery(userDetailsRow))
-            .zioValue
+          postgresClient.executeQuery(userManagementQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
           userContactsRepository
             .upsertUserContacts(userID, NonEmptyChunk(conflictUserContact1, conflictUserContact2))
@@ -452,12 +440,12 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .transform
 
           // Insert user for user_id foreign key constraint
-          postgresClient.database
-            .transactionOrDie(userManagementQueries.insertUserDetailsQuery(userDetailsRow))
-            .zioValue
+          postgresClient.executeQuery(userManagementQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
-          postgresClient.database
-            .transactionOrDie(userContactQueries.insertUserContacts(NonEmptyChunk(insertUserContactsRow)))
+          postgresClient
+            .executeQuery(
+              userContactQueries.insertUserContacts(NonEmptyChunk(insertUserContactsRow))
+            )
             .zioValue
 
           userContactsRepository
@@ -468,8 +456,10 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .asInstanceOf[DbException.Wrapped]
             .cause shouldBe a[java.sql.BatchUpdateException]
 
-          postgresClient.database
-            .transactionOrDie(userContactQueries.getUserContacts(userID))
+          postgresClient
+            .executeQuery(
+              userContactQueries.getUserContacts(userID)
+            )
             .zioValue should contain theSameElementsAs Vector(insertUserContactsRow)
       }
 

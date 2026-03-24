@@ -34,33 +34,42 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
 
   val repositoryConfigLive = ZLayer.succeed(repositoryConfig)
 
-  def withContext[A](f: PostgreSQLTestClient => A): A = withContainers { container =>
-    val config               = PostgreSQLTestClientConfig.from(container)
+  def withContext[A](f: (PostgreSQLTestClient, WahaQueries) => A): A = withContainers { container =>
+    val config = PostgreSQLTestClientConfig.from(container)
+
     val postgreSQLTestClient = ZIO
       .service[PostgreSQLTestClient]
       .provide(PostgreSQLTestClient.live, ZLayer.succeed(config))
       .zioValue
 
-    f(postgreSQLTestClient)
+    val wahaQueries = ZIO
+      .service[WahaQueries]
+      .provide(
+        WahaQueries.live,
+        repositoryConfigLive,
+      )
+      .zioValue
+
+    f(postgreSQLTestClient, wahaQueries)
   }
 
-  override def beforeAll(): Unit = withContext { client =>
+  override def beforeAll(): Unit = withContext { (postgresClient, _) =>
     super.beforeAll()
     eventually {
-      client.checkIfTableExists(repositoryConfig.schema, repositoryConfig.wahaUserTable).zioValue shouldBe true
+      postgresClient.checkIfTableExists(repositoryConfig.schema, repositoryConfig.wahaUserTable).zioValue shouldBe true
     }
   }
 
-  override def beforeEach(): Unit = withContext { client =>
+  override def beforeEach(): Unit = withContext { (postgresClient, _) =>
     super.beforeEach()
     eventually {
-      client.truncateTable(repositoryConfig.schema, repositoryConfig.wahaUserTable).zioValue
+      postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.wahaUserTable).zioValue
     }
   }
 
   "WahaRepository" when {
     "insertWahaUser" should {
-      "insert a waha user row" in withContext { (client: PostgreSQLTestClient) =>
+      "insert a waha user row" in withContext { (postgresClient, wahaQueries) =>
         val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow       = Clock.fixed(now, ZoneOffset.UTC)
         val wahaUserRowRaw = arbitrarySample[WahaUserRow]
@@ -69,9 +78,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           .service[WahaRepository]
           .provide(
             WahaRepository.live,
-            ZLayer.succeed(client.database),
-            WahaQueries.live,
-            repositoryConfigLive,
+            ZLayer.succeed(postgresClient.database),
+            ZLayer.succeed(wahaQueries),
             timeProviderMockLive(clockNow),
             idGeneratorMockLive,
           )
@@ -91,7 +99,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           wahaUserRowRaw.copy(userID = UserID.assume("1"), createdAt = CreatedAt(now), updatedAt = UpdatedAt(now))
       }
 
-      "not fail to insert the same waha user row on user id" in withContext { (client: PostgreSQLTestClient) =>
+      "not fail to insert the same waha user row on user id" in withContext { (postgresClient, wahaQueries) =>
         val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow       = Clock.fixed(now, ZoneOffset.UTC)
         val wahaUserRowRaw = arbitrarySample[WahaUserRow]
@@ -100,10 +108,9 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           .service[WahaRepository]
           .provide(
             WahaRepository.live,
-            ZLayer.succeed(client.database),
-            WahaQueries.live,
-            repositoryConfigLive,
+            ZLayer.succeed(postgresClient.database),
             timeProviderMockLive(clockNow),
+            ZLayer.succeed(wahaQueries),
             idGeneratorMockLive,
           )
           .zioValue
@@ -135,7 +142,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
     }
 
     "getWahaUser" should {
-      "get waha user using domain user id" in withContext { (client: PostgreSQLTestClient) =>
+      "get waha user using domain user id" in withContext { (postgresClient, wahaQueries) =>
         val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow       = Clock.fixed(now, ZoneOffset.UTC)
         val wahaUserRowRaw = arbitrarySample[WahaUserRow]
@@ -144,9 +151,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           .service[WahaRepository]
           .provide(
             WahaRepository.live,
-            ZLayer.succeed(client.database),
-            WahaQueries.live,
-            repositoryConfigLive,
+            ZLayer.succeed(postgresClient.database),
+            ZLayer.succeed(wahaQueries),
             timeProviderMockLive(clockNow),
             idGeneratorMockLive,
           )
@@ -171,7 +177,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
     }
 
     "getWahaUserWithWahaUserId" should {
-      "get waha user using waha user id" in withContext { (client: PostgreSQLTestClient) =>
+      "get waha user using waha user id" in withContext { (postgresClient, wahaQueries) =>
         val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow       = Clock.fixed(now, ZoneOffset.UTC)
         val wahaUserRowRaw = arbitrarySample[WahaUserRow]
@@ -180,9 +186,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           .service[WahaRepository]
           .provide(
             WahaRepository.live,
-            ZLayer.succeed(client.database),
-            WahaQueries.live,
-            repositoryConfigLive,
+            ZLayer.succeed(postgresClient.database),
+            ZLayer.succeed(wahaQueries),
             timeProviderMockLive(clockNow),
             idGeneratorMockLive,
           )
@@ -207,23 +212,17 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
     }
 
     "upsertWahaUserActivity" should {
-      "upsert waha user activity force update true" in withContext { (client: PostgreSQLTestClient) =>
+      "upsert waha user activity force update true" in withContext { (postgresClient, wahaQueries) =>
         val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow       = Clock.fixed(now, ZoneOffset.UTC)
         val wahaUserRowRaw = arbitrarySample[WahaUserRow]
-
-        val wahaQueries = ZIO
-          .service[WahaQueries]
-          .provide(WahaQueries.live, repositoryConfigLive)
-          .zioValue
 
         val wahaRepository = ZIO
           .service[WahaRepository]
           .provide(
             WahaRepository.live,
-            ZLayer.succeed(client.database),
-            WahaQueries.live,
-            repositoryConfigLive,
+            ZLayer.succeed(postgresClient.database),
+            ZLayer.succeed(wahaQueries),
             timeProviderMockLive(clockNow),
             idGeneratorMockLive,
           )
@@ -248,7 +247,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
           .zioValue
 
-        val wahaUserActivities = client.database.transactionOrDie(wahaQueries.getAllWahaUserActivities).zioValue
+        val wahaUserActivities = postgresClient.database.transactionOrDie(wahaQueries.getAllWahaUserActivities).zioValue
 
         wahaUserActivities should contain theSameElementsAs Vector(
           WahaUserActivityRow(
@@ -268,7 +267,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
           .zioValue
 
-        val wahaUserActivitiesUpdate = client.database.transactionOrDie(wahaQueries.getAllWahaUserActivities).zioValue
+        val wahaUserActivitiesUpdate =
+          postgresClient.database.transactionOrDie(wahaQueries.getAllWahaUserActivities).zioValue
 
         wahaUserActivitiesUpdate should contain theSameElementsAs Vector(
           WahaUserActivityRow(
@@ -284,7 +284,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           .zioValue
 
         val wahaUserActivitiesUpdateNone =
-          client.database.transactionOrDie(wahaQueries.getAllWahaUserActivities).zioValue
+          postgresClient.database.transactionOrDie(wahaQueries.getAllWahaUserActivities).zioValue
 
         wahaUserActivitiesUpdateNone should contain theSameElementsAs Vector(
           WahaUserActivityRow(
@@ -296,23 +296,17 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
         )
       }
 
-      "upsert waha user activity force update false" in withContext { (client: PostgreSQLTestClient) =>
+      "upsert waha user activity force update false" in withContext { (postgresClient, wahaQueries) =>
         val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow       = Clock.fixed(now, ZoneOffset.UTC)
         val wahaUserRowRaw = arbitrarySample[WahaUserRow]
-
-        val wahaQueries = ZIO
-          .service[WahaQueries]
-          .provide(WahaQueries.live, repositoryConfigLive)
-          .zioValue
 
         val wahaRepository = ZIO
           .service[WahaRepository]
           .provide(
             WahaRepository.live,
-            ZLayer.succeed(client.database),
-            WahaQueries.live,
-            repositoryConfigLive,
+            ZLayer.succeed(postgresClient.database),
+            ZLayer.succeed(wahaQueries),
             timeProviderMockLive(clockNow),
             idGeneratorMockLive,
           )
@@ -337,7 +331,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
           .zioValue
 
-        val wahaUserActivities = client.database.transactionOrDie(wahaQueries.getAllWahaUserActivities).zioValue
+        val wahaUserActivities = postgresClient.database.transactionOrDie(wahaQueries.getAllWahaUserActivities).zioValue
 
         wahaUserActivities should contain theSameElementsAs Vector(
           WahaUserActivityRow(
@@ -357,7 +351,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
           .zioValue
 
-        val wahaUserActivitiesUpdate = client.database.transactionOrDie(wahaQueries.getAllWahaUserActivities).zioValue
+        val wahaUserActivitiesUpdate =
+          postgresClient.database.transactionOrDie(wahaQueries.getAllWahaUserActivities).zioValue
 
         wahaUserActivitiesUpdate should contain theSameElementsAs Vector(
           WahaUserActivityRow(
@@ -378,7 +373,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           .zioValue
 
         val wahaUserActivitiesNoUpdate =
-          client.database.transactionOrDie(wahaQueries.getAllWahaUserActivities).zioValue
+          postgresClient.database.transactionOrDie(wahaQueries.getAllWahaUserActivities).zioValue
 
         wahaUserActivitiesNoUpdate should contain theSameElementsAs Vector(
           WahaUserActivityRow(
@@ -391,7 +386,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
       }
 
       "getUserWahaUserActivity" should {
-        "get user waha activity" in withContext { (client: PostgreSQLTestClient) =>
+        "get user waha activity" in withContext { (postgresClient, wahaQueries) =>
           val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
           val clockNow       = Clock.fixed(now, ZoneOffset.UTC)
           val wahaUserRowRaw = arbitrarySample[WahaUserRow]
@@ -400,9 +395,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             .service[WahaRepository]
             .provide(
               WahaRepository.live,
-              ZLayer.succeed(client.database),
-              WahaQueries.live,
-              repositoryConfigLive,
+              ZLayer.succeed(postgresClient.database),
+              ZLayer.succeed(wahaQueries),
               timeProviderMockLive(clockNow),
               idGeneratorMockLive,
             )
@@ -441,23 +435,17 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
       }
 
       "insertWahaUserMessage" should {
-        "insert waha user message" in withContext { (client: PostgreSQLTestClient) =>
+        "insert waha user message" in withContext { (postgresClient, wahaQueries) =>
           val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
           val clockNow       = Clock.fixed(now, ZoneOffset.UTC)
           val wahaUserRowRaw = arbitrarySample[WahaUserRow]
-
-          val wahaQueries = ZIO
-            .service[WahaQueries]
-            .provide(WahaQueries.live, repositoryConfigLive)
-            .zioValue
 
           val wahaRepository = ZIO
             .service[WahaRepository]
             .provide(
               WahaRepository.live,
-              ZLayer.succeed(client.database),
-              WahaQueries.live,
-              repositoryConfigLive,
+              ZLayer.succeed(postgresClient.database),
+              ZLayer.succeed(wahaQueries),
               timeProviderMockLive(clockNow),
               idGeneratorMockLive,
             )
@@ -480,7 +468,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             .insertWahaUserMessage(UserID.assume("1"), messageID, message, isAssistant = false)
             .zioValue
 
-          val wahaUserMessages = client.database.transactionOrDie(wahaQueries.getAllWahaUserMessages).zioValue
+          val wahaUserMessages = postgresClient.database.transactionOrDie(wahaQueries.getAllWahaUserMessages).zioValue
 
           wahaUserMessages should contain theSameElementsAs Vector(
             WahaUserMessageRow(
@@ -493,23 +481,17 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
         }
 
-        "not fail to insert conflict user waha message" in withContext { (client: PostgreSQLTestClient) =>
+        "not fail to insert conflict user waha message" in withContext { (postgresClient, wahaQueries) =>
           val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
           val clockNow       = Clock.fixed(now, ZoneOffset.UTC)
           val wahaUserRowRaw = arbitrarySample[WahaUserRow]
-
-          val wahaQueries = ZIO
-            .service[WahaQueries]
-            .provide(WahaQueries.live, repositoryConfigLive)
-            .zioValue
 
           val wahaRepository = ZIO
             .service[WahaRepository]
             .provide(
               WahaRepository.live,
-              ZLayer.succeed(client.database),
-              WahaQueries.live,
-              repositoryConfigLive,
+              ZLayer.succeed(postgresClient.database),
+              ZLayer.succeed(wahaQueries),
               timeProviderMockLive(clockNow),
               idGeneratorMockLive,
             )
@@ -537,7 +519,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             .insertWahaUserMessage(UserID.assume("1"), messageID, message2, isAssistant = true)
             .zioEither
 
-          val wahaUserMessages = client.database.transactionOrDie(wahaQueries.getAllWahaUserMessages).zioValue
+          val wahaUserMessages = postgresClient.database.transactionOrDie(wahaQueries.getAllWahaUserMessages).zioValue
 
           wahaUserMessages should contain theSameElementsAs Vector(
             WahaUserMessageRow(
@@ -552,7 +534,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
       }
 
       "getWahaUserMessages" should {
-        "get waha user messages" in withContext { (client: PostgreSQLTestClient) =>
+        "get waha user messages" in withContext { (postgresClient, wahaQueries) =>
           val now            = Instant.now().truncatedTo(ChronoUnit.MILLIS)
           val clockNow       = Clock.fixed(now, ZoneOffset.UTC)
           val wahaUserRowRaw = arbitrarySample[WahaUserRow]
@@ -561,9 +543,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             .service[WahaRepository]
             .provide(
               WahaRepository.live,
-              ZLayer.succeed(client.database),
-              WahaQueries.live,
-              repositoryConfigLive,
+              ZLayer.succeed(postgresClient.database),
+              ZLayer.succeed(wahaQueries),
               timeProviderMockLive(clockNow),
               idGeneratorMockLive,
             )
@@ -616,7 +597,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
 
       "getWahaUsersActivityWaitingForAssistantReply" should {
         "get all waha users activity rows that waiting for assistant reply" in withContext {
-          (client: PostgreSQLTestClient) =>
+          (postgresClient, wahaQueries) =>
             val now      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
             val clockNow = Clock.fixed(now, ZoneOffset.UTC)
 
@@ -626,9 +607,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
               .service[WahaRepository]
               .provide(
                 WahaRepository.live,
-                ZLayer.succeed(client.database),
-                WahaQueries.live,
-                repositoryConfigLive,
+                ZLayer.succeed(postgresClient.database),
+                ZLayer.succeed(wahaQueries),
                 timeProviderMockLive(clockNow),
                 idGeneratorMockLive,
               )

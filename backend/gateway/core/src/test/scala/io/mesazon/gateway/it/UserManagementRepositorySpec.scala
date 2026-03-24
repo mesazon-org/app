@@ -479,9 +479,7 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
 
           userManagementRepository.updateUserDetails(userID, updateUserDetails).zioValue
 
-          postgresClient.database
-            .transactionOrDie(userManagementQueries.getUserDetailsQuery(userID))
-            .zioValue shouldBe None
+          postgresClient.executeQuery(userManagementQueries.getUserDetailsQuery(userID)).zioValue shouldBe None
       }
     }
   }
