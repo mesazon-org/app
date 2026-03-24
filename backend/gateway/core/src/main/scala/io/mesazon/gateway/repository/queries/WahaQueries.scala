@@ -15,9 +15,9 @@ final class WahaQueries(
 ) {
 
   private val frSchema                = Fragment.const(config.schema)
-  private val frWahaUsersTable        = Fragment.const(config.wahaUsersTable)
+  private val frWahaUsersTable        = Fragment.const(config.wahaUserTable)
   private val frWahaUserActivityTable = Fragment.const(config.wahaUserActivityTable)
-  private val frWahaUserMessagesTable = Fragment.const(config.wahaUserMessagesTable)
+  private val frWahaUserMessagesTable = Fragment.const(config.wahaUserMessageTable)
 
   private val wahaUserFields =
     fr"""user_id,
@@ -172,5 +172,5 @@ final class WahaQueries(
 
 object WahaQueries {
 
-  def live = ZLayer.derive[WahaQueries]
+  val live = ZLayer.derive[WahaQueries]
 }

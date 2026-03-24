@@ -3,16 +3,16 @@ package io.mesazon.gateway
 import com.google.i18n.phonenumbers.*
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.{AuthorizationService, AuthorizationState}
-import io.mesazon.gateway.clients.{OpenAIClient, SttpBackend}
+import io.mesazon.gateway.auth.*
+import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.middleware.ServerMiddleware
 import io.mesazon.gateway.repository.*
-import io.mesazon.gateway.repository.queries.WahaQueries
+import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.service.*
-import io.mesazon.gateway.stream.ReplyingToMessagesCronJobStream
+import io.mesazon.gateway.stream.*
 import io.mesazon.generator.IDGenerator
-import io.mesazon.waha.WahaClient
+import io.mesazon.waha.*
 import org.slf4j.bridge.SLF4JBridgeHandler
 import zio.*
 import zio.config.typesafe.TypesafeConfigProvider
@@ -47,16 +47,19 @@ object Main extends ZIOAppDefault {
       UserManagementService.live,
       UserContactsService.live,
       WahaService.live,
+      AuthenticationService.live,
 
       // Repository
       PostgresTransactor.live,
       PingRepository.live,
-      UserRepository.live,
-      UserContactsRepository.live,
+      UserManagementRepository.live,
+      UserContactRepository.live,
       WahaRepository.live,
 
       // Queries
       WahaQueries.live,
+      UserManagementQueries.live,
+      UserContactQueries.live,
 
       // Auth
       AuthorizationService.live,
@@ -76,6 +79,7 @@ object Main extends ZIOAppDefault {
       OpenAIClientConfig.live,
 
       // Validators
+      EmailValidator.emailValidatorLive,
       PhoneNumberValidator.phoneNumberRegionValidatorLive,
       PhoneNumberValidator.wahaPhoneNumberValidatorLive,
       UserManagementValidators.onboardUserDetailsRequestValidatorLive,

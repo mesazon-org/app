@@ -7,25 +7,24 @@ import io.github.gaelrenoux.tranzactio.doobie.Connection
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.repository.domain.UserContactRow
-import io.mesazon.gateway.repository.queries.UserContactsQueries
+import io.mesazon.gateway.repository.queries.UserContactQueries
 import io.mesazon.generator.IDGenerator
 import io.scalaland.chimney.dsl.*
 import zio.*
 import zio.interop.catz.*
 
-import UserContactsQueries.UpdateUserContactQuery
-
-trait UserContactsRepository {
+trait UserContactRepository {
   def upsertUserContacts(userID: UserID, upsertUserContacts: NonEmptyChunk[UpsertUserContact]): UIO[Unit]
 }
 
-object UserContactsRepository {
+object UserContactRepository {
 
-  private final class UserContactsPostgres(
+  private final class UserContactPostgres(
       database: DatabaseOps.ServiceOps[Transactor[Task]],
       timeProvider: TimeProvider,
       idGenerator: IDGenerator,
-  ) extends UserContactsRepository {
+      userContactQueries: UserContactQueries,
+  ) extends UserContactRepository {
 
     override def upsertUserContacts(userID: UserID, upsertUserContacts: NonEmptyChunk[UpsertUserContact]): UIO[Unit] =
       (for {
@@ -35,7 +34,7 @@ object UserContactsRepository {
           .map(updateUserContact =>
             updateUserContact.userContactID.map(userContactID =>
               updateUserContact
-                .into[UpdateUserContactQuery]
+                .into[userContactQueries.UpdateUserContactQuery]
                 .withFieldConst(_.userContactID, userContactID)
                 .withFieldConst(_.updateAt, UpdatedAt(now))
                 .transform
@@ -59,11 +58,11 @@ object UserContactsRepository {
         nonEmptyInsertUserContacts = NonEmptyChunk.fromChunk(insertUserContacts)
         updateUserContactsTrans    = nonEmptyUpdateUserContacts
           .fold(ZIO.service[Connection].unit)(
-            UserContactsQueries.updateUserContacts
+            userContactQueries.updateUserContacts
           )
         insertUserContactsTrans = nonEmptyInsertUserContacts
           .fold(ZIO.service[Connection].unit)(
-            UserContactsQueries.insertUserContacts
+            userContactQueries.insertUserContacts
           )
         // IMPORTANT !!
         // Order of execution matters if a user performs an update on unique elements
@@ -74,7 +73,7 @@ object UserContactsRepository {
       } yield ()).orDie
   }
 
-  private def observed(repository: UserContactsRepository): UserContactsRepository = repository
+  private def observed(repository: UserContactRepository): UserContactRepository = repository
 
-  val live = ZLayer.derive[UserContactsPostgres] >>> ZLayer.fromFunction(observed)
+  val live = ZLayer.derive[UserContactPostgres] >>> ZLayer.fromFunction(observed)
 }

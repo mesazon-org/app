@@ -42,9 +42,11 @@ object HttpApp {
     serverMiddleware      <- ZIO.service[ServerEndpointMiddleware.Simple[Task]]
     userManagementService <- ZIO.service[smithy.UserManagementService[Task]]
     userContactsService   <- ZIO.service[smithy.UserContactsService[Task]]
+    authenticationService <- ZIO.service[smithy.AuthenticationService[Task]]
     userManagementRoute   <- buildRoute(userManagementService, Some(serverMiddleware))
+    authenticationRoute   <- buildRoute(authenticationService, None)
     userContactsRoute     <- buildRoute(userContactsService, Some(serverMiddleware))
-  } yield userManagementRoute <+> userContactsRoute
+  } yield userManagementRoute <+> userContactsRoute <+> authenticationRoute
 
   private val internalRoutesResource = for {
     wahaService <- ZIO.service[smithy.WahaService[Task]]
@@ -53,6 +55,7 @@ object HttpApp {
 
   private val docsRoutes = docs[Task](
     smithy.UserManagementService,
+    smithy.AuthenticationService,
     smithy.UserContactsService,
     smithy.WahaService,
   )

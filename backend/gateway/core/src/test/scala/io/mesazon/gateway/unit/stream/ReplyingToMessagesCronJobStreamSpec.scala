@@ -70,7 +70,7 @@ class ReplyingToMessagesCronJobStreamSpec extends ZWordSpecBase, RepositoryArbit
         wahaUserMessageRows = Map(wahaUserRow1.userID -> wahaUserMessageRows.toList),
       )
 
-      val _ = replyMessagesStream.stream.runHead.zioValue
+      replyMessagesStream.stream.runHead.zioValue
 
       sendMessageCounterRef.get.zioValue shouldBe 1
       messagesCounterRef.get.zioValue shouldBe 40

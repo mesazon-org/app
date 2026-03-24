@@ -9,7 +9,7 @@ object HealthCheckService {
 
   private final class HealthCheckServiceImpl(
       repository: PingRepository
-  ) extends smithy.HealthCheckService[[A] =>> IO[ServiceError, A]] {
+  ) extends smithy.HealthCheckService[ServiceTask] {
     override def liveness(): IO[ServiceError, Unit] = ZIO.unit
 
     override def readiness(): IO[ServiceError, Unit] =
@@ -17,7 +17,7 @@ object HealthCheckService {
   }
 
   private def observed(
-      service: smithy.HealthCheckService[[A] =>> IO[ServiceError, A]]
+      service: smithy.HealthCheckService[ServiceTask]
   ): smithy.HealthCheckService[Task] =
     new smithy.HealthCheckService[Task] {
       override def liveness(): Task[Unit] = HttpErrorHandler.errorResponseHandler(service.liveness())

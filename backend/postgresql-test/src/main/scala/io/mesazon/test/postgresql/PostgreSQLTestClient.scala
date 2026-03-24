@@ -41,6 +41,8 @@ case class PostgreSQLTestClient(
     database.transactionOrDie(truncateTableQuery(schema, table))
 
   def executeQuery[A](query: ConnectionIO[A]): IO[DbException, A] = database.transactionOrDie(tzio(query))
+
+  def executeQuery[A](query: TranzactIO[A]): IO[DbException, A] = database.transactionOrDie(query)
 }
 
 object PostgreSQLTestClient {

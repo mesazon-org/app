@@ -27,9 +27,9 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
 
   val repositoryConfig = RepositoryConfig(
     schema = "local_schema",
-    wahaUsersTable = "waha_users",
+    wahaUserTable = "waha_user",
     wahaUserActivityTable = "waha_user_activity",
-    wahaUserMessagesTable = "waha_user_messages",
+    wahaUserMessageTable = "waha_user_message",
   )
 
   val repositoryConfigLive = ZLayer.succeed(repositoryConfig)
@@ -47,14 +47,14 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
   override def beforeAll(): Unit = withContext { client =>
     super.beforeAll()
     eventually {
-      client.checkIfTableExists(repositoryConfig.schema, repositoryConfig.wahaUsersTable).zioValue shouldBe true
+      client.checkIfTableExists(repositoryConfig.schema, repositoryConfig.wahaUserTable).zioValue shouldBe true
     }
   }
 
   override def beforeEach(): Unit = withContext { client =>
     super.beforeEach()
     eventually {
-      client.truncateTable(repositoryConfig.schema, repositoryConfig.wahaUsersTable).zioValue
+      client.truncateTable(repositoryConfig.schema, repositoryConfig.wahaUserTable).zioValue
     }
   }
 
@@ -108,7 +108,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
           .zioValue
 
-        val _ = wahaRepository
+        wahaRepository
           .createOrGetWahaUser(
             wahaUserRowRaw.wahaUserID,
             wahaUserRowRaw.fullName,
@@ -152,7 +152,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
           .zioValue
 
-        val _ = wahaRepository
+        wahaRepository
           .createOrGetWahaUser(
             wahaUserRowRaw.wahaUserID,
             wahaUserRowRaw.fullName,
@@ -188,7 +188,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
           .zioValue
 
-        val _ = wahaRepository
+        wahaRepository
           .createOrGetWahaUser(
             wahaUserRowRaw.wahaUserID,
             wahaUserRowRaw.fullName,
@@ -229,7 +229,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
           .zioValue
 
-        val _ = wahaRepository
+        wahaRepository
           .createOrGetWahaUser(
             wahaUserRowRaw.wahaUserID,
             wahaUserRowRaw.fullName,
@@ -239,7 +239,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
           .zioValue
 
-        val _ = wahaRepository
+        wahaRepository
           .upsertWahaUserActivity(
             UserID.assume("1"),
             waha.MessageID.assume("1").some,
@@ -259,7 +259,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
         )
 
-        val _ = wahaRepository
+        wahaRepository
           .upsertWahaUserActivity(
             UserID.assume("1"),
             waha.MessageID.assume("2").some,
@@ -279,7 +279,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
         )
 
-        val _ = wahaRepository
+        wahaRepository
           .upsertWahaUserActivity(UserID.assume("1"), None, isWaitingAssistantReply = true, forceUpdate = true)
           .zioValue
 
@@ -318,7 +318,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
           .zioValue
 
-        val _ = wahaRepository
+        wahaRepository
           .createOrGetWahaUser(
             wahaUserRowRaw.wahaUserID,
             wahaUserRowRaw.fullName,
@@ -328,7 +328,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
           .zioValue
 
-        val _ = wahaRepository
+        wahaRepository
           .upsertWahaUserActivity(
             UserID.assume("1"),
             waha.MessageID.assume("1").some,
@@ -348,7 +348,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
         )
 
-        val _ = wahaRepository
+        wahaRepository
           .upsertWahaUserActivity(
             UserID.assume("1"),
             waha.MessageID.assume("1").some,
@@ -368,7 +368,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           )
         )
 
-        val _ = wahaRepository
+        wahaRepository
           .upsertWahaUserActivity(
             UserID.assume("1"),
             waha.MessageID.assume("2").some,
@@ -408,7 +408,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             )
             .zioValue
 
-          val _ = wahaRepository
+          wahaRepository
             .createOrGetWahaUser(
               wahaUserRowRaw.wahaUserID,
               wahaUserRowRaw.fullName,
@@ -418,7 +418,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             )
             .zioValue
 
-          val _ = wahaRepository
+          wahaRepository
             .upsertWahaUserActivity(
               UserID.assume("1"),
               waha.MessageID.assume("1").some,
@@ -463,7 +463,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             )
             .zioValue
 
-          val _ = wahaRepository
+          wahaRepository
             .createOrGetWahaUser(
               wahaUserRowRaw.wahaUserID,
               wahaUserRowRaw.fullName,
@@ -476,7 +476,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           val messageID = waha.MessageID.assume("message-id")
           val message   = waha.MessageText.assume("Hello, World!")
 
-          val _ = wahaRepository
+          wahaRepository
             .insertWahaUserMessage(UserID.assume("1"), messageID, message, isAssistant = false)
             .zioValue
 
@@ -515,7 +515,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             )
             .zioValue
 
-          val _ = wahaRepository
+          wahaRepository
             .createOrGetWahaUser(
               wahaUserRowRaw.wahaUserID,
               wahaUserRowRaw.fullName,
@@ -529,11 +529,11 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           val message1  = waha.MessageText.assume("Hello, John!")
           val message2  = waha.MessageText.assume("Hello, Mike!")
 
-          val _ = wahaRepository
+          wahaRepository
             .insertWahaUserMessage(UserID.assume("1"), messageID, message1, isAssistant = false)
             .zioValue
 
-          val _ = wahaRepository
+          wahaRepository
             .insertWahaUserMessage(UserID.assume("1"), messageID, message2, isAssistant = true)
             .zioEither
 
@@ -569,7 +569,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             )
             .zioValue
 
-          val _ = wahaRepository
+          wahaRepository
             .createOrGetWahaUser(
               wahaUserRowRaw.wahaUserID,
               wahaUserRowRaw.fullName,
@@ -585,11 +585,11 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           val messageID2 = waha.MessageID.assume("message-id-2")
           val message2   = waha.MessageText.assume("Hello, Mike!")
 
-          val _ = wahaRepository
+          wahaRepository
             .insertWahaUserMessage(UserID.assume("1"), messageID1, message1, isAssistant = false)
             .zioValue
 
-          val _ = wahaRepository
+          wahaRepository
             .insertWahaUserMessage(UserID.assume("1"), messageID2, message2, isAssistant = true)
             .zioValue
 
@@ -647,7 +647,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
               )
               .zioValue
 
-            val _ = wahaRepository
+            wahaRepository
               .upsertWahaUserActivity(
                 UserID.assume("1"),
                 waha.MessageID.assume("1").some,
@@ -655,7 +655,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
                 forceUpdate = true,
               )
               .zioValue
-            val _ = wahaRepository
+            wahaRepository
               .upsertWahaUserActivity(
                 UserID.assume("2"),
                 waha.MessageID.assume("2").some,
@@ -663,7 +663,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
                 forceUpdate = true,
               )
               .zioValue
-            val _ = wahaRepository
+            wahaRepository
               .upsertWahaUserActivity(
                 UserID.assume("3"),
                 waha.MessageID.assume("3").some,
@@ -671,7 +671,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
                 forceUpdate = true,
               )
               .zioValue
-            val _ = wahaRepository
+            wahaRepository
               .upsertWahaUserActivity(
                 UserID.assume("4"),
                 waha.MessageID.assume("4").some,
@@ -679,7 +679,7 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
                 forceUpdate = true,
               )
               .zioValue
-            val _ = wahaRepository
+            wahaRepository
               .upsertWahaUserActivity(
                 UserID.assume("5"),
                 waha.MessageID.assume("5").some,

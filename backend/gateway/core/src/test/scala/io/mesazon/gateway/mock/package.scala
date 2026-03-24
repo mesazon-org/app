@@ -1,6 +1,6 @@
 package io.mesazon.gateway
 
-import cats.data.ValidatedNec
+import cats.data.{NonEmptyChain, ValidatedNec}
 import cats.syntax.all.*
 import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import io.github.gaelrenoux.tranzactio.DbException
@@ -13,7 +13,8 @@ import io.mesazon.domain.waha.output.ChattingSendMessageOutput
 import io.mesazon.gateway.auth.{AuthorizationService, AuthorizationState}
 import io.mesazon.gateway.clients.OpenAIClient
 import io.mesazon.gateway.repository.*
-import io.mesazon.gateway.repository.domain.{WahaUserActivityRow, WahaUserMessageRow, WahaUserRow}
+import io.mesazon.gateway.repository.domain.{UserOnboardRow, WahaUserActivityRow, WahaUserMessageRow, WahaUserRow}
+import io.mesazon.gateway.validation.EmailValidator.EmailRaw
 import io.mesazon.gateway.validation.PhoneNumberValidator.PhoneNumberRegion
 import io.mesazon.generator.IDGenerator
 import io.mesazon.testkit.base.ZIOTestOps
@@ -38,13 +39,18 @@ package object mock extends ZIOTestOps {
     }
   )
 
-  def userRepositoryMockLive(
-      insertUserDetailsCounterRef: Ref[Int],
-      updateUserDetailsCounterRef: Ref[Int],
+  def userManagementRepositoryMockLive(
+      userOnboardRows: Map[UserID, UserOnboardRow] = Map.empty,
+      insertUserOnboardEmailRef: Ref[Int] = Ref.make(0).zioValue,
+      updateUserOnboardRef: Ref[Int] = Ref.make(0).zioValue,
+      getUserOnboardRef: Ref[Int] = Ref.make(0).zioValue,
+      getUserOnboardEmailRef: Ref[Int] = Ref.make(0).zioValue,
+      insertUserDetailsCounterRef: Ref[Int] = Ref.make(0).zioValue,
+      updateUserDetailsCounterRef: Ref[Int] = Ref.make(0).zioValue,
       maybeError: Option[Throwable] = None,
-  ): ULayer[UserRepository] =
+  ): ULayer[UserManagementRepository] =
     ZLayer.succeed(
-      new UserRepository {
+      new UserManagementRepository {
 
         override def insertUserDetails(
             userID: UserID,
@@ -55,14 +61,50 @@ package object mock extends ZIOTestOps {
 
         override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
           maybeError.fold(updateUserDetailsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
+
+        override def insertUserOnboardEmail(
+            email: Email,
+            stage: OnboardStage,
+        ): IO[ServiceError.ConflictError.UserAlreadyExists, UserOnboardRow] =
+          maybeError.fold(
+            insertUserOnboardEmailRef.incrementAndGet.unit.map(_ =>
+              userOnboardRows.values.filter(_.email == email).head
+            )
+          )(ZIO.fail(_).orDie)
+
+        override def updateUserOnboard(
+            userID: UserID,
+            fullName: Option[FullName],
+            phoneNumber: Option[PhoneNumberE164],
+            passwordHash: Option[PasswordHash],
+            stage: OnboardStage,
+        ): UIO[Unit] = maybeError.fold(updateUserOnboardRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
+
+        override def getUserOnboard(
+            userID: UserID
+        ): IO[ServiceError.InternalServerError.UserNotFoundError, UserOnboardRow] =
+          maybeError.fold(
+            getUserOnboardRef.incrementAndGet.unit *> ZIO.getOrFailWith(
+              ServiceError.InternalServerError.UserNotFoundError("not found")
+            )(userOnboardRows.get(userID))
+          )(ZIO.fail(_).orDie)
+
+        override def getUserOnboardByEmail(
+            email: Email
+        ): IO[ServiceError.InternalServerError.UserNotFoundError, UserOnboardRow] =
+          maybeError.fold(
+            getUserOnboardEmailRef.incrementAndGet.unit *> ZIO.getOrFailWith(
+              ServiceError.InternalServerError.UserNotFoundError("not found")
+            )(userOnboardRows.values.find(_.email == email))
+          )(ZIO.fail(_).orDie)
       }
     )
 
   def userContactsRepositoryMockLive(
       upsertUserContactsCounterRef: Ref[Int],
       maybeError: Option[Throwable] = None,
-  ): ULayer[UserContactsRepository] = ZLayer.succeed(
-    new UserContactsRepository {
+  ): ULayer[UserContactRepository] = ZLayer.succeed(
+    new UserContactRepository {
       override def upsertUserContacts(userID: UserID, upsertUserContacts: NonEmptyChunk[UpsertUserContact]): UIO[Unit] =
         maybeError.fold(upsertUserContactsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
     }
@@ -101,6 +143,20 @@ package object mock extends ZIOTestOps {
 
       }
     )
+
+  def emailValidatorMockLive(
+      invalidFieldError: Option[InvalidFieldError] = None
+  ): ULayer[ServiceValidator[EmailRaw, Email]] =
+    ZLayer.succeed {
+      val domainValidator: DomainValidator[EmailRaw, Email] = rawData =>
+        invalidFieldError
+          .fold[IO[NonEmptyChain[InvalidFieldError], Email]](ZIO.succeed(Email.assume(rawData)))(invalid =>
+            ZIO.fail(NonEmptyChain(invalid))
+          )
+          .fold(_.invalid, _.validNec)
+
+      toServiceValidator(domainValidator)
+    }
 
   def idGeneratorMockLive: ULayer[IDGenerator] =
     ZLayer.succeed {
