@@ -28,6 +28,23 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         insertUserOnboardEmailRef.get.zioValue shouldBe 1
       }
 
+      "successfully sign up a user with conflict error" in new TestContext {
+        val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
+        val userOnboardRow     = arbitrarySample[UserOnboardRow]
+          .copy(email = Email.assume(signUpEmailRequest.email))
+        val authenticationService =
+          buildAuthenticationService(
+            userOnboardRows = Map(userOnboardRow.userID -> userOnboardRow),
+            maybeUserManagementRepositoryServiceError =
+              Some(ServiceError.ConflictError.UserAlreadyExists(userOnboardRow.userID, userOnboardRow.email)),
+          )
+
+        authenticationService.signUpEmail(signUpEmailRequest).zioValue
+        authenticationService.signUpEmail(signUpEmailRequest).zioValue
+
+        insertUserOnboardEmailRef.get.zioValue shouldBe 2
+      }
+
       "fail with BadRequest when request is invalid" in new TestContext {
         val signUpEmailRequest    = arbitrarySample[smithy.SignUpEmailRequest]
         val authenticationService = buildAuthenticationService(
@@ -53,7 +70,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
       "fail with InternalServer when fail unexpectedly" in new TestContext {
         val signUpEmailRequest    = arbitrarySample[smithy.SignUpEmailRequest]
         val authenticationService = buildAuthenticationService(
-          maybeUserManagementRepositoryError = Some(new RuntimeException("Database connection failed"))
+          maybeUserManagementRepositoryUnexpectedError = Some(new RuntimeException("Database connection failed"))
         )
 
         authenticationService
@@ -63,7 +80,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           .value
           .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
 
-        insertUserOnboardEmailRef.get.zioValue shouldBe 0
+        insertUserOnboardEmailRef.get.zioValue shouldBe 1
       }
     }
   }
@@ -73,7 +90,8 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
 
     def buildAuthenticationService(
         userOnboardRows: Map[UserID, UserOnboardRow] = Map.empty,
-        maybeUserManagementRepositoryError: Option[Throwable] = None,
+        maybeUserManagementRepositoryUnexpectedError: Option[Throwable] = None,
+        maybeUserManagementRepositoryServiceError: Option[ServiceError] = None,
         emailValidatorMaybeError: Option[InvalidFieldError] = None,
     ): smithy.AuthenticationService[Task] =
       ZIO
@@ -84,7 +102,8 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           userManagementRepositoryMockLive(
             userOnboardRows = userOnboardRows,
             insertUserOnboardEmailRef = insertUserOnboardEmailRef,
-            maybeError = maybeUserManagementRepositoryError,
+            maybeUnexpectedError = maybeUserManagementRepositoryUnexpectedError,
+            maybeServiceError = maybeUserManagementRepositoryServiceError,
           ),
         )
         .zioValue

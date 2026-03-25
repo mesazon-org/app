@@ -19,7 +19,11 @@ object AuthenticationService {
     override def signUpEmail(request: SignUpEmailRequest): ServiceTask[Unit] = for {
       _     <- ZIO.logDebug(s"Signing up user with email: ${request.email}")
       email <- emailValidator.validate(request.email)
-      _     <- userManagementRepository.insertUserOnboardEmail(email, OnboardStage.EmailConfirmation).unit
+      _     <- userManagementRepository.insertUserOnboardEmail(email, OnboardStage.EmailConfirmation).unit.catchSome {
+        case error: ServiceError.ConflictError.UserAlreadyExists =>
+          ZIO.logDebug(s"User with the provided email already exists. ${error.message}") *>
+            ZIO.unit
+      }
     } yield ()
   }
 

@@ -126,7 +126,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries {
           userManagementRepositoryMockLive(
             insertUserDetailsCounterRef = insertUserDetailsCounterRef,
             updateUserDetailsCounterRef = updateUserDetailsCounterRef,
-            maybeError = userManagementRepositoryMaybeError,
+            maybeUnexpectedError = userManagementRepositoryMaybeError,
           ),
           authorizationStateMockLive(authedUser),
           phoneNumberRegionValidatorMockLive(),

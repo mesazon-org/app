@@ -4,9 +4,8 @@ import fs2.io.net.Network
 import io.mesazon.domain.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.RepositoryConfig
-import io.mesazon.gateway.it.client.GatewayApiClient
-import io.mesazon.gateway.it.client.GatewayApiClient.GatewayApiClientConfig
-import io.mesazon.gateway.it.codec.given
+import io.mesazon.gateway.it.client.GatewayClient
+import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.repository.domain.{UserContactRow, UserDetailsRow}
 import io.mesazon.gateway.repository.queries.{UserContactQueries, UserManagementQueries}
 import io.mesazon.gateway.smithy
@@ -14,7 +13,7 @@ import io.mesazon.gateway.utils.{RepositoryArbitraries, SmithyArbitraries}
 import io.mesazon.test.postgresql.PostgreSQLTestClient
 import io.mesazon.testkit.base.{DockerComposeBase, IronRefinedTypeTransformer, ZWordSpecBase}
 import io.scalaland.chimney.dsl.*
-import org.http4s.Status
+import sttp.model.*
 import zio.*
 import zio.interop.catz.*
 
@@ -33,18 +32,18 @@ class GatewayApiSpec
 
   given Network[Task] = Network.forAsync[Task]
 
-  override def exposedServices = GatewayApiClient.ExposedServices ++ PostgreSQLTestClient.ExposedServices
+  override def exposedServices = GatewayClient.ExposedServices ++ PostgreSQLTestClient.ExposedServices
 
   def withContext[A](f: Context => A): A = withContainers { container =>
     val context = for {
       postgreSQLClientConfig = PostgreSQLTestClientConfig.from(container)
-      gatewayApiClientConfig = GatewayApiClientConfig.from(container)
+      gatewayApiClientConfig = GatewayClientConfig.from(container)
       postgreSQLClient <- ZIO
         .service[PostgreSQLTestClient]
         .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgreSQLClientConfig))
       gatewayApiClient <- ZIO
-        .service[GatewayApiClient]
-        .provide(GatewayApiClient.live, ZLayer.succeed(gatewayApiClientConfig))
+        .service[GatewayClient]
+        .provide(GatewayClient.live, ZLayer.succeed(gatewayApiClientConfig))
       userManagementQueries <- ZIO
         .service[UserManagementQueries]
         .provide(UserManagementQueries.live, RepositoryConfig.live, appNameLive)
@@ -58,11 +57,12 @@ class GatewayApiSpec
 
   override def beforeAll(): Unit = withContext { context =>
     import context.*
+
     super.beforeAll()
 
     // Ensure the GatewayApiClient is initialized before running tests
     eventually(
-      gatewayClient.readiness.zioValue shouldBe Status.NoContent
+      gatewayClient.readiness.zioValue shouldBe StatusCode.NoContent
     )
   }
 
@@ -85,7 +85,7 @@ class GatewayApiSpec
 
         val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
 
-        gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
+        gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe StatusCode.NoContent
 
         val userDetailsRowResponse = postgresSQLClient
           .executeQuery(
@@ -110,7 +110,7 @@ class GatewayApiSpec
         val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
           .copy(firstName = "")
 
-        gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe Status.BadRequest
+        gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe StatusCode.BadRequest
       }
 
       "fail with Conflict when onboarding user details insert user twice" in withContext { context =>
@@ -118,9 +118,9 @@ class GatewayApiSpec
 
         val onboardUserDetailsRequest = arbitrarySample[smithy.OnboardUserDetailsRequest]
 
-        gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe Status.NoContent
+        gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe StatusCode.NoContent
 
-        gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe Status.Conflict
+        gatewayClient.onboardUser(onboardUserDetailsRequest).zioValue shouldBe StatusCode.Conflict
       }
     }
 
@@ -139,7 +139,7 @@ class GatewayApiSpec
 
         postgresSQLClient.executeQuery(userManagementQueries.insertUserDetailsQuery(userDetailsRow)).zioValue
 
-        gatewayClient.updateUser(updateUserDetailsRequest).zioValue shouldBe Status.NoContent
+        gatewayClient.updateUser(updateUserDetailsRequest).zioValue shouldBe StatusCode.NoContent
 
         val updatedUserDetailsRow = postgresSQLClient
           .executeQuery(
@@ -171,7 +171,7 @@ class GatewayApiSpec
         val updateUserDetailsRequest = arbitrarySample[smithy.UpdateUserDetailsRequest]
           .copy(firstName = Some(""))
 
-        gatewayClient.updateUser(updateUserDetailsRequest).zioValue shouldBe Status.BadRequest
+        gatewayClient.updateUser(updateUserDetailsRequest).zioValue shouldBe StatusCode.BadRequest
       }
     }
 
@@ -207,8 +207,8 @@ class GatewayApiSpec
           .zioValue
 
         gatewayClient
-          .upsertUserContacts(NonEmptyChunk(updateUserContact, insertUserContact))
-          .zioValue shouldBe Status.NoContent
+          .upsertUserContacts(List(updateUserContact, insertUserContact))
+          .zioValue shouldBe StatusCode.NoContent
 
         val userContactsRow = postgresSQLClient.executeQuery(userContactQueries.getUserContacts(userID)).zioValue
 
@@ -244,8 +244,8 @@ class GatewayApiSpec
           .copy(firstName = "")
 
         gatewayClient
-          .upsertUserContacts(NonEmptyChunk(invalidUpsertUserContactRequest))
-          .zioValue shouldBe Status.BadRequest
+          .upsertUserContacts(List(invalidUpsertUserContactRequest))
+          .zioValue shouldBe StatusCode.BadRequest
       }
     }
   }
@@ -254,7 +254,7 @@ class GatewayApiSpec
 object GatewayApiSpec {
 
   case class Context(
-      gatewayClient: GatewayApiClient,
+      gatewayClient: GatewayClient,
       postgresSQLClient: PostgreSQLTestClient,
       userManagementQueries: UserManagementQueries,
       userContactQueries: UserContactQueries,

@@ -47,7 +47,8 @@ package object mock extends ZIOTestOps {
       getUserOnboardEmailRef: Ref[Int] = Ref.make(0).zioValue,
       insertUserDetailsCounterRef: Ref[Int] = Ref.make(0).zioValue,
       updateUserDetailsCounterRef: Ref[Int] = Ref.make(0).zioValue,
-      maybeError: Option[Throwable] = None,
+      maybeServiceError: Option[ServiceError] = None,
+      maybeUnexpectedError: Option[Throwable] = None,
   ): ULayer[UserManagementRepository] =
     ZLayer.succeed(
       new UserManagementRepository {
@@ -57,20 +58,26 @@ package object mock extends ZIOTestOps {
             email: Email,
             userDetails: OnboardUserDetails,
         ): IO[ServiceError.ConflictError.UserAlreadyExists, Unit] =
-          maybeError.fold(insertUserDetailsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
+          insertUserDetailsCounterRef.incrementAndGet *> maybeServiceError
+            .map(_.asInstanceOf[ServiceError.ConflictError.UserAlreadyExists])
+            .fold(
+              maybeUnexpectedError.fold(ZIO.unit)(ZIO.fail(_).orDie)
+            )(ZIO.fail)
 
         override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
-          maybeError.fold(updateUserDetailsCounterRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
+          updateUserDetailsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(ZIO.unit)(ZIO.fail(_).orDie)
 
         override def insertUserOnboardEmail(
             email: Email,
             stage: OnboardStage,
         ): IO[ServiceError.ConflictError.UserAlreadyExists, UserOnboardRow] =
-          maybeError.fold(
-            insertUserOnboardEmailRef.incrementAndGet.unit.map(_ =>
-              userOnboardRows.values.filter(_.email == email).head
-            )
-          )(ZIO.fail(_).orDie)
+          insertUserOnboardEmailRef.incrementAndGet *> maybeServiceError
+            .map(_.asInstanceOf[ServiceError.ConflictError.UserAlreadyExists])
+            .fold(
+              maybeUnexpectedError.fold(
+                ZIO.succeed(userOnboardRows.values.filter(_.email == email).head)
+              )(ZIO.fail(_).orDie)
+            )(ZIO.fail)
 
         override def updateUserOnboard(
             userID: UserID,
@@ -78,25 +85,33 @@ package object mock extends ZIOTestOps {
             phoneNumber: Option[PhoneNumberE164],
             passwordHash: Option[PasswordHash],
             stage: OnboardStage,
-        ): UIO[Unit] = maybeError.fold(updateUserOnboardRef.incrementAndGet.unit)(ZIO.fail(_).orDie)
+        ): UIO[Unit] = updateUserOnboardRef.incrementAndGet *> maybeUnexpectedError.fold(ZIO.unit)(ZIO.fail(_).orDie)
 
         override def getUserOnboard(
             userID: UserID
         ): IO[ServiceError.InternalServerError.UserNotFoundError, UserOnboardRow] =
-          maybeError.fold(
-            getUserOnboardRef.incrementAndGet.unit *> ZIO.getOrFailWith(
-              ServiceError.InternalServerError.UserNotFoundError("not found")
-            )(userOnboardRows.get(userID))
-          )(ZIO.fail(_).orDie)
+          getUserOnboardRef.incrementAndGet *> maybeServiceError
+            .map(_.asInstanceOf[ServiceError.InternalServerError.UserNotFoundError])
+            .fold(
+              maybeUnexpectedError.fold(
+                ZIO.getOrFailWith(
+                  ServiceError.InternalServerError.UserNotFoundError("not found")
+                )(userOnboardRows.get(userID))
+              )(ZIO.fail(_).orDie)
+            )(ZIO.fail)
 
         override def getUserOnboardByEmail(
             email: Email
         ): IO[ServiceError.InternalServerError.UserNotFoundError, UserOnboardRow] =
-          maybeError.fold(
-            getUserOnboardEmailRef.incrementAndGet.unit *> ZIO.getOrFailWith(
-              ServiceError.InternalServerError.UserNotFoundError("not found")
-            )(userOnboardRows.values.find(_.email == email))
-          )(ZIO.fail(_).orDie)
+          getUserOnboardEmailRef.incrementAndGet *> maybeServiceError
+            .map(_.asInstanceOf[ServiceError.InternalServerError.UserNotFoundError])
+            .fold(
+              maybeUnexpectedError.fold(
+                ZIO.getOrFailWith(
+                  ServiceError.InternalServerError.UserNotFoundError("not found")
+                )(userOnboardRows.values.find(_.email == email))
+              )(ZIO.fail(_).orDie)
+            )(ZIO.fail)
       }
     )
 
