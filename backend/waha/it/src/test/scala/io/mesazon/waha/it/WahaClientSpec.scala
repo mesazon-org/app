@@ -158,7 +158,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
 
         val input = arbitrarySample[ChattingSeenInput].copy(sessionID = sessionID)
 
-        val _ = wahaClient.chattingSendSeen(input).zioValue
+        wahaClient.chattingSendSeen(input).zioValue
 
         val requestMappings =
           wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)

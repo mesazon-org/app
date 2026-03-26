@@ -18,6 +18,12 @@ package object gateway {
   object Email extends RefinedType[String, NonEmptyTrimmedLowerCase]
   type Email = Email.T
 
+  object FullName extends RefinedType[String, NonEmptyTrimmed]
+  type FullName = FullName.T
+
+  object PasswordHash extends RefinedType[String, NonEmptyTrimmed]
+  type PasswordHash = PasswordHash.T
+
   object FirstName extends RefinedType[String, NonEmptyTrimmed]
   type FirstName = FirstName.T
 

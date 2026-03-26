@@ -16,4 +16,6 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
   given Arbitrary[AssistantResponse] = Arbitrary(Gen.resultOf(AssistantResponse.apply))
 
   given Arbitrary[WahaMessage] = Arbitrary(Gen.resultOf(WahaMessage.apply))
+
+  given Arbitrary[OnboardStage] = Arbitrary(Gen.oneOf(OnboardStage.values.toIndexedSeq))
 }

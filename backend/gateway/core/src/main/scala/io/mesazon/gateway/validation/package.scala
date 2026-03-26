@@ -63,7 +63,7 @@ package object validation {
     }
     .toValidatedNec
 
-  private[validation] def toServiceValidator[A, B](
+  def toServiceValidator[A, B](
       domainValidator: DomainValidator[A, B]
   ): ServiceValidator[A, B] = rawData =>
     domainValidator
