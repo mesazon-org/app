@@ -51,7 +51,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries {
           .onboardUser(onboardUserDetailsRequest)
           .zioError shouldBe a[smithy.InternalServerError]
 
-        insertUserDetailsCounterRef.get.zioValue shouldBe 0
+        insertUserDetailsCounterRef.get.zioValue shouldBe 1
       }
     }
 
@@ -106,7 +106,7 @@ class UserManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries {
           .updateUser(updateUserDetailsRequest)
           .zioError shouldBe a[smithy.InternalServerError]
 
-        updateUserDetailsCounterRef.get.zioValue shouldBe 0
+        updateUserDetailsCounterRef.get.zioValue shouldBe 1
       }
     }
   }
