@@ -1,6 +1,6 @@
 package io.mesazon
 
-import io.mesazon.waha.domain.{WahaError, WahaErrorCode}
+import io.mesazon.domain.waha.{WahaError, WahaErrorCode}
 import sttp.client4.{Backend, Request, Response, ResponseException}
 import sttp.model.Header
 import zio.*
@@ -32,6 +32,14 @@ package object waha {
             .map(error => WahaError(errorCode, Some(error), None))
             .fold(ZIO.fail, body => ZIO.succeed(response.copy(body = body)))
         }
+        .logError("Waha request failed")
+  }
+
+  extension [A](request: Request[Unit]) {
+    def standardSendRequestUnit(errorCode: WahaErrorCode)(using backend: Backend[Task]): IO[WahaError, Response[Unit]] =
+      request
+        .send(backend)
+        .mapError(error => WahaError(errorCode, None, Some(error)))
         .logError("Waha request failed")
   }
 }

@@ -1,16 +1,15 @@
 package io.mesazon.waha.it
 
 import com.dimafeng.testcontainers.ExposedService
+import io.mesazon.domain.waha.*
+import io.mesazon.domain.waha.input.*
+import io.mesazon.domain.waha.output.{GroupsCreateOutput, GroupsGetInfoOutput, GroupsUpdateOutput}
+import io.mesazon.testkit.base.{DockerComposeBase, IronRefinedTypeTransformer, WahaArbitraries, ZWordSpecBase}
 import io.mesazon.waha.WahaClient
-import io.mesazon.waha.config.WahaConfig
-import io.mesazon.waha.domain.input.*
-import io.mesazon.waha.domain.output.*
-import io.mesazon.waha.domain.{UserAccountID, *}
+import io.mesazon.waha.config.WahaClientConfig
 import io.mesazon.waha.it.WahaClientSpec.Context
 import io.mesazon.waha.it.client.WiremockClient
 import io.mesazon.waha.it.client.WiremockClient.WiremockClientConfig
-import io.mesazon.waha.it.utils.WahaArbitraries
-import io.rikkos.testkit.base.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.model.StatusCode
 import zio.*
@@ -33,12 +32,13 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
 
   override def exposedServices: Set[ExposedService] = WiremockClient.ExposedServices
 
-  private def buildWahaConfigLayer(config: WiremockClientConfig): ULayer[WahaConfig] = ZLayer.succeed(
-    WahaConfig(
+  private def buildWahaConfigLayer(config: WiremockClientConfig): ULayer[WahaClientConfig] = ZLayer.succeed(
+    WahaClientConfig(
       config.scheme,
       config.host,
       config.port,
       apiKey = "dummy-key",
+
       wordsPerMinute = 10000,
       humanDelayMin = ScalaDuration.Zero,
       humanDelayMax = ScalaDuration.apply(1, TimeUnit.MILLISECONDS),
@@ -144,6 +144,30 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
         requestMappings(6).mapping.method shouldBe "POST"
         requestMappings(6).mapping.url shouldBe "/api/sendVoice"
         requestMappings(6).count shouldBe 1
+      }
+
+      "chattingSendSeen be able to send seen status" in withContext { case Context(wiremockClient) =>
+        val wahaClient = ZIO
+          .service[WahaClient]
+          .provide(
+            WahaClient.live,
+            buildWahaConfigLayer(wiremockClient.config),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val input = arbitrarySample[ChattingSeenInput].copy(sessionID = sessionID)
+
+        wahaClient.chattingSendSeen(input).zioValue
+
+        val requestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+        requestMappings.size shouldBe 1
+
+        requestMappings(0).mapping.method shouldBe "POST"
+        requestMappings(0).mapping.url shouldBe "/api/sendSeen"
+        requestMappings(0).count shouldBe 1
       }
     }
 

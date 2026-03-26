@@ -7,8 +7,8 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 
 ThisBuild / scalaVersion              := "3.8.2"
 ThisBuild / version                   := "latest"
-ThisBuild / organization              := "io.rikkos"
-ThisBuild / organizationName          := "Rikkos"
+ThisBuild / organization              := "io.mesazon"
+ThisBuild / organizationName          := "Mesazon"
 ThisBuild / scalafixOnCompile         := enableScalaLint
 ThisBuild / scalafmtOnCompile         := enableScalaLint
 ThisBuild / semanticdbVersion         := scalafixSemanticdb.revision
@@ -26,9 +26,6 @@ def createBackendModule(root: String)(subModule: Option[String]): Project = {
   Project(moduleName, file(s"$backendDirName/$directory"))
     .settings(Settings.ScalaCompiler)
     .settings(Settings.JavaOptions)
-    .settings(
-      libraryDependencies += compilerPlugin("org.polyvariant" % "better-tostring" % "0.3.17" cross CrossVersion.full)
-    )
 }
 
 lazy val root = Project("app", file("."))
@@ -51,7 +48,10 @@ lazy val backendModule = Project("backend", file("backend"))
   )
 
 lazy val backendDomainModule = createBackendModule("domain")(None)
-  .withDependencies(Dependencies.iron)
+  .withDependencies(
+    Dependencies.iron,
+    Dependencies.cats,
+  )
 
 lazy val backendClockModule = createBackendModule("clock")(None)
   .withDependencies(Dependencies.zio)
@@ -97,9 +97,11 @@ lazy val backendWahaModuleRoot = createBackendWahaModule(None)
   .aggregate(backendWahaModuleCore, backendWahaModuleIt)
 
 lazy val backendWahaModuleCore = createBackendWahaModule(Some("core"))
+  .dependsOn(backendDomainModule)
   .withDependencies(
     Dependencies.chimney,
     Dependencies.iron,
+    Dependencies.ironChimney,
     Dependencies.ironJsoniter,
     Dependencies.zio,
     Dependencies.zioInteropCats,
@@ -115,14 +117,6 @@ lazy val backendWahaModuleCore = createBackendWahaModule(Some("core"))
 lazy val backendWahaModuleIt = createBackendWahaModule(Some("it"))
   .dependsOn(backendTestKitModule)
   .dependsOn(backendWahaModuleCore % Test)
-  .settings(
-    test := Def
-      .sequential(
-        backendGatewayCore / Docker / publishLocal,
-        Test / test,
-      )
-      .value
-  )
 
 // Gateway
 lazy val createBackendGatewayModule = createBackendModule("gateway") _
@@ -136,6 +130,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
   .dependsOn(backendDomainModule)
   .dependsOn(backendClockModule)
   .dependsOn(backendGeneratorModule)
+  .dependsOn(backendWahaModuleCore)
   .dependsOn(backendTestKitModule % Test)
   .dependsOn(backendPostgreSQLTestModule % Test)
   .settings(DockerSettings.compileScope)
@@ -163,6 +158,14 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.doobieTranzactio,
     Dependencies.hikariCP,
     Dependencies.libphonenumber,
+    Dependencies.sttpOpenAI,
+    Dependencies.sttpOpenAIZIO,
+    Dependencies.sttpIron,
+    Dependencies.sttpClient4Core,
+    Dependencies.sttpClient4Slf4j,
+    Dependencies.sttpClient4ZIO,
+    Dependencies.sttpClient4Jsoniter,
+    Dependencies.jmail,
   )
 
 lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))

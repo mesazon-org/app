@@ -3,9 +3,9 @@ import sbt.*
 object Dependencies {
 
   lazy val http4sV              = "0.23.33"
-  lazy val smithy4sV            = "0.18.47"
+  lazy val smithy4sV            = "0.18.49"
   lazy val zioV                 = "2.1.24"
-  lazy val zioConfigV           = "4.0.6"
+  lazy val zioConfigV           = "4.0.7"
   lazy val zioInteropCatsV      = "23.1.0.13"
   lazy val catsV                = "2.13.0"
   lazy val zioLoggingV          = "2.5.3"
@@ -16,17 +16,21 @@ object Dependencies {
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
   lazy val scalacheckV          = "1.19.0"
   lazy val testcontainersScalaV = "0.44.1"
-  lazy val testcontainersV      = "2.0.3"
+  lazy val testcontainersV      = "2.0.4"
   lazy val ironV                = "3.3.0"
-  lazy val chimneyV             = "1.8.2"
+  lazy val chimneyV             = "1.9.0"
   lazy val doobieV              = "1.0.0-RC11"
   lazy val postgresqlV          = "42.7.3"
   lazy val hikariCPV            = "7.0.2"
   lazy val doobieTranzactioV    = "5.7.0"
-  lazy val libphonenumberV      = "9.0.24"
+  lazy val libphonenumberV      = "9.0.26"
   lazy val circeV               = "0.14.15"
   lazy val sttpV                = "4.0.19"
+  lazy val sttpIronV            = "1.13.13"
   lazy val jsoniterV            = "2.38.9"
+  lazy val sttpAIV              = "0.4.8"
+  lazy val jmailV               = "2.1.0"
+
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -57,6 +61,7 @@ object Dependencies {
 
   // Iron
   val iron         = "io.github.iltotore" %% "iron"          % ironV
+  val ironChimney  = "io.github.iltotore" %% "iron-chimney"  % ironV
   val ironJsoniter = "io.github.iltotore" %% "iron-jsoniter" % ironV
 
   // Circe
@@ -98,4 +103,14 @@ object Dependencies {
   // jsoniter
   lazy val jsoniterScalaCore  = "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core"   % jsoniterV
   lazy val jsoniterScalaMacro = "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterV
+
+  // STTP Iron
+  val sttpIron = "com.softwaremill.sttp.tapir" %% "tapir-iron" % sttpIronV
+
+  // STTP AI
+  lazy val sttpOpenAI    = "com.softwaremill.sttp.ai" %% "openai" % sttpAIV
+  lazy val sttpOpenAIZIO = "com.softwaremill.sttp.ai" %% "zio"    % sttpAIV
+
+  // JMail
+  val jmail = "com.sanctionco.jmail" % "jmail" % jmailV
 }
