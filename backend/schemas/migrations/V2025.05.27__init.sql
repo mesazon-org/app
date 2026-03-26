@@ -1,4 +1,20 @@
-create table users_details
+create table user_onboard
+(
+    user_id       text        not null,
+    email         text        not null,
+    full_name     text,
+    phone_number  text,
+    password_hash text,
+    stage         text        not null,
+    created_at    timestamptz not null,
+    updated_at    timestamptz not null,
+    primary key (user_id),
+    unique (email)
+);
+
+create index idx_user_onboard_email on user_onboard (email);
+
+create table user_details
 (
     user_id        text        not null,
     email          text        not null,
@@ -16,7 +32,7 @@ create table users_details
     unique (email)
 );
 
-create table users_contacts
+create table user_contact
 (
     user_contact_id text        not null,
     user_id         text        not null,
@@ -34,12 +50,12 @@ create table users_contacts
     updated_at      timestamptz not null,
     primary key (user_contact_id),
     unique (phone_number, user_id),
-    constraint user_details_fk foreign key (user_id) references users_details (user_id)
+    constraint user_details_fk foreign key (user_id) references user_details (user_id)
 );
 
-create index idx_users_contacts_user_id on users_contacts (user_id);
+create index idx_user_contact_user_id on user_contact (user_id);
 
-create table waha_users
+create table waha_user
 (
     user_id              text        not null,
     full_name            text        not null,
@@ -53,7 +69,7 @@ create table waha_users
     primary key (user_id)
 );
 
-CREATE INDEX idx_waha_users_waha_id ON waha_users (waha_user_id);
+CREATE INDEX idx_waha_user_waha_id ON waha_user (waha_user_id);
 
 create table waha_user_activity
 (
@@ -62,10 +78,10 @@ create table waha_user_activity
     is_waiting_assistant_reply boolean     not null,
     last_update                timestamptz not null,
     primary key (user_id),
-    foreign key (user_id) references waha_users (user_id)
+    foreign key (user_id) references waha_user (user_id)
 );
 
-create table waha_user_messages
+create table waha_user_message
 (
     user_id      text        not null,
     message_id   text        not null,
@@ -73,7 +89,7 @@ create table waha_user_messages
     is_assistant boolean     not null,
     created_at   timestamptz not null,
     primary key (user_id, message_id),
-    foreign key (user_id) references waha_users (user_id)
+    foreign key (user_id) references waha_user (user_id)
 );
 
-CREATE INDEX idx_waha_user_messages_ ON waha_user_messages (user_id, created_at DESC);
+CREATE INDEX idx_waha_user_message_order ON waha_user_message (user_id, created_at DESC);

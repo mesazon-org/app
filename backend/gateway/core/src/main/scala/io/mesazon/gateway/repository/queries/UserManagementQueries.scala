@@ -1,12 +1,21 @@
 package io.mesazon.gateway.repository.queries
 
+import doobie.*
 import doobie.implicits.*
 import doobie.postgres.implicits.*
 import io.github.gaelrenoux.tranzactio.doobie.*
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.repository.domain.UserDetailsRow
+import io.mesazon.gateway.config.*
+import io.mesazon.gateway.repository.domain.*
+import zio.*
 
-object UserDetailsQueries {
+final class UserManagementQueries(
+    config: RepositoryConfig
+) {
+
+  private val frSchema           = Fragment.const(config.schema)
+  private val frUserOnboardTable = Fragment.const(config.userOnboardTable)
+  private val frUserDetailsTable = Fragment.const(config.userDetailsTable)
 
   case class UpdateUserDetailsQuery(
       userID: UserID,
@@ -21,9 +30,73 @@ object UserDetailsQueries {
       updatedAt: UpdatedAt,
   )
 
+  val userOnboardFields =
+    fr"""user_id,
+        |email,
+        |full_name,
+        |password_hash,
+        |phone_number,
+        |stage,
+        |created_at,
+        |updated_at
+     """.stripMargin
+
+  def insertUserOnboard(userOnboardRow: UserOnboardRow): TranzactIO[Unit] =
+    tzio {
+      sql"""
+           |INSERT INTO $frSchema.$frUserOnboardTable (
+           |  $userOnboardFields
+           |)
+           |VALUES ($userOnboardRow)
+           |""".stripMargin.update.run.map(_ => ())
+    }
+
+  def updateOnboardUser(
+      userID: UserID,
+      fullName: Option[FullName],
+      phoneNumber: Option[PhoneNumberE164],
+      passwordHash: Option[PasswordHash],
+      stage: OnboardStage,
+      updatedAt: UpdatedAt,
+  ): TranzactIO[Unit] =
+    tzio {
+      sql"""
+           |UPDATE $frSchema.$frUserOnboardTable
+           |SET
+           |  full_name = COALESCE($fullName, $frUserOnboardTable.full_name),
+           |  phone_number = COALESCE($phoneNumber, $frUserOnboardTable.phone_number),
+           |  password_hash = COALESCE($passwordHash, $frUserOnboardTable.password_hash),
+           |  stage = $stage,
+           |  updated_at = $updatedAt
+           |WHERE user_id = $userID
+           |""".stripMargin.update.run.map(_ => ())
+    }
+
+  def getOnboardUser(
+      userID: UserID
+  ): TranzactIO[Option[UserOnboardRow]] =
+    tzio {
+      sql"""
+           |SELECT $userOnboardFields
+           |FROM $frSchema.$frUserOnboardTable
+           |WHERE user_id = $userID
+           |""".stripMargin.query[UserOnboardRow].option
+    }
+
+  def getOnboardUserByEmail(
+      email: Email
+  ): TranzactIO[Option[UserOnboardRow]] =
+    tzio {
+      sql"""
+           |SELECT $userOnboardFields
+           |FROM $frSchema.$frUserOnboardTable
+           |WHERE email = $email
+           |""".stripMargin.query[UserOnboardRow].option
+    }
+
   def insertUserDetailsQuery(userDetailsRow: UserDetailsRow): TranzactIO[Unit] =
     tzio {
-      sql"""INSERT INTO local_schema.users_details (
+      sql"""INSERT INTO $frSchema.$frUserDetailsTable (
           user_id,
           email,
           first_name,
@@ -68,14 +141,14 @@ object UserDetailsQueries {
               created_at,
               updated_at
               FROM
-              local_schema.users_details
+              $frSchema.$frUserDetailsTable
               WHERE user_id = $userID""".query[UserDetailsRow].option
     }
 
   def updateUserDetailsQuery(query: UpdateUserDetailsQuery): TranzactIO[Unit] =
     tzio {
       sql"""
-      UPDATE local_schema.users_details
+      UPDATE $frSchema.$frUserDetailsTable
       SET
         first_name            = COALESCE(${query.firstName}, first_name),
         last_name             = COALESCE(${query.lastName}, last_name),
@@ -90,4 +163,9 @@ object UserDetailsQueries {
         user_id = ${query.userID}
     """.update.run.map(_ => ())
     }
+}
+
+object UserManagementQueries {
+
+  val live = ZLayer.derive[UserManagementQueries]
 }

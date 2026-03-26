@@ -56,7 +56,7 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
   given Arbitrary[smithy.WahaMessageTextRequest] = Arbitrary {
     for {
       wahaMessage <- Arbitrary.arbitrary[WahaMessage]
-      d = smithy.WahaMessageTextRequest(payload =
+      request = smithy.WahaMessageTextRequest(payload =
         smithy.Payload(
           id = wahaMessage.wahaMessageID.value,
           from = wahaMessage.wahaUserAccountID.value,
@@ -70,6 +70,13 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
           ),
         )
       )
-    } yield d
+    } yield request
+  }
+
+  given Arbitrary[smithy.SignUpEmailRequest] = Arbitrary {
+    for {
+      email <- Arbitrary.arbitrary[Email]
+      request = smithy.SignUpEmailRequest(email = email.value)
+    } yield request
   }
 }

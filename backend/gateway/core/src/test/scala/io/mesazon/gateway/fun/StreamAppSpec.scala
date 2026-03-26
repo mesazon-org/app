@@ -31,7 +31,7 @@ class StreamAppSpec extends ZWordSpecBase {
           Some(new RuntimeException("Boom")),
         ) >>> StreamApp.streamsLayer
 
-      val _ = (for {
+      (for {
         fork <- streamApp.launch.fork
         _    <- ZIO.sleep(3.seconds)
         _    <- fork.interrupt

@@ -3,6 +3,9 @@ package io.mesazon.gateway.repository
 import doobie.util.{Get, Put}
 import io.github.iltotore.iron.RefinedType
 
+import scala.deriving.Mirror
+import scala.reflect.Enum
+
 package object queries {
 
   given [WrappedType](using
@@ -14,4 +17,8 @@ package object queries {
       mirror: RefinedType.Mirror[WrappedType],
       get: Get[mirror.BaseType],
   ): Get[mirror.FinalType] = Get[mirror.BaseType].tmap(_.asInstanceOf[mirror.FinalType])
+
+  inline given [A <: Enum](using mirror: Mirror.SumOf[A]): Get[A] = Get.deriveEnumString[A]
+
+  inline given [A <: Enum](using mirror: Mirror.SumOf[A]): Put[A] = Put.deriveEnumString[A]
 }

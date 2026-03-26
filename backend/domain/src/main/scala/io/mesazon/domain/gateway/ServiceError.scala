@@ -63,6 +63,8 @@ object ServiceError {
   }
 
   object InternalServerError {
+    case class UserNotFoundError(error: String) extends InternalServerError(error)
+
     case class UnexpectedError(error: String, throwable: Option[Throwable])
         extends InternalServerError(error, throwable)
   }

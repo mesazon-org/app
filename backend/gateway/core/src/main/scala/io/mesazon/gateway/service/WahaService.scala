@@ -11,7 +11,7 @@ object WahaService {
   private final class WahaServiceImpl(
       repository: WahaRepository,
       wahaRequestValidator: ServiceValidator[smithy.WahaMessageTextRequest, WahaMessage],
-  ) extends smithy.WahaService[[A] =>> IO[ServiceError, A]] {
+  ) extends smithy.WahaService[ServiceTask] {
 
     /** HTTP POST /waha/webhook/message */
     override def wahaWebhookMessage(request: smithy.WahaMessageTextRequest): IO[ServiceError, Unit] =
@@ -46,7 +46,7 @@ object WahaService {
       } yield ()
   }
 
-  private def observed(service: smithy.WahaService[[A] =>> IO[ServiceError, A]]): smithy.WahaService[Task] =
+  private def observed(service: smithy.WahaService[ServiceTask]): smithy.WahaService[Task] =
     new smithy.WahaService[Task] {
       override def wahaWebhookMessage(request: smithy.WahaMessageTextRequest): Task[Unit] =
         HttpErrorHandler

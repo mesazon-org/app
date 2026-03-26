@@ -16,7 +16,7 @@ object Dependencies {
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
   lazy val scalacheckV          = "1.19.0"
   lazy val testcontainersScalaV = "0.44.1"
-  lazy val testcontainersV      = "2.0.3"
+  lazy val testcontainersV      = "2.0.4"
   lazy val ironV                = "3.3.0"
   lazy val chimneyV             = "1.9.0"
   lazy val doobieV              = "1.0.0-RC11"
@@ -26,9 +26,11 @@ object Dependencies {
   lazy val libphonenumberV      = "9.0.26"
   lazy val circeV               = "0.14.15"
   lazy val sttpV                = "4.0.19"
-  lazy val sttpIronV            = "1.13.9"
+  lazy val sttpIronV            = "1.13.13"
   lazy val jsoniterV            = "2.38.9"
   lazy val sttpAIV              = "0.4.8"
+  lazy val jmailV               = "2.1.0"
+
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -108,4 +110,7 @@ object Dependencies {
   // STTP AI
   lazy val sttpOpenAI    = "com.softwaremill.sttp.ai" %% "openai" % sttpAIV
   lazy val sttpOpenAIZIO = "com.softwaremill.sttp.ai" %% "zio"    % sttpAIV
+
+  // JMail
+  val jmail = "com.sanctionco.jmail" % "jmail" % jmailV
 }
