@@ -3,7 +3,7 @@ import sbt.*
 object Dependencies {
 
   lazy val http4sV              = "0.23.33"
-  lazy val smithy4sV            = "0.18.49"
+  lazy val smithy4sV            = "0.18.50"
   lazy val zioV                 = "2.1.24"
   lazy val zioConfigV           = "4.0.7"
   lazy val zioInteropCatsV      = "23.1.0.13"
@@ -30,7 +30,6 @@ object Dependencies {
   lazy val jsoniterV            = "2.38.9"
   lazy val sttpAIV              = "0.4.8"
   lazy val jmailV               = "2.1.0"
-
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
