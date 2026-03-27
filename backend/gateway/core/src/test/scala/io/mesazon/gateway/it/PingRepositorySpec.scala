@@ -5,7 +5,7 @@ import io.mesazon.gateway.repository.PingRepository
 import io.mesazon.gateway.utils.SmithyArbitraries
 import io.mesazon.test.postgresql.PostgreSQLTestClient
 import io.mesazon.testkit.base.{DockerComposeBase, ZWordSpecBase}
-import zio.{Clock as _, *}
+import zio.*
 
 import PostgreSQLTestClient.PostgreSQLTestClientConfig
 

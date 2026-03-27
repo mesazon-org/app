@@ -36,7 +36,6 @@ object Settings {
       ScalacOptions.other("-experimental"),
       ScalacOptions.other("--preview"),
       ScalacOptions.other("-old-syntax"),
-      ScalacOptions.other("-Wunused:unsafe-warn-patvars"),
       ScalacOptions.other("-Wunused:all"),
     ),
     Test / tpolecatScalacOptions ++= Set(

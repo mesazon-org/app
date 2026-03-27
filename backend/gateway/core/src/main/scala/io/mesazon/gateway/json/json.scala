@@ -1,4 +1,4 @@
-package io.mesazon.gateway
+package io.mesazon.gateway.json
 
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
@@ -7,9 +7,6 @@ import io.mesazon.domain.gateway.AssistantResponse
 import sttp.tapir.Schema
 import sttp.tapir.codec.iron.given
 
-package object json {
+given Schema[AssistantResponse] = Schema.derived[AssistantResponse]
 
-  given Schema[AssistantResponse] = Schema.derived
-
-  given JsonValueCodec[AssistantResponse] = JsonCodecMaker.make[AssistantResponse]
-}
+given JsonValueCodec[AssistantResponse] = JsonCodecMaker.make[AssistantResponse]

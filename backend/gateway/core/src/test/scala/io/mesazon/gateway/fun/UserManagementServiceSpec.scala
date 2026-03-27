@@ -1,11 +1,10 @@
 package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.service.UserManagementService
-import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.SmithyArbitraries
 import io.mesazon.gateway.validation.*
+import io.mesazon.gateway.{smithy, Mocks}
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 
@@ -123,13 +122,13 @@ class UserManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries {
         .service[smithy.UserManagementService[Task]]
         .provide(
           UserManagementService.live,
-          userManagementRepositoryMockLive(
+          Mocks.userManagementRepositoryLive(
             insertUserDetailsCounterRef = insertUserDetailsCounterRef,
             updateUserDetailsCounterRef = updateUserDetailsCounterRef,
             maybeUnexpectedError = userManagementRepositoryMaybeError,
           ),
-          authorizationStateMockLive(authedUser),
-          phoneNumberRegionValidatorMockLive(),
+          Mocks.authorizationStateLive(authedUser),
+          Mocks.phoneNumberRegionValidatorLive(),
           UserManagementValidators.onboardUserDetailsRequestValidatorLive,
           UserManagementValidators.updateUserDetailsRequestValidatorLive,
         )

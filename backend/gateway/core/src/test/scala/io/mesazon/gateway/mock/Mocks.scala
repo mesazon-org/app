@@ -31,15 +31,15 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import validation.*
 
-package object mock extends ZIOTestOps {
+object Mocks extends ZIOTestOps {
 
-  def pingRepositoryMockLive(): ULayer[PingRepository] = ZLayer.succeed(
+  def pingRepositoryLive(): ULayer[PingRepository] = ZLayer.succeed(
     new PingRepository {
       override def ping(): IO[ServiceError.ServiceUnavailableError.DatabaseUnavailableError, Unit] = ZIO.unit
     }
   )
 
-  def userManagementRepositoryMockLive(
+  def userManagementRepositoryLive(
       userOnboardRows: Map[UserID, UserOnboardRow] = Map.empty,
       insertUserOnboardEmailRef: Ref[Int] = Ref.make(0).zioValue,
       updateUserOnboardRef: Ref[Int] = Ref.make(0).zioValue,
@@ -115,7 +115,7 @@ package object mock extends ZIOTestOps {
       }
     )
 
-  def userContactsRepositoryMockLive(
+  def userContactsRepositoryLive(
       upsertUserContactsCounterRef: Ref[Int],
       maybeError: Option[Throwable] = None,
   ): ULayer[UserContactRepository] = ZLayer.succeed(
@@ -125,7 +125,7 @@ package object mock extends ZIOTestOps {
     }
   )
 
-  def authorizationStateMockLive(authedUser: AuthedUser): ULayer[AuthorizationState] =
+  def authorizationStateLive(authedUser: AuthedUser): ULayer[AuthorizationState] =
     ZLayer.succeed(
       new AuthorizationState {
         override def get(): UIO[AuthedUser] = ZIO.succeed(authedUser)
@@ -134,7 +134,7 @@ package object mock extends ZIOTestOps {
       }
     )
 
-  def authorizationServiceMockLive(maybeError: Option[Throwable] = None): ULayer[AuthorizationService[Throwable]] =
+  def authorizationServiceLive(maybeError: Option[Throwable] = None): ULayer[AuthorizationService[Throwable]] =
     ZLayer.succeed(
       new AuthorizationService[Throwable] {
         override def auth(request: Request[Task]): Task[Unit] =
@@ -142,7 +142,7 @@ package object mock extends ZIOTestOps {
       }
     )
 
-  def phoneNumberRegionValidatorMockLive(): ULayer[DomainValidator[PhoneNumberRegion, PhoneNumberE164]] =
+  def phoneNumberRegionValidatorLive(): ULayer[DomainValidator[PhoneNumberRegion, PhoneNumberE164]] =
     ZLayer.succeed(
       new DomainValidator[PhoneNumberRegion, PhoneNumberE164] {
         override def validate(rawData: PhoneNumberRegion): UIO[ValidatedNec[InvalidFieldError, PhoneNumberE164]] =
@@ -150,7 +150,7 @@ package object mock extends ZIOTestOps {
       }
     )
 
-  def wahaPhoneNumberValidatorMockLive(): ULayer[DomainValidator[waha.WahaPhone, PhoneNumberE164]] =
+  def wahaPhoneNumberValidatorLive(): ULayer[DomainValidator[waha.WahaPhone, PhoneNumberE164]] =
     ZLayer.succeed(
       new DomainValidator[waha.WahaPhone, PhoneNumberE164] {
         override def validate(rawData: waha.WahaPhone): UIO[ValidatedNec[InvalidFieldError, PhoneNumberE164]] =
@@ -159,7 +159,7 @@ package object mock extends ZIOTestOps {
       }
     )
 
-  def emailValidatorMockLive(
+  def emailValidatorLive(
       invalidFieldError: Option[InvalidFieldError] = None
   ): ULayer[ServiceValidator[EmailRaw, Email]] =
     ZLayer.succeed {
@@ -173,7 +173,7 @@ package object mock extends ZIOTestOps {
       toServiceValidator(domainValidator)
     }
 
-  def idGeneratorMockLive: ULayer[IDGenerator] =
+  def idGeneratorLive: ULayer[IDGenerator] =
     ZLayer.succeed {
       val atomicInt = new AtomicInteger(0)
 
@@ -182,17 +182,17 @@ package object mock extends ZIOTestOps {
       }
     }
 
-  def idGeneratorMockConstLive(id: String): ULayer[IDGenerator] =
+  def idGeneratorConstLive(id: String): ULayer[IDGenerator] =
     ZLayer.succeed {
       new IDGenerator {
         override def generate: UIO[String] = ZIO.succeed(id)
       }
     }
 
-  def timeProviderMockLive(clock: Clock): ULayer[TimeProvider] =
+  def timeProviderLive(clock: Clock): ULayer[TimeProvider] =
     ZLayer.succeed(clock) >>> TimeProvider.live
 
-  def wahaClientMockLive(
+  def wahaClientLive(
       chattingSendSeenCounterRef: Ref[Int] = Ref.make(0).zioValue,
       chattingSendMessageCounterRef: Ref[Int] = Ref.make(0).zioValue,
   ): ULayer[WahaClient] =
@@ -229,7 +229,7 @@ package object mock extends ZIOTestOps {
       }
     )
 
-  def wahaRepositoryMockLive(
+  def wahaRepositoryLive(
       wahaUserRows: Map[UserID, WahaUserRow] = Map.empty,
       wahaUserActivityRows: Map[UserID, WahaUserActivityRow] = Map.empty,
       wahaUserMessageRows: Map[UserID, List[WahaUserMessageRow]] = Map.empty,
@@ -304,7 +304,7 @@ package object mock extends ZIOTestOps {
       }
     )
 
-  def openAIClientMockLive(
+  def openAIClientLive(
       assistantResponse: AssistantResponse,
       sendMessageCounterRef: Ref[Int] = Ref.make(0).zioValue,
       messagesCounterRef: Ref[Int] = Ref.make(0).zioValue,

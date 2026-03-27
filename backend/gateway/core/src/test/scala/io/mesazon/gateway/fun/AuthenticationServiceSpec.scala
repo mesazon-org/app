@@ -2,11 +2,10 @@ package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
-import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.UserOnboardRow
 import io.mesazon.gateway.service.*
-import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.{RepositoryArbitraries, SmithyArbitraries}
+import io.mesazon.gateway.{smithy, Mocks}
 import io.mesazon.testkit.base.*
 import zio.*
 
@@ -98,8 +97,8 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         .service[smithy.AuthenticationService[Task]]
         .provide(
           AuthenticationService.live,
-          emailValidatorMockLive(emailValidatorMaybeError),
-          userManagementRepositoryMockLive(
+          Mocks.emailValidatorLive(emailValidatorMaybeError),
+          Mocks.userManagementRepositoryLive(
             userOnboardRows = userOnboardRows,
             insertUserOnboardEmailRef = insertUserOnboardEmailRef,
             maybeUnexpectedError = maybeUserManagementRepositoryUnexpectedError,

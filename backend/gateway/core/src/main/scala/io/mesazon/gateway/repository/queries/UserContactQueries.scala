@@ -1,13 +1,14 @@
 package io.mesazon.gateway.repository.queries
 
 import cats.syntax.all.*
-import doobie.implicits.*
-import doobie.postgres.implicits.*
-import doobie.{Fragment, Update}
+import doobie.*
+import doobie.implicits.given
+import doobie.postgres.implicits.given
 import io.github.gaelrenoux.tranzactio.doobie.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.domain.UserContactRow
+import io.mesazon.gateway.repository.queries.given
 import zio.*
 
 final class UserContactQueries(

@@ -3,11 +3,9 @@ package io.mesazon.gateway.unit.validation
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.domain.waha
-import io.mesazon.gateway.mock.*
-import io.mesazon.gateway.smithy
-import io.mesazon.gateway.smithy.{InternalData, InternalInfo}
 import io.mesazon.gateway.utils.SmithyArbitraries
 import io.mesazon.gateway.validation.*
+import io.mesazon.gateway.{smithy, Mocks}
 import io.mesazon.testkit.base.{IronRefinedTypeArbitraries, ZWordSpecBase}
 import zio.*
 
@@ -29,8 +27,8 @@ class WahaValidatorSpec extends ZWordSpecBase, SmithyArbitraries, IronRefinedTyp
             id = expected.wahaMessageID.value,
             from = expected.wahaUserAccountID.value,
             body = expected.wahaMessageText.value,
-            data = InternalData(info =
-              InternalInfo(
+            data = smithy.InternalData(info =
+              smithy.InternalInfo(
                 sender = expected.wahaUserID.value,
                 senderAlt = expected.wahaWhatsAppPhoneNumber.value,
                 pushName = expected.wahaFullName.value,
@@ -43,7 +41,7 @@ class WahaValidatorSpec extends ZWordSpecBase, SmithyArbitraries, IronRefinedTyp
           .service[ServiceValidator[smithy.WahaMessageTextRequest, WahaMessage]]
           .provide(
             WahaValidator.wahaMessageRequestValidatorLive,
-            wahaPhoneNumberValidatorMockLive(),
+            Mocks.wahaPhoneNumberValidatorLive(),
           )
           .zioValue
 
@@ -66,8 +64,8 @@ class WahaValidatorSpec extends ZWordSpecBase, SmithyArbitraries, IronRefinedTyp
             id = expected.wahaMessageID.value,
             from = expected.wahaUserID.value,
             body = expected.wahaMessageText.value,
-            data = InternalData(info =
-              InternalInfo(
+            data = smithy.InternalData(info =
+              smithy.InternalInfo(
                 sender = expected.wahaUserAccountID.value,
                 senderAlt = expected.wahaUserID.value,
                 pushName = expected.wahaFullName.value,
@@ -80,7 +78,7 @@ class WahaValidatorSpec extends ZWordSpecBase, SmithyArbitraries, IronRefinedTyp
           .service[ServiceValidator[smithy.WahaMessageTextRequest, WahaMessage]]
           .provide(
             WahaValidator.wahaMessageRequestValidatorLive,
-            wahaPhoneNumberValidatorMockLive(),
+            Mocks.wahaPhoneNumberValidatorLive(),
           )
           .zioValue
 
@@ -95,8 +93,8 @@ class WahaValidatorSpec extends ZWordSpecBase, SmithyArbitraries, IronRefinedTyp
             id = "",
             from = "123",
             body = "",
-            data = InternalData(info =
-              InternalInfo(
+            data = smithy.InternalData(info =
+              smithy.InternalInfo(
                 sender = "456",
                 senderAlt = "789",
                 pushName = "",
@@ -109,7 +107,7 @@ class WahaValidatorSpec extends ZWordSpecBase, SmithyArbitraries, IronRefinedTyp
           .service[ServiceValidator[smithy.WahaMessageTextRequest, WahaMessage]]
           .provide(
             WahaValidator.wahaMessageRequestValidatorLive,
-            wahaPhoneNumberValidatorMockLive(),
+            Mocks.wahaPhoneNumberValidatorLive(),
           )
           .zioValue
 

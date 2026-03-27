@@ -4,8 +4,8 @@ import cats.syntax.all.*
 import com.dimafeng.testcontainers.ExposedService
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.waha
+import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.RepositoryConfig
-import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.WahaRepository
 import io.mesazon.gateway.repository.domain.{WahaUserActivityRow, WahaUserMessageRow, WahaUserRow}
 import io.mesazon.gateway.repository.queries.WahaQueries
@@ -80,8 +80,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             WahaRepository.live,
             ZLayer.succeed(postgresClient.database),
             ZLayer.succeed(wahaQueries),
-            timeProviderMockLive(clockNow),
-            idGeneratorMockLive,
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
           )
           .zioValue
 
@@ -109,9 +109,9 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
           .provide(
             WahaRepository.live,
             ZLayer.succeed(postgresClient.database),
-            timeProviderMockLive(clockNow),
+            Mocks.timeProviderLive(clockNow),
             ZLayer.succeed(wahaQueries),
-            idGeneratorMockLive,
+            Mocks.idGeneratorLive,
           )
           .zioValue
 
@@ -153,8 +153,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             WahaRepository.live,
             ZLayer.succeed(postgresClient.database),
             ZLayer.succeed(wahaQueries),
-            timeProviderMockLive(clockNow),
-            idGeneratorMockLive,
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
           )
           .zioValue
 
@@ -188,8 +188,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             WahaRepository.live,
             ZLayer.succeed(postgresClient.database),
             ZLayer.succeed(wahaQueries),
-            timeProviderMockLive(clockNow),
-            idGeneratorMockLive,
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
           )
           .zioValue
 
@@ -223,8 +223,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             WahaRepository.live,
             ZLayer.succeed(postgresClient.database),
             ZLayer.succeed(wahaQueries),
-            timeProviderMockLive(clockNow),
-            idGeneratorMockLive,
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
           )
           .zioValue
 
@@ -307,8 +307,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
             WahaRepository.live,
             ZLayer.succeed(postgresClient.database),
             ZLayer.succeed(wahaQueries),
-            timeProviderMockLive(clockNow),
-            idGeneratorMockLive,
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
           )
           .zioValue
 
@@ -397,8 +397,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
               WahaRepository.live,
               ZLayer.succeed(postgresClient.database),
               ZLayer.succeed(wahaQueries),
-              timeProviderMockLive(clockNow),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
             )
             .zioValue
 
@@ -446,8 +446,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
               WahaRepository.live,
               ZLayer.succeed(postgresClient.database),
               ZLayer.succeed(wahaQueries),
-              timeProviderMockLive(clockNow),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
             )
             .zioValue
 
@@ -492,8 +492,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
               WahaRepository.live,
               ZLayer.succeed(postgresClient.database),
               ZLayer.succeed(wahaQueries),
-              timeProviderMockLive(clockNow),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
             )
             .zioValue
 
@@ -545,8 +545,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
               WahaRepository.live,
               ZLayer.succeed(postgresClient.database),
               ZLayer.succeed(wahaQueries),
-              timeProviderMockLive(clockNow),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
             )
             .zioValue
 
@@ -609,8 +609,8 @@ class WahaRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerCom
                 WahaRepository.live,
                 ZLayer.succeed(postgresClient.database),
                 ZLayer.succeed(wahaQueries),
-                timeProviderMockLive(clockNow),
-                idGeneratorMockLive,
+                Mocks.timeProviderLive(clockNow),
+                Mocks.idGeneratorLive,
               )
               .zioValue
 

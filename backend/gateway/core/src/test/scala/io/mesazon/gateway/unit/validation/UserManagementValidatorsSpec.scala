@@ -5,7 +5,7 @@ import io.mesazon.domain.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
-import io.mesazon.gateway.mock.phoneNumberRegionValidatorMockLive
+import io.mesazon.gateway.Mocks.phoneNumberRegionValidatorLive
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.SmithyArbitraries
 import io.mesazon.gateway.validation.{ServiceValidator, UserManagementValidators}
@@ -32,7 +32,7 @@ class UserManagementValidatorsSpec extends ZWordSpecBase, SmithyArbitraries {
           .service[ServiceValidator[smithy.OnboardUserDetailsRequest, OnboardUserDetails]]
           .provide(
             UserManagementValidators.onboardUserDetailsRequestValidatorLive,
-            phoneNumberRegionValidatorMockLive(),
+            phoneNumberRegionValidatorLive(),
           )
           .zioValue
 
@@ -49,7 +49,7 @@ class UserManagementValidatorsSpec extends ZWordSpecBase, SmithyArbitraries {
           .service[ServiceValidator[smithy.OnboardUserDetailsRequest, OnboardUserDetails]]
           .provide(
             UserManagementValidators.onboardUserDetailsRequestValidatorLive,
-            phoneNumberRegionValidatorMockLive(),
+            phoneNumberRegionValidatorLive(),
           )
           .zioValue
 
@@ -87,7 +87,7 @@ class UserManagementValidatorsSpec extends ZWordSpecBase, SmithyArbitraries {
           .service[ServiceValidator[smithy.OnboardUserDetailsRequest, OnboardUserDetails]]
           .provide(
             UserManagementValidators.onboardUserDetailsRequestValidatorLive,
-            phoneNumberRegionValidatorMockLive(),
+            phoneNumberRegionValidatorLive(),
           )
           .zioValue
 
@@ -122,7 +122,7 @@ class UserManagementValidatorsSpec extends ZWordSpecBase, SmithyArbitraries {
 
         val validator = ZIO
           .service[ServiceValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails]]
-          .provide(UserManagementValidators.updateUserDetailsRequestValidatorLive, phoneNumberRegionValidatorMockLive())
+          .provide(UserManagementValidators.updateUserDetailsRequestValidatorLive, phoneNumberRegionValidatorLive())
           .zioValue
 
         validator.validate(updateUserDetailsRequest).zioValue shouldBe updateUserDetails.copy(phoneNumber =
@@ -136,7 +136,7 @@ class UserManagementValidatorsSpec extends ZWordSpecBase, SmithyArbitraries {
 
         val validator = ZIO
           .service[ServiceValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails]]
-          .provide(UserManagementValidators.updateUserDetailsRequestValidatorLive, phoneNumberRegionValidatorMockLive())
+          .provide(UserManagementValidators.updateUserDetailsRequestValidatorLive, phoneNumberRegionValidatorLive())
           .zioValue
 
         validator.validate(updateUserDetailsRequest).zioError shouldBe
@@ -161,7 +161,7 @@ class UserManagementValidatorsSpec extends ZWordSpecBase, SmithyArbitraries {
 
         val validator = ZIO
           .service[ServiceValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails]]
-          .provide(UserManagementValidators.updateUserDetailsRequestValidatorLive, phoneNumberRegionValidatorMockLive())
+          .provide(UserManagementValidators.updateUserDetailsRequestValidatorLive, phoneNumberRegionValidatorLive())
           .zioValue
 
         validator
@@ -188,7 +188,7 @@ class UserManagementValidatorsSpec extends ZWordSpecBase, SmithyArbitraries {
 
         val validator = ZIO
           .service[ServiceValidator[smithy.UpdateUserDetailsRequest, UpdateUserDetails]]
-          .provide(UserManagementValidators.updateUserDetailsRequestValidatorLive, phoneNumberRegionValidatorMockLive())
+          .provide(UserManagementValidators.updateUserDetailsRequestValidatorLive, phoneNumberRegionValidatorLive())
           .zioValue
 
         validator
