@@ -12,7 +12,7 @@ object Dependencies {
   lazy val logbackV             = "1.5.32"
   lazy val julToSlf4jV          = "2.0.17"
   lazy val pureconfigV          = "0.17.10"
-  lazy val scalaTestV           = "3.2.19"
+  lazy val scalaTestV           = "3.2.20"
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
   lazy val scalacheckV          = "1.19.0"
   lazy val testcontainersScalaV = "0.44.1"
@@ -30,7 +30,6 @@ object Dependencies {
   lazy val jsoniterV            = "2.38.9"
   lazy val sttpAIV              = "0.4.8"
   lazy val jmailV               = "2.1.0"
-
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
