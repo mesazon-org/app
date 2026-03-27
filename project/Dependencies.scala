@@ -23,14 +23,13 @@ object Dependencies {
   lazy val postgresqlV          = "42.7.3"
   lazy val hikariCPV            = "7.0.2"
   lazy val doobieTranzactioV    = "5.7.0"
-  lazy val libphonenumberV      = "9.0.26"
+  lazy val libphonenumberV      = "9.0.27"
   lazy val circeV               = "0.14.15"
   lazy val sttpV                = "4.0.19"
   lazy val sttpIronV            = "1.13.13"
   lazy val jsoniterV            = "2.38.9"
   lazy val sttpAIV              = "0.4.8"
   lazy val jmailV               = "2.1.0"
-
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
