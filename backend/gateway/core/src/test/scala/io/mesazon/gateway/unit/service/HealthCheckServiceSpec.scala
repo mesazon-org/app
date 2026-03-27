@@ -1,8 +1,7 @@
 package io.mesazon.gateway.unit.service
 
-import io.mesazon.gateway.Mocks.*
 import io.mesazon.gateway.service.HealthCheckService
-import io.mesazon.gateway.smithy
+import io.mesazon.gateway.{smithy, Mocks}
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 
@@ -13,7 +12,7 @@ class HealthCheckServiceSpec extends ZWordSpecBase {
   "HealthCheckService" when {
     "liveness" should {
       "return a successful response" in {
-        val healthCheckService = healthCheckServiceEnv.provide(HealthCheckService.live, pingRepositoryMockLive())
+        val healthCheckService = healthCheckServiceEnv.provide(HealthCheckService.live, Mocks.pingRepositoryLive())
 
         healthCheckService.flatMap(_.liveness()).zioEither.isRight shouldBe true
       }
@@ -21,7 +20,7 @@ class HealthCheckServiceSpec extends ZWordSpecBase {
 
     "readiness" should {
       "return a successful response" in {
-        val healthCheckService = healthCheckServiceEnv.provide(HealthCheckService.live, pingRepositoryMockLive())
+        val healthCheckService = healthCheckServiceEnv.provide(HealthCheckService.live, Mocks.pingRepositoryLive())
 
         healthCheckService.flatMap(_.readiness()).zioEither.isRight shouldBe true
       }

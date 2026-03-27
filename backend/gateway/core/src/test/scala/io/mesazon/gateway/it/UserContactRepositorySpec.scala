@@ -3,7 +3,7 @@ package io.mesazon.gateway.it
 import com.dimafeng.testcontainers.ExposedService
 import io.github.gaelrenoux.tranzactio.DbException
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.Mocks.*
+import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.UserContactRepository
 import io.mesazon.gateway.repository.domain.{UserContactRow, UserDetailsRow}
@@ -102,8 +102,8 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .provide(
               UserContactRepository.live,
               ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(clockNow),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
               ZLayer.succeed(userContactQueries),
             )
             .zioValue
@@ -172,8 +172,8 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .provide(
               UserContactRepository.live,
               ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(Clock.systemUTC()),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(Clock.systemUTC()),
+              Mocks.idGeneratorLive,
               ZLayer.succeed(userContactQueries),
             )
             .zioValue
@@ -248,8 +248,8 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .provide(
               UserContactRepository.live,
               ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(clockNow),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
               ZLayer.succeed(userContactQueries),
             )
             .zioValue
@@ -308,8 +308,8 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .provide(
               UserContactRepository.live,
               ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(Clock.systemUTC()),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(Clock.systemUTC()),
+              Mocks.idGeneratorLive,
               ZLayer.succeed(userContactQueries),
             )
             .zioValue
@@ -341,8 +341,8 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .provide(
               UserContactRepository.live,
               ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(Clock.systemUTC()),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(Clock.systemUTC()),
+              Mocks.idGeneratorLive,
               ZLayer.succeed(userContactQueries),
             )
             .zioValue
@@ -388,8 +388,8 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .provide(
               UserContactRepository.live,
               ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(Clock.systemUTC()),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(Clock.systemUTC()),
+              Mocks.idGeneratorLive,
               ZLayer.succeed(userContactQueries),
             )
             .zioValue
@@ -425,8 +425,8 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .provide(
               UserContactRepository.live,
               ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(Clock.systemUTC()),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(Clock.systemUTC()),
+              Mocks.idGeneratorLive,
               ZLayer.succeed(userContactQueries),
             )
             .zioValue
@@ -474,8 +474,8 @@ class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repos
             .provide(
               UserContactRepository.live,
               ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(Clock.systemUTC()),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(Clock.systemUTC()),
+              Mocks.idGeneratorLive,
               ZLayer.succeed(userContactQueries),
             )
             .zioValue

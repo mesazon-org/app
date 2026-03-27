@@ -1,7 +1,7 @@
 package io.mesazon.gateway.unit.stream
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.Mocks.*
+import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.ReplyingToMessagesCronJobConfig
 import io.mesazon.gateway.repository.domain.{WahaUserActivityRow, WahaUserMessageRow, WahaUserRow}
 import io.mesazon.gateway.stream.ReplyingToMessagesCronJobStream
@@ -114,16 +114,16 @@ class ReplyingToMessagesCronJobStreamSpec extends ZWordSpecBase, RepositoryArbit
         .provide(
           ReplyingToMessagesCronJobStream.live,
           ZLayer.succeed(config),
-          wahaClientMockLive(
+          Mocks.wahaClientLive(
             chattingSendSeenCounterRef = chattingSendSeenCounterRef,
             chattingSendMessageCounterRef = chattingSendMessageCounterRef,
           ),
-          openAIClientMockLive(
+          Mocks.openAIClientLive(
             assistantResponse = assistantResponse,
             sendMessageCounterRef = sendMessageCounterRef,
             messagesCounterRef = messagesCounterRef,
           ),
-          wahaRepositoryMockLive(
+          Mocks.wahaRepositoryLive(
             wahaUserRows = wahaUserRows,
             wahaUserActivityRows = wahaUserActivityRows,
             wahaUserMessageRows = wahaUserMessageRows,
@@ -133,7 +133,7 @@ class ReplyingToMessagesCronJobStreamSpec extends ZWordSpecBase, RepositoryArbit
               getWahaUsersActivityWaitingForAssistantReplyCounterRef,
             getWahaUserMessagesCounterRef = getWahaUserMessagesCounterRef,
           ),
-          timeProviderMockLive(clock),
+          Mocks.timeProviderLive(clock),
         )
         .zioValue
   }

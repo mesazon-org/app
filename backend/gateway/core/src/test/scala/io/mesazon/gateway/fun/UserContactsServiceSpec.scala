@@ -1,11 +1,10 @@
 package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.Mocks.*
 import io.mesazon.gateway.service.UserContactsService
-import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.SmithyArbitraries
 import io.mesazon.gateway.validation.*
+import io.mesazon.gateway.{smithy, Mocks}
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 
@@ -65,9 +64,9 @@ class UserContactsServiceSpec extends ZWordSpecBase, SmithyArbitraries {
         .service[smithy.UserContactsService[Task]]
         .provide(
           UserContactsService.live,
-          userContactsRepositoryMockLive(upsertUserContactsCounterRef, userManagementRepositoryMaybeError),
-          authorizationStateMockLive(authedUser),
-          phoneNumberRegionValidatorMockLive(),
+          Mocks.userContactsRepositoryLive(upsertUserContactsCounterRef, userManagementRepositoryMaybeError),
+          Mocks.authorizationStateLive(authedUser),
+          Mocks.phoneNumberRegionValidatorLive(),
           UserContactsValidators.upsertUserContactsValidatorLive,
         )
         .zioValue

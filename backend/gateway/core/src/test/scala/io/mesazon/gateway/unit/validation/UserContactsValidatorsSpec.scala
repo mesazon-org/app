@@ -5,7 +5,7 @@ import io.mesazon.domain.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
-import io.mesazon.gateway.Mocks.phoneNumberRegionValidatorMockLive
+import io.mesazon.gateway.Mocks.phoneNumberRegionValidatorLive
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.SmithyArbitraries
 import io.mesazon.gateway.validation.*
@@ -33,7 +33,7 @@ class UserContactsValidatorsSpec extends ZWordSpecBase, SmithyArbitraries {
 
         val validator = ZIO
           .service[ServiceValidator[Set[smithy.UpsertUserContactRequest], NonEmptyChunk[UpsertUserContact]]]
-          .provide(UserContactsValidators.upsertUserContactsValidatorLive, phoneNumberRegionValidatorMockLive())
+          .provide(UserContactsValidators.upsertUserContactsValidatorLive, phoneNumberRegionValidatorLive())
           .zioValue
 
         validator
@@ -68,7 +68,7 @@ class UserContactsValidatorsSpec extends ZWordSpecBase, SmithyArbitraries {
 
         val validator = ZIO
           .service[ServiceValidator[Set[smithy.UpsertUserContactRequest], NonEmptyChunk[UpsertUserContact]]]
-          .provide(UserContactsValidators.upsertUserContactsValidatorLive, phoneNumberRegionValidatorMockLive())
+          .provide(UserContactsValidators.upsertUserContactsValidatorLive, phoneNumberRegionValidatorLive())
           .zioValue
 
         validator.validate(upsertUserContactsRequest).zioError shouldBe
@@ -116,7 +116,7 @@ class UserContactsValidatorsSpec extends ZWordSpecBase, SmithyArbitraries {
 
         val validator = ZIO
           .service[ServiceValidator[Set[smithy.UpsertUserContactRequest], NonEmptyChunk[UpsertUserContact]]]
-          .provide(UserContactsValidators.upsertUserContactsValidatorLive, phoneNumberRegionValidatorMockLive())
+          .provide(UserContactsValidators.upsertUserContactsValidatorLive, phoneNumberRegionValidatorLive())
           .zioValue
 
         validator
@@ -142,7 +142,7 @@ class UserContactsValidatorsSpec extends ZWordSpecBase, SmithyArbitraries {
       "return failure when request set is empty" in {
         val validator = ZIO
           .service[ServiceValidator[Set[smithy.UpsertUserContactRequest], NonEmptyChunk[UpsertUserContact]]]
-          .provide(UserContactsValidators.upsertUserContactsValidatorLive, phoneNumberRegionValidatorMockLive())
+          .provide(UserContactsValidators.upsertUserContactsValidatorLive, phoneNumberRegionValidatorLive())
           .zioValue
 
         validator

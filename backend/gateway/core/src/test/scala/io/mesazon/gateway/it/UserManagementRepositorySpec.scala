@@ -3,7 +3,7 @@ package io.mesazon.gateway.it
 import com.dimafeng.testcontainers.ExposedService
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.Mocks.*
+import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.UserManagementRepository
 import io.mesazon.gateway.repository.domain.{UserDetailsRow, UserOnboardRow}
@@ -78,8 +78,8 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           .provide(
             UserManagementRepository.live,
             ZLayer.succeed(postgresClient.database),
-            timeProviderMockLive(clockNow),
-            idGeneratorMockLive,
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
             ZLayer.succeed(userManagementQueries),
           )
           .zioValue
@@ -116,8 +116,8 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
             .provide(
               UserManagementRepository.live,
               ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(clockNow),
-              idGeneratorMockConstLive("fixed-id"),
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorConstLive("fixed-id"),
               ZLayer.succeed(userManagementQueries),
             )
             .zioValue
@@ -158,8 +158,8 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           .provide(
             UserManagementRepository.live,
             ZLayer.succeed(postgresClient.database),
-            timeProviderMockLive(clockNow),
-            idGeneratorMockLive,
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
             ZLayer.succeed(userManagementQueries),
           )
           .zioValue
@@ -205,8 +205,8 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           .provide(
             UserManagementRepository.live,
             ZLayer.succeed(postgresClient.database),
-            timeProviderMockLive(clockNow),
-            idGeneratorMockLive,
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
             ZLayer.succeed(userManagementQueries),
           )
           .zioValue
@@ -249,8 +249,8 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
             .provide(
               UserManagementRepository.live,
               ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(clockNow),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
               ZLayer.succeed(userManagementQueries),
             )
             .zioValue
@@ -285,8 +285,8 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           .provide(
             UserManagementRepository.live,
             ZLayer.succeed(postgresClient.database),
-            timeProviderMockLive(clockNow),
-            idGeneratorMockLive,
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
             ZLayer.succeed(userManagementQueries),
           )
           .zioValue
@@ -316,7 +316,7 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
             UserManagementRepository.live,
             ZLayer.succeed(postgresClient.database),
             TimeProvider.liveSystemUTC,
-            idGeneratorMockLive,
+            Mocks.idGeneratorLive,
             ZLayer.succeed(userManagementQueries),
           )
           .zioValue
@@ -342,8 +342,8 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           .provide(
             UserManagementRepository.live,
             ZLayer.succeed(postgresClient.database),
-            timeProviderMockLive(Clock.fixed(userOnboardRow.createdAt.value, ZoneOffset.UTC)),
-            idGeneratorMockLive,
+            Mocks.timeProviderLive(Clock.fixed(userOnboardRow.createdAt.value, ZoneOffset.UTC)),
+            Mocks.idGeneratorLive,
             ZLayer.succeed(userManagementQueries),
           )
           .zioValue
@@ -363,8 +363,8 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
             .provide(
               UserManagementRepository.live,
               ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+              Mocks.idGeneratorLive,
               ZLayer.succeed(userManagementQueries),
             )
             .zioValue
@@ -385,8 +385,8 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           .provide(
             UserManagementRepository.live,
             ZLayer.succeed(postgresClient.database),
-            timeProviderMockLive(Clock.fixed(userOnboardRow.createdAt.value, ZoneOffset.UTC)),
-            idGeneratorMockLive,
+            Mocks.timeProviderLive(Clock.fixed(userOnboardRow.createdAt.value, ZoneOffset.UTC)),
+            Mocks.idGeneratorLive,
             ZLayer.succeed(userManagementQueries),
           )
           .zioValue
@@ -406,8 +406,8 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
             .provide(
               UserManagementRepository.live,
               ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+              Mocks.idGeneratorLive,
               ZLayer.succeed(userManagementQueries),
             )
             .zioValue
@@ -431,8 +431,8 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           .provide(
             UserManagementRepository.live,
             ZLayer.succeed(postgresClient.database),
-            timeProviderMockLive(clockNow),
-            idGeneratorMockLive,
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
             ZLayer.succeed(userManagementQueries),
           )
           .zioValue
@@ -469,8 +469,8 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
             .provide(
               UserManagementRepository.live,
               ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(clockNow),
-              idGeneratorMockLive,
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
               ZLayer.succeed(userManagementQueries),
             )
             .zioValue
