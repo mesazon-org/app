@@ -33,7 +33,7 @@ extension [A](request: Request[Either[String, A]]) {
       .logError("Waha request failed")
 }
 
-extension [A](request: Request[Unit]) {
+extension (request: Request[Unit]) {
   def standardSendRequestUnit(errorCode: WahaErrorCode)(using backend: Backend[Task]): IO[WahaError, Response[Unit]] =
     request
       .send(backend)
