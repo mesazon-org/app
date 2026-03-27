@@ -1,6 +1,6 @@
 package io.mesazon.gateway.fun
 
-import io.mesazon.gateway.mock.*
+import io.mesazon.gateway.Mocks.*
 import io.mesazon.gateway.service.WahaService
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.SmithyArbitraries

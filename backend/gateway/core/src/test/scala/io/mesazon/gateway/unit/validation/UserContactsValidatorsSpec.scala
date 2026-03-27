@@ -5,7 +5,7 @@ import io.mesazon.domain.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
-import io.mesazon.gateway.mock.phoneNumberRegionValidatorMockLive
+import io.mesazon.gateway.Mocks.phoneNumberRegionValidatorMockLive
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.SmithyArbitraries
 import io.mesazon.gateway.validation.*

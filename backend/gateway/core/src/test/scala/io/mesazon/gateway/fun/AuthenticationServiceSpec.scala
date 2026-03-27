@@ -2,7 +2,7 @@ package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
-import io.mesazon.gateway.mock.*
+import io.mesazon.gateway.Mocks.*
 import io.mesazon.gateway.repository.domain.UserOnboardRow
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy

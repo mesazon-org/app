@@ -31,7 +31,6 @@ object Dependencies {
   lazy val sttpAIV              = "0.4.8"
   lazy val jmailV               = "2.1.0"
 
-
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
   lazy val http4sEmberServer = "org.http4s" %% "http4s-ember-server" % http4sV

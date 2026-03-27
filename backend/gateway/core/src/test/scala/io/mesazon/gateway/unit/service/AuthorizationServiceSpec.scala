@@ -1,8 +1,8 @@
 package io.mesazon.gateway.unit.service
 
 import io.mesazon.domain.gateway.*
+import io.mesazon.gateway.Mocks.*
 import io.mesazon.gateway.auth.AuthorizationService
-import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.smithy
 import io.mesazon.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import org.http4s.*

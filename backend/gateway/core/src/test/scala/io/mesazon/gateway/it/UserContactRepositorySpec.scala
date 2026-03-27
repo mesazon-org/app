@@ -3,8 +3,8 @@ package io.mesazon.gateway.it
 import com.dimafeng.testcontainers.ExposedService
 import io.github.gaelrenoux.tranzactio.DbException
 import io.mesazon.domain.gateway.*
+import io.mesazon.gateway.Mocks.*
 import io.mesazon.gateway.config.RepositoryConfig
-import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.UserContactRepository
 import io.mesazon.gateway.repository.domain.{UserContactRow, UserDetailsRow}
 import io.mesazon.gateway.repository.queries.{UserContactQueries, UserManagementQueries}

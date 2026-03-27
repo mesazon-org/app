@@ -1,6 +1,6 @@
 package io.mesazon.gateway.unit.service
 
-import io.mesazon.gateway.mock.*
+import io.mesazon.gateway.Mocks.*
 import io.mesazon.gateway.service.HealthCheckService
 import io.mesazon.gateway.smithy
 import io.mesazon.testkit.base.ZWordSpecBase

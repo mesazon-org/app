@@ -3,8 +3,8 @@ package io.mesazon.gateway.it
 import com.dimafeng.testcontainers.ExposedService
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
+import io.mesazon.gateway.Mocks.*
 import io.mesazon.gateway.config.RepositoryConfig
-import io.mesazon.gateway.mock.{idGeneratorMockConstLive, idGeneratorMockLive, timeProviderMockLive}
 import io.mesazon.gateway.repository.UserManagementRepository
 import io.mesazon.gateway.repository.domain.{UserDetailsRow, UserOnboardRow}
 import io.mesazon.gateway.repository.queries.UserManagementQueries
@@ -68,22 +68,21 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
 
   "UserManagementRepository" when {
     "insertUserOnboardEmail" should {
-      "successfully insert onboard user email" in withContext {
-        (postgresClient, userManagementQueries) =>
-          val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
-          val email                    = arbitrarySample[Email]
-          val onboardStage             = arbitrarySample[OnboardStage]
-          val userManagementRepository = ZIO
-            .service[UserManagementRepository]
-            .provide(
-              UserManagementRepository.live,
-              ZLayer.succeed(postgresClient.database),
-              timeProviderMockLive(clockNow),
-              idGeneratorMockLive,
-              ZLayer.succeed(userManagementQueries),
-            )
-            .zioValue
+      "successfully insert onboard user email" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val email                    = arbitrarySample[Email]
+        val onboardStage             = arbitrarySample[OnboardStage]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            timeProviderMockLive(clockNow),
+            idGeneratorMockLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
 
         val userOnboardRow = userManagementRepository.insertUserOnboardEmail(email, onboardStage).zioValue
 
@@ -256,32 +255,32 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
             )
             .zioValue
 
-        userManagementRepository
-          .updateUserOnboard(
-            userID = notExistingUserID,
-            fullName = None,
-            phoneNumber = None,
-            passwordHash = None,
-            stage = updateOnboardStage,
-          )
-          .zioValue
+          userManagementRepository
+            .updateUserOnboard(
+              userID = notExistingUserID,
+              fullName = None,
+              phoneNumber = None,
+              passwordHash = None,
+              stage = updateOnboardStage,
+            )
+            .zioValue
 
-        postgresClient
-          .executeQuery(
-            userManagementQueries.getOnboardUser(notExistingUserID)
-          )
-          .zioValue shouldBe None
+          postgresClient
+            .executeQuery(
+              userManagementQueries.getOnboardUser(notExistingUserID)
+            )
+            .zioValue shouldBe None
       }
     }
 
     "insertUserDetails" should {
       "successfully insert user details" in withContext { (postgresClient, userManagementQueries) =>
-        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
-        val onboardUserDetails       = arbitrarySample[OnboardUserDetails]
-        val userID                   = arbitrarySample[UserID]
-        val email                    = arbitrarySample[Email]
-        val userManagementRepository = ZIO
+        val now                                                = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                                           = Clock.fixed(now, ZoneOffset.UTC)
+        val onboardUserDetails                                 = arbitrarySample[OnboardUserDetails]
+        val userID                                             = arbitrarySample[UserID]
+        val email                                              = arbitrarySample[Email]
+        val userManagementRepository: UserManagementRepository = ZIO
           .service[UserManagementRepository]
           .provide(
             UserManagementRepository.live,

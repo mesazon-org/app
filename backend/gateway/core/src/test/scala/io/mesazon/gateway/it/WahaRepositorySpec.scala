@@ -4,8 +4,8 @@ import cats.syntax.all.*
 import com.dimafeng.testcontainers.ExposedService
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.waha
+import io.mesazon.gateway.Mocks.*
 import io.mesazon.gateway.config.RepositoryConfig
-import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.WahaRepository
 import io.mesazon.gateway.repository.domain.{WahaUserActivityRow, WahaUserMessageRow, WahaUserRow}
 import io.mesazon.gateway.repository.queries.WahaQueries

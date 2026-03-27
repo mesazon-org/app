@@ -3,7 +3,7 @@ package io.mesazon.gateway.unit.validation
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.domain.waha
-import io.mesazon.gateway.mock.*
+import io.mesazon.gateway.Mocks.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.smithy.{InternalData, InternalInfo}
 import io.mesazon.gateway.utils.SmithyArbitraries

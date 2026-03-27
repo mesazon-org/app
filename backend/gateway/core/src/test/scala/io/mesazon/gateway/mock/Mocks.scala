@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import validation.*
 
-package object mock extends ZIOTestOps {
+object Mocks extends ZIOTestOps {
 
   def pingRepositoryMockLive(): ULayer[PingRepository] = ZLayer.succeed(
     new PingRepository {

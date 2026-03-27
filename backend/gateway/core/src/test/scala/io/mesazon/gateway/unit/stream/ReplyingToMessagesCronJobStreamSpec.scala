@@ -1,8 +1,8 @@
 package io.mesazon.gateway.unit.stream
 
 import io.mesazon.domain.gateway.*
+import io.mesazon.gateway.Mocks.*
 import io.mesazon.gateway.config.ReplyingToMessagesCronJobConfig
-import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.{WahaUserActivityRow, WahaUserMessageRow, WahaUserRow}
 import io.mesazon.gateway.stream.ReplyingToMessagesCronJobStream
 import io.mesazon.gateway.utils.RepositoryArbitraries
