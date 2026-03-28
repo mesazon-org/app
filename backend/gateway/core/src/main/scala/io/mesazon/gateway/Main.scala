@@ -92,6 +92,7 @@ object Main extends ZIOAppDefault {
       WahaClient.live,
       OpenAIClient.openAILive,
       OpenAIClient.live,
+      EmailClient.live,
 
       // Streams
       ReplyingToMessagesCronJobStream.live,

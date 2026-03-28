@@ -73,6 +73,7 @@ object OpenAIClient {
 
   private def observed(client: OpenAIClient): OpenAIClient = client
 
+  // maybe remove
   val openAILive = ZLayer {
     for {
       openAIConfig <- ZIO.service[OpenAIClientConfig]

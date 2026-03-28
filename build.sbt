@@ -126,7 +126,7 @@ lazy val backendGatewayRoot = createBackendGatewayModule(None)
 
 lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
   .enablePlugins(Smithy4sCodegenPlugin)
-  .enablePlugins(JavaAppPackaging, DockerPlugin)
+  .enablePlugins(JavaAppPackaging, DockerPlugin, SbtTwirl)
   .dependsOn(backendDomainModule)
   .dependsOn(backendClockModule)
   .dependsOn(backendGeneratorModule)
@@ -166,6 +166,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.sttpClient4ZIO,
     Dependencies.sttpClient4Jsoniter,
     Dependencies.jmail,
+    Dependencies.simplejavamail,
   )
 
 lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))

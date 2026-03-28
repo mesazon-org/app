@@ -21,7 +21,7 @@ import PostgreSQLTestClient.PostgreSQLTestClientConfig
 
 class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, RepositoryArbitraries, DockerComposeBase {
 
-  override def dockerComposeFile: String = "./src/test/resources/compose.yaml"
+  override def dockerComposeFile: String = "./src/test/resources/repository.yaml"
 
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 

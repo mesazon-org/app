@@ -20,7 +20,7 @@ import java.time.{Clock, Instant, ZoneOffset}
 import PostgreSQLTestClient.PostgreSQLTestClientConfig
 
 class UserContactRepositorySpec extends ZWordSpecBase, GatewayArbitraries, RepositoryArbitraries, DockerComposeBase {
-  override def dockerComposeFile: String = "./src/test/resources/compose.yaml"
+  override def dockerComposeFile: String = "./src/test/resources/repository.yaml"
 
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 
