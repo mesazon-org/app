@@ -44,11 +44,7 @@ class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBas
 
     super.beforeEach()
 
-    println("Clearing inbox before test....")
-
     mailHogClient.clearInbox().zioValue
-
-    println("Cleared inbox")
   }
 
   "EmailClient" when {
@@ -63,11 +59,7 @@ class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBas
           .provide(EmailClient.live, ZLayer.succeed(emailConfig))
           .zioValue
 
-        println("Sending email verification email....")
-
         emailClient.sendEmailVerificationEmail(email, "otp").zioValue
-
-        println("Sent email verification email")
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
       }

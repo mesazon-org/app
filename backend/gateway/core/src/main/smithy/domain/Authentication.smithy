@@ -6,3 +6,8 @@ structure SignUpEmailRequest {
     @required
     email: String
 }
+
+structure SignUpEmailResponse {
+    @required
+    otpID: String
+}

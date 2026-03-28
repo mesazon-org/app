@@ -23,7 +23,7 @@ object AuthenticationService {
       email <- emailValidator.validate(request.email)
       _     <- userManagementRepository.insertUserOnboardEmail(email, OnboardStage.EmailConfirmation).unit
       _     <- emailClient
-        .sendEmailVerificationEmail(email, "")
+        .sendEmailVerificationEmail(email, OTP.assume("323DFS"))
         .retry(Schedule.exponential(100.millis) && Schedule.recurs(3))
     } yield ()).catchSome { case error: ServiceError.ConflictError.UserAlreadyExists =>
       ZIO.logDebug(s"User with the provided email already exists. ${error.message}") *>

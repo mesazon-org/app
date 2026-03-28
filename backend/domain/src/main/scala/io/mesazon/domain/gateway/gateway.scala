@@ -56,6 +56,9 @@ type DisplayName = DisplayName.T
 object Message extends RefinedType[String, NonEmpty]
 type Message = Message.T
 
+object OTP extends RefinedType[String, OTPPredicate]
+type OTP = OTP.T
+
 object CreatedAt extends RefinedType[Instant, Pure]
 type CreatedAt = CreatedAt.T
 

@@ -77,6 +77,7 @@ object Main extends ZIOAppDefault {
       RepositoryConfig.live,
       HttpClientConfig.live,
       OpenAIClientConfig.live,
+      EmailConfig.live,
 
       // Validators
       EmailValidator.emailValidatorLive,

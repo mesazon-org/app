@@ -17,6 +17,13 @@ trait IronRefinedTypeArbitraries {
       .map(_.refineUnsafe[NonEmpty])
   }
 
+  given arbOTP: Arbitrary[String :| OTPPredicate] = Arbitrary {
+    Gen
+      .listOfN(6, Gen.alphaNumChar)
+      .map(_.mkString.toUpperCase)
+      .map(_.refineUnsafe[OTPPredicate])
+  }
+
   given arbNonEmptyTrimmedLowerCase: Arbitrary[String :| NonEmptyTrimmedLowerCase] = Arbitrary {
     Gen
       .nonEmptyStringOf(Gen.alphaNumChar)

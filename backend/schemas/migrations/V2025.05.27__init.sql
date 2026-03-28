@@ -14,6 +14,17 @@ create table user_onboard
 
 create index idx_user_onboard_email on user_onboard (email);
 
+create table user_otp
+(
+    otp_id     text        not null,
+    user_id    text        not null,
+    otp        text        not null,
+    otp_type   text        not null,
+    created_at timestamptz not null,
+    expires_at timestamptz not null,
+    primary key (otp_id),
+);
+
 create table user_details
 (
     user_id        text        not null,

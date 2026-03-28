@@ -13,7 +13,7 @@ import scala.util.chaining.scalaUtilChainingOps
 trait EmailClient {
   def sendEmailVerificationEmail(
       email: Email,
-      otp: String,
+      otp: OTP,
   ): IO[ServiceError.InternalServerError.UnexpectedError, Unit]
 
   def sendWelcomeEmail(
@@ -37,7 +37,7 @@ object EmailClient {
 
     override def sendEmailVerificationEmail(
         email: Email,
-        otp: String,
+        otp: OTP,
     ): IO[ServiceError.InternalServerError.UnexpectedError, Unit] =
       ZIO
         .fromCompletableFuture(

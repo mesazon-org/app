@@ -17,5 +17,6 @@ operation SignUpEmail {
         @httpPayload
         request: SignUpEmailRequest
     }
+//    output: SignUpEmailResponse
     errors: [BadRequest, InternalServerError]
 }
