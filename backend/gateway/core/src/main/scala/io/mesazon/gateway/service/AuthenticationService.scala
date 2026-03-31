@@ -12,8 +12,6 @@ import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import io.mesazon.generator.IDGenerator
 import zio.*
 
-import java.time.Instant
-
 object AuthenticationService {
 
   private final class AuthenticationServiceImpl(

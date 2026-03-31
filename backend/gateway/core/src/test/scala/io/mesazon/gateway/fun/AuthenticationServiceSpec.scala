@@ -33,14 +33,14 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         insertUserOnboardEmailRef.get.zioValue shouldBe 1
         updateUserOnboardRef.get.zioValue shouldBe 0
         upsertUserOtpRef.get.zioValue shouldBe 1
-        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 1
       }
 
-      "successfully re-sign up a user with EmailConfirmation stage but no user otp found" in new TestContext {
+      "successfully re-sign up a user with sign up email stages but no user otp found" in new TestContext {
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
+        val signUpEmailStage   = Random.shuffle(OnboardStage.signupEmailStages).zioValue.head
         val userOnboardRow     = arbitrarySample[UserOnboardRow]
-          .copy(email = Email.assume(signUpEmailRequest.email), stage = OnboardStage.EmailConfirmation)
+          .copy(email = Email.assume(signUpEmailRequest.email), stage = signUpEmailStage)
         val authenticationService = buildAuthenticationService(
           userOnboardRows = Map(userOnboardRow.userID -> userOnboardRow)
         )
@@ -54,16 +54,20 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         insertUserOnboardEmailRef.get.zioValue shouldBe 0
         updateUserOnboardRef.get.zioValue shouldBe 1
         upsertUserOtpRef.get.zioValue shouldBe 1
-        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 1
       }
 
-      "successfully re-sign up a user with EmailConfirmation | EmailConfirmed stage and user otp being expired in less than cooldown" in new TestContext {
-        val expiredAt =
-          Instant.now().truncatedTo(ChronoUnit.MILLIS).plusSeconds(authenticationConfig.otpResendCooldown.toSeconds - 2)
+      "successfully re-sign up a user with sign up email stages and user otp is expired or expiring soon" in new TestContext {
+        val expiredTimeSeconds = Random.nextIntBetween(2, 100).zioValue
+        val expiredAt          =
+          Instant
+            .now()
+            .truncatedTo(ChronoUnit.MILLIS)
+            .plusSeconds(authenticationConfig.otpResendCooldown.toSeconds - expiredTimeSeconds)
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
+        val signUpEmailStage   = Random.shuffle(OnboardStage.signupEmailStages).zioValue.head
         val userOnboardRow     = arbitrarySample[UserOnboardRow]
-          .copy(email = Email.assume(signUpEmailRequest.email), stage = OnboardStage.EmailConfirmation)
+          .copy(email = Email.assume(signUpEmailRequest.email), stage = signUpEmailStage)
         val userOtpRow = arbitrarySample[UserOtpRow]
           .copy(
             userID = userOnboardRow.userID,
@@ -78,22 +82,24 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         val response = authenticationService.signUpEmail(signUpEmailRequest).zioValue
 
         userOtpRow.otpID should not be response.otpID
+        response.otpExpiresInSeconds.toInt should be <= 10
+        response.otpExpiresInSeconds.toInt should be >= 9
 
         getUserOnboardByEmailRef.get.zioValue shouldBe 1
         getUserOtpByUserIDRef.get.zioValue shouldBe 1
         insertUserOnboardEmailRef.get.zioValue shouldBe 0
         updateUserOnboardRef.get.zioValue shouldBe 1
         upsertUserOtpRef.get.zioValue shouldBe 1
-        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 1
       }
 
-      "successfully re-sign up a user with EmailConfirmation | EmailConfirmed stage and user otp being expired in more than cooldown" in new TestContext {
+      "successfully re-sign up a user with sign up email stages and user otp is not expired or expiring soon" in new TestContext {
         val expiredAt =
           Instant.now().truncatedTo(ChronoUnit.MILLIS).plusSeconds(authenticationConfig.otpResendCooldown.toSeconds + 2)
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
+        val signUpEmailStage   = Random.shuffle(OnboardStage.signupEmailStages).zioValue.head
         val userOnboardRow     = arbitrarySample[UserOnboardRow]
-          .copy(email = Email.assume(signUpEmailRequest.email), stage = OnboardStage.EmailConfirmation)
+          .copy(email = Email.assume(signUpEmailRequest.email), stage = signUpEmailStage)
         val userOtpRow = arbitrarySample[UserOtpRow]
           .copy(
             userID = userOnboardRow.userID,
@@ -108,17 +114,18 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         val response = authenticationService.signUpEmail(signUpEmailRequest).zioValue
 
         userOtpRow.otpID.value should not be response.otpID
+        response.otpExpiresInSeconds.toInt should be <= 10
+        response.otpExpiresInSeconds.toInt should be >= 9
 
         getUserOnboardByEmailRef.get.zioValue shouldBe 1
         getUserOtpByUserIDRef.get.zioValue shouldBe 1
         insertUserOnboardEmailRef.get.zioValue shouldBe 0
-        updateUserOnboardRef.get.zioValue shouldBe 0
-        upsertUserOtpRef.get.zioValue shouldBe 0
-        updateUserOtpRef.get.zioValue shouldBe 0
+        updateUserOnboardRef.get.zioValue shouldBe 1
+        upsertUserOtpRef.get.zioValue shouldBe 1
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 0
       }
 
-      "successfully re-sign up a user with other than EmailConfirmation | EmailConfirmed stage and user otp being expired in less than cooldown" in new TestContext {
+      "successfully re-sign up a user with not a sing up email stage and user otp being expired in less than cooldown" in new TestContext {
         val expiredAt =
           Instant.now().truncatedTo(ChronoUnit.MILLIS).plusSeconds(authenticationConfig.otpResendCooldown.toSeconds - 2)
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
@@ -135,16 +142,16 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
 
-        val response = authenticationService.signUpEmail(signUpEmailRequest).zioEither
+        val response = authenticationService.signUpEmail(signUpEmailRequest).zioValue
 
-        assert(response.isRight)
+        response.otpExpiresInSeconds.toInt should be <= 10
+        response.otpExpiresInSeconds.toInt should be >= 9
 
         getUserOnboardByEmailRef.get.zioValue shouldBe 1
         getUserOtpByUserIDRef.get.zioValue shouldBe 1
         insertUserOnboardEmailRef.get.zioValue shouldBe 0
         updateUserOnboardRef.get.zioValue shouldBe 0
         upsertUserOtpRef.get.zioValue shouldBe 0
-        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 0
       }
 
@@ -166,7 +173,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         insertUserOnboardEmailRef.get.zioValue shouldBe 1
         updateUserOnboardRef.get.zioValue shouldBe 0
         upsertUserOtpRef.get.zioValue shouldBe 1
-        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe authenticationConfig.sendEmailVerificationEmailMaxRetries + 1
       }
 
@@ -194,7 +200,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         insertUserOnboardEmailRef.get.zioValue shouldBe 0
         updateUserOnboardRef.get.zioValue shouldBe 0
         upsertUserOtpRef.get.zioValue shouldBe 0
-        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 0
       }
 
@@ -216,7 +221,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         insertUserOnboardEmailRef.get.zioValue shouldBe 0
         updateUserOnboardRef.get.zioValue shouldBe 0
         upsertUserOtpRef.get.zioValue shouldBe 0
-        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 0
       }
     }
@@ -225,7 +229,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
   trait TestContext {
     val insertUserOnboardEmailRef            = Ref.make(0).zioValue
     val upsertUserOtpRef                     = Ref.make(0).zioValue
-    val updateUserOtpRef                     = Ref.make(0).zioValue
     val updateUserOnboardRef                 = Ref.make(0).zioValue
     val sendEmailVerificationEmailCounterRef = Ref.make(0).zioValue
     val getUserOnboardByEmailRef             = Ref.make(0).zioValue
@@ -256,7 +259,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
             userOnboardRows = userOnboardRows,
             updateUserOnboardRef = updateUserOnboardRef,
             upsertUserOtpRef = upsertUserOtpRef,
-            updateUserOtpRef = updateUserOtpRef,
             getUserOtpByUserIDRef = getUserOtpByUserIDRef,
             getUserOnboardByEmailRef = getUserOnboardByEmailRef,
             insertUserOnboardEmailRef = insertUserOnboardEmailRef,
