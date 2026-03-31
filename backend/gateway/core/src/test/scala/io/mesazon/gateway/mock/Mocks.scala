@@ -10,10 +10,10 @@ import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.domain.waha
 import io.mesazon.domain.waha.WahaError
 import io.mesazon.domain.waha.output.ChattingSendMessageOutput
-import io.mesazon.gateway.auth.{AuthorizationService, AuthorizationState}
-import io.mesazon.gateway.clients.OpenAIClient
+import io.mesazon.gateway.auth.*
+import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.repository.*
-import io.mesazon.gateway.repository.domain.{UserOnboardRow, WahaUserActivityRow, WahaUserMessageRow, WahaUserRow}
+import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.validation.EmailValidator.EmailRaw
 import io.mesazon.gateway.validation.PhoneNumberValidator.PhoneNumberRegion
 import io.mesazon.generator.IDGenerator
@@ -41,10 +41,14 @@ object Mocks extends ZIOTestOps {
 
   def userManagementRepositoryLive(
       userOnboardRows: Map[UserID, UserOnboardRow] = Map.empty,
+      userOtpRows: Map[OtpID, UserOtpRow] = Map.empty,
       insertUserOnboardEmailRef: Ref[Int] = Ref.make(0).zioValue,
       updateUserOnboardRef: Ref[Int] = Ref.make(0).zioValue,
       getUserOnboardRef: Ref[Int] = Ref.make(0).zioValue,
-      getUserOnboardEmailRef: Ref[Int] = Ref.make(0).zioValue,
+      getUserOnboardByEmailRef: Ref[Int] = Ref.make(0).zioValue,
+      upsertUserOtpRef: Ref[Int] = Ref.make(0).zioValue,
+      getUserOtpRef: Ref[Int] = Ref.make(0).zioValue,
+      getUserOtpByUserIDRef: Ref[Int] = Ref.make(0).zioValue,
       insertUserDetailsCounterRef: Ref[Int] = Ref.make(0).zioValue,
       updateUserDetailsCounterRef: Ref[Int] = Ref.make(0).zioValue,
       maybeServiceError: Option[ServiceError] = None,
@@ -52,6 +56,89 @@ object Mocks extends ZIOTestOps {
   ): ULayer[UserManagementRepository] =
     ZLayer.succeed(
       new UserManagementRepository {
+
+        override def insertUserOnboardEmail(
+            email: Email,
+            stage: OnboardStage,
+        ): IO[ServiceError, UserOnboardRow] =
+          insertUserOnboardEmailRef.incrementAndGet *> maybeServiceError.fold(
+            maybeUnexpectedError.fold(
+              ZIO.succeed(
+                UserOnboardRow(
+                  UserID.assume(UUID.randomUUID().toString),
+                  email,
+                  None,
+                  None,
+                  None,
+                  stage,
+                  CreatedAt.assume(Instant.now()),
+                  UpdatedAt.assume(Instant.now()),
+                )
+              )
+            )(ZIO.fail(_).orDie)
+          )(ZIO.fail)
+
+        override def updateUserOnboard(
+            userID: UserID,
+            stage: OnboardStage,
+            fullName: Option[FullName],
+            phoneNumber: Option[PhoneNumberE164],
+            passwordHash: Option[PasswordHash],
+        ): IO[ServiceError, UserOnboardRow] = updateUserOnboardRef.incrementAndGet *> maybeServiceError.fold(
+          maybeUnexpectedError.fold(
+            ZIO.succeed(userOnboardRows(userID))
+          )(ZIO.fail(_).orDie)
+        )(ZIO.fail)
+
+        override def getUserOnboard(userID: UserID): IO[ServiceError, Option[UserOnboardRow]] =
+          getUserOnboardRef.incrementAndGet *> maybeServiceError.fold(
+            maybeUnexpectedError.fold(
+              ZIO.succeed(userOnboardRows.get(userID))
+            )(ZIO.fail(_).orDie)
+          )(ZIO.fail)
+
+        override def getUserOnboardByEmail(email: Email): IO[ServiceError, Option[UserOnboardRow]] =
+          getUserOnboardByEmailRef.incrementAndGet *> maybeServiceError.fold(
+            maybeUnexpectedError.fold(
+              ZIO.succeed(userOnboardRows.values.find(_.email == email))
+            )(ZIO.fail(_).orDie)
+          )(ZIO.fail)
+
+        override def upsertUserOtp(
+            userID: UserID,
+            otp: Otp,
+            otpType: OtpType,
+            expiresAt: ExpiresAt,
+        ): IO[ServiceError, UserOtpRow] =
+          upsertUserOtpRef.incrementAndGet *> maybeServiceError.fold(
+            maybeUnexpectedError.fold(
+              ZIO.succeed(
+                UserOtpRow(
+                  OtpID.assume(UUID.randomUUID().toString),
+                  userID,
+                  otp,
+                  otpType,
+                  CreatedAt.assume(Instant.now()),
+                  UpdatedAt.assume(Instant.now()),
+                  expiresAt,
+                )
+              )
+            )(ZIO.fail(_).orDie)
+          )(ZIO.fail)
+
+        override def getUserOtp(otpID: OtpID): IO[ServiceError, Option[UserOtpRow]] =
+          getUserOtpRef.incrementAndGet *> maybeServiceError.fold(
+            maybeUnexpectedError.fold(
+              ZIO.succeed(userOtpRows.get(otpID))
+            )(ZIO.fail(_).orDie)
+          )(ZIO.fail)
+
+        override def getUserOtpByUserID(userID: UserID, otpType: OtpType): IO[ServiceError, Option[UserOtpRow]] =
+          getUserOtpByUserIDRef.incrementAndGet *> maybeServiceError.fold(
+            maybeUnexpectedError.fold(
+              ZIO.succeed(userOtpRows.values.find(row => row.userID == userID && row.otpType == otpType))
+            )(ZIO.fail(_).orDie)
+          )(ZIO.fail)
 
         override def insertUserDetails(
             userID: UserID,
@@ -66,52 +153,6 @@ object Mocks extends ZIOTestOps {
 
         override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
           updateUserDetailsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(ZIO.unit)(ZIO.fail(_).orDie)
-
-        override def insertUserOnboardEmail(
-            email: Email,
-            stage: OnboardStage,
-        ): IO[ServiceError.ConflictError.UserAlreadyExists, UserOnboardRow] =
-          insertUserOnboardEmailRef.incrementAndGet *> maybeServiceError
-            .map(_.asInstanceOf[ServiceError.ConflictError.UserAlreadyExists])
-            .fold(
-              maybeUnexpectedError.fold(
-                ZIO.succeed(userOnboardRows.values.filter(_.email == email).head)
-              )(ZIO.fail(_).orDie)
-            )(ZIO.fail)
-
-        override def updateUserOnboard(
-            userID: UserID,
-            fullName: Option[FullName],
-            phoneNumber: Option[PhoneNumberE164],
-            passwordHash: Option[PasswordHash],
-            stage: OnboardStage,
-        ): UIO[Unit] = updateUserOnboardRef.incrementAndGet *> maybeUnexpectedError.fold(ZIO.unit)(ZIO.fail(_).orDie)
-
-        override def getUserOnboard(
-            userID: UserID
-        ): IO[ServiceError.InternalServerError.UserNotFoundError, UserOnboardRow] =
-          getUserOnboardRef.incrementAndGet *> maybeServiceError
-            .map(_.asInstanceOf[ServiceError.InternalServerError.UserNotFoundError])
-            .fold(
-              maybeUnexpectedError.fold(
-                ZIO.getOrFailWith(
-                  ServiceError.InternalServerError.UserNotFoundError("not found")
-                )(userOnboardRows.get(userID))
-              )(ZIO.fail(_).orDie)
-            )(ZIO.fail)
-
-        override def getUserOnboardByEmail(
-            email: Email
-        ): IO[ServiceError.InternalServerError.UserNotFoundError, UserOnboardRow] =
-          getUserOnboardEmailRef.incrementAndGet *> maybeServiceError
-            .map(_.asInstanceOf[ServiceError.InternalServerError.UserNotFoundError])
-            .fold(
-              maybeUnexpectedError.fold(
-                ZIO.getOrFailWith(
-                  ServiceError.InternalServerError.UserNotFoundError("not found")
-                )(userOnboardRows.values.find(_.email == email))
-              )(ZIO.fail(_).orDie)
-            )(ZIO.fail)
       }
     )
 
@@ -317,6 +358,28 @@ object Mocks extends ZIOTestOps {
           messagesCounterRef.set(messages.size) *> sendMessageCounterRef.incrementAndGet *> ZIO.succeed(
             assistantResponse.asInstanceOf[A]
           )
+      }
+    )
+
+  def emailClientLive(
+      maybeError: Option[Throwable] = None,
+      maybeServiceError: Option[ServiceError] = None,
+      sendEmailVerificationEmailCounterRef: Ref[Int] = Ref.make(0).zioValue,
+      sendWelcomeEmailCounterRef: Ref[Int] = Ref.make(0).zioValue,
+  ): ULayer[EmailClient] =
+    ZLayer.succeed(
+      new EmailClient {
+        override def sendEmailVerificationEmail(
+            email: Email,
+            otp: Otp,
+        ): IO[ServiceError, Unit] =
+          sendEmailVerificationEmailCounterRef.incrementAndGet *>
+            maybeServiceError.fold(maybeError.fold(ZIO.unit)(ZIO.fail(_).orDie))(
+              ZIO.fail
+            )
+
+        override def sendWelcomeEmail(email: Email, fullName: FullName): IO[ServiceError, Unit] =
+          sendWelcomeEmailCounterRef.incrementAndGet *> maybeError.fold(ZIO.unit)(ZIO.fail(_).orDie)
       }
     )
 }

@@ -6,6 +6,7 @@ import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import fs2.io.net.Network
 import io.mesazon.gateway.it.client.GatewayClient.*
 import io.mesazon.gateway.smithy
+import io.mesazon.gateway.smithy.SignUpEmailResponse
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.client4.jsoniter.asJson
@@ -19,6 +20,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.OnboardUserDetailsRequest]      = JsonCodecMaker.make[smithy.OnboardUserDetailsRequest]
   given JsonValueCodec[smithy.UpdateUserDetailsRequest]       = JsonCodecMaker.make[smithy.UpdateUserDetailsRequest]
   given JsonValueCodec[smithy.SignUpEmailRequest]             = JsonCodecMaker.make[smithy.SignUpEmailRequest]
+  given JsonValueCodec[smithy.SignUpEmailResponse]            = JsonCodecMaker.make[smithy.SignUpEmailResponse]
   given JsonValueCodec[smithy.UpsertUserContactRequest]       = JsonCodecMaker.make[smithy.UpsertUserContactRequest]
   given JsonValueCodec[List[smithy.UpsertUserContactRequest]] =
     JsonCodecMaker.make[List[smithy.UpsertUserContactRequest]]
@@ -35,12 +37,12 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
 
   def signUpEmail(
       signUpEmailRequest: smithy.SignUpEmailRequest
-  ): Task[StatusCode] =
+  ): Task[Response[Either[ResponseException[String], SignUpEmailResponse]]] =
     basicRequest
       .post(externalUri.addPath("signup", "email"))
       .body(asJson(signUpEmailRequest))
+      .response(asJson[smithy.SignUpEmailResponse])
       .send(sttpBackend)
-      .map(_.code)
 
   def onboardUser(
       onboardUserDetailsRequest: smithy.OnboardUserDetailsRequest

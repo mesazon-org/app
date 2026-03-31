@@ -13,13 +13,13 @@ import scala.util.chaining.scalaUtilChainingOps
 trait EmailClient {
   def sendEmailVerificationEmail(
       email: Email,
-      otp: OTP,
-  ): IO[ServiceError.InternalServerError.UnexpectedError, Unit]
+      otp: Otp,
+  ): IO[ServiceError, Unit]
 
   def sendWelcomeEmail(
       email: Email,
       fullName: FullName,
-  ): IO[ServiceError.InternalServerError.UnexpectedError, Unit]
+  ): IO[ServiceError, Unit]
 }
 
 object EmailClient {
@@ -37,8 +37,8 @@ object EmailClient {
 
     override def sendEmailVerificationEmail(
         email: Email,
-        otp: OTP,
-    ): IO[ServiceError.InternalServerError.UnexpectedError, Unit] =
+        otp: Otp,
+    ): IO[ServiceError, Unit] =
       ZIO
         .fromCompletableFuture(
           mailer.sendMail(
@@ -49,7 +49,7 @@ object EmailClient {
               .withSubject("Mesazon email verification")
               .withHTMLText(
                 EmailVerification
-                  .render(emailConfig.redirectUri.addPath(otp).toStringSafe())
+                  .render(emailConfig.redirectUri.addPath(otp.value).toStringSafe())
                   .toString()
               )
               .buildEmail()
@@ -63,7 +63,7 @@ object EmailClient {
     override def sendWelcomeEmail(
         email: Email,
         fullName: FullName,
-    ): IO[ServiceError.InternalServerError.UnexpectedError, Unit] =
+    ): IO[ServiceError, Unit] =
       ZIO
         .fromCompletableFuture(
           mailer.sendMail(

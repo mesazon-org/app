@@ -17,11 +17,11 @@ trait IronRefinedTypeArbitraries {
       .map(_.refineUnsafe[NonEmpty])
   }
 
-  given arbOTP: Arbitrary[String :| OTPPredicate] = Arbitrary {
+  given arbOtp: Arbitrary[String :| OtpPredicate] = Arbitrary {
     Gen
       .listOfN(6, Gen.alphaNumChar)
       .map(_.mkString.toUpperCase)
-      .map(_.refineUnsafe[OTPPredicate])
+      .map(_.refineUnsafe[OtpPredicate])
   }
 
   given arbNonEmptyTrimmedLowerCase: Arbitrary[String :| NonEmptyTrimmedLowerCase] = Arbitrary {
@@ -75,5 +75,3 @@ trait IronRefinedTypeArbitraries {
       arb: Arbitrary[mirror.IronType],
   ): Arbitrary[WrappedType] = arb.asInstanceOf[Arbitrary[WrappedType]]
 }
-
-object IronRefinedTypeArbitraries extends IronRefinedTypeArbitraries

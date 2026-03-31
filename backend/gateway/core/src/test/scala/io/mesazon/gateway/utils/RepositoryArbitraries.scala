@@ -2,7 +2,7 @@ package io.mesazon.gateway.utils
 
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.testkit.base.*
-import org.scalacheck.{Arbitrary, Gen}
+import org.scalacheck.*
 
 trait RepositoryArbitraries extends GatewayArbitraries, IronRefinedTypeArbitraries {
 
@@ -17,4 +17,6 @@ trait RepositoryArbitraries extends GatewayArbitraries, IronRefinedTypeArbitrari
   given Arbitrary[WahaUserMessageRow] = Arbitrary(Gen.resultOf(WahaUserMessageRow.apply))
 
   given Arbitrary[UserOnboardRow] = Arbitrary(Gen.resultOf(UserOnboardRow.apply))
+
+  given Arbitrary[UserOtpRow] = Arbitrary(Gen.resultOf(UserOtpRow.apply))
 }

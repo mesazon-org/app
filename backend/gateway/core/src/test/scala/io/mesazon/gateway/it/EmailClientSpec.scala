@@ -2,8 +2,8 @@ package io.mesazon.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.config.*
 import io.mesazon.gateway.clients.EmailClient
+import io.mesazon.gateway.config.*
 import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.utils.MailHogClient.MailHogClientConfig
 import io.mesazon.testkit.base.*
@@ -53,13 +53,14 @@ class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBas
         import context.*
 
         val email = Email.assume("bar@foo.com")
+        val otp   = Otp.assume("123ABC")
 
         val emailClient = ZIO
           .service[EmailClient]
           .provide(EmailClient.live, ZLayer.succeed(emailConfig))
           .zioValue
 
-        emailClient.sendEmailVerificationEmail(email, "otp").zioValue
+        emailClient.sendEmailVerificationEmail(email, otp).zioValue
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
       }

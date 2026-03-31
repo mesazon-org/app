@@ -16,6 +16,7 @@ final class UserManagementQueries(
   private val frSchema           = Fragment.const(config.schema)
   private val frUserOnboardTable = Fragment.const(config.userOnboardTable)
   private val frUserDetailsTable = Fragment.const(config.userDetailsTable)
+  private val frUserOtpTable     = Fragment.const(config.userOtpTable)
 
   case class UpdateUserDetailsQuery(
       userID: UserID,
@@ -31,7 +32,8 @@ final class UserManagementQueries(
   )
 
   val userOnboardFields =
-    fr"""user_id,
+    fr"""
+        |user_id,
         |email,
         |full_name,
         |password_hash,
@@ -41,24 +43,80 @@ final class UserManagementQueries(
         |updated_at
      """.stripMargin
 
-  def insertUserOnboard(userOnboardRow: UserOnboardRow): TranzactIO[Unit] =
+  val userOtpFields =
+    fr"""
+        |otp_id,
+        |user_id,
+        |otp,
+        |otp_type,
+        |created_at,
+        |updated_at,
+        |expires_at
+     """.stripMargin
+
+  def insertUserOnboardEmail(userOnboardRow: UserOnboardRow): TranzactIO[UserOnboardRow] =
     tzio {
+      val condUserId = fr"user_id = ${userOnboardRow.userID}"
+      val condEmail  = fr"email = ${userOnboardRow.email}"
+
+      val conflictCondition = Fragments.or(condUserId, condEmail)
+
       sql"""
-           |INSERT INTO $frSchema.$frUserOnboardTable (
-           |  $userOnboardFields
+           |WITH inserted AS (
+           |  INSERT INTO $frSchema.$frUserOnboardTable ($userOnboardFields)
+           |  VALUES ($userOnboardRow)
+           |  ON CONFLICT DO NOTHING
+           |  RETURNING $userOnboardFields
            |)
-           |VALUES ($userOnboardRow)
-           |""".stripMargin.update.run.map(_ => ())
+           |
+           |SELECT * FROM inserted
+           |UNION ALL
+           |SELECT $userOnboardFields FROM $frSchema.$frUserOnboardTable
+           |WHERE $conflictCondition
+           |LIMIT 1;
+           |""".stripMargin.query[UserOnboardRow].unique
     }
 
-  def updateOnboardUser(
+  def upsertUserOtp(userOtpRow: UserOtpRow): TranzactIO[UserOtpRow] =
+    tzio {
+      sql"""
+           |INSERT INTO $frSchema.$frUserOtpTable ($userOtpFields)
+           |VALUES ($userOtpRow)
+           |ON CONFLICT (user_id, otp_type) DO UPDATE SET
+           |  otp_id = EXCLUDED.otp_id,
+           |  otp = EXCLUDED.otp,
+           |  expires_at = EXCLUDED.expires_at,
+           |  updated_at = EXCLUDED.updated_at
+           |RETURNING $userOtpFields
+           |""".stripMargin.query[UserOtpRow].unique
+    }
+
+  def getUserOtp(optID: OtpID): TranzactIO[Option[UserOtpRow]] =
+    tzio {
+      sql"""
+           |SELECT $userOtpFields
+           |FROM $frSchema.$frUserOtpTable
+           |WHERE otp_id = $optID
+           |""".stripMargin.query[UserOtpRow].option
+    }
+
+  def getUserOtpByUserID(userID: UserID, otpType: OtpType): TranzactIO[Option[UserOtpRow]] =
+    tzio {
+      sql"""
+           |SELECT $userOtpFields
+           |FROM $frSchema.$frUserOtpTable
+           |WHERE user_id = $userID AND otp_type = $otpType
+           |""".stripMargin.query[UserOtpRow].option
+    }
+
+  def updateUserOnboard(
       userID: UserID,
       fullName: Option[FullName],
       phoneNumber: Option[PhoneNumberE164],
       passwordHash: Option[PasswordHash],
       stage: OnboardStage,
       updatedAt: UpdatedAt,
-  ): TranzactIO[Unit] =
+  ): TranzactIO[UserOnboardRow] =
     tzio {
       sql"""
            |UPDATE $frSchema.$frUserOnboardTable
@@ -69,10 +127,11 @@ final class UserManagementQueries(
            |  stage = $stage,
            |  updated_at = $updatedAt
            |WHERE user_id = $userID
-           |""".stripMargin.update.run.map(_ => ())
+           |RETURNING $userOnboardFields
+           |""".stripMargin.query[UserOnboardRow].unique
     }
 
-  def getOnboardUser(
+  def getUserOnboard(
       userID: UserID
   ): TranzactIO[Option[UserOnboardRow]] =
     tzio {
@@ -83,7 +142,7 @@ final class UserManagementQueries(
            |""".stripMargin.query[UserOnboardRow].option
     }
 
-  def getOnboardUserByEmail(
+  def getUserOnboardByEmail(
       email: Email
   ): TranzactIO[Option[UserOnboardRow]] =
     tzio {
@@ -92,6 +151,22 @@ final class UserManagementQueries(
            |FROM $frSchema.$frUserOnboardTable
            |WHERE email = $email
            |""".stripMargin.query[UserOnboardRow].option
+    }
+
+  def getAllUserOnboardRows: TranzactIO[List[UserOnboardRow]] =
+    tzio {
+      sql"""
+           |SELECT $userOnboardFields
+           |FROM $frSchema.$frUserOnboardTable
+           |""".stripMargin.query[UserOnboardRow].to[List]
+    }
+
+  def getAllUserOtpRows: TranzactIO[List[UserOtpRow]] =
+    tzio {
+      sql"""
+             |SELECT $userOtpFields
+             |FROM $frSchema.$frUserOtpTable
+             |""".stripMargin.query[UserOtpRow].to[List]
     }
 
   def insertUserDetailsQuery(userDetailsRow: UserDetailsRow): TranzactIO[Unit] =
