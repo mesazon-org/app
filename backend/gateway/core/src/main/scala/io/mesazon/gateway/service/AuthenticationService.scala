@@ -6,7 +6,6 @@ import io.mesazon.gateway.auth.OtpGenerator
 import io.mesazon.gateway.clients.EmailClient
 import io.mesazon.gateway.config.AuthenticationConfig
 import io.mesazon.gateway.repository.UserManagementRepository
-import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.validation.EmailValidator.EmailRaw
 import io.mesazon.gateway.validation.ServiceValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
@@ -27,37 +26,6 @@ object AuthenticationService {
       idGenerator: IDGenerator,
   ) extends smithy.AuthenticationService[ServiceTask] {
 
-    private def userReSignupEmailCondition(
-        maybeUserOnboardRow: Option[UserOnboardRow],
-        maybeUserOtpRow: Option[UserOtpRow],
-        now: Instant,
-    ): Boolean = {
-      val firstTimeRegister   = maybeUserOnboardRow.isEmpty || maybeUserOtpRow.isEmpty
-      val otpExpiringCooldown =
-        maybeUserOtpRow.exists(
-          _.expiresAt.value.minusSeconds(authenticationConfig.otpResendCooldown.toSeconds).isBefore(now)
-        )
-      val inEmailConfirmationStage = maybeUserOnboardRow.exists(_.stage == OnboardStage.EmailConfirmation)
-      val inEmailConfirmedStage    = maybeUserOnboardRow.exists(_.stage == OnboardStage.EmailConfirmed)
-
-      firstTimeRegister || (otpExpiringCooldown && (inEmailConfirmationStage || inEmailConfirmedStage))
-    }
-
-    private def userReSignupUseSameOtpCondition(
-        maybeUserOnboardRow: Option[UserOnboardRow],
-        userOtpRow: UserOtpRow,
-        now: Instant,
-    ): Boolean = {
-      val headroomSeconds          = 2
-      val inEmailConfirmationStage = maybeUserOnboardRow.exists(_.stage == OnboardStage.EmailConfirmation)
-      val inEmailConfirmedStage    = maybeUserOnboardRow.exists(_.stage == OnboardStage.EmailConfirmed)
-      val userOtpNotExpiring       =
-        userOtpRow.expiresAt.value
-          .minusSeconds(authenticationConfig.otpResendCooldown.toSeconds - headroomSeconds)
-          .isAfter(now)
-      userOtpNotExpiring && (inEmailConfirmationStage || inEmailConfirmedStage)
-    }
-
     /** HTTP POST /signup/email */
     override def signUpEmail(request: smithy.SignUpEmailRequest): ServiceTask[smithy.SignUpEmailResponse] = for {
       _                   <- ZIO.logDebug(s"Signing up user with email: ${request.email}")
@@ -71,16 +39,46 @@ object AuthenticationService {
           )
         )
         .map(_.flatten)
-      now   <- timeProvider.instantNow
-      otpID <-
-        if (userReSignupEmailCondition(maybeUserOnboardRow, maybeUserOtpRow, now)) {
+      (otpID, otpExpiresAt) <- maybeUserOnboardRow match {
+        case Some(existingUserOnboardRow) if OnboardStage.signupEmailStages.contains(existingUserOnboardRow.stage) =>
           for {
-            newUserOnboardRow <- maybeUserOnboardRow.fold(
-              userManagementRepository.insertUserOnboardEmail(email, OnboardStage.EmailConfirmation)
-            )(existingUserOnboardRow =>
-              userManagementRepository.updateUserOnboard(existingUserOnboardRow.userID, OnboardStage.EmailConfirmation)
+            now <- timeProvider.instantNow
+            isEmptyOrExpiredOrExpiringSoon = maybeUserOtpRow.forall(
+              _.expiresAt.value
+                .minusSeconds(authenticationConfig.otpResendCooldown.toSeconds)
+                .isBefore(now)
             )
-            expiresAt <- timeProvider.instantNow
+            updatedUserOnboard <- userManagementRepository.updateUserOnboard(
+              existingUserOnboardRow.userID,
+              OnboardStage.EmailConfirmation,
+            )
+            newOtp <-
+              if (isEmptyOrExpiredOrExpiringSoon) otpGenerator.generate
+              else maybeUserOtpRow.map(_.otp).fold(otpGenerator.generate)(ZIO.succeed(_))
+            newExpiresAt <-
+              timeProvider.instantNow
+                .map(_.plusSeconds(authenticationConfig.otpExpiration.toSeconds))
+                .map(ExpiresAt.assume)
+            newUserOtp <- userManagementRepository.upsertUserOtp(
+              updatedUserOnboard.userID,
+              newOtp,
+              OtpType.EmailVerification,
+              newExpiresAt,
+            )
+            _ <-
+              if (isEmptyOrExpiredOrExpiringSoon)
+                emailClient
+                  .sendEmailVerificationEmail(updatedUserOnboard.email, newOtp)
+                  .retry(
+                    Schedule.recurs(authenticationConfig.sendEmailVerificationEmailMaxRetries) && Schedule
+                      .exponential(authenticationConfig.sendEmailVerificationEmailRetryDelay)
+                  )
+              else ZIO.unit
+          } yield (newUserOtp.otpID, newUserOtp.expiresAt)
+        case None =>
+          for {
+            newUserOnboardRow <- userManagementRepository.insertUserOnboardEmail(email, OnboardStage.EmailConfirmation)
+            expiresAt         <- timeProvider.instantNow
               .map(_.plusSeconds(authenticationConfig.otpExpiration.toSeconds))
               .map(ExpiresAt.assume)
             otp        <- otpGenerator.generate
@@ -96,15 +94,25 @@ object AuthenticationService {
                 Schedule.recurs(authenticationConfig.sendEmailVerificationEmailMaxRetries) && Schedule
                   .exponential(authenticationConfig.sendEmailVerificationEmailRetryDelay)
               )
-          } yield newUserOtp.otpID
-        } else {
-          maybeUserOtpRow match {
-            case Some(userOtpRow) if userReSignupUseSameOtpCondition(maybeUserOnboardRow, userOtpRow, now) =>
-              ZIO.succeed(userOtpRow.otpID)
-            case _ => idGenerator.generate.map(OtpID.assume)
-          }
-        }
-    } yield smithy.SignUpEmailResponse(otpID.value)
+          } yield (newUserOtp.otpID, newUserOtp.expiresAt)
+        case _ =>
+          for {
+            otpID     <- idGenerator.generate.map(OtpID.assume)
+            expiresAt <- timeProvider.instantNow
+              .map(_.plusSeconds(authenticationConfig.otpExpiration.toSeconds))
+              .map(ExpiresAt.assume)
+          } yield (otpID, expiresAt)
+      }
+      now                 <- timeProvider.instantNow
+      otpExpiresInSeconds <- ZIO
+        .attempt(otpExpiresAt.value.getEpochSecond - now.getEpochSecond)
+        .mapError(e =>
+          ServiceError.InternalServerError.UnexpectedError(
+            s"Failed to calculate otpExpiresInSeconds for otpID: [${otpID.value}]",
+            Some(e),
+          )
+        )
+    } yield smithy.SignUpEmailResponse(otpID.value, otpExpiresInSeconds)
   }
 
   private def observed(

@@ -24,13 +24,16 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         val signUpEmailRequest    = arbitrarySample[smithy.SignUpEmailRequest]
         val authenticationService = buildAuthenticationService()
 
-        authenticationService.signUpEmail(signUpEmailRequest).zioValue
+        val response = authenticationService.signUpEmail(signUpEmailRequest).zioEither
+
+        assert(response.isRight)
 
         getUserOnboardByEmailRef.get.zioValue shouldBe 1
         getUserOtpByUserIDRef.get.zioValue shouldBe 0
         insertUserOnboardEmailRef.get.zioValue shouldBe 1
         updateUserOnboardRef.get.zioValue shouldBe 0
         upsertUserOtpRef.get.zioValue shouldBe 1
+        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 1
       }
 
@@ -42,13 +45,16 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           userOnboardRows = Map(userOnboardRow.userID -> userOnboardRow)
         )
 
-        authenticationService.signUpEmail(signUpEmailRequest).zioValue
+        val response = authenticationService.signUpEmail(signUpEmailRequest).zioEither
+
+        assert(response.isRight)
 
         getUserOnboardByEmailRef.get.zioValue shouldBe 1
         getUserOtpByUserIDRef.get.zioValue shouldBe 1
         insertUserOnboardEmailRef.get.zioValue shouldBe 0
         updateUserOnboardRef.get.zioValue shouldBe 1
         upsertUserOtpRef.get.zioValue shouldBe 1
+        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 1
       }
 
@@ -69,13 +75,16 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
 
-        authenticationService.signUpEmail(signUpEmailRequest).zioValue
+        val response = authenticationService.signUpEmail(signUpEmailRequest).zioValue
+
+        userOtpRow.otpID should not be response.otpID
 
         getUserOnboardByEmailRef.get.zioValue shouldBe 1
         getUserOtpByUserIDRef.get.zioValue shouldBe 1
         insertUserOnboardEmailRef.get.zioValue shouldBe 0
         updateUserOnboardRef.get.zioValue shouldBe 1
         upsertUserOtpRef.get.zioValue shouldBe 1
+        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 1
       }
 
@@ -96,13 +105,16 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
 
-        authenticationService.signUpEmail(signUpEmailRequest).zioValue
+        val response = authenticationService.signUpEmail(signUpEmailRequest).zioValue
+
+        userOtpRow.otpID.value should not be response.otpID
 
         getUserOnboardByEmailRef.get.zioValue shouldBe 1
         getUserOtpByUserIDRef.get.zioValue shouldBe 1
         insertUserOnboardEmailRef.get.zioValue shouldBe 0
         updateUserOnboardRef.get.zioValue shouldBe 0
         upsertUserOtpRef.get.zioValue shouldBe 0
+        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 0
       }
 
@@ -123,13 +135,16 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
 
-        authenticationService.signUpEmail(signUpEmailRequest).zioValue
+        val response = authenticationService.signUpEmail(signUpEmailRequest).zioEither
+
+        assert(response.isRight)
 
         getUserOnboardByEmailRef.get.zioValue shouldBe 1
         getUserOtpByUserIDRef.get.zioValue shouldBe 1
         insertUserOnboardEmailRef.get.zioValue shouldBe 0
         updateUserOnboardRef.get.zioValue shouldBe 0
         upsertUserOtpRef.get.zioValue shouldBe 0
+        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 0
       }
 
@@ -151,6 +166,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         insertUserOnboardEmailRef.get.zioValue shouldBe 1
         updateUserOnboardRef.get.zioValue shouldBe 0
         upsertUserOtpRef.get.zioValue shouldBe 1
+        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe authenticationConfig.sendEmailVerificationEmailMaxRetries + 1
       }
 
@@ -178,6 +194,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         insertUserOnboardEmailRef.get.zioValue shouldBe 0
         updateUserOnboardRef.get.zioValue shouldBe 0
         upsertUserOtpRef.get.zioValue shouldBe 0
+        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 0
       }
 
@@ -199,6 +216,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         insertUserOnboardEmailRef.get.zioValue shouldBe 0
         updateUserOnboardRef.get.zioValue shouldBe 0
         upsertUserOtpRef.get.zioValue shouldBe 0
+        updateUserOtpRef.get.zioValue shouldBe 0
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 0
       }
     }
@@ -207,6 +225,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
   trait TestContext {
     val insertUserOnboardEmailRef            = Ref.make(0).zioValue
     val upsertUserOtpRef                     = Ref.make(0).zioValue
+    val updateUserOtpRef                     = Ref.make(0).zioValue
     val updateUserOnboardRef                 = Ref.make(0).zioValue
     val sendEmailVerificationEmailCounterRef = Ref.make(0).zioValue
     val getUserOnboardByEmailRef             = Ref.make(0).zioValue
@@ -237,6 +256,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
             userOnboardRows = userOnboardRows,
             updateUserOnboardRef = updateUserOnboardRef,
             upsertUserOtpRef = upsertUserOtpRef,
+            updateUserOtpRef = updateUserOtpRef,
             getUserOtpByUserIDRef = getUserOtpByUserIDRef,
             getUserOnboardByEmailRef = getUserOnboardByEmailRef,
             insertUserOnboardEmailRef = insertUserOnboardEmailRef,

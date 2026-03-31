@@ -36,6 +36,11 @@ trait UserManagementRepository {
       expiresAt: ExpiresAt,
   ): IO[ServiceError, UserOtpRow]
 
+  def updateUserOtp(
+      otpID: OtpID,
+      expiresAt: ExpiresAt,
+  ): IO[ServiceError, UserOtpRow]
+
   def getUserOtp(
       otpID: OtpID
   ): IO[ServiceError, Option[UserOtpRow]]
@@ -169,6 +174,22 @@ object UserManagementRepository {
             )
           )
       } yield upsertUserOptRow
+
+    def updateUserOtp(
+        otpID: OtpID,
+        expiresAt: ExpiresAt,
+    ): IO[ServiceError, UserOtpRow] =
+      for {
+        instantNow        <- timeProvider.instantNow
+        updatedUserOptRow <- database
+          .transactionOrDie(userManagementQueries.updateUserOtp(otpID, expiresAt, UpdatedAt(instantNow)))
+          .mapError(e =>
+            ServiceError.InternalServerError.UnexpectedError(
+              s"Failed to updateUserOtp: [$otpID], [$expiresAt]",
+              Some(e),
+            )
+          )
+      } yield updatedUserOptRow
 
     override def getUserOtp(otpID: OtpID): IO[ServiceError, Option[UserOtpRow]] =
       database

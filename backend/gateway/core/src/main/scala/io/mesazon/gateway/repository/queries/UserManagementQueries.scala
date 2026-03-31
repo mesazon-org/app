@@ -91,6 +91,18 @@ final class UserManagementQueries(
            |""".stripMargin.query[UserOtpRow].unique
     }
 
+  def updateUserOtp(otpID: OtpID, expiresAt: ExpiresAt, updatedAt: UpdatedAt): TranzactIO[UserOtpRow] =
+    tzio {
+      sql"""
+           |UPDATE $frSchema.$frUserOtpTable
+           |SET
+           |  expires_at = $expiresAt,
+           |  updated_at = $updatedAt
+           |WHERE otp_id = $otpID
+           |RETURNING $userOtpFields
+           |""".stripMargin.query[UserOtpRow].unique
+    }
+
   def getUserOtp(optID: OtpID): TranzactIO[Option[UserOtpRow]] =
     tzio {
       sql"""

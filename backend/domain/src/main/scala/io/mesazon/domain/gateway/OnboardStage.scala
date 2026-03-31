@@ -8,3 +8,10 @@ enum OnboardStage {
   case DetailsProvided
   case PhoneConfirmed
 }
+
+object OnboardStage {
+  val signupEmailStages = List(
+    OnboardStage.EmailConfirmation,
+    OnboardStage.EmailConfirmed,
+  )
+}

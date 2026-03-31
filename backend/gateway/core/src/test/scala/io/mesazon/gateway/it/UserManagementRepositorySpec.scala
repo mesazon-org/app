@@ -489,6 +489,68 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
       }
     }
 
+    "updateUserOtp" should {
+      "successfully update user otp" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val userOtpRow               = arbitrarySample[UserOtpRow]
+        val userOnboardRow           = arbitrarySample[UserOnboardRow]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val userManagementRepositoryUpdate = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(Clock.fixed(now.plusSeconds(5), ZoneOffset.UTC)),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val insertUserOnboardRow =
+          userManagementRepository.insertUserOnboardEmail(userOnboardRow.email, userOnboardRow.stage).zioValue
+
+        val insertUserOtpRow = userManagementRepository
+          .upsertUserOtp(
+            userID = insertUserOnboardRow.userID,
+            otp = userOtpRow.otp,
+            otpType = userOtpRow.otpType,
+            expiresAt = userOtpRow.expiresAt,
+          )
+          .zioValue
+
+        val updateUserOtpRow = userManagementRepositoryUpdate
+          .updateUserOtp(insertUserOtpRow.otpID, ExpiresAt.assume(userOtpRow.expiresAt.value.plusSeconds(7)))
+          .zioValue
+
+        val expectedUserOtpRow = UserOtpRow(
+          otpID = insertUserOtpRow.otpID,
+          userID = insertUserOnboardRow.userID,
+          otp = userOtpRow.otp,
+          otpType = userOtpRow.otpType,
+          createdAt = CreatedAt(now),
+          updatedAt = UpdatedAt(now.plusSeconds(5)),
+          expiresAt = ExpiresAt.assume(userOtpRow.expiresAt.value.plusSeconds(7)),
+        )
+
+        val userOtpRowResult =
+          postgresClient.database.transactionOrDie(userManagementQueries.getUserOtp(insertUserOtpRow.otpID)).zioValue
+
+        userOtpRowResult.value shouldBe expectedUserOtpRow
+        userOtpRowResult.value shouldBe updateUserOtpRow
+      }
+    }
+
     "getUserOtp" should {
       "successfully get user otp by otp id" in withContext { (postgresClient, userManagementQueries) =>
         val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)

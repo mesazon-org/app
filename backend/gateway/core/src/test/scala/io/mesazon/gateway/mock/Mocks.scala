@@ -47,6 +47,7 @@ object Mocks extends ZIOTestOps {
       getUserOnboardRef: Ref[Int] = Ref.make(0).zioValue,
       getUserOnboardByEmailRef: Ref[Int] = Ref.make(0).zioValue,
       upsertUserOtpRef: Ref[Int] = Ref.make(0).zioValue,
+      updateUserOtpRef: Ref[Int] = Ref.make(0).zioValue,
       getUserOtpRef: Ref[Int] = Ref.make(0).zioValue,
       getUserOtpByUserIDRef: Ref[Int] = Ref.make(0).zioValue,
       insertUserDetailsCounterRef: Ref[Int] = Ref.make(0).zioValue,
@@ -125,6 +126,15 @@ object Mocks extends ZIOTestOps {
               )
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
+
+        def updateUserOtp(
+            otpID: OtpID,
+            expiresAt: ExpiresAt,
+        ): IO[ServiceError, UserOtpRow] = updateUserOtpRef.incrementAndGet *> maybeServiceError.fold(
+          maybeUnexpectedError.fold(
+            ZIO.succeed(userOtpRows(otpID))
+          )(ZIO.fail(_).orDie)
+        )(ZIO.fail)
 
         override def getUserOtp(otpID: OtpID): IO[ServiceError, Option[UserOtpRow]] =
           getUserOtpRef.incrementAndGet *> maybeServiceError.fold(

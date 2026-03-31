@@ -167,7 +167,6 @@ class AuthenticationApiSpec
         )
 
         userOtpRow shouldBe expectedUserOtpRow
-
       }
 
       "fail with BadRequest when request is invalid" in withContext { context =>
