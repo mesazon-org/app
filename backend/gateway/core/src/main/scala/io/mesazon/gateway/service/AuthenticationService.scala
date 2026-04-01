@@ -57,7 +57,7 @@ object AuthenticationService {
               timeProvider.instantNow
                 .map(_.plusSeconds(authenticationConfig.otpExpiration.toSeconds))
                 .map(ExpiresAt.assume)
-            newUserOtp <- userManagementRepository.upsertUserOtp(
+            newUserOtpRow <- userManagementRepository.upsertUserOtp(
               updatedUserOnboard.userID,
               newOtp,
               OtpType.EmailVerification,
@@ -72,7 +72,7 @@ object AuthenticationService {
                       .exponential(authenticationConfig.sendEmailVerificationEmailRetryDelay)
                   )
               else ZIO.unit
-          } yield (newUserOtp.otpID, newUserOtp.expiresAt)
+          } yield (newUserOtpRow.otpID, newUserOtpRow.expiresAt)
         case None =>
           for {
             newUserOnboardRow <- userManagementRepository.insertUserOnboardEmail(email, OnboardStage.EmailConfirmation)
@@ -80,7 +80,7 @@ object AuthenticationService {
               .map(_.plusSeconds(authenticationConfig.otpExpiration.toSeconds))
               .map(ExpiresAt.assume)
             otp        <- otpGenerator.generate
-            newUserOtp <- userManagementRepository.upsertUserOtp(
+            newUserOtpRow <- userManagementRepository.upsertUserOtp(
               newUserOnboardRow.userID,
               otp,
               OtpType.EmailVerification,
@@ -92,7 +92,7 @@ object AuthenticationService {
                 Schedule.recurs(authenticationConfig.sendEmailVerificationEmailMaxRetries) && Schedule
                   .exponential(authenticationConfig.sendEmailVerificationEmailRetryDelay)
               )
-          } yield (newUserOtp.otpID, newUserOtp.expiresAt)
+          } yield (newUserOtpRow.otpID, newUserOtpRow.expiresAt)
         case _ =>
           for {
             otpID     <- idGenerator.generate.map(OtpID.assume)
