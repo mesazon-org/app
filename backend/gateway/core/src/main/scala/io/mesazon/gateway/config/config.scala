@@ -13,7 +13,7 @@ private[config] given DeriveConfig[Host] = DeriveConfig[String].mapAttempt(strin
 
 private[config] given DeriveConfig[Port] = DeriveConfig[Int].mapAttempt(int => Port.fromInt(int).get)
 
-private[config] given DeriveConfig[Uri] = DeriveConfig[String].mapAttempt(str => Uri.unsafeApply(str))
+private[config] given DeriveConfig[Uri] = DeriveConfig[String].mapAttempt(str => Uri.unsafeParse(str))
 
 private[config] def deriveConfigLayer[A: {Tag, DeriveConfig}](
     path: String

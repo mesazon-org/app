@@ -8,6 +8,7 @@ import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.utils.MailHogClient.MailHogClientConfig
 import io.mesazon.testkit.base.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
+import sttp.model.*
 import zio.*
 
 class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBase {
@@ -30,9 +31,7 @@ class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBas
       port = mailHogClientConfig.smtpPort,
       senderEmail = "john@doe.com",
       senderPassword = "password",
-      redirectScheme = "http",
-      redirectHost = "localhost",
-      redirectPort = 9090,
+      redirectUri = Uri.unsafeParse("http://localhost:9090"),
       enableTls = false,
     )
 
