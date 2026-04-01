@@ -10,12 +10,13 @@ service AuthenticationService {
     operations: [SignUpEmail]
 }
 
-@http(method: "POST", uri: "/signup/email", code: 204)
+@http(method: "POST", uri: "/signup/email", code: 200)
 operation SignUpEmail {
     input := {
         @required
         @httpPayload
         request: SignUpEmailRequest
     }
+    output: SignUpEmailResponse
     errors: [BadRequest, InternalServerError]
 }

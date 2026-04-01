@@ -13,6 +13,8 @@ services:
       DATABASE_PORT: 5432
       DATABASE_USERNAME: local_user
       DATABASE_PASSWORD: local_password
+      EMAIL_PROVIDER_HOST: mailhog
+      EMAIL_PROVIDER_PORT: 1025
 
   postgres:
     image: postgres:17.5-alpine
@@ -35,3 +37,10 @@ services:
       - ../../schemas/local/flyway:/flyway/conf
     depends_on:
       - postgres
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    restart: always
+#    ports:
+#      - "1025:1025"
+#      - "8025:8025"

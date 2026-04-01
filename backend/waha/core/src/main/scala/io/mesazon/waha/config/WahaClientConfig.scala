@@ -1,8 +1,7 @@
 package io.mesazon.waha.config
 
 import sttp.model.Uri
-
-import scala.concurrent.duration.Duration
+import zio.*
 
 case class WahaClientConfig(
     scheme: String,

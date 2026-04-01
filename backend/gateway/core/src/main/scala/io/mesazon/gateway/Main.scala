@@ -64,6 +64,7 @@ object Main extends ZIOAppDefault {
       // Auth
       AuthorizationService.live,
       AuthorizationState.live,
+      OtpGenerator.live,
 
       // Middleware
       ServerMiddleware.live,
@@ -77,6 +78,8 @@ object Main extends ZIOAppDefault {
       RepositoryConfig.live,
       HttpClientConfig.live,
       OpenAIClientConfig.live,
+      EmailConfig.live,
+      AuthenticationConfig.live,
 
       // Validators
       EmailValidator.emailValidatorLive,
@@ -90,8 +93,8 @@ object Main extends ZIOAppDefault {
       // Clients
       SttpBackend.live,
       WahaClient.live,
-      OpenAIClient.openAILive,
       OpenAIClient.live,
+      EmailClient.live,
 
       // Streams
       ReplyingToMessagesCronJobStream.live,

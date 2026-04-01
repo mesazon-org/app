@@ -56,8 +56,17 @@ type DisplayName = DisplayName.T
 object Message extends RefinedType[String, NonEmpty]
 type Message = Message.T
 
+object Otp extends RefinedType[String, OtpPredicate]
+type Otp = Otp.T
+
+object OtpID extends RefinedType[String, NonEmptyTrimmed]
+type OtpID = OtpID.T
+
 object CreatedAt extends RefinedType[Instant, Pure]
 type CreatedAt = CreatedAt.T
 
 object UpdatedAt extends RefinedType[Instant, Pure]
 type UpdatedAt = UpdatedAt.T
+
+object ExpiresAt extends RefinedType[Instant, Pure]
+type ExpiresAt = ExpiresAt.T

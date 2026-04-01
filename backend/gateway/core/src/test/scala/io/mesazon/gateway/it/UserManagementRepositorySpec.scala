@@ -1,16 +1,17 @@
 package io.mesazon.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
+import io.github.gaelrenoux.tranzactio.DbException
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.Mocks
-import io.mesazon.gateway.config.RepositoryConfig
-import io.mesazon.gateway.repository.UserManagementRepository
-import io.mesazon.gateway.repository.domain.{UserDetailsRow, UserOnboardRow}
-import io.mesazon.gateway.repository.queries.UserManagementQueries
+import io.mesazon.gateway.config.*
+import io.mesazon.gateway.repository.*
+import io.mesazon.gateway.repository.domain.*
+import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.utils.RepositoryArbitraries
 import io.mesazon.test.postgresql.PostgreSQLTestClient
-import io.mesazon.testkit.base.{DockerComposeBase, GatewayArbitraries, ZWordSpecBase}
+import io.mesazon.testkit.base.*
 import io.scalaland.chimney.dsl.*
 import zio.{Clock as _, *}
 
@@ -21,7 +22,7 @@ import PostgreSQLTestClient.PostgreSQLTestClientConfig
 
 class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, RepositoryArbitraries, DockerComposeBase {
 
-  override def dockerComposeFile: String = "./src/test/resources/compose.yaml"
+  override def dockerComposeFile: String = "./src/test/resources/repository.yaml"
 
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 
@@ -29,6 +30,7 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
     schema = "local_schema",
     userOnboardTable = "user_onboard",
     userDetailsTable = "user_details",
+    userOtpTable = "user_otp",
   )
 
   def withContext[A](f: (PostgreSQLTestClient, UserManagementQueries) => A): A = withContainers { container =>
@@ -53,6 +55,9 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
         .checkIfTableExists(repositoryConfig.schema, repositoryConfig.userDetailsTable)
         .zioValue shouldBe true
       postgresClient
+        .checkIfTableExists(repositoryConfig.schema, repositoryConfig.userOtpTable)
+        .zioValue shouldBe true
+      postgresClient
         .checkIfTableExists(repositoryConfig.schema, repositoryConfig.userOnboardTable)
         .zioValue shouldBe true
     }
@@ -61,8 +66,9 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
   override def beforeEach(): Unit = withContext { (postgresClient, _) =>
     super.beforeEach()
     eventually {
-      postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.userDetailsTable).zioValue
+      postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.userOtpTable).zioValue
       postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.userOnboardTable).zioValue
+      postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.userDetailsTable).zioValue
     }
   }
 
@@ -88,7 +94,7 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
 
         postgresClient
           .executeQuery(
-            userManagementQueries.getOnboardUser(userOnboardRow.userID)
+            userManagementQueries.getUserOnboard(userOnboardRow.userID)
           )
           .zioValue shouldBe Some(
           UserOnboardRow(
@@ -104,51 +110,7 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
         )
       }
 
-      "fail with UserAlreadyExists when user id already exist" in withContext {
-        (postgresClient, userManagementQueries) =>
-          val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
-          val email1                   = arbitrarySample[Email]
-          val email2                   = arbitrarySample[Email]
-          val onboardStage             = arbitrarySample[OnboardStage]
-          val userManagementRepository = ZIO
-            .service[UserManagementRepository]
-            .provide(
-              UserManagementRepository.live,
-              ZLayer.succeed(postgresClient.database),
-              Mocks.timeProviderLive(clockNow),
-              Mocks.idGeneratorConstLive("fixed-id"),
-              ZLayer.succeed(userManagementQueries),
-            )
-            .zioValue
-
-          val userOnboardRow = userManagementRepository.insertUserOnboardEmail(email1, onboardStage).zioValue
-          val error = userManagementRepository.insertUserOnboardEmail(email2, onboardStage).zioEither.left.value
-
-          postgresClient
-            .executeQuery(
-              userManagementQueries.getOnboardUser(userOnboardRow.userID)
-            )
-            .zioValue shouldBe Some(
-            UserOnboardRow(
-              userID = userOnboardRow.userID,
-              email = email1,
-              fullName = None,
-              passwordHash = None,
-              phoneNumber = None,
-              stage = onboardStage,
-              createdAt = CreatedAt(now),
-              updatedAt = UpdatedAt(now),
-            )
-          )
-
-          error shouldBe ServiceError.ConflictError.UserAlreadyExists(
-            userID = UserID.assume("fixed-id"),
-            email = email2,
-          )
-      }
-
-      "fail with UserAlreadyExists when email already exist" in withContext { (postgresClient, userManagementQueries) =>
+      "not fail when email already exist" in withContext { (postgresClient, userManagementQueries) =>
         val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
         val email                    = arbitrarySample[Email]
@@ -159,21 +121,21 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
             UserManagementRepository.live,
             ZLayer.succeed(postgresClient.database),
             Mocks.timeProviderLive(clockNow),
-            Mocks.idGeneratorLive,
+            Mocks.idGeneratorConstLive("fixed-id"),
             ZLayer.succeed(userManagementQueries),
           )
           .zioValue
 
-        val userOnboardRow = userManagementRepository.insertUserOnboardEmail(email, onboardStage).zioValue
-        val error          = userManagementRepository.insertUserOnboardEmail(email, onboardStage).zioEither.left.value
+        val userOnboardRow1 = userManagementRepository.insertUserOnboardEmail(email, onboardStage).zioValue
+        val userOnboardRow2 = userManagementRepository.insertUserOnboardEmail(email, onboardStage).zioValue
 
         postgresClient
           .executeQuery(
-            userManagementQueries.getOnboardUser(userOnboardRow.userID)
+            userManagementQueries.getUserOnboard(userOnboardRow1.userID)
           )
           .zioValue shouldBe Some(
           UserOnboardRow(
-            userID = userOnboardRow.userID,
+            userID = userOnboardRow1.userID,
             email = email,
             fullName = None,
             passwordHash = None,
@@ -184,10 +146,48 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           )
         )
 
-        error shouldBe ServiceError.ConflictError.UserAlreadyExists(
-          userID = UserID.assume("2"),
-          email = email,
+        userOnboardRow1 shouldBe userOnboardRow2
+      }
+
+      "fail when user id already exist" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val email1                   = arbitrarySample[Email]
+        val email2                   = arbitrarySample[Email]
+        val onboardStage             = arbitrarySample[OnboardStage]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorConstLive("fixed-id"),
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val userOnboardRow1 = userManagementRepository.insertUserOnboardEmail(email1, onboardStage).zioValue
+        val error           = userManagementRepository.insertUserOnboardEmail(email2, onboardStage).zioError
+
+        postgresClient
+          .executeQuery(
+            userManagementQueries.getUserOnboard(userOnboardRow1.userID)
+          )
+          .zioValue shouldBe Some(
+          UserOnboardRow(
+            userID = userOnboardRow1.userID,
+            email = email1,
+            fullName = None,
+            passwordHash = None,
+            phoneNumber = None,
+            stage = onboardStage,
+            createdAt = CreatedAt(now),
+            updatedAt = UpdatedAt(now),
+          )
         )
+
+        error.message shouldBe s"Failed to insertUserOnboardEmail: [${email2.value}], [$onboardStage]"
+        error.underlying.value shouldBe a[DbException]
       }
     }
 
@@ -196,9 +196,9 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
         val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
         val userOnboardRow           = arbitrarySample[UserOnboardRow]
-        val updateFullName           = arbitrarySample[FullName]
-        val updatePhoneNumber        = arbitrarySample[PhoneNumberE164]
-        val updatePasswordHash       = arbitrarySample[PasswordHash]
+        val updateFullName           = arbitrarySample[Option[FullName]]
+        val updatePhoneNumber        = arbitrarySample[Option[PhoneNumberE164]]
+        val updatePasswordHash       = arbitrarySample[Option[PasswordHash]]
         val updateOnboardStage       = arbitrarySample[OnboardStage]
         val userManagementRepository = ZIO
           .service[UserManagementRepository]
@@ -211,34 +211,34 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           )
           .zioValue
 
-        postgresClient.executeQuery(userManagementQueries.insertUserOnboard(userOnboardRow)).zioValue
+        postgresClient.executeQuery(userManagementQueries.insertUserOnboardEmail(userOnboardRow)).zioValue
 
         userManagementRepository
           .updateUserOnboard(
             userID = userOnboardRow.userID,
-            fullName = Some(updateFullName),
-            phoneNumber = Some(updatePhoneNumber),
-            passwordHash = Some(updatePasswordHash),
             stage = updateOnboardStage,
+            fullName = updateFullName,
+            phoneNumber = updatePhoneNumber,
+            passwordHash = updatePasswordHash,
           )
           .zioValue
 
         postgresClient
           .executeQuery(
-            userManagementQueries.getOnboardUser(userOnboardRow.userID)
+            userManagementQueries.getUserOnboard(userOnboardRow.userID)
           )
           .zioValue shouldBe Some(
           userOnboardRow.copy(
-            fullName = Some(updateFullName),
-            phoneNumber = Some(updatePhoneNumber),
-            passwordHash = Some(updatePasswordHash),
+            fullName = updateFullName orElse userOnboardRow.fullName,
+            phoneNumber = updatePhoneNumber orElse userOnboardRow.phoneNumber,
+            passwordHash = updatePasswordHash orElse userOnboardRow.passwordHash,
             stage = updateOnboardStage,
             updatedAt = UpdatedAt(now),
           )
         )
       }
 
-      "not failed to update onboard user details when user is not found, entry should remain empty" in withContext {
+      "should fail to update onboard user details when user is not found, entry should remain empty" in withContext {
         (postgresClient, userManagementQueries) =>
           val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
           val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
@@ -255,7 +255,7 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
             )
             .zioValue
 
-          userManagementRepository
+          val error = userManagementRepository
             .updateUserOnboard(
               userID = notExistingUserID,
               fullName = None,
@@ -263,13 +263,407 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
               passwordHash = None,
               stage = updateOnboardStage,
             )
-            .zioValue
+            .zioError
 
           postgresClient
             .executeQuery(
-              userManagementQueries.getOnboardUser(notExistingUserID)
+              userManagementQueries.getUserOnboard(notExistingUserID)
             )
             .zioValue shouldBe None
+
+          error.message shouldBe s"Failed to updateUserOnboard: [${notExistingUserID.value}], [${updateOnboardStage.toString}], [None], [None]"
+          error.underlying.value shouldBe a[DbException]
+      }
+    }
+
+    "getUserOnboard" should {
+      "successfully get user onboard" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val userOnboardRow           = arbitrarySample[UserOnboardRow]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val insertedUserOnboardRow =
+          postgresClient.executeQuery(userManagementQueries.insertUserOnboardEmail(userOnboardRow)).zioValue
+
+        val maybeUserOnboardRow = userManagementRepository.getUserOnboard(userOnboardRow.userID).zioValue
+
+        maybeUserOnboardRow.value shouldBe insertedUserOnboardRow
+      }
+
+      "return None when user onboard details is not found" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val userID                   = arbitrarySample[UserID]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val maybeUserOnboardRow = userManagementRepository.getUserOnboard(userID).zioValue
+
+        maybeUserOnboardRow shouldBe None
+      }
+    }
+
+    "getUserOnboardByEmail" should {
+      "successfully get user onboard by email" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val userOnboardRow           = arbitrarySample[UserOnboardRow]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val insertedUserOnboard =
+          postgresClient.executeQuery(userManagementQueries.insertUserOnboardEmail(userOnboardRow)).zioValue
+
+        val maybeUserOnboard = userManagementRepository.getUserOnboardByEmail(userOnboardRow.email).zioValue
+
+        maybeUserOnboard.value shouldBe insertedUserOnboard
+      }
+
+      "return None when user onboard details is not found by email" in withContext {
+        (postgresClient, userManagementQueries) =>
+          val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+          val email                    = arbitrarySample[Email]
+          val userManagementRepository = ZIO
+            .service[UserManagementRepository]
+            .provide(
+              UserManagementRepository.live,
+              ZLayer.succeed(postgresClient.database),
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
+              ZLayer.succeed(userManagementQueries),
+            )
+            .zioValue
+
+          val maybeUserOnboard = userManagementRepository.getUserOnboardByEmail(email).zioValue
+
+          maybeUserOnboard shouldBe None
+      }
+    }
+
+    "upsertUserOtp" should {
+      "successfully insert user otp" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val userOtpRow               = arbitrarySample[UserOtpRow]
+        val userOnboardRow           = arbitrarySample[UserOnboardRow]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val insertUserOnboardRow =
+          userManagementRepository.insertUserOnboardEmail(userOnboardRow.email, userOnboardRow.stage).zioValue
+
+        val insertUserOtpRow = userManagementRepository
+          .upsertUserOtp(
+            userID = insertUserOnboardRow.userID,
+            otp = userOtpRow.otp,
+            otpType = userOtpRow.otpType,
+            expiresAt = userOtpRow.expiresAt,
+          )
+          .zioValue
+
+        val getUserOtpRow =
+          postgresClient.database.transactionOrDie(userManagementQueries.getUserOtp(OtpID.assume("2"))).zioValue
+
+        val expectedUserOtpRow = UserOtpRow(
+          otpID = OtpID.assume("2"),
+          userID = insertUserOnboardRow.userID,
+          otp = userOtpRow.otp,
+          otpType = userOtpRow.otpType,
+          createdAt = CreatedAt(now),
+          updatedAt = UpdatedAt(now),
+          expiresAt = userOtpRow.expiresAt,
+        )
+
+        getUserOtpRow.value shouldBe expectedUserOtpRow
+        getUserOtpRow.value shouldBe insertUserOtpRow
+      }
+
+      "successfully upsert user otp if otp already exist for the same user and otp type" in withContext {
+        (postgresClient, userManagementQueries) =>
+          val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+          val userOtpRow               = arbitrarySample[UserOtpRow]
+          val userOnboardRow           = arbitrarySample[UserOnboardRow]
+          val userManagementRepository = ZIO
+            .service[UserManagementRepository]
+            .provide(
+              UserManagementRepository.live,
+              ZLayer.succeed(postgresClient.database),
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
+              ZLayer.succeed(userManagementQueries),
+            )
+            .zioValue
+
+          val userManagementRepositoryUpsert = ZIO
+            .service[UserManagementRepository]
+            .provide(
+              UserManagementRepository.live,
+              ZLayer.succeed(postgresClient.database),
+              Mocks.timeProviderLive(Clock.fixed(now.plusSeconds(5), ZoneOffset.UTC)),
+              Mocks.idGeneratorConstLive("upsert-id"),
+              ZLayer.succeed(userManagementQueries),
+            )
+            .zioValue
+
+          val insertUserOnboardRow =
+            userManagementRepository.insertUserOnboardEmail(userOnboardRow.email, userOnboardRow.stage).zioValue
+
+          val insertUserOtpRow = userManagementRepository
+            .upsertUserOtp(
+              userID = insertUserOnboardRow.userID,
+              otp = userOtpRow.otp,
+              otpType = userOtpRow.otpType,
+              expiresAt = userOtpRow.expiresAt,
+            )
+            .zioValue
+
+          insertUserOtpRow shouldBe UserOtpRow(
+            otpID = OtpID.assume("2"),
+            userID = insertUserOnboardRow.userID,
+            otp = userOtpRow.otp,
+            otpType = userOtpRow.otpType,
+            createdAt = CreatedAt(now),
+            updatedAt = UpdatedAt(now),
+            expiresAt = userOtpRow.expiresAt,
+          )
+
+          val otpUpsert       = arbitrarySample[Otp]
+          val expiresAtUpsert = ExpiresAt.assume(userOtpRow.expiresAt.value.minusSeconds(10))
+
+          val upsertUserOtp = userManagementRepositoryUpsert
+            .upsertUserOtp(
+              userID = insertUserOnboardRow.userID,
+              otp = otpUpsert,
+              otpType = userOtpRow.otpType,
+              expiresAt = expiresAtUpsert,
+            )
+            .zioValue
+
+          val userOtpRowUpsert =
+            postgresClient.database.transactionOrDie(userManagementQueries.getUserOtp(upsertUserOtp.otpID)).zioValue
+
+          userOtpRowUpsert.value shouldBe UserOtpRow(
+            otpID = OtpID.assume("upsert-id"),
+            userID = insertUserOnboardRow.userID,
+            otp = otpUpsert,
+            otpType = userOtpRow.otpType,
+            createdAt = CreatedAt(now),
+            updatedAt = UpdatedAt(now.plusSeconds(5)),
+            expiresAt = expiresAtUpsert,
+          )
+      }
+    }
+
+    "updateUserOtp" should {
+      "successfully update user otp" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val userOtpRow               = arbitrarySample[UserOtpRow]
+        val userOnboardRow           = arbitrarySample[UserOnboardRow]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val userManagementRepositoryUpdate = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(Clock.fixed(now.plusSeconds(5), ZoneOffset.UTC)),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val insertUserOnboardRow =
+          userManagementRepository.insertUserOnboardEmail(userOnboardRow.email, userOnboardRow.stage).zioValue
+
+        val insertUserOtpRow = userManagementRepository
+          .upsertUserOtp(
+            userID = insertUserOnboardRow.userID,
+            otp = userOtpRow.otp,
+            otpType = userOtpRow.otpType,
+            expiresAt = userOtpRow.expiresAt,
+          )
+          .zioValue
+
+        val updateUserOtpRow = userManagementRepositoryUpdate
+          .updateUserOtp(insertUserOtpRow.otpID, ExpiresAt.assume(userOtpRow.expiresAt.value.plusSeconds(7)))
+          .zioValue
+
+        val expectedUserOtpRow = UserOtpRow(
+          otpID = insertUserOtpRow.otpID,
+          userID = insertUserOnboardRow.userID,
+          otp = userOtpRow.otp,
+          otpType = userOtpRow.otpType,
+          createdAt = CreatedAt(now),
+          updatedAt = UpdatedAt(now.plusSeconds(5)),
+          expiresAt = ExpiresAt.assume(userOtpRow.expiresAt.value.plusSeconds(7)),
+        )
+
+        val userOtpRowResult =
+          postgresClient.database.transactionOrDie(userManagementQueries.getUserOtp(insertUserOtpRow.otpID)).zioValue
+
+        userOtpRowResult.value shouldBe expectedUserOtpRow
+        userOtpRowResult.value shouldBe updateUserOtpRow
+      }
+    }
+
+    "getUserOtp" should {
+      "successfully get user otp by otp id" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val userOtpRow               = arbitrarySample[UserOtpRow]
+        val userOnboardRow           = arbitrarySample[UserOnboardRow]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val insertUserOnboardRow =
+          userManagementRepository.insertUserOnboardEmail(userOnboardRow.email, userOnboardRow.stage).zioValue
+
+        val insertUserOtpRow = userManagementRepository
+          .upsertUserOtp(
+            userID = insertUserOnboardRow.userID,
+            otp = userOtpRow.otp,
+            otpType = userOtpRow.otpType,
+            expiresAt = userOtpRow.expiresAt,
+          )
+          .zioValue
+
+        val maybeUserOtpRow =
+          userManagementRepository.getUserOtp(insertUserOtpRow.otpID).zioValue
+
+        maybeUserOtpRow.value shouldBe insertUserOtpRow
+      }
+
+      "return None when user otp is not found by otp id" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val otpID                    = OtpID.assume("non-existing-otp-id")
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val maybeUserOtpRow = userManagementRepository.getUserOtp(otpID).zioValue
+
+        maybeUserOtpRow shouldBe None
+      }
+    }
+
+    "getUserOtpByUserID" should {
+      "successfully get user otp by user id and otp type" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val userOtpRow               = arbitrarySample[UserOtpRow]
+        val userOnboardRow           = arbitrarySample[UserOnboardRow]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val insertUserOnboardRow =
+          userManagementRepository.insertUserOnboardEmail(userOnboardRow.email, userOnboardRow.stage).zioValue
+
+        val insertUserOtpRow = userManagementRepository
+          .upsertUserOtp(
+            userID = insertUserOnboardRow.userID,
+            otp = userOtpRow.otp,
+            otpType = userOtpRow.otpType,
+            expiresAt = userOtpRow.expiresAt,
+          )
+          .zioValue
+
+        val maybeUserOtpRow =
+          userManagementRepository.getUserOtpByUserID(insertUserOnboardRow.userID, userOtpRow.otpType).zioValue
+
+        maybeUserOtpRow.value shouldBe insertUserOtpRow
+      }
+
+      "return None when user otp is not found by user id and otp type" in withContext {
+        (postgresClient, userManagementQueries) =>
+          val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+          val userID                   = arbitrarySample[UserID]
+          val otpType                  = arbitrarySample[OtpType]
+          val userManagementRepository = ZIO
+            .service[UserManagementRepository]
+            .provide(
+              UserManagementRepository.live,
+              ZLayer.succeed(postgresClient.database),
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
+              ZLayer.succeed(userManagementQueries),
+            )
+            .zioValue
+
+          val maybeUserOtpRow =
+            userManagementRepository.getUserOtpByUserID(userID, otpType).zioValue
+
+          maybeUserOtpRow shouldBe None
       }
     }
 
@@ -323,99 +717,12 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
 
         userManagementRepository.insertUserDetails(userID, email, onboardUserDetails).zioValue
 
-        // Attempt to insert the same user again
         userManagementRepository
           .insertUserDetails(userID, email, onboardUserDetails)
           .zioError shouldBe ServiceError.ConflictError
           .UserAlreadyExists(
             userID,
             email,
-          )
-      }
-    }
-
-    "getUserOnboard" should {
-      "successfully get user onboard" in withContext { (postgresClient, userManagementQueries) =>
-        val userOnboardRow           = arbitrarySample[UserOnboardRow]
-        val userManagementRepository = ZIO
-          .service[UserManagementRepository]
-          .provide(
-            UserManagementRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(userOnboardRow.createdAt.value, ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userManagementQueries),
-          )
-          .zioValue
-
-        postgresClient.executeQuery(userManagementQueries.insertUserOnboard(userOnboardRow)).zioValue
-
-        val result = userManagementRepository.getUserOnboard(userOnboardRow.userID).zioValue
-
-        result shouldBe userOnboardRow
-      }
-
-      "fail with UserNotFoundError when user onboard details is not found" in withContext {
-        (postgresClient, userManagementQueries) =>
-          val userID                   = arbitrarySample[UserID]
-          val userManagementRepository = ZIO
-            .service[UserManagementRepository]
-            .provide(
-              UserManagementRepository.live,
-              ZLayer.succeed(postgresClient.database),
-              Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-              Mocks.idGeneratorLive,
-              ZLayer.succeed(userManagementQueries),
-            )
-            .zioValue
-
-          val error = userManagementRepository.getUserOnboard(userID).zioEither.left.value
-
-          error shouldBe ServiceError.InternalServerError.UserNotFoundError(
-            s"UserOnboard with userId [$userID] couldn't be found"
-          )
-      }
-    }
-
-    "getUserOnboardByEmail" should {
-      "successfully get user onboard by email" in withContext { (postgresClient, userManagementQueries) =>
-        val userOnboardRow           = arbitrarySample[UserOnboardRow]
-        val userManagementRepository = ZIO
-          .service[UserManagementRepository]
-          .provide(
-            UserManagementRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(userOnboardRow.createdAt.value, ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userManagementQueries),
-          )
-          .zioValue
-
-        postgresClient.executeQuery(userManagementQueries.insertUserOnboard(userOnboardRow)).zioValue
-
-        val result = userManagementRepository.getUserOnboardByEmail(userOnboardRow.email).zioValue
-
-        result shouldBe userOnboardRow
-      }
-
-      "fail with UserNotFoundError when user onboard details is not found by email" in withContext {
-        (postgresClient, userManagementQueries) =>
-          val email                    = arbitrarySample[Email]
-          val userManagementRepository = ZIO
-            .service[UserManagementRepository]
-            .provide(
-              UserManagementRepository.live,
-              ZLayer.succeed(postgresClient.database),
-              Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-              Mocks.idGeneratorLive,
-              ZLayer.succeed(userManagementQueries),
-            )
-            .zioValue
-
-          val error = userManagementRepository.getUserOnboardByEmail(email).zioEither.left.value
-
-          error shouldBe ServiceError.InternalServerError.UserNotFoundError(
-            s"UserOnboard with email [$email] couldn't be found"
           )
       }
     }

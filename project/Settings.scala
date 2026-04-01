@@ -37,6 +37,7 @@ object Settings {
       ScalacOptions.other("--preview"),
       ScalacOptions.other("-old-syntax"),
       ScalacOptions.other("-Wunused:all"),
+      ScalacOptions.other("-Wconf:src=.*html&msg=unused import:s"),
     ),
     Test / tpolecatScalacOptions ++= Set(
       ignoreNotUsedAssertion,
