@@ -14,9 +14,6 @@ import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.model.StatusCode
 import zio.*
 
-import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.Duration as ScalaDuration
-
 class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbitraries with IronRefinedTypeTransformer {
 
   private val sessionID        = SessionID.assume("session-test")
@@ -38,10 +35,9 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
       config.host,
       config.port,
       apiKey = "dummy-key",
-
       wordsPerMinute = 10000,
-      humanDelayMin = ScalaDuration.Zero,
-      humanDelayMax = ScalaDuration.apply(1, TimeUnit.MILLISECONDS),
+      humanDelayMin = Duration.Zero,
+      humanDelayMax = 1.milli,
     )
   )
 

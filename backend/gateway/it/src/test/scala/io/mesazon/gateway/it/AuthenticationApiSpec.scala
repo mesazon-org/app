@@ -70,7 +70,7 @@ class AuthenticationApiSpec
       "successfully sign up a new user with valid email" in withContext { context =>
         import context.*
 
-        val email         = Email.assume("email@gmai.com")
+        val email              = Email.assume("email@gmai.com")
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
           .copy(email = email.value)
 
@@ -119,7 +119,7 @@ class AuthenticationApiSpec
       "successfully re-sign up a user already seen user with stages before completion" in withContext { context =>
         import context.*
 
-        val email         = Email.assume("email@gmai.com")
+        val email              = Email.assume("email@gmai.com")
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
           .copy(email = email.value)
 
@@ -157,7 +157,7 @@ class AuthenticationApiSpec
         val userOtpRow = userOtpRows.head
 
         val expectedUserOtpRow = UserOtpRow(
-          otpID = OtpID.assume(response1.body.value.otpID),
+          otpID = OtpID.assume(response2.body.value.otpID),
           userID = userOnboardRow.userID,
           otp = userOtpRow.otp,
           otpType = OtpType.EmailVerification,
@@ -174,7 +174,9 @@ class AuthenticationApiSpec
 
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest].copy(email = "invalidemail")
 
-        gatewayClient.signUpEmail(signUpEmailRequest).zioValue shouldBe StatusCode.BadRequest
+        val response = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+
+        response.code shouldBe StatusCode.BadRequest
       }
     }
   }

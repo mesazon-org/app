@@ -9,7 +9,6 @@ structure SignUpEmailRequest {
 
 structure SignUpEmailResponse {
     @required
-    @jsonName("otpId")
     otpID: String
     @required
     otpExpiresInSeconds: Long
