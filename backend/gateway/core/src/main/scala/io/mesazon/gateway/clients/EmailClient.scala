@@ -49,7 +49,7 @@ object EmailClient {
               .withSubject("Mesazon email verification")
               .withHTMLText(
                 EmailVerification
-                  .render(emailConfig.redirectUri.addPath(otp.value).toStringSafe())
+                  .render(otp.value)
                   .toString()
               )
               .buildEmail()

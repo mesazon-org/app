@@ -5,7 +5,7 @@ import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import io.mesazon.gateway.utils.MailHogClient.{MailHogClientConfig, MailHogResponse}
 import sttp.client4.jsoniter.asJson
-import sttp.client4.{basicRequest, Backend}
+import sttp.client4.{asStringAlways, basicRequest, Backend}
 import sttp.model.Uri
 import zio.*
 
@@ -26,6 +26,7 @@ class MailHogClient(
 
   private val deleteEmailRequest = basicRequest
     .delete(baseUri.withPath(MessagesV1Path))
+    .response(asStringAlways)
 
   def readInbox(): Task[MailHogResponse] =
     getEmailRequest.send(sttpBackend).map(_.body).absolve
@@ -47,8 +48,8 @@ object MailHogClient {
 
   case class MailHogClientConfig(
       host: String = "localhost",
-      servicePort: Int = 5432,
-      smtpPort: Int = 5432,
+      servicePort: Int = ServicePort,
+      smtpPort: Int = SmtpPort,
   ) {
 
     /** @param containers

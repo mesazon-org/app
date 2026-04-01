@@ -110,46 +110,6 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
         )
       }
 
-      "not fail when user id already exist" in withContext { (postgresClient, userManagementQueries) =>
-        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
-        val email1                   = arbitrarySample[Email]
-        val email2                   = arbitrarySample[Email]
-        val onboardStage             = arbitrarySample[OnboardStage]
-        val userManagementRepository = ZIO
-          .service[UserManagementRepository]
-          .provide(
-            UserManagementRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(clockNow),
-            Mocks.idGeneratorConstLive("fixed-id"),
-            ZLayer.succeed(userManagementQueries),
-          )
-          .zioValue
-
-        val userOnboardRow1 = userManagementRepository.insertUserOnboardEmail(email1, onboardStage).zioValue
-        val userOnboardRow2 = userManagementRepository.insertUserOnboardEmail(email2, onboardStage).zioValue
-
-        postgresClient
-          .executeQuery(
-            userManagementQueries.getUserOnboard(userOnboardRow1.userID)
-          )
-          .zioValue shouldBe Some(
-          UserOnboardRow(
-            userID = userOnboardRow1.userID,
-            email = email1,
-            fullName = None,
-            passwordHash = None,
-            phoneNumber = None,
-            stage = onboardStage,
-            createdAt = CreatedAt(now),
-            updatedAt = UpdatedAt(now),
-          )
-        )
-
-        userOnboardRow1 shouldBe userOnboardRow2
-      }
-
       "not fail when email already exist" in withContext { (postgresClient, userManagementQueries) =>
         val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
@@ -187,6 +147,47 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
         )
 
         userOnboardRow1 shouldBe userOnboardRow2
+      }
+
+      "fail when user id already exist" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val email1                   = arbitrarySample[Email]
+        val email2                   = arbitrarySample[Email]
+        val onboardStage             = arbitrarySample[OnboardStage]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorConstLive("fixed-id"),
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val userOnboardRow1 = userManagementRepository.insertUserOnboardEmail(email1, onboardStage).zioValue
+        val error           = userManagementRepository.insertUserOnboardEmail(email2, onboardStage).zioError
+
+        postgresClient
+          .executeQuery(
+            userManagementQueries.getUserOnboard(userOnboardRow1.userID)
+          )
+          .zioValue shouldBe Some(
+          UserOnboardRow(
+            userID = userOnboardRow1.userID,
+            email = email1,
+            fullName = None,
+            passwordHash = None,
+            phoneNumber = None,
+            stage = onboardStage,
+            createdAt = CreatedAt(now),
+            updatedAt = UpdatedAt(now),
+          )
+        )
+
+        error.message shouldBe s"Failed to insertUserOnboardEmail: [${email2.value}], [$onboardStage]"
+        error.underlying.value shouldBe a[DbException]
       }
     }
 

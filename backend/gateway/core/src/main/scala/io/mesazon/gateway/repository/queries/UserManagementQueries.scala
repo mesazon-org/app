@@ -65,7 +65,7 @@ final class UserManagementQueries(
            |WITH inserted AS (
            |  INSERT INTO $frSchema.$frUserOnboardTable ($userOnboardFields)
            |  VALUES ($userOnboardRow)
-           |  ON CONFLICT DO NOTHING
+           |  ON CONFLICT (email) DO NOTHING
            |  RETURNING $userOnboardFields
            |)
            |

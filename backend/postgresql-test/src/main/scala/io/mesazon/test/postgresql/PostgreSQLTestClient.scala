@@ -57,7 +57,7 @@ object PostgreSQLTestClient {
 
   case class PostgreSQLTestClientConfig(
       host: String = "localhost",
-      port: Int = 5432,
+      port: Int = ServicePort,
       database: String = defaultDatabase,
       username: String = defaultUsername,
       password: String = defaultPassword,
