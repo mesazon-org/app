@@ -1,20 +1,25 @@
 $version: "2.0"
 namespace io.mesazon.gateway.smithy
 
+list InvalidFields {
+    member: String
+}
+
 @error("client")
 @httpError(400)
 structure BadRequest {
     @required
-    code: Integer = 400
+    code: String = "BAD_REQUEST_ERROR"
     @required
-    message: String = "Bad request."
+    message: String = "Bad request"
+    fields: InvalidFields
 }
 
 @error("client")
 @httpError(401)
 structure Unauthorized {
     @required
-    code: Integer = 401
+    code: String = "UNAUTHORIZED_ERROR"
     @required
     message: String = "Unauthorized connection."
 }
@@ -23,25 +28,25 @@ structure Unauthorized {
 @httpError(409)
 structure Conflict {
     @required
-    code: Integer = 409
+    code: String = "CONFLICT_ERROR"
     @required
-    message: String = "Conflict."
+    message: String = "Conflict request"
 }
 
 @error("server")
 @httpError(500)
 structure InternalServerError {
     @required
-    code: Integer = 500
+    code: String = "INTERNAL_SERVER_ERROR"
     @required
-    message: String = "Internal server error."
+    message: String = "Internal server error"
 }
 
 @error("server")
 @httpError(503)
 structure ServiceUnavailable {
     @required
-    code: Integer = 503
+    code: String = "SERVICE_UNAVAILABLE_ERROR"
     @required
-    message: String = "The server is currently unavailable."
+    message: String = "The server is currently unavailable"
 }

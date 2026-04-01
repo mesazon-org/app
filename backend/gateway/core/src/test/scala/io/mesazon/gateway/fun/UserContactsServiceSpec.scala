@@ -32,7 +32,10 @@ class UserContactsServiceSpec extends ZWordSpecBase, SmithyArbitraries {
         buildUserContactsService(authedUser)
           .upsertContacts(Set(upsertUserContactRequest))
           .zioError
-          .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest()
+          .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest(
+          code = "INVALID_FIELDS_ERROR",
+          fields = Some(List("displayName")),
+        )
 
         upsertUserContactsCounterRef.get.zioValue shouldBe 0
       }

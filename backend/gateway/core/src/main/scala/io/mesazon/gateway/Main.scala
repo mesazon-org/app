@@ -93,7 +93,6 @@ object Main extends ZIOAppDefault {
       // Clients
       SttpBackend.live,
       WahaClient.live,
-      OpenAIClient.openAILive,
       OpenAIClient.live,
       EmailClient.live,
 

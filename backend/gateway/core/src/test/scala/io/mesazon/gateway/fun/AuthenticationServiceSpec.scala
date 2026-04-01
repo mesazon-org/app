@@ -155,7 +155,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 0
       }
 
-      "retry and fail with InternalServerError when sending email failing" in new TestContext {
+      "retry and fail with InternalServerError when sending email failing for new user" in new TestContext {
         val signUpEmailRequest    = arbitrarySample[smithy.SignUpEmailRequest]
         val authenticationService = buildAuthenticationService(
           maybeEmailClientServiceError = Some(
@@ -172,6 +172,31 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         getUserOtpByUserIDRef.get.zioValue shouldBe 0
         insertUserOnboardEmailRef.get.zioValue shouldBe 1
         updateUserOnboardRef.get.zioValue shouldBe 0
+        upsertUserOtpRef.get.zioValue shouldBe 1
+        sendEmailVerificationEmailCounterRef.get.zioValue shouldBe authenticationConfig.sendEmailVerificationEmailMaxRetries + 1
+      }
+
+      "retry and fail with InternalServerError when sending email failing for re-sign up email user" in new TestContext {
+        val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
+        val signUpEmailStage   = Random.shuffle(OnboardStage.signupEmailStages).zioValue.head
+        val userOnboardRow     = arbitrarySample[UserOnboardRow]
+          .copy(email = Email.assume(signUpEmailRequest.email), stage = signUpEmailStage)
+        val authenticationService = buildAuthenticationService(
+          userOnboardRows = Map(userOnboardRow.userID -> userOnboardRow),
+          maybeEmailClientServiceError = Some(
+            ServiceError.InternalServerError.UnexpectedError("Failed to send email due to SMTP server error")
+          ),
+        )
+
+        authenticationService
+          .signUpEmail(signUpEmailRequest)
+          .zioError
+          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+
+        getUserOnboardByEmailRef.get.zioValue shouldBe 1
+        getUserOtpByUserIDRef.get.zioValue shouldBe 1
+        insertUserOnboardEmailRef.get.zioValue shouldBe 0
+        updateUserOnboardRef.get.zioValue shouldBe 1
         upsertUserOtpRef.get.zioValue shouldBe 1
         sendEmailVerificationEmailCounterRef.get.zioValue shouldBe authenticationConfig.sendEmailVerificationEmailMaxRetries + 1
       }
@@ -193,7 +218,10 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           .zioEither
           .left
           .value
-          .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest()
+          .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest(
+          code = "INVALID_FIELDS_ERROR",
+          fields = Some(List("email")),
+        )
 
         getUserOnboardByEmailRef.get.zioValue shouldBe 0
         getUserOtpByUserIDRef.get.zioValue shouldBe 0

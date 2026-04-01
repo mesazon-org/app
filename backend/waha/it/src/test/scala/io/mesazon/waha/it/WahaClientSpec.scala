@@ -37,7 +37,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
       apiKey = "dummy-key",
       wordsPerMinute = 10000,
       humanDelayMin = Duration.Zero,
-      humanDelayMax = 1.milli,
+      humanDelayMax = 100.millis,
     )
   )
 

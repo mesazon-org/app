@@ -73,12 +73,6 @@ object OpenAIClient {
 
   private def observed(client: OpenAIClient): OpenAIClient = client
 
-  // maybe remove
-  val openAILive = ZLayer {
-    for {
-      openAIConfig <- ZIO.service[OpenAIClientConfig]
-    } yield new OpenAI(openAIConfig.apiKey)
-  }
-
-  val live = ZLayer.derive[OpenAIClientImpl] >>> ZLayer.fromFunction(observed)
+  val live = ZLayer(ZIO.service[OpenAIClientConfig].map(openAIConfig => new OpenAI(openAIConfig.apiKey))) >>> ZLayer
+    .derive[OpenAIClientImpl] >>> ZLayer.fromFunction(observed)
 }
