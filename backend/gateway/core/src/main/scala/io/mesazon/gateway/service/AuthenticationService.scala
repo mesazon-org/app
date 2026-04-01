@@ -79,7 +79,7 @@ object AuthenticationService {
             expiresAt         <- timeProvider.instantNow
               .map(_.plusSeconds(authenticationConfig.otpExpiration.toSeconds))
               .map(ExpiresAt.assume)
-            otp        <- otpGenerator.generate
+            otp           <- otpGenerator.generate
             newUserOtpRow <- userManagementRepository.upsertUserOtp(
               newUserOnboardRow.userID,
               otp,
