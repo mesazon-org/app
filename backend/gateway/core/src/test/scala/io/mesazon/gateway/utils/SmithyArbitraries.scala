@@ -79,4 +79,11 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
       request = smithy.SignUpEmailRequest(email = email.value)
     } yield request
   }
+
+  given Arbitrary[smithy.VerifyEmailRequest] = Arbitrary {
+    for {
+      verifyEmail <- Arbitrary.arbitrary[VerifyEmail]
+      request = smithy.VerifyEmailRequest(otpID = verifyEmail.otpID.value, otp = verifyEmail.otp.value)
+    } yield request
+  }
 }

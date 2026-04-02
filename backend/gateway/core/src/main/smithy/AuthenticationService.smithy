@@ -7,7 +7,7 @@ use alloy#simpleRestJson
 @simpleRestJson
 service AuthenticationService {
     version: "1.0.0",
-    operations: [SignUpEmail]
+    operations: [SignUpEmail, VerifyEmail]
 }
 
 @http(method: "POST", uri: "/signup/email", code: 200)
@@ -19,4 +19,14 @@ operation SignUpEmail {
     }
     output: SignUpEmailResponse
     errors: [BadRequest, InternalServerError]
+}
+
+@http(method: "POST", uri: "/verify/email", code: 200)
+operation VerifyEmail {
+    input := {
+        @required
+        @httpPayload
+        request: VerifyEmailRequest
+    }
+    errors: [BadRequest, Unauthorized, InternalServerError]
 }

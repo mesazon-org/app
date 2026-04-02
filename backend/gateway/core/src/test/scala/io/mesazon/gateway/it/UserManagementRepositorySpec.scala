@@ -552,6 +552,59 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
       }
     }
 
+    "deleteUserOtp" should {
+      "successfully delete user otp by otp id" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val userOtpRow               = arbitrarySample[UserOtpRow]
+        val userOnboardRow           = arbitrarySample[UserOnboardRow]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val insertUserOnboardRow =
+          userManagementRepository.insertUserOnboardEmail(userOnboardRow.email, userOnboardRow.stage).zioValue
+
+        val insertUserOtpRow = userManagementRepository
+          .upsertUserOtp(insertUserOnboardRow.userID, userOtpRow.otp, userOtpRow.otpType, userOtpRow.expiresAt)
+          .zioValue
+
+        userManagementRepository.deleteUserOtp(insertUserOtpRow.otpID).zioValue
+
+        val userOtpRows =
+          postgresClient.database.transactionOrDie(userManagementQueries.getAllUserOtpRows).zioValue
+
+        userOtpRows shouldBe empty
+      }
+
+      "successfully delete user otp that doesn't exist" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val userOtpRow               = arbitrarySample[UserOtpRow]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val deleteUserOtpResult = userManagementRepository.deleteUserOtp(userOtpRow.otpID).zioEither
+
+        assert(deleteUserOtpResult.isRight)
+      }
+    }
+
     "getUserOtp" should {
       "successfully get user otp by otp id" in withContext { (postgresClient, userManagementQueries) =>
         val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)

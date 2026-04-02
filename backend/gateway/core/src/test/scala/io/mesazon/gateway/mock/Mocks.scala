@@ -47,6 +47,7 @@ object Mocks extends ZIOTestOps {
       getUserOnboardRef: Ref[Int] = Ref.make(0).zioValue,
       getUserOnboardByEmailRef: Ref[Int] = Ref.make(0).zioValue,
       upsertUserOtpRef: Ref[Int] = Ref.make(0).zioValue,
+      deleteUserOtpRef: Ref[Int] = Ref.make(0).zioValue,
       updateUserOtpRef: Ref[Int] = Ref.make(0).zioValue,
       getUserOtpRef: Ref[Int] = Ref.make(0).zioValue,
       getUserOtpByUserIDRef: Ref[Int] = Ref.make(0).zioValue,
@@ -124,6 +125,13 @@ object Mocks extends ZIOTestOps {
                   expiresAt,
                 )
               )
+            )(ZIO.fail(_).orDie)
+          )(ZIO.fail)
+
+        override def deleteUserOtp(otpID: OtpID): IO[ServiceError, Unit] =
+          deleteUserOtpRef.incrementAndGet *> maybeServiceError.fold(
+            maybeUnexpectedError.fold(
+              ZIO.unit
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
@@ -368,28 +376,6 @@ object Mocks extends ZIOTestOps {
           messagesCounterRef.set(messages.size) *> sendMessageCounterRef.incrementAndGet *> ZIO.succeed(
             assistantResponse.asInstanceOf[A]
           )
-      }
-    )
-
-  def emailClientLive(
-      maybeError: Option[Throwable] = None,
-      maybeServiceError: Option[ServiceError] = None,
-      sendEmailVerificationEmailCounterRef: Ref[Int] = Ref.make(0).zioValue,
-      sendWelcomeEmailCounterRef: Ref[Int] = Ref.make(0).zioValue,
-  ): ULayer[EmailClient] =
-    ZLayer.succeed(
-      new EmailClient {
-        override def sendEmailVerificationEmail(
-            email: Email,
-            otp: Otp,
-        ): IO[ServiceError, Unit] =
-          sendEmailVerificationEmailCounterRef.incrementAndGet *>
-            maybeServiceError.fold(maybeError.fold(ZIO.unit)(ZIO.fail(_).orDie))(
-              ZIO.fail
-            )
-
-        override def sendWelcomeEmail(email: Email, fullName: FullName): IO[ServiceError, Unit] =
-          sendWelcomeEmailCounterRef.incrementAndGet *> maybeError.fold(ZIO.unit)(ZIO.fail(_).orDie)
       }
     )
 }

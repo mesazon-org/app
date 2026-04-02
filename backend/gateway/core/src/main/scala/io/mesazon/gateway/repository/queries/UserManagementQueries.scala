@@ -103,6 +103,14 @@ final class UserManagementQueries(
            |""".stripMargin.query[UserOtpRow].unique
     }
 
+  def deleteUserOtp(otpID: OtpID): TranzactIO[Unit] =
+    tzio {
+      sql"""
+           |DELETE FROM $frSchema.$frUserOtpTable
+           |WHERE otp_id = $otpID
+           |""".stripMargin.update.run.map(_ => ())
+    }
+
   def getUserOtp(optID: OtpID): TranzactIO[Option[UserOtpRow]] =
     tzio {
       sql"""

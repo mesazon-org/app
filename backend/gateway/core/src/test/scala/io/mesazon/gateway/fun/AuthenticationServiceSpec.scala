@@ -5,9 +5,11 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.gateway.auth.OtpGenerator
 import io.mesazon.gateway.config.AuthenticationConfig
+import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.utils.*
+import io.mesazon.gateway.validation.VerifyEmailValidator
 import io.mesazon.gateway.{smithy, Mocks}
 import io.mesazon.generator.IDGenerator
 import io.mesazon.testkit.base.*
@@ -28,12 +30,14 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
 
         assert(response.isRight)
 
-        getUserOnboardByEmailRef.get.zioValue shouldBe 1
-        getUserOtpByUserIDRef.get.zioValue shouldBe 0
-        insertUserOnboardEmailRef.get.zioValue shouldBe 1
-        updateUserOnboardRef.get.zioValue shouldBe 0
-        upsertUserOtpRef.get.zioValue shouldBe 1
-        sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 1
+        checkUserManagementRepository(
+          expectedGetUserOnboardByEmailCalls = 1,
+          expectedInsertUserOnboardEmailCalls = 1,
+          expectedUpsertUserOtpCalls = 1,
+        )
+        checkEmailClient(
+          expectedSendEmailVerificationEmailCalls = 1
+        )
       }
 
       "successfully re-sign up a user with sign up email stages but no user otp found" in new TestContext {
@@ -49,12 +53,16 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
 
         assert(response.isRight)
 
-        getUserOnboardByEmailRef.get.zioValue shouldBe 1
-        getUserOtpByUserIDRef.get.zioValue shouldBe 1
-        insertUserOnboardEmailRef.get.zioValue shouldBe 0
-        updateUserOnboardRef.get.zioValue shouldBe 1
-        upsertUserOtpRef.get.zioValue shouldBe 1
-        sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 1
+        checkUserManagementRepository(
+          expectedGetUserOnboardByEmailCalls = 1,
+          expectedGetUserOtpByUserIDCalls = 1,
+          expectedUpdateUserOnboardCalls = 1,
+          expectedUpsertUserOtpCalls = 1,
+        )
+
+        checkEmailClient(
+          expectedSendEmailVerificationEmailCalls = 1
+        )
       }
 
       "successfully re-sign up a user with sign up email stages and user otp is expired or expiring soon" in new TestContext {
@@ -85,12 +93,16 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         response.otpExpiresInSeconds.toInt should be <= 10
         response.otpExpiresInSeconds.toInt should be >= 9
 
-        getUserOnboardByEmailRef.get.zioValue shouldBe 1
-        getUserOtpByUserIDRef.get.zioValue shouldBe 1
-        insertUserOnboardEmailRef.get.zioValue shouldBe 0
-        updateUserOnboardRef.get.zioValue shouldBe 1
-        upsertUserOtpRef.get.zioValue shouldBe 1
-        sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 1
+        checkUserManagementRepository(
+          expectedGetUserOnboardByEmailCalls = 1,
+          expectedGetUserOtpByUserIDCalls = 1,
+          expectedUpdateUserOnboardCalls = 1,
+          expectedUpsertUserOtpCalls = 1,
+        )
+
+        checkEmailClient(
+          expectedSendEmailVerificationEmailCalls = 1
+        )
       }
 
       "successfully re-sign up a user with sign up email stages and user otp is not expired or expiring soon" in new TestContext {
@@ -117,12 +129,14 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         response.otpExpiresInSeconds.toInt should be <= 10
         response.otpExpiresInSeconds.toInt should be >= 9
 
-        getUserOnboardByEmailRef.get.zioValue shouldBe 1
-        getUserOtpByUserIDRef.get.zioValue shouldBe 1
-        insertUserOnboardEmailRef.get.zioValue shouldBe 0
-        updateUserOnboardRef.get.zioValue shouldBe 1
-        upsertUserOtpRef.get.zioValue shouldBe 1
-        sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 0
+        checkUserManagementRepository(
+          expectedGetUserOnboardByEmailCalls = 1,
+          expectedGetUserOtpByUserIDCalls = 1,
+          expectedUpdateUserOnboardCalls = 1,
+          expectedUpsertUserOtpCalls = 1,
+        )
+
+        checkEmailClient()
       }
 
       "successfully re-sign up a user with not a sing up email stage and user otp being expired in less than cooldown" in new TestContext {
@@ -147,12 +161,12 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         response.otpExpiresInSeconds.toInt should be <= 10
         response.otpExpiresInSeconds.toInt should be >= 9
 
-        getUserOnboardByEmailRef.get.zioValue shouldBe 1
-        getUserOtpByUserIDRef.get.zioValue shouldBe 1
-        insertUserOnboardEmailRef.get.zioValue shouldBe 0
-        updateUserOnboardRef.get.zioValue shouldBe 0
-        upsertUserOtpRef.get.zioValue shouldBe 0
-        sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 0
+        checkUserManagementRepository(
+          expectedGetUserOnboardByEmailCalls = 1,
+          expectedGetUserOtpByUserIDCalls = 1,
+        )
+
+        checkEmailClient()
       }
 
       "retry and fail with InternalServerError when sending email failing for new user" in new TestContext {
@@ -168,12 +182,15 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           .zioError
           .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
 
-        getUserOnboardByEmailRef.get.zioValue shouldBe 1
-        getUserOtpByUserIDRef.get.zioValue shouldBe 0
-        insertUserOnboardEmailRef.get.zioValue shouldBe 1
-        updateUserOnboardRef.get.zioValue shouldBe 0
-        upsertUserOtpRef.get.zioValue shouldBe 1
-        sendEmailVerificationEmailCounterRef.get.zioValue shouldBe authenticationConfig.sendEmailVerificationEmailMaxRetries + 1
+        checkUserManagementRepository(
+          expectedGetUserOnboardByEmailCalls = 1,
+          expectedInsertUserOnboardEmailCalls = 1,
+          expectedUpsertUserOtpCalls = 1,
+        )
+
+        checkEmailClient(
+          expectedSendEmailVerificationEmailCalls = authenticationConfig.sendEmailVerificationEmailMaxRetries + 1
+        )
       }
 
       "retry and fail with InternalServerError when sending email failing for re-sign up email user" in new TestContext {
@@ -193,12 +210,16 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           .zioError
           .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
 
-        getUserOnboardByEmailRef.get.zioValue shouldBe 1
-        getUserOtpByUserIDRef.get.zioValue shouldBe 1
-        insertUserOnboardEmailRef.get.zioValue shouldBe 0
-        updateUserOnboardRef.get.zioValue shouldBe 1
-        upsertUserOtpRef.get.zioValue shouldBe 1
-        sendEmailVerificationEmailCounterRef.get.zioValue shouldBe authenticationConfig.sendEmailVerificationEmailMaxRetries + 1
+        checkUserManagementRepository(
+          expectedGetUserOnboardByEmailCalls = 1,
+          expectedGetUserOtpByUserIDCalls = 1,
+          expectedUpdateUserOnboardCalls = 1,
+          expectedUpsertUserOtpCalls = 1,
+        )
+
+        checkEmailClient(
+          expectedSendEmailVerificationEmailCalls = authenticationConfig.sendEmailVerificationEmailMaxRetries + 1
+        )
       }
 
       "fail with BadRequest when request is invalid" in new TestContext {
@@ -223,12 +244,9 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           fields = Some(List("email")),
         )
 
-        getUserOnboardByEmailRef.get.zioValue shouldBe 0
-        getUserOtpByUserIDRef.get.zioValue shouldBe 0
-        insertUserOnboardEmailRef.get.zioValue shouldBe 0
-        updateUserOnboardRef.get.zioValue shouldBe 0
-        upsertUserOtpRef.get.zioValue shouldBe 0
-        sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 0
+        checkUserManagementRepository()
+
+        checkEmailClient()
       }
 
       "fail with InternalServer when fail unexpectedly" in new TestContext {
@@ -244,23 +262,217 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           .value
           .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
 
-        getUserOnboardByEmailRef.get.zioValue shouldBe 1
-        getUserOtpByUserIDRef.get.zioValue shouldBe 0
-        insertUserOnboardEmailRef.get.zioValue shouldBe 0
-        updateUserOnboardRef.get.zioValue shouldBe 0
-        upsertUserOtpRef.get.zioValue shouldBe 0
-        sendEmailVerificationEmailCounterRef.get.zioValue shouldBe 0
+        checkUserManagementRepository(
+          expectedGetUserOnboardByEmailCalls = 1
+        )
+
+        checkEmailClient()
+      }
+    }
+    "verifyEmail" should {
+      "successfully verify email with valid otp" in new TestContext {
+        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val userOnboardRow     = arbitrarySample[UserOnboardRow]
+          .copy(stage = OnboardStage.EmailConfirmation)
+        val userOtpRow = arbitrarySample[UserOtpRow]
+          .copy(
+            otpID = OtpID.assume(verifyEmailRequest.otpID),
+            userID = userOnboardRow.userID,
+            otpType = OtpType.EmailVerification,
+            otp = Otp.assume(verifyEmailRequest.otp),
+            expiresAt = ExpiresAt.assume(Instant.now().plusSeconds(300)),
+          )
+
+        val authenticationService = buildAuthenticationService(
+          userOnboardRows = Map(userOnboardRow.userID -> userOnboardRow),
+          userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
+        )
+
+        val response = authenticationService.verifyEmail(verifyEmailRequest).zioEither
+
+        assert(response.isRight)
+
+        checkUserManagementRepository(
+          expectedGetUserOtpCalls = 1,
+          expectedGetUserOnboardCalls = 1,
+          expectedUpdateUserOnboardCalls = 1,
+          expectedDeleteUserOtpCalls = 1,
+        )
+
+        checkEmailClient()
+      }
+
+      "fail to verify email with wrong otp" in new TestContext {
+        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val userOtpRow         = arbitrarySample[UserOtpRow]
+          .copy(
+            otpID = OtpID.assume(verifyEmailRequest.otpID),
+            otpType = OtpType.EmailVerification,
+            otp = Otp.assume("AAA111"),
+            expiresAt = ExpiresAt.assume(Instant.now().plusSeconds(300)),
+          )
+
+        val authenticationService = buildAuthenticationService(
+          userOtpRows = Map(userOtpRow.otpID -> userOtpRow)
+        )
+
+        authenticationService
+          .verifyEmail(verifyEmailRequest)
+          .zioError
+          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+
+        checkUserManagementRepository(
+          expectedGetUserOtpCalls = 1
+        )
+
+        checkEmailClient()
+      }
+
+      "fail to verify email with expired otp" in new TestContext {
+        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val userOtpRow         = arbitrarySample[UserOtpRow]
+          .copy(
+            otpID = OtpID.assume(verifyEmailRequest.otpID),
+            otpType = OtpType.EmailVerification,
+            otp = Otp.assume(verifyEmailRequest.otp),
+            expiresAt = ExpiresAt.assume(Instant.now().minusSeconds(300)),
+          )
+
+        val authenticationService = buildAuthenticationService(
+          userOtpRows = Map(userOtpRow.otpID -> userOtpRow)
+        )
+
+        authenticationService
+          .verifyEmail(verifyEmailRequest)
+          .zioError
+          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+
+        checkUserManagementRepository(
+          expectedGetUserOtpCalls = 1
+        )
+
+        checkEmailClient()
+      }
+
+      "fail to verify email when user onboard stage is not email confirmation" in new TestContext {
+        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val userOnboardRow     = arbitrarySample[UserOnboardRow]
+          .copy(stage = OnboardStage.DetailsProvided)
+        val userOtpRow = arbitrarySample[UserOtpRow]
+          .copy(
+            otpID = OtpID.assume(verifyEmailRequest.otpID),
+            userID = userOnboardRow.userID,
+            otpType = OtpType.EmailVerification,
+            otp = Otp.assume(verifyEmailRequest.otp),
+            expiresAt = ExpiresAt.assume(Instant.now().plusSeconds(300)),
+          )
+
+        val authenticationService = buildAuthenticationService(
+          userOnboardRows = Map(userOnboardRow.userID -> userOnboardRow),
+          userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
+        )
+
+        authenticationService
+          .verifyEmail(verifyEmailRequest)
+          .zioError
+          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+
+        checkUserManagementRepository(
+          expectedGetUserOtpCalls = 1,
+          expectedGetUserOnboardCalls = 1,
+          expectedDeleteUserOtpCalls = 1,
+        )
+
+        checkEmailClient()
+      }
+
+      "fail with bad request when request is invalid" in new TestContext {
+        val verifyEmailRequest    = arbitrarySample[smithy.VerifyEmailRequest].copy(otp = "invalidotp")
+        val authenticationService = buildAuthenticationService()
+
+        authenticationService
+          .verifyEmail(verifyEmailRequest)
+          .zioEither
+          .left
+          .value
+          .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest(
+          code = "INVALID_FIELDS_ERROR",
+          fields = Some(List("otp")),
+        )
+
+        checkUserManagementRepository()
+
+        checkEmailClient()
+      }
+
+      "fail to verify email when no user onboard found for userID in otp" in new TestContext {
+        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val userOtpRow         = arbitrarySample[UserOtpRow]
+          .copy(
+            otpID = OtpID.assume(verifyEmailRequest.otpID),
+            otpType = OtpType.EmailVerification,
+            otp = Otp.assume(verifyEmailRequest.otp),
+            expiresAt = ExpiresAt.assume(Instant.now().plusSeconds(300)),
+          )
+
+        val authenticationService = buildAuthenticationService(
+          userOtpRows = Map(userOtpRow.otpID -> userOtpRow)
+        )
+
+        authenticationService
+          .verifyEmail(verifyEmailRequest)
+          .zioError
+          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+
+        checkUserManagementRepository(
+          expectedGetUserOtpCalls = 1,
+          expectedGetUserOnboardCalls = 1,
+        )
+
+        checkEmailClient()
+      }
+
+      "fail to verify email when no user otp found for otpID" in new TestContext {
+        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+
+        val authenticationService = buildAuthenticationService()
+
+        authenticationService
+          .verifyEmail(verifyEmailRequest)
+          .zioError
+          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+
+        checkUserManagementRepository(
+          expectedGetUserOtpCalls = 1
+        )
+
+        checkEmailClient()
+      }
+
+      "fail with InternalServer when fail unexpectedly" in new TestContext {
+        val verifyEmailRequest    = arbitrarySample[smithy.VerifyEmailRequest]
+        val authenticationService = buildAuthenticationService(
+          maybeUserManagementRepositoryUnexpectedError = Some(new RuntimeException("Database connection failed"))
+        )
+
+        authenticationService
+          .verifyEmail(verifyEmailRequest)
+          .zioEither
+          .left
+          .value
+          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+
+        checkUserManagementRepository(
+          expectedGetUserOtpCalls = 1
+        )
+
+        checkEmailClient()
       }
     }
   }
 
-  trait TestContext {
-    val insertUserOnboardEmailRef            = Ref.make(0).zioValue
-    val upsertUserOtpRef                     = Ref.make(0).zioValue
-    val updateUserOnboardRef                 = Ref.make(0).zioValue
-    val sendEmailVerificationEmailCounterRef = Ref.make(0).zioValue
-    val getUserOnboardByEmailRef             = Ref.make(0).zioValue
-    val getUserOtpByUserIDRef                = Ref.make(0).zioValue
+  trait TestContext extends UserManagementRepositoryMock, EmailClientMock {
+    val sendEmailVerificationEmailCounterRef: Ref[Int] = Ref.make(0).zioValue
 
     val authenticationConfig = AuthenticationConfig(
       otpExpiration = 10.seconds,
@@ -282,25 +494,18 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         .provide(
           AuthenticationService.live,
           Mocks.emailValidatorLive(emailValidatorMaybeError),
-          Mocks.userManagementRepositoryLive(
+          userManagementRepositoryMockLive(
             userOtpRows = userOtpRows,
             userOnboardRows = userOnboardRows,
-            updateUserOnboardRef = updateUserOnboardRef,
-            upsertUserOtpRef = upsertUserOtpRef,
-            getUserOtpByUserIDRef = getUserOtpByUserIDRef,
-            getUserOnboardByEmailRef = getUserOnboardByEmailRef,
-            insertUserOnboardEmailRef = insertUserOnboardEmailRef,
             maybeUnexpectedError = maybeUserManagementRepositoryUnexpectedError,
             maybeServiceError = maybeUserManagementRepositoryServiceError,
           ),
-          Mocks.emailClientLive(
-            maybeServiceError = maybeEmailClientServiceError,
-            sendEmailVerificationEmailCounterRef = sendEmailVerificationEmailCounterRef,
-          ),
+          emailClientMockLive(maybeServiceError = maybeEmailClientServiceError),
           OtpGenerator.live,
           TimeProvider.liveSystemUTC,
           IDGenerator.uuidGeneratorLive,
           ZLayer.succeed(authenticationConfig),
+          VerifyEmailValidator.live,
         )
         .zioValue
   }
