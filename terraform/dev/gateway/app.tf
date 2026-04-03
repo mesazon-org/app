@@ -16,12 +16,18 @@ module "gateway_core_app" {
   image_name = var.image_name
   image_tag  = var.image_tag
 
+  service_port = 8080
+
+  internal_ports = [8081]
+
+  readiness_port = 8082
+
   vpc_name_raw = "gateway-vpc"
 
   app_name_raw = local.app_name_raw
   region       = local.region
   replicas     = 1
-  app_size     = "apps-s-1vcpu-1gb"
+  app_size     = "apps-s-1vcpu-1gb-fixed"
 
   env_vars = {
     REPOSITORY_SCHEMA = local.repository_schema
