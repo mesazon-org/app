@@ -287,7 +287,7 @@ class AuthenticationApiSpec
         gatewayClient
           .verifyEmail(
             smithy.VerifyEmailRequest(
-              otpID = userOtpRow.value.otp.value,
+              otpID = userOtpRow.value.otpID.value,
               otp = "AAA111",
             )
           )

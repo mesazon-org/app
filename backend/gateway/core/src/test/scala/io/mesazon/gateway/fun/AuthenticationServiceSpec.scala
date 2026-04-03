@@ -354,6 +354,33 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         checkEmailClient()
       }
 
+      "fail to verify email when otp type is not email verification" in new TestContext {
+        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val userOtpRow         = arbitrarySample[UserOtpRow]
+          .copy(
+            otpID = OtpID.assume(verifyEmailRequest.otpID),
+            otpType = OtpType.PhoneVerification,
+            otp = Otp.assume(verifyEmailRequest.otp),
+            expiresAt = ExpiresAt.assume(Instant.now().plusSeconds(300)),
+          )
+
+        val authenticationService = buildAuthenticationService(
+          userOtpRows = Map(userOtpRow.otpID -> userOtpRow)
+        )
+
+        authenticationService
+          .verifyEmail(verifyEmailRequest)
+          .zioError
+          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+
+        checkUserManagementRepository(
+          expectedGetUserOtpCalls = 1,
+          expectedDeleteUserOtpCalls = 1,
+        )
+
+        checkEmailClient()
+      }
+
       "fail to verify email when user onboard stage is not email confirmation" in new TestContext {
         val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
         val userOnboardRow     = arbitrarySample[UserOnboardRow]
@@ -472,7 +499,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
   }
 
   trait TestContext extends UserManagementRepositoryMock, EmailClientMock {
-    val sendEmailVerificationEmailCounterRef: Ref[Int] = Ref.make(0).zioValue
 
     val authenticationConfig = AuthenticationConfig(
       otpExpiration = 10.seconds,

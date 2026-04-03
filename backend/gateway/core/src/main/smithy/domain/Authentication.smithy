@@ -20,10 +20,3 @@ structure VerifyEmailRequest {
     @required
     otp: String
 }
-
-structure VerifyEmailResponse {
-    @required
-    accessToken: String
-    @required
-    refreshToken: String
-}

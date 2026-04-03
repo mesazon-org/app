@@ -116,7 +116,7 @@ object AuthenticationService {
 
     /** HTTP POST /verify/email */
     override def verifyEmail(request: VerifyEmailRequest): ServiceTask[Unit] = for {
-      _               <- ZIO.logDebug(s"Verify email: $request")
+      _               <- ZIO.logDebug(s"Verify email: [${request.otpID}]")
       verifyEmail     <- verifyEmailValidator.validate(request)
       maybeUserOtpRow <- userManagementRepository.getUserOtp(verifyEmail.otpID)
       userOtpRow      <- ZIO.getOrFailWith(
@@ -152,13 +152,13 @@ object AuthenticationService {
           } else
             ZIO.fail(
               ServiceError.UnauthorizedError.OtpError(
-                s"The otp provided was not equal or expired. Provided otp: ${verifyEmail.otp}, expected otp: ${userOtpRow.otp}, otp expires at: ${userOtpRow.expiresAt.value}"
+                s"Invalid or expired OTP for otpID: [${userOtpRow.otpID}]"
               )
             )
         case _ =>
           userManagementRepository.deleteUserOtp(userOtpRow.otpID) *> ZIO.fail(
             ServiceError.UnauthorizedError.OtpError(
-              s"Invalid otp type: ${userOtpRow.otpType}, expected: ${OtpType.EmailVerification}"
+              s"Invalid otp type: [${userOtpRow.otpType}], expected: [${OtpType.EmailVerification}]"
             )
           )
       }
