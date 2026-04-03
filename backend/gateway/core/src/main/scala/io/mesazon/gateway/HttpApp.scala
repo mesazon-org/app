@@ -85,10 +85,9 @@ object HttpApp {
       externalRoutes <- externalRoutesResource
       internalRoutes <- internalRoutesResource
       servers        <-
-        server(config.health, healthRoutes) &>
+        server(config.health, healthRoutes <+> docsRoutes) &>
           server(config.external, externalRoutes) &>
-          server(config.internal, internalRoutes) &>
-          server(config.docs, docsRoutes)
+          server(config.internal, internalRoutes)
     } yield servers).forkScoped
   }
 }

@@ -30,11 +30,12 @@ module "gateway_core_app" {
   app_size     = "apps-s-1vcpu-1gb-fixed"
 
   env_vars = {
-    REPOSITORY_SCHEMA = local.repository_schema
-    DATABASE_NAME     = local.database_name
-    DATABASE_HOST     = data.digitalocean_database_cluster.postgres_cluster.private_host
-    DATABASE_PORT     = data.digitalocean_database_cluster.postgres_cluster.port
-    DATABASE_USERNAME = data.digitalocean_database_user.database_user.name
-    DATABASE_PASSWORD = data.digitalocean_database_user.database_user.password
+    REPOSITORY_SCHEMA  = local.repository_schema
+    SERVER_ENABLE_DOCS = "true"
+    DATABASE_NAME      = local.database_name
+    DATABASE_HOST      = data.digitalocean_database_cluster.postgres_cluster.private_host
+    DATABASE_PORT      = data.digitalocean_database_cluster.postgres_cluster.port
+    DATABASE_USERNAME  = data.digitalocean_database_user.database_user.name
+    DATABASE_PASSWORD  = data.digitalocean_database_user.database_user.password
   }
 }
