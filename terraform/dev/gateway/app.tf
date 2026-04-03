@@ -18,7 +18,7 @@ module "gateway_core_app" {
 
   service_port = 8080
 
-  internal_ports = [8081]
+  internal_ports = [8081, 8082]
 
   readiness_port = 8082
 
