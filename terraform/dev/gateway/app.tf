@@ -24,6 +24,7 @@ module "gateway_core_app" {
   app_size     = "apps-s-1vcpu-1gb"
 
   env_vars = {
+    REPOSITORY_SCHEMA = local.repository_schema
     DATABASE_NAME     = local.database_name
     DATABASE_HOST     = data.digitalocean_database_cluster.postgres_cluster.private_host
     DATABASE_PORT     = data.digitalocean_database_cluster.postgres_cluster.port
