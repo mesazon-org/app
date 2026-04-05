@@ -38,5 +38,10 @@ module "gateway_core_app" {
     DATABASE_PORT      = data.digitalocean_database_cluster.postgres_cluster.port
     DATABASE_USERNAME  = data.digitalocean_database_user.database_user.name
     DATABASE_PASSWORD  = data.digitalocean_database_user.database_user.password
+    EMAIL_PROVIDER_HOST = "smtp.gmail.com"
+    EMAIL_PROVIDER_HOST = "587"
+    EMAIL_ENABLE_TLS= "true"
+    EMAIL_SENDER_EMAIL= "mesazon.dev@gmail.com"
+    EMAIL_SENDER_PASSWORD= ""
   }
 }

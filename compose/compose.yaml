@@ -15,6 +15,8 @@ services:
       DATABASE_USERNAME: local_user
       DATABASE_PASSWORD: local_password
       SERVER_ENABLE_DOCS: "true"
+      EMAIL_PROVIDER_HOST: mailhog
+      EMAIL_PROVIDER_PORT: 1025
 
 #  ubuntu:
 #    image: michaelirey/ubuntu-with-tools:latest
