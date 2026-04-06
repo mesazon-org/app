@@ -7,7 +7,10 @@
 
     <variable name="DEFAULT_APPENDER" value="${DEFAULT_APPENDER:-STDOUT}"/>
 
+    <logger name="io.mesazon" level="${APP_LOG_LEVEL:-INFO}"/>
+
     <root level="${LOG_LEVEL:-INFO}">
         <appender-ref ref="${DEFAULT_APPENDER}"/>
     </root>
+
 </configuration>
