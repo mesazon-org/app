@@ -21,32 +21,32 @@ jobs:
       module: "gateway-dev"
       docker-image-name: ${{ inputs.docker-image-name }}
       docker-image-tag: ${{ inputs.docker-image-tag }}
-
-  gateway-flyway-deploy-dev-apply:
-    needs: [ "gateway-deploy-dev-plan" ]
-    uses: ./.github/workflows/job-flyway.yml
-    secrets: inherit # Inherit secrets from the parent workflow
-    with:
-      module: "gateway-flyway-dev"
-      project-id: "33eee19d-9b81-4846-b24f-c39bf70fe1f5"
-      docker-build-directory: "backend/schemas"
-      working-directory: "terraform/dev/gateway-flyway"
-      docker-image-name: "gateway-flyway"
-      docker-image-tag: ${{ inputs.docker-image-tag }}
-      environment: "dev"
-
-  gateway-deploy-dev-apply:
-    needs: [ "gateway-deploy-dev-plan", "gateway-flyway-deploy-dev-apply" ]
-    if: |
-      always() &&
-      needs.gateway-deploy-dev-plan.result == 'success' &&
-      (needs.gateway-flyway-deploy-dev-apply.result == 'success' || needs.gateway-flyway-deploy-dev-apply.result == 'skipped')
-    uses: ./.github/workflows/job-tf-apply.yml
-    secrets: inherit # Inherit secrets from the parent workflow
-    with:
-      project-id: "33eee19d-9b81-4846-b24f-c39bf70fe1f5"
-      working-directory: "terraform/dev/gateway"
-      module: "gateway-dev"
-      docker-image-name: ${{ inputs.docker-image-name }}
-      docker-image-tag: ${{ inputs.docker-image-tag }}
-      environment: "dev"
+#
+#  gateway-flyway-deploy-dev-apply:
+#    needs: [ "gateway-deploy-dev-plan" ]
+#    uses: ./.github/workflows/job-flyway.yml
+#    secrets: inherit # Inherit secrets from the parent workflow
+#    with:
+#      module: "gateway-flyway-dev"
+#      project-id: "33eee19d-9b81-4846-b24f-c39bf70fe1f5"
+#      docker-build-directory: "backend/schemas"
+#      working-directory: "terraform/dev/gateway-flyway"
+#      docker-image-name: "gateway-flyway"
+#      docker-image-tag: ${{ inputs.docker-image-tag }}
+#      environment: "dev"
+#
+#  gateway-deploy-dev-apply:
+#    needs: [ "gateway-deploy-dev-plan", "gateway-flyway-deploy-dev-apply" ]
+#    if: |
+#      always() &&
+#      needs.gateway-deploy-dev-plan.result == 'success' &&
+#      (needs.gateway-flyway-deploy-dev-apply.result == 'success' || needs.gateway-flyway-deploy-dev-apply.result == 'skipped')
+#    uses: ./.github/workflows/job-tf-apply.yml
+#    secrets: inherit # Inherit secrets from the parent workflow
+#    with:
+#      project-id: "33eee19d-9b81-4846-b24f-c39bf70fe1f5"
+#      working-directory: "terraform/dev/gateway"
+#      module: "gateway-dev"
+#      docker-image-name: ${{ inputs.docker-image-name }}
+#      docker-image-tag: ${{ inputs.docker-image-tag }}
+#      environment: "dev"

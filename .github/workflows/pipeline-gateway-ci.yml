@@ -23,7 +23,7 @@ jobs:
     with:
       docker-image-name: ${{ needs.gateway-build.outputs.docker-image-name }}
       docker-image-tag: ${{ needs.gateway-build.outputs.docker-image-tag }}
-      environment: "prod"
+      environment: "dev"
   gateway-deploy-dev-plan:
     needs: [ "gateway-publish" ]
     uses: ./.github/workflows/job-tf-plan.yml
