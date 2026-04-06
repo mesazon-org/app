@@ -37,7 +37,7 @@ module "gateway_core_app" {
     DATABASE_HOST       = data.digitalocean_database_cluster.postgres_cluster.private_host
     DATABASE_PORT       = data.digitalocean_database_cluster.postgres_cluster.port
     EMAIL_PROVIDER_HOST = "smtp.gmail.com"
-    EMAIL_PROVIDER_HOST = "587"
+    EMAIL_PROVIDER_PORT = "587"
     EMAIL_ENABLE_TLS    = "true"
   }
 
