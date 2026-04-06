@@ -41,6 +41,10 @@ trait UserManagementRepository {
       expiresAt: ExpiresAt,
   ): IO[ServiceError, UserOtpRow]
 
+  def deleteUserOtp(
+      otpID: OtpID
+  ): IO[ServiceError, Unit]
+
   def getUserOtp(
       otpID: OtpID
   ): IO[ServiceError, Option[UserOtpRow]]
@@ -191,6 +195,17 @@ object UserManagementRepository {
           )
       } yield updatedUserOptRow
 
+    override def deleteUserOtp(otpID: OtpID): IO[ServiceError, Unit] =
+      database
+        .transactionOrDie(userManagementQueries.deleteUserOtp(otpID))
+        .mapError(e =>
+          ServiceError.InternalServerError.UnexpectedError(
+            s"Failed to deleteUserOtp: [$otpID]",
+            Some(e),
+          )
+        )
+        .unit
+
     override def getUserOtp(otpID: OtpID): IO[ServiceError, Option[UserOtpRow]] =
       database
         .transactionOrDie(userManagementQueries.getUserOtp(otpID))
@@ -234,7 +249,6 @@ object UserManagementRepository {
             )
           )
       } yield ()).orDie
-
   }
 
   private def observed(repository: UserManagementRepository): UserManagementRepository = repository

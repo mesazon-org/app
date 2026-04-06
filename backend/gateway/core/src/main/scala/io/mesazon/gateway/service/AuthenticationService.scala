@@ -6,6 +6,7 @@ import io.mesazon.gateway.auth.OtpGenerator
 import io.mesazon.gateway.clients.EmailClient
 import io.mesazon.gateway.config.AuthenticationConfig
 import io.mesazon.gateway.repository.UserManagementRepository
+import io.mesazon.gateway.smithy.VerifyEmailRequest
 import io.mesazon.gateway.validation.EmailValidator.EmailRaw
 import io.mesazon.gateway.validation.ServiceValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
@@ -18,6 +19,7 @@ object AuthenticationService {
       authenticationConfig: AuthenticationConfig,
       userManagementRepository: UserManagementRepository,
       emailValidator: ServiceValidator[EmailRaw, Email],
+      verifyEmailValidator: ServiceValidator[smithy.VerifyEmailRequest, VerifyEmail],
       timeProvider: TimeProvider,
       emailClient: EmailClient,
       otpGenerator: OtpGenerator,
@@ -111,6 +113,57 @@ object AuthenticationService {
           )
         )
     } yield smithy.SignUpEmailResponse(otpID.value, otpExpiresInSeconds)
+
+    /** HTTP POST /verify/email */
+    override def verifyEmail(request: VerifyEmailRequest): ServiceTask[Unit] = for {
+      _               <- ZIO.logDebug(s"Verify email: [${request.otpID}]")
+      verifyEmail     <- verifyEmailValidator.validate(request)
+      maybeUserOtpRow <- userManagementRepository.getUserOtp(verifyEmail.otpID)
+      userOtpRow      <- ZIO.getOrFailWith(
+        ServiceError.UnauthorizedError.OtpError(s"No otp found for otpID: ${verifyEmail.otpID}")
+      )(maybeUserOtpRow)
+      now <- timeProvider.instantNow
+      _   <- userOtpRow.otpType match {
+        case OtpType.EmailVerification =>
+          if (userOtpRow.otp == verifyEmail.otp && userOtpRow.expiresAt.value.isAfter(now)) {
+            for {
+              maybeUserOnboardRow <- userManagementRepository.getUserOnboard(userOtpRow.userID)
+              userOnboardRow      <- ZIO.getOrFailWith(
+                ServiceError.InternalServerError.UnexpectedError(
+                  s"No user onboard found for userID: ${userOtpRow.userID} and otpID: ${userOtpRow.otpID}"
+                )
+              )(maybeUserOnboardRow)
+              _ <-
+                if (userOnboardRow.stage == OnboardStage.EmailConfirmation)
+                  userManagementRepository
+                    .updateUserOnboard(
+                      userOnboardRow.userID,
+                      OnboardStage.EmailConfirmed,
+                    )
+                    .unit
+                else
+                  userManagementRepository.deleteUserOtp(userOtpRow.otpID) *> ZIO.fail(
+                    ServiceError.UnauthorizedError.OtpError(
+                      s"User onboard stage was not in expected stage: ${OnboardStage.EmailConfirmation}, actual stage: ${userOnboardRow.stage}, userID: ${userOnboardRow.userID}, otpID: ${userOtpRow.otpID}"
+                    )
+                  )
+              _ <- userManagementRepository.deleteUserOtp(userOtpRow.otpID)
+            } yield ()
+          } else
+            ZIO.fail(
+              ServiceError.UnauthorizedError.OtpError(
+                s"Invalid or expired OTP for otpID: [${userOtpRow.otpID}]"
+              )
+            )
+        case _ =>
+          userManagementRepository.deleteUserOtp(userOtpRow.otpID) *> ZIO.fail(
+            ServiceError.UnauthorizedError.OtpError(
+              s"Invalid otp type: [${userOtpRow.otpType}], expected: [${OtpType.EmailVerification}]"
+            )
+          )
+      }
+    } yield ()
+
   }
 
   private def observed(
@@ -122,6 +175,10 @@ object AuthenticationService {
       override def signUpEmail(request: smithy.SignUpEmailRequest): Task[smithy.SignUpEmailResponse] =
         HttpErrorHandler
           .errorResponseHandler(service.signUpEmail(request))
+
+      /** HTTP POST /verify/email */
+      override def verifyEmail(request: VerifyEmailRequest): Task[Unit] = HttpErrorHandler
+        .errorResponseHandler(service.verifyEmail(request))
     }
 
   val live = ZLayer.derive[AuthenticationServiceImpl] >>> ZLayer.fromFunction(observed)

@@ -10,7 +10,7 @@ case class GatewayServerConfig(
     internal: ServerConfig,
     external: ServerConfig,
     health: ServerConfig,
-    docs: ServerConfig,
+    enableDocs: Boolean,
 )
 
 object GatewayServerConfig {

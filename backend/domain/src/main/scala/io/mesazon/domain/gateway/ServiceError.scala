@@ -53,6 +53,8 @@ object ServiceError {
   object UnauthorizedError {
     case object TokenMissing extends UnauthorizedError("token is missing from request")
 
+    case class OtpError(error: String) extends UnauthorizedError(error)
+
     case class TokenFailedAuthorization(throwable: Throwable)
         extends UnauthorizedError("token failed authorization", Some(throwable))
   }

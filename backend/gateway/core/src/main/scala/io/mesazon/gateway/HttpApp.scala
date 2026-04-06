@@ -84,11 +84,11 @@ object HttpApp {
       healthRoutes   <- healthRoutesResource
       externalRoutes <- externalRoutesResource
       internalRoutes <- internalRoutesResource
-      servers        <-
+      externalWithDocsRoutes = Option.when(config.enableDocs)(externalRoutes <+> docsRoutes).getOrElse(externalRoutes)
+      servers <-
         server(config.health, healthRoutes) &>
-          server(config.external, externalRoutes) &>
-          server(config.internal, internalRoutes) &>
-          server(config.docs, docsRoutes)
+          server(config.external, externalWithDocsRoutes) &>
+          server(config.internal, internalRoutes)
     } yield servers).forkScoped
   }
 }

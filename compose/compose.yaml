@@ -14,6 +14,9 @@ services:
       DATABASE_PORT: 5432
       DATABASE_USERNAME: local_user
       DATABASE_PASSWORD: local_password
+      SERVER_ENABLE_DOCS: "true"
+      EMAIL_PROVIDER_HOST: mailhog
+      EMAIL_PROVIDER_PORT: 1025
 
 #  ubuntu:
 #    image: michaelirey/ubuntu-with-tools:latest
@@ -60,3 +63,10 @@ services:
       - 8.8.8.8
     environment:
       - WHATSAPP_SESSIONS_POSTGRESQL_URL=postgres://postgres:postgres@postgres:5432/local_db?sslmode=disable
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    restart: always
+    ports:
+      - "1025:1025"
+      - "8025:8025"

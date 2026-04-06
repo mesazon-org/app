@@ -89,6 +89,7 @@ object Main extends ZIOAppDefault {
       UserManagementValidators.updateUserDetailsRequestValidatorLive,
       UserContactsValidators.upsertUserContactsValidatorLive,
       WahaValidator.wahaMessageRequestValidatorLive,
+      VerifyEmailValidator.live,
 
       // Clients
       SttpBackend.live,

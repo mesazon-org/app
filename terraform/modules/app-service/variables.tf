@@ -18,6 +18,24 @@ variable "region" {
   type        = string
 }
 
+variable "service_port" {
+  description = "The port on which the service will listen."
+  type        = number
+  default     = 8080
+}
+
+variable "internal_ports" {
+  description = "The port on which the service will listen."
+  type        = list(number)
+  default     = [8081]
+}
+
+variable "readiness_port" {
+  description = "The port used for readiness checks."
+  type        = number
+  default     = 8082
+}
+
 variable "replicas" {
   description = "Number of app instances."
   type        = number

@@ -17,13 +17,14 @@ import zio.interop.catz.*
 case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]) {
   import config.*
 
-  given JsonValueCodec[smithy.OnboardUserDetailsRequest]      = JsonCodecMaker.make[smithy.OnboardUserDetailsRequest]
-  given JsonValueCodec[smithy.UpdateUserDetailsRequest]       = JsonCodecMaker.make[smithy.UpdateUserDetailsRequest]
-  given JsonValueCodec[smithy.SignUpEmailRequest]             = JsonCodecMaker.make[smithy.SignUpEmailRequest]
-  given JsonValueCodec[smithy.SignUpEmailResponse]            = JsonCodecMaker.make[smithy.SignUpEmailResponse]
-  given JsonValueCodec[smithy.UpsertUserContactRequest]       = JsonCodecMaker.make[smithy.UpsertUserContactRequest]
-  given JsonValueCodec[List[smithy.UpsertUserContactRequest]] =
-    JsonCodecMaker.make[List[smithy.UpsertUserContactRequest]]
+  given JsonValueCodec[smithy.OnboardUserDetailsRequest]      = JsonCodecMaker.make
+  given JsonValueCodec[smithy.UpdateUserDetailsRequest]       = JsonCodecMaker.make
+  given JsonValueCodec[smithy.SignUpEmailRequest]             = JsonCodecMaker.make
+  given JsonValueCodec[smithy.UpsertUserContactRequest]       = JsonCodecMaker.make
+  given JsonValueCodec[smithy.VerifyEmailRequest]             = JsonCodecMaker.make
+  given JsonValueCodec[List[smithy.UpsertUserContactRequest]] = JsonCodecMaker.make
+
+  given JsonValueCodec[smithy.SignUpEmailResponse] = JsonCodecMaker.make
 
   def liveness: Task[StatusCode] = basicRequest
     .get(healthUri.addPath("liveness"))
@@ -42,6 +43,15 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .post(externalUri.addPath("signup", "email"))
       .body(asJson(signUpEmailRequest))
       .response(asJson[smithy.SignUpEmailResponse])
+      .send(sttpBackend)
+
+  def verifyEmail(
+      verifyEmailRequest: smithy.VerifyEmailRequest
+  ): Task[Response[Unit]] =
+    basicRequest
+      .post(externalUri.addPath("verify", "email"))
+      .body(asJson(verifyEmailRequest))
+      .response(ignore)
       .send(sttpBackend)
 
   def onboardUser(

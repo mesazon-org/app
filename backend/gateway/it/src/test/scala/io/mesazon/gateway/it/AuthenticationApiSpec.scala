@@ -179,8 +179,152 @@ class AuthenticationApiSpec
         response.code shouldBe StatusCode.BadRequest
       }
     }
-  }
 
+    "/verify/email" should {
+      "successfully verify email with valid OTP" in withContext { context =>
+        import context.*
+
+        val email              = Email.assume("email@gmai.com")
+        val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
+          .copy(email = email.value)
+
+        val response = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+
+        response.code shouldBe StatusCode.Ok
+
+        val userOtpRow = postgresClient
+          .executeQuery(userManagementQueries.getUserOtp(OtpID.assume(response.body.value.otpID)))
+          .zioValue
+
+        gatewayClient
+          .verifyEmail(
+            smithy.VerifyEmailRequest(
+              otpID = userOtpRow.value.otpID.value,
+              otp = userOtpRow.value.otp.value,
+            )
+          )
+          .zioValue
+          .code shouldBe StatusCode.Ok
+
+        val userOtpRows = postgresClient.executeQuery(userManagementQueries.getAllUserOtpRows).zioValue
+
+        userOtpRows shouldBe empty
+      }
+
+      "fail with BadRequest to verify email with invalid OTP" in withContext { context =>
+        import context.*
+
+        val email              = Email.assume("email@gmai.com")
+        val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
+          .copy(email = email.value)
+
+        val response = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+
+        response.code shouldBe StatusCode.Ok
+
+        gatewayClient
+          .verifyEmail(
+            smithy.VerifyEmailRequest(
+              otpID = "invalidotpID",
+              otp = "invalidotp",
+            )
+          )
+          .zioValue
+          .code shouldBe StatusCode.BadRequest
+      }
+
+      "fail with Unauthorized to verify email with already used OTP" in withContext { context =>
+        import context.*
+
+        val email              = Email.assume("email@gmai.com")
+        val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
+          .copy(email = email.value)
+
+        val response = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+
+        response.code shouldBe StatusCode.Ok
+
+        val userOtpRow = postgresClient
+          .executeQuery(userManagementQueries.getUserOtp(OtpID.assume(response.body.value.otpID)))
+          .zioValue
+
+        gatewayClient
+          .verifyEmail(
+            smithy.VerifyEmailRequest(
+              otpID = userOtpRow.value.otpID.value,
+              otp = userOtpRow.value.otp.value,
+            )
+          )
+          .zioValue
+          .code shouldBe StatusCode.Ok
+
+        gatewayClient
+          .verifyEmail(
+            smithy.VerifyEmailRequest(
+              otpID = userOtpRow.value.otpID.value,
+              otp = userOtpRow.value.otp.value,
+            )
+          )
+          .zioValue
+          .code shouldBe StatusCode.Unauthorized
+      }
+
+      "fail with Unauthorized to verify email with wrong OTP" in withContext { context =>
+        import context.*
+
+        val email              = Email.assume("email@gmai.com")
+        val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
+          .copy(email = email.value)
+
+        val response = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+
+        response.code shouldBe StatusCode.Ok
+
+        val userOtpRow = postgresClient
+          .executeQuery(userManagementQueries.getUserOtp(OtpID.assume(response.body.value.otpID)))
+          .zioValue
+
+        gatewayClient
+          .verifyEmail(
+            smithy.VerifyEmailRequest(
+              otpID = userOtpRow.value.otpID.value,
+              otp = "AAA111",
+            )
+          )
+          .zioValue
+          .code shouldBe StatusCode.Unauthorized
+      }
+
+      "fail with Unauthorized when otp id doesn't exist" in withContext { context =>
+        import context.*
+
+        val otpID              = arbitrarySample[OtpID]
+        val email              = Email.assume("email@gmai.com")
+        val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
+          .copy(email = email.value)
+
+        val response = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+
+        response.code shouldBe StatusCode.Ok
+
+        postgresClient.executeQuery(userManagementQueries.getAllUserOnboardRows).zioValue
+
+        val maybeUserOtpRow = postgresClient
+          .executeQuery(userManagementQueries.getUserOtp(OtpID.assume(response.body.value.otpID)))
+          .zioValue
+
+        gatewayClient
+          .verifyEmail(
+            smithy.VerifyEmailRequest(
+              otpID = otpID.value,
+              otp = maybeUserOtpRow.value.otp.value,
+            )
+          )
+          .zioValue
+          .code shouldBe StatusCode.Unauthorized
+      }
+    }
+  }
 }
 
 object AuthenticationApiSpec {

@@ -13,3 +13,10 @@ structure SignUpEmailResponse {
     @required
     otpExpiresInSeconds: Long
 }
+
+structure VerifyEmailRequest {
+    @required
+    otpID: String
+    @required
+    otp: String
+}
