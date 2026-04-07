@@ -65,7 +65,6 @@ object Main extends ZIOAppDefault {
       AuthorizationService.live,
       AuthorizationState.live,
       OtpGenerator.live,
-      JwtService.live,
 
       // Middleware
       ServerMiddleware.live,
@@ -81,7 +80,6 @@ object Main extends ZIOAppDefault {
       OpenAIClientConfig.live,
       EmailConfig.live,
       AuthenticationConfig.live,
-      JwtConfig.live,
 
       // Validators
       EmailValidator.emailValidatorLive,

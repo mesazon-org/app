@@ -31,7 +31,7 @@ object JwtService {
   inline private val onboardStageClaimKey = "onboardStage"
 
   private final class JwtServiceImpl(
-      config: JwtConfig,
+      jwtConfig: JwtConfig,
       timeProvider: TimeProvider,
       idGenerator: IDGenerator,
   ) extends JwtService {
@@ -46,7 +46,7 @@ object JwtService {
       for {
         instantNow     <- timeProvider.instantNow
         expirationDate <- ZIO
-          .attempt(Date.from(instantNow.plusSeconds(config.accessTokenExpiresAtOffset.toSeconds)))
+          .attempt(Date.from(instantNow.plusSeconds(jwtConfig.accessTokenExpiresAtOffset.toSeconds)))
           .mapError(error =>
             ServiceError.InternalServerError
               .UnexpectedError("Failed to calculate access token expiration date", Some(error))
@@ -55,18 +55,18 @@ object JwtService {
           .attempt(
             Jwts.builder.claims
               .subject(userID.value)
-              .issuer(config.issuer)
+              .issuer(jwtConfig.issuer)
               .expiration(expirationDate)
               .add(onboardStageClaimKey, onboardStage.toString)
               .and
-              .signWith(config.secretKey)
+              .signWith(jwtConfig.secretKey)
               .compact
           )
           .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to generate Jwt", Some(error)))
         jwt <- ZIO
           .attempt(Jwt.applyUnsafe(jwtRaw))
           .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to apply Jwt", Some(error)))
-      } yield jwt -> config.accessTokenExpiresAtOffset
+      } yield jwt -> jwtConfig.accessTokenExpiresAtOffset
 
     override def generateRefreshToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, RefreshJwt] =
       for {
@@ -80,10 +80,10 @@ object JwtService {
             Jwts.builder.claims
               .id(jwtID.value)
               .subject(userID.value)
-              .issuer(config.issuer)
-              .expiration(Date.from(instantNow.plusSeconds(config.refreshTokenExpiresAtOffset.toSeconds)))
+              .issuer(jwtConfig.issuer)
+              .expiration(Date.from(instantNow.plusSeconds(jwtConfig.refreshTokenExpiresAtOffset.toSeconds)))
               .and
-              .signWith(config.secretKey)
+              .signWith(jwtConfig.secretKey)
               .compact
           )
           .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to generate Jwt", Some(error)))
@@ -99,15 +99,19 @@ object JwtService {
           .attempt(
             Jwts.parser
               .clock(clock)
-              .requireIssuer(config.issuer)
-              .verifyWith(config.secretKey)
+              .requireIssuer(jwtConfig.issuer)
+              .verifyWith(jwtConfig.secretKey)
               .build
               .parseSignedClaims(jwt.value)
           )
           .mapError {
             case error: JwtException =>
-              ServiceError.InternalServerError.UnexpectedError("Failed to parse and verify access Jwt", Some(error))
-            case error => ServiceError.InternalServerError.UnexpectedError("Failed to parse access Jwt", Some(error))
+              ServiceError.UnauthorizedError.FailedToVerifyJwt("Failed to parse and verify access Jwt", Some(error))
+            case error =>
+              ServiceError.InternalServerError.UnexpectedError(
+                "Unexpected failed to parse and verify access Jwt",
+                Some(error),
+              )
           }
         userID <- ZIO
           .getOrFailWith(
@@ -134,7 +138,10 @@ object JwtService {
               .attempt(OnboardStage.valueOf(onboardStageRaw.toString))
               .mapError(error =>
                 ServiceError.InternalServerError
-                  .UnexpectedError("Failed to apply OnboardStage from access jwt claim", Some(error))
+                  .UnexpectedError(
+                    s"Failed to apply OnboardStage from access jwt claim [$onboardStageRaw]",
+                    Some(error),
+                  )
               )
           )
       } yield userID -> onboardStage
@@ -146,15 +153,16 @@ object JwtService {
           .attempt(
             Jwts.parser
               .clock(clock)
-              .requireIssuer(config.issuer)
-              .verifyWith(config.secretKey)
+              .requireIssuer(jwtConfig.issuer)
+              .verifyWith(jwtConfig.secretKey)
               .build
               .parseSignedClaims(jwt.value)
           )
           .mapError {
             case error: JwtException =>
-              ServiceError.InternalServerError.UnexpectedError("Failed to parse and verify refresh Jwt", Some(error))
-            case error => ServiceError.InternalServerError.UnexpectedError("Failed to parse refresh Jwt", Some(error))
+              ServiceError.UnauthorizedError.FailedToVerifyJwt("Failed to parse and verify refresh Jwt", Some(error))
+            case error =>
+              ServiceError.InternalServerError.UnexpectedError("Unexpected failed to parse refresh Jwt", Some(error))
           }
         userID <- ZIO
           .getOrFailWith(
