@@ -36,7 +36,7 @@ object PhoneNumberValidator {
             )
           )
       phoneNumberRaw <- ZIO
-        .attemptBlocking(phoneNumberUtil.parse(phoneNationalNumber, phoneRegion))
+        .attempt(phoneNumberUtil.parse(phoneNationalNumber, phoneRegion))
         .flatMapError(error =>
           ZIO.fiberId.flatMap(fid =>
             ZIO.logDebugCause(
@@ -82,7 +82,7 @@ object PhoneNumberValidator {
   ): DomainValidator[waha.WahaPhone, PhoneNumberE164] = { wahaPhoneNumber =>
     (for {
       phoneNumberProto <- ZIO
-        .attemptBlocking(phoneNumberUtil.parse(s"+${wahaPhoneNumber.value}", null))
+        .attempt(phoneNumberUtil.parse(s"+${wahaPhoneNumber.value}", null))
         .flatMapError(error =>
           ZIO.fiberId.flatMap(fid =>
             ZIO.logDebugCause(

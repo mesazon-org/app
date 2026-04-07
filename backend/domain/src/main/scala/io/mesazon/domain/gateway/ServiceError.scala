@@ -53,6 +53,9 @@ object ServiceError {
   object UnauthorizedError {
     case object TokenMissing extends UnauthorizedError("token is missing from request")
 
+    case class FailedToVerifyJwt(error: String, throwable: Option[Throwable] = None)
+        extends UnauthorizedError(error, throwable)
+
     case class OtpError(error: String) extends UnauthorizedError(error)
 
     case class TokenFailedAuthorization(throwable: Throwable)
