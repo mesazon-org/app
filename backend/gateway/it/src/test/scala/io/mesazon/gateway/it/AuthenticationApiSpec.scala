@@ -90,7 +90,7 @@ class AuthenticationApiSpec
           fullName = None,
           passwordHash = None,
           phoneNumber = None,
-          stage = OnboardStage.EmailConfirmation,
+          stage = OnboardStage.EmailVerification,
           createdAt = userOnboardRow.createdAt,
           updatedAt = userOnboardRow.updatedAt,
         )
@@ -143,7 +143,7 @@ class AuthenticationApiSpec
           fullName = None,
           passwordHash = None,
           phoneNumber = None,
-          stage = OnboardStage.EmailConfirmation,
+          stage = OnboardStage.EmailVerification,
           createdAt = userOnboardRow.createdAt,
           updatedAt = userOnboardRow.updatedAt,
         )

@@ -54,6 +54,25 @@ trait UserManagementRepository {
       otpType: OtpType,
   ): IO[ServiceError, Option[UserOtpRow]]
 
+  def upsertUserRefreshToken(
+      userID: UserID,
+      tokenID: TokenID,
+      expiresAt: ExpiresAt,
+      maybeOldTokenID: Option[TokenID] = None,
+  ): IO[ServiceError, Unit]
+
+  def getUserRefreshToken(
+      tokenID: TokenID
+  ): IO[ServiceError, Option[UserRefreshTokenRow]]
+
+  def deleteUserRefreshToken(
+      tokenID: TokenID
+  ): IO[ServiceError, Unit]
+
+  def deleteAllUserRefreshTokens(
+      userID: UserID
+  ): IO[ServiceError, Unit]
+
   def insertUserDetails(
       userID: UserID,
       email: Email,
@@ -210,6 +229,62 @@ object UserManagementRepository {
       database
         .transactionOrDie(userManagementQueries.getUserOtp(otpID))
         .mapError(e => ServiceError.InternalServerError.UnexpectedError(s"Failed to getUserOtp: [$otpID]", Some(e)))
+
+    override def upsertUserRefreshToken(
+        userID: UserID,
+        tokenID: TokenID,
+        expiresAt: ExpiresAt,
+        maybeOldTokenID: Option[TokenID],
+    ): IO[ServiceError, Unit] =
+      for {
+        instantNow <- timeProvider.instantNow
+        userRefreshTokenRow = UserRefreshTokenRow(
+          tokenID = tokenID,
+          userID = userID,
+          createdAt = CreatedAt(instantNow),
+          expiresAt = expiresAt,
+        )
+        _ <- database
+          .transactionOrDie(userManagementQueries.upsertUserRefreshToken(userRefreshTokenRow, maybeOldTokenID))
+          .mapError(e =>
+            ServiceError.InternalServerError.UnexpectedError(
+              s"Failed to upsertUserRefreshToken: [$userID], [$tokenID], [$maybeOldTokenID]",
+              Some(e),
+            )
+          )
+      } yield ()
+
+    override def getUserRefreshToken(tokenID: TokenID): IO[ServiceError, Option[UserRefreshTokenRow]] =
+      database
+        .transactionOrDie(userManagementQueries.getUserRefreshToken(tokenID))
+        .mapError(e =>
+          ServiceError.InternalServerError.UnexpectedError(
+            s"Failed to getUserRefreshToken: [$tokenID]",
+            Some(e),
+          )
+        )
+
+    override def deleteUserRefreshToken(tokenID: TokenID): IO[ServiceError, Unit] =
+      database
+        .transactionOrDie(userManagementQueries.deleteUserRefreshToken(tokenID))
+        .mapError(e =>
+          ServiceError.InternalServerError.UnexpectedError(
+            s"Failed to deleteUserRefreshToken: [$tokenID]",
+            Some(e),
+          )
+        )
+        .unit
+
+    override def deleteAllUserRefreshTokens(userID: UserID): IO[ServiceError, Unit] =
+      database
+        .transactionOrDie(userManagementQueries.deleteAllUserRefreshTokens(userID))
+        .mapError(e =>
+          ServiceError.InternalServerError.UnexpectedError(
+            s"Failed to deleteAllUserRefreshTokens: [$userID]",
+            Some(e),
+          )
+        )
+        .unit
 
     override def insertUserDetails(
         userID: UserID,

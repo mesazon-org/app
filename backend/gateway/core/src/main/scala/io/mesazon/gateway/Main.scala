@@ -48,6 +48,7 @@ object Main extends ZIOAppDefault {
       UserContactsService.live,
       WahaService.live,
       AuthenticationService.live,
+      JwtService.live,
 
       // Repository
       PostgresTransactor.live,
@@ -80,6 +81,7 @@ object Main extends ZIOAppDefault {
       OpenAIClientConfig.live,
       EmailConfig.live,
       AuthenticationConfig.live,
+      JwtConfig.live,
 
       // Validators
       EmailValidator.emailValidatorLive,

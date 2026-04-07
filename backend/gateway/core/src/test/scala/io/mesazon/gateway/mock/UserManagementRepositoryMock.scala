@@ -12,17 +12,21 @@ import java.time.Instant
 import java.util.UUID
 
 trait UserManagementRepositoryMock extends ZIOTestOps, should.Matchers {
-  private val insertUserOnboardEmailCounterRef: Ref[Int] = Ref.make(0).zioValue
-  private val updateUserOnboardCounterRef: Ref[Int]      = Ref.make(0).zioValue
-  private val getUserOnboardCounterRef: Ref[Int]         = Ref.make(0).zioValue
-  private val getUserOnboardByEmailCounterRef: Ref[Int]  = Ref.make(0).zioValue
-  private val upsertUserOtpCounterRef: Ref[Int]          = Ref.make(0).zioValue
-  private val deleteUserOtpCounterRef: Ref[Int]          = Ref.make(0).zioValue
-  private val updateUserOtpCounterRef: Ref[Int]          = Ref.make(0).zioValue
-  private val getUserOtpCounterRef: Ref[Int]             = Ref.make(0).zioValue
-  private val getUserOtpByUserIDCounterRef: Ref[Int]     = Ref.make(0).zioValue
-  private val insertUserDetailsCounterRef: Ref[Int]      = Ref.make(0).zioValue
-  private val updateUserDetailsCounterRef: Ref[Int]      = Ref.make(0).zioValue
+  private val insertUserOnboardEmailCounterRef: Ref[Int]     = Ref.make(0).zioValue
+  private val updateUserOnboardCounterRef: Ref[Int]          = Ref.make(0).zioValue
+  private val getUserOnboardCounterRef: Ref[Int]             = Ref.make(0).zioValue
+  private val getUserOnboardByEmailCounterRef: Ref[Int]      = Ref.make(0).zioValue
+  private val upsertUserOtpCounterRef: Ref[Int]              = Ref.make(0).zioValue
+  private val deleteUserOtpCounterRef: Ref[Int]              = Ref.make(0).zioValue
+  private val updateUserOtpCounterRef: Ref[Int]              = Ref.make(0).zioValue
+  private val getUserOtpCounterRef: Ref[Int]                 = Ref.make(0).zioValue
+  private val getUserOtpByUserIDCounterRef: Ref[Int]         = Ref.make(0).zioValue
+  private val upsertUserRefreshTokenCounterRef: Ref[Int]     = Ref.make(0).zioValue
+  private val getUserRefreshTokenCounterRef: Ref[Int]        = Ref.make(0).zioValue
+  private val deleteUserRefreshTokenCounterRef: Ref[Int]     = Ref.make(0).zioValue
+  private val deleteAllUserRefreshTokensCounterRef: Ref[Int] = Ref.make(0).zioValue
+  private val insertUserDetailsCounterRef: Ref[Int]          = Ref.make(0).zioValue
+  private val updateUserDetailsCounterRef: Ref[Int]          = Ref.make(0).zioValue
 
   def checkUserManagementRepository(
       expectedInsertUserOnboardEmailCalls: Int = 0,
@@ -34,6 +38,10 @@ trait UserManagementRepositoryMock extends ZIOTestOps, should.Matchers {
       expectedUpdateUserOtpCalls: Int = 0,
       expectedGetUserOtpCalls: Int = 0,
       expectedGetUserOtpByUserIDCalls: Int = 0,
+      expectedUpsertUserRefreshTokenCalls: Int = 0,
+      expectedGetUserRefreshTokenCalls: Int = 0,
+      expectedDeleteUserRefreshTokenCalls: Int = 0,
+      expectedDeleteAllUserRefreshTokensCalls: Int = 0,
       expectedInsertUserDetailsCalls: Int = 0,
       expectedUpdateUserDetailsCalls: Int = 0,
   ): Assertion = {
@@ -46,6 +54,10 @@ trait UserManagementRepositoryMock extends ZIOTestOps, should.Matchers {
     updateUserOtpCounterRef.get.zioValue shouldBe expectedUpdateUserOtpCalls
     getUserOtpCounterRef.get.zioValue shouldBe expectedGetUserOtpCalls
     getUserOtpByUserIDCounterRef.get.zioValue shouldBe expectedGetUserOtpByUserIDCalls
+    upsertUserRefreshTokenCounterRef.get.zioValue shouldBe expectedUpsertUserRefreshTokenCalls
+    getUserRefreshTokenCounterRef.get.zioValue shouldBe expectedGetUserRefreshTokenCalls
+    deleteUserRefreshTokenCounterRef.get.zioValue shouldBe expectedDeleteUserRefreshTokenCalls
+    deleteAllUserRefreshTokensCounterRef.get.zioValue shouldBe expectedDeleteAllUserRefreshTokensCalls
     insertUserDetailsCounterRef.get.zioValue shouldBe expectedInsertUserDetailsCalls
     updateUserDetailsCounterRef.get.zioValue shouldBe expectedUpdateUserDetailsCalls
   }
@@ -170,6 +182,33 @@ trait UserManagementRepositoryMock extends ZIOTestOps, should.Matchers {
 
       override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
         updateUserDetailsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(ZIO.unit)(ZIO.fail(_).orDie)
+
+      override def upsertUserRefreshToken(
+          userID: UserID,
+          tokenID: TokenID,
+          expiresAt: ExpiresAt,
+          maybeOldTokenID: Option[TokenID],
+      ): IO[ServiceError, Unit] =
+        upsertUserRefreshTokenCounterRef.incrementAndGet *> maybeServiceError.fold(
+          maybeUnexpectedError.fold(ZIO.unit)(ZIO.fail(_).orDie)
+        )(ZIO.fail)
+
+      override def deleteUserRefreshToken(tokenID: TokenID): IO[ServiceError, Unit] =
+        deleteUserRefreshTokenCounterRef.incrementAndGet *> maybeServiceError.fold(
+          maybeUnexpectedError.fold(ZIO.unit)(ZIO.fail(_).orDie)
+        )(ZIO.fail)
+
+      override def deleteAllUserRefreshTokens(userID: UserID): IO[ServiceError, Unit] =
+        deleteAllUserRefreshTokensCounterRef.incrementAndGet *> maybeServiceError.fold(
+          maybeUnexpectedError.fold(ZIO.unit)(ZIO.fail(_).orDie)
+        )(ZIO.fail)
+
+      override def getUserRefreshToken(tokenID: TokenID): IO[ServiceError, Option[UserRefreshTokenRow]] =
+        getUserRefreshTokenCounterRef.incrementAndGet *> maybeServiceError.fold(
+          maybeUnexpectedError.fold(
+            ZIO.succeed(None)
+          )(ZIO.fail(_).orDie)
+        )(ZIO.fail)
     }
   )
 }

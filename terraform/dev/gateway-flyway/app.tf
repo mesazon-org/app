@@ -23,13 +23,20 @@ module "gateway_flyway_app" {
 
   vpc_name_raw = "gateway-vpc"
 
-  env_vars = {
-    FLYWAY_LOCATIONS           = "filesystem:/flyway/sql"
-    FLYWAY_SCHEMAS             = "gateway_schema_fra1_dev"
-    FLYWAY_CONNECT_RETRIES     = "5"
-    FLYWAY_BASELINE_ON_MIGRATE = "true" # This is important to avoid errors when running Flyway for the first time on an existing database
-    FLYWAY_URL                 = "jdbc:postgresql://${data.digitalocean_database_cluster.postgres_cluster.private_host}:${data.digitalocean_database_cluster.postgres_cluster.port}/${local.database_name}?sslmode=require"
-  }
+  env_vars = merge(
+    {
+      FLYWAY_LOCATIONS           = "filesystem:/flyway/sql"
+      FLYWAY_SCHEMAS             = "gateway_schema_${local.environment}"
+      FLYWAY_CONNECT_RETRIES     = "5"
+      FLYWAY_BASELINE_ON_MIGRATE = "true"
+      FLYWAY_URL                 = "jdbc:postgresql://${data.digitalocean_database_cluster.postgres_cluster.private_host}:${data.digitalocean_database_cluster.postgres_cluster.port}/${local.database_name}?sslmode=require"
+    },
+    # Only enable auto-purge in Dev environment!
+      local.environment == "dev" ? {
+      FLYWAY_CLEAN_ON_VALIDATION_ERROR = "true"
+      FLYWAY_CLEAN_DISABLED            = "false"
+    } : {}
+  )
 
   secret_vars = {
     FLYWAY_USER     = data.digitalocean_database_user.database_user.name

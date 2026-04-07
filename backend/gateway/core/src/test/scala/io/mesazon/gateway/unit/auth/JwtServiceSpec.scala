@@ -249,7 +249,7 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         val verifyResult: Either[ServiceError, AuthedUserRefresh] =
           jwtService.verifyRefreshToken(Jwt.assume(jws)).zioEither
 
-        verifyResult.value shouldBe (JwtID.assume("1"), userID)
+        verifyResult.value shouldBe (TokenID.assume("1"), userID)
       }
 
       "fail with FailedToVerifyJwt if the refresh token is invalid" in {

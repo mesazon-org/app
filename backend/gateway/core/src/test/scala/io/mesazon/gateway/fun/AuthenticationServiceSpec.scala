@@ -38,6 +38,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         checkEmailClient(
           expectedSendEmailVerificationEmailCalls = 1
         )
+        checkJwtService()
       }
 
       "successfully re-sign up a user with sign up email stages but no user otp found" in new TestContext {
@@ -63,6 +64,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         checkEmailClient(
           expectedSendEmailVerificationEmailCalls = 1
         )
+        checkJwtService()
       }
 
       "successfully re-sign up a user with sign up email stages and user otp is expired or expiring soon" in new TestContext {
@@ -103,6 +105,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         checkEmailClient(
           expectedSendEmailVerificationEmailCalls = 1
         )
+        checkJwtService()
       }
 
       "successfully re-sign up a user with sign up email stages and user otp is not expired or expiring soon" in new TestContext {
@@ -137,6 +140,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         )
 
         checkEmailClient()
+        checkJwtService()
       }
 
       "successfully re-sign up a user with not a sing up email stage and user otp being expired in less than cooldown" in new TestContext {
@@ -167,6 +171,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         )
 
         checkEmailClient()
+        checkJwtService()
       }
 
       "retry and fail with InternalServerError when sending email failing for new user" in new TestContext {
@@ -191,6 +196,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         checkEmailClient(
           expectedSendEmailVerificationEmailCalls = authenticationConfig.sendEmailVerificationEmailMaxRetries + 1
         )
+        checkJwtService()
       }
 
       "retry and fail with InternalServerError when sending email failing for re-sign up email user" in new TestContext {
@@ -220,6 +226,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         checkEmailClient(
           expectedSendEmailVerificationEmailCalls = authenticationConfig.sendEmailVerificationEmailMaxRetries + 1
         )
+        checkJwtService()
       }
 
       "fail with BadRequest when request is invalid" in new TestContext {
@@ -247,6 +254,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         checkUserManagementRepository()
 
         checkEmailClient()
+        checkJwtService()
       }
 
       "fail with InternalServer when fail unexpectedly" in new TestContext {
@@ -267,13 +275,15 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         )
 
         checkEmailClient()
+        checkJwtService()
       }
     }
+
     "verifyEmail" should {
       "successfully verify email with valid otp" in new TestContext {
         val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
         val userOnboardRow     = arbitrarySample[UserOnboardRow]
-          .copy(stage = OnboardStage.EmailConfirmation)
+          .copy(stage = OnboardStage.EmailVerification)
         val userOtpRow = arbitrarySample[UserOtpRow]
           .copy(
             otpID = OtpID.assume(verifyEmailRequest.otpID),
@@ -297,9 +307,14 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           expectedGetUserOnboardCalls = 1,
           expectedUpdateUserOnboardCalls = 1,
           expectedDeleteUserOtpCalls = 1,
+          expectedUpsertUserRefreshTokenCalls = 1,
         )
 
         checkEmailClient()
+        checkJwtService(
+          expectedGenerateAccessTokenCalls = 1,
+          expectedGenerateRefreshTokenCalls = 1,
+        )
       }
 
       "fail to verify email with wrong otp" in new TestContext {
@@ -326,6 +341,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         )
 
         checkEmailClient()
+        checkJwtService()
       }
 
       "fail to verify email with expired otp" in new TestContext {
@@ -352,6 +368,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         )
 
         checkEmailClient()
+        checkJwtService()
       }
 
       "fail to verify email when otp type is not email verification" in new TestContext {
@@ -379,6 +396,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         )
 
         checkEmailClient()
+        checkJwtService()
       }
 
       "fail to verify email when user onboard stage is not email confirmation" in new TestContext {
@@ -411,6 +429,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         )
 
         checkEmailClient()
+        checkJwtService()
       }
 
       "fail with bad request when request is invalid" in new TestContext {
@@ -430,6 +449,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         checkUserManagementRepository()
 
         checkEmailClient()
+        checkJwtService()
       }
 
       "fail to verify email when no user onboard found for userID in otp" in new TestContext {
@@ -457,6 +477,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         )
 
         checkEmailClient()
+        checkJwtService()
       }
 
       "fail to verify email when no user otp found for otpID" in new TestContext {
@@ -474,6 +495,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         )
 
         checkEmailClient()
+        checkJwtService()
       }
 
       "fail with InternalServer when fail unexpectedly" in new TestContext {
@@ -494,11 +516,12 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         )
 
         checkEmailClient()
+        checkJwtService()
       }
     }
   }
 
-  trait TestContext extends UserManagementRepositoryMock, EmailClientMock {
+  trait TestContext extends UserManagementRepositoryMock, EmailClientMock, JwtServiceMock {
 
     val authenticationConfig = AuthenticationConfig(
       otpExpiration = 10.seconds,
@@ -513,6 +536,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
         maybeUserManagementRepositoryUnexpectedError: Option[Throwable] = None,
         maybeUserManagementRepositoryServiceError: Option[ServiceError] = None,
         maybeEmailClientServiceError: Option[ServiceError] = None,
+        maybeJwtServiceError: Option[ServiceError] = None,
         emailValidatorMaybeError: Option[InvalidFieldError] = None,
     ): smithy.AuthenticationService[Task] =
       ZIO
@@ -532,6 +556,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, SmithyArbitraries, Reposi
           IDGenerator.uuidGeneratorLive,
           ZLayer.succeed(authenticationConfig),
           VerifyEmailValidator.live,
+          jwtServiceMockLive(maybeServiceError = maybeJwtServiceError),
         )
         .zioValue
   }
