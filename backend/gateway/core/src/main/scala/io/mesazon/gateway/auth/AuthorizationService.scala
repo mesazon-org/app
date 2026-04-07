@@ -18,8 +18,14 @@ object AuthorizationService {
         maybeBearerToken = request.headers
           .get[`Authorization`]
           .collect { case Authorization(Credentials.Token(AuthScheme.Bearer, token)) => token }
-        _          <- ZIO.logDebug(s"Bearer token: [$maybeBearerToken]")
-        _          <- ZIO.fromOption(maybeBearerToken).mapError(_ => ServiceError.UnauthorizedError.TokenMissing)
+        _ <- ZIO.logDebug(s"Bearer token: [$maybeBearerToken]")
+        _ <- ZIO
+          .getOrFailWith(ServiceError.UnauthorizedError.TokenMissing)(maybeBearerToken)
+          .flatMap(jwtRaw =>
+            ZIO
+              .fromEither(Jwt.either(jwtRaw))
+              .mapError(error => ServiceError.UnauthorizedError.FailedToVerifyJwt(s"Failed to apply Jwt: $error"))
+          )
         authedUser <- ZIO.succeed(AuthedUser(UserID.assume("test"), Email.assume("eliot.martel@gmail.com")))
         _          <- state.set(authedUser)
       } yield ()

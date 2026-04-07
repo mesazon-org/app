@@ -14,7 +14,7 @@ object EmailValidator {
     (for {
       emailRawFormatted = emailRaw.trim.toLowerCase
       _ <- ZIO
-        .attemptBlocking(JMail.enforceValid(emailRawFormatted))
+        .attempt(JMail.enforceValid(emailRawFormatted))
         .mapError(error =>
           NonEmptyChain(
             InvalidFieldError(

@@ -32,7 +32,7 @@ object PostgresTransactor {
   private val datasourceLive = ZLayer.scoped {
     for {
       config     <- ZIO.service[DatabaseConfig]
-      datasource <- ZIO.acquireRelease(ZIO.attemptBlocking {
+      datasource <- ZIO.acquireRelease(ZIO.attempt {
         val hikariDataSource = new HikariDataSource()
         hikariDataSource.setDriverClassName(config.driver)
         hikariDataSource.setJdbcUrl(config.url)

@@ -166,6 +166,9 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.sttpClient4Jsoniter,
     Dependencies.jmail,
     Dependencies.simplejavamail,
+    Dependencies.jjwtApi,
+    Dependencies.jjwtImpl,
+    Dependencies.jjwtJackson,
   )
 
 lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))

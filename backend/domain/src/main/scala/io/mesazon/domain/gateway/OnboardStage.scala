@@ -4,8 +4,8 @@ enum OnboardStage {
   case EmailConfirmation
   case EmailConfirmed
   case PasswordProvided
-  case PhoneConfirmation
   case DetailsProvided
+  case PhoneConfirmation
   case PhoneConfirmed
 }
 

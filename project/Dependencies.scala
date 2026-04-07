@@ -31,6 +31,7 @@ object Dependencies {
   lazy val sttpAIV              = "0.4.8"
   lazy val jmailV               = "2.1.0"
   lazy val simplejavamailV      = "8.12.6"
+  lazy val jjwtV                = "0.13.0"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -116,4 +117,9 @@ object Dependencies {
 
   // Simple Java Mail
   val simplejavamail = "org.simplejavamail" % "simple-java-mail" % simplejavamailV
+
+  // JJWT
+  lazy val jjwtApi     = "io.jsonwebtoken" % "jjwt-api"     % jjwtV
+  lazy val jjwtImpl    = "io.jsonwebtoken" % "jjwt-impl"    % jjwtV % "runtime"
+  lazy val jjwtJackson = "io.jsonwebtoken" % "jjwt-jackson" % jjwtV % "runtime"
 }

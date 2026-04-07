@@ -19,7 +19,7 @@ object SttpBackend {
         .version(HttpClient.Version.HTTP_1_1)
         .connectTimeout(config.connectionTimeout.asJava)
         .build()
-      backend <- ZIO.attemptBlocking(HttpClientZioBackend.usingClient(httpClient))
+      backend <- ZIO.attempt(HttpClientZioBackend.usingClient(httpClient))
       loggingBackend = Slf4jLoggingBackend(backend)
     } yield loggingBackend).tap(client => ZIO.addFinalizer(client.close().ignore))
   )

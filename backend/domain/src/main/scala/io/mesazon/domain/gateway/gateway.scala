@@ -11,6 +11,9 @@ type AppName = AppName.T
 object UserID extends RefinedType[String, NonEmptyTrimmed]
 type UserID = UserID.T
 
+object JwtID extends RefinedType[String, NonEmptyTrimmed]
+type JwtID = JwtID.T
+
 object UserContactID extends RefinedType[String, NonEmptyTrimmed]
 type UserContactID = UserContactID.T
 
@@ -70,3 +73,6 @@ type UpdatedAt = UpdatedAt.T
 
 object ExpiresAt extends RefinedType[Instant, Pure]
 type ExpiresAt = ExpiresAt.T
+
+object Jwt extends RefinedType[String, NonEmptyTrimmed]
+type Jwt = Jwt.T
