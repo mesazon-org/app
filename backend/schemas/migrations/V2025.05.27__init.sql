@@ -30,6 +30,18 @@ create table user_otp
 
 create index idx_user_otp_user_id on user_otp (user_id);
 
+create table user_refresh_token
+(
+    token_id   text        not null,
+    user_id    text        not null,
+    created_at timestamptz not null,
+    expires_at timestamptz not null,
+    primary key (token_id),
+    constraint user_token_fk foreign key (user_id) references user_onboard (user_id)
+);
+
+create index idx_user_refresh_token_user_id on user_refresh_token (user_id);
+
 create table user_details
 (
     user_id        text        not null,

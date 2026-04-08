@@ -11,8 +11,8 @@ type AppName = AppName.T
 object UserID extends RefinedType[String, NonEmptyTrimmed]
 type UserID = UserID.T
 
-object JwtID extends RefinedType[String, NonEmptyTrimmed]
-type JwtID = JwtID.T
+object TokenID extends RefinedType[String, NonEmptyTrimmed]
+type TokenID = TokenID.T
 
 object UserContactID extends RefinedType[String, NonEmptyTrimmed]
 type UserContactID = UserContactID.T

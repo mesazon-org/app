@@ -1,17 +1,17 @@
 package io.mesazon.domain.gateway
 
 enum OnboardStage {
-  case EmailConfirmation
-  case EmailConfirmed
+  case EmailVerification
+  case EmailVerified
   case PasswordProvided
   case DetailsProvided
-  case PhoneConfirmation
-  case PhoneConfirmed
+  case PhoneVerification
+  case PhoneVerified
 }
 
 object OnboardStage {
   val signupEmailStages = List(
-    OnboardStage.EmailConfirmation,
-    OnboardStage.EmailConfirmed,
+    OnboardStage.EmailVerification,
+    OnboardStage.EmailVerified,
   )
 }

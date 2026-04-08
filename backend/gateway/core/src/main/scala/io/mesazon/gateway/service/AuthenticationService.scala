@@ -2,11 +2,10 @@ package io.mesazon.gateway.service
 
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.OtpGenerator
+import io.mesazon.gateway.auth.{JwtService, OtpGenerator}
 import io.mesazon.gateway.clients.EmailClient
 import io.mesazon.gateway.config.AuthenticationConfig
 import io.mesazon.gateway.repository.UserManagementRepository
-import io.mesazon.gateway.smithy.VerifyEmailRequest
 import io.mesazon.gateway.validation.EmailValidator.EmailRaw
 import io.mesazon.gateway.validation.ServiceValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
@@ -20,6 +19,7 @@ object AuthenticationService {
       userManagementRepository: UserManagementRepository,
       emailValidator: ServiceValidator[EmailRaw, Email],
       verifyEmailValidator: ServiceValidator[smithy.VerifyEmailRequest, VerifyEmail],
+      jwtService: JwtService,
       timeProvider: TimeProvider,
       emailClient: EmailClient,
       otpGenerator: OtpGenerator,
@@ -50,7 +50,7 @@ object AuthenticationService {
             )
             updatedUserOnboard <- userManagementRepository.updateUserOnboard(
               existingUserOnboardRow.userID,
-              OnboardStage.EmailConfirmation,
+              OnboardStage.EmailVerification,
             )
             newOtp <-
               if (isEmptyOrExpiredOrExpiringSoon) otpGenerator.generate
@@ -77,7 +77,7 @@ object AuthenticationService {
           } yield (newUserOtpRow.otpID, newUserOtpRow.expiresAt)
         case None =>
           for {
-            newUserOnboardRow <- userManagementRepository.insertUserOnboardEmail(email, OnboardStage.EmailConfirmation)
+            newUserOnboardRow <- userManagementRepository.insertUserOnboardEmail(email, OnboardStage.EmailVerification)
             expiresAt         <- timeProvider.instantNow
               .map(_.plusSeconds(authenticationConfig.otpExpiration.toSeconds))
               .map(ExpiresAt.assume)
@@ -115,7 +115,7 @@ object AuthenticationService {
     } yield smithy.SignUpEmailResponse(otpID.value, otpExpiresInSeconds)
 
     /** HTTP POST /verify/email */
-    override def verifyEmail(request: VerifyEmailRequest): ServiceTask[Unit] = for {
+    override def verifyEmail(request: smithy.VerifyEmailRequest): ServiceTask[smithy.VerifyEmailResponse] = for {
       _               <- ZIO.logDebug(s"Verify email: [${request.otpID}]")
       verifyEmail     <- verifyEmailValidator.validate(request)
       maybeUserOtpRow <- userManagementRepository.getUserOtp(verifyEmail.otpID)
@@ -134,17 +134,17 @@ object AuthenticationService {
                 )
               )(maybeUserOnboardRow)
               _ <-
-                if (userOnboardRow.stage == OnboardStage.EmailConfirmation)
+                if (userOnboardRow.stage == OnboardStage.EmailVerification)
                   userManagementRepository
                     .updateUserOnboard(
                       userOnboardRow.userID,
-                      OnboardStage.EmailConfirmed,
+                      OnboardStage.EmailVerified,
                     )
                     .unit
                 else
                   userManagementRepository.deleteUserOtp(userOtpRow.otpID) *> ZIO.fail(
                     ServiceError.UnauthorizedError.OtpError(
-                      s"User onboard stage was not in expected stage: ${OnboardStage.EmailConfirmation}, actual stage: ${userOnboardRow.stage}, userID: ${userOnboardRow.userID}, otpID: ${userOtpRow.otpID}"
+                      s"User onboard stage was not in expected stage: ${OnboardStage.EmailVerification}, actual stage: ${userOnboardRow.stage}, userID: ${userOnboardRow.userID}, otpID: ${userOtpRow.otpID}"
                     )
                   )
               _ <- userManagementRepository.deleteUserOtp(userOtpRow.otpID)
@@ -162,8 +162,20 @@ object AuthenticationService {
             )
           )
       }
-    } yield ()
-
+      accessToken  <- jwtService.generateAccessToken(userOtpRow.userID, OnboardStage.EmailVerified)
+      refreshToken <- jwtService.generateRefreshToken(userOtpRow.userID)
+      _            <- userManagementRepository.upsertUserRefreshToken(
+        userOtpRow.userID,
+        refreshToken.tokenID,
+        refreshToken.expiresAt,
+        None,
+      )
+    } yield smithy.VerifyEmailResponse(
+      expiresInSeconds = accessToken.expiresIn.toSeconds,
+      onboardStage = onboardStageFromDomainToSmithy(OnboardStage.EmailVerified),
+      refreshToken = refreshToken.jwt.value,
+      accessToken = accessToken.jwt.value,
+    )
   }
 
   private def observed(
@@ -177,7 +189,7 @@ object AuthenticationService {
           .errorResponseHandler(service.signUpEmail(request))
 
       /** HTTP POST /verify/email */
-      override def verifyEmail(request: VerifyEmailRequest): Task[Unit] = HttpErrorHandler
+      override def verifyEmail(request: smithy.VerifyEmailRequest): Task[smithy.VerifyEmailResponse] = HttpErrorHandler
         .errorResponseHandler(service.verifyEmail(request))
     }
 

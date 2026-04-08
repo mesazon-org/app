@@ -7,6 +7,8 @@ import io.mesazon.testkit.base.ZIOTestOps
 import org.scalatest.matchers.should
 import zio.*
 
+import java.time.Instant
+
 trait JwtServiceMock extends ZIOTestOps, should.Matchers {
   private val generateAccessTokenCounterRef: zio.Ref[Int]  = zio.Ref.make(0).zioValue
   private val generateRefreshTokenCounterRef: zio.Ref[Int] = zio.Ref.make(0).zioValue
@@ -38,11 +40,13 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
-      override def generateRefreshToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, RefreshJwt] =
+      override def generateRefreshToken(userID: UserID): IO[ServiceError, RefreshJwt] =
         generateRefreshTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed((JwtID.assume("mock-refresh-jwt-id"), Jwt.assume("mock-refresh-jwt")))
+              ZIO.succeed(
+                (TokenID.assume("mock-refresh-jwt-id"), Jwt.assume("mock-refresh-jwt"), ExpiresAt(Instant.now))
+              )
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
@@ -50,7 +54,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
         verifyAccessTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed((UserID.assume("test"), OnboardStage.EmailConfirmation))
+              ZIO.succeed((UserID.assume("test"), OnboardStage.EmailVerification))
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
@@ -58,10 +62,9 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
         verifyRefreshTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed((JwtID.assume("mock-refresh-jwt-id"), UserID.assume("test")))
+              ZIO.succeed((TokenID.assume("mock-refresh-jwt-id"), UserID.assume("test")))
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
     }
   )
-
 }

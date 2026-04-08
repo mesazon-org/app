@@ -20,3 +20,14 @@ structure VerifyEmailRequest {
     @required
     otp: String
 }
+
+structure VerifyEmailResponse {
+    @required
+    expiresInSeconds: Long
+    @required
+    onboardStage: OnboardStage
+    @required
+    refreshToken: String
+    @required
+    accessToken: String
+}

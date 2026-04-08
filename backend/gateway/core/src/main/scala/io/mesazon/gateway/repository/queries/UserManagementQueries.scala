@@ -13,10 +13,11 @@ final class UserManagementQueries(
     config: RepositoryConfig
 ) {
 
-  private val frSchema           = Fragment.const(config.schema)
-  private val frUserOnboardTable = Fragment.const(config.userOnboardTable)
-  private val frUserDetailsTable = Fragment.const(config.userDetailsTable)
-  private val frUserOtpTable     = Fragment.const(config.userOtpTable)
+  private val frSchema                = Fragment.const(config.schema)
+  private val frUserOnboardTable      = Fragment.const(config.userOnboardTable)
+  private val frUserDetailsTable      = Fragment.const(config.userDetailsTable)
+  private val frUserOtpTable          = Fragment.const(config.userOtpTable)
+  private val frUserRefreshTokenTable = Fragment.const(config.userRefreshTokenTable)
 
   case class UpdateUserDetailsQuery(
       userID: UserID,
@@ -51,6 +52,14 @@ final class UserManagementQueries(
         |otp_type,
         |created_at,
         |updated_at,
+        |expires_at
+     """.stripMargin
+
+  val userRefreshTokenFields =
+    fr"""
+        |token_id,
+        |user_id,
+        |created_at,
         |expires_at
      """.stripMargin
 
@@ -128,6 +137,66 @@ final class UserManagementQueries(
            |WHERE user_id = $userID AND otp_type = $otpType
            |""".stripMargin.query[UserOtpRow].option
     }
+
+  def upsertUserRefreshToken(
+      userRefreshTokenRow: UserRefreshTokenRow,
+      maybeOldTokenID: Option[TokenID],
+  ): TranzactIO[Unit] = {
+    val insertQuery =
+      sql"""
+           |INSERT INTO $frSchema.$frUserRefreshTokenTable ($userRefreshTokenFields)
+           |VALUES ($userRefreshTokenRow)
+         """.stripMargin
+
+    maybeOldTokenID match {
+      case Some(oldTokenID) =>
+        val deleteQuery =
+          sql"""
+               |DELETE FROM $frSchema.$frUserRefreshTokenTable
+               |WHERE token_id = $oldTokenID AND user_id = ${userRefreshTokenRow.userID}
+           """.stripMargin
+        tzio(for {
+          _ <- deleteQuery.update.run
+          _ <- insertQuery.update.run
+        } yield ()).unit
+      case None =>
+        tzio(insertQuery.update.run).unit
+    }
+  }
+
+  def getUserRefreshToken(tokenID: TokenID, userID: UserID): TranzactIO[Option[UserRefreshTokenRow]] =
+    tzio {
+      sql"""
+           |SELECT $userRefreshTokenFields
+           |FROM $frSchema.$frUserRefreshTokenTable
+           |WHERE token_id = $tokenID AND user_id = $userID
+           |""".stripMargin.query[UserRefreshTokenRow].option
+    }
+
+  def getAllUserRefreshTokens(userID: UserID): TranzactIO[List[UserRefreshTokenRow]] =
+    tzio {
+      sql"""
+           |SELECT $userRefreshTokenFields
+           |FROM $frSchema.$frUserRefreshTokenTable
+           |WHERE user_id = $userID
+           |""".stripMargin.query[UserRefreshTokenRow].to[List]
+    }
+
+  def deleteUserRefreshToken(tokenID: TokenID, userID: UserID): TranzactIO[Unit] =
+    tzio {
+      sql"""
+           |DELETE FROM $frSchema.$frUserRefreshTokenTable
+           |WHERE token_id = $tokenID AND user_id = $userID
+           |""".stripMargin.update.run
+    }.unit
+
+  def deleteAllUserRefreshTokens(userID: UserID): TranzactIO[Unit] =
+    tzio {
+      sql"""
+           |DELETE FROM $frSchema.$frUserRefreshTokenTable
+           |WHERE user_id = $userID
+           |""".stripMargin.update.run
+    }.unit
 
   def updateUserOnboard(
       userID: UserID,

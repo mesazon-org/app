@@ -58,16 +58,15 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
     "generateRefreshToken" should {
       "generate a valid JWT token" in {
-        val instantNow   = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed   = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID       = arbitrarySample[UserID]
-        val onboardStage = arbitrarySample[OnboardStage]
-        val jwtService   = ZIO
+        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
+        val userID     = arbitrarySample[UserID]
+        val jwtService = ZIO
           .service[JwtService]
           .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
           .zioValue
 
-        val refreshJwtResult = jwtService.generateRefreshToken(userID, onboardStage).zioEither
+        val refreshJwtResult = jwtService.generateRefreshToken(userID).zioEither
 
         assert(refreshJwtResult.isRight)
 
@@ -249,7 +248,7 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         val verifyResult: Either[ServiceError, AuthedUserRefresh] =
           jwtService.verifyRefreshToken(Jwt.assume(jws)).zioEither
 
-        verifyResult.value shouldBe (JwtID.assume("1"), userID)
+        verifyResult.value shouldBe (TokenID.assume("1"), userID)
       }
 
       "fail with FailedToVerifyJwt if the refresh token is invalid" in {

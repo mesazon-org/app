@@ -14,7 +14,7 @@ import java.util.Date
 trait JwtService {
   def generateAccessToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, AccessJwt]
 
-  def generateRefreshToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, RefreshJwt]
+  def generateRefreshToken(userID: UserID): IO[ServiceError, RefreshJwt]
 
   def verifyAccessToken(jwt: Jwt): IO[ServiceError, AuthedUserAccess]
 
@@ -24,8 +24,8 @@ trait JwtService {
 object JwtService {
 
   type AccessJwt         = (jwt: Jwt, expiresIn: Duration)
-  type RefreshJwt        = (jwtID: JwtID, jwt: Jwt)
-  type AuthedUserRefresh = (jwtID: JwtID, userID: UserID)
+  type RefreshJwt        = (tokenID: TokenID, jwt: Jwt, expiresAt: ExpiresAt)
+  type AuthedUserRefresh = (tokenID: TokenID, userID: UserID)
   type AuthedUserAccess  = (userID: UserID, onboardStage: OnboardStage)
 
   inline private val onboardStageClaimKey = "onboardStage"
@@ -66,22 +66,23 @@ object JwtService {
         jwt <- ZIO
           .attempt(Jwt.applyUnsafe(jwtRaw))
           .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to apply Jwt", Some(error)))
-      } yield jwt -> jwtConfig.accessTokenExpiresAtOffset
+      } yield (jwt, jwtConfig.accessTokenExpiresAtOffset)
 
-    override def generateRefreshToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, RefreshJwt] =
+    override def generateRefreshToken(userID: UserID): IO[ServiceError, RefreshJwt] =
       for {
         instantNow <- timeProvider.instantNow
-        jwtIDRaw   <- idGenerator.generate
-        jwtID      <- ZIO
-          .attempt(JwtID.applyUnsafe(jwtIDRaw))
-          .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to apply JwtID", Some(error)))
+        tokenIDRaw <- idGenerator.generate
+        expiresAt = ExpiresAt(instantNow.plusSeconds(jwtConfig.refreshTokenExpiresAtOffset.toSeconds))
+        tokenID <- ZIO
+          .attempt(TokenID.applyUnsafe(tokenIDRaw))
+          .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to apply TokenID", Some(error)))
         jwtRaw <- ZIO
           .attempt(
             Jwts.builder.claims
-              .id(jwtID.value)
+              .id(tokenID.value)
               .subject(userID.value)
               .issuer(jwtConfig.issuer)
-              .expiration(Date.from(instantNow.plusSeconds(jwtConfig.refreshTokenExpiresAtOffset.toSeconds)))
+              .expiration(Date.from(expiresAt.value))
               .and
               .signWith(jwtConfig.secretKey)
               .compact
@@ -90,7 +91,7 @@ object JwtService {
         jwt <- ZIO
           .attempt(Jwt.applyUnsafe(jwtRaw))
           .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to apply Jwt", Some(error)))
-      } yield jwtID -> jwt
+      } yield (tokenID, jwt, expiresAt)
 
     override def verifyAccessToken(jwt: Jwt): IO[ServiceError, AuthedUserAccess] =
       for {
@@ -144,7 +145,7 @@ object JwtService {
                   )
               )
           )
-      } yield userID -> onboardStage
+      } yield (userID, onboardStage)
 
     override def verifyRefreshToken(jwt: Jwt): IO[ServiceError, AuthedUserRefresh] =
       for {
@@ -178,20 +179,20 @@ object JwtService {
                   .UnexpectedError(s"Failed to apply UserID from refresh jwt subject: $error")
               )
           )
-        jwtID <- ZIO
+        tokenID <- ZIO
           .getOrFailWith(
             ServiceError.InternalServerError.UnexpectedError("Failed to extract jwt id from refresh jwt")
           )(
             Option(jws.getPayload.getId)
           )
-          .flatMap(jwtIDRaw =>
+          .flatMap(tokenIDRaw =>
             ZIO
-              .fromEither(JwtID.either(jwtIDRaw))
+              .fromEither(TokenID.either(tokenIDRaw))
               .mapError(error =>
-                ServiceError.InternalServerError.UnexpectedError(s"Failed to apply JwtID from refresh jwt id: $error")
+                ServiceError.InternalServerError.UnexpectedError(s"Failed to apply TokenID from refresh jwt id: $error")
               )
           )
-      } yield jwtID -> userID
+      } yield tokenID -> userID
   }
 
   private def observed(service: JwtService): JwtService = service

@@ -30,7 +30,7 @@ object ReplyingToMessagesCronJobStream {
 
     private def replyToMessages(): Stream[Throwable, Unit] =
       for {
-        _               <- ZStream.logInfo("Scheduled reply to messages ...")
+        _               <- ZStream.logDebug("Scheduled reply to messages ...")
         userActivityRow <- repository.getWahaUsersActivityWaitingForAssistantReply
           .filterZIO(row =>
             timeProvider.instantNow.map(_.isAfter(row.lastUpdate.value.plusSeconds(config.lastUpdateOffsetSeconds)))
@@ -98,7 +98,7 @@ object ReplyingToMessagesCronJobStream {
             forceUpdate = false,
           )
         )
-        _ <- ZStream.logInfo("Scheduled reply messages finished.")
+        _ <- ZStream.logDebug("Scheduled reply messages finished.")
       } yield ()
 
     override def stream: Stream[Throwable, Unit] =

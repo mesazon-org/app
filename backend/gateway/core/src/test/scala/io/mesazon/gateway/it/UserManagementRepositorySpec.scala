@@ -31,6 +31,7 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
     userOnboardTable = "user_onboard",
     userDetailsTable = "user_details",
     userOtpTable = "user_otp",
+    userRefreshTokenTable = "user_refresh_token",
   )
 
   def withContext[A](f: (PostgreSQLTestClient, UserManagementQueries) => A): A = withContainers { container =>
@@ -60,6 +61,9 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
       postgresClient
         .checkIfTableExists(repositoryConfig.schema, repositoryConfig.userOnboardTable)
         .zioValue shouldBe true
+      postgresClient
+        .checkIfTableExists(repositoryConfig.schema, repositoryConfig.userRefreshTokenTable)
+        .zioValue shouldBe true
     }
   }
 
@@ -69,6 +73,7 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
       postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.userOtpTable).zioValue
       postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.userOnboardTable).zioValue
       postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.userDetailsTable).zioValue
+      postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.userRefreshTokenTable).zioValue
     }
   }
 
@@ -717,6 +722,269 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
             userManagementRepository.getUserOtpByUserID(userID, otpType).zioValue
 
           maybeUserOtpRow shouldBe None
+      }
+    }
+
+    "upsertUserRefreshToken" should {
+      "successfully upsert refresh token" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val userOnboardRow           = arbitrarySample[UserOnboardRow]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val insertedUserOnboardRow = postgresClient.database
+          .transactionOrDie(userManagementQueries.insertUserOnboardEmail(userOnboardRow))
+          .zioValue
+
+        val userRefreshTokenRow = arbitrarySample[UserRefreshTokenRow].copy(userID = insertedUserOnboardRow.userID)
+
+        userManagementRepository
+          .upsertUserRefreshToken(
+            userID = userRefreshTokenRow.userID,
+            tokenID = userRefreshTokenRow.tokenID,
+            expiresAt = userRefreshTokenRow.expiresAt,
+          )
+          .zioValue
+
+        val getRefreshTokenRow =
+          postgresClient.database
+            .transactionOrDie(
+              userManagementQueries.getUserRefreshToken(userRefreshTokenRow.tokenID, userRefreshTokenRow.userID)
+            )
+            .zioValue
+
+        getRefreshTokenRow.value shouldBe userRefreshTokenRow.copy(
+          createdAt = CreatedAt(now)
+        )
+      }
+
+      "successfully upsert refresh token if token already exist for the same user" in withContext {
+        (postgresClient, userManagementQueries) =>
+          val now        = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val clockNow   = Clock.fixed(now, ZoneOffset.UTC)
+          val oldTokenID = arbitrarySample[TokenID]
+
+          val userManagementRepository = ZIO
+            .service[UserManagementRepository]
+            .provide(
+              UserManagementRepository.live,
+              ZLayer.succeed(postgresClient.database),
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
+              ZLayer.succeed(userManagementQueries),
+            )
+            .zioValue
+
+          val userOnboardRow = arbitrarySample[UserOnboardRow]
+
+          postgresClient.database
+            .transactionOrDie(userManagementQueries.insertUserOnboardEmail(userOnboardRow))
+            .zioValue
+
+          val userRefreshTokenRow1 = arbitrarySample[UserRefreshTokenRow]
+            .copy(
+              userID = userOnboardRow.userID,
+              tokenID = oldTokenID,
+              createdAt = CreatedAt(now.minusSeconds(10)),
+              expiresAt = ExpiresAt.assume(now.plusSeconds(3600)),
+            )
+
+          val userRefreshTokenRow2 = arbitrarySample[UserRefreshTokenRow]
+            .copy(userID = userOnboardRow.userID, createdAt = CreatedAt(now))
+
+          postgresClient.database
+            .transactionOrDie(
+              userManagementQueries
+                .upsertUserRefreshToken(userRefreshTokenRow1, None)
+            )
+            .zioValue
+
+          userManagementRepository
+            .upsertUserRefreshToken(
+              userID = userRefreshTokenRow2.userID,
+              tokenID = userRefreshTokenRow2.tokenID,
+              expiresAt = userRefreshTokenRow2.expiresAt,
+              maybeOldTokenID = Some(oldTokenID),
+            )
+            .zioValue
+
+          val userRefreshTokenRows =
+            postgresClient.database
+              .transactionOrDie(userManagementQueries.getAllUserRefreshTokens(userOnboardRow.userID))
+              .zioValue
+
+          userRefreshTokenRows should have size 1
+          userRefreshTokenRows should contain theSameElementsAs List(userRefreshTokenRow2)
+      }
+    }
+
+    "getUserRefreshToken" should {
+      "successfully get user refresh token by token id" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val userOnboardRow           = arbitrarySample[UserOnboardRow]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val insertedUserOnboardRow = postgresClient.database
+          .transactionOrDie(userManagementQueries.insertUserOnboardEmail(userOnboardRow))
+          .zioValue
+
+        val userRefreshTokenRow = arbitrarySample[UserRefreshTokenRow].copy(userID = insertedUserOnboardRow.userID)
+
+        postgresClient.database
+          .transactionOrDie(userManagementQueries.upsertUserRefreshToken(userRefreshTokenRow, None))
+          .zioValue
+
+        val maybeUserRefreshTokenRow =
+          userManagementRepository
+            .getUserRefreshToken(userRefreshTokenRow.tokenID, insertedUserOnboardRow.userID)
+            .zioValue
+
+        maybeUserRefreshTokenRow.value shouldBe userRefreshTokenRow
+      }
+
+      "return None when user refresh token is not found by token id" in withContext {
+        (postgresClient, userManagementQueries) =>
+          val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+          val tokenID                  = arbitrarySample[TokenID]
+          val userID                   = arbitrarySample[UserID]
+          val userManagementRepository = ZIO
+            .service[UserManagementRepository]
+            .provide(
+              UserManagementRepository.live,
+              ZLayer.succeed(postgresClient.database),
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
+              ZLayer.succeed(userManagementQueries),
+            )
+            .zioValue
+
+          val maybeUserRefreshTokenRow =
+            userManagementRepository.getUserRefreshToken(tokenID, userID).zioValue
+
+          maybeUserRefreshTokenRow shouldBe None
+      }
+    }
+
+    "deleteUserRefreshToken" should {
+      "successfully delete user refresh token by token id" in withContext { (postgresClient, userManagementQueries) =>
+        val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+        val userOnboardRow           = arbitrarySample[UserOnboardRow]
+        val userManagementRepository = ZIO
+          .service[UserManagementRepository]
+          .provide(
+            UserManagementRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(clockNow),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userManagementQueries),
+          )
+          .zioValue
+
+        val insertedUserOnboardRow = postgresClient.database
+          .transactionOrDie(userManagementQueries.insertUserOnboardEmail(userOnboardRow))
+          .zioValue
+
+        val userRefreshTokenRow = arbitrarySample[UserRefreshTokenRow].copy(userID = insertedUserOnboardRow.userID)
+
+        postgresClient.database
+          .transactionOrDie(userManagementQueries.upsertUserRefreshToken(userRefreshTokenRow, None))
+          .zioValue
+
+        userManagementRepository
+          .deleteUserRefreshToken(userRefreshTokenRow.tokenID, userRefreshTokenRow.userID)
+          .zioValue
+
+        val maybeUserRefreshTokenRow = postgresClient.database
+          .transactionOrDie(userManagementQueries.getAllUserRefreshTokens(userRefreshTokenRow.userID))
+          .zioValue
+
+        maybeUserRefreshTokenRow shouldBe empty
+      }
+
+      "successfully delete user refresh token that doesn't exist" in withContext {
+        (postgresClient, userManagementQueries) =>
+          val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+          val tokenID                  = arbitrarySample[TokenID]
+          val userID                   = arbitrarySample[UserID]
+          val userManagementRepository = ZIO
+            .service[UserManagementRepository]
+            .provide(
+              UserManagementRepository.live,
+              ZLayer.succeed(postgresClient.database),
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
+              ZLayer.succeed(userManagementQueries),
+            )
+            .zioValue
+
+          val deleteUserRefreshTokenResult =
+            userManagementRepository.deleteUserRefreshToken(tokenID, userID).zioEither
+
+          assert(deleteUserRefreshTokenResult.isRight)
+      }
+    }
+
+    "deleteAllUserRefreshTokens" should {
+      "successfully delete all user refresh tokens by user id" in withContext {
+        (postgresClient, userManagementQueries) =>
+          val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
+          val userOnboardRow           = arbitrarySample[UserOnboardRow]
+          val userManagementRepository = ZIO
+            .service[UserManagementRepository]
+            .provide(
+              UserManagementRepository.live,
+              ZLayer.succeed(postgresClient.database),
+              Mocks.timeProviderLive(clockNow),
+              Mocks.idGeneratorLive,
+              ZLayer.succeed(userManagementQueries),
+            )
+            .zioValue
+
+          val insertedUserOnboardRow = postgresClient.database
+            .transactionOrDie(userManagementQueries.insertUserOnboardEmail(userOnboardRow))
+            .zioValue
+
+          val userRefreshTokenRow1 = arbitrarySample[UserRefreshTokenRow].copy(userID = insertedUserOnboardRow.userID)
+          val userRefreshTokenRow2 = arbitrarySample[UserRefreshTokenRow].copy(userID = insertedUserOnboardRow.userID)
+
+          postgresClient.database
+            .transactionOrDie(userManagementQueries.upsertUserRefreshToken(userRefreshTokenRow1, None))
+            .zioValue
+
+          postgresClient.database
+            .transactionOrDie(userManagementQueries.upsertUserRefreshToken(userRefreshTokenRow2, None))
+            .zioValue
+
+          userManagementRepository.deleteAllUserRefreshTokens(insertedUserOnboardRow.userID).zioValue
+
+          val maybeUserRefreshTokenRows = postgresClient.database
+            .transactionOrDie(userManagementQueries.getAllUserRefreshTokens(insertedUserOnboardRow.userID))
+            .zioValue
+
+          maybeUserRefreshTokenRows shouldBe empty
       }
     }
 
