@@ -28,6 +28,6 @@ operation VerifyEmail {
         @httpPayload
         request: VerifyEmailRequest
     }
-    output : VerifyEmailResponse
+    output: VerifyEmailResponse
     errors: [BadRequest, Unauthorized, InternalServerError]
 }
