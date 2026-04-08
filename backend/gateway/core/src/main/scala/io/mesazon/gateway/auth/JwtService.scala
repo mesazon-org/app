@@ -75,7 +75,7 @@ object JwtService {
         expiresAt = ExpiresAt(instantNow.plusSeconds(jwtConfig.refreshTokenExpiresAtOffset.toSeconds))
         tokenID <- ZIO
           .attempt(TokenID.applyUnsafe(tokenIDRaw))
-          .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to apply JwtID", Some(error)))
+          .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to apply TokenID", Some(error)))
         jwtRaw <- ZIO
           .attempt(
             Jwts.builder.claims
@@ -185,11 +185,11 @@ object JwtService {
           )(
             Option(jws.getPayload.getId)
           )
-          .flatMap(jwtIDRaw =>
+          .flatMap(tokenIDRaw =>
             ZIO
-              .fromEither(TokenID.either(jwtIDRaw))
+              .fromEither(TokenID.either(tokenIDRaw))
               .mapError(error =>
-                ServiceError.InternalServerError.UnexpectedError(s"Failed to apply JwtID from refresh jwt id: $error")
+                ServiceError.InternalServerError.UnexpectedError(s"Failed to apply TokenID from refresh jwt id: $error")
               )
           )
       } yield tokenID -> userID

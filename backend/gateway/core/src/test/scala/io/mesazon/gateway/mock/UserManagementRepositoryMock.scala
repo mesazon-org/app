@@ -193,7 +193,7 @@ trait UserManagementRepositoryMock extends ZIOTestOps, should.Matchers {
           maybeUnexpectedError.fold(ZIO.unit)(ZIO.fail(_).orDie)
         )(ZIO.fail)
 
-      override def deleteUserRefreshToken(tokenID: TokenID): IO[ServiceError, Unit] =
+      override def deleteUserRefreshToken(tokenID: TokenID, userID: UserID): IO[ServiceError, Unit] =
         deleteUserRefreshTokenCounterRef.incrementAndGet *> maybeServiceError.fold(
           maybeUnexpectedError.fold(ZIO.unit)(ZIO.fail(_).orDie)
         )(ZIO.fail)
@@ -203,7 +203,10 @@ trait UserManagementRepositoryMock extends ZIOTestOps, should.Matchers {
           maybeUnexpectedError.fold(ZIO.unit)(ZIO.fail(_).orDie)
         )(ZIO.fail)
 
-      override def getUserRefreshToken(tokenID: TokenID): IO[ServiceError, Option[UserRefreshTokenRow]] =
+      override def getUserRefreshToken(
+          tokenID: TokenID,
+          userID: UserID,
+      ): IO[ServiceError, Option[UserRefreshTokenRow]] =
         getUserRefreshTokenCounterRef.incrementAndGet *> maybeServiceError.fold(
           maybeUnexpectedError.fold(
             ZIO.succeed(None)

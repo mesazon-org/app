@@ -757,7 +757,9 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
 
         val getRefreshTokenRow =
           postgresClient.database
-            .transactionOrDie(userManagementQueries.getUserRefreshToken(userRefreshTokenRow.tokenID))
+            .transactionOrDie(
+              userManagementQueries.getUserRefreshToken(userRefreshTokenRow.tokenID, userRefreshTokenRow.userID)
+            )
             .zioValue
 
         getRefreshTokenRow.value shouldBe userRefreshTokenRow.copy(
@@ -852,7 +854,9 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           .zioValue
 
         val maybeUserRefreshTokenRow =
-          userManagementRepository.getUserRefreshToken(userRefreshTokenRow.tokenID).zioValue
+          userManagementRepository
+            .getUserRefreshToken(userRefreshTokenRow.tokenID, insertedUserOnboardRow.userID)
+            .zioValue
 
         maybeUserRefreshTokenRow.value shouldBe userRefreshTokenRow
       }
@@ -862,6 +866,7 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
           val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
           val tokenID                  = arbitrarySample[TokenID]
+          val userID                   = arbitrarySample[UserID]
           val userManagementRepository = ZIO
             .service[UserManagementRepository]
             .provide(
@@ -874,7 +879,7 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
             .zioValue
 
           val maybeUserRefreshTokenRow =
-            userManagementRepository.getUserRefreshToken(tokenID).zioValue
+            userManagementRepository.getUserRefreshToken(tokenID, userID).zioValue
 
           maybeUserRefreshTokenRow shouldBe None
       }
@@ -906,7 +911,9 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           .transactionOrDie(userManagementQueries.upsertUserRefreshToken(userRefreshTokenRow, None))
           .zioValue
 
-        userManagementRepository.deleteUserRefreshToken(userRefreshTokenRow.tokenID).zioValue
+        userManagementRepository
+          .deleteUserRefreshToken(userRefreshTokenRow.tokenID, userRefreshTokenRow.userID)
+          .zioValue
 
         val maybeUserRefreshTokenRow = postgresClient.database
           .transactionOrDie(userManagementQueries.getAllUserRefreshTokens(userRefreshTokenRow.userID))
@@ -920,6 +927,7 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
           val now                      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
           val clockNow                 = Clock.fixed(now, ZoneOffset.UTC)
           val tokenID                  = arbitrarySample[TokenID]
+          val userID                   = arbitrarySample[UserID]
           val userManagementRepository = ZIO
             .service[UserManagementRepository]
             .provide(
@@ -932,7 +940,7 @@ class UserManagementRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Re
             .zioValue
 
           val deleteUserRefreshTokenResult =
-            userManagementRepository.deleteUserRefreshToken(tokenID).zioEither
+            userManagementRepository.deleteUserRefreshToken(tokenID, userID).zioEither
 
           assert(deleteUserRefreshTokenResult.isRight)
       }

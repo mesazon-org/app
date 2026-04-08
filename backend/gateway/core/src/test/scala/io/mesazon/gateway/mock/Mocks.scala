@@ -165,7 +165,7 @@ object Mocks extends ZIOTestOps {
             maybeOldTokenID: Option[TokenID],
         ): IO[ServiceError, Unit] = ???
 
-        override def deleteUserRefreshToken(tokenID: TokenID): IO[ServiceError, Unit] = ???
+        override def deleteUserRefreshToken(tokenID: TokenID, userID: UserID): IO[ServiceError, Unit] = ???
 
         override def deleteAllUserRefreshTokens(userID: UserID): IO[ServiceError, Unit] = ???
 
@@ -183,7 +183,10 @@ object Mocks extends ZIOTestOps {
         override def updateUserDetails(userID: UserID, updateUserDetails: UpdateUserDetails): UIO[Unit] =
           updateUserDetailsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(ZIO.unit)(ZIO.fail(_).orDie)
 
-        override def getUserRefreshToken(tokenID: TokenID): IO[ServiceError, Option[UserRefreshTokenRow]] = ???
+        override def getUserRefreshToken(
+            tokenID: TokenID,
+            userID: UserID,
+        ): IO[ServiceError, Option[UserRefreshTokenRow]] = ???
       }
     )
 

@@ -32,7 +32,7 @@ module "gateway_flyway_app" {
       FLYWAY_URL                 = "jdbc:postgresql://${data.digitalocean_database_cluster.postgres_cluster.private_host}:${data.digitalocean_database_cluster.postgres_cluster.port}/${local.database_name}?sslmode=require"
     },
     # Only enable auto-purge in Dev environment!
-      local.environment == "dev" ? {
+    local.environment == "dev" ? {
       FLYWAY_CLEAN_ON_VALIDATION_ERROR = "true"
       FLYWAY_CLEAN_DISABLED            = "false"
     } : {}

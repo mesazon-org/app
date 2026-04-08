@@ -153,7 +153,7 @@ final class UserManagementQueries(
         val deleteQuery =
           sql"""
                |DELETE FROM $frSchema.$frUserRefreshTokenTable
-               |WHERE token_id = $oldTokenID
+               |WHERE token_id = $oldTokenID AND user_id = ${userRefreshTokenRow.userID}
            """.stripMargin
         tzio(for {
           _ <- deleteQuery.update.run
@@ -164,12 +164,12 @@ final class UserManagementQueries(
     }
   }
 
-  def getUserRefreshToken(tokenID: TokenID): TranzactIO[Option[UserRefreshTokenRow]] =
+  def getUserRefreshToken(tokenID: TokenID, userID: UserID): TranzactIO[Option[UserRefreshTokenRow]] =
     tzio {
       sql"""
            |SELECT $userRefreshTokenFields
            |FROM $frSchema.$frUserRefreshTokenTable
-           |WHERE token_id = $tokenID
+           |WHERE token_id = $tokenID AND user_id = $userID
            |""".stripMargin.query[UserRefreshTokenRow].option
     }
 
@@ -182,11 +182,11 @@ final class UserManagementQueries(
            |""".stripMargin.query[UserRefreshTokenRow].to[List]
     }
 
-  def deleteUserRefreshToken(tokenID: TokenID): TranzactIO[Unit] =
+  def deleteUserRefreshToken(tokenID: TokenID, userID: UserID): TranzactIO[Unit] =
     tzio {
       sql"""
            |DELETE FROM $frSchema.$frUserRefreshTokenTable
-           |WHERE token_id = $tokenID
+           |WHERE token_id = $tokenID AND user_id = $userID
            |""".stripMargin.update.run
     }.unit
 

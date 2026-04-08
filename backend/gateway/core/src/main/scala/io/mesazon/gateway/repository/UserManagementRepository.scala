@@ -62,11 +62,13 @@ trait UserManagementRepository {
   ): IO[ServiceError, Unit]
 
   def getUserRefreshToken(
-      tokenID: TokenID
+      tokenID: TokenID,
+      userID: UserID,
   ): IO[ServiceError, Option[UserRefreshTokenRow]]
 
   def deleteUserRefreshToken(
-      tokenID: TokenID
+      tokenID: TokenID,
+      userID: UserID,
   ): IO[ServiceError, Unit]
 
   def deleteAllUserRefreshTokens(
@@ -254,9 +256,9 @@ object UserManagementRepository {
           )
       } yield ()
 
-    override def getUserRefreshToken(tokenID: TokenID): IO[ServiceError, Option[UserRefreshTokenRow]] =
+    override def getUserRefreshToken(tokenID: TokenID, userID: UserID): IO[ServiceError, Option[UserRefreshTokenRow]] =
       database
-        .transactionOrDie(userManagementQueries.getUserRefreshToken(tokenID))
+        .transactionOrDie(userManagementQueries.getUserRefreshToken(tokenID, userID))
         .mapError(e =>
           ServiceError.InternalServerError.UnexpectedError(
             s"Failed to getUserRefreshToken: [$tokenID]",
@@ -264,9 +266,9 @@ object UserManagementRepository {
           )
         )
 
-    override def deleteUserRefreshToken(tokenID: TokenID): IO[ServiceError, Unit] =
+    override def deleteUserRefreshToken(tokenID: TokenID, userID: UserID): IO[ServiceError, Unit] =
       database
-        .transactionOrDie(userManagementQueries.deleteUserRefreshToken(tokenID))
+        .transactionOrDie(userManagementQueries.deleteUserRefreshToken(tokenID, userID))
         .mapError(e =>
           ServiceError.InternalServerError.UnexpectedError(
             s"Failed to deleteUserRefreshToken: [$tokenID]",
