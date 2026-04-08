@@ -9,6 +9,8 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
 
   given Arbitrary[OnboardStage] = Arbitrary(Gen.oneOf(OnboardStage.values.toIndexedSeq))
 
+  given Arbitrary[TokenType] = Arbitrary(Gen.oneOf(TokenType.values.toIndexedSeq))
+
   given Arbitrary[AuthedUser] = Arbitrary(Gen.resultOf(AuthedUser.apply))
 
   given Arbitrary[OnboardUserDetails] = Arbitrary(Gen.resultOf(OnboardUserDetails.apply))

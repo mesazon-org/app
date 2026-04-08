@@ -17,7 +17,7 @@ import zio.*
 import java.time.temporal.ChronoUnit
 import java.time.{Clock, Instant, ZoneOffset}
 
-class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, RepositoryArbitraries, DockerComposeBase {
+class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
 
   override def dockerComposeFile: String = "./src/test/resources/repository.yaml"
 
@@ -78,8 +78,6 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
         val now      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow = Clock.fixed(now, ZoneOffset.UTC)
 
-        val userOtpRow = arbitrarySample[UserOtpRow]
-
         val userOtpRepository = ZIO
           .service[UserOtpRepository]
           .provide(
@@ -90,6 +88,8 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
 
         val userOtpRowInserted = userOtpRepository
           .upsertUserOtp(
@@ -113,8 +113,6 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
         val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
 
-        val userOtpRow = arbitrarySample[UserOtpRow]
-
         val userOtpRepository = ZIO
           .service[UserOtpRepository]
           .provide(
@@ -125,6 +123,8 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
 
         postgresClient
           .executeQuery(
@@ -163,11 +163,9 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
       }
     }
 
-    "getUserOtpByUserID" should {
-      "successfully retrieve an existing OTP for a user by user ID and OTP type" in withContext { context =>
+    "getUserOtp" should {
+      "successfully retrieve an existing OTP for a user by OTP ID and OTP type" in withContext { context =>
         import context.*
-
-        val userOtpRow = arbitrarySample[UserOtpRow]
 
         val userOtpRepository = ZIO
           .service[UserOtpRepository]
@@ -179,6 +177,8 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
 
         postgresClient
           .executeQuery(
@@ -186,18 +186,15 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
           )
           .zioValue
 
-        val maybeUserOtpRowRetrieved = userOtpRepository
-          .getUserOtpByUserID(userID = userOtpRow.userID, otpType = userOtpRow.otpType)
+        val userOtpRowOptRetrieved = userOtpRepository
+          .getUserOtp(otpID = userOtpRow.otpID, otpType = userOtpRow.otpType)
           .zioValue
 
-        maybeUserOtpRowRetrieved shouldBe Some(userOtpRow)
+        userOtpRowOptRetrieved shouldBe Some(userOtpRow)
       }
 
-      "return None when there is no OTP for the given user ID and OTP type" in withContext { context =>
+      "return None when there is no OTP for the given OTP ID and OTP type" in withContext { context =>
         import context.*
-
-        val userID  = arbitrarySample[UserID]
-        val otpType = arbitrarySample[OtpType]
 
         val userOtpRepository = ZIO
           .service[UserOtpRepository]
@@ -210,11 +207,69 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
           )
           .zioValue
 
-        val maybeUserOtpRowRetrieved = userOtpRepository
+        val otpID   = arbitrarySample[OtpID]
+        val otpType = arbitrarySample[OtpType]
+
+        val userOtpRowOptRetrieved = userOtpRepository
+          .getUserOtp(otpID, otpType)
+          .zioValue
+
+        userOtpRowOptRetrieved shouldBe None
+      }
+    }
+
+    "getUserOtpByUserID" should {
+      "successfully retrieve an existing OTP for a user by user ID and OTP type" in withContext { context =>
+        import context.*
+
+        val userOtpRepository = ZIO
+          .service[UserOtpRepository]
+          .provide(
+            UserOtpRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userOtpQueries),
+          )
+          .zioValue
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
+
+        postgresClient
+          .executeQuery(
+            userOtpQueries.insertUserOtp(userOtpRow)
+          )
+          .zioValue
+
+        val userOtpRowOptRetrieved = userOtpRepository
+          .getUserOtpByUserID(userID = userOtpRow.userID, otpType = userOtpRow.otpType)
+          .zioValue
+
+        userOtpRowOptRetrieved shouldBe Some(userOtpRow)
+      }
+
+      "return None when there is no OTP for the given user ID and OTP type" in withContext { context =>
+        import context.*
+
+        val userOtpRepository = ZIO
+          .service[UserOtpRepository]
+          .provide(
+            UserOtpRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userOtpQueries),
+          )
+          .zioValue
+
+        val userID = arbitrarySample[UserID]
+        val otpType = arbitrarySample[OtpType]
+
+        val userOtpRowOptRetrieved = userOtpRepository
           .getUserOtpByUserID(userID, otpType)
           .zioValue
 
-        maybeUserOtpRowRetrieved shouldBe None
+        userOtpRowOptRetrieved shouldBe None
       }
     }
 
@@ -224,8 +279,6 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
 
         val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
-        val userOtpRow = arbitrarySample[UserOtpRow]
 
         val userOtpRepository = ZIO
           .service[UserOtpRepository]
@@ -237,6 +290,8 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
 
         postgresClient
           .executeQuery(
@@ -273,8 +328,6 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
       "fail to update a non existing user OTP" in withContext { context =>
         import context.*
 
-        val userOtpRow = arbitrarySample[UserOtpRow]
-
         val userOtpRepository = ZIO
           .service[UserOtpRepository]
           .provide(
@@ -285,6 +338,8 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
 
         val expiresAtUpdate = ExpiresAt(userOtpRow.expiresAt.value.plusSeconds(1))
 
@@ -306,8 +361,6 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
       "successfully delete an existing OTP for a user" in withContext { context =>
         import context.*
 
-        val userOtpRow = arbitrarySample[UserOtpRow]
-
         val userOtpRepository = ZIO
           .service[UserOtpRepository]
           .provide(
@@ -318,6 +371,8 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
 
         postgresClient
           .executeQuery(
@@ -342,8 +397,6 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
       "successfully delete a non existin user OTP" in withContext { context =>
         import context.*
 
-        val userOtpRow = arbitrarySample[UserOtpRow]
-
         val userOtpRepository = ZIO
           .service[UserOtpRepository]
           .provide(
@@ -354,6 +407,8 @@ class UserOtpRepositorySpec extends ZWordSpecBase, GatewayArbitraries, Repositor
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
 
         userOtpRepository
           .deleteUserOtp(

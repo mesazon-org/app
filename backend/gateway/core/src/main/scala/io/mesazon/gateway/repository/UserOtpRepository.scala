@@ -22,6 +22,11 @@ trait UserOtpRepository {
       otpType: OtpType,
   ): IO[ServiceError, Option[UserOtpRow]]
 
+  def getUserOtp(
+      otpID: OtpID,
+      otpType: OtpType,
+  ): IO[ServiceError, Option[UserOtpRow]]
+
   def updateUserOtp(
       otpID: OtpID,
       userID: UserID,
@@ -99,6 +104,15 @@ object UserOtpRepository {
           )
       } yield updatedUserOtpRow
 
+    override def getUserOtp(otpID: OtpID, otpType: OtpType): IO[ServiceError, Option[UserOtpRow]] =
+        database
+            .transactionOrWiden(
+            userOtpQueries.getUserOtp(otpID, otpType)
+            )
+            .mapError(e =>
+            ServiceError.InternalServerError.DatabaseError(s"Failed to get user OTP by OTP ID: [$otpID], [$otpType]", e)
+            )
+
     override def getUserOtpByUserID(
         userID: UserID,
         otpType: OtpType,
@@ -120,6 +134,7 @@ object UserOtpRepository {
           ServiceError.InternalServerError
             .DatabaseError(s"Failed to delete user OTP: [$otpID], [$userID], [$otpType]", e)
         )
+
   }
 
   private def observed(userOtpRepository: UserOtpRepository): UserOtpRepository = userOtpRepository

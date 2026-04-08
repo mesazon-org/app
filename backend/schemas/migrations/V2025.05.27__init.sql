@@ -29,6 +29,18 @@ create table user_otp
 
 create index idx_user_otp_user_id on user_otp (user_id);
 
+create table user_token
+(
+    token_id   text        not null,
+    user_id    text        not null,
+    token_type text        not null,
+    created_at timestamptz not null,
+    expires_at timestamptz not null,
+    primary key (token_id)
+);
+
+create index idx_user_token_user_id on user_token using hash (user_id);
+
 create table user_refresh_token
 (
     token_id   text        not null,

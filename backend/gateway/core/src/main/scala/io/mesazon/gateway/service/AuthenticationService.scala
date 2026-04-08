@@ -5,10 +5,10 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.auth.{JwtService, OtpGenerator}
 import io.mesazon.gateway.clients.EmailClient
 import io.mesazon.gateway.config.AuthenticationConfig
-import io.mesazon.gateway.repository.UserManagementRepository
+import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.validation.EmailValidator.EmailRaw
 import io.mesazon.gateway.validation.ServiceValidator
-import io.mesazon.gateway.{smithy, HttpErrorHandler}
+import io.mesazon.gateway.{HttpErrorHandler, smithy}
 import io.mesazon.generator.IDGenerator
 import zio.*
 
@@ -16,6 +16,7 @@ object AuthenticationService {
 
   private final class AuthenticationServiceImpl(
       authenticationConfig: AuthenticationConfig,
+      userOtpRepository: UserOtpRepository,
       userManagementRepository: UserManagementRepository,
       emailValidator: ServiceValidator[EmailRaw, Email],
       verifyEmailValidator: ServiceValidator[smithy.VerifyEmailRequest, VerifyEmail],
@@ -33,7 +34,7 @@ object AuthenticationService {
       maybeUserOnboardRow <- userManagementRepository.getUserOnboardByEmail(email)
       maybeUserOtpRow     <- ZIO
         .foreach(maybeUserOnboardRow)(userOnboardRow =>
-          userManagementRepository.getUserOtpByUserID(
+          userOtpRepository.getUserOtpByUserID(
             userOnboardRow.userID,
             OtpType.EmailVerification,
           )
@@ -59,7 +60,7 @@ object AuthenticationService {
               timeProvider.instantNow
                 .map(_.plusSeconds(authenticationConfig.otpExpiration.toSeconds))
                 .map(ExpiresAt.assume)
-            newUserOtpRow <- userManagementRepository.upsertUserOtp(
+            newUserOtpRow <- userOtpRepository.upsertUserOtp(
               updatedUserOnboard.userID,
               newOtp,
               OtpType.EmailVerification,
@@ -82,7 +83,7 @@ object AuthenticationService {
               .map(_.plusSeconds(authenticationConfig.otpExpiration.toSeconds))
               .map(ExpiresAt.assume)
             otp           <- otpGenerator.generate
-            newUserOtpRow <- userManagementRepository.upsertUserOtp(
+            newUserOtpRow <- userOtpRepository.upsertUserOtp(
               newUserOnboardRow.userID,
               otp,
               OtpType.EmailVerification,
@@ -118,45 +119,28 @@ object AuthenticationService {
     override def verifyEmail(request: smithy.VerifyEmailRequest): ServiceTask[smithy.VerifyEmailResponse] = for {
       _               <- ZIO.logDebug(s"Verify email: [${request.otpID}]")
       verifyEmail     <- verifyEmailValidator.validate(request)
-      maybeUserOtpRow <- userManagementRepository.getUserOtp(verifyEmail.otpID)
+      maybeUserOtpRow <- userOtpRepository.getUserOtp(verifyEmail.otpID, OtpType.EmailVerification)
       userOtpRow      <- ZIO.getOrFailWith(
         ServiceError.UnauthorizedError.OtpError(s"No otp found for otpID: ${verifyEmail.otpID}")
       )(maybeUserOtpRow)
+      maybeUserOnboardRow <- userManagementRepository.getUserOnboard(userOtpRow.userID)
+      userOnboardRow      <- ZIO.getOrFailWith(
+        ServiceError.InternalServerError.UnexpectedError(
+          s"No user onboard found for userID: ${userOtpRow.userID} and otpID: ${userOtpRow.otpID}"
+        )
+      )(maybeUserOnboardRow)
       now <- timeProvider.instantNow
-      _   <- userOtpRow.otpType match {
-        case OtpType.EmailVerification =>
-          if (userOtpRow.otp == verifyEmail.otp && userOtpRow.expiresAt.value.isAfter(now)) {
-            for {
-              maybeUserOnboardRow <- userManagementRepository.getUserOnboard(userOtpRow.userID)
-              userOnboardRow      <- ZIO.getOrFailWith(
-                ServiceError.InternalServerError.UnexpectedError(
-                  s"No user onboard found for userID: ${userOtpRow.userID} and otpID: ${userOtpRow.otpID}"
-                )
-              )(maybeUserOnboardRow)
-              _ <-
-                if (userOnboardRow.stage == OnboardStage.EmailVerification)
-                  userManagementRepository
-                    .updateUserOnboard(
-                      userOnboardRow.userID,
-                      OnboardStage.EmailVerified,
-                    )
-                    .unit
-                else
-                  userManagementRepository.deleteUserOtp(userOtpRow.otpID) *> ZIO.fail(
-                    ServiceError.UnauthorizedError.OtpError(
-                      s"User onboard stage was not in expected stage: ${OnboardStage.EmailVerification}, actual stage: ${userOnboardRow.stage}, userID: ${userOnboardRow.userID}, otpID: ${userOtpRow.otpID}"
-                    )
-                  )
-              _ <- userManagementRepository.deleteUserOtp(userOtpRow.otpID)
-            } yield ()
-          } else
-            ZIO.fail(
-              ServiceError.UnauthorizedError.OtpError(
-                s"Invalid or expired OTP for otpID: [${userOtpRow.otpID}]"
-              )
+      _   <- (userOtpRow.otpType, userOnboardRow.stage) match {
+        case (OtpType.EmailVerification, OnboardStage.EmailVerification)
+            if userOtpRow.otp == verifyEmail.otp && userOtpRow.expiresAt.value.isAfter(now) =>
+          userManagementRepository
+            .updateUserOnboard(
+              userOnboardRow.userID,
+              OnboardStage.EmailVerified,
             )
+            .unit *> userOtpRepository.deleteUserOtp(userOtpRow.otpID, userOtpRow.userID, userOtpRow.otpType)
         case _ =>
-          userManagementRepository.deleteUserOtp(userOtpRow.otpID) *> ZIO.fail(
+          ZIO.fail(
             ServiceError.UnauthorizedError.OtpError(
               s"Invalid otp type: [${userOtpRow.otpType}], expected: [${OtpType.EmailVerification}]"
             )

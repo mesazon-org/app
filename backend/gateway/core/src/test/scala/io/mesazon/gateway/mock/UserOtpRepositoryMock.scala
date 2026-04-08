@@ -10,19 +10,22 @@ import zio.*
 
 trait UserOtpRepositoryMock extends ZIOTestOps, should.Matchers {
   private val upsertUserOtpCounterRef: Ref[Int]      = Ref.make(0).zioValue
-  private val getUserOtpByUserIDCounterRef: Ref[Int] = Ref.make(0).zioValue
   private val updateUserOtpCounterRef: Ref[Int]      = Ref.make(0).zioValue
+  private val getUserOtpCounterRef: Ref[Int]         = Ref.make(0).zioValue
+  private val getUserOtpByUserIDCounterRef: Ref[Int] = Ref.make(0).zioValue
   private val deleteUserOtpCounterRef: Ref[Int]      = Ref.make(0).zioValue
 
   def checkUserOtpRepository(
       expectedUpsertUserOtpCalls: Int = 0,
-      expectedGetUserOtpByUserIDCalls: Int = 0,
       expectedUpdateUserOtpCalls: Int = 0,
+      expectedGetUserOtpCalls: Int = 0,
+      expectedGetUserOtpByUserIDCalls: Int = 0,
       expectedDeleteUserOtpCalls: Int = 0,
   ): Assertion = {
     upsertUserOtpCounterRef.get.zioValue shouldBe expectedUpsertUserOtpCalls
-    getUserOtpByUserIDCounterRef.get.zioValue shouldBe expectedGetUserOtpByUserIDCalls
     updateUserOtpCounterRef.get.zioValue shouldBe expectedUpdateUserOtpCalls
+    getUserOtpCounterRef.get.zioValue shouldBe expectedGetUserOtpCalls
+    getUserOtpByUserIDCounterRef.get.zioValue shouldBe expectedGetUserOtpByUserIDCalls
     deleteUserOtpCounterRef.get.zioValue shouldBe expectedDeleteUserOtpCalls
   }
 
@@ -43,6 +46,15 @@ trait UserOtpRepositoryMock extends ZIOTestOps, should.Matchers {
           maybeUnexpectedError.fold[IO[ServiceError, UserOtpRow]](
             ZIO.succeed(
               userOtpRows.values.find(_.userID == userID).get
+            )
+          )(ZIO.fail(_).orDie)
+        )(ZIO.fail(_))
+
+      override def getUserOtp(otpID: OtpID, otpType: OtpType): IO[ServiceError, Option[UserOtpRow]] =
+        getUserOtpCounterRef.incrementAndGet *> maybeServiceError.fold(
+          maybeUnexpectedError.fold[IO[ServiceError, Option[UserOtpRow]]](
+            ZIO.succeed(
+              userOtpRows.get(otpID).filter(_.otpType == otpType)
             )
           )(ZIO.fail(_).orDie)
         )(ZIO.fail(_))
