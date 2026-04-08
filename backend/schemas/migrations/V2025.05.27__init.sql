@@ -24,8 +24,7 @@ create table user_otp
     updated_at timestamptz not null,
     expires_at timestamptz not null,
     primary key (otp_id),
-    unique (user_id, otp_type),
-    constraint user_otp_fk foreign key (user_id) references user_onboard (user_id)
+    unique (user_id, otp_type)
 );
 
 create index idx_user_otp_user_id on user_otp (user_id);

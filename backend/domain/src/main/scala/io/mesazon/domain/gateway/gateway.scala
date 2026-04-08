@@ -1,6 +1,7 @@
 package io.mesazon.domain.gateway
 
 import io.github.iltotore.iron.*
+import io.github.iltotore.iron.constraint.all.Positive
 import io.mesazon.domain.*
 
 import java.time.Instant
@@ -61,6 +62,9 @@ type Message = Message.T
 
 object Otp extends RefinedType[String, OtpPredicate]
 type Otp = Otp.T
+
+object Retries extends RefinedType[Int, Positive]
+type Retries = Retries.T
 
 object OtpID extends RefinedType[String, NonEmptyTrimmed]
 type OtpID = OtpID.T
