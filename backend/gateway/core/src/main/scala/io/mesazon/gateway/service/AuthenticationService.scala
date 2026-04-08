@@ -163,7 +163,7 @@ object AuthenticationService {
           )
       }
       accessToken  <- jwtService.generateAccessToken(userOtpRow.userID, OnboardStage.EmailVerified)
-      refreshToken <- jwtService.generateRefreshToken(userOtpRow.userID, OnboardStage.EmailVerified)
+      refreshToken <- jwtService.generateRefreshToken(userOtpRow.userID)
       _            <- userManagementRepository.upsertUserRefreshToken(
         userOtpRow.userID,
         refreshToken.tokenID,

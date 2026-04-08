@@ -15,6 +15,7 @@ services:
       DATABASE_PASSWORD: local_password
       EMAIL_PROVIDER_HOST: mailhog
       EMAIL_PROVIDER_PORT: 1025
+      JWT_SECRET_KEY: "Yk8zYkwwNGtVa0JvbE1NSU5lS2dtODdIMWlITzA4cDlZSkRiaFhBZmE4TT0="
 
   postgres:
     image: postgres:17.5-alpine

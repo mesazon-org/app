@@ -14,7 +14,7 @@ import java.util.Date
 trait JwtService {
   def generateAccessToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, AccessJwt]
 
-  def generateRefreshToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, RefreshJwt]
+  def generateRefreshToken(userID: UserID): IO[ServiceError, RefreshJwt]
 
   def verifyAccessToken(jwt: Jwt): IO[ServiceError, AuthedUserAccess]
 
@@ -68,7 +68,7 @@ object JwtService {
           .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to apply Jwt", Some(error)))
       } yield (jwt, jwtConfig.accessTokenExpiresAtOffset)
 
-    override def generateRefreshToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, RefreshJwt] =
+    override def generateRefreshToken(userID: UserID): IO[ServiceError, RefreshJwt] =
       for {
         instantNow <- timeProvider.instantNow
         tokenIDRaw <- idGenerator.generate

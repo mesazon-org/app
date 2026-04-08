@@ -40,7 +40,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
-      override def generateRefreshToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, RefreshJwt] =
+      override def generateRefreshToken(userID: UserID): IO[ServiceError, RefreshJwt] =
         generateRefreshTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
