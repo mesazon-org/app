@@ -46,5 +46,6 @@ module "gateway_core_app" {
     DATABASE_USERNAME     = data.digitalocean_database_user.database_user.name
     DATABASE_PASSWORD     = data.digitalocean_database_user.database_user.password
     EMAIL_SENDER_PASSWORD = var.email_sender_password
+    JWT_SECRET_KEY        = var.jwt_secret_key
   }
 }

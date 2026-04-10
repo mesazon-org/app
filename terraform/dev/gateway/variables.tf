@@ -23,3 +23,9 @@ variable "email_sender_password" {
   type        = string
   sensitive   = true
 }
+
+variable "jwt_secret_key" {
+  description = "Secret key for signing JWT tokens."
+  type        = string
+  sensitive   = true
+}
