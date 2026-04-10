@@ -14,6 +14,8 @@ import io.mesazon.testkit.base.{DockerComposeBase, IronRefinedTypeTransformer, Z
 import sttp.model.*
 import zio.*
 
+import java.time.Instant
+
 class UserSignupApiSpec
     extends ZWordSpecBase,
       DockerComposeBase,
@@ -41,9 +43,6 @@ class UserSignupApiSpec
       gatewayApiClient <- ZIO
         .service[GatewayClient]
         .provide(GatewayClient.live, ZLayer.succeed(gatewayApiClientConfig))
-      userDetailsQueries <- ZIO
-        .service[UserDetailsQueries]
-        .provide(UserDetailsQueries.live, RepositoryConfig.live, appNameLive)
       userDetailsQueries <- ZIO
         .service[UserDetailsQueries]
         .provide(UserDetailsQueries.live, RepositoryConfig.live, appNameLive)
@@ -82,7 +81,7 @@ class UserSignupApiSpec
     }
   }
 
-  "User Signup API" should {
+  "User Signup API" when {
     "/signup/email" should {
       "successfully sign up a new user with valid email and verify email" in withContext { context =>
         import context.*
@@ -98,13 +97,12 @@ class UserSignupApiSpec
         userDetailsRowsAll should have size 1
 
         userDetailsRowsAll should contain theSameElementsAs List(
-          UserOnboardRow(
+          UserDetailsRow(
             userID = userDetailsRowsAll.head.userID,
             email = userDetailsRowsAll.head.email,
             fullName = None,
-            passwordHash = None,
             phoneNumber = None,
-            stage = OnboardStage.EmailVerification,
+            onboardStage = OnboardStage.EmailVerification,
             createdAt = userDetailsRowsAll.head.createdAt,
             updatedAt = userDetailsRowsAll.head.updatedAt,
           )
@@ -148,13 +146,12 @@ class UserSignupApiSpec
 
           userDetailsRowsAll should have size 1
           userDetailsRowsAll should contain theSameElementsAs List(
-            UserOnboardRow(
+            UserDetailsRow(
               userID = userDetailsRowsAll.head.userID,
               email = userDetailsRowsAll.head.email,
               fullName = None,
-              passwordHash = None,
               phoneNumber = None,
-              stage = OnboardStage.EmailVerification,
+              onboardStage = OnboardStage.EmailVerification,
               createdAt = userDetailsRowsAll.head.createdAt,
               updatedAt = userDetailsRowsAll.head.updatedAt,
             )
@@ -201,6 +198,7 @@ class UserSignupApiSpec
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
           userID = userDetailsRow.userID,
           otpType = OtpType.EmailVerification,
+          expiresAt = ExpiresAt.assume(Instant.now.plusSeconds(10)),
         )
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
@@ -225,14 +223,62 @@ class UserSignupApiSpec
       "fail with BadRequest when request is invalid" in withContext { context =>
         import context.*
 
-        val verifyEmailRequest = smithy.VerifyEmailRequest(
-          email = "invalidemail",
-          otp = "invalidotp",
+        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest].copy(
+          otp = "invalidotp"
         )
 
         val response = gatewayClient.verifyEmail(verifyEmailRequest).zioValue
 
         response.code shouldBe StatusCode.BadRequest
+      }
+
+      "fail with Unauthorized when OTP is expired" in withContext { context =>
+        import context.*
+
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+          onboardStage = OnboardStage.EmailVerification
+        )
+        val userOtpRow = arbitrarySample[UserOtpRow].copy(
+          userID = userDetailsRow.userID,
+          otpType = OtpType.EmailVerification,
+          expiresAt = ExpiresAt.assume(Instant.now.minusSeconds(10)),
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest].copy(
+          otpID = userOtpRow.otpID.value,
+          otp = userOtpRow.otp.value,
+        )
+
+        val response = gatewayClient.verifyEmail(verifyEmailRequest).zioValue
+
+        response.code shouldBe StatusCode.Unauthorized
+      }
+
+      "fail with Unauthorized when OTP is wrong" in withContext { context =>
+        import context.*
+
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+          onboardStage = OnboardStage.EmailVerification
+        )
+        val userOtpRow = arbitrarySample[UserOtpRow].copy(
+          userID = userDetailsRow.userID,
+          otpType = OtpType.EmailVerification,
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest].copy(
+          otpID = userOtpRow.otpID.value,
+          otp = "123ABC", // wrong otp
+        )
+
+        val response = gatewayClient.verifyEmail(verifyEmailRequest).zioValue
+
+        response.code shouldBe StatusCode.Unauthorized
       }
     }
   }

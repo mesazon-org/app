@@ -45,29 +45,6 @@ create table user_token
 
 create index idx_user_token_user_id on user_token using hash (user_id);
 
-create table user_contact
-(
-    user_contact_id text        not null,
-    user_id         text        not null,
-    display_name    text        not null,
-    first_name      text        not null,
-    phone_number    text        not null,
-    last_name       text,
-    company         text,
-    email           text,
-    address_line_1  text,
-    address_line_2  text,
-    city            text,
-    postal_code     text,
-    created_at      timestamptz not null,
-    updated_at      timestamptz not null,
-    primary key (user_contact_id),
-    unique (phone_number, user_id),
-    constraint user_details_fk foreign key (user_id) references user_details (user_id)
-);
-
-create index idx_user_contact_user_id on user_contact (user_id);
-
 create table waha_user
 (
     user_id              text        not null,
