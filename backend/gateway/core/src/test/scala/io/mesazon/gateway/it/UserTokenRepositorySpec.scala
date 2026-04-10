@@ -1,6 +1,7 @@
 package io.mesazon.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
+import io.github.gaelrenoux.tranzactio.DbException
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.RepositoryConfig
@@ -192,6 +193,90 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           userTokensRowAll should contain theSameElementsAs List(
             userTokenRowNew
           )
+      }
+
+      "fail to re-insert the same token when not tokenIDOptOld is provided" in withContext { context =>
+        import context.*
+
+        val instantNow          = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow            = Clock.fixed(instantNow, ZoneOffset.UTC)
+        val userTokenRepository = ZIO
+          .service[UserTokenRepository]
+          .provide(
+            UserTokenRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            ZLayer.succeed(userTokenQueries),
+            Mocks.timeProviderLive(clockNow),
+          )
+          .zioValue
+
+        val userTokenRow = arbitrarySample[UserTokenRow]
+
+        postgresClient
+          .executeQuery(
+            userTokenQueries.insertUserToken(userTokenRow)
+          )
+          .zioValue
+
+        val serviceError = userTokenRepository
+          .upsertUserToken(
+            tokenID = userTokenRow.tokenID,
+            userID = userTokenRow.userID,
+            tokenType = userTokenRow.tokenType,
+            expiresAt = userTokenRow.expiresAt,
+            tokenIDOptOld = None,
+          )
+          .zioError
+
+        serviceError.message shouldBe s"Failed to insert user token: [${userTokenRow.tokenID}], [${userTokenRow.tokenType}], [${userTokenRow.userID}], [${userTokenRow.expiresAt}]"
+        serviceError.underlying.value shouldBe a[DbException]
+      }
+
+      "fail to upsert a user token when tokenIDOptOld is provided but the old token does not exist and another token with the same new tokenID already exists" in withContext {
+        context =>
+          import context.*
+
+          val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
+
+          val userTokenRepository = ZIO
+            .service[UserTokenRepository]
+            .provide(
+              UserTokenRepository.live,
+              ZLayer.succeed(postgresClient.database),
+              ZLayer.succeed(userTokenQueries),
+              Mocks.timeProviderLive(clockNow),
+            )
+            .zioValue
+
+          val tokenIDOld      = arbitrarySample[TokenID]
+          val userTokenRowNew = arbitrarySample[UserTokenRow]
+            .copy(createdAt = CreatedAt(instantNow), expiresAt = ExpiresAt(instantNow.plusSeconds(10)))
+          val userTokenRowExisting = arbitrarySample[UserTokenRow]
+            .copy(
+              tokenID = userTokenRowNew.tokenID,
+              createdAt = CreatedAt(instantNow),
+              expiresAt = ExpiresAt(instantNow.plusSeconds(20)),
+            )
+
+          postgresClient
+            .executeQuery(
+              userTokenQueries.insertUserToken(userTokenRowExisting)
+            )
+            .zioValue
+
+          val serviceError = userTokenRepository
+            .upsertUserToken(
+              tokenID = userTokenRowNew.tokenID,
+              userID = userTokenRowNew.userID,
+              tokenType = userTokenRowNew.tokenType,
+              expiresAt = userTokenRowNew.expiresAt,
+              tokenIDOptOld = Some(tokenIDOld),
+            )
+            .zioError
+
+          serviceError.message shouldBe s"Failed to upsert user token: [$tokenIDOld], [${userTokenRowNew.tokenID}], [${userTokenRowNew.tokenType}], [${userTokenRowNew.userID}], [${userTokenRowNew.expiresAt}]"
+          serviceError.underlying.value shouldBe a[DbException]
       }
     }
 

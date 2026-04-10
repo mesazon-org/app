@@ -53,12 +53,12 @@ object UserTokenRepository {
             database
               .transactionOrWiden(for {
                 _ <- userTokenQueries.deleteUserToken(tokenIDOld, userID, tokenType)
-                _ <- database.transactionOrWiden(userTokenQueries.insertUserToken(userTokenRowNew))
+                _ <- userTokenQueries.insertUserToken(userTokenRowNew)
               } yield ())
               .mapError(e =>
                 ServiceError.InternalServerError
                   .DatabaseError(
-                    s"Failed to upsert user token: [$tokenIDOld], [$tokenID], [$tokenType], [$userID], $expiresAt]",
+                    s"Failed to upsert user token: [$tokenIDOld], [$tokenID], [$tokenType], [$userID], [$expiresAt]",
                     e,
                   )
               )
@@ -67,7 +67,7 @@ object UserTokenRepository {
               .transactionOrWiden(userTokenQueries.insertUserToken(userTokenRowNew))
               .mapError(e =>
                 ServiceError.InternalServerError
-                  .DatabaseError(s"Failed to insert user token: [$tokenID], [$tokenType], [$userID], $expiresAt]", e)
+                  .DatabaseError(s"Failed to insert user token: [$tokenID], [$tokenType], [$userID], [$expiresAt]", e)
               )
         }
       } yield ()

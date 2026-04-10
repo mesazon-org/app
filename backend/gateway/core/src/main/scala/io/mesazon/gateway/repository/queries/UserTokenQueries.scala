@@ -30,7 +30,6 @@ class UserTokenQueries(
       sql"""
            |INSERT INTO $frSchema.$frUserTokensTable ($userTokensFields)
            |VALUES ($userTokenRow)
-           |ON CONFLICT DO NOTHING
            |""".stripMargin.update.run
     }.unit
 

@@ -115,7 +115,7 @@ object UserSignupService {
         userDetailsRowOpt      <- userDetailsRepository.getUserDetails(userOtpRowExisting.userID)
         userDetailsRowExisting <- ZIO.getOrFailWith(
           ServiceError.InternalServerError.UnexpectedError(
-            s"No user onboard found for userID: ${userOtpRowExisting.userID} and otpID: ${userOtpRowExisting.otpID}"
+            s"No user details found for userID: ${userOtpRowExisting.userID} and otpID: ${userOtpRowExisting.otpID}"
           )
         )(userDetailsRowOpt)
         instantNow <- timeProvider.instantNow
