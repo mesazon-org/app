@@ -32,7 +32,6 @@ final class UserOtpQueries(
       sql"""
            |INSERT INTO $frSchema.$frUserOtpTable ($userOtpFields)
            |VALUES ($userOtpRow)
-           |ON CONFLICT DO NOTHING
            |""".stripMargin.update.run
     }.unit
 
