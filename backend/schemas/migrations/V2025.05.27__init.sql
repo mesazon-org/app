@@ -1,18 +1,24 @@
-create table user_onboard
+create table user_credentials
+(
+    user_id       text        not null,
+    password_hash text        not null,
+    created_at    timestamptz not null,
+    updated_at    timestamptz not null,
+    primary key (user_id)
+);
+
+create table user_details
 (
     user_id       text        not null,
     email         text        not null,
     full_name     text,
     phone_number  text,
-    password_hash text,
-    stage         text        not null,
+    onboard_stage text        not null,
     created_at    timestamptz not null,
     updated_at    timestamptz not null,
     primary key (user_id),
     unique (email)
 );
-
-create index idx_user_onboard_email on user_onboard (email);
 
 create table user_otp
 (
@@ -24,64 +30,20 @@ create table user_otp
     updated_at timestamptz not null,
     expires_at timestamptz not null,
     primary key (otp_id),
-    unique (user_id, otp_type),
-    constraint user_otp_fk foreign key (user_id) references user_onboard (user_id)
+    unique (user_id, otp_type)
 );
 
-create index idx_user_otp_user_id on user_otp (user_id);
-
-create table user_refresh_token
+create table user_token
 (
     token_id   text        not null,
     user_id    text        not null,
+    token_type text        not null,
     created_at timestamptz not null,
     expires_at timestamptz not null,
-    primary key (token_id),
-    constraint user_token_fk foreign key (user_id) references user_onboard (user_id)
+    primary key (token_id)
 );
 
-create index idx_user_refresh_token_user_id on user_refresh_token (user_id);
-
-create table user_details
-(
-    user_id        text        not null,
-    email          text        not null,
-    first_name     text        not null,
-    last_name      text        not null,
-    phone_number   text        not null,
-    address_line_1 text        not null,
-    address_line_2 text,
-    city           text        not null,
-    postal_code    text        not null,
-    company        text        not null,
-    created_at     timestamptz not null,
-    updated_at     timestamptz not null,
-    primary key (user_id),
-    unique (email)
-);
-
-create table user_contact
-(
-    user_contact_id text        not null,
-    user_id         text        not null,
-    display_name    text        not null,
-    first_name      text        not null,
-    phone_number    text        not null,
-    last_name       text,
-    company         text,
-    email           text,
-    address_line_1  text,
-    address_line_2  text,
-    city            text,
-    postal_code     text,
-    created_at      timestamptz not null,
-    updated_at      timestamptz not null,
-    primary key (user_contact_id),
-    unique (phone_number, user_id),
-    constraint user_details_fk foreign key (user_id) references user_details (user_id)
-);
-
-create index idx_user_contact_user_id on user_contact (user_id);
+create index idx_user_token_user_id on user_token using hash (user_id);
 
 create table waha_user
 (

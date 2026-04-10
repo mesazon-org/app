@@ -7,7 +7,7 @@ import zio.{ZIO, ZLayer}
 
 object VerifyEmailValidator {
 
-  private val verifyEmailValidatorLive: DomainValidator[smithy.VerifyEmailRequest, VerifyEmail] = { request =>
+  private val verifyEmailDomainValidatorLive: DomainValidator[smithy.VerifyEmailRequest, VerifyEmail] = { request =>
     ZIO.succeed(
       (
         validateRequiredField("otpID", request.otpID, OtpID.either),
@@ -16,5 +16,5 @@ object VerifyEmailValidator {
     )
   }
 
-  val live = ZLayer.succeed(toServiceValidator(verifyEmailValidatorLive))
+  val verifyEmailValidatorLive = ZLayer.succeed(toServiceValidator(verifyEmailDomainValidatorLive))
 }

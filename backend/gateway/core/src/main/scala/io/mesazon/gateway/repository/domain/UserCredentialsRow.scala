@@ -2,12 +2,9 @@ package io.mesazon.gateway.repository.domain
 
 import io.mesazon.domain.gateway.*
 
-case class UserDetailsRow(
+case class UserCredentialsRow(
     userID: UserID,
-    email: Email,
-    fullName: Option[FullName],
-    phoneNumber: Option[PhoneNumberE164],
-    onboardStage: OnboardStage,
+    passwordHash: PasswordHash,
     createdAt: CreatedAt,
     updatedAt: UpdatedAt,
 )

@@ -1,6 +1,7 @@
 package io.mesazon.domain.gateway
 
 import io.github.iltotore.iron.*
+import io.github.iltotore.iron.constraint.all.Positive
 import io.mesazon.domain.*
 
 import java.time.Instant
@@ -17,7 +18,7 @@ type TokenID = TokenID.T
 object UserContactID extends RefinedType[String, NonEmptyTrimmed]
 type UserContactID = UserContactID.T
 
-object Email extends RefinedType[String, NonEmptyTrimmedLowerCase]
+object Email extends RefinedType[String, EmailPredicate]
 type Email = Email.T
 
 object FullName extends RefinedType[String, NonEmptyTrimmed]
@@ -25,12 +26,6 @@ type FullName = FullName.T
 
 object PasswordHash extends RefinedType[String, NonEmptyTrimmed]
 type PasswordHash = PasswordHash.T
-
-object FirstName extends RefinedType[String, NonEmptyTrimmed]
-type FirstName = FirstName.T
-
-object LastName extends RefinedType[String, NonEmptyTrimmed]
-type LastName = LastName.T
 
 object PhoneNumberE164 extends RefinedType[String, NonEmptyTrimmed] {
   def cy(phoneNationalNumber: String): PhoneNumberE164.T =
@@ -61,6 +56,9 @@ type Message = Message.T
 
 object Otp extends RefinedType[String, OtpPredicate]
 type Otp = Otp.T
+
+object Retries extends RefinedType[Int, Positive]
+type Retries = Retries.T
 
 object OtpID extends RefinedType[String, NonEmptyTrimmed]
 type OtpID = OtpID.T

@@ -44,23 +44,23 @@ object Main extends ZIOAppDefault {
 
       // Services
       HealthCheckService.live,
-      UserManagementService.live,
-      UserContactsService.live,
       WahaService.live,
-      AuthenticationService.live,
+      UserSignupService.live,
       JwtService.live,
 
       // Repository
       PostgresTransactor.live,
       PingRepository.live,
-      UserManagementRepository.live,
-      UserContactRepository.live,
       WahaRepository.live,
+      UserOtpRepository.live,
+      UserTokenRepository.live,
+      UserDetailsRepository.live,
 
       // Queries
       WahaQueries.live,
-      UserManagementQueries.live,
-      UserContactQueries.live,
+      UserOtpQueries.live,
+      UserTokenQueries.live,
+      UserDetailsQueries.live,
 
       // Auth
       AuthorizationService.live,
@@ -80,18 +80,15 @@ object Main extends ZIOAppDefault {
       HttpClientConfig.live,
       OpenAIClientConfig.live,
       EmailConfig.live,
-      AuthenticationConfig.live,
+      UserSignupConfig.live,
       JwtConfig.live,
 
       // Validators
       EmailValidator.emailValidatorLive,
-      PhoneNumberValidator.phoneNumberRegionValidatorLive,
+//      PhoneNumberValidator.phoneNumberRegionValidatorLive,
       PhoneNumberValidator.wahaPhoneNumberValidatorLive,
-      UserManagementValidators.onboardUserDetailsRequestValidatorLive,
-      UserManagementValidators.updateUserDetailsRequestValidatorLive,
-      UserContactsValidators.upsertUserContactsValidatorLive,
       WahaValidator.wahaMessageRequestValidatorLive,
-      VerifyEmailValidator.live,
+      VerifyEmailValidator.verifyEmailValidatorLive,
 
       // Clients
       SttpBackend.live,

@@ -14,6 +14,7 @@ services:
       DATABASE_USERNAME: local_user
       DATABASE_PASSWORD: local_password
       EMAIL_PROVIDER_HOST: mailhog
+      APP_LOG_LEVEL: DEBUG
       EMAIL_PROVIDER_PORT: 1025
       JWT_SECRET_KEY: "Yk8zYkwwNGtVa0JvbE1NSU5lS2dtODdIMWlITzA4cDlZSkRiaFhBZmE4TT0="
 

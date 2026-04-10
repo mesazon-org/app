@@ -8,7 +8,6 @@ import org.scalatest.matchers.should
 import zio.*
 
 trait EmailClientMock extends ZIOTestOps, should.Matchers {
-
   private val sendEmailVerificationEmailCounterRef: Ref[Int] = Ref.make(0).zioValue
   private val sendWelcomeEmailCounterRef: Ref[Int]           = Ref.make(0).zioValue
 

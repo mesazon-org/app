@@ -17,12 +17,8 @@ import zio.interop.catz.*
 case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]) {
   import config.*
 
-  given JsonValueCodec[smithy.OnboardUserDetailsRequest]      = JsonCodecMaker.make
-  given JsonValueCodec[smithy.UpdateUserDetailsRequest]       = JsonCodecMaker.make
-  given JsonValueCodec[smithy.SignUpEmailRequest]             = JsonCodecMaker.make
-  given JsonValueCodec[smithy.UpsertUserContactRequest]       = JsonCodecMaker.make
-  given JsonValueCodec[smithy.VerifyEmailRequest]             = JsonCodecMaker.make
-  given JsonValueCodec[List[smithy.UpsertUserContactRequest]] = JsonCodecMaker.make
+  given JsonValueCodec[smithy.SignUpEmailRequest] = JsonCodecMaker.make
+  given JsonValueCodec[smithy.VerifyEmailRequest] = JsonCodecMaker.make
 
   given JsonValueCodec[smithy.SignUpEmailResponse] = JsonCodecMaker.make
 
@@ -53,39 +49,6 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .body(asJson(verifyEmailRequest))
       .response(ignore)
       .send(sttpBackend)
-
-  def onboardUser(
-      onboardUserDetailsRequest: smithy.OnboardUserDetailsRequest
-  ): Task[StatusCode] =
-    basicRequest
-      .post(externalUri.addPath("users", "onboard"))
-      .auth
-      .bearer(token)
-      .body(asJson(onboardUserDetailsRequest))
-      .send(sttpBackend)
-      .map(_.code)
-
-  def updateUser(
-      updateUserDetailsRequest: smithy.UpdateUserDetailsRequest
-  ): Task[StatusCode] =
-    basicRequest
-      .post(externalUri.addPath("users", "update"))
-      .auth
-      .bearer(token)
-      .body(asJson(updateUserDetailsRequest))
-      .send(sttpBackend)
-      .map(_.code)
-
-  def upsertUserContacts(
-      upsertUserContactsRequest: List[smithy.UpsertUserContactRequest]
-  ): Task[StatusCode] =
-    basicRequest
-      .post(externalUri.addPath("contacts", "upsert"))
-      .auth
-      .bearer(token)
-      .body(asJson(upsertUserContactsRequest))
-      .send(sttpBackend)
-      .map(_.code)
 }
 
 object GatewayClient {
