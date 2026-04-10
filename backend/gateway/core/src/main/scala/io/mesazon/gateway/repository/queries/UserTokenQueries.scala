@@ -1,12 +1,11 @@
 package io.mesazon.gateway.repository.queries
 
-import io.mesazon.gateway.config.RepositoryConfig
 import doobie.*
 import doobie.implicits.*
 import doobie.postgres.implicits.*
 import io.github.gaelrenoux.tranzactio.doobie.*
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.config.*
+import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.domain.*
 import zio.*
 
@@ -61,7 +60,7 @@ class UserTokenQueries(
     }.unit
 
   // Testing
-  def getAllUserTokens: TranzactIO[List[UserTokenRow]] =
+  def getAllUserTokensTesting: TranzactIO[List[UserTokenRow]] =
     tzio {
       sql"""
            |SELECT $userTokensFields

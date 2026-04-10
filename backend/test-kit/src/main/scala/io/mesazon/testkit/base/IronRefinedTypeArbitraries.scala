@@ -38,6 +38,15 @@ trait IronRefinedTypeArbitraries {
       .map(_.refineUnsafe[NonEmptyTrimmed])
   }
 
+  given arbEmailPredicate: Arbitrary[String :| EmailPredicate] = Arbitrary {
+    Gen
+      .choose(5, 20)
+      .flatMap(Gen.listOfN(_, Gen.alphaNumChar))
+      .map(_.mkString.trim.toLowerCase)
+      .map(_ + "@example.com")
+      .map(_.refineUnsafe[EmailPredicate])
+  }
+
   given arbWahaIDPredicate: Arbitrary[String :| WahaIDPredicate] = Arbitrary {
     Gen
       .nonEmptyStringOf(Gen.alphaNumChar)

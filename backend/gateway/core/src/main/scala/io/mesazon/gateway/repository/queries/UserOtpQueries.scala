@@ -89,7 +89,7 @@ final class UserOtpQueries(
     }.unit
 
   // Testing
-  def getAllUserOtps: TranzactIO[List[UserOtpRow]] =
+  def getAllUserOtpsTesting: TranzactIO[List[UserOtpRow]] =
     tzio {
       sql"""
            |SELECT $userOtpFields

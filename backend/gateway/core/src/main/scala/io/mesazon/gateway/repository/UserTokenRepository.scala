@@ -10,11 +10,11 @@ import zio.*
 
 trait UserTokenRepository {
   def upsertUserToken(
-      tokenIDOptOld: Option[TokenID],
       tokenID: TokenID,
       userID: UserID,
       tokenType: TokenType,
       expiresAt: ExpiresAt,
+      tokenIDOptOld: Option[TokenID] = None,
   ): IO[ServiceError, Unit]
 
   def getUserToken(tokenID: TokenID, userID: UserID, tokenType: TokenType): IO[ServiceError, Option[UserTokenRow]]
@@ -33,11 +33,11 @@ object UserTokenRepository {
   ) extends UserTokenRepository {
 
     override def upsertUserToken(
-        tokenIDOptOld: Option[TokenID],
         tokenID: TokenID,
         userID: UserID,
         tokenType: TokenType,
         expiresAt: ExpiresAt,
+        tokenIDOptOld: Option[TokenID] = None,
     ): IO[ServiceError, Unit] =
       for {
         instantNow <- timeProvider.instantNow

@@ -101,7 +101,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .zioValue
 
         val userOtpRowsAll =
-          postgresClient.executeQuery(userOtpQueries.getAllUserOtps).zioValue
+          postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll should have size 1
         userOtpRowsAll should contain theSameElementsAs List(userOtpRowInserted)
@@ -145,7 +145,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .zioValue
 
         val userOtpRowsAll =
-          postgresClient.executeQuery(userOtpQueries.getAllUserOtps).zioValue
+          postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll should have size 1
         userOtpRowsAll should contain theSameElementsAs List(
@@ -262,7 +262,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           )
           .zioValue
 
-        val userID = arbitrarySample[UserID]
+        val userID  = arbitrarySample[UserID]
         val otpType = arbitrarySample[OtpType]
 
         val userOtpRowOptRetrieved = userOtpRepository
@@ -311,7 +311,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .zioValue
 
         val userOtpRowsAll =
-          postgresClient.executeQuery(userOtpQueries.getAllUserOtps).zioValue
+          postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll should have size 1
         userOtpRowsAll should contain theSameElementsAs List(
@@ -389,7 +389,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .zioValue
 
         val userOtpRowsAll =
-          postgresClient.executeQuery(userOtpQueries.getAllUserOtps).zioValue
+          postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll shouldBe empty
       }
@@ -419,7 +419,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .zioValue
 
         val userOtpRowsAll =
-          postgresClient.executeQuery(userOtpQueries.getAllUserOtps).zioValue
+          postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll shouldBe empty
       }

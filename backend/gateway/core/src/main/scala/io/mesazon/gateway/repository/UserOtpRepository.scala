@@ -12,8 +12,8 @@ import zio.*
 trait UserOtpRepository {
   def upsertUserOtp(
       userID: UserID,
-      otp: Otp,
       otpType: OtpType,
+      otp: Otp,
       expiresAt: ExpiresAt,
   ): IO[ServiceError, UserOtpRow]
 
@@ -52,8 +52,8 @@ object UserOtpRepository {
 
     override def upsertUserOtp(
         userID: UserID,
-        otp: Otp,
         otpType: OtpType,
+        otp: Otp,
         expiresAt: ExpiresAt,
     ): IO[ServiceError, UserOtpRow] = for {
       instantNow <- timeProvider.instantNow
@@ -105,13 +105,13 @@ object UserOtpRepository {
       } yield updatedUserOtpRow
 
     override def getUserOtp(otpID: OtpID, otpType: OtpType): IO[ServiceError, Option[UserOtpRow]] =
-        database
-            .transactionOrWiden(
-            userOtpQueries.getUserOtp(otpID, otpType)
-            )
-            .mapError(e =>
-            ServiceError.InternalServerError.DatabaseError(s"Failed to get user OTP by OTP ID: [$otpID], [$otpType]", e)
-            )
+      database
+        .transactionOrWiden(
+          userOtpQueries.getUserOtp(otpID, otpType)
+        )
+        .mapError(e =>
+          ServiceError.InternalServerError.DatabaseError(s"Failed to get user OTP by OTP ID: [$otpID], [$otpType]", e)
+        )
 
     override def getUserOtpByUserID(
         userID: UserID,

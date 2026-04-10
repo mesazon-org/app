@@ -1,7 +1,7 @@
 package io.mesazon.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
-import io.mesazon.domain.gateway.CreatedAt
+import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.UserTokenRepository
@@ -11,7 +11,7 @@ import io.mesazon.gateway.utils.RepositoryArbitraries
 import io.mesazon.test.postgresql.PostgreSQLTestClient
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.{DockerComposeBase, ZWordSpecBase}
-import zio.{ZIO, ZLayer}
+import zio.*
 
 import java.time.temporal.ChronoUnit
 import java.time.{Clock, Instant, ZoneOffset}
@@ -75,12 +75,13 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         import context.*
 
         val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow   = Clock.fixed(now, ZoneOffset.UTC)
+        val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
 
         val userTokenRepository = ZIO
           .service[UserTokenRepository]
           .provide(
             UserTokenRepository.live,
+            ZLayer.succeed(postgresClient.database),
             ZLayer.succeed(userTokenQueries),
             Mocks.timeProviderLive(clockNow),
           )
@@ -90,18 +91,394 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         userTokenRepository
           .upsertUserToken(
-            tokenIDOptOld = None,
             tokenID = userTokenRow.tokenID,
             userID = userTokenRow.userID,
             tokenType = userTokenRow.tokenType,
             expiresAt = userTokenRow.expiresAt,
+            tokenIDOptOld = None,
           )
           .zioValue shouldBe ()
 
-        val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokens).zioValue
+        val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
         userTokensRowAll should have size 1
         userTokensRowAll should contain theSameElementsAs List(userTokenRow.copy(createdAt = CreatedAt(instantNow)))
+      }
+
+      "successfully upsert a user token when tokenIDOptOld is provided" in withContext { context =>
+        import context.*
+
+        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
+
+        val userTokenRepository = ZIO
+          .service[UserTokenRepository]
+          .provide(
+            UserTokenRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            ZLayer.succeed(userTokenQueries),
+            Mocks.timeProviderLive(clockNow),
+          )
+          .zioValue
+
+        val userTokenRowOld = arbitrarySample[UserTokenRow]
+          .copy(createdAt = CreatedAt(instantNow.minusSeconds(10)), expiresAt = ExpiresAt(instantNow.minusSeconds(5)))
+        val userTokenRowNew = arbitrarySample[UserTokenRow]
+          .copy(
+            userID = userTokenRowOld.userID,
+            tokenType = userTokenRowOld.tokenType,
+            createdAt = CreatedAt(instantNow),
+            expiresAt = ExpiresAt(instantNow.plusSeconds(10)),
+          )
+
+        postgresClient
+          .executeQuery(
+            userTokenQueries.insertUserToken(userTokenRowOld)
+          )
+          .zioValue
+
+        userTokenRepository
+          .upsertUserToken(
+            tokenID = userTokenRowNew.tokenID,
+            userID = userTokenRowNew.userID,
+            tokenType = userTokenRowNew.tokenType,
+            expiresAt = userTokenRowNew.expiresAt,
+            tokenIDOptOld = Some(userTokenRowOld.tokenID),
+          )
+          .zioValue
+
+        val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+        userTokensRowAll should have size 1
+        userTokensRowAll should contain theSameElementsAs List(
+          userTokenRowNew
+        )
+      }
+
+      "successfully upsert a user token when tokenIDOptOld is provided but the old token does not exist" in withContext {
+        context =>
+          import context.*
+
+          val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+          val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
+
+          val userTokenRepository = ZIO
+            .service[UserTokenRepository]
+            .provide(
+              UserTokenRepository.live,
+              ZLayer.succeed(postgresClient.database),
+              ZLayer.succeed(userTokenQueries),
+              Mocks.timeProviderLive(clockNow),
+            )
+            .zioValue
+
+          val tokenIDOld      = arbitrarySample[TokenID]
+          val userTokenRowNew = arbitrarySample[UserTokenRow]
+            .copy(createdAt = CreatedAt(instantNow), expiresAt = ExpiresAt(instantNow.plusSeconds(10)))
+
+          userTokenRepository
+            .upsertUserToken(
+              tokenID = userTokenRowNew.tokenID,
+              userID = userTokenRowNew.userID,
+              tokenType = userTokenRowNew.tokenType,
+              expiresAt = userTokenRowNew.expiresAt,
+              tokenIDOptOld = Some(tokenIDOld),
+            )
+            .zioValue
+
+          val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+          userTokensRowAll should have size 1
+          userTokensRowAll should contain theSameElementsAs List(
+            userTokenRowNew
+          )
+      }
+    }
+
+    "getUserToken" should {
+      "successfully get a user token" in withContext { context =>
+        import context.*
+
+        val userTokenRepository = ZIO
+          .service[UserTokenRepository]
+          .provide(
+            UserTokenRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            ZLayer.succeed(userTokenQueries),
+          )
+          .zioValue
+
+        val userTokenRow = arbitrarySample[UserTokenRow]
+
+        postgresClient
+          .executeQuery(
+            userTokenQueries.insertUserToken(userTokenRow)
+          )
+          .zioValue
+
+        val userTokenRowOptRetrieved = userTokenRepository
+          .getUserToken(
+            tokenID = userTokenRow.tokenID,
+            userID = userTokenRow.userID,
+            tokenType = userTokenRow.tokenType,
+          )
+          .zioValue
+
+        userTokenRowOptRetrieved shouldBe Some(userTokenRow)
+      }
+
+      "successfully return None when the user token does not exist" in withContext { context =>
+        import context.*
+
+        val userTokenRepository = ZIO
+          .service[UserTokenRepository]
+          .provide(
+            UserTokenRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            ZLayer.succeed(userTokenQueries),
+          )
+          .zioValue
+
+        val tokenID   = arbitrarySample[TokenID]
+        val userID    = arbitrarySample[UserID]
+        val tokenType = arbitrarySample[TokenType]
+
+        val userTokenRowOptRetrieved = userTokenRepository
+          .getUserToken(
+            tokenID = tokenID,
+            userID = userID,
+            tokenType = tokenType,
+          )
+          .zioValue
+
+        userTokenRowOptRetrieved shouldBe None
+      }
+    }
+
+    "deleteUserToken" should {
+      "successfully delete a user token" in withContext { context =>
+        import context.*
+
+        val userTokenRepository = ZIO
+          .service[UserTokenRepository]
+          .provide(
+            UserTokenRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            ZLayer.succeed(userTokenQueries),
+          )
+          .zioValue
+
+        val userTokenRow = arbitrarySample[UserTokenRow]
+
+        postgresClient
+          .executeQuery(
+            userTokenQueries.insertUserToken(userTokenRow)
+          )
+          .zioValue
+
+        userTokenRepository
+          .deleteUserToken(
+            tokenID = userTokenRow.tokenID,
+            userID = userTokenRow.userID,
+            tokenType = userTokenRow.tokenType,
+          )
+          .zioValue shouldBe ()
+
+        val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+        userTokensRowAll should have size 0
+      }
+
+      "successfully do nothing when trying to delete a non-existing user token" in withContext { context =>
+        import context.*
+
+        val userTokenRepository = ZIO
+          .service[UserTokenRepository]
+          .provide(
+            UserTokenRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            ZLayer.succeed(userTokenQueries),
+          )
+          .zioValue
+
+        val tokenID   = arbitrarySample[TokenID]
+        val userID    = arbitrarySample[UserID]
+        val tokenType = arbitrarySample[TokenType]
+
+        userTokenRepository
+          .deleteUserToken(
+            tokenID = tokenID,
+            userID = userID,
+            tokenType = tokenType,
+          )
+          .zioValue shouldBe ()
+
+        val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+        userTokensRowAll should have size 0
+      }
+
+      "successfully delete only the specified user token when multiple tokens exist for the same user" in withContext {
+        context =>
+          import context.*
+
+          val userTokenRepository = ZIO
+            .service[UserTokenRepository]
+            .provide(
+              UserTokenRepository.live,
+              ZLayer.succeed(postgresClient.database),
+              Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+              ZLayer.succeed(userTokenQueries),
+            )
+            .zioValue
+
+          val userID = arbitrarySample[UserID]
+
+          val userTokenRow1 = arbitrarySample[UserTokenRow].copy(userID = userID)
+          val userTokenRow2 = arbitrarySample[UserTokenRow].copy(userID = userID)
+
+          postgresClient
+            .executeQuery(
+              userTokenQueries.insertUserToken(userTokenRow1)
+            )
+            .zioValue
+
+          postgresClient
+            .executeQuery(
+              userTokenQueries.insertUserToken(userTokenRow2)
+            )
+            .zioValue
+
+          userTokenRepository
+            .deleteUserToken(
+              tokenID = userTokenRow1.tokenID,
+              userID = userTokenRow1.userID,
+              tokenType = userTokenRow1.tokenType,
+            )
+            .zioValue shouldBe ()
+
+          val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+          userTokensRowAll should have size 1
+          userTokensRowAll should contain theSameElementsAs List(userTokenRow2)
+      }
+    }
+
+    "deleteAllUserTokens" should {
+      "successfully delete all user tokens for a user" in withContext { context =>
+        import context.*
+
+        val userTokenRepository = ZIO
+          .service[UserTokenRepository]
+          .provide(
+            UserTokenRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            ZLayer.succeed(userTokenQueries),
+          )
+          .zioValue
+
+        val userID = arbitrarySample[UserID]
+
+        val userTokenRow1 = arbitrarySample[UserTokenRow].copy(userID = userID)
+        val userTokenRow2 = arbitrarySample[UserTokenRow].copy(userID = userID)
+
+        postgresClient
+          .executeQuery(
+            userTokenQueries.insertUserToken(userTokenRow1)
+          )
+          .zioValue
+
+        postgresClient
+          .executeQuery(
+            userTokenQueries.insertUserToken(userTokenRow2)
+          )
+          .zioValue
+
+        userTokenRepository
+          .deleteAllUserTokens(userID)
+          .zioValue
+
+        val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+        userTokensRowAll should have size 0
+      }
+
+      "successfully do nothing when trying to delete all user tokens for a user that has no tokens" in withContext {
+        context =>
+          import context.*
+
+          val userTokenRepository = ZIO
+            .service[UserTokenRepository]
+            .provide(
+              UserTokenRepository.live,
+              ZLayer.succeed(postgresClient.database),
+              Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+              ZLayer.succeed(userTokenQueries),
+            )
+            .zioValue
+
+          val userID = arbitrarySample[UserID]
+
+          userTokenRepository
+            .deleteAllUserTokens(userID)
+            .zioValue
+
+          val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+          userTokensRowAll should have size 0
+      }
+
+      "successfully delete only the specified user tokens when multiple users have tokens" in withContext { context =>
+        import context.*
+
+        val userTokenRepository = ZIO
+          .service[UserTokenRepository]
+          .provide(
+            UserTokenRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            ZLayer.succeed(userTokenQueries),
+          )
+          .zioValue
+
+        val userID1 = arbitrarySample[UserID]
+        val userID2 = arbitrarySample[UserID]
+
+        val userTokenRow1 = arbitrarySample[UserTokenRow].copy(userID = userID1)
+        val userTokenRow2 = arbitrarySample[UserTokenRow].copy(userID = userID1)
+        val userTokenRow3 = arbitrarySample[UserTokenRow].copy(userID = userID2)
+
+        postgresClient
+          .executeQuery(
+            userTokenQueries.insertUserToken(userTokenRow1)
+          )
+          .zioValue
+
+        postgresClient
+          .executeQuery(
+            userTokenQueries.insertUserToken(userTokenRow2)
+          )
+          .zioValue
+
+        postgresClient
+          .executeQuery(
+            userTokenQueries.insertUserToken(userTokenRow3)
+          )
+          .zioValue
+
+        userTokenRepository
+          .deleteAllUserTokens(userID1)
+          .zioValue
+
+        val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+        userTokensRowAll should have size 1
+        userTokensRowAll should contain theSameElementsAs List(userTokenRow3)
       }
     }
   }

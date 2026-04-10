@@ -18,7 +18,7 @@ type TokenID = TokenID.T
 object UserContactID extends RefinedType[String, NonEmptyTrimmed]
 type UserContactID = UserContactID.T
 
-object Email extends RefinedType[String, NonEmptyTrimmedLowerCase]
+object Email extends RefinedType[String, EmailPredicate]
 type Email = Email.T
 
 object FullName extends RefinedType[String, NonEmptyTrimmed]

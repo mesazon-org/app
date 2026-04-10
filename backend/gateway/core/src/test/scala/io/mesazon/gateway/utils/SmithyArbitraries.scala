@@ -14,31 +14,31 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
     phoneNumberSuffix <- Gen.choose(100000, 999999)
   } yield s"$phoneNumberPrefix$phoneNumberSuffix"
 
-  given Arbitrary[smithy.OnboardUserDetailsRequest] = Arbitrary {
-    for {
-      onboardUserDetails  <- Arbitrary.arbitrary[OnboardUserDetails]
-      phoneRegion         <- Gen.oneOf(Seq("CY"))
-      phoneNationalNumber <- genCyPhoneNationalNumber
-      onboardUserDetailsRequest = onboardUserDetails
-        .into[smithy.OnboardUserDetailsRequest]
-        .withFieldConst(_.phoneRegion, phoneRegion)
-        .withFieldConst(_.phoneNationalNumber, phoneNationalNumber)
-        .transform
-    } yield onboardUserDetailsRequest
-  }
+//  given Arbitrary[smithy.OnboardUserDetailsRequest] = Arbitrary {
+//    for {
+//      onboardUserDetails  <- Arbitrary.arbitrary[OnboardUserDetails]
+//      phoneRegion         <- Gen.oneOf(Seq("CY"))
+//      phoneNationalNumber <- genCyPhoneNationalNumber
+//      onboardUserDetailsRequest = onboardUserDetails
+//        .into[smithy.OnboardUserDetailsRequest]
+//        .withFieldConst(_.phoneRegion, phoneRegion)
+//        .withFieldConst(_.phoneNationalNumber, phoneNationalNumber)
+//        .transform
+//    } yield onboardUserDetailsRequest
+//  }
 
-  given Arbitrary[smithy.UpdateUserDetailsRequest] = Arbitrary {
-    for {
-      updateUserDetails   <- Arbitrary.arbitrary[UpdateUserDetails]
-      phoneRegion         <- Gen.option(Gen.oneOf(Seq("CY")))
-      phoneNationalNumber <- Gen.option(genCyPhoneNationalNumber)
-      updateUserDetailsRequest = updateUserDetails
-        .into[smithy.UpdateUserDetailsRequest]
-        .withFieldConst(_.phoneRegion, phoneRegion)
-        .withFieldConst(_.phoneNationalNumber, phoneNationalNumber)
-        .transform
-    } yield updateUserDetailsRequest
-  }
+//  given Arbitrary[smithy.UpdateUserDetailsRequest] = Arbitrary {
+//    for {
+//      updateUserDetails   <- Arbitrary.arbitrary[UpdateUserDetails]
+//      phoneRegion         <- Gen.option(Gen.oneOf(Seq("CY")))
+//      phoneNationalNumber <- Gen.option(genCyPhoneNationalNumber)
+//      updateUserDetailsRequest = updateUserDetails
+//        .into[smithy.UpdateUserDetailsRequest]
+//        .withFieldConst(_.phoneRegion, phoneRegion)
+//        .withFieldConst(_.phoneNationalNumber, phoneNationalNumber)
+//        .transform
+//    } yield updateUserDetailsRequest
+//  }
 
   given Arbitrary[smithy.UpsertUserContactRequest] = Arbitrary {
     for {

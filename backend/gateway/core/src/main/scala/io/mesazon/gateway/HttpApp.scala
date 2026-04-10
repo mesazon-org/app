@@ -39,14 +39,12 @@ object HttpApp {
   } yield healthCheckRoute
 
   private val externalRoutesResource = for {
-    serverMiddleware      <- ZIO.service[ServerEndpointMiddleware.Simple[Task]]
-    userManagementService <- ZIO.service[smithy.UserManagementService[Task]]
-    userContactsService   <- ZIO.service[smithy.UserContactsService[Task]]
-    authenticationService <- ZIO.service[smithy.AuthenticationService[Task]]
-    userManagementRoute   <- buildRoute(userManagementService, Some(serverMiddleware))
-    authenticationRoute   <- buildRoute(authenticationService, None)
-    userContactsRoute     <- buildRoute(userContactsService, Some(serverMiddleware))
-  } yield userManagementRoute <+> userContactsRoute <+> authenticationRoute
+    serverMiddleware    <- ZIO.service[ServerEndpointMiddleware.Simple[Task]]
+    userSignupService   <- ZIO.service[smithy.UserSignupService[Task]]
+    userContactsService <- ZIO.service[smithy.UserContactsService[Task]]
+    userSignupRoute     <- buildRoute(userSignupService, Some(serverMiddleware))
+    userContactsRoute   <- buildRoute(userContactsService, Some(serverMiddleware))
+  } yield userSignupRoute <+> userContactsRoute
 
   private val internalRoutesResource = for {
     wahaService <- ZIO.service[smithy.WahaService[Task]]
@@ -54,8 +52,7 @@ object HttpApp {
   } yield routes
 
   private val docsRoutes = docs[Task](
-    smithy.UserManagementService,
-    smithy.AuthenticationService,
+    smithy.UserSignupService,
     smithy.UserContactsService,
     smithy.WahaService,
   )

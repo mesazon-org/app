@@ -2,12 +2,11 @@ package io.mesazon.gateway.config
 
 case class RepositoryConfig(
     schema: String,
-    userOnboardTable: String = "",
+    userCredentialsTable: String = "",
     userDetailsTable: String = "",
-    userContactTable: String = "",
     userOtpTable: String = "",
-    userRefreshTokenTable: String = "",
     userTokenTable: String = "",
+    userContactTable: String = "",
     wahaUserTable: String = "",
     wahaUserActivityTable: String = "",
     wahaUserMessageTable: String = "",

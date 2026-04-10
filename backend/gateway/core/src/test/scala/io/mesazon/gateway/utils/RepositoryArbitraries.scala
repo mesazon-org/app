@@ -23,4 +23,6 @@ trait RepositoryArbitraries extends GatewayArbitraries, IronRefinedTypeArbitrari
   given Arbitrary[UserRefreshTokenRow] = Arbitrary(Gen.resultOf(UserRefreshTokenRow.apply))
 
   given Arbitrary[UserTokenRow] = Arbitrary(Gen.resultOf(UserTokenRow.apply))
+
+  given Arbitrary[UserCredentialsRow] = Arbitrary(Gen.resultOf(UserCredentialsRow.apply))
 }
