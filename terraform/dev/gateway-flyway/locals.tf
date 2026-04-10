@@ -8,4 +8,6 @@ locals {
   database_name             = "${local.database_name_raw}_${local.region}_${local.environment}"
   databse_user_raw          = "gateway_flyway_user"
   database_user             = "${local.databse_user_raw}_${local.region}_${local.environment}"
+  database_gateway_schema_raw     = "gateway_schema"
+  database_gateway_schema         = "${local.database_gateway_schema_raw}_${local.region}_${local.environment}"
 }
