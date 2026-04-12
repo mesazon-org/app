@@ -157,7 +157,7 @@ class WahaValidatorSpec extends ZWordSpecBase, SmithyArbitraries, IronRefinedTyp
         )
 
         result
-          .asInstanceOf[ServiceError.BadRequestError.FormValidationError]
+          .asInstanceOf[ServiceError.BadRequestError.ValidationError]
           .invalidFields should contain theSameElementsAs expected
       }
     }

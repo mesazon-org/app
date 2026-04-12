@@ -23,3 +23,16 @@ def onboardStageFromSmithyToDomain(stage: smithy.OnboardStage): io.mesazon.domai
   case smithy.OnboardStage.PHONE_VERIFICATION => OnboardStage.PhoneVerification
   case smithy.OnboardStage.PHONE_VERIFIED     => OnboardStage.PhoneVerified
 }
+
+def verifyOnboardStage(
+    onboardStageUser: OnboardStage,
+    onboardStagesAllowed: List[OnboardStage],
+): IO[ServiceError.UnauthorizedError.FailedOnboardStage, Unit] =
+  if (onboardStagesAllowed.contains(onboardStageUser)) ZIO.unit
+  else
+    ZIO.fail(
+      ServiceError.UnauthorizedError.FailedOnboardStage(
+        onboardStageUser = onboardStageUser,
+        onboardStagesAllowed = onboardStagesAllowed,
+      )
+    )

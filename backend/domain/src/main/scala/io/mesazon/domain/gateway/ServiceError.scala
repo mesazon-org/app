@@ -46,7 +46,9 @@ object ServiceError {
         InvalidFieldError(fieldName, errorMessage, Seq(invalidValue))
     }
 
-    case class FormValidationError(invalidFields: Seq[InvalidFieldError])
+    case class OtpValidationError(error: String) extends BadRequestError(error)
+
+    case class ValidationError(invalidFields: Seq[InvalidFieldError])
         extends BadRequestError(s"request validation error ${invalidFields.mkString("[", ",", "]")}")
   }
 
@@ -56,7 +58,16 @@ object ServiceError {
     case class FailedToVerifyJwt(error: String, throwable: Option[Throwable] = None)
         extends UnauthorizedError(error, throwable)
 
-    case class OtpError(error: String) extends UnauthorizedError(error)
+    case class FailedToVerifyPassword(error: String, throwable: Option[Throwable] = None)
+        extends UnauthorizedError(error, throwable)
+
+    case class FailedOnboardStage(
+        onboardStageUser: OnboardStage,
+        onboardStagesAllowed: List[OnboardStage],
+    ) extends UnauthorizedError(
+          s"Failed onboard stage user [$onboardStageUser], allowed: [$onboardStagesAllowed]",
+          None,
+        )
 
     case class TokenFailedAuthorization(throwable: Throwable)
         extends UnauthorizedError("token failed authorization", Some(throwable))

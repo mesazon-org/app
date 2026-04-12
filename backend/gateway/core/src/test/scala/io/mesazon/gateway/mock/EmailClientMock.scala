@@ -20,8 +20,7 @@ trait EmailClientMock extends ZIOTestOps, should.Matchers {
   }
 
   def emailClientMockLive(
-      maybeError: Option[Throwable] = None,
-      maybeServiceError: Option[ServiceError] = None,
+      maybeServiceError: Option[ServiceError] = None
   ): ULayer[EmailClient] =
     ZLayer.succeed(
       new EmailClient {
@@ -29,13 +28,10 @@ trait EmailClientMock extends ZIOTestOps, should.Matchers {
             email: Email,
             otp: Otp,
         ): IO[ServiceError, Unit] =
-          sendEmailVerificationEmailCounterRef.incrementAndGet *>
-            maybeServiceError.fold(maybeError.fold(ZIO.unit)(ZIO.fail(_).orDie))(
-              ZIO.fail
-            )
+          sendEmailVerificationEmailCounterRef.incrementAndGet *> maybeServiceError.fold(ZIO.unit)(ZIO.fail)
 
-        override def sendWelcomeEmail(email: Email, fullName: FullName): IO[ServiceError, Unit] =
-          sendWelcomeEmailCounterRef.incrementAndGet *> maybeError.fold(ZIO.unit)(ZIO.fail(_).orDie)
+        override def sendWelcomeEmail(email: Email): IO[ServiceError, Unit] =
+          sendWelcomeEmailCounterRef.incrementAndGet *> maybeServiceError.fold(ZIO.unit)(ZIO.fail)
       }
     )
 }

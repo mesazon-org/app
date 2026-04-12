@@ -18,4 +18,6 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
   given Arbitrary[WahaMessage] = Arbitrary(Gen.resultOf(WahaMessage.apply))
 
   given Arbitrary[VerifyEmail] = Arbitrary(Gen.resultOf(VerifyEmail.apply))
+
+  given Arbitrary[OnboardPassword] = Arbitrary(Gen.resultOf(OnboardPassword.apply))
 }

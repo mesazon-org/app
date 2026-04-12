@@ -11,6 +11,7 @@ object Dependencies {
   lazy val zioLoggingV          = "2.5.3"
   lazy val logbackV             = "1.5.32"
   lazy val julToSlf4jV          = "2.0.17"
+  lazy val jclToSlf4jV          = "2.0.17"
   lazy val pureconfigV          = "0.17.10"
   lazy val scalaTestV           = "3.2.20"
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
@@ -32,6 +33,8 @@ object Dependencies {
   lazy val jmailV               = "2.1.0"
   lazy val simplejavamailV      = "8.12.6"
   lazy val jjwtV                = "0.13.0"
+  lazy val springSecurityV      = "7.0.4"
+  lazy val bouncyCastleV        = "1.83"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -73,6 +76,7 @@ object Dependencies {
   // Logging
   lazy val logback    = "ch.qos.logback" % "logback-classic" % logbackV
   lazy val julToSlf4j = "org.slf4j"      % "jul-to-slf4j"    % julToSlf4jV
+  lazy val jclToSlf4j = "org.slf4j"      % "jcl-over-slf4j"  % jclToSlf4jV
 
   // Test
   lazy val scalaTest          = "org.scalatest"     %% "scalatest"       % scalaTestV
@@ -122,4 +126,8 @@ object Dependencies {
   lazy val jjwtApi     = "io.jsonwebtoken" % "jjwt-api"     % jjwtV
   lazy val jjwtImpl    = "io.jsonwebtoken" % "jjwt-impl"    % jjwtV % "runtime"
   lazy val jjwtJackson = "io.jsonwebtoken" % "jjwt-jackson" % jjwtV % "runtime"
+
+  // Spring Security Crypto
+  lazy val springSecurityCrypto = "org.springframework.security" % "spring-security-crypto" % springSecurityV
+  lazy val bouncyCastle         = "org.bouncycastle"             % "bcprov-jdk18on"         % bouncyCastleV
 }

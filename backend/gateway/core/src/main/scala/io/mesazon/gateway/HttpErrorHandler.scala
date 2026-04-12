@@ -26,11 +26,12 @@ object HttpErrorHandler {
 
   def errorResponseHandler[A](response: IO[ServiceError, A])(using trace: Trace): Task[A] =
     response.flatMapError {
-      case error @ ServiceError.BadRequestError.FormValidationError(invalidFields) =>
+      case error @ ServiceError.BadRequestError.ValidationError(invalidFields) =>
         logWarning(error)
-          .map(_ =>
-            smithy.BadRequest(code = "INVALID_FIELDS_ERROR", fields = Some(invalidFields.map(_.fieldName).toList))
-          )
+          .map(_ => smithy.ValidationError(fields = invalidFields.map(_.fieldName).toList))
+      case error: ServiceError.BadRequestError.OtpValidationError =>
+        logWarning(error)
+          .map(_ => smithy.BadRequest())
       case error: ServiceError.UnauthorizedError =>
         logError(error)
           .map(_ => smithy.Unauthorized())

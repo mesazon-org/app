@@ -32,11 +32,11 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
       maybeUnexpectedError: Option[Throwable] = None,
   ) = ZLayer.succeed(
     new JwtService {
-      override def generateAccessToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, AccessJwt] =
+      override def generateAccessToken(userID: UserID): IO[ServiceError, AccessJwt] =
         generateAccessTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed((Jwt.assume("mock-access-jwt"), 1.minute))
+              ZIO.succeed((AccessToken.assume("mock-access-jwt"), 1.minute))
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
@@ -45,20 +45,20 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
               ZIO.succeed(
-                (TokenID.assume("mock-refresh-jwt-id"), Jwt.assume("mock-refresh-jwt"), ExpiresAt(Instant.now))
+                (TokenID.assume("mock-refresh-jwt-id"), RefreshToken.assume("mock-refresh-jwt"), ExpiresAt(Instant.now))
               )
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
-      override def verifyAccessToken(jwt: Jwt): IO[ServiceError, AuthedUserAccess] =
+      override def verifyAccessToken(accessToken: AccessToken): IO[ServiceError, AuthedUserAccess] =
         verifyAccessTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed((UserID.assume("test"), OnboardStage.EmailVerification))
+              ZIO.succeed(UserID.assume("test"))
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
-      override def verifyRefreshToken(jwt: Jwt): IO[ServiceError, AuthedUserRefresh] =
+      override def verifyRefreshToken(refreshToken: RefreshToken): IO[ServiceError, AuthedUserRefresh] =
         verifyRefreshTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(

@@ -47,6 +47,14 @@ trait IronRefinedTypeArbitraries {
       .map(_.refineUnsafe[EmailPredicate])
   }
 
+  given arbPasswordPredicate: Arbitrary[String :| PasswordPredicate] = Arbitrary {
+    Gen
+      .listOfN(8, Gen.alphaNumChar)
+      .map(_.mkString)
+      .map(password => password + "Aa1@") // Ensure it meets the complexity requirements
+      .map(_.refineUnsafe[PasswordPredicate])
+  }
+
   given arbWahaIDPredicate: Arbitrary[String :| WahaIDPredicate] = Arbitrary {
     Gen
       .nonEmptyStringOf(Gen.alphaNumChar)

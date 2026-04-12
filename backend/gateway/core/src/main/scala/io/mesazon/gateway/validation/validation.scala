@@ -68,4 +68,4 @@ def toServiceValidator[A, B](
     .validate(rawData)
     .flatMap(validated => ZIO.fromEither(validated.toEither))
     .mapError(_.toNonEmptyList.toList)
-    .mapError(ServiceError.BadRequestError.FormValidationError.apply)
+    .mapError(ServiceError.BadRequestError.ValidationError.apply)

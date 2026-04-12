@@ -12,23 +12,21 @@ import java.time.Instant
 import java.util.Date
 
 trait JwtService {
-  def generateAccessToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, AccessJwt]
+  def generateAccessToken(userID: UserID): IO[ServiceError, AccessJwt]
 
   def generateRefreshToken(userID: UserID): IO[ServiceError, RefreshJwt]
 
-  def verifyAccessToken(jwt: Jwt): IO[ServiceError, AuthedUserAccess]
+  def verifyAccessToken(accessToken: AccessToken): IO[ServiceError, AuthedUserAccess]
 
-  def verifyRefreshToken(jwt: Jwt): IO[ServiceError, AuthedUserRefresh]
+  def verifyRefreshToken(refreshToken: RefreshToken): IO[ServiceError, AuthedUserRefresh]
 }
 
 object JwtService {
 
-  type AccessJwt         = (jwt: Jwt, expiresIn: Duration)
-  type RefreshJwt        = (tokenID: TokenID, jwt: Jwt, expiresAt: ExpiresAt)
+  type AccessJwt         = (accessToken: AccessToken, expiresIn: Duration)
+  type RefreshJwt        = (tokenID: TokenID, refreshToken: RefreshToken, expiresAt: ExpiresAt)
   type AuthedUserRefresh = (tokenID: TokenID, userID: UserID)
-  type AuthedUserAccess  = (userID: UserID, onboardStage: OnboardStage)
-
-  inline private val onboardStageClaimKey = "onboardStage"
+  type AuthedUserAccess  = UserID
 
   private final class JwtServiceImpl(
       jwtConfig: JwtConfig,
@@ -42,7 +40,7 @@ object JwtService {
       }
     )
 
-    override def generateAccessToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, AccessJwt] =
+    override def generateAccessToken(userID: UserID): IO[ServiceError, AccessJwt] =
       for {
         instantNow     <- timeProvider.instantNow
         expirationDate <- ZIO
@@ -51,22 +49,25 @@ object JwtService {
             ServiceError.InternalServerError
               .UnexpectedError("Failed to calculate access token expiration date", Some(error))
           )
-        jwtRaw <- ZIO
+        accessTokenRaw <- ZIO
           .attempt(
             Jwts.builder.claims
               .subject(userID.value)
               .issuer(jwtConfig.issuer)
               .expiration(expirationDate)
-              .add(onboardStageClaimKey, onboardStage.toString)
               .and
               .signWith(jwtConfig.secretKey)
               .compact
           )
-          .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to generate Jwt", Some(error)))
-        jwt <- ZIO
-          .attempt(Jwt.applyUnsafe(jwtRaw))
-          .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to apply Jwt", Some(error)))
-      } yield (jwt, jwtConfig.accessTokenExpiresAtOffset)
+          .mapError(error =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to generate access token", Some(error))
+          )
+        accessToken <- ZIO
+          .attempt(AccessToken.applyUnsafe(accessTokenRaw))
+          .mapError(error =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to apply access token", Some(error))
+          )
+      } yield (accessToken, jwtConfig.accessTokenExpiresAtOffset)
 
     override def generateRefreshToken(userID: UserID): IO[ServiceError, RefreshJwt] =
       for {
@@ -76,7 +77,7 @@ object JwtService {
         tokenID <- ZIO
           .attempt(TokenID.applyUnsafe(tokenIDRaw))
           .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to apply TokenID", Some(error)))
-        jwtRaw <- ZIO
+        refreshTokenRaw <- ZIO
           .attempt(
             Jwts.builder.claims
               .id(tokenID.value)
@@ -87,13 +88,17 @@ object JwtService {
               .signWith(jwtConfig.secretKey)
               .compact
           )
-          .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to generate Jwt", Some(error)))
-        jwt <- ZIO
-          .attempt(Jwt.applyUnsafe(jwtRaw))
-          .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to apply Jwt", Some(error)))
-      } yield (tokenID, jwt, expiresAt)
+          .mapError(error =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to generate refresh token", Some(error))
+          )
+        refreshToken <- ZIO
+          .attempt(RefreshToken.applyUnsafe(refreshTokenRaw))
+          .mapError(error =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to apply refresh token", Some(error))
+          )
+      } yield (tokenID, refreshToken, expiresAt)
 
-    override def verifyAccessToken(jwt: Jwt): IO[ServiceError, AuthedUserAccess] =
+    override def verifyAccessToken(accessToken: AccessToken): IO[ServiceError, AuthedUserAccess] =
       for {
         clock <- jjwtClock
         jws   <- ZIO
@@ -103,20 +108,20 @@ object JwtService {
               .requireIssuer(jwtConfig.issuer)
               .verifyWith(jwtConfig.secretKey)
               .build
-              .parseSignedClaims(jwt.value)
+              .parseSignedClaims(accessToken.value)
           )
           .mapError {
             case error: JwtException =>
-              ServiceError.UnauthorizedError.FailedToVerifyJwt("Failed to parse and verify access Jwt", Some(error))
+              ServiceError.UnauthorizedError.FailedToVerifyJwt("Failed to parse and verify access token", Some(error))
             case error =>
               ServiceError.InternalServerError.UnexpectedError(
-                "Unexpected failed to parse and verify access Jwt",
+                "Unexpected failed to parse and verify access token",
                 Some(error),
               )
           }
         userID <- ZIO
           .getOrFailWith(
-            ServiceError.InternalServerError.UnexpectedError("Failed to extract subject from access jwt")
+            ServiceError.InternalServerError.UnexpectedError("Failed to extract subject from access token")
           )(
             Option(jws.getPayload.getSubject)
           )
@@ -125,29 +130,12 @@ object JwtService {
               .fromEither(UserID.either(userIDRaw))
               .mapError(error =>
                 ServiceError.InternalServerError
-                  .UnexpectedError(s"Failed to apply UserID from access jwt subject: $error")
+                  .UnexpectedError(s"Failed to apply UserID from access token subject: $error")
               )
           )
-        onboardStage <- ZIO
-          .getOrFailWith(
-            ServiceError.InternalServerError.UnexpectedError("Failed to extract onboard stage from access jwt")
-          )(
-            Option(jws.getPayload.get(onboardStageClaimKey))
-          )
-          .flatMap(onboardStageRaw =>
-            ZIO
-              .attempt(OnboardStage.valueOf(onboardStageRaw.toString))
-              .mapError(error =>
-                ServiceError.InternalServerError
-                  .UnexpectedError(
-                    s"Failed to apply OnboardStage from access jwt claim [$onboardStageRaw]",
-                    Some(error),
-                  )
-              )
-          )
-      } yield (userID, onboardStage)
+      } yield userID
 
-    override def verifyRefreshToken(jwt: Jwt): IO[ServiceError, AuthedUserRefresh] =
+    override def verifyRefreshToken(refreshToken: RefreshToken): IO[ServiceError, AuthedUserRefresh] =
       for {
         clock <- jjwtClock
         jws   <- ZIO
@@ -157,17 +145,17 @@ object JwtService {
               .requireIssuer(jwtConfig.issuer)
               .verifyWith(jwtConfig.secretKey)
               .build
-              .parseSignedClaims(jwt.value)
+              .parseSignedClaims(refreshToken.value)
           )
           .mapError {
             case error: JwtException =>
-              ServiceError.UnauthorizedError.FailedToVerifyJwt("Failed to parse and verify refresh Jwt", Some(error))
+              ServiceError.UnauthorizedError.FailedToVerifyJwt("Failed to parse and verify refresh token", Some(error))
             case error =>
-              ServiceError.InternalServerError.UnexpectedError("Unexpected failed to parse refresh Jwt", Some(error))
+              ServiceError.InternalServerError.UnexpectedError("Unexpected failed to parse refresh token", Some(error))
           }
         userID <- ZIO
           .getOrFailWith(
-            ServiceError.InternalServerError.UnexpectedError("Failed to extract subject from refresh jwt")
+            ServiceError.InternalServerError.UnexpectedError("Failed to extract subject from refresh token")
           )(
             Option(jws.getPayload.getSubject)
           )
@@ -176,12 +164,12 @@ object JwtService {
               .fromEither(UserID.either(userIDRaw))
               .mapError(error =>
                 ServiceError.InternalServerError
-                  .UnexpectedError(s"Failed to apply UserID from refresh jwt subject: $error")
+                  .UnexpectedError(s"Failed to apply UserID from refresh token subject: $error")
               )
           )
         tokenID <- ZIO
           .getOrFailWith(
-            ServiceError.InternalServerError.UnexpectedError("Failed to extract jwt id from refresh jwt")
+            ServiceError.InternalServerError.UnexpectedError("Failed to extract token id from refresh token")
           )(
             Option(jws.getPayload.getId)
           )
@@ -189,7 +177,8 @@ object JwtService {
             ZIO
               .fromEither(TokenID.either(tokenIDRaw))
               .mapError(error =>
-                ServiceError.InternalServerError.UnexpectedError(s"Failed to apply TokenID from refresh jwt id: $error")
+                ServiceError.InternalServerError
+                  .UnexpectedError(s"Failed to apply TokenID from refresh token id: $error")
               )
           )
       } yield tokenID -> userID

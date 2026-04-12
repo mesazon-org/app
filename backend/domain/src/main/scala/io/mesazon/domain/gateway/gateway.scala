@@ -24,6 +24,9 @@ type Email = Email.T
 object FullName extends RefinedType[String, NonEmptyTrimmed]
 type FullName = FullName.T
 
+object Password extends RefinedType[String, PasswordPredicate]
+type Password = Password.T
+
 object PasswordHash extends RefinedType[String, NonEmptyTrimmed]
 type PasswordHash = PasswordHash.T
 
@@ -72,5 +75,8 @@ type UpdatedAt = UpdatedAt.T
 object ExpiresAt extends RefinedType[Instant, Pure]
 type ExpiresAt = ExpiresAt.T
 
-object Jwt extends RefinedType[String, NonEmptyTrimmed]
-type Jwt = Jwt.T
+object RefreshToken extends RefinedType[String, NonEmptyTrimmed]
+type RefreshToken = RefreshToken.T
+
+object AccessToken extends RefinedType[String, NonEmptyTrimmed]
+type AccessToken = AccessToken.T
