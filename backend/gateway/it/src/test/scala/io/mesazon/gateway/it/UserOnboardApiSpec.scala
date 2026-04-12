@@ -164,7 +164,7 @@ class UserOnboardApiSpec
 
         onboardPasswordResponse.code shouldBe StatusCode.BadRequest
 
-        mailHogClient.readInbox().zioValue.total shouldBe 0
+        mailHogClient.readInbox().zioValue.total shouldBe 1
       }
 
       "fail with Unauthorized when access token is missing" in withContext { context =>
@@ -179,6 +179,8 @@ class UserOnboardApiSpec
           .zioValue
 
         response.code shouldBe StatusCode.Unauthorized
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
       "fail with Unauthorized when access token is invalid" in withContext { context =>
