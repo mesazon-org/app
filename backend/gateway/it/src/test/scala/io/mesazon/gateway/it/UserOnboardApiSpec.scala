@@ -89,6 +89,8 @@ class UserOnboardApiSpec
 
     postgresClient.truncateTable("local_schema", "user_details").zioValue
     postgresClient.truncateTable("local_schema", "user_credentials").zioValue
+    postgresClient.truncateTable("local_schema", "user_otp").zioValue
+    postgresClient.truncateTable("local_schema", "user_token").zioValue
   }
 
   "User Onboard Api" when {

@@ -47,6 +47,39 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         )
       }
 
+      "successfully onboard password for user but retry sending welcome email when fails to send email" in new TestContext {
+        val authedUser     = arbitrarySample[AuthedUser]
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = OnboardStage.EmailVerified)
+
+        val userOnboardService = buildUserOnboardServiceLive(
+          authedUser = authedUser,
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+          emailClientServiceErrorOpt = Some(ServiceError.InternalServerError.UnexpectedError("Email client error")),
+        )
+
+        val onboardPasswordRequest = arbitrarySample[smithy.OnboardPasswordRequest]
+
+        val onboardPasswordResponse =
+          userOnboardService.onboardPassword(onboardPasswordRequest).zioValue
+
+        onboardPasswordResponse.onboardStage.value shouldBe "PASSWORD_PROVIDED"
+
+        checkUserDetailsRepository(
+          expectedGetUserDetailsCalls = 1,
+          expectedUpdateUserDetailsCalls = 1,
+        )
+        checkUserCredentialsRepository(
+          expectedInsertUserCredentialsCalls = 1
+        )
+        checkEmailClient(
+          expectedSendWelcomeEmailCalls = userOnboardConfig.sendWelcomeEmailMaxRetries + 1
+        )
+        checkPasswordService(
+          expectedHashPasswordCalls = 1
+        )
+      }
+
       "fail with Unauthorized when onboard password for user not in email verified stage" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -129,40 +162,6 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         )
         checkUserCredentialsRepository()
         checkEmailClient()
-        checkPasswordService(
-          expectedHashPasswordCalls = 1
-        )
-      }
-
-      "fail and retry with InternalServer Error when email client fails to send welcome email" in new TestContext {
-        val authedUser     = arbitrarySample[AuthedUser]
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = OnboardStage.EmailVerified)
-
-        val userOnboardService = buildUserOnboardServiceLive(
-          authedUser = authedUser,
-          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
-          emailClientServiceErrorOpt = Some(ServiceError.InternalServerError.UnexpectedError("Email client error")),
-        )
-
-        val onboardPasswordRequest = arbitrarySample[smithy.OnboardPasswordRequest]
-
-        val smithyError = userOnboardService.onboardPassword(onboardPasswordRequest).zioError
-
-        smithyError shouldBe a[smithy.InternalServerError]
-        smithyError
-          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
-
-        checkUserDetailsRepository(
-          expectedGetUserDetailsCalls = 1,
-          expectedUpdateUserDetailsCalls = 1,
-        )
-        checkUserCredentialsRepository(
-          expectedInsertUserCredentialsCalls = 1
-        )
-        checkEmailClient(
-          expectedSendWelcomeEmailCalls = userOnboardConfig.sendWelcomeEmailMaxRetries + 1
-        )
         checkPasswordService(
           expectedHashPasswordCalls = 1
         )

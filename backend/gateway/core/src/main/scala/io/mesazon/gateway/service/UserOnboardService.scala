@@ -47,6 +47,11 @@ object UserOnboardService {
             Schedule.recurs(userOnboardConfig.sendWelcomeEmailMaxRetries) && Schedule
               .exponential(userOnboardConfig.sendWelcomeEmailRetryDelay)
           )
+          .catchAllCause(cause =>
+            ZIO.logWarning(
+              s"Failed to send welcome email after onboarding completed for userID=${authedUser.userID}, email=${userDetailsRow.email}"
+            ) *> ZIO.logDebugCause("Welcome email send failure cause", cause)
+          )
       } yield smithy.OnboardPasswordResponse(onboardStageFromDomainToSmithy(OnboardStage.PasswordProvided))
   }
 
