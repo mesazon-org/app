@@ -44,8 +44,8 @@ object UserOnboardService {
         _ <- emailClient
           .sendWelcomeEmail(userDetailsRow.email)
           .retry(
-            Schedule.recurs(userOnboardConfig.sendEmailVerificationEmailMaxRetries) && Schedule
-              .exponential(userOnboardConfig.sendEmailVerificationEmailRetryDelay)
+            Schedule.recurs(userOnboardConfig.sendWelcomeEmailMaxRetries) && Schedule
+              .exponential(userOnboardConfig.sendWelcomeEmailRetryDelay)
           )
       } yield smithy.OnboardPasswordResponse(onboardStageFromDomainToSmithy(OnboardStage.PasswordProvided))
   }

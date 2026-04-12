@@ -3,8 +3,8 @@ package io.mesazon.gateway.config
 import zio.Duration
 
 case class UserOnboardConfig(
-    sendEmailVerificationEmailMaxRetries: Int,
-    sendEmailVerificationEmailRetryDelay: Duration,
+    sendWelcomeEmailMaxRetries: Int,
+    sendWelcomeEmailRetryDelay: Duration,
 )
 
 object UserOnboardConfig {

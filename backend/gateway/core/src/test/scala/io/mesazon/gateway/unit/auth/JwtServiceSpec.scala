@@ -114,9 +114,9 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
           .zioValue
 
-        val invalidAcessToken = AccessToken.assume("invalid.access.token")
+        val accessTokenInvalid = AccessToken.assume("invalid.access.token")
 
-        val failedToVerifyJwt = jwtService.verifyAccessToken(invalidAcessToken).zioError
+        val failedToVerifyJwt = jwtService.verifyAccessToken(accessTokenInvalid).zioError
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify access token"
@@ -224,9 +224,9 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
           .zioValue
 
-        val invalidRefreshToken = RefreshToken.assume("invalid.resfresh.token")
+        val refreshTokenInvalid = RefreshToken.assume("invalid.refresh.token")
 
-        val failedToVerifyJwt = jwtService.verifyRefreshToken(invalidRefreshToken).zioError
+        val failedToVerifyJwt = jwtService.verifyRefreshToken(refreshTokenInvalid).zioError
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify refresh token"
