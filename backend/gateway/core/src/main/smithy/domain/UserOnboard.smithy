@@ -7,7 +7,7 @@ structure OnboardPasswordRequest {
     password: String
 }
 
-structure OnboardResponse{
+structure OnboardPasswordResponse{
     @required
     onboardStage: OnboardStage
 }

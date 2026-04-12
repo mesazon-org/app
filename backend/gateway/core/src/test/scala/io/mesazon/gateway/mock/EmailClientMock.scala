@@ -28,10 +28,10 @@ trait EmailClientMock extends ZIOTestOps, should.Matchers {
             email: Email,
             otp: Otp,
         ): IO[ServiceError, Unit] =
-          sendEmailVerificationEmailCounterRef.incrementAndGet *> maybeServiceError.fold(ZIO.unit)(ZIO.fail(_).orDie)
+          sendEmailVerificationEmailCounterRef.incrementAndGet *> maybeServiceError.fold(ZIO.unit)(ZIO.fail)
 
         override def sendWelcomeEmail(email: Email): IO[ServiceError, Unit] =
-          sendWelcomeEmailCounterRef.incrementAndGet *> maybeServiceError.fold(ZIO.unit)(ZIO.fail(_).orDie)
+          sendWelcomeEmailCounterRef.incrementAndGet *> maybeServiceError.fold(ZIO.unit)(ZIO.fail)
       }
     )
 }

@@ -18,6 +18,6 @@ operation OnboardPassword {
         @httpPayload
         request: OnboardPasswordRequest
     }
-    output: OnboardResponse
-    errors: [Unauthorized, BadRequest, InternalServerError]
+    output: OnboardPasswordResponse
+    errors: [Unauthorized, ValidationError, InternalServerError]
 }

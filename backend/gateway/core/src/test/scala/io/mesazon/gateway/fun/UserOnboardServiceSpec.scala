@@ -33,7 +33,8 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         onboardPasswordResponse.onboardStage.value shouldBe "PASSWORD_PROVIDED"
 
         checkUserDetailsRepository(
-          expectedUpdateUserDetailsCalls = 1
+          expectedGetUserDetailsCalls = 1,
+          expectedUpdateUserDetailsCalls = 1,
         )
         checkUserCredentialsRepository(
           expectedInsertUserCredentialsCalls = 1
@@ -95,7 +96,9 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         smithyError
           .asInstanceOf[smithy.ValidationError] shouldBe smithy.ValidationError(fields = List("password"))
 
-        checkUserDetailsRepository()
+        checkUserDetailsRepository(
+          expectedGetUserDetailsCalls = 1
+        )
         checkUserCredentialsRepository()
         checkEmailClient()
         checkPasswordService()
@@ -121,7 +124,9 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         smithyError
           .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
 
-        checkUserDetailsRepository()
+        checkUserDetailsRepository(
+          expectedGetUserDetailsCalls = 1
+        )
         checkUserCredentialsRepository()
         checkEmailClient()
         checkPasswordService(
@@ -149,7 +154,8 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
 
         checkUserDetailsRepository(
-          expectedUpdateUserDetailsCalls = 1
+          expectedGetUserDetailsCalls = 1,
+          expectedUpdateUserDetailsCalls = 1,
         )
         checkUserCredentialsRepository(
           expectedInsertUserCredentialsCalls = 1

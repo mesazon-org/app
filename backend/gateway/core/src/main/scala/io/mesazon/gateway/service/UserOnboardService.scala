@@ -22,7 +22,7 @@ object UserOnboardService {
   ) extends smithy.UserOnboardService[ServiceTask] {
 
     /** HTTP POST /onboard/password */
-    override def onboardPassword(request: smithy.OnboardPasswordRequest): ServiceTask[smithy.OnboardResponse] =
+    override def onboardPassword(request: smithy.OnboardPasswordRequest): ServiceTask[smithy.OnboardPasswordResponse] =
       for {
         authedUser  <- authorizationState.get()
         userDetails <- userDetailsRepository
@@ -47,12 +47,12 @@ object UserOnboardService {
             Schedule.recurs(userOnboardConfig.sendEmailVerificationEmailMaxRetries) && Schedule
               .exponential(userOnboardConfig.sendEmailVerificationEmailRetryDelay)
           )
-      } yield smithy.OnboardResponse(onboardStageFromDomainToSmithy(OnboardStage.PasswordProvided))
+      } yield smithy.OnboardPasswordResponse(onboardStageFromDomainToSmithy(OnboardStage.PasswordProvided))
   }
 
   private def observed(userOnboardService: smithy.UserOnboardService[ServiceTask]): smithy.UserOnboardService[Task] =
     new smithy.UserOnboardService[Task] {
-      override def onboardPassword(request: smithy.OnboardPasswordRequest): Task[smithy.OnboardResponse] =
+      override def onboardPassword(request: smithy.OnboardPasswordRequest): Task[smithy.OnboardPasswordResponse] =
         HttpErrorHandler.errorResponseHandler(
           userOnboardService.onboardPassword(request)
         )

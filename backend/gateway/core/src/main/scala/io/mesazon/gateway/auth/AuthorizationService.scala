@@ -21,14 +21,16 @@ object AuthorizationService {
         maybeBearerToken = request.headers
           .get[`Authorization`]
           .collect { case Authorization(Credentials.Token(AuthScheme.Bearer, token)) => token }
-        jwt <- ZIO
+        accessToken <- ZIO
           .getOrFailWith(ServiceError.UnauthorizedError.TokenMissing)(maybeBearerToken)
-          .flatMap(jwtRaw =>
+          .flatMap(accessTokenRaw =>
             ZIO
-              .fromEither(Jwt.either(jwtRaw))
-              .mapError(error => ServiceError.UnauthorizedError.FailedToVerifyJwt(s"Failed to apply Jwt: $error"))
+              .fromEither(AccessToken.either(accessTokenRaw))
+              .mapError(error =>
+                ServiceError.UnauthorizedError.FailedToVerifyJwt(s"Failed to apply AccessToken: $error")
+              )
           )
-        authedUserAccess <- jwtService.verifyAccessToken(jwt)
+        authedUserAccess <- jwtService.verifyAccessToken(accessToken)
         _                <- authorizationState.set(AuthedUser(authedUserAccess))
       } yield ()
   }

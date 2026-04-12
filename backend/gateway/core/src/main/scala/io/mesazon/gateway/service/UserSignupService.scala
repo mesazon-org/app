@@ -138,20 +138,20 @@ object UserSignupService {
               )
             )
         }
-        _            <- userTokenRepository.deleteAllUserTokens(userDetailsRowExisting.userID)
-        accessToken  <- jwtService.generateAccessToken(userDetailsRowExisting.userID)
-        refreshToken <- jwtService.generateRefreshToken(userDetailsRowExisting.userID)
-        _            <- userTokenRepository.upsertUserToken(
-          refreshToken.tokenID,
+        _          <- userTokenRepository.deleteAllUserTokens(userDetailsRowExisting.userID)
+        accessJwt  <- jwtService.generateAccessToken(userDetailsRowExisting.userID)
+        refreshJwt <- jwtService.generateRefreshToken(userDetailsRowExisting.userID)
+        _          <- userTokenRepository.upsertUserToken(
+          refreshJwt.tokenID,
           userDetailsRowExisting.userID,
           TokenType.RefreshToken,
-          refreshToken.expiresAt,
+          refreshJwt.expiresAt,
         )
       } yield smithy.VerifyEmailResponse(
-        accessTokenExpiresInSeconds = accessToken.expiresIn.toSeconds,
+        accessTokenExpiresInSeconds = accessJwt.expiresIn.toSeconds,
         onboardStage = onboardStageFromDomainToSmithy(OnboardStage.EmailVerified),
-        refreshToken = refreshToken.jwt.value,
-        accessToken = accessToken.jwt.value,
+        refreshToken = refreshJwt.refreshToken.value,
+        accessToken = accessJwt.accessToken.value,
       )
   }
 

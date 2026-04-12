@@ -7,10 +7,12 @@ import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.smithy
-import io.mesazon.gateway.utils.{RepositoryArbitraries, SmithyArbitraries}
+import io.mesazon.gateway.utils.MailHogClient.MailHogClientConfig
+import io.mesazon.gateway.utils.{MailHogClient, RepositoryArbitraries, SmithyArbitraries}
 import io.mesazon.test.postgresql.PostgreSQLTestClient
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.{DockerComposeBase, IronRefinedTypeTransformer, ZWordSpecBase}
+import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.model.*
 import zio.*
 
@@ -23,11 +25,13 @@ class UserSignupApiSpec
       RepositoryArbitraries,
       IronRefinedTypeTransformer {
 
-  override def exposedServices = GatewayClient.ExposedServices ++ PostgreSQLTestClient.ExposedServices
+  override def exposedServices =
+    GatewayClient.ExposedServices ++ PostgreSQLTestClient.ExposedServices ++ MailHogClient.ExposedServices
 
   case class Context(
       gatewayClient: GatewayClient,
       postgresClient: PostgreSQLTestClient,
+      mailHogClient: MailHogClient,
       userDetailsQueries: UserDetailsQueries,
       userOtpQueries: UserOtpQueries,
       userTokenQueries: UserTokenQueries,
@@ -36,10 +40,14 @@ class UserSignupApiSpec
   def withContext[A](f: Context => A): A = withContainers { container =>
     val context = for {
       postgreSQLClientConfig = PostgreSQLTestClientConfig.from(container)
+      mailHogClientConfig    = MailHogClientConfig.from(container)
       gatewayApiClientConfig = GatewayClientConfig.from(container)
       postgreSQLClient <- ZIO
         .service[PostgreSQLTestClient]
         .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgreSQLClientConfig))
+      mailHogClient <- ZIO
+        .service[MailHogClient]
+        .provide(MailHogClient.live, HttpClientZioBackend.layer(), ZLayer.succeed(mailHogClientConfig))
       gatewayApiClient <- ZIO
         .service[GatewayClient]
         .provide(GatewayClient.live, ZLayer.succeed(gatewayApiClientConfig))
@@ -52,7 +60,14 @@ class UserSignupApiSpec
       userTokenQueries <- ZIO
         .service[UserTokenQueries]
         .provide(UserTokenQueries.live, RepositoryConfig.live, appNameLive)
-    } yield Context(gatewayApiClient, postgreSQLClient, userDetailsQueries, userOtpQueries, userTokenQueries)
+    } yield Context(
+      gatewayApiClient,
+      postgreSQLClient,
+      mailHogClient,
+      userDetailsQueries,
+      userOtpQueries,
+      userTokenQueries,
+    )
 
     f(context.zioValue)
   }
@@ -73,12 +88,11 @@ class UserSignupApiSpec
 
     super.beforeEach()
 
-    // Truncate the table before each test to ensure a clean state
-    eventually {
-      postgresClient.truncateTable("local_schema", "user_details").zioValue
-      postgresClient.truncateTable("local_schema", "user_otp").zioValue
-      postgresClient.truncateTable("local_schema", "user_token").zioValue
-    }
+    mailHogClient.clearInbox().zioValue
+
+    postgresClient.truncateTable("local_schema", "user_details").zioValue
+    postgresClient.truncateTable("local_schema", "user_otp").zioValue
+    postgresClient.truncateTable("local_schema", "user_token").zioValue
   }
 
   "User Signup API" when {
@@ -91,6 +105,8 @@ class UserSignupApiSpec
         val signupEmailResponse = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
 
         signupEmailResponse.code shouldBe StatusCode.Ok
+
+        mailHogClient.readInbox().zioValue.total shouldBe 1
 
         val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
 
@@ -134,11 +150,16 @@ class UserSignupApiSpec
 
           signupEmailResponse1.code shouldBe StatusCode.Ok
 
+          mailHogClient.readInbox().zioValue.total shouldBe 1
+
           val userOtpRowsAll1 = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
           val signupEmailResponse2 = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
 
           signupEmailResponse2.code shouldBe StatusCode.Ok
+
+          // Should remain 1 email in inbox
+          mailHogClient.readInbox().zioValue.total shouldBe 1
 
           signupEmailResponse2.body.value.otpID should not be signupEmailResponse1.body.value.otpID
 
@@ -185,6 +206,8 @@ class UserSignupApiSpec
         val response = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
 
         response.code shouldBe StatusCode.BadRequest
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
       }
     }
 
@@ -213,6 +236,8 @@ class UserSignupApiSpec
 
         verifyEmailResponse.code shouldBe StatusCode.Ok
 
+        mailHogClient.readInbox().zioValue.total shouldBe 0
+
         val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
         userTokenRowsAll should have size 1
@@ -230,6 +255,8 @@ class UserSignupApiSpec
         val response = gatewayClient.verifyEmail(verifyEmailRequest).zioValue
 
         response.code shouldBe StatusCode.BadRequest
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
       "fail with BadRequest when OTP is expired" in withContext { context =>
@@ -255,6 +282,8 @@ class UserSignupApiSpec
         val response = gatewayClient.verifyEmail(verifyEmailRequest).zioValue
 
         response.code shouldBe StatusCode.BadRequest
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
       "fail with BadRequest when OTP is wrong" in withContext { context =>
@@ -279,6 +308,8 @@ class UserSignupApiSpec
         val response = gatewayClient.verifyEmail(verifyEmailRequest).zioValue
 
         response.code shouldBe StatusCode.BadRequest
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
       }
     }
   }

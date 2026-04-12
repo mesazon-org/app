@@ -36,7 +36,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
         generateAccessTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed((Jwt.assume("mock-access-jwt"), 1.minute))
+              ZIO.succeed((AccessToken.assume("mock-access-jwt"), 1.minute))
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
@@ -45,12 +45,12 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
               ZIO.succeed(
-                (TokenID.assume("mock-refresh-jwt-id"), Jwt.assume("mock-refresh-jwt"), ExpiresAt(Instant.now))
+                (TokenID.assume("mock-refresh-jwt-id"), RefreshToken.assume("mock-refresh-jwt"), ExpiresAt(Instant.now))
               )
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
-      override def verifyAccessToken(jwt: Jwt): IO[ServiceError, AuthedUserAccess] =
+      override def verifyAccessToken(accessToken: AccessToken): IO[ServiceError, AuthedUserAccess] =
         verifyAccessTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
@@ -58,7 +58,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
-      override def verifyRefreshToken(jwt: Jwt): IO[ServiceError, AuthedUserRefresh] =
+      override def verifyRefreshToken(refreshToken: RefreshToken): IO[ServiceError, AuthedUserRefresh] =
         verifyRefreshTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
