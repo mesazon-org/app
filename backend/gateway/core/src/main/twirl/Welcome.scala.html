@@ -1,7 +1,108 @@
-@(fullName: String)
+@()
 
-<html>
-    <body>
-        <h1>Welcome @(fullName)</h1>
-    </body>
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Disable auto-scaling in iOS Mail -->
+    <meta name="x-apple-disable-message-reformatting">
+    <title>Welcome to mesazon - Account Ready</title>
+
+    @* We use a double symbol (@@) below for the CSS media query so Twirl ignores it *@
+    <style type="text/css">
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100% !important;
+            background-color: #f4f7f6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        table {
+            border-spacing: 0;
+            border-collapse: collapse;
+        }
+        /* Mobile Responsive Styles */
+        @@media screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+                margin: auto !important;
+            }
+            .content-padding {
+                padding: 30px 20px !important;
+            }
+        }
+    </style>
+</head>
+<body width="100%" style="margin: 0; padding: 0 !important; background-color: #f4f7f6; -webkit-font-smoothing: antialiased;">
+<center style="width: 100%; background-color: #f4f7f6;">
+    <div style="max-width: 600px; margin: 0 auto;" class="email-container">
+
+        <!-- Main Email Table -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; margin-top: 40px; margin-bottom: 40px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+
+            <!-- Header -->
+            <tr>
+                <td style="background-color: #2e7d32; padding: 30px; text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: 1px;">mesazon</h1>
+                </td>
+            </tr>
+
+            <!-- Body Content -->
+            <tr>
+                <td class="content-padding" style="padding: 40px 40px; text-align: left; color: #333333;">
+                    <h2 style="margin-top: 0; color: #2e7d32; font-size: 24px;">Welcome to Mesazon!</h2>
+
+                    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px; color: #444444;">
+                        Your account setup is officially complete. We are absolutely thrilled to welcome you to our community!
+                    </p>
+
+                    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 30px; color: #444444;">
+                        You can now securely sign in to your account using the credentials you created during registration. Start exploring and enjoy everything we have to offer.
+                    </p>
+
+                    <!-- Highlight Box Area (Maintains the style of the original OTP box) -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr>
+                            <td style="background-color: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 30px; text-align: center;">
+
+                                <span style="display: block; font-size: 22px; font-weight: bold; color: #1b5e20; letter-spacing: 1px;">
+                                    Your account is ready!
+                                </span>
+                                <p style="margin: 10px 0 0 0; font-size: 16px; color: #2e7d32;">
+                                    Head over to the sign-in page to get started.
+                                </p>
+
+                            </td>
+                        </tr>
+                    </table>
+
+                    <p style="font-size: 14px; line-height: 1.6; margin-top: 30px; color: #777777;">
+                        <em>Note: For your security, never share your password with anyone. If you have any trouble signing in, please reach out to our support team.</em>
+                    </p>
+
+                    <p style="font-size: 16px; line-height: 1.6; margin-top: 30px; margin-bottom: 0; color: #444444;">
+                        Best regards,<br>
+                        <strong style="color: #2e7d32;">The mesazon Team</strong>
+                    </p>
+                </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+                <td style="background-color: #f9f9f9; padding: 25px 30px; text-align: center; border-top: 1px solid #eeeeee;">
+                    <p style="margin: 0; font-size: 12px; color: #999999; line-height: 1.5;">
+                        This email was sent to notify you of a successful account creation. If you believe this is a mistake, please contact support.
+                        <br><br>
+                        &copy; 2026 mesazon. All rights reserved.
+                    </p>
+                </td>
+            </tr>
+        </table>
+        <!-- End Main Email Table -->
+
+    </div>
+</center>
+</body>
 </html>

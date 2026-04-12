@@ -32,7 +32,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
       maybeUnexpectedError: Option[Throwable] = None,
   ) = ZLayer.succeed(
     new JwtService {
-      override def generateAccessToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, AccessJwt] =
+      override def generateAccessToken(userID: UserID): IO[ServiceError, AccessJwt] =
         generateAccessTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
@@ -54,7 +54,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
         verifyAccessTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed((UserID.assume("test"), OnboardStage.EmailVerification))
+              ZIO.succeed(UserID.assume("test"))
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 

@@ -12,6 +12,16 @@ structure BadRequest {
     code: String = "BAD_REQUEST_ERROR"
     @required
     message: String = "Bad request"
+}
+
+@error("client")
+@httpError(400)
+structure ValidationError {
+    @required
+    code: String = "VALIDATION_ERROR"
+    @required
+    message: String = "Bad request validation error"
+    @required
     fields: InvalidFields
 }
 

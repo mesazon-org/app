@@ -12,22 +12,24 @@ trait AuthorizationService[E] {
 
 object AuthorizationService {
 
-  private final class AuthorizationServiceImpl(state: AuthorizationState) extends AuthorizationService[ServiceError] {
+  private final class AuthorizationServiceImpl(
+      authorizationState: AuthorizationState,
+      jwtService: JwtService,
+  ) extends AuthorizationService[ServiceError] {
     override def auth(request: Request[Task]): IO[ServiceError, Unit] =
       for {
         maybeBearerToken = request.headers
           .get[`Authorization`]
           .collect { case Authorization(Credentials.Token(AuthScheme.Bearer, token)) => token }
-        _ <- ZIO.logDebug(s"Bearer token: [$maybeBearerToken]")
-        _ <- ZIO
+        jwt <- ZIO
           .getOrFailWith(ServiceError.UnauthorizedError.TokenMissing)(maybeBearerToken)
           .flatMap(jwtRaw =>
             ZIO
               .fromEither(Jwt.either(jwtRaw))
               .mapError(error => ServiceError.UnauthorizedError.FailedToVerifyJwt(s"Failed to apply Jwt: $error"))
           )
-        authedUser <- ZIO.succeed(AuthedUser(UserID.assume("test"), Email.assume("eliot.martel@gmail.com")))
-        _          <- state.set(authedUser)
+        authedUserAccess <- jwtService.verifyAccessToken(jwt)
+        _                <- authorizationState.set(AuthedUser(authedUserAccess))
       } yield ()
   }
 

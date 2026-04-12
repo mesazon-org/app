@@ -12,7 +12,7 @@ import java.time.Instant
 import java.util.Date
 
 trait JwtService {
-  def generateAccessToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, AccessJwt]
+  def generateAccessToken(userID: UserID): IO[ServiceError, AccessJwt]
 
   def generateRefreshToken(userID: UserID): IO[ServiceError, RefreshJwt]
 
@@ -26,9 +26,7 @@ object JwtService {
   type AccessJwt         = (jwt: Jwt, expiresIn: Duration)
   type RefreshJwt        = (tokenID: TokenID, jwt: Jwt, expiresAt: ExpiresAt)
   type AuthedUserRefresh = (tokenID: TokenID, userID: UserID)
-  type AuthedUserAccess  = (userID: UserID, onboardStage: OnboardStage)
-
-  inline private val onboardStageClaimKey = "onboardStage"
+  type AuthedUserAccess  = UserID
 
   private final class JwtServiceImpl(
       jwtConfig: JwtConfig,
@@ -42,7 +40,7 @@ object JwtService {
       }
     )
 
-    override def generateAccessToken(userID: UserID, onboardStage: OnboardStage): IO[ServiceError, AccessJwt] =
+    override def generateAccessToken(userID: UserID): IO[ServiceError, AccessJwt] =
       for {
         instantNow     <- timeProvider.instantNow
         expirationDate <- ZIO
@@ -57,7 +55,6 @@ object JwtService {
               .subject(userID.value)
               .issuer(jwtConfig.issuer)
               .expiration(expirationDate)
-              .add(onboardStageClaimKey, onboardStage.toString)
               .and
               .signWith(jwtConfig.secretKey)
               .compact
@@ -128,24 +125,7 @@ object JwtService {
                   .UnexpectedError(s"Failed to apply UserID from access jwt subject: $error")
               )
           )
-        onboardStage <- ZIO
-          .getOrFailWith(
-            ServiceError.InternalServerError.UnexpectedError("Failed to extract onboard stage from access jwt")
-          )(
-            Option(jws.getPayload.get(onboardStageClaimKey))
-          )
-          .flatMap(onboardStageRaw =>
-            ZIO
-              .attempt(OnboardStage.valueOf(onboardStageRaw.toString))
-              .mapError(error =>
-                ServiceError.InternalServerError
-                  .UnexpectedError(
-                    s"Failed to apply OnboardStage from access jwt claim [$onboardStageRaw]",
-                    Some(error),
-                  )
-              )
-          )
-      } yield (userID, onboardStage)
+      } yield userID
 
     override def verifyRefreshToken(jwt: Jwt): IO[ServiceError, AuthedUserRefresh] =
       for {

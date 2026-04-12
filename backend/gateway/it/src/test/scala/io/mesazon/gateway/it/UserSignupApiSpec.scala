@@ -232,7 +232,7 @@ class UserSignupApiSpec
         response.code shouldBe StatusCode.BadRequest
       }
 
-      "fail with Unauthorized when OTP is expired" in withContext { context =>
+      "fail with BadRequest when OTP is expired" in withContext { context =>
         import context.*
 
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
@@ -254,10 +254,10 @@ class UserSignupApiSpec
 
         val response = gatewayClient.verifyEmail(verifyEmailRequest).zioValue
 
-        response.code shouldBe StatusCode.Unauthorized
+        response.code shouldBe StatusCode.BadRequest
       }
 
-      "fail with Unauthorized when OTP is wrong" in withContext { context =>
+      "fail with BadRequest when OTP is wrong" in withContext { context =>
         import context.*
 
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
@@ -278,7 +278,7 @@ class UserSignupApiSpec
 
         val response = gatewayClient.verifyEmail(verifyEmailRequest).zioValue
 
-        response.code shouldBe StatusCode.Unauthorized
+        response.code shouldBe StatusCode.BadRequest
       }
     }
   }

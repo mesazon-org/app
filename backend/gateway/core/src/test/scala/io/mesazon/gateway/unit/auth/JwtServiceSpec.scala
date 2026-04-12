@@ -27,16 +27,15 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
   "JwtService" when {
     "generateAccessToken" should {
       "generate a valid JWT token" in {
-        val instantNow   = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed   = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID       = arbitrarySample[UserID]
-        val onboardStage = arbitrarySample[OnboardStage]
-        val jwtService   = ZIO
+        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
+        val userID     = arbitrarySample[UserID]
+        val jwtService = ZIO
           .service[JwtService]
           .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
           .zioValue
 
-        val accessJwtResult = jwtService.generateAccessToken(userID, onboardStage).zioEither
+        val accessJwtResult = jwtService.generateAccessToken(userID).zioEither
 
         assert(accessJwtResult.isRight)
 
@@ -49,7 +48,6 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         jws.getPayload.getSubject shouldBe userID.value
         jws.getPayload.getIssuer shouldBe jwtConfig.issuer
-        jws.getPayload.get("onboardStage") shouldBe onboardStage.toString
         jws.getPayload.getExpiration.toInstant shouldBe instantNow.plusSeconds(
           jwtConfig.accessTokenExpiresAtOffset.toSeconds
         )
@@ -86,11 +84,10 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
     "verifyAccessToken" should {
       "successfully verify a valid JWT token and extract claims" in {
-        val instantNow   = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed   = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID       = arbitrarySample[UserID]
-        val onboardStage = arbitrarySample[OnboardStage]
-        val jwtService   = ZIO
+        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
+        val userID     = arbitrarySample[UserID]
+        val jwtService = ZIO
           .service[JwtService]
           .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
           .zioValue
@@ -99,7 +96,6 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .subject(userID.value)
           .issuer(jwtConfig.issuer)
           .expiration(Date.from(instantNow.plusSeconds(jwtConfig.accessTokenExpiresAtOffset.toSeconds)))
-          .add("onboardStage", onboardStage.toString)
           .and
           .signWith(jwtConfig.secretKey)
           .compact
@@ -108,7 +104,7 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         assert(verifyResult.isRight)
 
-        verifyResult.value shouldBe (userID, onboardStage)
+        verifyResult.value shouldBe userID
       }
 
       "fail with FailedToVerifyJwt with invalid JWT token" in {
@@ -127,11 +123,10 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       }
 
       "fail with FailedToVerifyJwt if the token is expired" in {
-        val instantNow   = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed   = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID       = arbitrarySample[UserID]
-        val onboardStage = arbitrarySample[OnboardStage]
-        val jwtService   = ZIO
+        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
+        val userID     = arbitrarySample[UserID]
+        val jwtService = ZIO
           .service[JwtService]
           .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
           .zioValue
@@ -140,7 +135,6 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .subject(userID.value)
           .issuer(jwtConfig.issuer)
           .expiration(Date.from(instantNow.minusSeconds(1)))
-          .add("onboardStage", onboardStage.toString)
           .and
           .signWith(jwtConfig.secretKey)
           .compact
@@ -152,11 +146,10 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       }
 
       "fail with FailedToVerifyJwt if the token issuer is invalid" in {
-        val instantNow   = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed   = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID       = arbitrarySample[UserID]
-        val onboardStage = arbitrarySample[OnboardStage]
-        val jwtService   = ZIO
+        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
+        val userID     = arbitrarySample[UserID]
+        val jwtService = ZIO
           .service[JwtService]
           .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
           .zioValue
@@ -165,7 +158,6 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .subject(userID.value)
           .issuer("invalid-issuer")
           .expiration(Date.from(instantNow.plusSeconds(jwtConfig.accessTokenExpiresAtOffset.toSeconds)))
-          .add("onboardStage", onboardStage.toString)
           .and
           .signWith(jwtConfig.secretKey)
           .compact
@@ -177,31 +169,6 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       }
 
       "fail with FailedToVerifyJwt if the token signature is invalid" in {
-        val instantNow   = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed   = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID       = arbitrarySample[UserID]
-        val onboardStage = arbitrarySample[OnboardStage]
-        val jwtService   = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
-
-        val jws = Jwts.builder.claims
-          .subject(userID.value)
-          .issuer(jwtConfig.issuer)
-          .expiration(Date.from(instantNow.plusSeconds(jwtConfig.accessTokenExpiresAtOffset.toSeconds)))
-          .add("onboardStage", onboardStage.toString)
-          .and
-          .signWith(Jwts.SIG.HS256.key().build()) // Sign with a different key to make the signature invalid
-          .compact
-
-        val failedToVerifyJwt = jwtService.verifyAccessToken(Jwt.assume(jws)).zioError
-
-        failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
-        failedToVerifyJwt.message shouldBe "Failed to parse and verify access Jwt"
-      }
-
-      "fail with UnexpectedError if the onboardStage cant be resolved" in {
         val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
         val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
         val userID     = arbitrarySample[UserID]
@@ -214,15 +181,14 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .subject(userID.value)
           .issuer(jwtConfig.issuer)
           .expiration(Date.from(instantNow.plusSeconds(jwtConfig.accessTokenExpiresAtOffset.toSeconds)))
-          .add("onboardStage", "invalidOnboardStage")
           .and
-          .signWith(jwtConfig.secretKey)
+          .signWith(Jwts.SIG.HS256.key().build()) // Sign with a different key to make the signature invalid
           .compact
 
         val failedToVerifyJwt = jwtService.verifyAccessToken(Jwt.assume(jws)).zioError
 
-        failedToVerifyJwt shouldBe a[ServiceError.InternalServerError.UnexpectedError]
-        failedToVerifyJwt.message shouldBe "Failed to apply OnboardStage from access jwt claim [invalidOnboardStage]"
+        failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
+        failedToVerifyJwt.message shouldBe "Failed to parse and verify access Jwt"
       }
     }
 

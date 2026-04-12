@@ -23,7 +23,7 @@ structure VerifyEmailRequest {
 
 structure VerifyEmailResponse {
     @required
-    expiresInSeconds: Long
+    accessTokenExpiresInSeconds: Long
     @required
     onboardStage: OnboardStage
     @required

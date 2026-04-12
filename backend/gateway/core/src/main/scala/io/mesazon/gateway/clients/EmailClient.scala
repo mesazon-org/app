@@ -17,8 +17,7 @@ trait EmailClient {
   ): IO[ServiceError, Unit]
 
   def sendWelcomeEmail(
-      email: Email,
-      fullName: FullName,
+      email: Email
   ): IO[ServiceError, Unit]
 }
 
@@ -61,8 +60,7 @@ object EmailClient {
         )
 
     override def sendWelcomeEmail(
-        email: Email,
-        fullName: FullName,
+        email: Email
     ): IO[ServiceError, Unit] =
       ZIO
         .fromCompletableFuture(
@@ -74,7 +72,7 @@ object EmailClient {
               .withSubject("Welcome to Mesazon!")
               .withHTMLText(
                 Welcome
-                  .render(fullName.value)
+                  .render()
                   .toString()
               )
               .buildEmail()

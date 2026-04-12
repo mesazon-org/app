@@ -69,15 +69,14 @@ class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBas
       "send email successfully" in withContext { context =>
         import context.*
 
-        val email    = Email.assume("bar@foo.com")
-        val fullName = FullName.assume("Bar Foo")
+        val email = Email.assume("bar@foo.com")
 
         val emailClient = ZIO
           .service[EmailClient]
           .provide(EmailClient.live, ZLayer.succeed(emailConfig))
           .zioValue
 
-        emailClient.sendWelcomeEmail(email, fullName).zioValue
+        emailClient.sendWelcomeEmail(email).zioValue
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
       }

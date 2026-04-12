@@ -3,7 +3,8 @@ package io.mesazon.gateway.utils
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.waha
 import io.mesazon.gateway.smithy
-import io.mesazon.testkit.base.{GatewayArbitraries, IronRefinedTypeTransformer}
+import io.mesazon.testkit.base.*
+import io.scalaland.chimney.dsl.*
 import org.scalacheck.*
 
 trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
@@ -46,4 +47,8 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
       request = smithy.VerifyEmailRequest(otpID = verifyEmail.otpID.value, otp = verifyEmail.otp.value)
     } yield request
   }
+
+  given Arbitrary[smithy.OnboardPasswordRequest] = Arbitrary(
+    Arbitrary.arbitrary[OnboardPassword].map(_.transformInto[smithy.OnboardPasswordRequest])
+  )
 }

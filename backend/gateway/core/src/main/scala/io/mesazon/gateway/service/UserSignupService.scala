@@ -110,7 +110,7 @@ object UserSignupService {
         verifyEmail        <- verifyEmailValidator.validate(request)
         userOtpRowOpt      <- userOtpRepository.getUserOtp(verifyEmail.otpID, OtpType.EmailVerification)
         userOtpRowExisting <- ZIO.getOrFailWith(
-          ServiceError.UnauthorizedError.OtpError(s"No otp found for otpID: ${verifyEmail.otpID}")
+          ServiceError.BadRequestError.OtpValidationError(s"No otp found for otpID: ${verifyEmail.otpID}")
         )(userOtpRowOpt)
         userDetailsRowOpt      <- userDetailsRepository.getUserDetails(userOtpRowExisting.userID)
         userDetailsRowExisting <- ZIO.getOrFailWith(
@@ -133,12 +133,13 @@ object UserSignupService {
             )
           case _ =>
             ZIO.fail(
-              ServiceError.UnauthorizedError.OtpError(
+              ServiceError.BadRequestError.OtpValidationError(
                 s"Invalid otp for otpID: [${userOtpRowExisting.otpID}]"
               )
             )
         }
-        accessToken  <- jwtService.generateAccessToken(userDetailsRowExisting.userID, OnboardStage.EmailVerified)
+        _            <- userTokenRepository.deleteAllUserTokens(userDetailsRowExisting.userID)
+        accessToken  <- jwtService.generateAccessToken(userDetailsRowExisting.userID)
         refreshToken <- jwtService.generateRefreshToken(userDetailsRowExisting.userID)
         _            <- userTokenRepository.upsertUserToken(
           refreshToken.tokenID,
@@ -147,7 +148,7 @@ object UserSignupService {
           refreshToken.expiresAt,
         )
       } yield smithy.VerifyEmailResponse(
-        expiresInSeconds = accessToken.expiresIn.toSeconds,
+        accessTokenExpiresInSeconds = accessToken.expiresIn.toSeconds,
         onboardStage = onboardStageFromDomainToSmithy(OnboardStage.EmailVerified),
         refreshToken = refreshToken.jwt.value,
         accessToken = accessToken.jwt.value,
