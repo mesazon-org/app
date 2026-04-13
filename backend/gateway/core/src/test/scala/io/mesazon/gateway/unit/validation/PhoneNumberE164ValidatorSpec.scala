@@ -25,7 +25,7 @@ class PhoneNumberE164ValidatorSpec extends ZWordSpecBase {
         val phoneNumberValidator = ZIO
           .service[DomainValidator[PhoneNumberRegion, PhoneNumberE164]]
           .provide(
-            PhoneNumberValidator.phoneNumberRegionValidatorLive,
+            PhoneNumberValidator.phoneNumberE164RegionValidatorLive,
             ZLayer.succeed(config),
             ZLayer.succeed(phoneNumberUtil),
           )
@@ -43,7 +43,7 @@ class PhoneNumberE164ValidatorSpec extends ZWordSpecBase {
         val phoneNumberValidator = ZIO
           .service[DomainValidator[PhoneNumberRegion, PhoneNumberE164]]
           .provide(
-            PhoneNumberValidator.phoneNumberRegionValidatorLive,
+            PhoneNumberValidator.phoneNumberE164RegionValidatorLive,
             ZLayer.succeed(config),
             ZLayer.succeed(phoneNumberUtil),
           )
@@ -61,7 +61,7 @@ class PhoneNumberE164ValidatorSpec extends ZWordSpecBase {
         val phoneNumberValidator = ZIO
           .service[DomainValidator[PhoneNumberRegion, PhoneNumberE164]]
           .provide(
-            PhoneNumberValidator.phoneNumberRegionValidatorLive,
+            PhoneNumberValidator.phoneNumberE164RegionValidatorLive,
             ZLayer.succeed(config),
             ZLayer.succeed(phoneNumberUtil),
           )
@@ -83,7 +83,7 @@ class PhoneNumberE164ValidatorSpec extends ZWordSpecBase {
         val phoneNumberValidator = ZIO
           .service[DomainValidator[PhoneNumberRegion, PhoneNumberE164]]
           .provide(
-            PhoneNumberValidator.phoneNumberRegionValidatorLive,
+            PhoneNumberValidator.phoneNumberE164RegionValidatorLive,
             ZLayer.succeed(config),
             ZLayer.succeed(phoneNumberUtil),
           )
@@ -106,7 +106,7 @@ class PhoneNumberE164ValidatorSpec extends ZWordSpecBase {
         val phoneNumberValidator = ZIO
           .service[DomainValidator[PhoneNumberRegion, PhoneNumberE164]]
           .provide(
-            PhoneNumberValidator.phoneNumberRegionValidatorLive,
+            PhoneNumberValidator.phoneNumberE164RegionValidatorLive,
             ZLayer.succeed(config),
             ZLayer.succeed(phoneNumberUtil),
           )
@@ -131,7 +131,7 @@ class PhoneNumberE164ValidatorSpec extends ZWordSpecBase {
         val wahaPhoneNumberValidator = ZIO
           .service[DomainValidator[waha.WahaPhone, PhoneNumberE164]]
           .provide(
-            PhoneNumberValidator.wahaPhoneNumberValidatorLive,
+            PhoneNumberValidator.wahaPhoneNumberE164ValidatorLive,
             ZLayer.succeed(config),
             ZLayer.succeed(phoneNumberUtil),
           )
@@ -151,7 +151,7 @@ class PhoneNumberE164ValidatorSpec extends ZWordSpecBase {
         val wahaPhoneNumberValidator = ZIO
           .service[DomainValidator[waha.WahaPhone, PhoneNumberE164]]
           .provide(
-            PhoneNumberValidator.wahaPhoneNumberValidatorLive,
+            PhoneNumberValidator.wahaPhoneNumberE164ValidatorLive,
             ZLayer.succeed(config),
             ZLayer.succeed(phoneNumberUtil),
           )
@@ -173,7 +173,7 @@ class PhoneNumberE164ValidatorSpec extends ZWordSpecBase {
         val wahaPhoneNumberValidator = ZIO
           .service[DomainValidator[waha.WahaPhone, PhoneNumberE164]]
           .provide(
-            PhoneNumberValidator.wahaPhoneNumberValidatorLive,
+            PhoneNumberValidator.wahaPhoneNumberE164ValidatorLive,
             ZLayer.succeed(config),
             ZLayer.succeed(phoneNumberUtil),
           )

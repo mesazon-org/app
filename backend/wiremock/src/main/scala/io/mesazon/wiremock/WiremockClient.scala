@@ -1,10 +1,10 @@
-package io.mesazon.waha.it.client
+package io.mesazon.wiremock
 
 import cats.syntax.all.*
-import com.dimafeng.testcontainers.{DockerComposeContainer, ExposedService}
+import com.dimafeng.testcontainers.*
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
-import io.mesazon.waha.it.client.WiremockClient.*
+import io.mesazon.wiremock.WiremockClient.*
 import sttp.client4.*
 import sttp.client4.jsoniter.*
 import sttp.model.Uri
@@ -102,35 +102,6 @@ object WiremockClient {
       loggedDate: Long,
       absoluteUrl: String,
   )
-  /*
-  {
-  "requests": [
-    {
-      "id": "8a32a3b0-2139-4d32-8e10-123456789abc",
-      "request": {
-        "method": "POST",
-        "url": "/your/endpoint",
-        "headers": {
-          "Content-Type": "application/json",
-          "User-Agent": "PostmanRuntime/7.26.8"
-        },
-        "body": "{\"username\": \"admin\"}",
-        "queryParams": {},
-        "loggedInDate": 1625097600000,
-        "absoluteUrl": "http://localhost:8080/your/endpoint"
-      },
-      "responseDefinition": {
-        "status": 200,
-        "body": "OK"
-      },
-      "wasMatched": true
-    }
-  ],
-  "meta": {
-    "total": 1
-  }
-}
-   */
 
   case class WiremockClientConfig(scheme: String, host: String, port: Int) {
     val baseUri: Uri = Uri.unsafeApply(scheme, host, port)

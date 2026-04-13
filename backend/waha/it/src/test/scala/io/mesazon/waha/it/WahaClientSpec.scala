@@ -3,13 +3,13 @@ package io.mesazon.waha.it
 import com.dimafeng.testcontainers.ExposedService
 import io.mesazon.domain.waha.*
 import io.mesazon.domain.waha.input.*
-import io.mesazon.domain.waha.output.{GroupsCreateOutput, GroupsGetInfoOutput, GroupsUpdateOutput}
-import io.mesazon.testkit.base.{DockerComposeBase, IronRefinedTypeTransformer, WahaArbitraries, ZWordSpecBase}
+import io.mesazon.domain.waha.output.*
+import io.mesazon.testkit.base.*
 import io.mesazon.waha.WahaClient
 import io.mesazon.waha.config.WahaClientConfig
 import io.mesazon.waha.it.WahaClientSpec.Context
-import io.mesazon.waha.it.client.WiremockClient
-import io.mesazon.waha.it.client.WiremockClient.WiremockClientConfig
+import io.mesazon.wiremock.WiremockClient
+import io.mesazon.wiremock.WiremockClient.WiremockClientConfig
 import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.model.StatusCode
 import zio.*

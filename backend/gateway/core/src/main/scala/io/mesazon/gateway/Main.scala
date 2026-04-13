@@ -92,7 +92,7 @@ object Main extends ZIOAppDefault {
       // Validators
       EmailValidator.emailValidatorLive,
 //      PhoneNumberValidator.phoneNumberRegionValidatorLive,
-      PhoneNumberValidator.wahaPhoneNumberValidatorLive,
+      PhoneNumberValidator.wahaPhoneNumberE164ValidatorLive,
       WahaValidator.wahaMessageRequestValidatorLive,
       VerifyEmailValidator.verifyEmailValidatorLive,
       OnboardPasswordValidator.onboardPasswordValidatorLive,

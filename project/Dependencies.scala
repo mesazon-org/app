@@ -35,6 +35,7 @@ object Dependencies {
   lazy val jjwtV                = "0.13.0"
   lazy val springSecurityV      = "7.0.4"
   lazy val bouncyCastleV        = "1.83"
+  lazy val twilioV              = "11.3.6"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -79,12 +80,11 @@ object Dependencies {
   lazy val jclToSlf4j = "org.slf4j"      % "jcl-over-slf4j"  % jclToSlf4jV
 
   // Test
-  lazy val scalaTest          = "org.scalatest"     %% "scalatest"       % scalaTestV
-  lazy val scalaTestPlusCheck = "org.scalatestplus" %% "scalacheck-1-15" % scalaTestPlusCheckV
-  lazy val scalacheck         = "org.scalacheck"    %% "scalacheck"      % scalacheckV
-  lazy val testcontainers     = "org.testcontainers" % "testcontainers"  % testcontainersV
-  lazy val testcontainersScalaPostgresql = "com.dimafeng" %% "testcontainers-scala-postgresql" % testcontainersScalaV
-  lazy val testcontainersScalaScalatest  = "com.dimafeng" %% "testcontainers-scala-scalatest"  % testcontainersScalaV
+  lazy val scalaTest                    = "org.scalatest"     %% "scalatest"                      % scalaTestV
+  lazy val scalaTestPlusCheck           = "org.scalatestplus" %% "scalacheck-1-15"                % scalaTestPlusCheckV
+  lazy val scalacheck                   = "org.scalacheck"    %% "scalacheck"                     % scalacheckV
+  lazy val testcontainers               = "org.testcontainers" % "testcontainers"                 % testcontainersV
+  lazy val testcontainersScalaScalatest = "com.dimafeng"      %% "testcontainers-scala-scalatest" % testcontainersScalaV
 
   // Chimney
   lazy val chimney = "io.scalaland" %% "chimney" % chimneyV
@@ -130,4 +130,7 @@ object Dependencies {
   // Spring Security Crypto
   lazy val springSecurityCrypto = "org.springframework.security" % "spring-security-crypto" % springSecurityV
   lazy val bouncyCastle         = "org.bouncycastle"             % "bcprov-jdk18on"         % bouncyCastleV
+
+  // Twilio
+  lazy val twilio = "com.twilio.sdk" % "twilio" % twilioV
 }

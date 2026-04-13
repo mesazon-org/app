@@ -1,10 +1,12 @@
 package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
+import io.mesazon.domain.gateway.OnboardStage.PhoneVerification
 import io.mesazon.gateway.auth.{AuthorizationState, PasswordService}
 import io.mesazon.gateway.clients.EmailClient
 import io.mesazon.gateway.config.UserOnboardConfig
 import io.mesazon.gateway.repository.*
+import io.mesazon.gateway.smithy.{OnboardDetailsRequest, OnboardDetailsResponse}
 import io.mesazon.gateway.validation.ServiceValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import zio.*
@@ -53,6 +55,25 @@ object UserOnboardService {
             ) *> ZIO.logDebugCause("Welcome email send failure cause", cause)
           )
       } yield smithy.OnboardPasswordResponse(onboardStageFromDomainToSmithy(OnboardStage.PasswordProvided))
+
+    /** HTTP POST /onboard/details */
+    override def onboardDetails(request: OnboardDetailsRequest): ServiceTask[OnboardDetailsResponse] =
+      for {
+        authedUser  <- authorizationState.get()
+        userDetails <- userDetailsRepository
+          .getUserDetails(authedUser.userID)
+          .someOrFail(
+            ServiceError.InternalServerError.UserNotFoundError(
+              s"User details not found for userID: ${authedUser.userID}"
+            )
+          )
+        _ <- verifyOnboardStage(
+          onboardStageUser = userDetails.onboardStage,
+          onboardStagesAllowed = List(OnboardStage.PasswordProvided, OnboardStage.PhoneVerification),
+        )
+        _ <- userDetailsRepository
+          .updateUserDetails(authedUser.userID, OnboardStage.PhoneVerification)
+      } yield OnboardDetailsResponse(onboardStageFromDomainToSmithy(PhoneVerification))
   }
 
   private def observed(userOnboardService: smithy.UserOnboardService[ServiceTask]): smithy.UserOnboardService[Task] =
@@ -60,6 +81,12 @@ object UserOnboardService {
       override def onboardPassword(request: smithy.OnboardPasswordRequest): Task[smithy.OnboardPasswordResponse] =
         HttpErrorHandler.errorResponseHandler(
           userOnboardService.onboardPassword(request)
+        )
+
+      /** HTTP POST /onboard/details */
+      override def onboardDetails(request: OnboardDetailsRequest): Task[OnboardDetailsResponse] =
+        HttpErrorHandler.errorResponseHandler(
+          userOnboardService.onboardDetails(request)
         )
     }
 

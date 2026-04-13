@@ -13,7 +13,7 @@ import zio.*
 object PhoneNumberValidator {
   type PhoneNumberRegion = (phoneRegion: String, phoneNationalNumber: String)
 
-  private def phoneNumberRegionValidator(
+  private def phoneNumberE164RegionValidator(
       config: PhoneNumberValidatorConfig,
       phoneNumberUtil: PhoneNumberUtil,
   ): DomainValidator[PhoneNumberRegion, PhoneNumberE164] = { case (phoneRegion, phoneNationalNumber) =>
@@ -76,7 +76,7 @@ object PhoneNumberValidator {
     } yield phoneNumber).fold(_.invalid, _.valid)
   }
 
-  private def wahaPhoneNumberValidator(
+  private def wahaPhoneNumberE164Validator(
       config: PhoneNumberValidatorConfig,
       phoneNumberUtil: PhoneNumberUtil,
   ): DomainValidator[waha.WahaPhone, PhoneNumberE164] = { wahaPhoneNumber =>
@@ -136,7 +136,7 @@ object PhoneNumberValidator {
     } yield phoneNumber).fold(_.invalid, _.valid)
   }
 
-  val phoneNumberRegionValidatorLive = ZLayer.fromFunction(phoneNumberRegionValidator)
+  val phoneNumberE164RegionValidatorLive = ZLayer.fromFunction(phoneNumberE164RegionValidator)
 
-  val wahaPhoneNumberValidatorLive = ZLayer.fromFunction(wahaPhoneNumberValidator)
+  val wahaPhoneNumberE164ValidatorLive = ZLayer.fromFunction(wahaPhoneNumberE164Validator)
 }

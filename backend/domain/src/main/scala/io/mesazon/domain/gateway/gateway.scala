@@ -30,6 +30,12 @@ type Password = Password.T
 object PasswordHash extends RefinedType[String, NonEmptyTrimmed]
 type PasswordHash = PasswordHash.T
 
+object PhoneCountryCode extends RefinedType[String, NonEmptyTrimmed]
+type PhoneCountryCode = PhoneCountryCode.T
+
+object PhoneNationalNumber extends RefinedType[String, NonEmptyTrimmed]
+type PhoneNationalNumber = PhoneNationalNumber.T
+
 object PhoneNumberE164 extends RefinedType[String, NonEmptyTrimmed] {
   def cy(phoneNationalNumber: String): PhoneNumberE164.T =
     assume(s"+357$phoneNationalNumber")

@@ -26,7 +26,6 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
         case "EMAIL_VERIFICATION" => smithy.OnboardStage.EMAIL_VERIFICATION
         case "EMAIL_VERIFIED"     => smithy.OnboardStage.EMAIL_VERIFIED
         case "PASSWORD_PROVIDED"  => smithy.OnboardStage.PASSWORD_PROVIDED
-        case "DETAILS_PROVIDED"   => smithy.OnboardStage.DETAILS_PROVIDED
         case "PHONE_VERIFICATION" => smithy.OnboardStage.PHONE_VERIFICATION
         case "PHONE_VERIFIED"     => smithy.OnboardStage.PHONE_VERIFIED
         case str                  => throw new IllegalArgumentException(s"Unknown OnboardStage: $str")
@@ -37,7 +36,6 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
         case smithy.OnboardStage.EMAIL_VERIFICATION => out.writeVal("EMAIL_VERIFICATION")
         case smithy.OnboardStage.EMAIL_VERIFIED     => out.writeVal("EMAIL_VERIFIED")
         case smithy.OnboardStage.PASSWORD_PROVIDED  => out.writeVal("PASSWORD_PROVIDED")
-        case smithy.OnboardStage.DETAILS_PROVIDED   => out.writeVal("DETAILS_PROVIDED")
         case smithy.OnboardStage.PHONE_VERIFICATION => out.writeVal("PHONE_VERIFICATION")
         case smithy.OnboardStage.PHONE_VERIFIED     => out.writeVal("PHONE_VERIFIED")
       }
