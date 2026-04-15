@@ -26,7 +26,7 @@ object TwilioClient {
         .body(
           Map(
             "To"   -> to.value,
-            "From" -> twilioClientConfig.phoneNumber,
+            "From" -> twilioClientConfig.companyName,
             "Body" -> s"Your Mesazon verification code is: ${otp.value}. Valid for 5 minutes. Do not share this code.",
           )
         )

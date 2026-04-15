@@ -37,7 +37,7 @@ class TwilioClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBa
       port = wiremockClientConfig.port,
       accountSid = "account-sid",
       authToken = "auth-token",
-      phoneNumber = "+1234567890",
+      companyName = "+1234567890",
     )
 
     f(Context(twilioClientConfig, wiremockClient))

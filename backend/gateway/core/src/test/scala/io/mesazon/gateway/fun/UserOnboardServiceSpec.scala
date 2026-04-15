@@ -49,6 +49,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           expectedHashPasswordCalls = 1
         )
         checkTwilioClient()
+        checkUserOtpRepository()
       }
 
       "successfully onboard password for user but retry sending welcome email when fails to send email" in new TestContext {
@@ -83,6 +84,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           expectedHashPasswordCalls = 1
         )
         checkTwilioClient()
+        checkUserOtpRepository()
       }
 
       "fail with Unauthorized when onboard password for user not in email verified stage" in new TestContext {
@@ -114,6 +116,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         checkEmailClient()
         checkPasswordService()
         checkTwilioClient()
+        checkUserOtpRepository()
       }
 
       "fail with ValidationError when onboard password with invalid password" in new TestContext {
@@ -140,6 +143,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         checkEmailClient()
         checkPasswordService()
         checkTwilioClient()
+        checkUserOtpRepository()
       }
 
       "fail with InternalServer Error when password service fails to hash password" in new TestContext {
@@ -171,6 +175,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           expectedHashPasswordCalls = 1
         )
         checkTwilioClient()
+        checkUserOtpRepository()
       }
     }
 
@@ -190,11 +195,13 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val onboardPasswordResponse =
           userOnboardService.onboardDetails(onboardDetailsRequest).zioValue
 
-        onboardPasswordResponse.onboardStage.value shouldBe "PASSWORD_PROVIDED"
+        onboardPasswordResponse.onboardStage.value shouldBe "PHONE_VERIFICATION"
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,
           expectedUpdateUserDetailsCalls = 1,
+        )
+        checkUserOtpRepository(
         )
         checkUserCredentialsRepository(
           expectedInsertUserCredentialsCalls = 1

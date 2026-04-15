@@ -31,8 +31,8 @@ object UserOnboardService {
     /** HTTP POST /onboard/password */
     override def onboardPassword(request: smithy.OnboardPasswordRequest): ServiceTask[smithy.OnboardPasswordResponse] =
       for {
-        onboardPassword <- onboardPasswordServiceValidator.validate(request)
         authedUser      <- authorizationState.get()
+        onboardPassword <- onboardPasswordServiceValidator.validate(request)
         userDetails     <- userDetailsRepository
           .getUserDetails(authedUser.userID)
           .someOrFail(
@@ -64,8 +64,8 @@ object UserOnboardService {
     /** HTTP POST /onboard/details */
     override def onboardDetails(request: smithy.OnboardDetailsRequest): ServiceTask[smithy.OnboardDetailsResponse] =
       for {
-        onboardDetails <- onboardDetailsServiceValidator.validate(request)
         authedUser     <- authorizationState.get()
+        onboardDetails <- onboardDetailsServiceValidator.validate(request)
         userDetails    <- userDetailsRepository
           .getUserDetails(authedUser.userID)
           .someOrFail(
@@ -77,16 +77,28 @@ object UserOnboardService {
           onboardStageUser = userDetails.onboardStage,
           onboardStagesAllowed = List(OnboardStage.PasswordProvided, OnboardStage.PhoneVerification),
         )
-        instantNow <- timeProvider.instantNow
-        otp        <- otpGenerator.generate
-        userOtpRow <- userOtpRepository.upsertUserOtp(
-          authedUser.userID,
-          OtpType.PhoneVerification,
-          otp,
-          ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds)),
-        )
+        instantNow    <- timeProvider.instantNow
+        userOtpRowOpt <- userOtpRepository.getUserOtpByUserID(authedUser.userID, OtpType.PhoneVerification)
+        (userOtpRowNew, otpExpiresInSeconds) <- userOtpRowOpt match {
+          case Some(userOtpRow)
+              if userOtpRow.expiresAt.value
+                .minusSeconds(userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds)
+                .isAfter(instantNow) =>
+            val otpExpiresInSeconds = userOtpRow.expiresAt.value.getEpochSecond - instantNow.getEpochSecond
+            ZIO.succeed((userOtpRow, otpExpiresInSeconds))
+          case _ =>
+            for {
+              otp        <- otpGenerator.generate
+              userOtpRow <- userOtpRepository.upsertUserOtp(
+                authedUser.userID,
+                OtpType.PhoneVerification,
+                otp,
+                ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds)),
+              )
+            } yield (userOtpRow, userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds)
+        }
         _ <- twilioClient
-          .sendOtpSms(onboardDetails.phoneNumber.phoneNumberE164, Otp.assume("123456"))
+          .sendOtpSms(onboardDetails.phoneNumber.phoneNumberE164, userOtpRowNew.otp)
           .retry(
             Schedule.recurs(userOnboardConfig.sendWelcomeEmailMaxRetries) && Schedule
               .exponential(userOnboardConfig.sendWelcomeEmailRetryDelay)
@@ -95,8 +107,8 @@ object UserOnboardService {
           .updateUserDetails(authedUser.userID, OnboardStage.PhoneVerification)
       } yield smithy.OnboardDetailsResponse(
         onboardStage = onboardStageFromDomainToSmithy(PhoneVerification),
-        otpID = userOtpRow.otpID.value,
-        otpExpiresInSeconds = userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds,
+        otpID = userOtpRowNew.otpID.value,
+        otpExpiresInSeconds = otpExpiresInSeconds,
       )
   }
 

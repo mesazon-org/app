@@ -8,7 +8,7 @@ final case class TwilioClientConfig(
     port: Int,
     accountSid: String,
     authToken: String,
-    phoneNumber: String,
+    companyName: String,
 ) {
   val baseUri: Uri = Uri(scheme, host, port)
 }
