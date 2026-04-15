@@ -100,9 +100,9 @@ class UserOnboardApiSpec
 
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
 
-        val signupEmailResponse = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+        val signUpEmailResponse = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
 
-        signupEmailResponse.code shouldBe StatusCode.Ok
+        signUpEmailResponse.code shouldBe StatusCode.Ok
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
 
@@ -141,9 +141,9 @@ class UserOnboardApiSpec
         import context.*
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
 
-        val signupEmailResponse = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+        val signUpEmailResponse = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
 
-        signupEmailResponse.code shouldBe StatusCode.Ok
+        signUpEmailResponse.code shouldBe StatusCode.Ok
 
         val userOtpRow = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue.head
 

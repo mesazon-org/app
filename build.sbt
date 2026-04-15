@@ -197,7 +197,6 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.jjwtJackson,
     Dependencies.springSecurityCrypto,
     Dependencies.bouncyCastle,
-    Dependencies.twilio,
   )
   .settings(
     test := Def

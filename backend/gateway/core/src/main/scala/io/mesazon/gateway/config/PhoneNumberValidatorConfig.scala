@@ -7,7 +7,7 @@ import zio.Config.Error
 import scala.jdk.CollectionConverters.SetHasAsScala
 
 case class PhoneNumberValidatorConfig(
-    supportedRegions: Set[String]
+    supportedPhoneRegions: Set[String]
 )
 
 object PhoneNumberValidatorConfig {
@@ -17,7 +17,7 @@ object PhoneNumberValidatorConfig {
     ZLayer(for {
       config          <- ZIO.service[PhoneNumberValidatorConfig]
       phoneNumberUtil <- ZIO.service[PhoneNumberUtil]
-      unsupportedRegions = config.supportedRegions.diff(phoneNumberUtil.getSupportedRegions.asScala.toSet)
+      unsupportedRegions = config.supportedPhoneRegions.diff(phoneNumberUtil.getSupportedRegions.asScala.toSet)
       _ <-
         if (unsupportedRegions.isEmpty) ZIO.unit
         else
@@ -27,7 +27,7 @@ object PhoneNumberValidatorConfig {
               s"Config pass unsupported regions ${unsupportedRegions.mkString("[", ", ", "]")}",
             )
           )
-    } yield config.copy(supportedRegions = config.supportedRegions.map(_.trim.toUpperCase)))
+    } yield config.copy(supportedPhoneRegions = config.supportedPhoneRegions.map(_.trim.toUpperCase)))
 
   val live = deriveConfigLayer[PhoneNumberValidatorConfig]("validation") >>> supportedRegionsConfig
 }

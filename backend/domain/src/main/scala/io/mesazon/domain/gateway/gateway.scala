@@ -30,6 +30,9 @@ type Password = Password.T
 object PasswordHash extends RefinedType[String, NonEmptyTrimmed]
 type PasswordHash = PasswordHash.T
 
+object PhoneRegion extends RefinedType[String, NonEmptyTrimmed]
+type PhoneRegion = PhoneRegion.T
+
 object PhoneCountryCode extends RefinedType[String, NonEmptyTrimmed]
 type PhoneCountryCode = PhoneCountryCode.T
 

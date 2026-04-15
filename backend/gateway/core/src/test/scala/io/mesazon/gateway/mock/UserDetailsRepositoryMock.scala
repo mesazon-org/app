@@ -56,7 +56,7 @@ trait UserDetailsRepositoryMock extends ZIOTestOps, should.Matchers {
           userID: UserID,
           onboardStageUpdate: OnboardStage,
           fullNameOptUpdate: Option[FullName],
-          phoneNumberOptUpdate: Option[PhoneNumberE164],
+          phoneNumberOptUpdate: Option[PhoneNumber],
       ): IO[ServiceError, UserDetailsRow] = updateUserDetailsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(
         maybeServiceError.fold(
           ZIO.succeed(

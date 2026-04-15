@@ -19,7 +19,7 @@ trait UserDetailsRepository {
       userID: UserID,
       onboardStageUpdate: OnboardStage,
       fullNameOptUpdate: Option[FullName] = None,
-      phoneNumberOptUpdate: Option[PhoneNumberE164] = None,
+      phoneNumberOptUpdate: Option[PhoneNumber] = None,
   ): IO[ServiceError, UserDetailsRow]
 
   def getUserDetails(userID: UserID): IO[ServiceError, Option[UserDetailsRow]]
@@ -69,7 +69,7 @@ object UserDetailsRepository {
         userID: UserID,
         onboardStageUpdate: OnboardStage,
         fullNameOptUpdate: Option[FullName],
-        phoneNumberOptUpdate: Option[PhoneNumberE164],
+        phoneNumberOptUpdate: Option[PhoneNumber],
     ): IO[ServiceError, UserDetailsRow] = for {
       instantNow     <- timeProvider.instantNow
       userDetailsRow <- database

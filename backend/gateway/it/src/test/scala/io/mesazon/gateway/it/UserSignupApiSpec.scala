@@ -102,9 +102,9 @@ class UserSignupApiSpec
 
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
 
-        val signupEmailResponse = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+        val signUpEmailResponse = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
 
-        signupEmailResponse.code shouldBe StatusCode.Ok
+        signUpEmailResponse.code shouldBe StatusCode.Ok
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
 
@@ -129,7 +129,7 @@ class UserSignupApiSpec
         userOtpRowsAll should have size 1
         userOtpRowsAll should contain theSameElementsAs List(
           UserOtpRow(
-            otpID = OtpID.assume(signupEmailResponse.body.value.otpID),
+            otpID = OtpID.assume(signUpEmailResponse.body.value.otpID),
             userID = userDetailsRowsAll.head.userID,
             otp = userOtpRowsAll.head.otp,
             otpType = OtpType.EmailVerification,
@@ -146,22 +146,22 @@ class UserSignupApiSpec
 
           val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
 
-          val signupEmailResponse1 = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+          val signUpEmailResponse1 = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
 
-          signupEmailResponse1.code shouldBe StatusCode.Ok
+          signUpEmailResponse1.code shouldBe StatusCode.Ok
 
           mailHogClient.readInbox().zioValue.total shouldBe 1
 
           val userOtpRowsAll1 = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
-          val signupEmailResponse2 = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+          val signUpEmailResponse2 = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
 
-          signupEmailResponse2.code shouldBe StatusCode.Ok
+          signUpEmailResponse2.code shouldBe StatusCode.Ok
 
           // Should remain 1 email in inbox
           mailHogClient.readInbox().zioValue.total shouldBe 1
 
-          signupEmailResponse2.body.value.otpID should not be signupEmailResponse1.body.value.otpID
+          signUpEmailResponse2.body.value.otpID should not be signUpEmailResponse1.body.value.otpID
 
           val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
 
@@ -187,7 +187,7 @@ class UserSignupApiSpec
 
           userOtpRowsAll2 should contain theSameElementsAs List(
             UserOtpRow(
-              otpID = OtpID.assume(signupEmailResponse2.body.value.otpID),
+              otpID = OtpID.assume(signUpEmailResponse2.body.value.otpID),
               userID = userDetailsRowsAll.head.userID,
               otp = userOtpRowsAll2.head.otp,
               otpType = OtpType.EmailVerification,

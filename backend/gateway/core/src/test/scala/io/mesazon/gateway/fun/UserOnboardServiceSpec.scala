@@ -1,12 +1,15 @@
 package io.mesazon.gateway.fun
 
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.config.UserOnboardConfig
+import io.mesazon.gateway.auth.OtpGenerator
+import io.mesazon.gateway.config.{PhoneNumberValidatorConfig, UserOnboardConfig}
 import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.UserOnboardService
 import io.mesazon.gateway.utils.*
-import io.mesazon.gateway.validation.*
+import io.mesazon.gateway.validation.domain.PhoneNumberDomainValidator
+import io.mesazon.gateway.validation.service.{OnboardDetailsServiceValidator, OnboardPasswordServiceValidator}
 import io.mesazon.gateway.{smithy, Mocks}
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
@@ -45,6 +48,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         checkPasswordService(
           expectedHashPasswordCalls = 1
         )
+        checkTwilioClient()
       }
 
       "successfully onboard password for user but retry sending welcome email when fails to send email" in new TestContext {
@@ -78,6 +82,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         checkPasswordService(
           expectedHashPasswordCalls = 1
         )
+        checkTwilioClient()
       }
 
       "fail with Unauthorized when onboard password for user not in email verified stage" in new TestContext {
@@ -108,6 +113,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         checkUserCredentialsRepository()
         checkEmailClient()
         checkPasswordService()
+        checkTwilioClient()
       }
 
       "fail with ValidationError when onboard password with invalid password" in new TestContext {
@@ -129,12 +135,11 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         smithyError
           .asInstanceOf[smithy.ValidationError] shouldBe smithy.ValidationError(fields = List("password"))
 
-        checkUserDetailsRepository(
-          expectedGetUserDetailsCalls = 1
-        )
+        checkUserDetailsRepository()
         checkUserCredentialsRepository()
         checkEmailClient()
         checkPasswordService()
+        checkTwilioClient()
       }
 
       "fail with InternalServer Error when password service fails to hash password" in new TestContext {
@@ -165,6 +170,42 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         checkPasswordService(
           expectedHashPasswordCalls = 1
         )
+        checkTwilioClient()
+      }
+    }
+
+    "onboardDetails" should {
+      "successfully onboard details for user in password provided stage" in new TestContext {
+        val authedUser     = arbitrarySample[AuthedUser]
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = OnboardStage.PasswordProvided)
+
+        val userOnboardService = buildUserOnboardServiceLive(
+          authedUser = authedUser,
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+        )
+
+        val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
+
+        val onboardPasswordResponse =
+          userOnboardService.onboardDetails(onboardDetailsRequest).zioValue
+
+        onboardPasswordResponse.onboardStage.value shouldBe "PASSWORD_PROVIDED"
+
+        checkUserDetailsRepository(
+          expectedGetUserDetailsCalls = 1,
+          expectedUpdateUserDetailsCalls = 1,
+        )
+        checkUserCredentialsRepository(
+          expectedInsertUserCredentialsCalls = 1
+        )
+        checkEmailClient(
+          expectedSendWelcomeEmailCalls = 1
+        )
+        checkPasswordService(
+          expectedHashPasswordCalls = 1
+        )
+        checkTwilioClient()
       }
     }
   }
@@ -172,28 +213,50 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
   trait TestContext
       extends UserDetailsRepositoryMock,
         UserCredentialsRepositoryMock,
+        UserOtpRepositoryMock,
         EmailClientMock,
-        PasswordServiceMock {
+        PasswordServiceMock,
+        TwilioClientMock {
 
     val userOnboardConfig = UserOnboardConfig(
+      otpPhoneVerificationExpiresAtOffset = 10.seconds,
+      otpPhoneVerificationResendCooldown = 2.seconds,
       sendWelcomeEmailMaxRetries = 3,
       sendWelcomeEmailRetryDelay = 1.millisecond,
+      sendPhoneVerificationOtpMaxRetries = 3,
+      sendPhoneVerificationOtpRetryDelay = 1.millisecond,
     )
 
     def buildUserOnboardServiceLive(
         authedUser: AuthedUser,
         userDetailsRows: Map[UserID, UserDetailsRow] = Map.empty,
         userCredentialsRows: Map[UserID, UserCredentialsRow] = Map.empty,
+        userOtpRows: Map[OtpID, UserOtpRow] = Map.empty,
+        userOtpRepositoryServiceErrorOpt: Option[ServiceError] = None,
         passwordServiceServiceErrorOpt: Option[ServiceError] = None,
         emailClientServiceErrorOpt: Option[ServiceError] = None,
         userDetailsRepositoryServiceErrorOpt: Option[ServiceError] = None,
         userCredentialsRepositoryServiceErrorOpt: Option[ServiceError] = None,
+        twilioClientServiceErrorOpt: Option[ServiceError] = None,
     ): smithy.UserOnboardService[Task] =
       ZIO
         .service[smithy.UserOnboardService[Task]]
         .provide(
           UserOnboardService.live,
-          OnboardPasswordValidator.onboardPasswordValidatorLive,
+          OtpGenerator.live,
+          TimeProvider.liveSystemUTC,
+          PhoneNumberUtil.live,
+          OnboardPasswordServiceValidator.live,
+          OnboardDetailsServiceValidator.live,
+          ZLayer.succeed(
+            PhoneNumberValidatorConfig(
+              supportedPhoneRegions = Set("CY", "GB")
+            )
+          ),
+          PhoneNumberDomainValidator.live,
+          twilioClientMockLive(
+            maybeServiceError = twilioClientServiceErrorOpt
+          ),
           passwordServiceMockLive(
             maybeServiceError = passwordServiceServiceErrorOpt
           ),
@@ -202,9 +265,13 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             userDetailsRows = userDetailsRows,
             maybeServiceError = userDetailsRepositoryServiceErrorOpt,
           ),
+          userOtpRepositoryMockLive(
+            userOtpRows = userOtpRows,
+            serviceErrorOpt = userOtpRepositoryServiceErrorOpt,
+          ),
           userCredentialsRepositoryMockLive(
             userCredentialsRows = userCredentialsRows,
-            maybeServiceError = userCredentialsRepositoryServiceErrorOpt,
+            serviceErrorOpt = userCredentialsRepositoryServiceErrorOpt,
           ),
           emailClientMockLive(
             maybeServiceError = emailClientServiceErrorOpt

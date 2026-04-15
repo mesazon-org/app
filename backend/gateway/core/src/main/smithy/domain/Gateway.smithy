@@ -9,3 +9,10 @@ enum OnboardStage {
     PHONE_VERIFICATION
     PHONE_VERIFIED
 }
+
+structure PhoneNumberRequest {
+    @required
+    phoneNationalNumber: String
+    @required
+    phoneCountryCode: String
+}

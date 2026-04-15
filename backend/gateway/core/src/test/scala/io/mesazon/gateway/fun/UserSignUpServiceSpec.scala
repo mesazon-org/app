@@ -3,22 +3,23 @@ package io.mesazon.gateway.fun
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.auth.OtpGenerator
-import io.mesazon.gateway.config.UserSignupConfig
+import io.mesazon.gateway.config.UserSignUpConfig
 import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.*
-import io.mesazon.gateway.service.UserSignupService
+import io.mesazon.gateway.service.UserSignUpService
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
-import io.mesazon.gateway.validation.*
+import io.mesazon.gateway.validation.domain.EmailDomainValidator
+import io.mesazon.gateway.validation.service.{SignUpEmailServiceValidator, SignUpVerifyEmailServiceValidator}
 import io.mesazon.generator.IDGenerator
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 
 import java.time.Instant
 
-class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries {
+class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries {
 
-  "UserSignupService" when {
+  "UserSignUpService" when {
     "signUpEmail" should {
       "successfully sign up a new user with valid email" in new TestContext {
 
@@ -32,7 +33,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         val signUpEmailResponse = userSignupService.signUpEmail(signUpEmailRequest).zioValue
 
         signUpEmailResponse.otpID shouldBe OtpID.assume("otp-id").value
-        signUpEmailResponse.otpExpiresInSeconds shouldBe userSignupConfig.otpEmailVerificationExpiresAtOffset.toSeconds
+        signUpEmailResponse.otpExpiresInSeconds shouldBe userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds
 
         checkUserDetailsRepository(
           expectedGetUserDetailsByEmailCalls = 1,
@@ -51,7 +52,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
       "successfully re-sign up a user with sign up email stages with otp found and not expired" in new TestContext {
         val userID                   = arbitrarySample[UserID]
         val email                    = arbitrarySample[Email]
-        val onboardStagesSignupEmail = Random.shuffle(OnboardStage.signupEmailStages).zioValue.head
+        val onboardStagesSignupEmail = Random.shuffle(OnboardStage.signUpEmailStages).zioValue.head
         val userOtpRow               = arbitrarySample[UserOtpRow]
           .copy(userID = userID, otpType = OtpType.EmailVerification)
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -68,7 +69,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         val signUpEmailResponse = userSignupService.signUpEmail(signUpEmailRequest).zioValue
 
         signUpEmailResponse.otpID shouldBe OtpID.assume("otp-id").value
-        signUpEmailResponse.otpExpiresInSeconds shouldBe userSignupConfig.otpEmailVerificationExpiresAtOffset.toSeconds
+        signUpEmailResponse.otpExpiresInSeconds shouldBe userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds
 
         checkUserDetailsRepository(
           expectedGetUserDetailsByEmailCalls = 1,
@@ -88,7 +89,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
       "successfully re-sign up a user with sign up email when no otp found" in new TestContext {
         val userID                   = arbitrarySample[UserID]
         val email                    = arbitrarySample[Email]
-        val onboardStagesSignupEmail = Random.shuffle(OnboardStage.signupEmailStages).zioValue.head
+        val onboardStagesSignupEmail = Random.shuffle(OnboardStage.signUpEmailStages).zioValue.head
         val userDetailsRow           = arbitrarySample[UserDetailsRow]
           .copy(userID = userID, onboardStage = onboardStagesSignupEmail, email = email)
 
@@ -103,7 +104,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         val signUpEmailResponse = userSignupService.signUpEmail(signUpEmailRequest).zioValue
 
         signUpEmailResponse.otpID shouldBe OtpID.assume("otp-id").value
-        signUpEmailResponse.otpExpiresInSeconds shouldBe userSignupConfig.otpEmailVerificationExpiresAtOffset.toSeconds
+        signUpEmailResponse.otpExpiresInSeconds shouldBe userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds
 
         checkUserDetailsRepository(
           expectedGetUserDetailsByEmailCalls = 1,
@@ -123,7 +124,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
       "successfully re-sign up a user with sign up email when otp found but expired" in new TestContext {
         val userID                   = arbitrarySample[UserID]
         val email                    = arbitrarySample[Email]
-        val onboardStagesSignupEmail = Random.shuffle(OnboardStage.signupEmailStages).zioValue.head
+        val onboardStagesSignupEmail = Random.shuffle(OnboardStage.signUpEmailStages).zioValue.head
         val userOtpRow               = arbitrarySample[UserOtpRow]
           .copy(
             userID = userID,
@@ -144,7 +145,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         val signUpEmailResponse = userSignupService.signUpEmail(signUpEmailRequest).zioValue
 
         signUpEmailResponse.otpID shouldBe OtpID.assume("otp-id").value
-        signUpEmailResponse.otpExpiresInSeconds shouldBe userSignupConfig.otpEmailVerificationExpiresAtOffset.toSeconds
+        signUpEmailResponse.otpExpiresInSeconds shouldBe userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds
 
         checkUserDetailsRepository(
           expectedGetUserDetailsByEmailCalls = 1,
@@ -165,7 +166,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         val userID                     = arbitrarySample[UserID]
         val email                      = arbitrarySample[Email]
         val onboardStageNonSingupEmail =
-          Random.shuffle(OnboardStage.values.diff(OnboardStage.signupEmailStages).toList).zioValue.head
+          Random.shuffle(OnboardStage.values.diff(OnboardStage.signUpEmailStages).toList).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(userID = userID, onboardStage = onboardStageNonSingupEmail, email = email)
 
@@ -179,7 +180,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         val signUpEmailResponse = userSignupService.signUpEmail(signUpEmailRequest).zioValue
 
         signUpEmailResponse.otpID should not be OtpID.assume("otp-id").value
-        signUpEmailResponse.otpExpiresInSeconds shouldBe userSignupConfig.otpEmailVerificationExpiresAtOffset.toSeconds
+        signUpEmailResponse.otpExpiresInSeconds shouldBe userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds
 
         checkUserDetailsRepository(
           expectedGetUserDetailsByEmailCalls = 1
@@ -216,7 +217,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
       "fail and retry sign up for already existing user when sending email when email client fails" in new TestContext {
         val userID                   = arbitrarySample[UserID]
         val email                    = arbitrarySample[Email]
-        val onboardStagesSignupEmail = Random.shuffle(OnboardStage.signupEmailStages).zioValue.head
+        val onboardStagesSignupEmail = Random.shuffle(OnboardStage.signUpEmailStages).zioValue.head
         val userDetailsRow           = arbitrarySample[UserDetailsRow]
           .copy(userID = userID, onboardStage = onboardStagesSignupEmail, email = email)
         val userSignupService = buildUserSignupServiceLive(
@@ -243,7 +244,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           expectedGetUserOtpByUserIDCalls = 1,
         )
         checkEmailClient(
-          expectedSendEmailVerificationEmailCalls = userSignupConfig.sendEmailVerificationEmailMaxRetries + 1
+          expectedSendEmailVerificationEmailCalls = userSignUpConfig.sendEmailVerificationEmailMaxRetries + 1
         )
         checkJwtService()
       }
@@ -270,7 +271,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           expectedUpsertUserOtpCalls = 1
         )
         checkEmailClient(
-          expectedSendEmailVerificationEmailCalls = userSignupConfig.sendEmailVerificationEmailMaxRetries + 1
+          expectedSendEmailVerificationEmailCalls = userSignUpConfig.sendEmailVerificationEmailMaxRetries + 1
         )
         checkJwtService()
       }
@@ -299,7 +300,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
       }
     }
 
-    "verifyEmail" should {
+    "signUpVerifyEmail" should {
       "successfully verify email with valid otp" in new TestContext {
         val userID     = arbitrarySample[UserID]
         val email      = arbitrarySample[Email]
@@ -317,12 +318,12 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
 
-        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val signUpVerifyEmailRequest = arbitrarySample[smithy.SignUpVerifyEmailRequest]
           .copy(otpID = userOtpRow.otpID.value, otp = userOtpRow.otp.value)
 
-        val verifyEmailResponse = userSignupService.verifyEmail(verifyEmailRequest).zioValue
+        val signUpVerifyEmailResponse = userSignupService.signUpVerifyEmail(signUpVerifyEmailRequest).zioValue
 
-        verifyEmailResponse.onboardStage.value shouldBe "EMAIL_VERIFIED"
+        signUpVerifyEmailResponse.onboardStage.value shouldBe "EMAIL_VERIFIED"
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,
@@ -360,10 +361,10 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
 
-        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val signUpVerifyEmailRequest = arbitrarySample[smithy.SignUpVerifyEmailRequest]
           .copy(otpID = userOtpRow.otpID.value, otp = "invalid-otp")
 
-        val smithyError = userSignupService.verifyEmail(verifyEmailRequest).zioError
+        val smithyError = userSignupService.signUpVerifyEmail(signUpVerifyEmailRequest).zioError
 
         smithyError shouldBe a[smithy.ValidationError]
         smithyError
@@ -377,12 +378,12 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
       }
 
       "fail with BadRequest when verify email with non-existing otp" in new TestContext {
-        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val signUpVerifyEmailRequest = arbitrarySample[smithy.SignUpVerifyEmailRequest]
           .copy(otpID = OtpID.assume("non-existing-otp-id").value)
 
         val userSignupService = buildUserSignupServiceLive()
 
-        val smithyError = userSignupService.verifyEmail(verifyEmailRequest).zioError
+        val smithyError = userSignupService.signUpVerifyEmail(signUpVerifyEmailRequest).zioError
 
         smithyError shouldBe a[smithy.BadRequest]
         smithyError
@@ -412,10 +413,10 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
 
-        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val signUpVerifyEmailRequest = arbitrarySample[smithy.SignUpVerifyEmailRequest]
           .copy(otpID = userOtpRow.otpID.value, otp = userOtpRow.otp.value)
 
-        val smithyError = userSignupService.verifyEmail(verifyEmailRequest).zioError
+        val smithyError = userSignupService.signUpVerifyEmail(signUpVerifyEmailRequest).zioError
 
         smithyError shouldBe a[smithy.BadRequest]
         smithyError
@@ -442,10 +443,10 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow)
         )
 
-        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val signUpVerifyEmailRequest = arbitrarySample[smithy.SignUpVerifyEmailRequest]
           .copy(otpID = userOtpRow.otpID.value, otp = userOtpRow.otp.value)
 
-        val smithyError = userSignupService.verifyEmail(verifyEmailRequest).zioError
+        val smithyError = userSignupService.signUpVerifyEmail(signUpVerifyEmailRequest).zioError
 
         smithyError shouldBe a[smithy.BadRequest]
         smithyError
@@ -477,10 +478,10 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
 
-        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val signUpVerifyEmailRequest = arbitrarySample[smithy.SignUpVerifyEmailRequest]
           .copy(otpID = userOtpRow.otpID.value, otp = userOtpRow.otp.value)
 
-        val smithyError = userSignupService.verifyEmail(verifyEmailRequest).zioError
+        val smithyError = userSignupService.signUpVerifyEmail(signUpVerifyEmailRequest).zioError
 
         smithyError shouldBe a[smithy.BadRequest]
         smithyError
@@ -514,10 +515,10 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
 
-        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val signUpVerifyEmailRequest = arbitrarySample[smithy.SignUpVerifyEmailRequest]
           .copy(otpID = userOtpRow.otpID.value, otp = "123ABC")
 
-        val smithyError = userSignupService.verifyEmail(verifyEmailRequest).zioError
+        val smithyError = userSignupService.signUpVerifyEmail(signUpVerifyEmailRequest).zioError
 
         smithyError shouldBe a[smithy.BadRequest]
         smithyError
@@ -535,14 +536,14 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
       }
 
       "fail with InternalServerError when userOtpRepository fails to get user otp" in new TestContext {
-        val verifyEmailRequest = arbitrarySample[smithy.VerifyEmailRequest]
+        val signUpVerifyEmailRequest = arbitrarySample[smithy.SignUpVerifyEmailRequest]
 
         val userSignupService = buildUserSignupServiceLive(
           userOtpRepositoryServiceErrorOpt =
             Some(ServiceError.InternalServerError.DatabaseError("Database error", new RuntimeException))
         )
 
-        val smithyError = userSignupService.verifyEmail(verifyEmailRequest).zioError
+        val smithyError = userSignupService.signUpVerifyEmail(signUpVerifyEmailRequest).zioError
 
         smithyError shouldBe a[smithy.InternalServerError]
         smithyError
@@ -566,7 +567,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         JwtServiceMock,
         EmailClientMock {
 
-    val userSignupConfig = UserSignupConfig(
+    val userSignUpConfig = UserSignUpConfig(
       otpEmailVerificationExpiresAtOffset = 10.seconds,
       otpEmailVerificationResendCooldown = 5.seconds,
       sendEmailVerificationEmailMaxRetries = 3,
@@ -582,12 +583,13 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         userDetailsRepositoryServiceErrorOpt: Option[ServiceError] = None,
         userTokenRepositoryServiceErrorOpt: Option[ServiceError] = None,
         userOtpRepositoryServiceErrorOpt: Option[ServiceError] = None,
-    ): smithy.UserSignupService[Task] =
+    ): smithy.UserSignUpService[Task] =
       ZIO
-        .service[smithy.UserSignupService[Task]]
+        .service[smithy.UserSignUpService[Task]]
         .provide(
-          ZLayer.succeed(userSignupConfig),
-          UserSignupService.live,
+          ZLayer.succeed(userSignUpConfig),
+          UserSignUpService.live,
+          EmailDomainValidator.live,
           userDetailsRepositoryMockLive(
             userDetailsRows = userDetailsRows,
             maybeServiceError = userDetailsRepositoryServiceErrorOpt,
@@ -598,7 +600,7 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           ),
           userOtpRepositoryMockLive(
             userOtpRows = userOtpRows,
-            maybeServiceError = userOtpRepositoryServiceErrorOpt,
+            serviceErrorOpt = userOtpRepositoryServiceErrorOpt,
           ),
           jwtServiceMockLive(
             maybeServiceError = jwtServiceServiceErrorOpt
@@ -609,8 +611,8 @@ class UserSignupServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           IDGenerator.uuidGeneratorLive,
           OtpGenerator.live,
           TimeProvider.liveSystemUTC,
-          VerifyEmailValidator.verifyEmailValidatorLive,
-          EmailValidator.emailValidatorLive,
+          SignUpEmailServiceValidator.live,
+          SignUpVerifyEmailServiceValidator.live,
         )
         .zioValue
   }

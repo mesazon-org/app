@@ -1,13 +1,13 @@
 package io.mesazon.gateway.service
 
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.OnboardStage.PhoneVerification
-import io.mesazon.gateway.auth.{AuthorizationState, PasswordService}
-import io.mesazon.gateway.clients.EmailClient
+import io.mesazon.gateway.auth.{AuthorizationState, OtpGenerator, PasswordService}
+import io.mesazon.gateway.clients.{EmailClient, TwilioClient}
 import io.mesazon.gateway.config.UserOnboardConfig
 import io.mesazon.gateway.repository.*
-import io.mesazon.gateway.smithy.{OnboardDetailsRequest, OnboardDetailsResponse}
-import io.mesazon.gateway.validation.ServiceValidator
+import io.mesazon.gateway.validation.service.*
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import zio.*
 
@@ -18,16 +18,22 @@ object UserOnboardService {
       authorizationState: AuthorizationState,
       userCredentialsRepository: UserCredentialsRepository,
       userDetailsRepository: UserDetailsRepository,
+      userOtpRepository: UserOtpRepository,
       emailClient: EmailClient,
+      twilioClient: TwilioClient,
+      timeProvider: TimeProvider,
+      otpGenerator: OtpGenerator,
       passwordService: PasswordService,
-      onboardPasswordValidator: ServiceValidator[smithy.OnboardPasswordRequest, OnboardPassword],
+      onboardPasswordServiceValidator: OnboardPasswordServiceValidator,
+      onboardDetailsServiceValidator: OnboardDetailsServiceValidator,
   ) extends smithy.UserOnboardService[ServiceTask] {
 
     /** HTTP POST /onboard/password */
     override def onboardPassword(request: smithy.OnboardPasswordRequest): ServiceTask[smithy.OnboardPasswordResponse] =
       for {
-        authedUser  <- authorizationState.get()
-        userDetails <- userDetailsRepository
+        onboardPassword <- onboardPasswordServiceValidator.validate(request)
+        authedUser      <- authorizationState.get()
+        userDetails     <- userDetailsRepository
           .getUserDetails(authedUser.userID)
           .someOrFail(
             ServiceError.InternalServerError.UserNotFoundError(
@@ -38,10 +44,9 @@ object UserOnboardService {
           onboardStageUser = userDetails.onboardStage,
           onboardStagesAllowed = List(OnboardStage.EmailVerified),
         )
-        onboardPassword <- onboardPasswordValidator.validate(request)
-        passwordHash    <- passwordService.hashPassword(onboardPassword.password)
-        _               <- userCredentialsRepository.insertUserCredentials(authedUser.userID, passwordHash)
-        userDetailsRow  <- userDetailsRepository
+        passwordHash   <- passwordService.hashPassword(onboardPassword.password)
+        _              <- userCredentialsRepository.insertUserCredentials(authedUser.userID, passwordHash)
+        userDetailsRow <- userDetailsRepository
           .updateUserDetails(authedUser.userID, OnboardStage.PasswordProvided)
         _ <- emailClient
           .sendWelcomeEmail(userDetailsRow.email)
@@ -57,10 +62,11 @@ object UserOnboardService {
       } yield smithy.OnboardPasswordResponse(onboardStageFromDomainToSmithy(OnboardStage.PasswordProvided))
 
     /** HTTP POST /onboard/details */
-    override def onboardDetails(request: OnboardDetailsRequest): ServiceTask[OnboardDetailsResponse] =
+    override def onboardDetails(request: smithy.OnboardDetailsRequest): ServiceTask[smithy.OnboardDetailsResponse] =
       for {
-        authedUser  <- authorizationState.get()
-        userDetails <- userDetailsRepository
+        onboardDetails <- onboardDetailsServiceValidator.validate(request)
+        authedUser     <- authorizationState.get()
+        userDetails    <- userDetailsRepository
           .getUserDetails(authedUser.userID)
           .someOrFail(
             ServiceError.InternalServerError.UserNotFoundError(
@@ -71,9 +77,27 @@ object UserOnboardService {
           onboardStageUser = userDetails.onboardStage,
           onboardStagesAllowed = List(OnboardStage.PasswordProvided, OnboardStage.PhoneVerification),
         )
+        instantNow <- timeProvider.instantNow
+        otp        <- otpGenerator.generate
+        userOtpRow <- userOtpRepository.upsertUserOtp(
+          authedUser.userID,
+          OtpType.PhoneVerification,
+          otp,
+          ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds)),
+        )
+        _ <- twilioClient
+          .sendOtpSms(onboardDetails.phoneNumber.phoneNumberE164, Otp.assume("123456"))
+          .retry(
+            Schedule.recurs(userOnboardConfig.sendWelcomeEmailMaxRetries) && Schedule
+              .exponential(userOnboardConfig.sendWelcomeEmailRetryDelay)
+          )
         _ <- userDetailsRepository
           .updateUserDetails(authedUser.userID, OnboardStage.PhoneVerification)
-      } yield OnboardDetailsResponse(onboardStageFromDomainToSmithy(PhoneVerification))
+      } yield smithy.OnboardDetailsResponse(
+        onboardStage = onboardStageFromDomainToSmithy(PhoneVerification),
+        otpID = userOtpRow.otpID.value,
+        otpExpiresInSeconds = userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds,
+      )
   }
 
   private def observed(userOnboardService: smithy.UserOnboardService[ServiceTask]): smithy.UserOnboardService[Task] =
@@ -84,7 +108,7 @@ object UserOnboardService {
         )
 
       /** HTTP POST /onboard/details */
-      override def onboardDetails(request: OnboardDetailsRequest): Task[OnboardDetailsResponse] =
+      override def onboardDetails(request: smithy.OnboardDetailsRequest): Task[smithy.OnboardDetailsResponse] =
         HttpErrorHandler.errorResponseHandler(
           userOnboardService.onboardDetails(request)
         )

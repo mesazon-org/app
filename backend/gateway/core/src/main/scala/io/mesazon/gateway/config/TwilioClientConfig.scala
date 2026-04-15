@@ -1,10 +1,17 @@
 package io.mesazon.gateway.config
 
+import sttp.model.Uri
+
 final case class TwilioClientConfig(
+    scheme: String,
+    host: String,
+    port: Int,
     accountSid: String,
     authToken: String,
     phoneNumber: String,
-)
+) {
+  val baseUri: Uri = Uri(scheme, host, port)
+}
 
 object TwilioClientConfig {
 

@@ -1,8 +1,9 @@
 package io.mesazon.gateway.fun
 
 import io.mesazon.gateway.service.WahaService
-import io.mesazon.gateway.utils.SmithyArbitraries
-import io.mesazon.gateway.validation.WahaValidator
+import io.mesazon.gateway.utils.{PhoneNumberUtil, SmithyArbitraries}
+import io.mesazon.gateway.validation.domain.WahaPhoneNumberDomainValidator
+import io.mesazon.gateway.validation.service.WahaServiceValidator
 import io.mesazon.gateway.{smithy, Mocks}
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
@@ -31,9 +32,10 @@ class WahaServiceSpec extends ZWordSpecBase, SmithyArbitraries {
         .service[smithy.WahaService[Task]]
         .provide(
           WahaService.live,
+          PhoneNumberUtil.live,
           Mocks.wahaRepositoryLive(),
-          WahaValidator.wahaMessageRequestValidatorLive,
-          Mocks.wahaPhoneNumberValidatorLive(),
+          WahaServiceValidator.live,
+          WahaPhoneNumberDomainValidator.live,
         )
         .zioValue
   }

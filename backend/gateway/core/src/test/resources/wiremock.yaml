@@ -1,0 +1,5 @@
+services:
+  wiremock:
+    image: local/wiremock:latest
+#    ports:
+#      - "8080:8080"

@@ -22,11 +22,8 @@ structure OnboardDetailsRequest {
 structure OnboardDetailsResponse {
     @required
     onboardStage: OnboardStage
-}
-
-structure PhoneNumberRequest {
     @required
-    nationalNumber: String
+    otpID: String
     @required
-    countryCode: String
+    otpExpiresInSeconds: Long
 }

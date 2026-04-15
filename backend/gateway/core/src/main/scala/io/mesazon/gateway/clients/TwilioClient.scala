@@ -1,11 +1,8 @@
 package io.mesazon.gateway.clients
 
-import com.twilio.Twilio
-import com.twilio.`type`.PhoneNumber as TwilioPhoneNumber
-import com.twilio.http.TwilioRestClient
-import com.twilio.rest.api.v2010.account.Message as TwilioMessage
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.TwilioClientConfig
+import sttp.client4.*
 import zio.*
 
 trait TwilioClient {
@@ -16,30 +13,30 @@ object TwilioClient {
 
   private final class TwilioClientImpl(
       twilioClientConfig: TwilioClientConfig,
-      twilioRestClient: TwilioRestClient,
+      sttpBackend: Backend[Task],
   ) extends TwilioClient {
 
     override def sendOtpSms(to: PhoneNumberE164, otp: Otp): IO[ServiceError, Unit] =
-      ZIO
-        .fromCompletableFuture(
-          TwilioMessage
-            .creator(
-              new TwilioPhoneNumber(to.value),
-              new TwilioPhoneNumber(twilioClientConfig.phoneNumber),
-              "Your OTP code is: " + otp.value,
-            )
-            .createAsync(twilioRestClient)
+      basicRequest
+        .post(
+          twilioClientConfig.baseUri.addPath("2010-04-01", "Accounts", twilioClientConfig.accountSid, "Messages.json")
         )
+        .auth
+        .basic(twilioClientConfig.accountSid, twilioClientConfig.authToken)
+        .body(
+          Map(
+            "To"   -> to.value,
+            "From" -> twilioClientConfig.phoneNumber,
+            "Body" -> s"Your Mesazon verification code is: ${otp.value}. Valid for 5 minutes. Do not share this code.",
+          )
+        )
+        .response(ignore)
+        .send(sttpBackend)
         .unit
         .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to send OTP SMS", Some(error)))
   }
 
-  private def make(twilioClientConfig: TwilioClientConfig): UIO[TwilioRestClient] =
-    ZIO.attemptBlocking(Twilio.init(twilioClientConfig.accountSid, twilioClientConfig.authToken)).orDie *> ZIO.succeed(
-      Twilio.getRestClient
-    )
+  private def observed(twilioClientImpl: TwilioClientImpl): TwilioClient = twilioClientImpl
 
-  private def observed(twilioRestClient: TwilioRestClient): TwilioRestClient = twilioRestClient
-
-  val live = ZLayer.fromFunction(make) >>> ZLayer.derive[TwilioClientImpl] >>> ZLayer.fromFunction(observed)
+  val live = ZLayer.derive[TwilioClientImpl] >>> ZLayer.fromFunction(observed)
 }

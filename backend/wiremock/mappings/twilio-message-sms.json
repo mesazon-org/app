@@ -1,0 +1,29 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPattern": "2010-04-01/Accounts/.*/Messages.json",
+    "headers": {
+      "Content-Type": {
+        "contains": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.To"
+      },
+      {
+        "matchesJsonPath": "$.From"
+      },
+      {
+        "matchesJsonPath": "$.Body"
+      }
+    ]
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": ""
+  }
+}
