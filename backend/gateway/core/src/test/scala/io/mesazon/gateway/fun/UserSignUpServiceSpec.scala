@@ -398,41 +398,6 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkJwtService()
       }
 
-      "fail with BadRequest when verify email is send for user with no email verification stage" in new TestContext {
-        val userID     = arbitrarySample[UserID]
-        val email      = arbitrarySample[Email]
-        val userOtpRow = arbitrarySample[UserOtpRow]
-          .copy(userID = userID, otpType = OtpType.EmailVerification)
-        val onboardStageNonEmailVerification =
-          Random.shuffle(OnboardStage.values.diff(List(OnboardStage.EmailVerification)).toList).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(userID = userID, onboardStage = onboardStageNonEmailVerification, email = email)
-
-        val userSignupService = buildUserSignupServiceLive(
-          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
-          userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
-        )
-
-        val signUpVerifyEmailRequest = arbitrarySample[smithy.SignUpVerifyEmailRequest]
-          .copy(otpID = userOtpRow.otpID.value, otp = userOtpRow.otp.value)
-
-        val smithyError = userSignupService.signUpVerifyEmail(signUpVerifyEmailRequest).zioError
-
-        smithyError shouldBe a[smithy.BadRequest]
-        smithyError
-          .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest()
-
-        checkUserDetailsRepository(
-          expectedGetUserDetailsCalls = 1
-        )
-        checkUserTokenRepository()
-        checkUserOtpRepository(
-          expectedGetUserOtpCalls = 1
-        )
-        checkEmailClient()
-        checkJwtService()
-      }
-
       "fail with BadRequest when verify email send for otp type non email verification" in new TestContext {
         val otpTypeNonEmailVerification =
           Random.shuffle(OtpType.values.diff(List(OtpType.EmailVerification)).toList).zioValue.head
@@ -453,6 +418,41 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           .asInstanceOf[smithy.BadRequest] shouldBe smithy.BadRequest()
 
         checkUserDetailsRepository()
+        checkUserTokenRepository()
+        checkUserOtpRepository(
+          expectedGetUserOtpCalls = 1
+        )
+        checkEmailClient()
+        checkJwtService()
+      }
+
+      "fail with Unauthorized when verify email is send for user with no email verification stage" in new TestContext {
+        val userID     = arbitrarySample[UserID]
+        val email      = arbitrarySample[Email]
+        val userOtpRow = arbitrarySample[UserOtpRow]
+          .copy(userID = userID, otpType = OtpType.EmailVerification)
+        val onboardStageNonEmailVerification =
+          Random.shuffle(OnboardStage.values.toList diff OnboardStage.signUpVerifyEmailStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = userID, onboardStage = onboardStageNonEmailVerification, email = email)
+
+        val userSignupService = buildUserSignupServiceLive(
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+          userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
+        )
+
+        val signUpVerifyEmailRequest = arbitrarySample[smithy.SignUpVerifyEmailRequest]
+          .copy(otpID = userOtpRow.otpID.value, otp = userOtpRow.otp.value)
+
+        val smithyError = userSignupService.signUpVerifyEmail(signUpVerifyEmailRequest).zioError
+
+        smithyError shouldBe a[smithy.Unauthorized]
+        smithyError
+          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+
+        checkUserDetailsRepository(
+          expectedGetUserDetailsCalls = 1
+        )
         checkUserTokenRepository()
         checkUserOtpRepository(
           expectedGetUserOtpCalls = 1

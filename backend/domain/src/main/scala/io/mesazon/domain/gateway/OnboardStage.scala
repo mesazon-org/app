@@ -13,4 +13,17 @@ object OnboardStage {
     OnboardStage.EmailVerification,
     OnboardStage.EmailVerified,
   )
+
+  val signUpVerifyEmailStages = List(
+    OnboardStage.EmailVerification
+  )
+
+  val onboardPasswordStages = List(
+    OnboardStage.EmailVerified
+  )
+
+  val onboardDetailsStages = List(
+    OnboardStage.PasswordProvided,
+    OnboardStage.PhoneVerification,
+  )
 }

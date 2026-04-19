@@ -119,9 +119,13 @@ object UserSignUpService {
             s"No user details found for userID: ${userOtpRowExisting.userID} and otpID: ${userOtpRowExisting.otpID}"
           )
         )(userDetailsRowOpt)
+        _ <- verifyOnboardStage(
+          onboardStageUser = userDetailsRowExisting.onboardStage,
+          onboardStagesAllowed = OnboardStage.signUpVerifyEmailStages,
+        )
         instantNow <- timeProvider.instantNow
-        _          <- (userOtpRowExisting.otpType, userDetailsRowExisting.onboardStage) match {
-          case (OtpType.EmailVerification, OnboardStage.EmailVerification)
+        _          <- userOtpRowExisting.otpType match {
+          case OtpType.EmailVerification
               if userOtpRowExisting.otp == signUpVerifyEmail.otp && userOtpRowExisting.expiresAt.value.isAfter(
                 instantNow
               ) =>
@@ -137,7 +141,7 @@ object UserSignUpService {
           case _ =>
             ZIO.fail(
               ServiceError.BadRequestError.OtpValidationError(
-                s"Invalid otp for otpID: [${userOtpRowExisting.otpID}]"
+                s"Invalid otp or otp type for otpID: [${userOtpRowExisting.otpID}]"
               )
             )
         }

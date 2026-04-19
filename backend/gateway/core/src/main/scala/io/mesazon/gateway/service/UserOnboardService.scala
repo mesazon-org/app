@@ -75,7 +75,7 @@ object UserOnboardService {
           )
         _ <- verifyOnboardStage(
           onboardStageUser = userDetails.onboardStage,
-          onboardStagesAllowed = List(OnboardStage.PasswordProvided, OnboardStage.PhoneVerification),
+          onboardStagesAllowed = OnboardStage.onboardDetailsStages,
         )
         instantNow    <- timeProvider.instantNow
         userOtpRowOpt <- userOtpRepository.getUserOtpByUserID(authedUser.userID, OtpType.PhoneVerification)
@@ -95,16 +95,21 @@ object UserOnboardService {
                 otp,
                 ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds)),
               )
+              _ <- userDetailsRepository
+                .updateUserDetails(
+                  authedUser.userID,
+                  OnboardStage.PhoneVerification,
+                  Some(onboardDetails.fullName),
+                  Some(onboardDetails.phoneNumber),
+                )
+              _ <- twilioClient
+                .sendOtpSms(onboardDetails.phoneNumber.phoneNumberE164, userOtpRow.otp)
+                .retry(
+                  Schedule.recurs(userOnboardConfig.sendWelcomeEmailMaxRetries) && Schedule
+                    .exponential(userOnboardConfig.sendWelcomeEmailRetryDelay)
+                )
             } yield (userOtpRow, userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds)
         }
-        _ <- twilioClient
-          .sendOtpSms(onboardDetails.phoneNumber.phoneNumberE164, userOtpRowNew.otp)
-          .retry(
-            Schedule.recurs(userOnboardConfig.sendWelcomeEmailMaxRetries) && Schedule
-              .exponential(userOnboardConfig.sendWelcomeEmailRetryDelay)
-          )
-        _ <- userDetailsRepository
-          .updateUserDetails(authedUser.userID, OnboardStage.PhoneVerification)
       } yield smithy.OnboardDetailsResponse(
         onboardStage = onboardStageFromDomainToSmithy(PhoneVerification),
         otpID = userOtpRowNew.otpID.value,

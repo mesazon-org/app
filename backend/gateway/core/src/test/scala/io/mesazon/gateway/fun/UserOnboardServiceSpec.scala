@@ -14,6 +14,8 @@ import io.mesazon.gateway.{smithy, Mocks}
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 
+import java.time.Instant
+
 class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries {
 
   "UserOnboardService" when {
@@ -180,10 +182,11 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
     }
 
     "onboardDetails" should {
-      "successfully onboard details for user in password provided stage" in new TestContext {
-        val authedUser     = arbitrarySample[AuthedUser]
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = OnboardStage.PasswordProvided)
+      "successfully onboard details for user in valid onboard stage" in new TestContext {
+        val authedUser        = arbitrarySample[AuthedUser]
+        val onboardStageValid = Random.shuffle(OnboardStage.onboardDetailsStages).zioValue.head
+        val userDetailsRow    = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
 
         val userOnboardService = buildUserOnboardServiceLive(
           authedUser = authedUser,
@@ -192,26 +195,237 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
 
-        val onboardPasswordResponse =
+        val onboardDetailsResponse =
           userOnboardService.onboardDetails(onboardDetailsRequest).zioValue
 
-        onboardPasswordResponse.onboardStage.value shouldBe "PHONE_VERIFICATION"
+        onboardDetailsResponse.onboardStage.value shouldBe "PHONE_VERIFICATION"
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,
           expectedUpdateUserDetailsCalls = 1,
         )
         checkUserOtpRepository(
+          expectedGetUserOtpByUserIDCalls = 1,
+          expectedUpsertUserOtpCalls = 1,
         )
-        checkUserCredentialsRepository(
-          expectedInsertUserCredentialsCalls = 1
+        checkUserCredentialsRepository()
+        checkEmailClient()
+        checkPasswordService()
+        checkTwilioClient(
+          expectedSendOtpCalls = 1
         )
-        checkEmailClient(
-          expectedSendWelcomeEmailCalls = 1
+      }
+
+      "successfully onboard details for user with non expired otp" in new TestContext {
+        val authedUser        = arbitrarySample[AuthedUser]
+        val onboardStageValid = Random.shuffle(OnboardStage.onboardDetailsStages).zioValue.head
+        val userDetailsRow    = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
+
+        val instantNow = Instant.now()
+        val buffer     = Random.nextIntBetween(1, 300).zioValue
+        val expiresAt  =
+          ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds + buffer))
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
+          .copy(
+            userID = authedUser.userID,
+            otpType = OtpType.PhoneVerification,
+            expiresAt = expiresAt,
+          )
+
+        val userOnboardService = buildUserOnboardServiceLive(
+          authedUser = authedUser,
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+          userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
-        checkPasswordService(
-          expectedHashPasswordCalls = 1
+
+        val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
+
+        val onboardDetailsResponse =
+          userOnboardService.onboardDetails(onboardDetailsRequest).zioValue
+
+        onboardDetailsResponse.onboardStage.value shouldBe "PHONE_VERIFICATION"
+
+        checkUserDetailsRepository(
+          expectedGetUserDetailsCalls = 1
         )
+        checkUserOtpRepository(
+          expectedGetUserOtpByUserIDCalls = 1
+        )
+        checkUserCredentialsRepository()
+        checkEmailClient()
+        checkPasswordService()
+        checkTwilioClient()
+      }
+
+      "successfully onboard details for user with expired otp" in new TestContext {
+        val authedUser        = arbitrarySample[AuthedUser]
+        val onboardStageValid = Random.shuffle(OnboardStage.onboardDetailsStages).zioValue.head
+        val userDetailsRow    = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
+
+        val instantNow = Instant.now()
+        val buffer     = Random.nextIntBetween(0, 300).zioValue
+        val expiresAt  =
+          ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds - buffer))
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
+          .copy(
+            userID = authedUser.userID,
+            otpType = OtpType.PhoneVerification,
+            expiresAt = expiresAt,
+          )
+
+        val userOnboardService = buildUserOnboardServiceLive(
+          authedUser = authedUser,
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+          userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
+        )
+
+        val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
+
+        val onboardDetailsResponse =
+          userOnboardService.onboardDetails(onboardDetailsRequest).zioValue
+
+        onboardDetailsResponse.onboardStage.value shouldBe "PHONE_VERIFICATION"
+
+        checkUserDetailsRepository(
+          expectedGetUserDetailsCalls = 1,
+          expectedUpdateUserDetailsCalls = 1,
+        )
+        checkUserOtpRepository(
+          expectedGetUserOtpByUserIDCalls = 1,
+          expectedUpsertUserOtpCalls = 1,
+        )
+        checkUserCredentialsRepository()
+        checkEmailClient()
+        checkPasswordService()
+        checkTwilioClient(
+          expectedSendOtpCalls = 1
+        )
+      }
+
+      "fail with Unauthorized when onboardStage is not valid" in new TestContext {
+        val authedUser          = arbitrarySample[AuthedUser]
+        val onboardStageInvalid =
+          Random.shuffle(OnboardStage.values.diff(OnboardStage.onboardDetailsStages).toList).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStageInvalid)
+
+        val userOnboardService = buildUserOnboardServiceLive(
+          authedUser = authedUser,
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+        )
+
+        val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
+
+        val smithyError = userOnboardService.onboardDetails(onboardDetailsRequest).zioError
+
+        smithyError shouldBe a[smithy.Unauthorized]
+        smithyError
+          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+
+        checkUserDetailsRepository(
+          expectedGetUserDetailsCalls = 1
+        )
+        checkUserOtpRepository()
+        checkUserCredentialsRepository()
+        checkEmailClient()
+        checkPasswordService()
+        checkTwilioClient()
+      }
+
+      "fail with ValidationError when is request is invalid" in new TestContext {
+        val authedUser = arbitrarySample[AuthedUser]
+
+        val userOnboardService = buildUserOnboardServiceLive(
+          authedUser = authedUser
+        )
+
+        val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
+          .copy(fullName = "")
+
+        val smithyError =
+          userOnboardService.onboardDetails(onboardDetailsRequest).zioError
+
+        smithyError shouldBe a[smithy.ValidationError]
+        smithyError
+          .asInstanceOf[smithy.ValidationError] shouldBe smithy.ValidationError(fields = List("fullName"))
+
+        checkUserDetailsRepository()
+        checkUserOtpRepository()
+        checkUserCredentialsRepository()
+        checkEmailClient()
+        checkPasswordService()
+        checkTwilioClient()
+      }
+
+      "fail and retry with InternalServerError when twilio client sms sent otp fails" in new TestContext {
+        val authedUser        = arbitrarySample[AuthedUser]
+        val onboardStageValid = Random.shuffle(OnboardStage.onboardDetailsStages).zioValue.head
+        val userDetailsRow    = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
+
+        val userOnboardService = buildUserOnboardServiceLive(
+          authedUser = authedUser,
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+          twilioClientServiceErrorOpt = Some(ServiceError.InternalServerError.UnexpectedError("")),
+        )
+
+        val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
+
+        val smithyError = userOnboardService.onboardDetails(onboardDetailsRequest).zioError
+
+        smithyError shouldBe a[smithy.InternalServerError]
+        smithyError
+          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+
+        checkUserDetailsRepository(
+          expectedGetUserDetailsCalls = 1,
+          expectedUpdateUserDetailsCalls = 1,
+        )
+        checkUserOtpRepository(
+          expectedGetUserOtpByUserIDCalls = 1,
+          expectedUpsertUserOtpCalls = 1,
+        )
+        checkUserCredentialsRepository()
+        checkEmailClient()
+        checkPasswordService()
+        checkTwilioClient(
+          expectedSendOtpCalls = userOnboardConfig.sendPhoneVerificationOtpMaxRetries + 1
+        )
+      }
+
+      "fail with InternalServerError when repository fail" in new TestContext {
+        val authedUser        = arbitrarySample[AuthedUser]
+        val onboardStageValid = Random.shuffle(OnboardStage.onboardDetailsStages).zioValue.head
+        val userDetailsRow    = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
+
+        val userOnboardService = buildUserOnboardServiceLive(
+          authedUser = authedUser,
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+          userOtpRepositoryServiceErrorOpt = Some(ServiceError.InternalServerError.UnexpectedError("")),
+        )
+
+        val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
+
+        val smithyError = userOnboardService.onboardDetails(onboardDetailsRequest).zioError
+
+        smithyError shouldBe a[smithy.InternalServerError]
+        smithyError
+          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+
+        checkUserDetailsRepository(
+          expectedGetUserDetailsCalls = 1
+        )
+        checkUserOtpRepository(
+          expectedGetUserOtpByUserIDCalls = 1
+        )
+        checkUserCredentialsRepository()
+        checkEmailClient()
+        checkPasswordService()
         checkTwilioClient()
       }
     }

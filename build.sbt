@@ -221,6 +221,7 @@ lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
   .settings(
     test := Def
       .sequential(
+        backendWiremock / Docker / publishLocal,
         backendGatewayCore / Docker / publishLocal,
         Test / test,
       )

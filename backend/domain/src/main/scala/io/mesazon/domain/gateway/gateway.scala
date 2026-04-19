@@ -45,24 +45,6 @@ object PhoneNumberE164 extends RefinedType[String, NonEmptyTrimmed] {
 }
 type PhoneNumberE164 = PhoneNumberE164.T
 
-object AddressLine1 extends RefinedType[String, NonEmptyTrimmed]
-type AddressLine1 = AddressLine1.T
-
-object AddressLine2 extends RefinedType[String, NonEmptyTrimmed]
-type AddressLine2 = AddressLine2.T
-
-object City extends RefinedType[String, NonEmptyTrimmed]
-type City = City.T
-
-object PostalCode extends RefinedType[String, NonEmptyTrimmed]
-type PostalCode = PostalCode.T
-
-object Company extends RefinedType[String, NonEmptyTrimmed]
-type Company = Company.T
-
-object DisplayName extends RefinedType[String, NonEmptyTrimmed]
-type DisplayName = DisplayName.T
-
 object Message extends RefinedType[String, NonEmpty]
 type Message = Message.T
 
