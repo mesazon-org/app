@@ -162,7 +162,6 @@ class UserSignupApiSpec
 
         signUpEmailResponse2.code shouldBe StatusCode.Ok
 
-        // Should remain 1 email in inbox
         mailHogClient.readInbox().zioValue.total shouldBe 1
 
         signUpEmailResponse2.body.value.otpID should not be signUpEmailResponse1.body.value.otpID
@@ -202,7 +201,7 @@ class UserSignupApiSpec
         )
       }
 
-      "sucessfuly not re sign up a user with not sign up email stages" in withContext { context =>
+      "successfully not re sign up a user with not sign up email stages" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =
@@ -249,8 +248,10 @@ class UserSignupApiSpec
       "successfully verify email with valid OTP and return user token" in withContext { context =>
         import context.*
 
+        val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
+
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
-          onboardStage = OnboardStage.EmailVerification
+          onboardStage = onboardStage
         )
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
           userID = userDetailsRow.userID,
@@ -293,11 +294,13 @@ class UserSignupApiSpec
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
-      "fail with BadRequest when OTP is expired" in withContext { context =>
+      "fail with Unauthorized when OTP is expired" in withContext { context =>
         import context.*
 
+        val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
+
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
-          onboardStage = OnboardStage.EmailVerification
+          onboardStage = onboardStage
         )
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
           userID = userDetailsRow.userID,
@@ -315,16 +318,18 @@ class UserSignupApiSpec
 
         val signUpVerifyEmailResponse = gatewayClient.signUpVerifyEmail(signUpVerifyEmailRequest).zioValue
 
-        signUpVerifyEmailResponse.code shouldBe StatusCode.BadRequest
+        signUpVerifyEmailResponse.code shouldBe StatusCode.Unauthorized
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
-      "fail with BadRequest when OTP is wrong" in withContext { context =>
+      "fail with Unauthorized when OTP is wrong" in withContext { context =>
         import context.*
 
+        val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
+
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
-          onboardStage = OnboardStage.EmailVerification
+          onboardStage = onboardStage
         )
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
           userID = userDetailsRow.userID,
@@ -341,12 +346,12 @@ class UserSignupApiSpec
 
         val signUpVerifyEmailResponse = gatewayClient.signUpVerifyEmail(signUpVerifyEmailRequest).zioValue
 
-        signUpVerifyEmailResponse.code shouldBe StatusCode.BadRequest
+        signUpVerifyEmailResponse.code shouldBe StatusCode.Unauthorized
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
-      "fail with BadRequest when otp type is in not what expected" in withContext { context =>
+      "fail with Unauthorized when otp type is in not what expected" in withContext { context =>
         import context.*
 
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
@@ -370,10 +375,9 @@ class UserSignupApiSpec
 
         val signUpVerifyEmailResponse = gatewayClient.signUpVerifyEmail(signUpVerifyEmailRequest).zioValue
 
-        signUpVerifyEmailResponse.code shouldBe StatusCode.BadRequest
+        signUpVerifyEmailResponse.code shouldBe StatusCode.Unauthorized
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
-
       }
 
       "fail with Unauthorized when user is in wrong onboard stage" in withContext { context =>
@@ -387,7 +391,9 @@ class UserSignupApiSpec
         )
 
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          userID = userDetailsRow.userID
+          userID = userDetailsRow.userID,
+          otpType = OtpType.EmailVerification,
+          expiresAt = ExpiresAt.assume(Instant.now.plusSeconds(10)),
         )
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue

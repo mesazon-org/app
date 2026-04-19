@@ -111,7 +111,7 @@ object UserSignUpService {
         signUpVerifyEmail  <- signUpVerifyEmailServiceValidator.validate(request)
         userOtpRowOpt      <- userOtpRepository.getUserOtp(signUpVerifyEmail.otpID, OtpType.EmailVerification)
         userOtpRowExisting <- ZIO.getOrFailWith(
-          ServiceError.BadRequestError.OtpValidationError(s"No otp found for otpID: ${signUpVerifyEmail.otpID}")
+          ServiceError.UnauthorizedError.OtpValidationError(s"No otp found for otpID: ${signUpVerifyEmail.otpID}")
         )(userOtpRowOpt)
         userDetailsRowOpt      <- userDetailsRepository.getUserDetails(userOtpRowExisting.userID)
         userDetailsRowExisting <- ZIO.getOrFailWith(
@@ -140,7 +140,7 @@ object UserSignUpService {
             )
           case _ =>
             ZIO.fail(
-              ServiceError.BadRequestError.OtpValidationError(
+              ServiceError.UnauthorizedError.OtpValidationError(
                 s"Invalid otp or otp type for otpID: [${userOtpRowExisting.otpID}]"
               )
             )
