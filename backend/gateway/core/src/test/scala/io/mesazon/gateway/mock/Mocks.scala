@@ -1,12 +1,9 @@
 package io.mesazon.gateway
 
-import cats.data.{NonEmptyChain, ValidatedNec}
-import cats.syntax.all.*
 import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import io.github.gaelrenoux.tranzactio.DbException
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.domain.waha
 import io.mesazon.domain.waha.WahaError
 import io.mesazon.domain.waha.output.ChattingSendMessageOutput
@@ -14,8 +11,6 @@ import io.mesazon.gateway.auth.*
 import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.domain.*
-import io.mesazon.gateway.validation.EmailValidator.EmailRaw
-import io.mesazon.gateway.validation.PhoneNumberValidator.PhoneNumberRegion
 import io.mesazon.generator.IDGenerator
 import io.mesazon.testkit.base.ZIOTestOps
 import io.mesazon.waha.WahaClient
@@ -28,8 +23,6 @@ import zio.stream.*
 import java.time.{Clock, Instant}
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
-
-import validation.*
 
 object Mocks extends ZIOTestOps {
 
@@ -55,37 +48,6 @@ object Mocks extends ZIOTestOps {
           maybeError.fold(ZIO.unit)(ZIO.fail(_))
       }
     )
-
-  def phoneNumberRegionValidatorLive(): ULayer[DomainValidator[PhoneNumberRegion, PhoneNumberE164]] =
-    ZLayer.succeed(
-      new DomainValidator[PhoneNumberRegion, PhoneNumberE164] {
-        override def validate(rawData: PhoneNumberRegion): UIO[ValidatedNec[InvalidFieldError, PhoneNumberE164]] =
-          ZIO.succeed(PhoneNumberE164.assume(rawData.phoneNationalNumber).validNec)
-      }
-    )
-
-  def wahaPhoneNumberValidatorLive(): ULayer[DomainValidator[waha.WahaPhone, PhoneNumberE164]] =
-    ZLayer.succeed(
-      new DomainValidator[waha.WahaPhone, PhoneNumberE164] {
-        override def validate(rawData: waha.WahaPhone): UIO[ValidatedNec[InvalidFieldError, PhoneNumberE164]] =
-          ZIO.succeed(PhoneNumberE164.assume(s"+${rawData.value}").validNec)
-
-      }
-    )
-
-  def emailValidatorLive(
-      invalidFieldError: Option[InvalidFieldError] = None
-  ): ULayer[ServiceValidator[EmailRaw, Email]] =
-    ZLayer.succeed {
-      val domainValidator: DomainValidator[EmailRaw, Email] = rawData =>
-        invalidFieldError
-          .fold[IO[NonEmptyChain[InvalidFieldError], Email]](ZIO.succeed(Email.assume(rawData)))(invalid =>
-            ZIO.fail(NonEmptyChain(invalid))
-          )
-          .fold(_.invalid, _.validNec)
-
-      toServiceValidator(domainValidator)
-    }
 
   def idGeneratorLive: ULayer[IDGenerator] =
     ZLayer.succeed {

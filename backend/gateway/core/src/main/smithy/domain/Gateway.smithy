@@ -6,7 +6,13 @@ enum OnboardStage {
     EMAIL_VERIFICATION
     EMAIL_VERIFIED
     PASSWORD_PROVIDED
-    DETAILS_PROVIDED
     PHONE_VERIFICATION
     PHONE_VERIFIED
+}
+
+structure PhoneNumberRequest {
+    @required
+    phoneNationalNumber: String
+    @required
+    phoneCountryCode: String
 }

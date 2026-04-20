@@ -44,6 +44,7 @@ lazy val backendModule = Project("backend", file("backend"))
     backendPostgreSQLTestModule,
     backendGatewayRoot,
     backendSchemas,
+    backendWiremock,
   )
 
 lazy val backendDomainModule = createBackendModule("domain")(None)
@@ -79,7 +80,6 @@ lazy val backendTestKitModule = createBackendModule("test-kit")(None)
 lazy val backendPostgreSQLTestModule = createBackendModule("postgresql-test")(None)
   .dependsOn(backendTestKitModule)
   .withDependencies(
-    Dependencies.testcontainersScalaPostgresql,
     Dependencies.doobieCore,
     Dependencies.doobieHikari,
     Dependencies.doobiePostgres,
@@ -88,6 +88,21 @@ lazy val backendPostgreSQLTestModule = createBackendModule("postgresql-test")(No
   )
 
 lazy val backendSchemas = createBackendModule("schemas")(None)
+
+lazy val backendWiremock = createBackendModule("wiremock")(None)
+  .enablePlugins(DockerPlugin)
+  .settings(name := "wiremock")
+  .settings(DockerWiremockSettings.settings)
+  .withDependencies(
+    Dependencies.zio,
+    Dependencies.zioInteropCats,
+    Dependencies.testcontainers,
+    Dependencies.testcontainersScalaScalatest,
+    Dependencies.sttpClient4ZIO,
+    Dependencies.sttpClient4Jsoniter,
+    Dependencies.jsoniterScalaCore,
+    Dependencies.jsoniterScalaMacro,
+  )
 
 // Waha
 lazy val createBackendWahaModule = createBackendModule("waha") _
@@ -116,6 +131,15 @@ lazy val backendWahaModuleCore = createBackendWahaModule(Some("core"))
 lazy val backendWahaModuleIt = createBackendWahaModule(Some("it"))
   .dependsOn(backendTestKitModule)
   .dependsOn(backendWahaModuleCore % Test)
+  .dependsOn(backendWiremock % Test)
+  .settings(
+    test := Def
+      .sequential(
+        backendWiremock / Docker / publishLocal,
+        Test / test,
+      )
+      .value
+  )
 
 // Gateway
 lazy val createBackendGatewayModule = createBackendModule("gateway") _
@@ -131,6 +155,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
   .dependsOn(backendGeneratorModule)
   .dependsOn(backendWahaModuleCore)
   .dependsOn(backendTestKitModule % Test)
+  .dependsOn(backendWiremock % Test)
   .dependsOn(backendPostgreSQLTestModule % Test)
   .settings(DockerSettings.compileScope)
   .withDependencies(
@@ -173,6 +198,14 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.springSecurityCrypto,
     Dependencies.bouncyCastle,
   )
+  .settings(
+    test := Def
+      .sequential(
+        backendWiremock / Docker / publishLocal,
+        Test / test,
+      )
+      .value
+  )
 
 lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
   .dependsOn(backendGatewayCore % "test->test")
@@ -188,6 +221,7 @@ lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
   .settings(
     test := Def
       .sequential(
+        backendWiremock / Docker / publishLocal,
         backendGatewayCore / Docker / publishLocal,
         Test / test,
       )

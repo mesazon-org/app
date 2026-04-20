@@ -11,3 +11,19 @@ structure OnboardPasswordResponse{
     @required
     onboardStage: OnboardStage
 }
+
+structure OnboardDetailsRequest {
+    @required
+    fullName: String
+    @required
+    phoneNumber: PhoneNumberRequest
+}
+
+structure OnboardDetailsResponse {
+    @required
+    onboardStage: OnboardStage
+    @required
+    otpID: String
+    @required
+    otpExpiresInSeconds: Long
+}

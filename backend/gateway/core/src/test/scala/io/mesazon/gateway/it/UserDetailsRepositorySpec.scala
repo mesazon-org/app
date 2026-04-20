@@ -159,7 +159,7 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
 
         val onboardStageUpdate   = arbitrarySample[OnboardStage]
         val fullNameOptUpdate    = arbitrarySample[Option[FullName]]
-        val phoneNumberOptUpdate = arbitrarySample[Option[PhoneNumberE164]]
+        val phoneNumberOptUpdate = arbitrarySample[Option[PhoneNumber]]
 
         userDetailsRepository
           .updateUserDetails(
@@ -203,7 +203,7 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
         val userID               = arbitrarySample[UserID]
         val onboardStageUpdate   = arbitrarySample[OnboardStage]
         val fullNameOptUpdate    = arbitrarySample[Option[FullName]]
-        val phoneNumberOptUpdate = arbitrarySample[Option[PhoneNumberE164]]
+        val phoneNumberOptUpdate = arbitrarySample[Option[PhoneNumber]]
 
         val serviceError = userDetailsRepository
           .updateUserDetails(
