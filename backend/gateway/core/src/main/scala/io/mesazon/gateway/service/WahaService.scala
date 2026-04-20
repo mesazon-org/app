@@ -2,23 +2,23 @@ package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.repository.WahaRepository
-import io.mesazon.gateway.validation.ServiceValidator
+import io.mesazon.gateway.validation.service.WahaServiceValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import zio.*
 
 object WahaService {
 
   private final class WahaServiceImpl(
-      repository: WahaRepository,
-      wahaRequestValidator: ServiceValidator[smithy.WahaMessageTextRequest, WahaMessage],
+      wahaRepository: WahaRepository,
+      wahaServiceValidator: WahaServiceValidator,
   ) extends smithy.WahaService[ServiceTask] {
 
     /** HTTP POST /waha/webhook/message */
     override def wahaWebhookMessage(request: smithy.WahaMessageTextRequest): IO[ServiceError, Unit] =
       for {
         _           <- ZIO.logInfo(s"Received Waha webhook message: $request")
-        wahaMessage <- wahaRequestValidator.validate(request)
-        wahaUserRow <- repository
+        wahaMessage <- wahaServiceValidator.validate(request)
+        wahaUserRow <- wahaRepository
           .createOrGetWahaUser(
             wahaMessage.wahaUserID,
             wahaMessage.wahaFullName,
@@ -27,7 +27,7 @@ object WahaService {
             wahaMessage.phoneNumber,
           )
           .orDie
-        _ <- repository
+        _ <- wahaRepository
           .insertWahaUserMessage(
             wahaUserRow.userID,
             wahaMessage.wahaMessageID,
@@ -35,7 +35,7 @@ object WahaService {
             isAssistant = false,
           )
           .orDie
-        _ <- repository
+        _ <- wahaRepository
           .upsertWahaUserActivity(
             wahaUserRow.userID,
             Some(wahaMessage.wahaMessageID),

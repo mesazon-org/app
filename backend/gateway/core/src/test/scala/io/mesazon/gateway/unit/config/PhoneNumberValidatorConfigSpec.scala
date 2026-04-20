@@ -5,12 +5,12 @@ import io.mesazon.gateway.config.PhoneNumberValidatorConfig
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 
-class PhoneNumberE164ValidatorConfigSpec extends ZWordSpecBase {
+class PhoneNumberValidatorConfigSpec extends ZWordSpecBase {
 
   "PhoneNumberValidatorConfig" when {
     "supportedRegionsConfig" should {
       "return valid config with all supported regions that are provided" in {
-        val config = PhoneNumberValidatorConfig(supportedRegions = Set("US", "GB", "CY"))
+        val config = PhoneNumberValidatorConfig(supportedPhoneRegions = Set("US", "GB", "CY"))
 
         val resConfig = ZIO
           .service[PhoneNumberValidatorConfig]
@@ -24,7 +24,7 @@ class PhoneNumberE164ValidatorConfigSpec extends ZWordSpecBase {
       }
 
       "fail with unsupported regions that have been provided" in {
-        val config = PhoneNumberValidatorConfig(supportedRegions = Set("UU", "GAMW", "CY"))
+        val config = PhoneNumberValidatorConfig(supportedPhoneRegions = Set("UU", "GAMW", "CY"))
 
         val error = ZIO
           .service[PhoneNumberValidatorConfig]
@@ -34,7 +34,7 @@ class PhoneNumberE164ValidatorConfigSpec extends ZWordSpecBase {
           )
           .zioError
 
-        error.path shouldBe Chunk("validation", "supported-regions")
+        error.path shouldBe Chunk("validation", "supported-phone-regions")
         error.message shouldBe "Config pass unsupported regions [UU, GAMW]"
       }
     }

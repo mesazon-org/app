@@ -25,31 +25,27 @@ trait UserCredentialsRepositoryMock extends ZIOTestOps with should.Matchers {
 
   def userCredentialsRepositoryMockLive(
       userCredentialsRows: Map[UserID, UserCredentialsRow] = Map.empty,
-      maybeServiceError: Option[ServiceError] = None,
-      maybeUnexpectedError: Option[Throwable] = None,
+      serviceErrorOpt: Option[ServiceError] = None,
   ): ULayer[UserCredentialsRepository] = ZLayer.succeed(
     new UserCredentialsRepository {
 
       override def insertUserCredentials(userID: UserID, passwordHash: PasswordHash): IO[ServiceError, Unit] =
-        insertUserCredentialsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(
-          maybeServiceError.fold(
+        insertUserCredentialsCounterRef.incrementAndGet *>
+          serviceErrorOpt.fold(
             ZIO.unit
           )(ZIO.fail)
-        )(ZIO.fail(_).orDie)
 
       override def getUserCredentials(userID: UserID): IO[ServiceError, Option[UserCredentialsRow]] =
-        getUserCredentialsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(
-          maybeServiceError.fold(
+        getUserCredentialsCounterRef.incrementAndGet *>
+          serviceErrorOpt.fold(
             ZIO.succeed(userCredentialsRows.get(userID))
           )(ZIO.fail)
-        )(ZIO.fail(_).orDie)
 
       override def updateUserCredentials(userID: UserID, passwordHashUpdate: PasswordHash): IO[ServiceError, Unit] =
-        updateUserCredentialsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(
-          maybeServiceError.fold(
+        updateUserCredentialsCounterRef.incrementAndGet *>
+          serviceErrorOpt.fold(
             ZIO.unit
           )(ZIO.fail)
-        )(ZIO.fail(_).orDie)
     }
   )
 }

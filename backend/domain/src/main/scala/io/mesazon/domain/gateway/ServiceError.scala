@@ -46,8 +46,6 @@ object ServiceError {
         InvalidFieldError(fieldName, errorMessage, Seq(invalidValue))
     }
 
-    case class OtpValidationError(error: String) extends BadRequestError(error)
-
     case class ValidationError(invalidFields: Seq[InvalidFieldError])
         extends BadRequestError(s"request validation error ${invalidFields.mkString("[", ",", "]")}")
   }
@@ -57,6 +55,8 @@ object ServiceError {
 
     case class FailedToVerifyJwt(error: String, throwable: Option[Throwable] = None)
         extends UnauthorizedError(error, throwable)
+
+    case class OtpValidationError(error: String) extends UnauthorizedError(error)
 
     case class FailedToVerifyPassword(error: String, throwable: Option[Throwable] = None)
         extends UnauthorizedError(error, throwable)

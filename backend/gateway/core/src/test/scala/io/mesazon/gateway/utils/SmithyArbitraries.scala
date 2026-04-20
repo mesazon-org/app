@@ -35,20 +35,28 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
   }
 
   given Arbitrary[smithy.SignUpEmailRequest] = Arbitrary {
-    for {
-      email <- Arbitrary.arbitrary[Email]
-      request = smithy.SignUpEmailRequest(email = email.value)
-    } yield request
+    Arbitrary.arbitrary[SignUpEmail].map(_.transformInto[smithy.SignUpEmailRequest])
   }
 
-  given Arbitrary[smithy.VerifyEmailRequest] = Arbitrary {
+  given Arbitrary[smithy.SignUpVerifyEmailRequest] = Arbitrary {
     for {
-      verifyEmail <- Arbitrary.arbitrary[VerifyEmail]
-      request = smithy.VerifyEmailRequest(otpID = verifyEmail.otpID.value, otp = verifyEmail.otp.value)
+      verifyEmail <- Arbitrary.arbitrary[SignUpVerifyEmail]
+      request = smithy.SignUpVerifyEmailRequest(otpID = verifyEmail.otpID.value, otp = verifyEmail.otp.value)
     } yield request
   }
 
   given Arbitrary[smithy.OnboardPasswordRequest] = Arbitrary(
     Arbitrary.arbitrary[OnboardPassword].map(_.transformInto[smithy.OnboardPasswordRequest])
+  )
+
+  given Arbitrary[smithy.OnboardDetailsRequest] = Arbitrary(
+    Arbitrary
+      .arbitrary[OnboardDetails]
+      .map(
+        _.into[smithy.OnboardDetailsRequest]
+          .withFieldComputed(_.phoneNumber.phoneCountryCode, _.phoneNumber.phoneCountryCode.value)
+          .withFieldComputed(_.phoneNumber.phoneNationalNumber, _.phoneNumber.phoneNationalNumber.value)
+          .transform
+      )
   )
 }

@@ -4,22 +4,26 @@ enum OnboardStage {
   case EmailVerification
   case EmailVerified
   case PasswordProvided
-  case DetailsProvided
   case PhoneVerification
   case PhoneVerified
 }
 
 object OnboardStage {
-  val signupEmailStages = List(
+  val signUpEmailStages = List(
     OnboardStage.EmailVerification,
     OnboardStage.EmailVerified,
   )
 
-  val signupStages = List(
-    OnboardStage.EmailVerification,
-    OnboardStage.EmailVerified,
+  val signUpVerifyEmailStages = List(
+    OnboardStage.EmailVerification
+  )
+
+  val onboardPasswordStages = List(
+    OnboardStage.EmailVerified
+  )
+
+  val onboardDetailsStages = List(
     OnboardStage.PasswordProvided,
-    OnboardStage.DetailsProvided,
     OnboardStage.PhoneVerification,
   )
 }

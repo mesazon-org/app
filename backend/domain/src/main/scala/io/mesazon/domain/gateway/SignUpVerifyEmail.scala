@@ -1,6 +1,6 @@
 package io.mesazon.domain.gateway
 
-case class VerifyEmail(
+case class SignUpVerifyEmail(
     otpID: OtpID,
     otp: Otp,
 )

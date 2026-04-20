@@ -6,7 +6,7 @@ case class UserDetailsRow(
     userID: UserID,
     email: Email,
     fullName: Option[FullName],
-    phoneNumber: Option[PhoneNumberE164],
+    phoneNumber: Option[PhoneNumber],
     onboardStage: OnboardStage,
     createdAt: CreatedAt,
     updatedAt: UpdatedAt,

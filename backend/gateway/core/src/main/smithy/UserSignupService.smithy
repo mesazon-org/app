@@ -5,9 +5,9 @@ namespace io.mesazon.gateway.smithy
 use alloy#simpleRestJson
 
 @simpleRestJson
-service UserSignupService {
+service UserSignUpService {
     version: "1.0.0",
-    operations: [SignUpEmail, VerifyEmail]
+    operations: [SignUpEmail, SignUpVerifyEmail]
 }
 
 @http(method: "POST", uri: "/signup/email", code: 200)
@@ -22,13 +22,13 @@ operation SignUpEmail {
 }
 
 @auth([])
-@http(method: "POST", uri: "/verify/email", code: 200)
-operation VerifyEmail {
+@http(method: "POST", uri: "/signup/verify/email", code: 200)
+operation SignUpVerifyEmail {
     input := {
         @required
         @httpPayload
-        request: VerifyEmailRequest
+        request: SignUpVerifyEmailRequest
     }
-    output: VerifyEmailResponse
-    errors: [ValidationError, BadRequest, InternalServerError]
+    output: SignUpVerifyEmailResponse
+    errors: [ValidationError, BadRequest, Unauthorized, InternalServerError]
 }
