@@ -6,7 +6,7 @@ import sttp.client4.*
 import zio.*
 
 trait TwilioClient {
-  def sendOtpSms(to: PhoneNumberE164, otp: Otp): IO[ServiceError, Unit]
+  def sendOtpSms(phoneNumberE16To: PhoneNumberE164, otp: Otp): IO[ServiceError, Unit]
 }
 
 object TwilioClient {
@@ -16,7 +16,7 @@ object TwilioClient {
       sttpBackend: Backend[Task],
   ) extends TwilioClient {
 
-    override def sendOtpSms(to: PhoneNumberE164, otp: Otp): IO[ServiceError, Unit] =
+    override def sendOtpSms(phoneNumberE16To: PhoneNumberE164, otp: Otp): IO[ServiceError, Unit] =
       basicRequest
         .post(
           twilioClientConfig.baseUri.addPath("2010-04-01", "Accounts", twilioClientConfig.accountSid, "Messages.json")
@@ -25,15 +25,28 @@ object TwilioClient {
         .basic(twilioClientConfig.accountSid, twilioClientConfig.authToken)
         .body(
           Map(
-            "To"   -> to.value,
+            "To"   -> phoneNumberE16To.value,
             "From" -> twilioClientConfig.companyName,
             "Body" -> s"Your Mesazon verification code is: ${otp.value}. Valid for 5 minutes. Do not share this code.",
           )
         )
-        .response(ignore)
+        .response(asStringAlways)
         .send(sttpBackend)
-        .unit
         .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to send OTP SMS", Some(error)))
+        .flatMap { response =>
+          if (response.code.isSuccess) {
+            ZIO.unit
+          } else {
+            val responseBody = response.body.trim
+            val message      =
+              if (responseBody.nonEmpty)
+                s"Failed to send OTP SMS: Twilio returned HTTP [${response.code.code}]: $responseBody"
+              else
+                s"Failed to send OTP SMS: Twilio returned HTTP [${response.code.code}]"
+
+            ZIO.fail(ServiceError.InternalServerError.UnexpectedError(message, None))
+          }
+        }
   }
 
   private def observed(twilioClientImpl: TwilioClientImpl): TwilioClient = twilioClientImpl

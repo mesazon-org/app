@@ -444,7 +444,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
       otpPhoneVerificationResendCooldown = 2.seconds,
       sendWelcomeEmailMaxRetries = 3,
       sendWelcomeEmailRetryDelay = 1.millisecond,
-      sendPhoneVerificationOtpMaxRetries = 3,
+      sendPhoneVerificationOtpMaxRetries = 5,
       sendPhoneVerificationOtpRetryDelay = 1.millisecond,
     )
 

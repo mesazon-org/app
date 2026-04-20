@@ -1,23 +1,13 @@
 {
+  "priority": 2,
   "request": {
     "method": "POST",
-    "urlPattern": "2010-04-01/Accounts/.*/Messages.json",
+    "urlPattern": "/2010-04-01/Accounts/.*/Messages.json",
     "headers": {
       "Content-Type": {
-        "contains": "application/json"
+        "contains": "application/x-www-form-urlencoded"
       }
-    },
-    "bodyPatterns": [
-      {
-        "matchesJsonPath": "$.To"
-      },
-      {
-        "matchesJsonPath": "$.From"
-      },
-      {
-        "matchesJsonPath": "$.Body"
-      }
-    ]
+    }
   },
   "response": {
     "status": 201,
