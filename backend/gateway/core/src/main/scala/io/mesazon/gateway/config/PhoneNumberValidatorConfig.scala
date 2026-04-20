@@ -23,7 +23,7 @@ object PhoneNumberValidatorConfig {
         else
           ZIO.fail(
             Config.Error.Unsupported(
-              path = Chunk("validation", "supported-regions"),
+              path = Chunk("validation", "supported-phone-regions"),
               s"Config pass unsupported regions ${unsupportedRegions.mkString("[", ", ", "]")}",
             )
           )
