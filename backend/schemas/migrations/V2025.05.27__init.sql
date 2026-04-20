@@ -9,13 +9,16 @@ create table user_credentials
 
 create table user_details
 (
-    user_id       text        not null,
-    email         text        not null,
-    full_name     text,
-    phone_number  text,
-    onboard_stage text        not null,
-    created_at    timestamptz not null,
-    updated_at    timestamptz not null,
+    user_id               text        not null,
+    email                 text        not null,
+    full_name             text,
+    phone_region          text,
+    phone_country_code    text,
+    phone_national_number text,
+    phone_number_e164     text,
+    onboard_stage         text        not null,
+    created_at            timestamptz not null,
+    updated_at            timestamptz not null,
     primary key (user_id),
     unique (email)
 );

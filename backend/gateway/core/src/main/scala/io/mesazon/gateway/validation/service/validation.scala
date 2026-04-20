@@ -1,14 +1,11 @@
-package io.mesazon.gateway.validation
+package io.mesazon.gateway.validation.service
 
 import cats.Show
 import cats.data.*
 import cats.syntax.all.*
-import io.mesazon.domain.gateway.ServiceError
-import zio.ZIO
+import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 
 import scala.util.chaining.scalaUtilChainingOps
-
-import ServiceError.BadRequestError.InvalidFieldError
 
 private[validation] def validateRequiredField[A: Show, T](
     fieldName: String,
@@ -60,12 +57,3 @@ private[validation] def validateOptionalFields[A: Show, T](
       )
   }
   .toValidatedNec
-
-def toServiceValidator[A, B](
-    domainValidator: DomainValidator[A, B]
-): ServiceValidator[A, B] = rawData =>
-  domainValidator
-    .validate(rawData)
-    .flatMap(validated => ZIO.fromEither(validated.toEither))
-    .mapError(_.toNonEmptyList.toList)
-    .mapError(ServiceError.BadRequestError.ValidationError.apply)

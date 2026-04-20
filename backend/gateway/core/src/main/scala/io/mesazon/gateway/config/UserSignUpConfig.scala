@@ -2,14 +2,14 @@ package io.mesazon.gateway.config
 
 import zio.*
 
-case class UserSignupConfig(
+case class UserSignUpConfig(
     otpEmailVerificationExpiresAtOffset: Duration,
     otpEmailVerificationResendCooldown: Duration,
     sendEmailVerificationEmailMaxRetries: Int,
     sendEmailVerificationEmailRetryDelay: Duration,
 )
 
-object UserSignupConfig {
+object UserSignUpConfig {
 
-  val live = deriveConfigLayer[UserSignupConfig]("user-signup")
+  val live = deriveConfigLayer[UserSignUpConfig]("user-sign-up")
 }

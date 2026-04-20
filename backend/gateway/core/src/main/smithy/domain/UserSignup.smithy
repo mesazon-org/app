@@ -14,14 +14,14 @@ structure SignUpEmailResponse {
     otpExpiresInSeconds: Long
 }
 
-structure VerifyEmailRequest {
+structure SignUpVerifyEmailRequest {
     @required
     otpID: String
     @required
     otp: String
 }
 
-structure VerifyEmailResponse {
+structure SignUpVerifyEmailResponse {
     @required
     accessTokenExpiresInSeconds: Long
     @required

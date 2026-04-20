@@ -1,6 +1,5 @@
 package io.mesazon.gateway
 
-import com.google.i18n.phonenumbers.*
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.auth.*
@@ -11,14 +10,15 @@ import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.stream.*
+import io.mesazon.gateway.utils.PhoneNumberUtil
+import io.mesazon.gateway.validation.domain.*
+import io.mesazon.gateway.validation.service.*
 import io.mesazon.generator.IDGenerator
 import io.mesazon.waha.*
 import org.slf4j.bridge.SLF4JBridgeHandler
 import zio.*
 import zio.config.typesafe.TypesafeConfigProvider
 import zio.logging.backend.SLF4J
-
-import validation.*
 
 object Main extends ZIOAppDefault {
 
@@ -40,12 +40,12 @@ object Main extends ZIOAppDefault {
       // Utils
       TimeProvider.liveSystemUTC,
       IDGenerator.uuidGeneratorLive,
-      ZLayer.succeed(PhoneNumberUtil.getInstance()),
+      PhoneNumberUtil.live,
 
       // Services
       HealthCheckService.live,
       WahaService.live,
-      UserSignupService.live,
+      UserSignUpService.live,
       UserOnboardService.live,
       JwtService.live,
       PasswordService.live,
@@ -84,24 +84,30 @@ object Main extends ZIOAppDefault {
       HttpClientConfig.live,
       OpenAIClientConfig.live,
       EmailConfig.live,
-      UserSignupConfig.live,
+      UserSignUpConfig.live,
       JwtConfig.live,
       PasswordConfig.live,
       UserOnboardConfig.live,
+      TwilioClientConfig.live,
 
-      // Validators
-      EmailValidator.emailValidatorLive,
-//      PhoneNumberValidator.phoneNumberRegionValidatorLive,
-      PhoneNumberValidator.wahaPhoneNumberValidatorLive,
-      WahaValidator.wahaMessageRequestValidatorLive,
-      VerifyEmailValidator.verifyEmailValidatorLive,
-      OnboardPasswordValidator.onboardPasswordValidatorLive,
+      // Domain validators
+      EmailDomainValidator.live,
+      PhoneNumberDomainValidator.live,
+      WahaPhoneNumberDomainValidator.live,
+
+      // Service validators
+      SignUpEmailServiceValidator.live,
+      SignUpVerifyEmailServiceValidator.live,
+      OnboardPasswordServiceValidator.live,
+      OnboardDetailsServiceValidator.live,
+      WahaServiceValidator.live,
 
       // Clients
       SttpBackend.live,
       WahaClient.live,
       OpenAIClient.live,
       EmailClient.live,
+      TwilioClient.live,
 
       // Streams
       ReplyingToMessagesCronJobStream.live,

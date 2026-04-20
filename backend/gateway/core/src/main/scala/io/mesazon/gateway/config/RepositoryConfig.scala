@@ -6,11 +6,20 @@ case class RepositoryConfig(
     userDetailsTable: String = "",
     userOtpTable: String = "",
     userTokenTable: String = "",
-    userContactTable: String = "",
     wahaUserTable: String = "",
     wahaUserActivityTable: String = "",
     wahaUserMessageTable: String = "",
-)
+) {
+  val allTableNames = List(
+    userCredentialsTable,
+    userDetailsTable,
+    userOtpTable,
+    userTokenTable,
+    wahaUserTable,
+    wahaUserActivityTable,
+    wahaUserMessageTable,
+  ).filter(_.nonEmpty)
+}
 
 object RepositoryConfig {
   val live = deriveConfigLayer[RepositoryConfig]("repository")

@@ -17,6 +17,7 @@ services:
 #      APP_LOG_LEVEL: DEBUG
       EMAIL_PROVIDER_PORT: 1025
       JWT_SECRET_KEY: "Yk8zYkwwNGtVa0JvbE1NSU5lS2dtODdIMWlITzA4cDlZSkRiaFhBZmE4TT0="
+      TWILIO_CLIENT_HOST: wiremock
 
   postgres:
     image: postgres:17.5-alpine
@@ -46,3 +47,8 @@ services:
 #    ports:
 #      - "1025:1025"
 #      - "8025:8025"
+
+  wiremock:
+    image: local/wiremock:latest
+#    ports:
+#      - "8080:8080"

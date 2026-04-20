@@ -79,12 +79,11 @@ object Dependencies {
   lazy val jclToSlf4j = "org.slf4j"      % "jcl-over-slf4j"  % jclToSlf4jV
 
   // Test
-  lazy val scalaTest          = "org.scalatest"     %% "scalatest"       % scalaTestV
-  lazy val scalaTestPlusCheck = "org.scalatestplus" %% "scalacheck-1-15" % scalaTestPlusCheckV
-  lazy val scalacheck         = "org.scalacheck"    %% "scalacheck"      % scalacheckV
-  lazy val testcontainers     = "org.testcontainers" % "testcontainers"  % testcontainersV
-  lazy val testcontainersScalaPostgresql = "com.dimafeng" %% "testcontainers-scala-postgresql" % testcontainersScalaV
-  lazy val testcontainersScalaScalatest  = "com.dimafeng" %% "testcontainers-scala-scalatest"  % testcontainersScalaV
+  lazy val scalaTest                    = "org.scalatest"     %% "scalatest"                      % scalaTestV
+  lazy val scalaTestPlusCheck           = "org.scalatestplus" %% "scalacheck-1-15"                % scalaTestPlusCheckV
+  lazy val scalacheck                   = "org.scalacheck"    %% "scalacheck"                     % scalacheckV
+  lazy val testcontainers               = "org.testcontainers" % "testcontainers"                 % testcontainersV
+  lazy val testcontainersScalaScalatest = "com.dimafeng"      %% "testcontainers-scala-scalatest" % testcontainersScalaV
 
   // Chimney
   lazy val chimney = "io.scalaland" %% "chimney" % chimneyV

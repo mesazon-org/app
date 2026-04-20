@@ -30,29 +30,20 @@ type Password = Password.T
 object PasswordHash extends RefinedType[String, NonEmptyTrimmed]
 type PasswordHash = PasswordHash.T
 
+object PhoneRegion extends RefinedType[String, NonEmptyTrimmed]
+type PhoneRegion = PhoneRegion.T
+
+object PhoneCountryCode extends RefinedType[String, NonEmptyTrimmed]
+type PhoneCountryCode = PhoneCountryCode.T
+
+object PhoneNationalNumber extends RefinedType[String, NonEmptyTrimmed]
+type PhoneNationalNumber = PhoneNationalNumber.T
+
 object PhoneNumberE164 extends RefinedType[String, NonEmptyTrimmed] {
   def cy(phoneNationalNumber: String): PhoneNumberE164.T =
     assume(s"+357$phoneNationalNumber")
 }
 type PhoneNumberE164 = PhoneNumberE164.T
-
-object AddressLine1 extends RefinedType[String, NonEmptyTrimmed]
-type AddressLine1 = AddressLine1.T
-
-object AddressLine2 extends RefinedType[String, NonEmptyTrimmed]
-type AddressLine2 = AddressLine2.T
-
-object City extends RefinedType[String, NonEmptyTrimmed]
-type City = City.T
-
-object PostalCode extends RefinedType[String, NonEmptyTrimmed]
-type PostalCode = PostalCode.T
-
-object Company extends RefinedType[String, NonEmptyTrimmed]
-type Company = Company.T
-
-object DisplayName extends RefinedType[String, NonEmptyTrimmed]
-type DisplayName = DisplayName.T
 
 object Message extends RefinedType[String, NonEmpty]
 type Message = Message.T
