@@ -1,4 +1,3 @@
-import DockerSettings.{baseImage, copyJarsDir1, copyJarsDir2, daemonUser, pasteJarsDir, workDir}
 import com.typesafe.sbt.packager.Keys.*
 import com.typesafe.sbt.packager.docker.{Cmd, ExecCmd}
 import com.typesafe.sbt.packager.docker.DockerPlugin.autoImport.Docker

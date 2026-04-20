@@ -6,7 +6,7 @@ import sttp.client4.*
 import zio.*
 
 trait TwilioClient {
-  def sendOtpSms(phoneNumberE16To: PhoneNumberE164, otp: Otp): IO[ServiceError, Unit]
+  def sendOtpSms(phoneNumberE164To: PhoneNumberE164, otp: Otp): IO[ServiceError, Unit]
 }
 
 object TwilioClient {
@@ -16,7 +16,7 @@ object TwilioClient {
       sttpBackend: Backend[Task],
   ) extends TwilioClient {
 
-    override def sendOtpSms(phoneNumberE16To: PhoneNumberE164, otp: Otp): IO[ServiceError, Unit] =
+    override def sendOtpSms(phoneNumberE164To: PhoneNumberE164, otp: Otp): IO[ServiceError, Unit] =
       basicRequest
         .post(
           twilioClientConfig.baseUri.addPath("2010-04-01", "Accounts", twilioClientConfig.accountSid, "Messages.json")
@@ -25,9 +25,9 @@ object TwilioClient {
         .basic(twilioClientConfig.accountSid, twilioClientConfig.authToken)
         .body(
           Map(
-            "To"   -> phoneNumberE16To.value,
+            "To"   -> phoneNumberE164To.value,
             "From" -> twilioClientConfig.companyName,
-            "Body" -> s"Your Mesazon verification code is: ${otp.value}. Valid for 5 minutes. Do not share this code.",
+            "Body" -> s"Your Mesazon verification code is: ${otp.value}. Do not share this code.",
           )
         )
         .response(asStringAlways)

@@ -10,7 +10,7 @@ final case class TwilioClientConfig(
     authToken: String,
     companyName: String,
 ) {
-  val baseUri: Uri = Uri(scheme, host, port)
+  val baseUri: Uri = Uri.unsafeApply(scheme, host, port)
 }
 
 object TwilioClientConfig {

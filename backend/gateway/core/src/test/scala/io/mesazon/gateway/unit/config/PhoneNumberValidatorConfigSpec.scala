@@ -34,7 +34,7 @@ class PhoneNumberValidatorConfigSpec extends ZWordSpecBase {
           )
           .zioError
 
-        error.path shouldBe Chunk("validation", "supported-regions")
+        error.path shouldBe Chunk("validation", "supported-phone-regions")
         error.message shouldBe "Config pass unsupported regions [UU, GAMW]"
       }
     }
