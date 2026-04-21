@@ -42,12 +42,12 @@ module "gateway_core_app" {
   }
 
   secret_vars = {
-    EMAIL_SENDER_EMAIL    = "mesazon.dev@gmail.com"
-    DATABASE_USERNAME     = data.digitalocean_database_user.database_user.name
-    DATABASE_PASSWORD     = data.digitalocean_database_user.database_user.password
-    EMAIL_SENDER_PASSWORD = var.email_sender_password
+    EMAIL_SENDER_EMAIL        = "mesazon.dev@gmail.com"
+    DATABASE_USERNAME         = data.digitalocean_database_user.database_user.name
+    DATABASE_PASSWORD         = data.digitalocean_database_user.database_user.password
+    EMAIL_SENDER_PASSWORD     = var.email_sender_password
     TWILIO_CLIENT_ACCOUNT_SID = var.twilio_client_account_sid
-    TWILIO_CLIENT_AUTH_TOKEN = var.twilio_client_auth_token
-    JWT_SECRET_KEY        = var.jwt_secret_key
+    TWILIO_CLIENT_AUTH_TOKEN  = var.twilio_client_auth_token
+    JWT_SECRET_KEY            = var.jwt_secret_key
   }
 }
