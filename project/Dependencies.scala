@@ -33,7 +33,7 @@ object Dependencies {
   lazy val jmailV               = "2.1.0"
   lazy val simplejavamailV      = "8.12.6"
   lazy val jjwtV                = "0.13.0"
-  lazy val springSecurityV      = "7.0.4"
+  lazy val springSecurityV      = "7.0.5"
   lazy val bouncyCastleV        = "1.84"
 
   // Http4s
