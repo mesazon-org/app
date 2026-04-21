@@ -39,6 +39,9 @@ module "gateway_core_app" {
     EMAIL_PROVIDER_HOST = "smtp.gmail.com"
     EMAIL_PROVIDER_PORT = "587"
     EMAIL_ENABLE_TLS    = "true"
+    TWILIO_CLIENT_SCHEME = "https"
+    TWILIO_CLIENT_HOST   = "api.twilio.com"
+    TWILIO_CLIENT_PORT   = "443"
   }
 
   secret_vars = {
