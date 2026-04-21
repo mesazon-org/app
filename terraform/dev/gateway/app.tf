@@ -30,15 +30,15 @@ module "gateway_core_app" {
   app_size     = "apps-s-1vcpu-1gb-fixed"
 
   env_vars = {
-    REPOSITORY_SCHEMA   = local.repository_schema
-    SERVER_ENABLE_DOCS  = "true"
-    JAVA_OPTS           = "-XX:InitialRAMPercentage=65.0 -XX:MaxRAMPercentage=65.0 -XX:MaxMetaspaceSize=256m -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ExitOnOutOfMemoryError"
-    DATABASE_NAME       = local.database_name
-    DATABASE_HOST       = data.digitalocean_database_cluster.postgres_cluster.private_host
-    DATABASE_PORT       = data.digitalocean_database_cluster.postgres_cluster.port
-    EMAIL_PROVIDER_HOST = "smtp.gmail.com"
-    EMAIL_PROVIDER_PORT = "587"
-    EMAIL_ENABLE_TLS    = "true"
+    REPOSITORY_SCHEMA    = local.repository_schema
+    SERVER_ENABLE_DOCS   = "true"
+    JAVA_OPTS            = "-XX:InitialRAMPercentage=65.0 -XX:MaxRAMPercentage=65.0 -XX:MaxMetaspaceSize=256m -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ExitOnOutOfMemoryError"
+    DATABASE_NAME        = local.database_name
+    DATABASE_HOST        = data.digitalocean_database_cluster.postgres_cluster.private_host
+    DATABASE_PORT        = data.digitalocean_database_cluster.postgres_cluster.port
+    EMAIL_PROVIDER_HOST  = "smtp.gmail.com"
+    EMAIL_PROVIDER_PORT  = "587"
+    EMAIL_ENABLE_TLS     = "true"
     TWILIO_CLIENT_SCHEME = "https"
     TWILIO_CLIENT_HOST   = "api.twilio.com"
     TWILIO_CLIENT_PORT   = "443"
