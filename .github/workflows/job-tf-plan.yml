@@ -33,6 +33,8 @@ env:
   TF_VAR_do_token: ${{ secrets.DO_API_KEY }}
   TF_VAR_project_id: ${{ inputs.project-id }}
   TF_VAR_email_sender_password: ${{ secrets.EMAIL_SENDER_PASSWORD }}
+  TF_VAR_twilio_client_account_sid: ${{ secrets.TWILIO_CLIENT_ACCOUNT_SID }}
+  TF_VAR_twilio_client_auth_token: ${{ secrets.TWILIO_CLIENT_AUTH_TOKEN }}
   TF_VAR_jwt_secret_key: ${{ secrets.JWT_SECRET_KEY }}
   TF_VAR_image_name: ${{ inputs.docker-image-name }}
   TF_VAR_image_tag: ${{ inputs.docker-image-tag }}
