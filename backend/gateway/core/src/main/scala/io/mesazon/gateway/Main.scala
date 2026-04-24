@@ -100,6 +100,7 @@ object Main extends ZIOAppDefault {
       SignUpVerifyEmailServiceValidator.live,
       OnboardPasswordServiceValidator.live,
       OnboardDetailsServiceValidator.live,
+      OnboardVerifyPhoneNumberServiceValidator.live,
       WahaServiceValidator.live,
 
       // Clients

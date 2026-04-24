@@ -59,4 +59,8 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
           .transform
       )
   )
+
+  given Arbitrary[smithy.OnboardVerifyPhoneNumberRequest] = Arbitrary(
+    Arbitrary.arbitrary[OnboardVerifyPhoneNumber].map(_.transformInto[smithy.OnboardVerifyPhoneNumberRequest])
+  )
 }
