@@ -20,6 +20,7 @@ import sttp.model.*
 import zio.*
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 class UserOnboardApiSpec
     extends ZWordSpecBase,
@@ -182,7 +183,7 @@ class UserOnboardApiSpec
         userCredentialsRowsAll should have size 0
       }
 
-      "fail with Unauthorized when user is not incorrect onboard stage" in withContext { context =>
+      "fail with Unauthorized when user is not in correct onboard stage" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =
@@ -396,7 +397,7 @@ class UserOnboardApiSpec
     }
 
     "onboard/verify/phone-number" should {
-      "successfully verify phone number for user with valid access token and valid otp gamo" in withContext { context =>
+      "successfully verify phone number for user with valid access token and valid otp" in withContext { context =>
         import context.*
 
         val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
@@ -411,8 +412,10 @@ class UserOnboardApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          expiresAt = ExpiresAt(Instant.now.plusSeconds(10)),
+          expiresAt = ExpiresAt(instantNow.plusSeconds(10)),
           userID = userDetailsRow.userID,
           otpType = OtpType.PhoneVerification,
         )
@@ -468,8 +471,10 @@ class UserOnboardApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          expiresAt = ExpiresAt(Instant.now.plusSeconds(10)),
+          expiresAt = ExpiresAt(instantNow.plusSeconds(10)),
           userID = userDetailsRow.userID,
           otpType = OtpType.PhoneVerification,
         )
@@ -551,8 +556,10 @@ class UserOnboardApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          expiresAt = ExpiresAt(Instant.now.plusSeconds(10)),
+          expiresAt = ExpiresAt(instantNow.plusSeconds(10)),
           userID = userDetailsRow.userID,
           otpType = OtpType.PhoneVerification,
         )
@@ -606,8 +613,10 @@ class UserOnboardApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          expiresAt = ExpiresAt(Instant.now.minusSeconds(10)),
+          expiresAt = ExpiresAt(instantNow.minusSeconds(10)),
           userID = userDetailsRow.userID,
           otpType = OtpType.PhoneVerification,
         )

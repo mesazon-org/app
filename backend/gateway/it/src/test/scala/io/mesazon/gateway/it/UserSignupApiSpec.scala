@@ -17,6 +17,7 @@ import sttp.model.*
 import zio.*
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 class UserSignupApiSpec
     extends ZWordSpecBase,
@@ -253,10 +254,13 @@ class UserSignupApiSpec
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
           onboardStage = onboardStage
         )
+
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
           userID = userDetailsRow.userID,
           otpType = OtpType.EmailVerification,
-          expiresAt = ExpiresAt.assume(Instant.now.plusSeconds(10)),
+          expiresAt = ExpiresAt.assume(instantNow.plusSeconds(10)),
         )
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
@@ -302,10 +306,13 @@ class UserSignupApiSpec
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
           onboardStage = onboardStage
         )
+
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
           userID = userDetailsRow.userID,
           otpType = OtpType.EmailVerification,
-          expiresAt = ExpiresAt.assume(Instant.now.minusSeconds(10)),
+          expiresAt = ExpiresAt.assume(instantNow.minusSeconds(10)),
         )
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
@@ -390,10 +397,12 @@ class UserSignupApiSpec
           onboardStage = onboardStageInvalid
         )
 
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
           userID = userDetailsRow.userID,
           otpType = OtpType.EmailVerification,
-          expiresAt = ExpiresAt.assume(Instant.now.plusSeconds(10)),
+          expiresAt = ExpiresAt.assume(instantNow.plusSeconds(10)),
         )
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
