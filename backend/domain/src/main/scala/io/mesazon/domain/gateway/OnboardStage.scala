@@ -26,4 +26,8 @@ object OnboardStage {
     OnboardStage.PasswordProvided,
     OnboardStage.PhoneVerification,
   )
+
+  val onboardVerifyPhoneNumberStages = List(
+    OnboardStage.PhoneVerification
+  )
 }

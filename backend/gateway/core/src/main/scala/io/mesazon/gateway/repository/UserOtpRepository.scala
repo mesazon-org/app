@@ -17,13 +17,19 @@ trait UserOtpRepository {
       expiresAt: ExpiresAt,
   ): IO[ServiceError, UserOtpRow]
 
-  def getUserOtpByUserID(
+  def getUserOtp(
+      otpID: OtpID,
       userID: UserID,
       otpType: OtpType,
   ): IO[ServiceError, Option[UserOtpRow]]
 
-  def getUserOtp(
+  def getUserOtpByOtpID(
       otpID: OtpID,
+      otpType: OtpType,
+  ): IO[ServiceError, Option[UserOtpRow]]
+
+  def getUserOtpByUserID(
+      userID: UserID,
       otpType: OtpType,
   ): IO[ServiceError, Option[UserOtpRow]]
 
@@ -104,10 +110,22 @@ object UserOtpRepository {
           )
       } yield updatedUserOtpRow
 
-    override def getUserOtp(otpID: OtpID, otpType: OtpType): IO[ServiceError, Option[UserOtpRow]] =
+    override def getUserOtp(otpID: OtpID, userID: UserID, otpType: OtpType): IO[ServiceError, Option[UserOtpRow]] =
       database
         .transactionOrWiden(
-          userOtpQueries.getUserOtp(otpID, otpType)
+          userOtpQueries.getUserOtp(otpID, userID, otpType)
+        )
+        .mapError(e =>
+          ServiceError.InternalServerError.DatabaseError(s"Failed to get user OTP: [$otpID], [$userID], [$otpType]", e)
+        )
+
+    override def getUserOtpByOtpID(
+        otpID: OtpID,
+        otpType: OtpType,
+    ): IO[ServiceError, Option[UserOtpRow]] =
+      database
+        .transactionOrWiden(
+          userOtpQueries.getUserOtpByOtpID(otpID, otpType)
         )
         .mapError(e =>
           ServiceError.InternalServerError.DatabaseError(s"Failed to get user OTP by OTP ID: [$otpID], [$otpType]", e)
@@ -134,7 +152,6 @@ object UserOtpRepository {
           ServiceError.InternalServerError
             .DatabaseError(s"Failed to delete user OTP: [$otpID], [$userID], [$otpType]", e)
         )
-
   }
 
   private def observed(userOtpRepository: UserOtpRepository): UserOtpRepository = userOtpRepository

@@ -14,6 +14,7 @@ trait UserOtpRepositoryMock extends ZIOTestOps, should.Matchers {
   private val upsertUserOtpCounterRef: Ref[Int]      = Ref.make(0).zioValue
   private val updateUserOtpCounterRef: Ref[Int]      = Ref.make(0).zioValue
   private val getUserOtpCounterRef: Ref[Int]         = Ref.make(0).zioValue
+  private val getUserOtpByOtpIDCounterRef: Ref[Int]  = Ref.make(0).zioValue
   private val getUserOtpByUserIDCounterRef: Ref[Int] = Ref.make(0).zioValue
   private val deleteUserOtpCounterRef: Ref[Int]      = Ref.make(0).zioValue
 
@@ -21,12 +22,14 @@ trait UserOtpRepositoryMock extends ZIOTestOps, should.Matchers {
       expectedUpsertUserOtpCalls: Int = 0,
       expectedUpdateUserOtpCalls: Int = 0,
       expectedGetUserOtpCalls: Int = 0,
+      expectedGetUserOtpByOtpIDCalls: Int = 0,
       expectedGetUserOtpByUserIDCalls: Int = 0,
       expectedDeleteUserOtpCalls: Int = 0,
   ): Assertion = {
     upsertUserOtpCounterRef.get.zioValue shouldBe expectedUpsertUserOtpCalls
     updateUserOtpCounterRef.get.zioValue shouldBe expectedUpdateUserOtpCalls
     getUserOtpCounterRef.get.zioValue shouldBe expectedGetUserOtpCalls
+    getUserOtpByOtpIDCounterRef.get.zioValue shouldBe expectedGetUserOtpByOtpIDCalls
     getUserOtpByUserIDCounterRef.get.zioValue shouldBe expectedGetUserOtpByUserIDCalls
     deleteUserOtpCounterRef.get.zioValue shouldBe expectedDeleteUserOtpCalls
   }
@@ -58,8 +61,16 @@ trait UserOtpRepositoryMock extends ZIOTestOps, should.Matchers {
             )
           )(ZIO.fail)
 
-      override def getUserOtp(otpID: OtpID, otpType: OtpType): IO[ServiceError, Option[UserOtpRow]] =
+      override def getUserOtp(otpID: OtpID, userID: UserID, otpType: OtpType): IO[ServiceError, Option[UserOtpRow]] =
         getUserOtpCounterRef.incrementAndGet *>
+          serviceErrorOpt.fold[IO[ServiceError, Option[UserOtpRow]]](
+            ZIO.succeed(
+              userOtpRows.get(otpID).filter(_.userID == userID).filter(_.otpType == otpType)
+            )
+          )(ZIO.fail)
+
+      override def getUserOtpByOtpID(otpID: OtpID, otpType: OtpType): IO[ServiceError, Option[UserOtpRow]] =
+        getUserOtpByOtpIDCounterRef.incrementAndGet *>
           serviceErrorOpt.fold[IO[ServiceError, Option[UserOtpRow]]](
             ZIO.succeed(
               userOtpRows.get(otpID).filter(_.otpType == otpType)
@@ -92,6 +103,7 @@ trait UserOtpRepositoryMock extends ZIOTestOps, should.Matchers {
           serviceErrorOpt.fold(
             ZIO.unit
           )(ZIO.fail)
+
     }
   )
 }
