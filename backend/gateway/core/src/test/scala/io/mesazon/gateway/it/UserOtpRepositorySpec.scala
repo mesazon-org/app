@@ -164,7 +164,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
     }
 
     "getUserOtp" should {
-      "successfully retrieve an existing OTP for a user by OTP ID and OTP type" in withContext { context =>
+      "successfully retrieve an existing OTP for a user by OTP ID, User ID and OTP type" in withContext { context =>
         import context.*
 
         val userOtpRepository = ZIO
@@ -193,7 +193,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
         userOtpRowOptRetrieved shouldBe Some(userOtpRow)
       }
 
-      "return None when there is no OTP for the given OTP ID and OTP type" in withContext { context =>
+      "return None when there is no OTP for the given OTP ID, User ID and OTP type" in withContext { context =>
         import context.*
 
         val userOtpRepository = ZIO

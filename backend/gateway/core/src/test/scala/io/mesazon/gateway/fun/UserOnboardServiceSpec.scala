@@ -440,7 +440,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val instantNow = Instant.now()
         val buffer     = Random.nextIntBetween(1, 300).zioValue
         val expiresAt  =
-          ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds + buffer))
+          ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds + buffer))
 
         val userOtpRow = arbitrarySample[UserOtpRow]
           .copy(
