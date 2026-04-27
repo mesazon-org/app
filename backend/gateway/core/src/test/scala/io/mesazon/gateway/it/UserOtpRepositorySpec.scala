@@ -164,6 +164,62 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
     }
 
     "getUserOtp" should {
+      "successfully retrieve an existing OTP for a user by OTP ID, User ID and OTP type" in withContext { context =>
+        import context.*
+
+        val userOtpRepository = ZIO
+          .service[UserOtpRepository]
+          .provide(
+            UserOtpRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userOtpQueries),
+          )
+          .zioValue
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
+
+        postgresClient
+          .executeQuery(
+            userOtpQueries.insertUserOtp(userOtpRow)
+          )
+          .zioValue
+
+        val userOtpRowOptRetrieved = userOtpRepository
+          .getUserOtp(userOtpRow.otpID, userOtpRow.userID, userOtpRow.otpType)
+          .zioValue
+
+        userOtpRowOptRetrieved shouldBe Some(userOtpRow)
+      }
+
+      "return None when there is no OTP for the given OTP ID, User ID and OTP type" in withContext { context =>
+        import context.*
+
+        val userOtpRepository = ZIO
+          .service[UserOtpRepository]
+          .provide(
+            UserOtpRepository.live,
+            ZLayer.succeed(postgresClient.database),
+            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            Mocks.idGeneratorLive,
+            ZLayer.succeed(userOtpQueries),
+          )
+          .zioValue
+
+        val otpID   = arbitrarySample[OtpID]
+        val userID  = arbitrarySample[UserID]
+        val otpType = arbitrarySample[OtpType]
+
+        val userOtpRowOptRetrieved = userOtpRepository
+          .getUserOtp(otpID, userID, otpType)
+          .zioValue
+
+        userOtpRowOptRetrieved shouldBe None
+      }
+    }
+
+    "getUserOtpByOtpID" should {
       "successfully retrieve an existing OTP for a user by OTP ID and OTP type" in withContext { context =>
         import context.*
 
@@ -187,7 +243,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .zioValue
 
         val userOtpRowOptRetrieved = userOtpRepository
-          .getUserOtp(otpID = userOtpRow.otpID, otpType = userOtpRow.otpType)
+          .getUserOtpByOtpID(otpID = userOtpRow.otpID, otpType = userOtpRow.otpType)
           .zioValue
 
         userOtpRowOptRetrieved shouldBe Some(userOtpRow)
@@ -211,7 +267,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
         val otpType = arbitrarySample[OtpType]
 
         val userOtpRowOptRetrieved = userOtpRepository
-          .getUserOtp(otpID, otpType)
+          .getUserOtpByOtpID(otpID, otpType)
           .zioValue
 
         userOtpRowOptRetrieved shouldBe None

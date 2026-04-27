@@ -42,15 +42,19 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     override def nullValue: smithy.OnboardStage = null
   }
 
-  given JsonValueCodec[smithy.SignUpEmailRequest]       = JsonCodecMaker.make[smithy.SignUpEmailRequest]
-  given JsonValueCodec[smithy.SignUpVerifyEmailRequest] = JsonCodecMaker.make[smithy.SignUpVerifyEmailRequest]
-  given JsonValueCodec[smithy.OnboardPasswordRequest]   = JsonCodecMaker.make[smithy.OnboardPasswordRequest]
-  given JsonValueCodec[smithy.OnboardDetailsRequest]    = JsonCodecMaker.make[smithy.OnboardDetailsRequest]
+  given JsonValueCodec[smithy.SignUpEmailRequest]              = JsonCodecMaker.make[smithy.SignUpEmailRequest]
+  given JsonValueCodec[smithy.SignUpVerifyEmailRequest]        = JsonCodecMaker.make[smithy.SignUpVerifyEmailRequest]
+  given JsonValueCodec[smithy.OnboardPasswordRequest]          = JsonCodecMaker.make[smithy.OnboardPasswordRequest]
+  given JsonValueCodec[smithy.OnboardDetailsRequest]           = JsonCodecMaker.make[smithy.OnboardDetailsRequest]
+  given JsonValueCodec[smithy.OnboardVerifyPhoneNumberRequest] =
+    JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberRequest]
 
-  given JsonValueCodec[smithy.SignUpEmailResponse]       = JsonCodecMaker.make[smithy.SignUpEmailResponse]
-  given JsonValueCodec[smithy.SignUpVerifyEmailResponse] = JsonCodecMaker.make[smithy.SignUpVerifyEmailResponse]
-  given JsonValueCodec[smithy.OnboardPasswordResponse]   = JsonCodecMaker.make[smithy.OnboardPasswordResponse]
-  given JsonValueCodec[smithy.OnboardDetailsResponse]    = JsonCodecMaker.make[smithy.OnboardDetailsResponse]
+  given JsonValueCodec[smithy.SignUpEmailResponse]              = JsonCodecMaker.make[smithy.SignUpEmailResponse]
+  given JsonValueCodec[smithy.SignUpVerifyEmailResponse]        = JsonCodecMaker.make[smithy.SignUpVerifyEmailResponse]
+  given JsonValueCodec[smithy.OnboardPasswordResponse]          = JsonCodecMaker.make[smithy.OnboardPasswordResponse]
+  given JsonValueCodec[smithy.OnboardDetailsResponse]           = JsonCodecMaker.make[smithy.OnboardDetailsResponse]
+  given JsonValueCodec[smithy.OnboardVerifyPhoneNumberResponse] =
+    JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberResponse]
 
   def liveness: Task[StatusCode] = basicRequest
     .get(healthUri.addPath("liveness"))
@@ -108,6 +112,21 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
         )
       )
       .response(asJson[smithy.OnboardDetailsResponse])
+      .send(sttpBackend)
+
+  def onboardVerifyPhoneNumber(
+      onboardVerifyPhoneNumberRequest: smithy.OnboardVerifyPhoneNumberRequest,
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[ResponseException[String], smithy.OnboardVerifyPhoneNumberResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("onboard", "verify", "phone-number"))
+      .body(asJson(onboardVerifyPhoneNumberRequest))
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJson[smithy.OnboardVerifyPhoneNumberResponse])
       .send(sttpBackend)
 }
 

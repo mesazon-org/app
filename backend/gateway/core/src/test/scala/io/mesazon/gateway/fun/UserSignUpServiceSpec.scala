@@ -334,7 +334,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           expectedDeleteAllUserTokensCalls = 1,
         )
         checkUserOtpRepository(
-          expectedGetUserOtpCalls = 1,
+          expectedGetUserOtpByOtpIDCalls = 1,
           expectedDeleteUserOtpCalls = 1,
         )
         checkEmailClient()
@@ -392,7 +392,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkUserDetailsRepository()
         checkUserTokenRepository()
         checkUserOtpRepository(
-          expectedGetUserOtpCalls = 1
+          expectedGetUserOtpByOtpIDCalls = 1
         )
         checkEmailClient()
         checkJwtService()
@@ -420,7 +420,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkUserDetailsRepository()
         checkUserTokenRepository()
         checkUserOtpRepository(
-          expectedGetUserOtpCalls = 1
+          expectedGetUserOtpByOtpIDCalls = 1
         )
         checkEmailClient()
         checkJwtService()
@@ -455,7 +455,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         )
         checkUserTokenRepository()
         checkUserOtpRepository(
-          expectedGetUserOtpCalls = 1
+          expectedGetUserOtpByOtpIDCalls = 1
         )
         checkEmailClient()
         checkJwtService()
@@ -492,7 +492,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         )
         checkUserTokenRepository()
         checkUserOtpRepository(
-          expectedGetUserOtpCalls = 1
+          expectedGetUserOtpByOtpIDCalls = 1
         )
         checkEmailClient()
         checkJwtService()
@@ -529,7 +529,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         )
         checkUserTokenRepository()
         checkUserOtpRepository(
-          expectedGetUserOtpCalls = 1
+          expectedGetUserOtpByOtpIDCalls = 1
         )
         checkEmailClient()
         checkJwtService()
@@ -552,7 +552,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkUserDetailsRepository()
         checkUserTokenRepository()
         checkUserOtpRepository(
-          expectedGetUserOtpCalls = 1
+          expectedGetUserOtpByOtpIDCalls = 1
         )
         checkEmailClient()
         checkJwtService()

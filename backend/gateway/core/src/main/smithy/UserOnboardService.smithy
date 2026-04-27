@@ -8,7 +8,7 @@ use alloy#simpleRestJson
 @httpBearerAuth
 service UserOnboardService {
     version: "1.0.0",
-    operations: [OnboardPassword, OnboardDetails]
+    operations: [OnboardPassword, OnboardDetails, OnboardVerifyPhoneNumber]
 }
 
 @http(method: "POST", uri: "/onboard/password", code: 200)
@@ -30,5 +30,17 @@ operation OnboardDetails {
         request: OnboardDetailsRequest
     }
     output: OnboardDetailsResponse
+    errors: [Unauthorized, ValidationError, InternalServerError]
+}
+
+
+@http(method: "POST", uri: "/onboard/verify/phone-number", code: 200)
+operation OnboardVerifyPhoneNumber {
+    input := {
+        @required
+        @httpPayload
+        request: OnboardVerifyPhoneNumberRequest
+    }
+    output: OnboardVerifyPhoneNumberResponse
     errors: [Unauthorized, ValidationError, InternalServerError]
 }

@@ -27,3 +27,15 @@ structure OnboardDetailsResponse {
     @required
     otpExpiresInSeconds: Long
 }
+
+structure OnboardVerifyPhoneNumberRequest {
+    @required
+    otpID: String
+    @required
+    otp: String
+}
+
+structure OnboardVerifyPhoneNumberResponse {
+    @required
+    onboardStage: OnboardStage
+}

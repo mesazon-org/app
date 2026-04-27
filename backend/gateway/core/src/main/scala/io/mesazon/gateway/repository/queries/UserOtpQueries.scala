@@ -53,7 +53,16 @@ final class UserOtpQueries(
            |""".stripMargin.query[UserOtpRow].unique
     }
 
-  def getUserOtp(otpID: OtpID, otpType: OtpType): TranzactIO[Option[UserOtpRow]] =
+  def getUserOtp(otpID: OtpID, userID: UserID, otpType: OtpType): TranzactIO[Option[UserOtpRow]] =
+    tzio {
+      sql"""
+           |SELECT $userOtpFields
+           |FROM $frSchema.$frUserOtpTable
+           |WHERE otp_id = $otpID AND user_id = $userID AND otp_type = $otpType
+           |""".stripMargin.query[UserOtpRow].option
+    }
+
+  def getUserOtpByOtpID(otpID: OtpID, otpType: OtpType): TranzactIO[Option[UserOtpRow]] =
     tzio {
       sql"""
            |SELECT $userOtpFields

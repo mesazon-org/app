@@ -109,7 +109,7 @@ object UserSignUpService {
       for {
         _                  <- ZIO.logDebug(s"Verify email: [${request.otpID}]")
         signUpVerifyEmail  <- signUpVerifyEmailServiceValidator.validate(request)
-        userOtpRowOpt      <- userOtpRepository.getUserOtp(signUpVerifyEmail.otpID, OtpType.EmailVerification)
+        userOtpRowOpt      <- userOtpRepository.getUserOtpByOtpID(signUpVerifyEmail.otpID, OtpType.EmailVerification)
         userOtpRowExisting <- ZIO.getOrFailWith(
           ServiceError.UnauthorizedError.OtpValidationError(s"No otp found for otpID: ${signUpVerifyEmail.otpID}")
         )(userOtpRowOpt)
