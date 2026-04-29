@@ -1,12 +1,12 @@
-package io.mesazon.gateway.auth
+package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
 import io.mesazon.gateway.repository.{UserCredentialsRepository, UserDetailsRepository}
-import io.mesazon.gateway.service.ServiceTask
+import io.mesazon.gateway.state.AuthState
 import io.mesazon.gateway.validation.service.BasicCredentialsServiceValidator
-import org.http4s.*
 import org.http4s.headers.Authorization
+import org.http4s.{BasicCredentials as Http4sBasicCredentials, *}
 import zio.*
 
 trait AuthenticationService[F[_]] {
@@ -21,7 +21,7 @@ object AuthenticationService {
       userDetailsRepository: UserDetailsRepository,
       userCredentialsRepository: UserCredentialsRepository,
       passwordService: PasswordService,
-      authorizationState: AuthorizationState,
+      authState: AuthState,
       basicCredentialsServiceValidator: BasicCredentialsServiceValidator,
   ) extends AuthenticationService[ServiceTask] {
 
@@ -30,7 +30,9 @@ object AuthenticationService {
         _ <- ZIO.logDebug("AuthenticationService: auth called")
         basicCredentialsRequestOpt = request.headers
           .get[`Authorization`]
-          .collect { case Authorization(BasicCredentials(email, password)) => BasicCredentialsRequest(email, password) }
+          .collect { case Authorization(Http4sBasicCredentials(email, password)) =>
+            BasicCredentialsRequest(email, password)
+          }
         basicCredentialsRequest <- ZIO.getOrFailWith(ServiceError.UnauthorizedError.BasicCredentialsMissing)(
           basicCredentialsRequestOpt
         )
@@ -51,7 +53,7 @@ object AuthenticationService {
         _                  <-
           if (isPasswordVerified) ZIO.unit
           else ZIO.fail(ServiceError.UnauthorizedError.InvalidCredentials)
-        _ <- authorizationState.set(AuthedUser(userDetails.userID))
+        _ <- authState.set(AuthedUser(userDetails.userID))
       } yield ()
   }
 

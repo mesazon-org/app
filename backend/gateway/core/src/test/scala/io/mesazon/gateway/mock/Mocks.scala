@@ -7,10 +7,11 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.domain.waha
 import io.mesazon.domain.waha.WahaError
 import io.mesazon.domain.waha.output.ChattingSendMessageOutput
-import io.mesazon.gateway.auth.*
 import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.domain.*
+import io.mesazon.gateway.service.*
+import io.mesazon.gateway.state.AuthState
 import io.mesazon.generator.IDGenerator
 import io.mesazon.testkit.base.ZIOTestOps
 import io.mesazon.waha.WahaClient
@@ -32,18 +33,18 @@ object Mocks extends ZIOTestOps {
     }
   )
 
-  def authorizationStateLive(authedUser: AuthedUser): ULayer[AuthorizationState] =
+  def authStateLive(authedUser: AuthedUser): ULayer[AuthState] =
     ZLayer.succeed(
-      new AuthorizationState {
+      new AuthState {
         override def get(): UIO[AuthedUser] = ZIO.succeed(authedUser)
 
         override def set(authedUser: AuthedUser): UIO[Unit] = ZIO.unit
       }
     )
 
-  def authorizationServiceLive(maybeError: Option[Throwable] = None): ULayer[AuthorizationService[Throwable]] =
+  def authorizationServiceLive(maybeError: Option[Throwable] = None): ULayer[AuthorizationService[Task]] =
     ZLayer.succeed(
-      new AuthorizationService[Throwable] {
+      new AuthorizationService[Task] {
         override def auth(request: Request[Task]): Task[Unit] =
           maybeError.fold(ZIO.unit)(ZIO.fail(_))
       }

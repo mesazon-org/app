@@ -2,10 +2,10 @@ package io.mesazon.gateway.service
 
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.{JwtService, OtpGenerator}
 import io.mesazon.gateway.clients.EmailClient
 import io.mesazon.gateway.config.UserSignUpConfig
 import io.mesazon.gateway.repository.*
+import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.service.*
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import io.mesazon.generator.IDGenerator

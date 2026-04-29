@@ -1,6 +1,6 @@
-package io.mesazon.gateway.unit.auth
+package io.mesazon.gateway.unit.utils
 
-import io.mesazon.gateway.auth.OtpGenerator
+import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 

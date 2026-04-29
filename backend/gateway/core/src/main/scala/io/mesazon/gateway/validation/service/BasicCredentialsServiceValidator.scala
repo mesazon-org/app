@@ -1,9 +1,9 @@
 package io.mesazon.gateway.validation.service
 
-import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.AuthenticationService.BasicCredentialsRequest
-import io.mesazon.gateway.validation.domain.*
 import cats.syntax.all.*
+import io.mesazon.domain.gateway.*
+import io.mesazon.gateway.service.AuthenticationService.BasicCredentialsRequest
+import io.mesazon.gateway.validation.domain.*
 import zio.ZLayer
 
 final class BasicCredentialsServiceValidator(

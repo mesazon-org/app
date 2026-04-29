@@ -2,15 +2,15 @@ package io.mesazon.gateway
 
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.*
 import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.middleware.ServerMiddleware
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.service.*
+import io.mesazon.gateway.state.*
 import io.mesazon.gateway.stream.*
-import io.mesazon.gateway.utils.PhoneNumberUtil
+import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.domain.*
 import io.mesazon.gateway.validation.service.*
 import io.mesazon.generator.IDGenerator
@@ -41,8 +41,11 @@ object Main extends ZIOAppDefault {
       TimeProvider.liveSystemUTC,
       IDGenerator.uuidGeneratorLive,
       PhoneNumberUtil.live,
+      OtpGenerator.live,
 
       // Services
+      AuthenticationService.live,
+      AuthorizationService.live,
       HealthCheckService.live,
       WahaService.live,
       UserSignUpService.live,
@@ -66,10 +69,8 @@ object Main extends ZIOAppDefault {
       UserDetailsQueries.live,
       UserCredentialsQueries.live,
 
-      // Auth
-      AuthorizationService.live,
-      AuthorizationState.live,
-      OtpGenerator.live,
+      // State
+      AuthState.live,
 
       // Middleware
       ServerMiddleware.live,
@@ -97,6 +98,7 @@ object Main extends ZIOAppDefault {
 
       // Service validators
       SignUpEmailServiceValidator.live,
+      BasicCredentialsServiceValidator.live,
       SignUpVerifyEmailServiceValidator.live,
       OnboardPasswordServiceValidator.live,
       OnboardDetailsServiceValidator.live,

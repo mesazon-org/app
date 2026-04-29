@@ -2,10 +2,11 @@ package io.mesazon.gateway.service
 
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.{AuthorizationState, OtpGenerator, PasswordService}
 import io.mesazon.gateway.clients.{EmailClient, TwilioClient}
 import io.mesazon.gateway.config.UserOnboardConfig
 import io.mesazon.gateway.repository.*
+import io.mesazon.gateway.state.*
+import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.service.*
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import zio.*
@@ -14,7 +15,7 @@ object UserOnboardService {
 
   private final class UserOnboardServiceImpl(
       userOnboardConfig: UserOnboardConfig,
-      authorizationState: AuthorizationState,
+      authState: AuthState,
       userCredentialsRepository: UserCredentialsRepository,
       userDetailsRepository: UserDetailsRepository,
       userOtpRepository: UserOtpRepository,
@@ -31,7 +32,7 @@ object UserOnboardService {
     /** HTTP POST /onboard/password */
     override def onboardPassword(request: smithy.OnboardPasswordRequest): ServiceTask[smithy.OnboardPasswordResponse] =
       for {
-        authedUser      <- authorizationState.get()
+        authedUser      <- authState.get()
         onboardPassword <- onboardPasswordServiceValidator.validate(request)
         userDetails     <- userDetailsRepository
           .getUserDetails(authedUser.userID)
@@ -64,7 +65,7 @@ object UserOnboardService {
     /** HTTP POST /onboard/details */
     override def onboardDetails(request: smithy.OnboardDetailsRequest): ServiceTask[smithy.OnboardDetailsResponse] =
       for {
-        authedUser     <- authorizationState.get()
+        authedUser     <- authState.get()
         onboardDetails <- onboardDetailsServiceValidator.validate(request)
         userDetails    <- userDetailsRepository
           .getUserDetails(authedUser.userID)
@@ -121,7 +122,7 @@ object UserOnboardService {
         request: smithy.OnboardVerifyPhoneNumberRequest
     ): ServiceTask[smithy.OnboardVerifyPhoneNumberResponse] =
       for {
-        authedUser               <- authorizationState.get()
+        authedUser               <- authState.get()
         onboardVerifyPhoneNumber <- onboardVerifyPhoneNumberServiceValidator.validate(request)
         userDetails              <- userDetailsRepository
           .getUserDetails(authedUser.userID)

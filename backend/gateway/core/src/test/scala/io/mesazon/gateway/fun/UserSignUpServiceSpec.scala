@@ -2,7 +2,6 @@ package io.mesazon.gateway.fun
 
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.OtpGenerator
 import io.mesazon.gateway.config.UserSignUpConfig
 import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.*
@@ -592,7 +591,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           EmailDomainValidator.live,
           userDetailsRepositoryMockLive(
             userDetailsRows = userDetailsRows,
-            maybeServiceError = userDetailsRepositoryServiceErrorOpt,
+            serviceErrorOpt = userDetailsRepositoryServiceErrorOpt,
           ),
           userTokenRepositoryMockLive(
             userTokenRows = userTokenRows,

@@ -1,8 +1,8 @@
 package io.mesazon.gateway.unit.service
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.AuthorizationService
 import io.mesazon.gateway.mock.JwtServiceMock
+import io.mesazon.gateway.service.AuthorizationService
 import io.mesazon.gateway.{smithy, Mocks}
 import io.mesazon.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import org.http4s.*
@@ -39,11 +39,11 @@ class AuthorizationServiceSpec extends ZWordSpecBase, GatewayArbitraries {
   }
 
   trait TestContext extends JwtServiceMock {
-    def buildAuthorizationService(authedUser: AuthedUser): AuthorizationService[Throwable] = ZIO
-      .service[AuthorizationService[Throwable]]
+    def buildAuthorizationService(authedUser: AuthedUser): AuthorizationService[Task] = ZIO
+      .service[AuthorizationService[Task]]
       .provide(
         AuthorizationService.live,
-        Mocks.authorizationStateLive(authedUser),
+        Mocks.authStateLive(authedUser),
         jwtServiceMockLive(),
       )
       .zioValue

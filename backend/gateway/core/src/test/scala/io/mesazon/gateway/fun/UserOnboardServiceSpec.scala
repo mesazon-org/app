@@ -2,7 +2,6 @@ package io.mesazon.gateway.fun
 
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.OtpGenerator
 import io.mesazon.gateway.config.{PhoneNumberValidatorConfig, UserOnboardConfig}
 import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.*
@@ -769,12 +768,12 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             maybeServiceError = twilioClientServiceErrorOpt
           ),
           passwordServiceMockLive(
-            maybeServiceError = passwordServiceServiceErrorOpt
+            serviceErrorOpt = passwordServiceServiceErrorOpt
           ),
-          Mocks.authorizationStateLive(authedUser),
+          Mocks.authStateLive(authedUser),
           userDetailsRepositoryMockLive(
             userDetailsRows = userDetailsRows,
-            maybeServiceError = userDetailsRepositoryServiceErrorOpt,
+            serviceErrorOpt = userDetailsRepositoryServiceErrorOpt,
           ),
           userOtpRepositoryMockLive(
             userOtpRows = userOtpRows,

@@ -1,4 +1,4 @@
-package io.mesazon.gateway.auth
+package io.mesazon.gateway.utils
 
 import io.mesazon.domain.gateway.*
 import zio.*
