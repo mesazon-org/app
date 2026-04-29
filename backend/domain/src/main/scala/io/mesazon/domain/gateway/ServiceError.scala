@@ -58,9 +58,6 @@ object ServiceError {
 
     case class OtpValidationError(error: String) extends UnauthorizedError(error)
 
-    case class FailedToVerifyPassword(error: String, throwable: Option[Throwable] = None)
-        extends UnauthorizedError(error, throwable)
-
     case class FailedOnboardStage(
         onboardStageUser: OnboardStage,
         onboardStagesAllowed: List[OnboardStage],

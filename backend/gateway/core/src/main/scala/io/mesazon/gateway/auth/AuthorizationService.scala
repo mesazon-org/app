@@ -16,6 +16,7 @@ object AuthorizationService {
       authorizationState: AuthorizationState,
       jwtService: JwtService,
   ) extends AuthorizationService[ServiceError] {
+
     override def auth(request: Request[Task]): IO[ServiceError, Unit] =
       for {
         maybeBearerToken = request.headers
