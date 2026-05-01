@@ -38,7 +38,7 @@ object UserOnboardService {
           .getUserDetails(authedUser.userID)
           .someOrFail(
             ServiceError.InternalServerError.UserNotFoundError(
-              s"User details not found for userID: ${authedUser.userID}"
+              s"User details not found for userID: [${authedUser.userID}]"
             )
           )
         _ <- verifyOnboardStage(
@@ -71,7 +71,7 @@ object UserOnboardService {
           .getUserDetails(authedUser.userID)
           .someOrFail(
             ServiceError.InternalServerError.UserNotFoundError(
-              s"User details not found for userID: ${authedUser.userID}"
+              s"User details not found for userID: [${authedUser.userID}]"
             )
           )
         _ <- verifyOnboardStage(
@@ -128,7 +128,7 @@ object UserOnboardService {
           .getUserDetails(authedUser.userID)
           .someOrFail(
             ServiceError.InternalServerError.UserNotFoundError(
-              s"User details not found for userID: ${authedUser.userID}"
+              s"User details not found for userID: [${authedUser.userID}]"
             )
           )
         _ <- verifyOnboardStage(
@@ -139,7 +139,7 @@ object UserOnboardService {
           .getUserOtp(onboardVerifyPhoneNumber.otpID, authedUser.userID, OtpType.PhoneVerification)
           .someOrFail(
             ServiceError.UnauthorizedError
-              .OtpValidationError(s"No OTP found for otpID: ${onboardVerifyPhoneNumber.otpID}")
+              .OtpValidationError(s"No OTP found for otpID: [${onboardVerifyPhoneNumber.otpID}]")
           )
         instantNow <- timeProvider.instantNow
         _          <-
@@ -154,7 +154,7 @@ object UserOnboardService {
           else
             ZIO.fail(
               ServiceError.UnauthorizedError
-                .OtpValidationError(s"Invalid or expired OTP provided for otpID: ${onboardVerifyPhoneNumber.otpID}")
+                .OtpValidationError(s"Wrong or expired OTP provided for otpID: [${onboardVerifyPhoneNumber.otpID}]")
             )
       } yield smithy.OnboardVerifyPhoneNumberResponse(
         onboardStage = onboardStageFromDomainToSmithy(OnboardStage.PhoneVerified)

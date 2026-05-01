@@ -147,13 +147,42 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             List(
               InvalidFieldError(
                 "password",
-                "password does not meet complexity requirements",
+                "Should match ^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%#*^,?)(&._-])[A-Za-z\\d@$!%#*^,?)(&._-]{8,72}$",
                 Seq("short"),
               )
             )
           )
 
         checkUserDetailsRepository()
+        checkUserCredentialsRepository()
+        checkEmailClient()
+        checkPasswordService()
+        checkTwilioClient()
+        checkUserOtpRepository()
+      }
+
+      "fail with InternalServerError when user details does not exist" in new TestContext {
+        val authedUser = arbitrarySample[AuthedUser]
+
+        val userOnboardService = buildUserOnboardServiceLive(
+          authedUser = authedUser,
+          userDetailsRows = Map.empty,
+        )
+
+        val onboardPasswordRequest = arbitrarySample[smithy.OnboardPasswordRequest]
+
+        val serviceError = userOnboardService.onboardPassword(onboardPasswordRequest).zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.UserNotFoundError]
+        serviceError
+          .asInstanceOf[ServiceError.InternalServerError.UserNotFoundError] shouldBe ServiceError.InternalServerError
+          .UserNotFoundError(
+            s"User details not found for userID: [${authedUser.userID}]"
+          )
+
+        checkUserDetailsRepository(
+          expectedGetUserDetailsCalls = 1
+        )
         checkUserCredentialsRepository()
         checkEmailClient()
         checkPasswordService()
@@ -369,15 +398,49 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val serviceError =
           userOnboardService.onboardDetails(onboardDetailsRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.BadRequestError.ValidationError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
-          .FailedOnboardStage(
-            onboardStageUser = userDetailsRow.onboardStage,
-            onboardStagesAllowed = OnboardStage.onboardDetailsStages,
+          .asInstanceOf[ServiceError.BadRequestError.ValidationError] shouldBe ServiceError.BadRequestError
+          .ValidationError(
+            invalidFields = List(
+              InvalidFieldError(
+                fieldName = "fullName",
+                errorMessage = "Should not have leading or trailing whitespaces & Should have a minimum length of 1",
+                invalidValues = Seq(""),
+              )
+            )
           )
 
         checkUserDetailsRepository()
+        checkUserOtpRepository()
+        checkUserCredentialsRepository()
+        checkEmailClient()
+        checkPasswordService()
+        checkTwilioClient()
+      }
+
+      "fail with InternalServerError when user details does not exist" in new TestContext {
+        val authedUser = arbitrarySample[AuthedUser]
+
+        val userOnboardService = buildUserOnboardServiceLive(
+          authedUser = authedUser,
+          userDetailsRows = Map.empty,
+        )
+
+        val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
+
+        val serviceError = userOnboardService.onboardDetails(onboardDetailsRequest).zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.UserNotFoundError]
+        serviceError
+          .asInstanceOf[ServiceError.InternalServerError.UserNotFoundError] shouldBe ServiceError.InternalServerError
+          .UserNotFoundError(
+            s"User details not found for userID: [${authedUser.userID}]"
+          )
+
+        checkUserDetailsRepository(
+          expectedGetUserDetailsCalls = 1
+        )
         checkUserOtpRepository()
         checkUserCredentialsRepository()
         checkEmailClient()
@@ -399,11 +462,12 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
 
-        val smithyError = userOnboardService.onboardDetails(onboardDetailsRequest).zioError
+        val serviceError = userOnboardService.onboardDetails(onboardDetailsRequest).zioError
 
-        smithyError shouldBe a[smithy.InternalServerError]
-        smithyError
-          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError("")
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,
@@ -435,11 +499,12 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
 
-        val smithyError = userOnboardService.onboardDetails(onboardDetailsRequest).zioError
+        val serviceError = userOnboardService.onboardDetails(onboardDetailsRequest).zioError
 
-        smithyError shouldBe a[smithy.InternalServerError]
-        smithyError
-          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError("")
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
@@ -513,12 +578,17 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val onboardVerifyPhoneNumberRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberRequest]
           .copy(otp = "invalid")
 
-        val smithyError =
+        val serviceError =
           userOnboardService.onboardVerifyPhoneNumber(onboardVerifyPhoneNumberRequest).zioError
 
-        smithyError shouldBe a[smithy.ValidationError]
-        smithyError
-          .asInstanceOf[smithy.ValidationError] shouldBe smithy.ValidationError(fields = List("otp"))
+        serviceError shouldBe a[ServiceError.BadRequestError.ValidationError]
+        serviceError
+          .asInstanceOf[ServiceError.BadRequestError.ValidationError] shouldBe ServiceError.BadRequestError
+          .ValidationError(invalidFields =
+            List(
+              InvalidFieldError("otp", "Should match ^[A-Z0-9]{6}$", Seq("invalid"))
+            )
+          )
 
         checkUserDetailsRepository()
         checkUserOtpRepository()
@@ -542,12 +612,16 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val onboardVerifyPhoneNumberRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberRequest]
 
-        val smithyError =
+        val serviceError =
           userOnboardService.onboardVerifyPhoneNumber(onboardVerifyPhoneNumberRequest).zioError
 
-        smithyError shouldBe a[smithy.Unauthorized]
-        smithyError
-          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError
+          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
+          .FailedOnboardStage(
+            onboardStageUser = userDetailsRow.onboardStage,
+            onboardStagesAllowed = OnboardStage.onboardVerifyPhoneNumberStages,
+          )
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
@@ -588,12 +662,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           userOtpRow.otp.value,
         )
 
-        val smithyError =
+        val serviceError =
           userOnboardService.onboardVerifyPhoneNumber(onboardVerifyPhoneNumberRequest).zioError
 
-        smithyError shouldBe a[smithy.Unauthorized]
-        smithyError
-          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError
+          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
+          .OtpValidationError(
+            s"Wrong or expired OTP provided for otpID: [${userOtpRow.otpID}]"
+          )
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
@@ -621,12 +698,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val onboardVerifyPhoneNumberRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberRequest]
 
-        val smithyError =
+        val serviceError =
           userOnboardService.onboardVerifyPhoneNumber(onboardVerifyPhoneNumberRequest).zioError
 
-        smithyError shouldBe a[smithy.Unauthorized]
-        smithyError
-          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError
+          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
+          .OtpValidationError(
+            s"No OTP found for otpID: [${onboardVerifyPhoneNumberRequest.otpID}]"
+          )
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
@@ -669,12 +749,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           "123ABC",
         )
 
-        val smithyError =
+        val serviceError =
           userOnboardService.onboardVerifyPhoneNumber(onboardVerifyPhoneNumberRequest).zioError
 
-        smithyError shouldBe a[smithy.Unauthorized]
-        smithyError
-          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError
+          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
+          .OtpValidationError(
+            s"Wrong or expired OTP provided for otpID: [${userOtpRow.otpID}]"
+          )
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
@@ -698,12 +781,16 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val onboardVerifyPhoneNumberRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberRequest]
 
-        val smithyError =
+        val serviceError =
           userOnboardService.onboardVerifyPhoneNumber(onboardVerifyPhoneNumberRequest).zioError
 
-        smithyError shouldBe a[smithy.InternalServerError]
-        smithyError
-          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+        serviceError shouldBe a[ServiceError.InternalServerError.UserNotFoundError]
+        serviceError.asInstanceOf[
+          ServiceError.InternalServerError.UserNotFoundError
+        ] shouldBe ServiceError.InternalServerError
+          .UserNotFoundError(
+            s"User details not found for userID: [${authedUser.userID}]"
+          )
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
@@ -725,12 +812,13 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val onboardVerifyPhoneNumberRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberRequest]
 
-        val smithyError =
+        val serviceError =
           userOnboardService.onboardVerifyPhoneNumber(onboardVerifyPhoneNumberRequest).zioError
 
-        smithyError shouldBe a[smithy.InternalServerError]
-        smithyError
-          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError.asInstanceOf[
+          ServiceError.InternalServerError.UnexpectedError
+        ] shouldBe ServiceError.InternalServerError.UnexpectedError("")
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1

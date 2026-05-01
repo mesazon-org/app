@@ -111,12 +111,14 @@ object UserSignUpService {
         signUpVerifyEmail  <- signUpVerifyEmailServiceValidator.validate(request)
         userOtpRowOpt      <- userOtpRepository.getUserOtpByOtpID(signUpVerifyEmail.otpID, OtpType.EmailVerification)
         userOtpRowExisting <- ZIO.getOrFailWith(
-          ServiceError.UnauthorizedError.OtpValidationError(s"No otp found for otpID: ${signUpVerifyEmail.otpID}")
+          ServiceError.UnauthorizedError.OtpValidationError(
+            s"No otp found for otpID: [${signUpVerifyEmail.otpID}] and otpType: [${OtpType.EmailVerification}]"
+          )
         )(userOtpRowOpt)
         userDetailsRowOpt      <- userDetailsRepository.getUserDetails(userOtpRowExisting.userID)
         userDetailsRowExisting <- ZIO.getOrFailWith(
           ServiceError.InternalServerError.UnexpectedError(
-            s"No user details found for userID: ${userOtpRowExisting.userID} and otpID: ${userOtpRowExisting.otpID}"
+            s"No user details found for userID: [${userOtpRowExisting.userID}] and otpID: [${userOtpRowExisting.otpID}]"
           )
         )(userDetailsRowOpt)
         _ <- verifyOnboardStage(
@@ -141,7 +143,7 @@ object UserSignUpService {
           case _ =>
             ZIO.fail(
               ServiceError.UnauthorizedError.OtpValidationError(
-                s"Invalid otp or otp type for otpID: [${userOtpRowExisting.otpID}]"
+                s"Wrong or expired OTP provided for otpID: [${userOtpRowExisting.otpID}]"
               )
             )
         }

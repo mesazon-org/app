@@ -2,12 +2,12 @@ package io.mesazon.gateway.it
 
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.JwtService
 import io.mesazon.gateway.config.{JwtConfig, RepositoryConfig}
 import io.mesazon.gateway.it.client.GatewayClient
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.repository.domain.{UserDetailsRow, UserOtpRow}
 import io.mesazon.gateway.repository.queries.*
+import io.mesazon.gateway.service.JwtService
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.MailHogClient.MailHogClientConfig
 import io.mesazon.gateway.utils.{MailHogClient, RepositoryArbitraries, SmithyArbitraries}
