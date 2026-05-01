@@ -14,5 +14,5 @@ service UserSignInService {
 @http(method: "POST", uri: "/signin", code: 200)
 operation SignIn {
     output: SignInResponse
-    errors: [Unauthorized, ValidationError, InternalServerError]
+    errors: [Unauthorized, BadRequest, ValidationError, InternalServerError]
 }

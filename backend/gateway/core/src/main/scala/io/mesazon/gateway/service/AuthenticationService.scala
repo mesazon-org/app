@@ -33,7 +33,7 @@ object AuthenticationService {
           .collect { case Authorization(Http4sBasicCredentials(email, password)) =>
             BasicCredentialsRequest(email, password)
           }
-        basicCredentialsRequest <- ZIO.getOrFailWith(ServiceError.UnauthorizedError.BasicCredentialsMissing)(
+        basicCredentialsRequest <- ZIO.getOrFailWith(ServiceError.BadRequestError.BasicCredentialsMissing)(
           basicCredentialsRequestOpt
         )
         basicCredentials <- basicCredentialsServiceValidator.validate(basicCredentialsRequest)
@@ -42,6 +42,10 @@ object AuthenticationService {
           .someOrFail(
             ServiceError.UnauthorizedError.EmailNotFound
           )
+        _ <- verifyOnboardStage(
+          onboardStageUser = userDetails.onboardStage,
+          onboardStagesAllowed = OnboardStage.signInAllowedStages,
+        )
         userCredentials <- userCredentialsRepository
           .getUserCredentials(userDetails.userID)
           .someOrFail(
@@ -60,5 +64,7 @@ object AuthenticationService {
   def observed(service: AuthenticationService[ServiceTask]): AuthenticationService[Task] =
     (request: Request[Task]) => HttpErrorHandler.errorResponseHandler(service.auth(request))
 
-  val live = ZLayer.derive[AuthenticationServiceImpl] >>> ZLayer.fromFunction(observed)
+  val local = ZLayer.derive[AuthenticationServiceImpl].project[AuthenticationService[ServiceTask]](identity)
+
+  val live = local >>> ZLayer.fromFunction(observed)
 }

@@ -178,5 +178,7 @@ object UserSignUpService {
           .errorResponseHandler(service.signUpVerifyEmail(request))
     }
 
-  val live = ZLayer.derive[UserSignUpServiceImpl] >>> ZLayer.fromFunction(observed)
+  val local = ZLayer.derive[UserSignUpServiceImpl].project[smithy.UserSignUpService[ServiceTask]](identity)
+
+  val live = local >>> ZLayer.fromFunction(observed)
 }

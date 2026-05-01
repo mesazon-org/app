@@ -51,5 +51,7 @@ object UserSignInService {
       override def signIn(): Task[smithy.SignInResponse] = HttpErrorHandler.errorResponseHandler(service.signIn())
     }
 
-  val live = ZLayer.derive[UserSignInServiceImpl] >>> ZLayer.fromFunction(observed)
+  val local = ZLayer.derive[UserSignInServiceImpl].project[smithy.UserSignInService[ServiceTask]](identity)
+
+  val live = local >>> ZLayer.fromFunction(observed)
 }

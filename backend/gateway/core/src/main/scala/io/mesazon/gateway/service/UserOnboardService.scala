@@ -184,5 +184,7 @@ object UserOnboardService {
 
     }
 
-  val live = ZLayer.derive[UserOnboardServiceImpl] >>> ZLayer.fromFunction(observed)
+  val local = ZLayer.derive[UserOnboardServiceImpl].project[smithy.UserOnboardService[ServiceTask]](identity)
+
+  val live = local >>> ZLayer.fromFunction(observed)
 }

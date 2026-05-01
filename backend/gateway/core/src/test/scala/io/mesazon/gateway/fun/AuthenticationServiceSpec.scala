@@ -1,6 +1,7 @@
 package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
+import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.*
@@ -15,10 +16,13 @@ import zio.*
 class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
   "AuthenticationService" when {
-    "authenticate" should {
+    "auth" should {
       "successfully authenticate user" in new TestContext {
-        val password           = arbitrarySample[Password]
-        val userDetailsRow     = arbitrarySample[UserDetailsRow]
+        val password     = arbitrarySample[Password]
+        val onboardStage = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
+
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
           .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
 
@@ -44,6 +48,204 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
         checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
       }
+
+      "fail with BadRequest to authenticate user with missing basic credentials" in new TestContext {
+        val authedUser = arbitrarySample[AuthedUser]
+
+        val authenticationService = buildAuthenticationService(
+          authedUser = authedUser
+        )
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+
+        val serviceError = authenticationService.auth(request).zioError
+
+        serviceError shouldBe a[ServiceError.BadRequestError.BasicCredentialsMissing.type]
+        serviceError
+          .asInstanceOf[
+            ServiceError.BadRequestError.BasicCredentialsMissing.type
+          ] shouldBe ServiceError.BadRequestError.BasicCredentialsMissing
+
+        checkAuthState()
+        checkPasswordService()
+        checkUserDetailsRepository()
+        checkUserCredentialsRepository()
+      }
+
+      "fail with ValidationError to authenticate user with invalid basic credentials" in new TestContext {
+        val authedUser = arbitrarySample[AuthedUser]
+
+        val authenticationService = buildAuthenticationService(
+          authedUser = authedUser
+        )
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(
+              Http4sBasicCredentials("invalid_email", "invalid_password")
+            )
+          )
+
+        val serviceError = authenticationService.auth(request).zioError
+
+        serviceError shouldBe a[ServiceError.BadRequestError.ValidationError]
+        serviceError
+          .asInstanceOf[ServiceError.BadRequestError.ValidationError] shouldBe ServiceError.BadRequestError
+          .ValidationError(invalidFields =
+            Seq(
+              InvalidFieldError("email", "Invalid email format: [invalid_email], error: [null]", "invalid_email"),
+              InvalidFieldError(
+                "password",
+                "Should match ^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%#*^,?)(&._-])[A-Za-z\\d@$!%#*^,?)(&._-]{8,72}$",
+                "invalid_password",
+              ),
+            )
+          )
+
+        checkAuthState()
+        checkPasswordService()
+        checkUserDetailsRepository()
+        checkUserCredentialsRepository()
+      }
+
+      "fail with Unauthorized to authenticate user with no allowed sing in onboardStage" in new TestContext {
+        val password     = arbitrarySample[Password]
+        val onboardStage =
+          Random.shuffle(OnboardStage.values.toList.diff(OnboardStage.signInAllowedStages)).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+        val userCredentialsRow = arbitrarySample[UserCredentialsRow]
+          .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
+
+        val authenticationService = buildAuthenticationService(
+          authedUser = AuthedUser(userID = userDetailsRow.userID),
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+          userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
+        )
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(
+              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
+            )
+          )
+
+        val serviceError = authenticationService.auth(request).zioError
+
+        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError
+          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe
+          ServiceError.UnauthorizedError.FailedOnboardStage(
+            onboardStageUser = onboardStage,
+            onboardStagesAllowed = OnboardStage.signInAllowedStages,
+          )
+
+        checkAuthState()
+        checkPasswordService()
+        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
+        checkUserCredentialsRepository()
+      }
+
+      "fail with Unauthorized to authenticate user with invalid credentials" in new TestContext {
+        val password       = arbitrarySample[Password]
+        val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+        val userCredentialsRow = arbitrarySample[UserCredentialsRow]
+          .copy(userID = userDetailsRow.userID)
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(
+              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
+            )
+          )
+
+        val authenticationService = buildAuthenticationService(
+          authedUser = AuthedUser(userID = userDetailsRow.userID),
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+          userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
+        )
+
+        val serviceError = authenticationService.auth(request).zioError
+
+        serviceError shouldBe a[ServiceError.UnauthorizedError.InvalidCredentials.type]
+        serviceError
+          .asInstanceOf[
+            ServiceError.UnauthorizedError.InvalidCredentials.type
+          ] shouldBe ServiceError.UnauthorizedError.InvalidCredentials
+
+        checkAuthState()
+        checkPasswordService(expectedVerifyPasswordCalls = 1)
+        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
+        checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
+      }
+
+      "fail with InternalServerError to authenticate user when user credentials are not found for existing user details" in new TestContext {
+        val password       = arbitrarySample[Password]
+        val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(
+              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
+            )
+          )
+
+        val authenticationService = buildAuthenticationService(
+          authedUser = AuthedUser(userID = userDetailsRow.userID),
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+          userCredentialsRows = Map.empty, // No credentials for existing user details
+        )
+
+        val serviceError = authenticationService.auth(request).zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError(
+            s"User credentials not found for userID: [${userDetailsRow.userID}], could only occur if user details exist but credentials do not"
+          )
+
+        checkAuthState()
+        checkPasswordService()
+        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
+        checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
+      }
+
+      "fail with InternalServerError to authenticate user when user details repository fails" in new TestContext {
+        val authedUser       = arbitrarySample[AuthedUser]
+        val basicCredentials = arbitrarySample[BasicCredentials]
+
+        val authenticationService = buildAuthenticationService(
+          authedUser = authedUser,
+          userDetailsRepositoryServiceErrorOpt =
+            Some(ServiceError.InternalServerError.UnexpectedError("Database connection error")),
+        )
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(
+              Http4sBasicCredentials(basicCredentials.email.value, basicCredentials.password.value)
+            )
+          )
+
+        val serviceError = authenticationService.auth(request).zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError(
+            "Database connection error"
+          )
+
+        checkAuthState()
+        checkPasswordService()
+        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
+        checkUserCredentialsRepository()
+      }
     }
   }
 
@@ -60,10 +262,10 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         passwordServiceErrorOpt: Option[ServiceError] = None,
         userDetailsRepositoryServiceErrorOpt: Option[ServiceError] = None,
         userCredentialsRepositoryServiceErrorOpt: Option[ServiceError] = None,
-    ): AuthenticationService[Task] = ZIO
-      .service[AuthenticationService[Task]]
+    ): AuthenticationService[ServiceTask] = ZIO
+      .service[AuthenticationService[ServiceTask]]
       .provide(
-        AuthenticationService.live,
+        AuthenticationService.local,
         EmailDomainValidator.live,
         BasicCredentialsServiceValidator.live,
         authStateMockLive(authedUser = authedUser),

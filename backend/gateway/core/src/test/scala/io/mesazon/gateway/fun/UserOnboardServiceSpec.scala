@@ -2,10 +2,11 @@ package io.mesazon.gateway.fun
 
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
+import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.gateway.config.{PhoneNumberValidatorConfig, UserOnboardConfig}
 import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.*
-import io.mesazon.gateway.service.UserOnboardService
+import io.mesazon.gateway.service.{ServiceTask, UserOnboardService}
 import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.domain.PhoneNumberDomainValidator
 import io.mesazon.gateway.validation.service.*
@@ -104,11 +105,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val onboardPasswordRequest = arbitrarySample[smithy.OnboardPasswordRequest]
 
-        val smithyError = userOnboardService.onboardPassword(onboardPasswordRequest).zioError
+        val serviceError = userOnboardService.onboardPassword(onboardPasswordRequest).zioError
 
-        smithyError shouldBe a[smithy.Unauthorized]
-        smithyError
-          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError
+          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
+          .FailedOnboardStage(
+            onboardStageUser = userDetailsRow.onboardStage,
+            onboardStagesAllowed = OnboardStage.onboardPasswordStages,
+          )
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
@@ -133,11 +138,20 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val onboardPasswordRequest = arbitrarySample[smithy.OnboardPasswordRequest]
           .copy(password = "short")
 
-        val smithyError = userOnboardService.onboardPassword(onboardPasswordRequest).zioError
+        val serviceError = userOnboardService.onboardPassword(onboardPasswordRequest).zioError
 
-        smithyError shouldBe a[smithy.ValidationError]
-        smithyError
-          .asInstanceOf[smithy.ValidationError] shouldBe smithy.ValidationError(fields = List("password"))
+        serviceError shouldBe a[ServiceError.BadRequestError.ValidationError]
+        serviceError
+          .asInstanceOf[ServiceError.BadRequestError.ValidationError] shouldBe ServiceError.BadRequestError
+          .ValidationError(invalidFields =
+            List(
+              InvalidFieldError(
+                "password",
+                "password does not meet complexity requirements",
+                Seq("short"),
+              )
+            )
+          )
 
         checkUserDetailsRepository()
         checkUserCredentialsRepository()
@@ -161,11 +175,14 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val onboardPasswordRequest = arbitrarySample[smithy.OnboardPasswordRequest]
 
-        val smithyError = userOnboardService.onboardPassword(onboardPasswordRequest).zioError
+        val serviceError = userOnboardService.onboardPassword(onboardPasswordRequest).zioError
 
-        smithyError shouldBe a[smithy.InternalServerError]
-        smithyError
-          .asInstanceOf[smithy.InternalServerError] shouldBe smithy.InternalServerError()
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError(
+            "Password service error"
+          )
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
@@ -319,11 +336,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
 
-        val smithyError = userOnboardService.onboardDetails(onboardDetailsRequest).zioError
+        val serviceError = userOnboardService.onboardDetails(onboardDetailsRequest).zioError
 
-        smithyError shouldBe a[smithy.Unauthorized]
-        smithyError
-          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError
+          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
+          .FailedOnboardStage(
+            onboardStageUser = userDetailsRow.onboardStage,
+            onboardStagesAllowed = OnboardStage.onboardDetailsStages,
+          )
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
@@ -345,12 +366,16 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
           .copy(fullName = "")
 
-        val smithyError =
+        val serviceError =
           userOnboardService.onboardDetails(onboardDetailsRequest).zioError
 
-        smithyError shouldBe a[smithy.ValidationError]
-        smithyError
-          .asInstanceOf[smithy.ValidationError] shouldBe smithy.ValidationError(fields = List("fullName"))
+        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError
+          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
+          .FailedOnboardStage(
+            onboardStageUser = userDetailsRow.onboardStage,
+            onboardStagesAllowed = OnboardStage.onboardDetailsStages,
+          )
 
         checkUserDetailsRepository()
         checkUserOtpRepository()
@@ -747,11 +772,11 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         userDetailsRepositoryServiceErrorOpt: Option[ServiceError] = None,
         userCredentialsRepositoryServiceErrorOpt: Option[ServiceError] = None,
         twilioClientServiceErrorOpt: Option[ServiceError] = None,
-    ): smithy.UserOnboardService[Task] =
+    ): smithy.UserOnboardService[ServiceTask] =
       ZIO
-        .service[smithy.UserOnboardService[Task]]
+        .service[smithy.UserOnboardService[ServiceTask]]
         .provide(
-          UserOnboardService.live,
+          UserOnboardService.local,
           OtpGenerator.live,
           TimeProvider.liveSystemUTC,
           PhoneNumberUtil.live,

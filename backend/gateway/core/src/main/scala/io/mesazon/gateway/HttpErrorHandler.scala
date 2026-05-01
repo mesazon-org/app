@@ -29,6 +29,9 @@ object HttpErrorHandler {
       case error @ ServiceError.BadRequestError.ValidationError(invalidFields) =>
         logWarning(error)
           .map(_ => smithy.ValidationError(fields = invalidFields.map(_.fieldName).toList))
+      case error: ServiceError.BadRequestError =>
+        logWarning(error)
+          .map(_ => smithy.BadRequest())
       case error: ServiceError.UnauthorizedError =>
         logError(error)
           .map(_ => smithy.Unauthorized())

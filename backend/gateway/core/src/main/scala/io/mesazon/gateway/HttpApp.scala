@@ -13,8 +13,6 @@ import smithy4s.kinds.FunctorAlgebra
 import zio.*
 import zio.interop.catz.*
 
-import scala.util.chaining.scalaUtilChainingOps
-
 import GatewayServerConfig.ServerConfig
 
 object HttpApp {
@@ -24,14 +22,16 @@ object HttpApp {
   import dsl.*
 
   private def buildRoute[Alg[_[_, _, _, _, _]]](
-      impl: FunctorAlgebra[Alg, Task],
-      middleware: Option[ServerEndpointMiddleware[Task]] = None,
-  )(using smithy4s.Service[Alg]): ZIO[Scope, Throwable, HttpRoutes[Task]] =
-    SimpleRestJsonBuilder
-      .routes(impl)
-      .pipe(builder => middleware.fold(builder)(builder.middleware))
-      .resource
-      .toScopedZIO
+      impl: FunctorAlgebra[Alg, Task]
+  )(using smithy4s.Service[Alg]): ZIO[Scope & ServerEndpointMiddleware.Simple[Task], Throwable, HttpRoutes[Task]] =
+    for {
+      middleware <- ZIO.service[ServerEndpointMiddleware.Simple[Task]]
+      httpRoutes <- SimpleRestJsonBuilder
+        .routes(impl)
+        .middleware(middleware)
+        .resource
+        .toScopedZIO
+    } yield httpRoutes
 
   private val healthRoutesResource = for {
     healthCheckService <- ZIO.service[smithy.HealthCheckService[Task]]
@@ -39,11 +39,10 @@ object HttpApp {
   } yield healthCheckRoute
 
   private val externalRoutesResource = for {
-    serverMiddleware   <- ZIO.service[ServerEndpointMiddleware.Simple[Task]]
     userSignUpService  <- ZIO.service[smithy.UserSignUpService[Task]]
     userOnboardService <- ZIO.service[smithy.UserOnboardService[Task]]
-    userSignUpRoutes   <- buildRoute(userSignUpService, Some(serverMiddleware))
-    userOnboardRoutes  <- buildRoute(userOnboardService, Some(serverMiddleware))
+    userSignUpRoutes   <- buildRoute(userSignUpService)
+    userOnboardRoutes  <- buildRoute(userOnboardService)
   } yield userSignUpRoutes <+> userOnboardRoutes
 
   private val internalRoutesResource = for {

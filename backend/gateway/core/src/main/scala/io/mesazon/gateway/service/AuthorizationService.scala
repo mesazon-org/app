@@ -40,5 +40,7 @@ object AuthorizationService {
   private def observed(service: AuthorizationService[ServiceTask]): AuthorizationService[Task] =
     (request: Request[Task]) => HttpErrorHandler.errorResponseHandler(service.auth(request))
 
-  val live = ZLayer.derive[AuthorizationServiceImpl] >>> ZLayer.fromFunction(observed)
+  val local = ZLayer.derive[AuthorizationServiceImpl].project[AuthorizationService[ServiceTask]](identity)
+
+  val live = local >>> ZLayer.fromFunction(observed)
 }

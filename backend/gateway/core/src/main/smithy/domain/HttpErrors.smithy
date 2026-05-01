@@ -20,7 +20,7 @@ structure ValidationError {
     @required
     code: String = "VALIDATION_ERROR"
     @required
-    message: String = "Bad request validation error"
+    message: String = "Validation error"
     @required
     fields: InvalidFields
 }

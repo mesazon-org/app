@@ -46,14 +46,14 @@ object ServiceError {
         InvalidFieldError(fieldName, errorMessage, Seq(invalidValue))
     }
 
+    case object BasicCredentialsMissing extends BadRequestError("basic credentials are missing from request")
+
     case class ValidationError(invalidFields: Seq[InvalidFieldError])
         extends BadRequestError(s"request validation error ${invalidFields.mkString("[", ",", "]")}")
   }
 
   object UnauthorizedError {
     case object TokenMissing extends UnauthorizedError("token is missing from request")
-
-    case object BasicCredentialsMissing extends UnauthorizedError("basic credentials are missing from request")
 
     case object EmailNotFound extends UnauthorizedError("email not found")
 
