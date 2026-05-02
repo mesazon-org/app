@@ -23,7 +23,7 @@ object UserSignInService {
         .getUserDetails(authedUser.userID)
         .someOrFail(
           ServiceError.InternalServerError.UserNotFoundError(
-            s"User details not found for userID: ${authedUser.userID}"
+            s"User details not found for userID: [${authedUser.userID}]"
           )
         )
       accessJwt  <- jwtService.generateAccessToken(authedUser.userID)

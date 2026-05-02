@@ -19,45 +19,24 @@ object ServerMiddleware {
     override def prepareWithHints(serviceHints: Hints, endpointHints: Hints): HttpApp[Task] => HttpApp[Task] =
       (inputApp: HttpApp[Task]) =>
         (serviceHints.get[smithy.api.HttpBasicAuth], serviceHints.get[smithy.api.HttpBearerAuth]) match {
-          case (Some(_), Some(_)) =>
-            endpointHints.get[smithy.api.Auth] match {
-              case Some(auths) if auths.value.isEmpty => inputApp
-              case Some(auths)                        =>
-                if (auths.value.exists(_.value.name == "httpBasicAuth")) {
-                  HttpApp[Task](request => authenticationService.auth(request) *> inputApp(request))
-                } else if (auths.value.exists(_.value.name == "httpBearerAuth")) {
-                  HttpApp[Task](request => authorizationService.auth(request) *> inputApp(request))
-                } else {
-                  HttpApp[Task](_ =>
-                    ZIO.logError("Unsupported authentication OR authorization type") *>
-                      ZIO.fail(gatewaySmithy.InternalServerError())
-                  )
-                }
-              case None => inputApp
-            }
           case (Some(_), None) =>
             endpointHints.get[smithy.api.Auth] match {
               case Some(auths) if auths.value.isEmpty => inputApp
-              case Some(_)                            =>
+              case _                                  =>
                 HttpApp[Task](request => authenticationService.auth(request) *> inputApp(request))
-              case None =>
-                HttpApp[Task](_ =>
-                  ZIO.logError("Unsupported authentication type") *>
-                    ZIO.fail(gatewaySmithy.InternalServerError())
-                )
             }
           case (None, Some(_)) =>
             endpointHints.get[smithy.api.Auth] match {
               case Some(auths) if auths.value.isEmpty => inputApp
-              case Some(_)                            =>
-                HttpApp[Task](request => authenticationService.auth(request) *> inputApp(request))
-              case None =>
-                HttpApp[Task](_ =>
-                  ZIO.logError("Unsupported authorization type") *>
-                    ZIO.fail(gatewaySmithy.InternalServerError())
-                )
+              case _                                  =>
+                HttpApp[Task](request => authorizationService.auth(request) *> inputApp(request))
             }
-          case (None, None) => inputApp
+          case (None, None)       => inputApp
+          case (Some(_), Some(_)) =>
+            HttpApp[Task](_ =>
+              ZIO.logError("Multiple authentication types not supported") *>
+                ZIO.fail(gatewaySmithy.InternalServerError())
+            )
         }
   }
 
