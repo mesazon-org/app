@@ -43,17 +43,6 @@ structure Conflict {
     message: String = "Conflict request"
 }
 
-@error("client")
-@httpError(429)
-structure TooManyRequests {
-    @required
-    code: String = "TOO_MANY_REQUESTS_ERROR"
-    @required
-    message: String = "Too many requests"
-    @required
-    blockDurationSeconds: Long
-}
-
 @error("server")
 @httpError(500)
 structure InternalServerError {

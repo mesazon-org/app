@@ -47,6 +47,10 @@ object AuthenticationService {
           .someOrFail(
             ServiceError.UnauthorizedError.EmailNotFound
           )
+        _ <- verifyOnboardStage(
+          onboardStageUser = userDetails.onboardStage,
+          onboardStagesAllowed = OnboardStage.signInAllowedStages,
+        )
         userActionAttemptRow <- userActionAttemptRepository
           .getAndIncreaseUserActionAttempt(
             userDetails.userID,
@@ -61,17 +65,13 @@ object AuthenticationService {
               .isAfter(instantNow)
           )
             ZIO.fail(
-              ServiceError.TooManyRequestsError.TooManySignInAttempts(
+              ServiceError.UnauthorizedError.TooManySignInAttempts(
                 userDetails.userID,
                 ActionAttemptType.SignIn,
                 authenticationConfig.signInAttemptsBlockDuration.toSeconds,
               )
             )
           else ZIO.unit
-        _ <- verifyOnboardStage(
-          onboardStageUser = userDetails.onboardStage,
-          onboardStagesAllowed = OnboardStage.signInAllowedStages,
-        )
         userCredentials <- userCredentialsRepository
           .getUserCredentials(userDetails.userID)
           .someOrFail(

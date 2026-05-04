@@ -13,6 +13,7 @@ case class RepositoryConfig(
 ) {
   val allTableNames = List(
     userCredentialsTable,
+    userActionAttemptTable,
     userDetailsTable,
     userOtpTable,
     userTokenTable,

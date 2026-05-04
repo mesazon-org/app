@@ -2,20 +2,16 @@ package io.mesazon.gateway.it
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.*
-import com.github.plokhotnyuk.jsoniter_scala.core.given
-import io.mesazon.gateway.smithy
 import io.mesazon.gateway.it.client.GatewayClient
-import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
+import io.mesazon.gateway.it.client.GatewayClient.{GatewayClientConfig, given}
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.service.*
-import io.mesazon.gateway.it.client.GatewayClient.given
-import io.mesazon.gateway.smithy.{SignInResponse, ValidationError}
+import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
 import io.mesazon.test.postgresql.PostgreSQLTestClient
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.*
-import sttp.client4.{Response, ResponseException}
 import sttp.model.*
 import zio.*
 
@@ -35,6 +31,7 @@ class UserSignInApiSpec
       repositoryConfig: RepositoryConfig,
       userDetailsQueries: UserDetailsQueries,
       userCredentialsQueries: UserCredentialsQueries,
+      userActionAttemptQueries: UserActionAttemptQueries,
       userTokenQueries: UserTokenQueries,
       passwordService: PasswordService,
   )
@@ -56,6 +53,9 @@ class UserSignInApiSpec
       userCredentialsQueries <- ZIO
         .service[UserCredentialsQueries]
         .provide(UserCredentialsQueries.live, RepositoryConfig.live, appNameLive)
+      userActionAttemptQueries <- ZIO
+        .service[UserActionAttemptQueries]
+        .provide(UserActionAttemptQueries.live, RepositoryConfig.live, appNameLive)
       userTokenQueries <- ZIO
         .service[UserTokenQueries]
         .provide(UserTokenQueries.live, RepositoryConfig.live, appNameLive)
@@ -66,6 +66,7 @@ class UserSignInApiSpec
       repositoryConfig,
       userDetailsQueries,
       userCredentialsQueries,
+      userActionAttemptQueries,
       userTokenQueries,
       passwordService,
     )
@@ -124,10 +125,14 @@ class UserSignInApiSpec
         signInResponse.code shouldBe StatusCode.Ok
         signInResponse.body.value.onboardStage shouldBe onboardStageFromDomainToSmithy(onboardStage)
 
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll shouldBe empty
+
         val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
         userTokenRowsAll should have size 1
-
         userTokenRowsAll.head.tokenType shouldBe TokenType.RefreshToken
       }
 
@@ -168,6 +173,11 @@ class UserSignInApiSpec
           signInResponse.code shouldBe StatusCode.Ok
           signInResponse.body.value.onboardStage shouldBe onboardStageFromDomainToSmithy(onboardStage)
 
+          val userActionAttemptRowsAll =
+            postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+          userActionAttemptRowsAll shouldBe empty
+
           val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
           userTokenRowsAll should have size 2
@@ -175,7 +185,7 @@ class UserSignInApiSpec
           all(userTokenRowsAll.map(_.tokenType)) shouldBe TokenType.RefreshToken
       }
 
-      "successfully sign in user with valid credentials after retries of failure" in withContext { context =>
+      "successfully sign in user with valid credentials after some failed retries" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
@@ -204,28 +214,100 @@ class UserSignInApiSpec
         gatewayClient.signIn[smithy.Unauthorized](userDetailsRow.email, wrongPassword).zioValue
 
         // Now attempt to sign in with correct password, should still succeed and reset attempts
-        val signInResponse = gatewayClient.signIn(userDetailsRow.email, password).zioValue
+        val signInResponse = gatewayClient.signIn[smithy.InternalServerError](userDetailsRow.email, password).zioValue
 
         signInResponse.code shouldBe StatusCode.Ok
         signInResponse.body.value.onboardStage shouldBe onboardStageFromDomainToSmithy(onboardStage)
 
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll shouldBe empty
+
         val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
         userTokenRowsAll should have size 1
-
         userTokenRowsAll.head.tokenType shouldBe TokenType.RefreshToken
       }
 
-      "fail with ValidationError if email is invalid" in withContext { context =>
+      "fail with BadRequest when basic credentials is missing" in withContext { context =>
         import context.*
 
-        val invalidEmail = "invalid-email-format"
-        val password     = arbitrarySample[Password]
+        val email    = arbitrarySample[Email]
+        val password = arbitrarySample[Password]
 
-        val signInResponse: Response[Either[ResponseException[ValidationError], SignInResponse]] = gatewayClient.signIn[smithy.ValidationError](invalidEmail, password).zioValue
+        val signInResponse = gatewayClient.signIn[smithy.BadRequest](email, password, addBasicAuth = false).zioValue
 
         signInResponse.code shouldBe StatusCode.BadRequest
-        signInResponse.body.left.value. shouldBe "ValidationError"
+        signInResponse.body.left.value shouldBe smithy.BadRequest()
+
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll shouldBe empty
+
+        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+        userTokenRowsAll shouldBe empty
+      }
+
+      "fail with BadRequest ValidationError if email is invalid" in withContext { context =>
+        import context.*
+
+        val invalidEmail = Email.assume("invalid-email-format")
+        val password     = arbitrarySample[Password]
+
+        val signInResponse = gatewayClient.signIn[smithy.ValidationError](invalidEmail, password).zioValue
+
+        signInResponse.code shouldBe StatusCode.BadRequest
+        signInResponse.body.left.value shouldBe smithy.ValidationError(
+          fields = List("email")
+        )
+
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll shouldBe empty
+
+        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+        userTokenRowsAll shouldBe empty
+      }
+
+      "fail with Unauthorized when user onboardStage is not allowed" in withContext { context =>
+        import context.*
+
+        val onboardStage =
+          Random.shuffle(OnboardStage.values.toList.diff(OnboardStage.signInAllowedStages)).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val password     = arbitrarySample[Password]
+        val passwordHash = passwordService.hashPassword(password).zioValue
+
+        val userCredentialsRow =
+          arbitrarySample[UserCredentialsRow].copy(
+            userID = userDetailsRow.userID,
+            passwordHash = passwordHash,
+          )
+
+        postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
+
+        val signInResponse = gatewayClient.signIn[smithy.Unauthorized](userDetailsRow.email, password).zioValue
+
+        signInResponse.code shouldBe StatusCode.Unauthorized
+        signInResponse.body.left.value shouldBe smithy.Unauthorized()
+
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll shouldBe empty
+
+        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+        userTokenRowsAll shouldBe empty
       }
 
       "fail with Unauthorized to sign in user with invalid credentials" in withContext { context =>
@@ -252,13 +334,88 @@ class UserSignInApiSpec
 
         val wrongPassword = Password("WrongPassword123!")
 
-        val signInResponse = gatewayClient.signIn(userDetailsRow.email, wrongPassword).zioValue
+        val signInResponse = gatewayClient.signIn[smithy.Unauthorized](userDetailsRow.email, wrongPassword).zioValue
 
         signInResponse.code shouldBe StatusCode.Unauthorized
+        signInResponse.body.left.value shouldBe smithy.Unauthorized()
+
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll should have size 1
+        userActionAttemptRowsAll.head shouldBe UserActionAttemptRow(
+          actionAttemptID = userActionAttemptRowsAll.head.actionAttemptID, // ignore ID value
+          userID = userDetailsRow.userID,
+          actionAttemptType = ActionAttemptType.SignIn,
+          attempts = Attempts.assume(1),
+          createdAt = userActionAttemptRowsAll.head.createdAt, // ignore timestamp value
+          updatedAt = userActionAttemptRowsAll.head.updatedAt, // ignore timestamp value
+        )
 
         val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
-        userTokenRowsAll should have size 0
+        userTokenRowsAll shouldBe empty
+      }
+
+      "fail with Unauthorized to sign in user with correct credentials after invalid credentials max attempts has been reached" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(
+              onboardStage = onboardStage
+            )
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+          val password     = arbitrarySample[Password]
+          val passwordHash = passwordService.hashPassword(password).zioValue
+
+          val userCredentialsRow =
+            arbitrarySample[UserCredentialsRow].copy(
+              userID = userDetailsRow.userID,
+              passwordHash = passwordHash,
+            )
+
+          postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
+
+          val wrongPassword = Password("WrongPassword123!")
+
+          val maxAttempts = 10 // application.conf sign-in-attempts-max
+
+          val signInResponses = List.fill(maxAttempts + 1)(
+            gatewayClient
+              .signIn[smithy.Unauthorized](userDetailsRow.email, wrongPassword)
+              .zioValue
+          )
+
+          signInResponses.last.code shouldBe StatusCode.Unauthorized
+          signInResponses.last.body.left.value shouldBe smithy.Unauthorized()
+
+          val signInResponseAfterFailedAttempts = gatewayClient
+            .signIn[smithy.Unauthorized](userDetailsRow.email, password)
+            .zioValue
+
+          signInResponseAfterFailedAttempts.code shouldBe StatusCode.Unauthorized
+          signInResponseAfterFailedAttempts.body.left.value shouldBe smithy.Unauthorized()
+
+          val userActionAttemptRowsAll =
+            postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+          userActionAttemptRowsAll should have size 1
+          userActionAttemptRowsAll.head shouldBe UserActionAttemptRow(
+            actionAttemptID = userActionAttemptRowsAll.head.actionAttemptID, // ignore ID value
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.SignIn,
+            attempts = Attempts.assume(maxAttempts + 2),
+            createdAt = userActionAttemptRowsAll.head.createdAt, // ignore timestamp value
+            updatedAt = userActionAttemptRowsAll.head.updatedAt, // ignore timestamp value
+          )
+
+          val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+          userTokenRowsAll shouldBe empty
       }
     }
   }

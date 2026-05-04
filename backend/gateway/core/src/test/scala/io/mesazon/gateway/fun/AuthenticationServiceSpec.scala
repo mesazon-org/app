@@ -154,7 +154,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
       }
 
-      "fail with BadRequest to authenticate user with missing basic credentials" in new TestContext {
+      "fail with BasicCredentialsMissing to authenticate user with missing basic credentials" in new TestContext {
         val authedUser = arbitrarySample[AuthedUser]
 
         val authenticationService = buildAuthenticationService(
@@ -215,7 +215,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         checkUserCredentialsRepository()
       }
 
-      "fail with Unauthorized to authenticate user with no allowed sing in onboardStage" in new TestContext {
+      "fail with FailedOnboardStage to authenticate user with no allowed sing in onboardStage" in new TestContext {
         val password     = arbitrarySample[Password]
         val onboardStage =
           Random.shuffle(OnboardStage.values.toList.diff(OnboardStage.signInAllowedStages)).zioValue.head
@@ -256,7 +256,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         checkUserCredentialsRepository()
       }
 
-      "fail with Unauthorized to authenticate user with invalid credentials" in new TestContext {
+      "fail with InvalidCredentials to authenticate user with invalid credentials" in new TestContext {
         val password       = arbitrarySample[Password]
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -294,7 +294,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
       }
 
-      "fail with TooManyRequests to authenticate user with too many sign in attempts and is in blocked duration" in new TestContext {
+      "fail with TooManySignInAttempts to authenticate user with too many sign in attempts and is in blocked duration" in new TestContext {
         val password       = arbitrarySample[Password]
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -325,10 +325,10 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val serviceError = authenticationService.auth(request).zioError
 
-        serviceError shouldBe a[ServiceError.TooManyRequestsError.TooManySignInAttempts]
+        serviceError shouldBe a[ServiceError.UnauthorizedError.TooManySignInAttempts]
         serviceError
-          .asInstanceOf[ServiceError.TooManyRequestsError.TooManySignInAttempts] shouldBe
-          ServiceError.TooManyRequestsError.TooManySignInAttempts(
+          .asInstanceOf[ServiceError.UnauthorizedError.TooManySignInAttempts] shouldBe
+          ServiceError.UnauthorizedError.TooManySignInAttempts(
             userID = userDetailsRow.userID,
             actionAttemptType = ActionAttemptType.SignIn,
             blockDurationSeconds = authenticationConfig.signInAttemptsBlockDuration.toSeconds,
