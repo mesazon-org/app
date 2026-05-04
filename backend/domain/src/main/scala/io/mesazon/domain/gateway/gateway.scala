@@ -12,6 +12,9 @@ type AppName = AppName.T
 object UserID extends RefinedType[String, NonEmptyTrimmed]
 type UserID = UserID.T
 
+object ActionAttemptID extends RefinedType[String, NonEmptyTrimmed]
+type ActionAttemptID = ActionAttemptID.T
+
 object TokenID extends RefinedType[String, NonEmptyTrimmed]
 type TokenID = TokenID.T
 
@@ -71,3 +74,6 @@ type RefreshToken = RefreshToken.T
 
 object AccessToken extends RefinedType[String, NonEmptyTrimmed]
 type AccessToken = AccessToken.T
+
+object Attempts extends RefinedType[Int, Positive]
+type Attempts = Attempts.T

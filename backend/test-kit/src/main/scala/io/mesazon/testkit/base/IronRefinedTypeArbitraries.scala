@@ -1,6 +1,7 @@
 package io.mesazon.testkit.base
 
 import io.github.iltotore.iron.*
+import io.github.iltotore.iron.constraint.all.Positive
 import io.mesazon.domain.*
 import org.scalacheck.*
 
@@ -22,6 +23,12 @@ trait IronRefinedTypeArbitraries {
       .listOfN(6, Gen.alphaNumChar)
       .map(_.mkString.toUpperCase)
       .map(_.refineUnsafe[OtpPredicate])
+  }
+
+  given arbIntPositive: Arbitrary[Int :| Positive] = Arbitrary {
+    Gen
+      .choose(1, Int.MaxValue)
+      .map(_.refineUnsafe[Positive])
   }
 
   given arbNonEmptyTrimmedLowerCase: Arbitrary[String :| NonEmptyTrimmedLowerCase] = Arbitrary {

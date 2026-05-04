@@ -38,6 +38,9 @@ object HttpErrorHandler {
       case error: ServiceError.ConflictError =>
         logWarning(error)
           .map(_ => smithy.Conflict())
+      case error: ServiceError.TooManyRequestsError.TooManySignInAttempts =>
+        logWarning(error)
+          .map(_ => smithy.TooManyRequests(blockDurationSeconds = error.blockDurationSeconds))
       case error: ServiceError.InternalServerError =>
         logWarning(error)
           .map(_ => smithy.InternalServerError())

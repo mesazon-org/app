@@ -4,57 +4,21 @@ import com.dimafeng.testcontainers.*
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import fs2.io.net.Network
-import io.mesazon.domain.gateway.AccessToken
+import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient.*
 import io.mesazon.gateway.smithy
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
-import sttp.client4.jsoniter.asJson
+import sttp.client4.jsoniter.{asJson, asJsonEither}
 import sttp.model.*
 import zio.*
 import zio.interop.catz.*
+import io.mesazon.gateway.it.client.GatewayClient.given
 
 import scala.util.chaining.scalaUtilChainingOps
 
 case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]) {
   import config.*
-
-  given JsonValueCodec[smithy.OnboardStage] = new JsonValueCodec[smithy.OnboardStage] {
-    override def decodeValue(in: JsonReader, default: smithy.OnboardStage): smithy.OnboardStage =
-      in.readString(null) match {
-        case "EMAIL_VERIFICATION" => smithy.OnboardStage.EMAIL_VERIFICATION
-        case "EMAIL_VERIFIED"     => smithy.OnboardStage.EMAIL_VERIFIED
-        case "PASSWORD_PROVIDED"  => smithy.OnboardStage.PASSWORD_PROVIDED
-        case "PHONE_VERIFICATION" => smithy.OnboardStage.PHONE_VERIFICATION
-        case "PHONE_VERIFIED"     => smithy.OnboardStage.PHONE_VERIFIED
-        case str                  => throw new IllegalArgumentException(s"Unknown OnboardStage: $str")
-      }
-
-    override def encodeValue(x: smithy.OnboardStage, out: JsonWriter): Unit =
-      x match {
-        case smithy.OnboardStage.EMAIL_VERIFICATION => out.writeVal("EMAIL_VERIFICATION")
-        case smithy.OnboardStage.EMAIL_VERIFIED     => out.writeVal("EMAIL_VERIFIED")
-        case smithy.OnboardStage.PASSWORD_PROVIDED  => out.writeVal("PASSWORD_PROVIDED")
-        case smithy.OnboardStage.PHONE_VERIFICATION => out.writeVal("PHONE_VERIFICATION")
-        case smithy.OnboardStage.PHONE_VERIFIED     => out.writeVal("PHONE_VERIFIED")
-      }
-
-    override def nullValue: smithy.OnboardStage = null
-  }
-
-  given JsonValueCodec[smithy.SignUpEmailRequest]              = JsonCodecMaker.make[smithy.SignUpEmailRequest]
-  given JsonValueCodec[smithy.SignUpVerifyEmailRequest]        = JsonCodecMaker.make[smithy.SignUpVerifyEmailRequest]
-  given JsonValueCodec[smithy.OnboardPasswordRequest]          = JsonCodecMaker.make[smithy.OnboardPasswordRequest]
-  given JsonValueCodec[smithy.OnboardDetailsRequest]           = JsonCodecMaker.make[smithy.OnboardDetailsRequest]
-  given JsonValueCodec[smithy.OnboardVerifyPhoneNumberRequest] =
-    JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberRequest]
-
-  given JsonValueCodec[smithy.SignUpEmailResponse]              = JsonCodecMaker.make[smithy.SignUpEmailResponse]
-  given JsonValueCodec[smithy.SignUpVerifyEmailResponse]        = JsonCodecMaker.make[smithy.SignUpVerifyEmailResponse]
-  given JsonValueCodec[smithy.OnboardPasswordResponse]          = JsonCodecMaker.make[smithy.OnboardPasswordResponse]
-  given JsonValueCodec[smithy.OnboardDetailsResponse]           = JsonCodecMaker.make[smithy.OnboardDetailsResponse]
-  given JsonValueCodec[smithy.OnboardVerifyPhoneNumberResponse] =
-    JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberResponse]
 
   def liveness: Task[StatusCode] = basicRequest
     .get(healthUri.addPath("liveness"))
@@ -128,9 +92,64 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       )
       .response(asJson[smithy.OnboardVerifyPhoneNumberResponse])
       .send(sttpBackend)
+
+  def signIn[E](
+      email: Email,
+      password: Password,
+  )(using JsonValueCodec[E]): Task[Response[Either[ResponseException[E], smithy.SignInResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("signin"))
+      .auth
+      .basic(email.value, password.value)
+      .response(asJsonEither[E, smithy.SignInResponse])
+      .send(sttpBackend)
 }
 
 object GatewayClient {
+
+  given JsonValueCodec[smithy.OnboardStage] = new JsonValueCodec[smithy.OnboardStage] {
+    override def decodeValue(in: JsonReader, default: smithy.OnboardStage): smithy.OnboardStage =
+      in.readString(null) match {
+        case "EMAIL_VERIFICATION" => smithy.OnboardStage.EMAIL_VERIFICATION
+        case "EMAIL_VERIFIED"     => smithy.OnboardStage.EMAIL_VERIFIED
+        case "PASSWORD_PROVIDED"  => smithy.OnboardStage.PASSWORD_PROVIDED
+        case "PHONE_VERIFICATION" => smithy.OnboardStage.PHONE_VERIFICATION
+        case "PHONE_VERIFIED"     => smithy.OnboardStage.PHONE_VERIFIED
+        case str                  => throw new IllegalArgumentException(s"Unknown OnboardStage: $str")
+      }
+
+    override def encodeValue(x: smithy.OnboardStage, out: JsonWriter): Unit =
+      x match {
+        case smithy.OnboardStage.EMAIL_VERIFICATION => out.writeVal("EMAIL_VERIFICATION")
+        case smithy.OnboardStage.EMAIL_VERIFIED     => out.writeVal("EMAIL_VERIFIED")
+        case smithy.OnboardStage.PASSWORD_PROVIDED  => out.writeVal("PASSWORD_PROVIDED")
+        case smithy.OnboardStage.PHONE_VERIFICATION => out.writeVal("PHONE_VERIFICATION")
+        case smithy.OnboardStage.PHONE_VERIFIED     => out.writeVal("PHONE_VERIFIED")
+      }
+
+    override def nullValue: smithy.OnboardStage = null
+  }
+
+  given JsonValueCodec[smithy.SignUpEmailRequest]              = JsonCodecMaker.make[smithy.SignUpEmailRequest]
+  given JsonValueCodec[smithy.SignUpVerifyEmailRequest]        = JsonCodecMaker.make[smithy.SignUpVerifyEmailRequest]
+  given JsonValueCodec[smithy.OnboardPasswordRequest]          = JsonCodecMaker.make[smithy.OnboardPasswordRequest]
+  given JsonValueCodec[smithy.OnboardDetailsRequest]           = JsonCodecMaker.make[smithy.OnboardDetailsRequest]
+  given JsonValueCodec[smithy.OnboardVerifyPhoneNumberRequest] =
+    JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberRequest]
+
+  given JsonValueCodec[smithy.SignUpEmailResponse]              = JsonCodecMaker.make[smithy.SignUpEmailResponse]
+  given JsonValueCodec[smithy.SignUpVerifyEmailResponse]        = JsonCodecMaker.make[smithy.SignUpVerifyEmailResponse]
+  given JsonValueCodec[smithy.OnboardPasswordResponse]          = JsonCodecMaker.make[smithy.OnboardPasswordResponse]
+  given JsonValueCodec[smithy.OnboardDetailsResponse]           = JsonCodecMaker.make[smithy.OnboardDetailsResponse]
+  given JsonValueCodec[smithy.OnboardVerifyPhoneNumberResponse] =
+    JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberResponse]
+  given JsonValueCodec[smithy.SignInResponse] = JsonCodecMaker.make[smithy.SignInResponse]
+
+  given JsonValueCodec[smithy.ValidationError]     = JsonCodecMaker.make[smithy.ValidationError]
+  given JsonValueCodec[smithy.BadRequest]          = JsonCodecMaker.make[smithy.BadRequest]
+  given JsonValueCodec[smithy.Unauthorized]        = JsonCodecMaker.make[smithy.Unauthorized]
+  given JsonValueCodec[smithy.InternalServerError] = JsonCodecMaker.make[smithy.InternalServerError]
+
   // Remove stupid warning that can't execute bin/sh in distroless images
   lazy val ServiceName     = "gateway"
   lazy val ExternalPort    = 8080

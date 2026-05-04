@@ -1,7 +1,9 @@
 package io.mesazon.gateway.fun
 
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.gateway.config.AuthenticationConfig
 import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.*
@@ -12,6 +14,9 @@ import io.mesazon.testkit.base.ZWordSpecBase
 import org.http4s.headers.Authorization
 import org.http4s.{BasicCredentials as Http4sBasicCredentials, *}
 import zio.*
+
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
@@ -44,6 +49,106 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         assert(authenticationResponse.isRight)
 
         checkAuthState(expectedSetCalls = 1)
+        checkUserActionAttemptRepository(
+          expectedGetAndIncreaseUserActionAttemptCalls = 1,
+          expectedDeleteUserActionAttemptCalls = 1,
+        )
+        checkPasswordService(expectedVerifyPasswordCalls = 1)
+        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
+        checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
+      }
+
+      "successfully authenticate user with sign in attempts under max and block duration passed" in new TestContext {
+        val password       = arbitrarySample[Password]
+        val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+        val userCredentialsRow = arbitrarySample[UserCredentialsRow]
+          .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
+        val instantNow           = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.SignIn,
+            attempts = Attempts.assume(authenticationConfig.signInAttemptsMax), // Under max attempts or equals
+            updatedAt = UpdatedAt(
+              instantNow.minusSeconds(
+                authenticationConfig.signInAttemptsBlockDuration.toSeconds + 1
+              ) // Block duration passed
+            ),
+          )
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(
+              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
+            )
+          )
+
+        val authenticationService = buildAuthenticationService(
+          authedUser = AuthedUser(userID = userDetailsRow.userID),
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+          userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
+          userActionAttemptRowOpt = Some(userActionAttemptRow),
+        )
+
+        val authenticationResponse = authenticationService.auth(request).zioEither
+
+        assert(authenticationResponse.isRight)
+
+        checkAuthState(expectedSetCalls = 1)
+        checkUserActionAttemptRepository(
+          expectedGetAndIncreaseUserActionAttemptCalls = 1,
+          expectedDeleteUserActionAttemptCalls = 1,
+        )
+        checkPasswordService(expectedVerifyPasswordCalls = 1)
+        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
+        checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
+      }
+
+      "successfully authenticate user with sign in attempts at max but block duration passed" in new TestContext {
+        val password       = arbitrarySample[Password]
+        val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+        val userCredentialsRow = arbitrarySample[UserCredentialsRow]
+          .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
+        val instantNow           = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.SignIn,
+            attempts = Attempts.assume(authenticationConfig.signInAttemptsMax + 1), // At max attempts
+            updatedAt = UpdatedAt(
+              instantNow.minusSeconds(
+                authenticationConfig.signInAttemptsBlockDuration.toSeconds + 1
+              ) // Block duration passed
+            ),
+          )
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(
+              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
+            )
+          )
+
+        val authenticationService = buildAuthenticationService(
+          authedUser = AuthedUser(userID = userDetailsRow.userID),
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+          userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
+          userActionAttemptRowOpt = Some(userActionAttemptRow),
+        )
+
+        val authenticationResponse = authenticationService.auth(request).zioEither
+
+        assert(authenticationResponse.isRight)
+
+        checkAuthState(expectedSetCalls = 1)
+        checkUserActionAttemptRepository(
+          expectedGetAndIncreaseUserActionAttemptCalls = 1,
+          expectedDeleteUserActionAttemptCalls = 1,
+        )
         checkPasswordService(expectedVerifyPasswordCalls = 1)
         checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
         checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
@@ -67,6 +172,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           ] shouldBe ServiceError.BadRequestError.BasicCredentialsMissing
 
         checkAuthState()
+        checkUserActionAttemptRepository()
         checkPasswordService()
         checkUserDetailsRepository()
         checkUserCredentialsRepository()
@@ -103,6 +209,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           )
 
         checkAuthState()
+        checkUserActionAttemptRepository()
         checkPasswordService()
         checkUserDetailsRepository()
         checkUserCredentialsRepository()
@@ -141,6 +248,9 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           )
 
         checkAuthState()
+        checkUserActionAttemptRepository(
+          expectedGetAndIncreaseUserActionAttemptCalls = 1
+        )
         checkPasswordService()
         checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
         checkUserCredentialsRepository()
@@ -176,9 +286,61 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           ] shouldBe ServiceError.UnauthorizedError.InvalidCredentials
 
         checkAuthState()
+        checkUserActionAttemptRepository(
+          expectedGetAndIncreaseUserActionAttemptCalls = 1
+        )
         checkPasswordService(expectedVerifyPasswordCalls = 1)
         checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
         checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
+      }
+
+      "fail with TooManyRequests to authenticate user with too many sign in attempts and is in blocked duration" in new TestContext {
+        val password       = arbitrarySample[Password]
+        val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+        val instantNow           = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.SignIn,
+            attempts = Attempts.assume(authenticationConfig.signInAttemptsMax + 1),
+            updatedAt = UpdatedAt(
+              instantNow.minusSeconds(authenticationConfig.signInAttemptsBlockDuration.toSeconds - 1)
+            ),
+          )
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(
+              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
+            )
+          )
+
+        val authenticationService = buildAuthenticationService(
+          authedUser = AuthedUser(userID = userDetailsRow.userID),
+          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+          userActionAttemptRowOpt = Some(userActionAttemptRow),
+        )
+
+        val serviceError = authenticationService.auth(request).zioError
+
+        serviceError shouldBe a[ServiceError.TooManyRequestsError.TooManySignInAttempts]
+        serviceError
+          .asInstanceOf[ServiceError.TooManyRequestsError.TooManySignInAttempts] shouldBe
+          ServiceError.TooManyRequestsError.TooManySignInAttempts(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.SignIn,
+            blockDurationSeconds = authenticationConfig.signInAttemptsBlockDuration.toSeconds,
+          )
+
+        checkAuthState()
+        checkUserActionAttemptRepository(
+          expectedGetAndIncreaseUserActionAttemptCalls = 1
+        )
+        checkPasswordService()
+        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
+        checkUserCredentialsRepository()
       }
 
       "fail with InternalServerError to authenticate user when user credentials are not found for existing user details" in new TestContext {
@@ -210,6 +372,9 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           )
 
         checkAuthState()
+        checkUserActionAttemptRepository(
+          expectedGetAndIncreaseUserActionAttemptCalls = 1
+        )
         checkPasswordService()
         checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
         checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
@@ -242,6 +407,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           )
 
         checkAuthState()
+        checkUserActionAttemptRepository()
         checkPasswordService()
         checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
         checkUserCredentialsRepository()
@@ -253,12 +419,19 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
       extends UserDetailsRepositoryMock,
         UserCredentialsRepositoryMock,
         PasswordServiceMock,
-        AuthStateMock {
+        AuthStateMock,
+        UserActionAttemptRepositoryMock {
+
+    val authenticationConfig = AuthenticationConfig(
+      signInAttemptsMax = 5,
+      signInAttemptsBlockDuration = Duration.fromMillis(5),
+    )
 
     def buildAuthenticationService(
         authedUser: AuthedUser,
         userDetailsRows: Map[UserID, UserDetailsRow] = Map.empty,
         userCredentialsRows: Map[UserID, UserCredentialsRow] = Map.empty,
+        userActionAttemptRowOpt: Option[UserActionAttemptRow] = None,
         passwordServiceErrorOpt: Option[ServiceError] = None,
         userDetailsRepositoryServiceErrorOpt: Option[ServiceError] = None,
         userCredentialsRepositoryServiceErrorOpt: Option[ServiceError] = None,
@@ -269,6 +442,10 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         EmailDomainValidator.live,
         BasicCredentialsServiceValidator.live,
         authStateMockLive(authedUser = authedUser),
+        userActionAttemptRepositoryMockLive(
+          userActionAttemptRowOpt = userActionAttemptRowOpt
+        ),
+        TimeProvider.liveSystemUTC,
         passwordServiceMockLive(
           serviceErrorOpt = passwordServiceErrorOpt
         ),
@@ -280,6 +457,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           userCredentialsRows = userCredentialsRows,
           serviceErrorOpt = userCredentialsRepositoryServiceErrorOpt,
         ),
+        ZLayer.succeed(authenticationConfig),
       )
       .zioValue
   }

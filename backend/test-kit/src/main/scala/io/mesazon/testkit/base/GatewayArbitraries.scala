@@ -37,6 +37,8 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
 
   given Arbitrary[TokenType] = Arbitrary(Gen.oneOf(TokenType.values.toIndexedSeq))
 
+  given Arbitrary[ActionAttemptType] = Arbitrary(Gen.oneOf(ActionAttemptType.values.toIndexedSeq))
+
   given Arbitrary[AuthedUser] = Arbitrary(Gen.resultOf(AuthedUser.apply))
 
   given Arbitrary[AssistantResponse] = Arbitrary(Gen.resultOf(AssistantResponse.apply))

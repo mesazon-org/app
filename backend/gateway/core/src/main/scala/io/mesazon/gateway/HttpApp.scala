@@ -40,10 +40,12 @@ object HttpApp {
 
   private val externalRoutesResource = for {
     userSignUpService  <- ZIO.service[smithy.UserSignUpService[Task]]
+    userSignInService  <- ZIO.service[smithy.UserSignInService[Task]]
     userOnboardService <- ZIO.service[smithy.UserOnboardService[Task]]
     userSignUpRoutes   <- buildRoute(userSignUpService)
+    userSignInRoutes   <- buildRoute(userSignInService)
     userOnboardRoutes  <- buildRoute(userOnboardService)
-  } yield userSignUpRoutes <+> userOnboardRoutes
+  } yield userSignUpRoutes <+> userOnboardRoutes <+> userSignInRoutes
 
   private val internalRoutesResource = for {
     wahaService <- ZIO.service[smithy.WahaService[Task]]

@@ -23,6 +23,18 @@ create table user_details
     unique (email)
 );
 
+create table user_action_attempt
+(
+    action_attempt_id   text        not null,
+    user_id             text        not null,
+    action_attempt_type text        not null,
+    attempts            int         not null,
+    created_at          timestamptz not null,
+    updated_at          timestamptz not null,
+    primary key (action_attempt_id),
+    unique (user_id, action_attempt_type)
+);
+
 create table user_otp
 (
     otp_id     text        not null,

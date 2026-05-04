@@ -49,6 +49,7 @@ object Main extends ZIOAppDefault {
       HealthCheckService.live,
       WahaService.live,
       UserSignUpService.live,
+      UserSignInService.live,
       UserOnboardService.live,
       JwtService.live,
       PasswordService.live,
@@ -61,6 +62,7 @@ object Main extends ZIOAppDefault {
       UserTokenRepository.live,
       UserDetailsRepository.live,
       UserCredentialsRepository.live,
+      UserActionAttemptRepository.live,
 
       // Queries
       WahaQueries.live,
@@ -68,6 +70,7 @@ object Main extends ZIOAppDefault {
       UserTokenQueries.live,
       UserDetailsQueries.live,
       UserCredentialsQueries.live,
+      UserActionAttemptQueries.live,
 
       // State
       AuthState.live,
@@ -90,6 +93,7 @@ object Main extends ZIOAppDefault {
       PasswordConfig.live,
       UserOnboardConfig.live,
       TwilioClientConfig.live,
+      AuthenticationConfig.live,
 
       // Domain validators
       EmailDomainValidator.live,

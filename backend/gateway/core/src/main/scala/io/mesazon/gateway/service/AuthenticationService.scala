@@ -1,8 +1,10 @@
 package io.mesazon.gateway.service
 
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
-import io.mesazon.gateway.repository.{UserCredentialsRepository, UserDetailsRepository}
+import io.mesazon.gateway.config.AuthenticationConfig
+import io.mesazon.gateway.repository.{UserActionAttemptRepository, UserCredentialsRepository, UserDetailsRepository}
 import io.mesazon.gateway.state.AuthState
 import io.mesazon.gateway.validation.service.BasicCredentialsServiceValidator
 import org.http4s.headers.Authorization
@@ -18,11 +20,14 @@ object AuthenticationService {
   case class BasicCredentialsRequest(email: String, password: String)
 
   private final class AuthenticationServiceImpl(
+      authenticationConfig: AuthenticationConfig,
       userDetailsRepository: UserDetailsRepository,
       userCredentialsRepository: UserCredentialsRepository,
+      userActionAttemptRepository: UserActionAttemptRepository,
       passwordService: PasswordService,
       authState: AuthState,
       basicCredentialsServiceValidator: BasicCredentialsServiceValidator,
+      timeProvider: TimeProvider,
   ) extends AuthenticationService[ServiceTask] {
 
     override def auth(request: Request[Task]): ServiceTask[Unit] =
@@ -42,6 +47,27 @@ object AuthenticationService {
           .someOrFail(
             ServiceError.UnauthorizedError.EmailNotFound
           )
+        userActionAttemptRow <- userActionAttemptRepository
+          .getAndIncreaseUserActionAttempt(
+            userDetails.userID,
+            ActionAttemptType.SignIn,
+          )
+        instantNow <- timeProvider.instantNow
+        _          <-
+          if (
+            userActionAttemptRow.attempts.value > authenticationConfig.signInAttemptsMax &&
+            userActionAttemptRow.updatedAt.value
+              .plusSeconds(authenticationConfig.signInAttemptsBlockDuration.toSeconds)
+              .isAfter(instantNow)
+          )
+            ZIO.fail(
+              ServiceError.TooManyRequestsError.TooManySignInAttempts(
+                userDetails.userID,
+                ActionAttemptType.SignIn,
+                authenticationConfig.signInAttemptsBlockDuration.toSeconds,
+              )
+            )
+          else ZIO.unit
         _ <- verifyOnboardStage(
           onboardStageUser = userDetails.onboardStage,
           onboardStagesAllowed = OnboardStage.signInAllowedStages,
@@ -55,7 +81,8 @@ object AuthenticationService {
           )
         isPasswordVerified <- passwordService.verifyPassword(basicCredentials.password, userCredentials.passwordHash)
         _                  <-
-          if (isPasswordVerified) ZIO.unit
+          if (isPasswordVerified)
+            userActionAttemptRepository.deleteUserActionAttempt(userDetails.userID, ActionAttemptType.SignIn)
           else ZIO.fail(ServiceError.UnauthorizedError.InvalidCredentials)
         _ <- authState.set(AuthedUser(userDetails.userID))
       } yield ()

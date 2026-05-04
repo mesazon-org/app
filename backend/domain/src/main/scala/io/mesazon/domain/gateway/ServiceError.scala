@@ -26,6 +26,11 @@ object ServiceError {
       override val underlying: Option[Throwable] = None,
   ) extends ServiceError("ConflictError", message, underlying)
 
+  sealed abstract class TooManyRequestsError(
+      override val message: String,
+      override val underlying: Option[Throwable] = None,
+  ) extends ServiceError("TooManyRequests", message, underlying)
+
   // 500
   sealed abstract class InternalServerError(
       override val message: String,
@@ -79,6 +84,13 @@ object ServiceError {
   object ConflictError {
     case class UserAlreadyExists(userID: UserID, email: Email)
         extends ConflictError(s"user with id [$userID] and email [$email] already exists")
+  }
+
+  object TooManyRequestsError {
+    case class TooManySignInAttempts(userID: UserID, actionAttemptType: ActionAttemptType, blockDurationSeconds: Long)
+        extends TooManyRequestsError(
+          s"too many requests for user [$userID] and action attempt type [$actionAttemptType]"
+        )
   }
 
   object InternalServerError {
