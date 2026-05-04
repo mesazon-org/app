@@ -248,9 +248,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           )
 
         checkAuthState()
-        checkUserActionAttemptRepository(
-          expectedGetAndIncreaseUserActionAttemptCalls = 1
-        )
+        checkUserActionAttemptRepository()
         checkPasswordService()
         checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
         checkUserCredentialsRepository()
