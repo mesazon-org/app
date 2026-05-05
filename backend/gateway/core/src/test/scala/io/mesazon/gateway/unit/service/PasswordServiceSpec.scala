@@ -1,8 +1,8 @@
-package io.mesazon.gateway.unit.auth
+package io.mesazon.gateway.unit.service
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.PasswordService
 import io.mesazon.gateway.config.PasswordConfig
+import io.mesazon.gateway.service.*
 import io.mesazon.testkit.base.*
 import zio.*
 

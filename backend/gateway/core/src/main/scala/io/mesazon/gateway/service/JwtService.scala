@@ -1,10 +1,10 @@
-package io.mesazon.gateway.auth
+package io.mesazon.gateway.service
 
 import io.jsonwebtoken.{Clock as JJwtClock, JwtException, Jwts}
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.JwtService.*
 import io.mesazon.gateway.config.JwtConfig
+import io.mesazon.gateway.service.JwtService.*
 import io.mesazon.generator.IDGenerator
 import zio.*
 

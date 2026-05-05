@@ -30,14 +30,14 @@ trait UserDetailsRepositoryMock extends ZIOTestOps, should.Matchers {
 
   def userDetailsRepositoryMockLive(
       userDetailsRows: Map[UserID, UserDetailsRow] = Map.empty,
-      maybeServiceError: Option[ServiceError] = None,
+      serviceErrorOpt: Option[ServiceError] = None,
       maybeUnexpectedError: Option[Throwable] = None,
   ): ULayer[UserDetailsRepository] = ZLayer.succeed(
     new UserDetailsRepository {
 
       override def insertUserDetails(email: Email, onboardStage: OnboardStage): IO[ServiceError, UserDetailsRow] =
         insertUserDetailsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(
-          maybeServiceError.fold(
+          serviceErrorOpt.fold(
             ZIO.succeed(
               UserDetailsRow(
                 userID = UserID.assume("mock-user-id"),
@@ -58,7 +58,7 @@ trait UserDetailsRepositoryMock extends ZIOTestOps, should.Matchers {
           fullNameOptUpdate: Option[FullName],
           phoneNumberOptUpdate: Option[PhoneNumber],
       ): IO[ServiceError, UserDetailsRow] = updateUserDetailsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(
-        maybeServiceError.fold(
+        serviceErrorOpt.fold(
           ZIO.succeed(
             userDetailsRows(userID)
               .copy(
@@ -73,14 +73,14 @@ trait UserDetailsRepositoryMock extends ZIOTestOps, should.Matchers {
 
       override def getUserDetails(userID: UserID): IO[ServiceError, Option[UserDetailsRow]] =
         getUserDetailsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(
-          maybeServiceError.fold(
+          serviceErrorOpt.fold(
             ZIO.succeed(userDetailsRows.get(userID))
           )(ZIO.fail)
         )(ZIO.fail(_).orDie)
 
       override def getUserDetailsByEmail(email: Email): IO[ServiceError, Option[UserDetailsRow]] =
         getUserDetailsByEmailCounterRef.incrementAndGet *> maybeUnexpectedError.fold(
-          maybeServiceError.fold(
+          serviceErrorOpt.fold(
             ZIO.succeed(userDetailsRows.values.find(_.email == email))
           )(ZIO.fail)
         )(ZIO.fail(_).orDie)

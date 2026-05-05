@@ -1,8 +1,8 @@
 package io.mesazon.gateway.mock
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.JwtService
-import io.mesazon.gateway.auth.JwtService.{AccessJwt, AuthedUserAccess, AuthedUserRefresh, RefreshJwt}
+import io.mesazon.gateway.service.*
+import io.mesazon.gateway.service.JwtService.*
 import io.mesazon.testkit.base.ZIOTestOps
 import org.scalatest.matchers.should
 import zio.*

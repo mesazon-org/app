@@ -1,11 +1,11 @@
-package io.mesazon.gateway.unit.auth
+package io.mesazon.gateway.unit.service
 
 import io.jsonwebtoken.Jwts
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.Mocks
-import io.mesazon.gateway.auth.JwtService
-import io.mesazon.gateway.auth.JwtService.AuthedUserRefresh
 import io.mesazon.gateway.config.JwtConfig
+import io.mesazon.gateway.service.*
+import io.mesazon.gateway.service.JwtService.*
 import io.mesazon.testkit.base.*
 import zio.*
 

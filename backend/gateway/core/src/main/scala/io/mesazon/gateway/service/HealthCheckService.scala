@@ -25,5 +25,7 @@ object HealthCheckService {
       override def readiness(): Task[Unit] = HttpErrorHandler.errorResponseHandler(service.readiness())
     }
 
-  val live = ZLayer.derive[HealthCheckServiceImpl] >>> ZLayer.fromFunction(observed)
+  val local = ZLayer.derive[HealthCheckServiceImpl].project[smithy.HealthCheckService[ServiceTask]](identity)
+
+  val live = local >>> ZLayer.fromFunction(observed)
 }

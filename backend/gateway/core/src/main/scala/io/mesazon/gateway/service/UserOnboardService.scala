@@ -2,10 +2,11 @@ package io.mesazon.gateway.service
 
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.{AuthorizationState, OtpGenerator, PasswordService}
 import io.mesazon.gateway.clients.{EmailClient, TwilioClient}
 import io.mesazon.gateway.config.UserOnboardConfig
 import io.mesazon.gateway.repository.*
+import io.mesazon.gateway.state.*
+import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.service.*
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import zio.*
@@ -14,7 +15,7 @@ object UserOnboardService {
 
   private final class UserOnboardServiceImpl(
       userOnboardConfig: UserOnboardConfig,
-      authorizationState: AuthorizationState,
+      authState: AuthState,
       userCredentialsRepository: UserCredentialsRepository,
       userDetailsRepository: UserDetailsRepository,
       userOtpRepository: UserOtpRepository,
@@ -31,13 +32,13 @@ object UserOnboardService {
     /** HTTP POST /onboard/password */
     override def onboardPassword(request: smithy.OnboardPasswordRequest): ServiceTask[smithy.OnboardPasswordResponse] =
       for {
-        authedUser      <- authorizationState.get()
+        authedUser      <- authState.get()
         onboardPassword <- onboardPasswordServiceValidator.validate(request)
         userDetails     <- userDetailsRepository
           .getUserDetails(authedUser.userID)
           .someOrFail(
             ServiceError.InternalServerError.UserNotFoundError(
-              s"User details not found for userID: ${authedUser.userID}"
+              s"User details not found for userID: [${authedUser.userID}]"
             )
           )
         _ <- verifyOnboardStage(
@@ -64,13 +65,13 @@ object UserOnboardService {
     /** HTTP POST /onboard/details */
     override def onboardDetails(request: smithy.OnboardDetailsRequest): ServiceTask[smithy.OnboardDetailsResponse] =
       for {
-        authedUser     <- authorizationState.get()
+        authedUser     <- authState.get()
         onboardDetails <- onboardDetailsServiceValidator.validate(request)
         userDetails    <- userDetailsRepository
           .getUserDetails(authedUser.userID)
           .someOrFail(
             ServiceError.InternalServerError.UserNotFoundError(
-              s"User details not found for userID: ${authedUser.userID}"
+              s"User details not found for userID: [${authedUser.userID}]"
             )
           )
         _ <- verifyOnboardStage(
@@ -121,13 +122,13 @@ object UserOnboardService {
         request: smithy.OnboardVerifyPhoneNumberRequest
     ): ServiceTask[smithy.OnboardVerifyPhoneNumberResponse] =
       for {
-        authedUser               <- authorizationState.get()
+        authedUser               <- authState.get()
         onboardVerifyPhoneNumber <- onboardVerifyPhoneNumberServiceValidator.validate(request)
         userDetails              <- userDetailsRepository
           .getUserDetails(authedUser.userID)
           .someOrFail(
             ServiceError.InternalServerError.UserNotFoundError(
-              s"User details not found for userID: ${authedUser.userID}"
+              s"User details not found for userID: [${authedUser.userID}]"
             )
           )
         _ <- verifyOnboardStage(
@@ -138,7 +139,7 @@ object UserOnboardService {
           .getUserOtp(onboardVerifyPhoneNumber.otpID, authedUser.userID, OtpType.PhoneVerification)
           .someOrFail(
             ServiceError.UnauthorizedError
-              .OtpValidationError(s"No OTP found for otpID: ${onboardVerifyPhoneNumber.otpID}")
+              .OtpValidationError(s"No OTP found for otpID: [${onboardVerifyPhoneNumber.otpID}]")
           )
         instantNow <- timeProvider.instantNow
         _          <-
@@ -153,7 +154,7 @@ object UserOnboardService {
           else
             ZIO.fail(
               ServiceError.UnauthorizedError
-                .OtpValidationError(s"Invalid or expired OTP provided for otpID: ${onboardVerifyPhoneNumber.otpID}")
+                .OtpValidationError(s"Wrong or expired OTP provided for otpID: [${onboardVerifyPhoneNumber.otpID}]")
             )
       } yield smithy.OnboardVerifyPhoneNumberResponse(
         onboardStage = onboardStageFromDomainToSmithy(OnboardStage.PhoneVerified)
@@ -183,5 +184,7 @@ object UserOnboardService {
 
     }
 
-  val live = ZLayer.derive[UserOnboardServiceImpl] >>> ZLayer.fromFunction(observed)
+  val local = ZLayer.derive[UserOnboardServiceImpl].project[smithy.UserOnboardService[ServiceTask]](identity)
+
+  val live = local >>> ZLayer.fromFunction(observed)
 }

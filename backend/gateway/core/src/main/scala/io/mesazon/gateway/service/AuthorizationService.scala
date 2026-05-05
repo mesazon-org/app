@@ -1,22 +1,24 @@
-package io.mesazon.gateway.auth
+package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
+import io.mesazon.gateway.state.*
 import org.http4s.*
 import org.http4s.headers.Authorization
 import zio.*
 
-trait AuthorizationService[E] {
-  def auth(request: Request[Task]): IO[E, Unit]
+trait AuthorizationService[F[_]] {
+  def auth(request: Request[Task]): F[Unit]
 }
 
 object AuthorizationService {
 
   private final class AuthorizationServiceImpl(
-      authorizationState: AuthorizationState,
+      authState: AuthState,
       jwtService: JwtService,
-  ) extends AuthorizationService[ServiceError] {
-    override def auth(request: Request[Task]): IO[ServiceError, Unit] =
+  ) extends AuthorizationService[ServiceTask] {
+
+    override def auth(request: Request[Task]): ServiceTask[Unit] =
       for {
         maybeBearerToken = request.headers
           .get[`Authorization`]
@@ -31,12 +33,14 @@ object AuthorizationService {
               )
           )
         authedUserAccess <- jwtService.verifyAccessToken(accessToken)
-        _                <- authorizationState.set(AuthedUser(authedUserAccess))
+        _                <- authState.set(AuthedUser(authedUserAccess))
       } yield ()
   }
 
-  private def observed(service: AuthorizationService[ServiceError]): AuthorizationService[Throwable] =
+  private def observed(service: AuthorizationService[ServiceTask]): AuthorizationService[Task] =
     (request: Request[Task]) => HttpErrorHandler.errorResponseHandler(service.auth(request))
 
-  val live = ZLayer.derive[AuthorizationServiceImpl] >>> ZLayer.fromFunction(observed)
+  val local = ZLayer.derive[AuthorizationServiceImpl].project[AuthorizationService[ServiceTask]](identity)
+
+  val live = local >>> ZLayer.fromFunction(observed)
 }

@@ -4,6 +4,7 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.it.client.GatewayClient
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
+import io.mesazon.gateway.it.client.GatewayClient.given
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.smithy
@@ -108,7 +109,7 @@ class UserSignupApiSpec
 
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
 
-        val signUpEmailResponse = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+        val signUpEmailResponse = gatewayClient.signUpEmail[smithy.InternalServerError](signUpEmailRequest).zioValue
 
         signUpEmailResponse.code shouldBe StatusCode.Ok
 
@@ -151,7 +152,7 @@ class UserSignupApiSpec
 
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
 
-        val signUpEmailResponse1 = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+        val signUpEmailResponse1 = gatewayClient.signUpEmail[smithy.InternalServerError](signUpEmailRequest).zioValue
 
         signUpEmailResponse1.code shouldBe StatusCode.Ok
 
@@ -159,7 +160,7 @@ class UserSignupApiSpec
 
         val userOtpRowsAll1 = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
-        val signUpEmailResponse2 = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+        val signUpEmailResponse2 = gatewayClient.signUpEmail[smithy.InternalServerError](signUpEmailRequest).zioValue
 
         signUpEmailResponse2.code shouldBe StatusCode.Ok
 
@@ -216,7 +217,7 @@ class UserSignupApiSpec
 
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest].copy(email = userDetailsRow.email.value)
 
-        val signUpEmailResponse = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+        val signUpEmailResponse = gatewayClient.signUpEmail[smithy.InternalServerError](signUpEmailRequest).zioValue
 
         signUpEmailResponse.code shouldBe StatusCode.Ok
 
@@ -237,9 +238,12 @@ class UserSignupApiSpec
 
         val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest].copy(email = "invalidemail")
 
-        val signUpEmailResponse = gatewayClient.signUpEmail(signUpEmailRequest).zioValue
+        val signUpEmailResponse = gatewayClient.signUpEmail[smithy.ValidationError](signUpEmailRequest).zioValue
 
         signUpEmailResponse.code shouldBe StatusCode.BadRequest
+        signUpEmailResponse.body.left.value shouldBe smithy.ValidationError(
+          fields = List("email")
+        )
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -271,7 +275,8 @@ class UserSignupApiSpec
           otp = userOtpRow.otp.value,
         )
 
-        val signUpVerifyEmailResponse = gatewayClient.signUpVerifyEmail(signUpVerifyEmailRequest).zioValue
+        val signUpVerifyEmailResponse =
+          gatewayClient.signUpVerifyEmail[smithy.InternalServerError](signUpVerifyEmailRequest).zioValue
 
         signUpVerifyEmailResponse.code shouldBe StatusCode.Ok
 
@@ -291,9 +296,11 @@ class UserSignupApiSpec
           otp = "invalidotp"
         )
 
-        val signUpVerifyEmailResponse = gatewayClient.signUpVerifyEmail(signUpVerifyEmailRequest).zioValue
+        val signUpVerifyEmailResponse =
+          gatewayClient.signUpVerifyEmail[smithy.ValidationError](signUpVerifyEmailRequest).zioValue
 
         signUpVerifyEmailResponse.code shouldBe StatusCode.BadRequest
+        signUpVerifyEmailResponse.body.left.value shouldBe smithy.ValidationError(fields = List("otp"))
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -323,9 +330,11 @@ class UserSignupApiSpec
           otp = userOtpRow.otp.value,
         )
 
-        val signUpVerifyEmailResponse = gatewayClient.signUpVerifyEmail(signUpVerifyEmailRequest).zioValue
+        val signUpVerifyEmailResponse =
+          gatewayClient.signUpVerifyEmail[smithy.Unauthorized](signUpVerifyEmailRequest).zioValue
 
         signUpVerifyEmailResponse.code shouldBe StatusCode.Unauthorized
+        signUpVerifyEmailResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -351,9 +360,11 @@ class UserSignupApiSpec
           otp = "123ABC", // wrong otp
         )
 
-        val signUpVerifyEmailResponse = gatewayClient.signUpVerifyEmail(signUpVerifyEmailRequest).zioValue
+        val signUpVerifyEmailResponse =
+          gatewayClient.signUpVerifyEmail[smithy.Unauthorized](signUpVerifyEmailRequest).zioValue
 
         signUpVerifyEmailResponse.code shouldBe StatusCode.Unauthorized
+        signUpVerifyEmailResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -380,9 +391,11 @@ class UserSignupApiSpec
           otp = userOtpRow.otp.value,
         )
 
-        val signUpVerifyEmailResponse = gatewayClient.signUpVerifyEmail(signUpVerifyEmailRequest).zioValue
+        val signUpVerifyEmailResponse =
+          gatewayClient.signUpVerifyEmail[smithy.Unauthorized](signUpVerifyEmailRequest).zioValue
 
         signUpVerifyEmailResponse.code shouldBe StatusCode.Unauthorized
+        signUpVerifyEmailResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -413,9 +426,11 @@ class UserSignupApiSpec
           otp = userOtpRow.otp.value,
         )
 
-        val signUpVerifyEmailResponse = gatewayClient.signUpVerifyEmail(signUpVerifyEmailRequest).zioValue
+        val signUpVerifyEmailResponse =
+          gatewayClient.signUpVerifyEmail[smithy.Unauthorized](signUpVerifyEmailRequest).zioValue
 
         signUpVerifyEmailResponse.code shouldBe StatusCode.Unauthorized
+        signUpVerifyEmailResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }

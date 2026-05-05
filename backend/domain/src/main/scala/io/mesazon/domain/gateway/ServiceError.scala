@@ -46,6 +46,8 @@ object ServiceError {
         InvalidFieldError(fieldName, errorMessage, Seq(invalidValue))
     }
 
+    case object BasicCredentialsMissing extends BadRequestError("basic credentials are missing from request")
+
     case class ValidationError(invalidFields: Seq[InvalidFieldError])
         extends BadRequestError(s"request validation error ${invalidFields.mkString("[", ",", "]")}")
   }
@@ -53,13 +55,14 @@ object ServiceError {
   object UnauthorizedError {
     case object TokenMissing extends UnauthorizedError("token is missing from request")
 
+    case object EmailNotFound extends UnauthorizedError("email not found")
+
+    case object InvalidCredentials extends UnauthorizedError("invalid credentials")
+
     case class FailedToVerifyJwt(error: String, throwable: Option[Throwable] = None)
         extends UnauthorizedError(error, throwable)
 
     case class OtpValidationError(error: String) extends UnauthorizedError(error)
-
-    case class FailedToVerifyPassword(error: String, throwable: Option[Throwable] = None)
-        extends UnauthorizedError(error, throwable)
 
     case class FailedOnboardStage(
         onboardStageUser: OnboardStage,
@@ -71,6 +74,11 @@ object ServiceError {
 
     case class TokenFailedAuthorization(throwable: Throwable)
         extends UnauthorizedError("token failed authorization", Some(throwable))
+
+    case class TooManySignInAttempts(userID: UserID, actionAttemptType: ActionAttemptType, blockDurationSeconds: Long)
+        extends UnauthorizedError(
+          s"too many requests for user [$userID] and action attempt type [$actionAttemptType], block for [$blockDurationSeconds] seconds"
+        )
   }
 
   object ConflictError {

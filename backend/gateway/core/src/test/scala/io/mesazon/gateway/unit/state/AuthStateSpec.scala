@@ -1,27 +1,27 @@
-package io.mesazon.gateway.unit.service
+package io.mesazon.gateway.unit.state
 
 import io.mesazon.domain.gateway.AuthedUser
-import io.mesazon.gateway.auth.AuthorizationState
+import io.mesazon.gateway.state.AuthState
 import io.mesazon.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import org.scalactic.anyvals.PosInt
 import zio.*
 
-class AuthorizationStateSpec extends ZWordSpecBase, GatewayArbitraries {
+class AuthStateSpec extends ZWordSpecBase, GatewayArbitraries {
 
   // Overriding the default value of minSuccessful to 1 generated state doesn't affect Authorization results at all.
   override def minSuccessful: PosInt = PosInt(1)
 
-  "AuthorizationState" should {
+  "AuthState" should {
     "return the state set in the same fiber context" in forAll { (authedUser: AuthedUser) =>
       val stateResult = for {
-        authorizationState <- ZIO
-          .service[AuthorizationState]
+        authState <- ZIO
+          .service[AuthState]
           .provide(
-            AuthorizationState.live,
+            AuthState.live,
             ZLayer.scoped(FiberRef.make(Option.empty[AuthedUser])),
           )
-        _     <- authorizationState.set(authedUser)
-        state <- authorizationState.get()
+        _     <- authState.set(authedUser)
+        state <- authState.get()
       } yield state
 
       stateResult.zioValue shouldBe authedUser
@@ -29,14 +29,14 @@ class AuthorizationStateSpec extends ZWordSpecBase, GatewayArbitraries {
 
     "return the state if set in parent fiber and get is called in child fiber" in forAll { (authedUser: AuthedUser) =>
       val stateResult = for {
-        authorizationState <- ZIO
-          .service[AuthorizationState]
+        authState <- ZIO
+          .service[AuthState]
           .provide(
-            AuthorizationState.live,
+            AuthState.live,
             ZLayer.scoped(FiberRef.make(Option.empty[AuthedUser])),
           )
-        _          <- authorizationState.set(authedUser) // Set the state in a main fiber
-        stateFiber <- authorizationState.get().fork      // Get the state in a sub fiber
+        _          <- authState.set(authedUser) // Set the state in a main fiber
+        stateFiber <- authState.get().fork      // Get the state in a sub fiber
         state      <- stateFiber.join
       } yield state
 
@@ -45,14 +45,14 @@ class AuthorizationStateSpec extends ZWordSpecBase, GatewayArbitraries {
 
     "return no state if set in different fiber context" in forAll { (authedUser: AuthedUser) =>
       val stateResult = for {
-        authorizationState <- ZIO
-          .service[AuthorizationState]
+        authState <- ZIO
+          .service[AuthState]
           .provide(
-            AuthorizationState.live,
+            AuthState.live,
             ZLayer.scoped(FiberRef.make(Option.empty[AuthedUser])),
           )
-        _          <- authorizationState.set(authedUser).fork // Set the state in a different fiber
-        stateFiber <- authorizationState.get().fork           // Get the state in a different fiber
+        _          <- authState.set(authedUser).fork // Set the state in a different fiber
+        stateFiber <- authState.get().fork           // Get the state in a different fiber
         state      <- stateFiber.join
       } yield state
 

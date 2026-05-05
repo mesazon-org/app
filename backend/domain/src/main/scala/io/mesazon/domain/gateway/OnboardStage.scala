@@ -1,5 +1,6 @@
 package io.mesazon.domain.gateway
 
+// When new stages are added, make sure to update the following lists in the companion object:
 enum OnboardStage {
   case EmailVerification
   case EmailVerified
@@ -9,6 +10,12 @@ enum OnboardStage {
 }
 
 object OnboardStage {
+  val signInAllowedStages = List(
+    OnboardStage.PasswordProvided,
+    OnboardStage.PhoneVerification,
+    OnboardStage.PhoneVerified,
+  )
+
   val signUpEmailStages = List(
     OnboardStage.EmailVerification,
     OnboardStage.EmailVerified,

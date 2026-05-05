@@ -1,17 +1,17 @@
-package io.mesazon.gateway.auth
+package io.mesazon.gateway.state
 
 import cats.syntax.all.*
 import io.mesazon.domain.gateway.AuthedUser
 import zio.*
 
-trait AuthorizationState {
+trait AuthState {
   def get(): UIO[AuthedUser]
   def set(authedUser: AuthedUser): UIO[Unit]
 }
 
-object AuthorizationState {
+object AuthState {
 
-  private final class AuthorizationStateImpl(authedUserFRef: FiberRef[Option[AuthedUser]]) extends AuthorizationState {
+  private final class AuthStateImpl(authedUserFRef: FiberRef[Option[AuthedUser]]) extends AuthState {
     def get(): UIO[AuthedUser] =
       authedUserFRef.get.someOrFailException.orDie.tapErrorCause(cause =>
         ZIO.logErrorCause("Unexpected error failed to get authorized user details", cause)
@@ -21,7 +21,7 @@ object AuthorizationState {
       authedUserFRef.set(authedUser.some)
   }
 
-  private def observed(state: AuthorizationState): AuthorizationState = state
+  private def observed(state: AuthState): AuthState = state
 
-  val live = ZLayer.derive[AuthorizationStateImpl] >>> ZLayer.fromFunction(observed)
+  val live = ZLayer.derive[AuthStateImpl] >>> ZLayer.fromFunction(observed)
 }

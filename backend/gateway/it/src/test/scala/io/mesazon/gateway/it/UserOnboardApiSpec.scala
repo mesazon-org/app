@@ -2,12 +2,13 @@ package io.mesazon.gateway.it
 
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.JwtService
 import io.mesazon.gateway.config.{JwtConfig, RepositoryConfig}
 import io.mesazon.gateway.it.client.GatewayClient
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
+import io.mesazon.gateway.it.client.GatewayClient.given
 import io.mesazon.gateway.repository.domain.{UserDetailsRow, UserOtpRow}
 import io.mesazon.gateway.repository.queries.*
+import io.mesazon.gateway.service.JwtService
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.MailHogClient.MailHogClientConfig
 import io.mesazon.gateway.utils.{MailHogClient, RepositoryArbitraries, SmithyArbitraries}
@@ -137,14 +138,14 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardPasswordResponse = gatewayClient
-          .onboardPassword(
+          .onboardPassword[smithy.InternalServerError](
             onboardPasswordRequest,
             Some(accessToken),
           )
           .zioValue
 
         onboardPasswordResponse.code shouldBe StatusCode.Ok
-        onboardPasswordResponse.body.value.onboardStage.value shouldBe "PASSWORD_PROVIDED"
+        onboardPasswordResponse.body.value.onboardStage.name shouldBe "PASSWORD_PROVIDED"
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
 
@@ -155,7 +156,7 @@ class UserOnboardApiSpec
         userCredentialsRowsAll.head.userID shouldBe userDetailsRow.userID
       }
 
-      "fail with BadRequest when request is invalid" in withContext { context =>
+      "fail with BadRequest ValidationError when request is invalid" in withContext { context =>
         import context.*
 
         val userID = arbitrarySample[UserID]
@@ -167,13 +168,16 @@ class UserOnboardApiSpec
         )
 
         val onboardPasswordResponse = gatewayClient
-          .onboardPassword(
+          .onboardPassword[smithy.ValidationError](
             onboardPasswordRequest,
             Some(AccessToken.assume(accessToken.value)),
           )
           .zioValue
 
         onboardPasswordResponse.code shouldBe StatusCode.BadRequest
+        onboardPasswordResponse.body.left.value shouldBe smithy.ValidationError(
+          fields = List("password")
+        )
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -204,13 +208,14 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardPasswordResponse = gatewayClient
-          .onboardPassword(
+          .onboardPassword[smithy.Unauthorized](
             onboardPasswordRequest,
             Some(AccessToken.assume(accessToken.value)),
           )
           .zioValue
 
         onboardPasswordResponse.code shouldBe StatusCode.Unauthorized
+        onboardPasswordResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -223,10 +228,11 @@ class UserOnboardApiSpec
         )
 
         val onboardPasswordResponse = gatewayClient
-          .onboardPassword(onboardPasswordRequest, None)
+          .onboardPassword[smithy.Unauthorized](onboardPasswordRequest, None)
           .zioValue
 
         onboardPasswordResponse.code shouldBe StatusCode.Unauthorized
+        onboardPasswordResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -239,10 +245,11 @@ class UserOnboardApiSpec
         )
 
         val onboardPasswordResponse = gatewayClient
-          .onboardPassword(onboardPasswordRequest, Some(AccessToken("invalidtoken")))
+          .onboardPassword[smithy.Unauthorized](onboardPasswordRequest, Some(AccessToken("invalidtoken")))
           .zioValue
 
         onboardPasswordResponse.code shouldBe StatusCode.Unauthorized
+        onboardPasswordResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -267,14 +274,14 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardDetailsResponse = gatewayClient
-          .onboardDetails(
+          .onboardDetails[smithy.InternalServerError](
             onboardDetailsRequest,
             Some(accessToken),
           )
           .zioValue
 
         onboardDetailsResponse.code shouldBe StatusCode.Ok
-        onboardDetailsResponse.body.value.onboardStage.value shouldBe "PHONE_VERIFICATION"
+        onboardDetailsResponse.body.value.onboardStage.name shouldBe "PHONE_VERIFICATION"
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -300,7 +307,7 @@ class UserOnboardApiSpec
         )
       }
 
-      "fail with BadRequest when request is invalid" in withContext { context =>
+      "fail with BadRequest ValidationError when request is invalid" in withContext { context =>
         import context.*
 
         val userID = arbitrarySample[UserID]
@@ -312,13 +319,16 @@ class UserOnboardApiSpec
         )
 
         val onboardDetailsResponse = gatewayClient
-          .onboardDetails(
+          .onboardDetails[smithy.ValidationError](
             onboardDetailsRequest,
             Some(accessToken),
           )
           .zioValue
 
         onboardDetailsResponse.code shouldBe StatusCode.BadRequest
+        onboardDetailsResponse.body.left.value shouldBe smithy.ValidationError(
+          fields = List("phoneNationalNumber")
+        )
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -347,13 +357,14 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardDetailsResponse = gatewayClient
-          .onboardDetails(
+          .onboardDetails[smithy.Unauthorized](
             onboardDetailsRequest,
             Some(accessToken),
           )
           .zioValue
 
         onboardDetailsResponse.code shouldBe StatusCode.Unauthorized
+        onboardDetailsResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -373,10 +384,11 @@ class UserOnboardApiSpec
         val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
 
         val onboardDetailsResponse = gatewayClient
-          .onboardDetails(onboardDetailsRequest, None)
+          .onboardDetails[smithy.Unauthorized](onboardDetailsRequest, None)
           .zioValue
 
         onboardDetailsResponse.code shouldBe StatusCode.Unauthorized
+        onboardDetailsResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -387,10 +399,11 @@ class UserOnboardApiSpec
         val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
 
         val onboardDetailsResponse = gatewayClient
-          .onboardDetails(onboardDetailsRequest, Some(AccessToken("invalidtoken")))
+          .onboardDetails[smithy.Unauthorized](onboardDetailsRequest, Some(AccessToken("invalidtoken")))
           .zioValue
 
         onboardDetailsResponse.code shouldBe StatusCode.Unauthorized
+        onboardDetailsResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -431,14 +444,14 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumber(
+          .onboardVerifyPhoneNumber[smithy.InternalServerError](
             onboardVerifyPhoneNumberRequest,
             Some(accessToken),
           )
           .zioValue
 
         onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Ok
-        onboardVerifyPhoneNumberResponse.body.value.onboardStage.value shouldBe "PHONE_VERIFIED"
+        onboardVerifyPhoneNumberResponse.body.value.onboardStage.name shouldBe "PHONE_VERIFIED"
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -490,13 +503,14 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumber(
+          .onboardVerifyPhoneNumber[smithy.Unauthorized](
             onboardVerifyPhoneNumberRequest,
             Some(accessToken),
           )
           .zioValue
 
         onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -519,10 +533,11 @@ class UserOnboardApiSpec
         val onboardVerifyPhoneNumberRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberRequest]
 
         val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumber(onboardVerifyPhoneNumberRequest, None)
+          .onboardVerifyPhoneNumber[smithy.Unauthorized](onboardVerifyPhoneNumberRequest, None)
           .zioValue
 
         onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -533,10 +548,14 @@ class UserOnboardApiSpec
         val onboardVerifyPhoneNumberRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberRequest]
 
         val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumber(onboardVerifyPhoneNumberRequest, Some(AccessToken("invalidtoken")))
+          .onboardVerifyPhoneNumber[smithy.Unauthorized](
+            onboardVerifyPhoneNumberRequest,
+            Some(AccessToken("invalidtoken")),
+          )
           .zioValue
 
         onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -575,13 +594,14 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumber(
+          .onboardVerifyPhoneNumber[smithy.Unauthorized](
             onboardVerifyPhoneNumberRequest,
             Some(accessToken),
           )
           .zioValue
 
         onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -632,13 +652,14 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumber(
+          .onboardVerifyPhoneNumber[smithy.Unauthorized](
             onboardVerifyPhoneNumberRequest,
             Some(accessToken),
           )
           .zioValue
 
         onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -675,13 +696,14 @@ class UserOnboardApiSpec
         val onboardVerifyPhoneNumberRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberRequest]
 
         val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumber(
+          .onboardVerifyPhoneNumber[smithy.Unauthorized](
             onboardVerifyPhoneNumberRequest,
             Some(accessToken),
           )
           .zioValue
 
         onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 

@@ -18,10 +18,9 @@ operation SignUpEmail {
         request: SignUpEmailRequest
     }
     output: SignUpEmailResponse
-    errors: [ValidationError, BadRequest, InternalServerError]
+    errors: [ValidationError, InternalServerError]
 }
 
-@auth([])
 @http(method: "POST", uri: "/signup/verify/email", code: 200)
 operation SignUpVerifyEmail {
     input := {
@@ -30,5 +29,5 @@ operation SignUpVerifyEmail {
         request: SignUpVerifyEmailRequest
     }
     output: SignUpVerifyEmailResponse
-    errors: [ValidationError, BadRequest, Unauthorized, InternalServerError]
+    errors: [ValidationError, Unauthorized, InternalServerError]
 }

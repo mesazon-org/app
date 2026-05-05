@@ -4,12 +4,12 @@ import com.dimafeng.testcontainers.*
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import fs2.io.net.Network
-import io.mesazon.domain.gateway.AccessToken
-import io.mesazon.gateway.it.client.GatewayClient.*
+import io.mesazon.domain.gateway.*
+import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.smithy
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
-import sttp.client4.jsoniter.asJson
+import sttp.client4.jsoniter.{asJson, asJsonEitherOrFail}
 import sttp.model.*
 import zio.*
 import zio.interop.catz.*
@@ -55,6 +55,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.OnboardDetailsResponse]           = JsonCodecMaker.make[smithy.OnboardDetailsResponse]
   given JsonValueCodec[smithy.OnboardVerifyPhoneNumberResponse] =
     JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberResponse]
+  given JsonValueCodec[smithy.SignInResponse] = JsonCodecMaker.make[smithy.SignInResponse]
 
   def liveness: Task[StatusCode] = basicRequest
     .get(healthUri.addPath("liveness"))
@@ -66,28 +67,28 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     .send(sttpBackend)
     .map(_.code)
 
-  def signUpEmail(
+  def signUpEmail[E: JsonValueCodec](
       signUpEmailRequest: smithy.SignUpEmailRequest
-  ): Task[Response[Either[ResponseException[String], smithy.SignUpEmailResponse]]] =
+  ): Task[Response[Either[E, smithy.SignUpEmailResponse]]] =
     basicRequest
       .post(externalUri.addPath("signup", "email"))
       .body(asJson(signUpEmailRequest))
-      .response(asJson[smithy.SignUpEmailResponse])
+      .response(asJsonEitherOrFail[E, smithy.SignUpEmailResponse])
       .send(sttpBackend)
 
-  def signUpVerifyEmail(
+  def signUpVerifyEmail[E: JsonValueCodec](
       verifyEmailRequest: smithy.SignUpVerifyEmailRequest
-  ): Task[Response[Either[ResponseException[String], smithy.SignUpVerifyEmailResponse]]] =
+  ): Task[Response[Either[E, smithy.SignUpVerifyEmailResponse]]] =
     basicRequest
       .post(externalUri.addPath("signup", "verify", "email"))
       .body(asJson(verifyEmailRequest))
-      .response(asJson[smithy.SignUpVerifyEmailResponse])
+      .response(asJsonEitherOrFail[E, smithy.SignUpVerifyEmailResponse])
       .send(sttpBackend)
 
-  def onboardPassword(
+  def onboardPassword[E: JsonValueCodec](
       onboardPasswordRequest: smithy.OnboardPasswordRequest,
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[ResponseException[String], smithy.OnboardPasswordResponse]]] =
+  ): Task[Response[Either[E, smithy.OnboardPasswordResponse]]] =
     basicRequest
       .post(externalUri.addPath("onboard", "password"))
       .body(asJson(onboardPasswordRequest))
@@ -96,13 +97,13 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .response(asJson[smithy.OnboardPasswordResponse])
+      .response(asJsonEitherOrFail[E, smithy.OnboardPasswordResponse])
       .send(sttpBackend)
 
-  def onboardDetails(
+  def onboardDetails[E: JsonValueCodec](
       onboardDetailsRequest: smithy.OnboardDetailsRequest,
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[ResponseException[String], smithy.OnboardDetailsResponse]]] =
+  ): Task[Response[Either[E, smithy.OnboardDetailsResponse]]] =
     basicRequest
       .post(externalUri.addPath("onboard", "details"))
       .body(asJson(onboardDetailsRequest))
@@ -111,13 +112,13 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .response(asJson[smithy.OnboardDetailsResponse])
+      .response(asJsonEitherOrFail[E, smithy.OnboardDetailsResponse])
       .send(sttpBackend)
 
-  def onboardVerifyPhoneNumber(
+  def onboardVerifyPhoneNumber[E: JsonValueCodec](
       onboardVerifyPhoneNumberRequest: smithy.OnboardVerifyPhoneNumberRequest,
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[ResponseException[String], smithy.OnboardVerifyPhoneNumberResponse]]] =
+  ): Task[Response[Either[E, smithy.OnboardVerifyPhoneNumberResponse]]] =
     basicRequest
       .post(externalUri.addPath("onboard", "verify", "phone-number"))
       .body(asJson(onboardVerifyPhoneNumberRequest))
@@ -126,11 +127,28 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .response(asJson[smithy.OnboardVerifyPhoneNumberResponse])
+      .response(asJsonEitherOrFail[E, smithy.OnboardVerifyPhoneNumberResponse])
+      .send(sttpBackend)
+
+  def signIn[E: JsonValueCodec](
+      email: Email,
+      password: Password,
+      addBasicAuth: Boolean = true,
+  ): Task[Response[Either[E, smithy.SignInResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("signin"))
+      .pipe(request => if (addBasicAuth) request.auth.basic(email.value, password.value) else request)
+      .response(asJsonEitherOrFail[E, smithy.SignInResponse])
       .send(sttpBackend)
 }
 
 object GatewayClient {
+
+  given JsonValueCodec[smithy.ValidationError]     = JsonCodecMaker.make[smithy.ValidationError]
+  given JsonValueCodec[smithy.BadRequest]          = JsonCodecMaker.make[smithy.BadRequest]
+  given JsonValueCodec[smithy.Unauthorized]        = JsonCodecMaker.make[smithy.Unauthorized]
+  given JsonValueCodec[smithy.InternalServerError] = JsonCodecMaker.make[smithy.InternalServerError]
+
   // Remove stupid warning that can't execute bin/sh in distroless images
   lazy val ServiceName     = "gateway"
   lazy val ExternalPort    = 8080

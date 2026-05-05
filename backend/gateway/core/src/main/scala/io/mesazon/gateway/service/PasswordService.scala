@@ -1,4 +1,4 @@
-package io.mesazon.gateway.auth
+package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.PasswordConfig

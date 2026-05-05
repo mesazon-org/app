@@ -3,6 +3,7 @@ package io.mesazon.gateway.config
 case class RepositoryConfig(
     schema: String,
     userCredentialsTable: String = "",
+    userActionAttemptTable: String = "",
     userDetailsTable: String = "",
     userOtpTable: String = "",
     userTokenTable: String = "",
@@ -12,6 +13,7 @@ case class RepositoryConfig(
 ) {
   val allTableNames = List(
     userCredentialsTable,
+    userActionAttemptTable,
     userDetailsTable,
     userOtpTable,
     userTokenTable,

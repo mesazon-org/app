@@ -1,9 +1,9 @@
 package io.mesazon.gateway.unit.service
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.AuthorizationService
+import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.mock.JwtServiceMock
-import io.mesazon.gateway.{smithy, Mocks}
+import io.mesazon.gateway.service.{AuthorizationService, ServiceTask}
 import io.mesazon.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import org.http4s.*
 import org.http4s.headers.Authorization
@@ -30,20 +30,24 @@ class AuthorizationServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         val authorizationService = buildAuthorizationService(authedUser)
 
-        authorizationService
+        val serviceError = authorizationService
           .auth(request)
           .zioError
-          .asInstanceOf[smithy.Unauthorized] shouldBe smithy.Unauthorized()
+
+        serviceError shouldBe a[ServiceError.UnauthorizedError.TokenMissing.type]
+        serviceError.asInstanceOf[
+          ServiceError.UnauthorizedError.TokenMissing.type
+        ] shouldBe ServiceError.UnauthorizedError.TokenMissing
       }
     }
   }
 
   trait TestContext extends JwtServiceMock {
-    def buildAuthorizationService(authedUser: AuthedUser): AuthorizationService[Throwable] = ZIO
-      .service[AuthorizationService[Throwable]]
+    def buildAuthorizationService(authedUser: AuthedUser): AuthorizationService[ServiceTask] = ZIO
+      .service[AuthorizationService[ServiceTask]]
       .provide(
-        AuthorizationService.live,
-        Mocks.authorizationStateLive(authedUser),
+        AuthorizationService.local,
+        Mocks.authStateLive(authedUser),
         jwtServiceMockLive(),
       )
       .zioValue
