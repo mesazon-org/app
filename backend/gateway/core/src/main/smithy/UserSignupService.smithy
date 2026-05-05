@@ -7,27 +7,27 @@ use alloy#simpleRestJson
 @simpleRestJson
 service UserSignUpService {
     version: "1.0.0",
-    operations: [SignUpEmail, SignUpVerifyEmail]
+    operations: [SignUpEmailPost, SignUpVerifyEmailPost]
 }
 
 @http(method: "POST", uri: "/signup/email", code: 200)
-operation SignUpEmail {
+operation SignUpEmailPost {
     input := {
         @required
         @httpPayload
-        request: SignUpEmailRequest
+        request: SignUpEmailPostRequest
     }
-    output: SignUpEmailResponse
+    output: SignUpEmailPostResponse
     errors: [ValidationError, InternalServerError]
 }
 
 @http(method: "POST", uri: "/signup/verify/email", code: 200)
-operation SignUpVerifyEmail {
+operation SignUpVerifyEmailPost {
     input := {
         @required
         @httpPayload
-        request: SignUpVerifyEmailRequest
+        request: SignUpVerifyEmailPostRequest
     }
-    output: SignUpVerifyEmailResponse
+    output: SignUpVerifyEmailPostResponse
     errors: [ValidationError, Unauthorized, InternalServerError]
 }

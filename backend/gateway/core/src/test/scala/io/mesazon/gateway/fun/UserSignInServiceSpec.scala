@@ -23,9 +23,9 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
         )
 
-        val signInEmailResponse = userSignInService.signIn().zioEither
+        val signInEmailPostResponse = userSignInService.signInPost().zioEither
 
-        assert(signInEmailResponse.isRight)
+        assert(signInEmailPostResponse.isRight)
 
         checkAuthState(
           expectedGetCalls = 1
@@ -51,7 +51,7 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           userDetailsRows = Map.empty,
         )
 
-        val serviceError = userSignInService.signIn().zioError
+        val serviceError = userSignInService.signInPost().zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.UserNotFoundError]
         serviceError
@@ -82,7 +82,7 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           jwtServiceServiceErrorOpt = Some(ServiceError.InternalServerError.UnexpectedError("JWT generation failed")),
         )
 
-        val serviceError = userSignInService.signIn().zioError
+        val serviceError = userSignInService.signInPost().zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         serviceError

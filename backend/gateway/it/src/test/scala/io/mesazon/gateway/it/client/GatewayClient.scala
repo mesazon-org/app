@@ -42,20 +42,20 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     override def nullValue: smithy.OnboardStage = null
   }
 
-  given JsonValueCodec[smithy.SignUpEmailRequest]              = JsonCodecMaker.make[smithy.SignUpEmailRequest]
-  given JsonValueCodec[smithy.SignUpVerifyEmailRequest]        = JsonCodecMaker.make[smithy.SignUpVerifyEmailRequest]
-  given JsonValueCodec[smithy.OnboardPasswordRequest]          = JsonCodecMaker.make[smithy.OnboardPasswordRequest]
-  given JsonValueCodec[smithy.OnboardDetailsRequest]           = JsonCodecMaker.make[smithy.OnboardDetailsRequest]
-  given JsonValueCodec[smithy.OnboardVerifyPhoneNumberRequest] =
-    JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberRequest]
+  given JsonValueCodec[smithy.SignUpEmailPostRequest]       = JsonCodecMaker.make[smithy.SignUpEmailPostRequest]
+  given JsonValueCodec[smithy.SignUpVerifyEmailPostRequest] = JsonCodecMaker.make[smithy.SignUpVerifyEmailPostRequest]
+  given JsonValueCodec[smithy.OnboardPasswordPostRequest]   = JsonCodecMaker.make[smithy.OnboardPasswordPostRequest]
+  given JsonValueCodec[smithy.OnboardDetailsPostRequest]    = JsonCodecMaker.make[smithy.OnboardDetailsPostRequest]
+  given JsonValueCodec[smithy.OnboardVerifyPhoneNumberPostRequest] =
+    JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberPostRequest]
 
-  given JsonValueCodec[smithy.SignUpEmailResponse]              = JsonCodecMaker.make[smithy.SignUpEmailResponse]
-  given JsonValueCodec[smithy.SignUpVerifyEmailResponse]        = JsonCodecMaker.make[smithy.SignUpVerifyEmailResponse]
-  given JsonValueCodec[smithy.OnboardPasswordResponse]          = JsonCodecMaker.make[smithy.OnboardPasswordResponse]
-  given JsonValueCodec[smithy.OnboardDetailsResponse]           = JsonCodecMaker.make[smithy.OnboardDetailsResponse]
-  given JsonValueCodec[smithy.OnboardVerifyPhoneNumberResponse] =
-    JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberResponse]
-  given JsonValueCodec[smithy.SignInResponse] = JsonCodecMaker.make[smithy.SignInResponse]
+  given JsonValueCodec[smithy.SignUpEmailPostResponse]       = JsonCodecMaker.make[smithy.SignUpEmailPostResponse]
+  given JsonValueCodec[smithy.SignUpVerifyEmailPostResponse] = JsonCodecMaker.make[smithy.SignUpVerifyEmailPostResponse]
+  given JsonValueCodec[smithy.OnboardPasswordPostResponse]   = JsonCodecMaker.make[smithy.OnboardPasswordPostResponse]
+  given JsonValueCodec[smithy.OnboardDetailsPostResponse]    = JsonCodecMaker.make[smithy.OnboardDetailsPostResponse]
+  given JsonValueCodec[smithy.OnboardVerifyPhoneNumberPostResponse] =
+    JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberPostResponse]
+  given JsonValueCodec[smithy.SignInPostResponse] = JsonCodecMaker.make[smithy.SignInPostResponse]
 
   def liveness: Task[StatusCode] = basicRequest
     .get(healthUri.addPath("liveness"))
@@ -67,78 +67,78 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     .send(sttpBackend)
     .map(_.code)
 
-  def signUpEmail[E: JsonValueCodec](
-      signUpEmailRequest: smithy.SignUpEmailRequest
-  ): Task[Response[Either[E, smithy.SignUpEmailResponse]]] =
+  def signUpEmailPost[E: JsonValueCodec](
+      signUpEmailPostRequest: smithy.SignUpEmailPostRequest
+  ): Task[Response[Either[E, smithy.SignUpEmailPostResponse]]] =
     basicRequest
       .post(externalUri.addPath("signup", "email"))
-      .body(asJson(signUpEmailRequest))
-      .response(asJsonEitherOrFail[E, smithy.SignUpEmailResponse])
+      .body(asJson(signUpEmailPostRequest))
+      .response(asJsonEitherOrFail[E, smithy.SignUpEmailPostResponse])
       .send(sttpBackend)
 
-  def signUpVerifyEmail[E: JsonValueCodec](
-      verifyEmailRequest: smithy.SignUpVerifyEmailRequest
-  ): Task[Response[Either[E, smithy.SignUpVerifyEmailResponse]]] =
+  def signUpVerifyEmailPost[E: JsonValueCodec](
+      verifyEmailRequest: smithy.SignUpVerifyEmailPostRequest
+  ): Task[Response[Either[E, smithy.SignUpVerifyEmailPostResponse]]] =
     basicRequest
       .post(externalUri.addPath("signup", "verify", "email"))
       .body(asJson(verifyEmailRequest))
-      .response(asJsonEitherOrFail[E, smithy.SignUpVerifyEmailResponse])
+      .response(asJsonEitherOrFail[E, smithy.SignUpVerifyEmailPostResponse])
       .send(sttpBackend)
 
-  def onboardPassword[E: JsonValueCodec](
-      onboardPasswordRequest: smithy.OnboardPasswordRequest,
+  def onboardPasswordPost[E: JsonValueCodec](
+      onboardPasswordPostRequest: smithy.OnboardPasswordPostRequest,
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, smithy.OnboardPasswordResponse]]] =
+  ): Task[Response[Either[E, smithy.OnboardPasswordPostResponse]]] =
     basicRequest
       .post(externalUri.addPath("onboard", "password"))
-      .body(asJson(onboardPasswordRequest))
+      .body(asJson(onboardPasswordPostRequest))
       .pipe(request =>
         accessTokenOpt.fold(request)(accessToken =>
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .response(asJsonEitherOrFail[E, smithy.OnboardPasswordResponse])
+      .response(asJsonEitherOrFail[E, smithy.OnboardPasswordPostResponse])
       .send(sttpBackend)
 
-  def onboardDetails[E: JsonValueCodec](
-      onboardDetailsRequest: smithy.OnboardDetailsRequest,
+  def onboardDetailsPost[E: JsonValueCodec](
+      onboardDetailsPostRequest: smithy.OnboardDetailsPostRequest,
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, smithy.OnboardDetailsResponse]]] =
+  ): Task[Response[Either[E, smithy.OnboardDetailsPostResponse]]] =
     basicRequest
       .post(externalUri.addPath("onboard", "details"))
-      .body(asJson(onboardDetailsRequest))
+      .body(asJson(onboardDetailsPostRequest))
       .pipe(request =>
         accessTokenOpt.fold(request)(accessToken =>
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .response(asJsonEitherOrFail[E, smithy.OnboardDetailsResponse])
+      .response(asJsonEitherOrFail[E, smithy.OnboardDetailsPostResponse])
       .send(sttpBackend)
 
-  def onboardVerifyPhoneNumber[E: JsonValueCodec](
-      onboardVerifyPhoneNumberRequest: smithy.OnboardVerifyPhoneNumberRequest,
+  def onboardVerifyPhoneNumberPost[E: JsonValueCodec](
+      onboardVerifyPhoneNumberPostRequest: smithy.OnboardVerifyPhoneNumberPostRequest,
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, smithy.OnboardVerifyPhoneNumberResponse]]] =
+  ): Task[Response[Either[E, smithy.OnboardVerifyPhoneNumberPostResponse]]] =
     basicRequest
       .post(externalUri.addPath("onboard", "verify", "phone-number"))
-      .body(asJson(onboardVerifyPhoneNumberRequest))
+      .body(asJson(onboardVerifyPhoneNumberPostRequest))
       .pipe(request =>
         accessTokenOpt.fold(request)(accessToken =>
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .response(asJsonEitherOrFail[E, smithy.OnboardVerifyPhoneNumberResponse])
+      .response(asJsonEitherOrFail[E, smithy.OnboardVerifyPhoneNumberPostResponse])
       .send(sttpBackend)
 
-  def signIn[E: JsonValueCodec](
+  def signInPost[E: JsonValueCodec](
       email: Email,
       password: Password,
       addBasicAuth: Boolean = true,
-  ): Task[Response[Either[E, smithy.SignInResponse]]] =
+  ): Task[Response[Either[E, smithy.SignInPostResponse]]] =
     basicRequest
       .post(externalUri.addPath("signin"))
       .pipe(request => if (addBasicAuth) request.auth.basic(email.value, password.value) else request)
-      .response(asJsonEitherOrFail[E, smithy.SignInResponse])
+      .response(asJsonEitherOrFail[E, smithy.SignInPostResponse])
       .send(sttpBackend)
 }
 

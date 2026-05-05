@@ -10,21 +10,21 @@ import io.mesazon.gateway.validation.service.*
 import io.mesazon.testkit.base.*
 import zio.*
 
-class OnboardDetailsServiceValidatorSpec extends ZWordSpecBase, SmithyArbitraries {
+class OnboardDetailsPostRequestServiceValidatorSpec extends ZWordSpecBase, SmithyArbitraries {
 
-  "OnboardDetailsServiceValidator" should {
+  "OnboardDetailsPostRequestServiceValidator" should {
     "successfully validate valid onboard password" in {
       val onboardDetailsServiceValidator = ZIO
-        .service[OnboardDetailsServiceValidator]
+        .service[OnboardDetailsPostRequestServiceValidator]
         .provide(
-          OnboardDetailsServiceValidator.live,
+          OnboardDetailsPostRequestServiceValidator.live,
           PhoneNumberDomainValidator.live,
           PhoneNumberUtil.live,
           ZLayer.succeed(PhoneNumberValidatorConfig(supportedPhoneRegions = Set("CY", "GB"))),
         )
         .zioValue
 
-      val onboardDetailsRequest = arbitrarySample[smithy.OnboardDetailsRequest]
+      val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
         .copy(
           phoneNumber = smithy.PhoneNumberRequest(
             phoneCountryCode = "+357",
@@ -32,8 +32,8 @@ class OnboardDetailsServiceValidatorSpec extends ZWordSpecBase, SmithyArbitrarie
           )
         )
 
-      onboardDetailsServiceValidator.validate(onboardDetailsRequest).zioValue shouldBe OnboardDetails(
-        fullName = FullName.assume(onboardDetailsRequest.fullName),
+      onboardDetailsServiceValidator.validate(onboardDetailsPostRequest).zioValue shouldBe OnboardDetails(
+        fullName = FullName.assume(onboardDetailsPostRequest.fullName),
         phoneNumber = PhoneNumber(
           phoneRegion = PhoneRegion.assume("CY"),
           phoneCountryCode = PhoneCountryCode.assume("+357"),
@@ -45,16 +45,16 @@ class OnboardDetailsServiceValidatorSpec extends ZWordSpecBase, SmithyArbitrarie
 
     "fail to validate invalid onboard password" in {
       val onboardDetailsServiceValidator = ZIO
-        .service[OnboardDetailsServiceValidator]
+        .service[OnboardDetailsPostRequestServiceValidator]
         .provide(
-          OnboardDetailsServiceValidator.live,
+          OnboardDetailsPostRequestServiceValidator.live,
           PhoneNumberDomainValidator.live,
           PhoneNumberUtil.live,
           ZLayer.succeed(PhoneNumberValidatorConfig(supportedPhoneRegions = Set("CY", "GB"))),
         )
         .zioValue
 
-      val onboardDetailsRequest = smithy.OnboardDetailsRequest(
+      val onboardDetailsPostRequest = smithy.OnboardDetailsPostRequest(
         fullName = "",
         phoneNumber = smithy.PhoneNumberRequest(
           phoneCountryCode = "+123",
@@ -62,7 +62,7 @@ class OnboardDetailsServiceValidatorSpec extends ZWordSpecBase, SmithyArbitrarie
         ),
       )
 
-      onboardDetailsServiceValidator.validate(onboardDetailsRequest).zioError shouldBe
+      onboardDetailsServiceValidator.validate(onboardDetailsPostRequest).zioError shouldBe
         ServiceError.BadRequestError.ValidationError(
           invalidFields = List(
             InvalidFieldError(

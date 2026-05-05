@@ -6,7 +6,7 @@ import io.mesazon.gateway.HttpErrorHandler
 import io.mesazon.gateway.config.AuthenticationConfig
 import io.mesazon.gateway.repository.{UserActionAttemptRepository, UserCredentialsRepository, UserDetailsRepository}
 import io.mesazon.gateway.state.AuthState
-import io.mesazon.gateway.validation.service.BasicCredentialsServiceValidator
+import io.mesazon.gateway.validation.service.BasicCredentialsRequestServiceValidator
 import org.http4s.headers.Authorization
 import org.http4s.{BasicCredentials as Http4sBasicCredentials, *}
 import zio.*
@@ -26,7 +26,7 @@ object AuthenticationService {
       userActionAttemptRepository: UserActionAttemptRepository,
       passwordService: PasswordService,
       authState: AuthState,
-      basicCredentialsServiceValidator: BasicCredentialsServiceValidator,
+      basicCredentialsRequestServiceValidator: BasicCredentialsRequestServiceValidator,
       timeProvider: TimeProvider,
   ) extends AuthenticationService[ServiceTask] {
 
@@ -41,7 +41,7 @@ object AuthenticationService {
         basicCredentialsRequest <- ZIO.getOrFailWith(ServiceError.BadRequestError.BasicCredentialsMissing)(
           basicCredentialsRequestOpt
         )
-        basicCredentials <- basicCredentialsServiceValidator.validate(basicCredentialsRequest)
+        basicCredentials <- basicCredentialsRequestServiceValidator.validate(basicCredentialsRequest)
         userDetails      <- userDetailsRepository
           .getUserDetailsByEmail(basicCredentials.email)
           .someOrFail(

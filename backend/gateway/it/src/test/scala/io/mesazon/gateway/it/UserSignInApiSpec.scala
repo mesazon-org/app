@@ -120,10 +120,11 @@ class UserSignInApiSpec
 
         postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
 
-        val signInResponse = gatewayClient.signIn[smithy.InternalServerError](userDetailsRow.email, password).zioValue
+        val signInPostResponse =
+          gatewayClient.signInPost[smithy.InternalServerError](userDetailsRow.email, password).zioValue
 
-        signInResponse.code shouldBe StatusCode.Ok
-        signInResponse.body.value.onboardStage shouldBe onboardStageFromDomainToSmithy(onboardStage)
+        signInPostResponse.code shouldBe StatusCode.Ok
+        signInPostResponse.body.value.onboardStage shouldBe onboardStageFromDomainToSmithy(onboardStage)
 
         val userActionAttemptRowsAll =
           postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
@@ -168,10 +169,11 @@ class UserSignInApiSpec
           postgresClient.executeQuery(userTokenQueries.insertUserToken(existingRefreshTokenRow)).zioValue
 
           // Now attempt to sign in, should create a new refresh token in addition to existing one
-          val signInResponse = gatewayClient.signIn[smithy.InternalServerError](userDetailsRow.email, password).zioValue
+          val signInPostResponse =
+            gatewayClient.signInPost[smithy.InternalServerError](userDetailsRow.email, password).zioValue
 
-          signInResponse.code shouldBe StatusCode.Ok
-          signInResponse.body.value.onboardStage shouldBe onboardStageFromDomainToSmithy(onboardStage)
+          signInPostResponse.code shouldBe StatusCode.Ok
+          signInPostResponse.body.value.onboardStage shouldBe onboardStageFromDomainToSmithy(onboardStage)
 
           val userActionAttemptRowsAll =
             postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
@@ -210,14 +212,15 @@ class UserSignInApiSpec
         // Attempt to sign in with wrong password until we exceed max attempts
         val wrongPassword = Password("WrongPassword123!")
 
-        gatewayClient.signIn[smithy.Unauthorized](userDetailsRow.email, wrongPassword).zioValue
-        gatewayClient.signIn[smithy.Unauthorized](userDetailsRow.email, wrongPassword).zioValue
+        gatewayClient.signInPost[smithy.Unauthorized](userDetailsRow.email, wrongPassword).zioValue
+        gatewayClient.signInPost[smithy.Unauthorized](userDetailsRow.email, wrongPassword).zioValue
 
         // Now attempt to sign in with correct password, should still succeed and reset attempts
-        val signInResponse = gatewayClient.signIn[smithy.InternalServerError](userDetailsRow.email, password).zioValue
+        val signInPostResponse =
+          gatewayClient.signInPost[smithy.InternalServerError](userDetailsRow.email, password).zioValue
 
-        signInResponse.code shouldBe StatusCode.Ok
-        signInResponse.body.value.onboardStage shouldBe onboardStageFromDomainToSmithy(onboardStage)
+        signInPostResponse.code shouldBe StatusCode.Ok
+        signInPostResponse.body.value.onboardStage shouldBe onboardStageFromDomainToSmithy(onboardStage)
 
         val userActionAttemptRowsAll =
           postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
@@ -236,10 +239,11 @@ class UserSignInApiSpec
         val email    = arbitrarySample[Email]
         val password = arbitrarySample[Password]
 
-        val signInResponse = gatewayClient.signIn[smithy.BadRequest](email, password, addBasicAuth = false).zioValue
+        val signInPostResponse =
+          gatewayClient.signInPost[smithy.BadRequest](email, password, addBasicAuth = false).zioValue
 
-        signInResponse.code shouldBe StatusCode.BadRequest
-        signInResponse.body.left.value shouldBe smithy.BadRequest()
+        signInPostResponse.code shouldBe StatusCode.BadRequest
+        signInPostResponse.body.left.value shouldBe smithy.BadRequest()
 
         val userActionAttemptRowsAll =
           postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
@@ -257,10 +261,10 @@ class UserSignInApiSpec
         val invalidEmail = Email.assume("invalid-email-format")
         val password     = arbitrarySample[Password]
 
-        val signInResponse = gatewayClient.signIn[smithy.ValidationError](invalidEmail, password).zioValue
+        val signInPostResponse = gatewayClient.signInPost[smithy.ValidationError](invalidEmail, password).zioValue
 
-        signInResponse.code shouldBe StatusCode.BadRequest
-        signInResponse.body.left.value shouldBe smithy.ValidationError(
+        signInPostResponse.code shouldBe StatusCode.BadRequest
+        signInPostResponse.body.left.value shouldBe smithy.ValidationError(
           fields = List("email")
         )
 
@@ -295,10 +299,10 @@ class UserSignInApiSpec
 
         postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
 
-        val signInResponse = gatewayClient.signIn[smithy.Unauthorized](userDetailsRow.email, password).zioValue
+        val signInPostResponse = gatewayClient.signInPost[smithy.Unauthorized](userDetailsRow.email, password).zioValue
 
-        signInResponse.code shouldBe StatusCode.Unauthorized
-        signInResponse.body.left.value shouldBe smithy.Unauthorized()
+        signInPostResponse.code shouldBe StatusCode.Unauthorized
+        signInPostResponse.body.left.value shouldBe smithy.Unauthorized()
 
         val userActionAttemptRowsAll =
           postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
@@ -334,10 +338,11 @@ class UserSignInApiSpec
 
         val wrongPassword = Password("WrongPassword123!")
 
-        val signInResponse = gatewayClient.signIn[smithy.Unauthorized](userDetailsRow.email, wrongPassword).zioValue
+        val signInPostResponse =
+          gatewayClient.signInPost[smithy.Unauthorized](userDetailsRow.email, wrongPassword).zioValue
 
-        signInResponse.code shouldBe StatusCode.Unauthorized
-        signInResponse.body.left.value shouldBe smithy.Unauthorized()
+        signInPostResponse.code shouldBe StatusCode.Unauthorized
+        signInPostResponse.body.left.value shouldBe smithy.Unauthorized()
 
         val userActionAttemptRowsAll =
           postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
@@ -384,21 +389,21 @@ class UserSignInApiSpec
 
           val maxAttempts = 10 // application.conf sign-in-attempts-max
 
-          val signInResponses = List.fill(maxAttempts + 1)(
+          val signInPostResponses = List.fill(maxAttempts + 1)(
             gatewayClient
-              .signIn[smithy.Unauthorized](userDetailsRow.email, wrongPassword)
+              .signInPost[smithy.Unauthorized](userDetailsRow.email, wrongPassword)
               .zioValue
           )
 
-          signInResponses.last.code shouldBe StatusCode.Unauthorized
-          signInResponses.last.body.left.value shouldBe smithy.Unauthorized()
+          signInPostResponses.last.code shouldBe StatusCode.Unauthorized
+          signInPostResponses.last.body.left.value shouldBe smithy.Unauthorized()
 
-          val signInResponseAfterFailedAttempts = gatewayClient
-            .signIn[smithy.Unauthorized](userDetailsRow.email, password)
+          val signInPostResponseAfterFailedAttempts = gatewayClient
+            .signInPost[smithy.Unauthorized](userDetailsRow.email, password)
             .zioValue
 
-          signInResponseAfterFailedAttempts.code shouldBe StatusCode.Unauthorized
-          signInResponseAfterFailedAttempts.body.left.value shouldBe smithy.Unauthorized()
+          signInPostResponseAfterFailedAttempts.code shouldBe StatusCode.Unauthorized
+          signInPostResponseAfterFailedAttempts.body.left.value shouldBe smithy.Unauthorized()
 
           val userActionAttemptRowsAll =
             postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue

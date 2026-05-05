@@ -34,33 +34,33 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
     } yield request
   }
 
-  given Arbitrary[smithy.SignUpEmailRequest] = Arbitrary {
-    Arbitrary.arbitrary[SignUpEmail].map(_.transformInto[smithy.SignUpEmailRequest])
+  given Arbitrary[smithy.SignUpEmailPostRequest] = Arbitrary {
+    Arbitrary.arbitrary[SignUpEmail].map(_.transformInto[smithy.SignUpEmailPostRequest])
   }
 
-  given Arbitrary[smithy.SignUpVerifyEmailRequest] = Arbitrary {
+  given Arbitrary[smithy.SignUpVerifyEmailPostRequest] = Arbitrary {
     for {
       verifyEmail <- Arbitrary.arbitrary[SignUpVerifyEmail]
-      request = smithy.SignUpVerifyEmailRequest(otpID = verifyEmail.otpID.value, otp = verifyEmail.otp.value)
+      request = smithy.SignUpVerifyEmailPostRequest(otpID = verifyEmail.otpID.value, otp = verifyEmail.otp.value)
     } yield request
   }
 
-  given Arbitrary[smithy.OnboardPasswordRequest] = Arbitrary(
-    Arbitrary.arbitrary[OnboardPassword].map(_.transformInto[smithy.OnboardPasswordRequest])
+  given Arbitrary[smithy.OnboardPasswordPostRequest] = Arbitrary(
+    Arbitrary.arbitrary[OnboardPassword].map(_.transformInto[smithy.OnboardPasswordPostRequest])
   )
 
-  given Arbitrary[smithy.OnboardDetailsRequest] = Arbitrary(
+  given Arbitrary[smithy.OnboardDetailsPostRequest] = Arbitrary(
     Arbitrary
       .arbitrary[OnboardDetails]
       .map(
-        _.into[smithy.OnboardDetailsRequest]
+        _.into[smithy.OnboardDetailsPostRequest]
           .withFieldComputed(_.phoneNumber.phoneCountryCode, _.phoneNumber.phoneCountryCode.value)
           .withFieldComputed(_.phoneNumber.phoneNationalNumber, _.phoneNumber.phoneNationalNumber.value)
           .transform
       )
   )
 
-  given Arbitrary[smithy.OnboardVerifyPhoneNumberRequest] = Arbitrary(
-    Arbitrary.arbitrary[OnboardVerifyPhoneNumber].map(_.transformInto[smithy.OnboardVerifyPhoneNumberRequest])
+  given Arbitrary[smithy.OnboardVerifyPhoneNumberPostRequest] = Arbitrary(
+    Arbitrary.arbitrary[OnboardVerifyPhoneNumber].map(_.transformInto[smithy.OnboardVerifyPhoneNumberPostRequest])
   )
 }

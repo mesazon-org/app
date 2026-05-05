@@ -8,39 +8,45 @@ use alloy#simpleRestJson
 @httpBearerAuth
 service UserOnboardService {
     version: "1.0.0",
-    operations: [OnboardPassword, OnboardDetails, OnboardVerifyPhoneNumber]
+    operations: [OnboardPasswordPost, OnboardDetailsPost, OnboardVerifyPhoneNumberPost, OnboardVerifyPhoneNumberGet]
 }
 
 @http(method: "POST", uri: "/onboard/password", code: 200)
-operation OnboardPassword {
+operation OnboardPasswordPost {
     input := {
         @required
         @httpPayload
-        request: OnboardPasswordRequest
+        request: OnboardPasswordPostRequest
     }
-    output: OnboardPasswordResponse
+    output: OnboardPasswordPostResponse
     errors: [Unauthorized, ValidationError, InternalServerError]
 }
 
 @http(method: "POST", uri: "/onboard/details", code: 200)
-operation OnboardDetails {
+operation OnboardDetailsPost {
     input := {
         @required
         @httpPayload
-        request: OnboardDetailsRequest
+        request: OnboardDetailsPostRequest
     }
-    output: OnboardDetailsResponse
+    output: OnboardDetailsPostResponse
     errors: [Unauthorized, ValidationError, InternalServerError]
 }
 
 
 @http(method: "POST", uri: "/onboard/verify/phone-number", code: 200)
-operation OnboardVerifyPhoneNumber {
+operation OnboardVerifyPhoneNumberPost {
     input := {
         @required
         @httpPayload
-        request: OnboardVerifyPhoneNumberRequest
+        request: OnboardVerifyPhoneNumberPostRequest
     }
-    output: OnboardVerifyPhoneNumberResponse
+    output: OnboardVerifyPhoneNumberPostResponse
+    errors: [Unauthorized, ValidationError, InternalServerError]
+}
+
+@http(method: "GET", uri: "/onboard/verify/phone-number", code: 200)
+operation OnboardVerifyPhoneNumberGet {
+    output: OnboardVerifyPhoneNumberGetResponse
     errors: [Unauthorized, ValidationError, InternalServerError]
 }

@@ -9,35 +9,35 @@ import io.mesazon.gateway.validation.service.*
 import io.mesazon.testkit.base.*
 import zio.*
 
-class SignUpEmailServiceValidatorSpec extends ZWordSpecBase, SmithyArbitraries {
+class SignUpEmailPostRequestServiceValidatorSpec extends ZWordSpecBase, SmithyArbitraries {
 
-  "SignUpEmailServiceValidator" should {
+  "SignUpEmailPostRequestServiceValidator" should {
     "successfully validate valid email addresses" in {
       val signUpEmailServiceValidator = ZIO
-        .service[SignUpEmailServiceValidator]
+        .service[SignUpEmailPostRequestServiceValidator]
         .provide(
-          SignUpEmailServiceValidator.live,
+          SignUpEmailPostRequestServiceValidator.live,
           EmailDomainValidator.live,
         )
         .zioValue
 
-      val signUpEmailRequest = arbitrarySample[smithy.SignUpEmailRequest]
+      val signUpEmailPostRequest = arbitrarySample[smithy.SignUpEmailPostRequest]
 
-      signUpEmailServiceValidator.validate(signUpEmailRequest).zioValue shouldBe SignUpEmail(
-        email = Email.assume(signUpEmailRequest.email)
+      signUpEmailServiceValidator.validate(signUpEmailPostRequest).zioValue shouldBe SignUpEmail(
+        email = Email.assume(signUpEmailPostRequest.email)
       )
     }
 
     "fail to validate invalid data" in {
       val signUpEmailServiceValidator = ZIO
-        .service[SignUpEmailServiceValidator]
+        .service[SignUpEmailPostRequestServiceValidator]
         .provide(
-          SignUpEmailServiceValidator.live,
+          SignUpEmailPostRequestServiceValidator.live,
           EmailDomainValidator.live,
         )
         .zioValue
 
-      val invalidSignUpEmailRequest = smithy.SignUpEmailRequest(email = "invalid-email")
+      val invalidSignUpEmailRequest = smithy.SignUpEmailPostRequest(email = "invalid-email")
 
       signUpEmailServiceValidator.validate(invalidSignUpEmailRequest).zioError shouldBe
         ServiceError.BadRequestError.ValidationError(

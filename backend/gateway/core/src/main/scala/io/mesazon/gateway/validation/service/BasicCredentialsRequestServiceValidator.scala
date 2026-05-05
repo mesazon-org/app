@@ -6,7 +6,7 @@ import io.mesazon.gateway.service.AuthenticationService.BasicCredentialsRequest
 import io.mesazon.gateway.validation.domain.*
 import zio.ZLayer
 
-final class BasicCredentialsServiceValidator(
+final class BasicCredentialsRequestServiceValidator(
     emailDomainValidator: EmailDomainValidator
 ) extends ServiceValidator[BasicCredentialsRequest, BasicCredentials] {
 
@@ -23,7 +23,7 @@ final class BasicCredentialsServiceValidator(
   }
 }
 
-object BasicCredentialsServiceValidator {
+object BasicCredentialsRequestServiceValidator {
 
-  val live = ZLayer.derive[BasicCredentialsServiceValidator]
+  val live = ZLayer.derive[BasicCredentialsRequestServiceValidator]
 }
