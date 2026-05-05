@@ -18,6 +18,7 @@ import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries {
 
@@ -131,7 +132,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           .copy(
             userID = userID,
             otpType = OtpType.EmailVerification,
-            expiresAt = ExpiresAt.assume(Instant.now.minusSeconds(10)),
+            expiresAt = ExpiresAt.assume(Instant.now.minusSeconds(10).truncatedTo(ChronoUnit.MILLIS)),
           )
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(userID = userID, onboardStage = onboardStagesSignupEmail, email = email)
@@ -320,7 +321,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           .copy(
             userID = userID,
             otpType = OtpType.EmailVerification,
-            expiresAt = ExpiresAt.assume(Instant.now.plusSeconds(10)),
+            expiresAt = ExpiresAt.assume(Instant.now.plusSeconds(10).truncatedTo(ChronoUnit.MILLIS)),
           )
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(userID = userID, onboardStage = OnboardStage.EmailVerification, email = email)
@@ -364,7 +365,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           .copy(
             userID = userID,
             otpType = OtpType.EmailVerification,
-            expiresAt = ExpiresAt.assume(Instant.now.plusSeconds(10)),
+            expiresAt = ExpiresAt.assume(Instant.now.plusSeconds(10).truncatedTo(ChronoUnit.MILLIS)),
           )
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(userID = userID, onboardStage = OnboardStage.EmailVerification, email = email)
@@ -500,7 +501,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           .copy(
             userID = userID,
             otpType = OtpType.EmailVerification,
-            expiresAt = ExpiresAt.assume(Instant.now.minusSeconds(10)),
+            expiresAt = ExpiresAt.assume(Instant.now.minusSeconds(10).truncatedTo(ChronoUnit.MILLIS)),
           )
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(userID = userID, onboardStage = OnboardStage.EmailVerification, email = email)
@@ -538,7 +539,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           .copy(
             userID = userID,
             otpType = OtpType.EmailVerification,
-            expiresAt = ExpiresAt.assume(Instant.now.plusSeconds(10)),
+            expiresAt = ExpiresAt.assume(Instant.now.plusSeconds(10).truncatedTo(ChronoUnit.MILLIS)),
           )
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(userID = userID, onboardStage = OnboardStage.EmailVerification, email = email)

@@ -15,6 +15,7 @@ import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries {
 
@@ -267,7 +268,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val userDetailsRow    = arbitrarySample[UserDetailsRow]
           .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
 
-        val instantNow = Instant.now()
+        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val buffer     = Random.nextIntBetween(1, 300).zioValue
         val expiresAt  =
           ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds + buffer))
@@ -310,7 +311,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val userDetailsRow    = arbitrarySample[UserDetailsRow]
           .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
 
-        val instantNow = Instant.now()
+        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val buffer     = Random.nextIntBetween(0, 300).zioValue
         val expiresAt  =
           ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds - buffer))
@@ -526,7 +527,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val userDetailsRow    = arbitrarySample[UserDetailsRow]
           .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
 
-        val instantNow = Instant.now()
+        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val buffer     = Random.nextIntBetween(1, 300).zioValue
         val expiresAt  =
           ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds + buffer))
@@ -639,7 +640,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val userDetailsRow    = arbitrarySample[UserDetailsRow]
           .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
 
-        val instantNow = Instant.now()
+        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val buffer     = Random.nextIntBetween(1, 300).zioValue
         val expiresAt  =
           ExpiresAt(instantNow.minusSeconds(buffer))
@@ -726,7 +727,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val userDetailsRow    = arbitrarySample[UserDetailsRow]
           .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
 
-        val instantNow = Instant.now()
+        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val buffer     = Random.nextIntBetween(1, 300).zioValue
         val expiresAt  =
           ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds + buffer))

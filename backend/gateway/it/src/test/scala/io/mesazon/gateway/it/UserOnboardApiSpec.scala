@@ -740,7 +740,7 @@ class UserOnboardApiSpec
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
           userID = userDetailsRow.userID,
           otpType = OtpType.PhoneVerification,
-          expiresAt = ExpiresAt(Instant.now.plusSeconds(expiresInSeconds)),
+          expiresAt = ExpiresAt(Instant.now.truncatedTo(ChronoUnit.MILLIS).plusSeconds(expiresInSeconds)),
         )
 
         postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue

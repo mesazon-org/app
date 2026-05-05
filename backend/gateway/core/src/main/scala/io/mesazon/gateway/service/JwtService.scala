@@ -9,6 +9,7 @@ import io.mesazon.generator.IDGenerator
 import zio.*
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.Date
 
 trait JwtService {
@@ -36,7 +37,7 @@ object JwtService {
 
     private val jjwtClock = timeProvider.clock.map(clock =>
       new JJwtClock {
-        override def now(): Date = Date.from(Instant.now(clock))
+        override def now(): Date = Date.from(Instant.now(clock).truncatedTo(ChronoUnit.MILLIS))
       }
     )
 
