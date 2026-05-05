@@ -332,7 +332,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
 
         val signUpVerifyEmailResponse = userSignupService.signUpVerifyEmail(signUpVerifyEmailRequest).zioValue
 
-        signUpVerifyEmailResponse.onboardStage.value shouldBe "EMAIL_VERIFIED"
+        signUpVerifyEmailResponse.onboardStage.name shouldBe "EMAIL_VERIFIED"
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,

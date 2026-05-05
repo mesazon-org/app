@@ -19,6 +19,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
   private val sessionID        = SessionID.assume("session-test")
   private val groupID          = GroupID.assume("0000@g.us")
   private val groupInviteUrl   = GroupInviteUrl.assume("http://chat.com/invite")
+
   val nonRegisteredParticipant = UserAccountID.assume("6666@c.us")
   val participants             = List(
     UserAccountID.assume("1000@c.us"),

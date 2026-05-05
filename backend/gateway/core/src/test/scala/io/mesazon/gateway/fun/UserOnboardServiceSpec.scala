@@ -35,7 +35,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val onboardPasswordResponse =
           userOnboardService.onboardPassword(onboardPasswordRequest).zioValue
 
-        onboardPasswordResponse.onboardStage.value shouldBe "PASSWORD_PROVIDED"
+        onboardPasswordResponse.onboardStage.name shouldBe "PASSWORD_PROVIDED"
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,
@@ -70,7 +70,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val onboardPasswordResponse =
           userOnboardService.onboardPassword(onboardPasswordRequest).zioValue
 
-        onboardPasswordResponse.onboardStage.value shouldBe "PASSWORD_PROVIDED"
+        onboardPasswordResponse.onboardStage.name shouldBe "PASSWORD_PROVIDED"
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,
@@ -243,7 +243,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val onboardDetailsResponse =
           userOnboardService.onboardDetails(onboardDetailsRequest).zioValue
 
-        onboardDetailsResponse.onboardStage.value shouldBe "PHONE_VERIFICATION"
+        onboardDetailsResponse.onboardStage.name shouldBe "PHONE_VERIFICATION"
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,
@@ -290,7 +290,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val onboardDetailsResponse =
           userOnboardService.onboardDetails(onboardDetailsRequest).zioValue
 
-        onboardDetailsResponse.onboardStage.value shouldBe "PHONE_VERIFICATION"
+        onboardDetailsResponse.onboardStage.name shouldBe "PHONE_VERIFICATION"
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
@@ -333,7 +333,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val onboardDetailsResponse =
           userOnboardService.onboardDetails(onboardDetailsRequest).zioValue
 
-        onboardDetailsResponse.onboardStage.value shouldBe "PHONE_VERIFICATION"
+        onboardDetailsResponse.onboardStage.name shouldBe "PHONE_VERIFICATION"
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,
@@ -552,7 +552,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val onboardVerifyPhoneNumberResponse =
           userOnboardService.onboardVerifyPhoneNumber(onboardVerifyPhoneNumberRequest).zioValue
 
-        onboardVerifyPhoneNumberResponse.onboardStage.value shouldBe "PHONE_VERIFIED"
+        onboardVerifyPhoneNumberResponse.onboardStage.name shouldBe "PHONE_VERIFIED"
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,

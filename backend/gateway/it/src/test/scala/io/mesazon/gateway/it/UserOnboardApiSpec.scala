@@ -145,7 +145,7 @@ class UserOnboardApiSpec
           .zioValue
 
         onboardPasswordResponse.code shouldBe StatusCode.Ok
-        onboardPasswordResponse.body.value.onboardStage.value shouldBe "PASSWORD_PROVIDED"
+        onboardPasswordResponse.body.value.onboardStage.name shouldBe "PASSWORD_PROVIDED"
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
 
@@ -281,7 +281,7 @@ class UserOnboardApiSpec
           .zioValue
 
         onboardDetailsResponse.code shouldBe StatusCode.Ok
-        onboardDetailsResponse.body.value.onboardStage.value shouldBe "PHONE_VERIFICATION"
+        onboardDetailsResponse.body.value.onboardStage.name shouldBe "PHONE_VERIFICATION"
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -451,7 +451,7 @@ class UserOnboardApiSpec
           .zioValue
 
         onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Ok
-        onboardVerifyPhoneNumberResponse.body.value.onboardStage.value shouldBe "PHONE_VERIFIED"
+        onboardVerifyPhoneNumberResponse.body.value.onboardStage.name shouldBe "PHONE_VERIFIED"
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
