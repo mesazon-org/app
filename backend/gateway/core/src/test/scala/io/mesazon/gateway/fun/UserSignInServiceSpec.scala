@@ -12,7 +12,7 @@ import zio.*
 class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries {
 
   "UserSignInService" when {
-    "signInEmail" should {
+    "signInEmailPost" should {
       "successfully sign in a user" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -23,9 +23,9 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
         )
 
-        val signInEmailResponse = userSignInService.signIn().zioEither
+        val signInEmailPostResponse = userSignInService.signInPost().zioEither
 
-        assert(signInEmailResponse.isRight)
+        assert(signInEmailPostResponse.isRight)
 
         checkAuthState(
           expectedGetCalls = 1
@@ -43,7 +43,7 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         )
       }
 
-      "fail with InternalServerError when user details not found" in new TestContext {
+      "fail with UserNotFoundError when user details not found" in new TestContext {
         val authedUser = arbitrarySample[AuthedUser]
 
         val userSignInService = buildUserSignInServiceLive(
@@ -51,7 +51,7 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           userDetailsRows = Map.empty,
         )
 
-        val serviceError = userSignInService.signIn().zioError
+        val serviceError = userSignInService.signInPost().zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.UserNotFoundError]
         serviceError
@@ -71,7 +71,7 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkJwtService()
       }
 
-      "fail with InternalServerError when jwt service fails to generate tokens" in new TestContext {
+      "fail with UnexpectedError when jwt service fails to generate tokens" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(userID = authedUser.userID)
@@ -82,7 +82,7 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           jwtServiceServiceErrorOpt = Some(ServiceError.InternalServerError.UnexpectedError("JWT generation failed")),
         )
 
-        val serviceError = userSignInService.signIn().zioError
+        val serviceError = userSignInService.signInPost().zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         serviceError

@@ -9,7 +9,7 @@ import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.utils.RepositoryArbitraries
 import io.mesazon.gateway.validation.domain.EmailDomainValidator
-import io.mesazon.gateway.validation.service.BasicCredentialsServiceValidator
+import io.mesazon.gateway.validation.service.BasicCredentialsRequestServiceValidator
 import io.mesazon.testkit.base.ZWordSpecBase
 import org.http4s.headers.Authorization
 import org.http4s.{BasicCredentials as Http4sBasicCredentials, *}
@@ -438,7 +438,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
       .provide(
         AuthenticationService.local,
         EmailDomainValidator.live,
-        BasicCredentialsServiceValidator.live,
+        BasicCredentialsRequestServiceValidator.live,
         authStateMockLive(authedUser = authedUser),
         userActionAttemptRepositoryMockLive(
           userActionAttemptRowOpt = userActionAttemptRowOpt

@@ -8,11 +8,11 @@ use alloy#simpleRestJson
 @httpBasicAuth
 service UserSignInService {
     version: "1.0.0",
-    operations: [SignIn]
+    operations: [SignInPost]
 }
 
 @http(method: "POST", uri: "/signin", code: 200)
-operation SignIn {
-    output: SignInResponse
+operation SignInPost {
+    output: SignInPostResponse
     errors: [Unauthorized, BadRequest, ValidationError, InternalServerError]
 }

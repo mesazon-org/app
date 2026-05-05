@@ -8,34 +8,34 @@ import io.mesazon.gateway.validation.service.*
 import io.mesazon.testkit.base.*
 import zio.*
 
-class SignUpVerifyEmailServiceValidatorSpec extends ZWordSpecBase, SmithyArbitraries {
+class SignUpVerifyEmailPostRequestServiceValidatorSpec extends ZWordSpecBase, SmithyArbitraries {
 
-  "SignUpVerifyEmailServiceValidator" should {
+  "SignUpVerifyEmailPostRequestServiceValidator" should {
     "successfully validate valid" in {
       val signUpVerifyEmailServiceValidator = ZIO
-        .service[SignUpVerifyEmailServiceValidator]
+        .service[SignUpVerifyEmailPostRequestServiceValidator]
         .provide(
-          SignUpVerifyEmailServiceValidator.live
+          SignUpVerifyEmailPostRequestServiceValidator.live
         )
         .zioValue
 
-      val signUpVerifyEmailRequest = arbitrarySample[smithy.SignUpVerifyEmailRequest]
+      val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest]
 
-      signUpVerifyEmailServiceValidator.validate(signUpVerifyEmailRequest).zioValue shouldBe SignUpVerifyEmail(
-        otp = Otp.assume(signUpVerifyEmailRequest.otp),
-        otpID = OtpID.assume(signUpVerifyEmailRequest.otpID),
+      signUpVerifyEmailServiceValidator.validate(signUpVerifyEmailPostRequest).zioValue shouldBe SignUpVerifyEmail(
+        otp = Otp.assume(signUpVerifyEmailPostRequest.otp),
+        otpID = OtpID.assume(signUpVerifyEmailPostRequest.otpID),
       )
     }
 
     "fail to validate invalid data" in {
       val signUpVerifyEmailServiceValidator = ZIO
-        .service[SignUpVerifyEmailServiceValidator]
+        .service[SignUpVerifyEmailPostRequestServiceValidator]
         .provide(
-          SignUpVerifyEmailServiceValidator.live
+          SignUpVerifyEmailPostRequestServiceValidator.live
         )
         .zioValue
 
-      val invalidSignUpVerifyEmailRequest = smithy.SignUpVerifyEmailRequest(otpID = "", otp = "invalid-otp")
+      val invalidSignUpVerifyEmailRequest = smithy.SignUpVerifyEmailPostRequest(otpID = "", otp = "invalid-otp")
 
       signUpVerifyEmailServiceValidator.validate(invalidSignUpVerifyEmailRequest).zioError shouldBe
         ServiceError.BadRequestError.ValidationError(

@@ -23,15 +23,15 @@ object UserSignUpService {
       emailClient: EmailClient,
       otpGenerator: OtpGenerator,
       idGenerator: IDGenerator,
-      signUpEmailServiceValidator: SignUpEmailServiceValidator,
-      signUpVerifyEmailServiceValidator: SignUpVerifyEmailServiceValidator,
+      signUpEmailPostRequestServiceValidator: SignUpEmailPostRequestServiceValidator,
+      signUpVerifyEmailPostRequestServiceValidator: SignUpVerifyEmailPostRequestServiceValidator,
   ) extends smithy.UserSignUpService[ServiceTask] {
 
     /** HTTP POST /signup/email */
-    override def signUpEmail(request: smithy.SignUpEmailRequest): ServiceTask[smithy.SignUpEmailResponse] =
+    override def signUpEmailPost(request: smithy.SignUpEmailPostRequest): ServiceTask[smithy.SignUpEmailPostResponse] =
       for {
         _                 <- ZIO.logDebug(s"Signing up user with email: $request")
-        signUpEmail       <- signUpEmailServiceValidator.validate(request)
+        signUpEmail       <- signUpEmailPostRequestServiceValidator.validate(request)
         userDetailsRowOpt <- userDetailsRepository.getUserDetailsByEmail(signUpEmail.email)
         userOtpRowOpt     <- ZIO
           .foreach(userDetailsRowOpt)(userDetailsRow =>
@@ -100,15 +100,18 @@ object UserSignUpService {
             } yield userOtpRowNew.otpID
           case _ => idGenerator.generate.map(OtpID.assume)
         }
-      } yield smithy.SignUpEmailResponse(otpID.value, userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds)
+      } yield smithy.SignUpEmailPostResponse(
+        otpID.value,
+        userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds,
+      )
 
     /** HTTP POST /signup/verify/email */
-    override def signUpVerifyEmail(
-        request: smithy.SignUpVerifyEmailRequest
-    ): ServiceTask[smithy.SignUpVerifyEmailResponse] =
+    override def signUpVerifyEmailPost(
+        request: smithy.SignUpVerifyEmailPostRequest
+    ): ServiceTask[smithy.SignUpVerifyEmailPostResponse] =
       for {
         _                  <- ZIO.logDebug(s"Verify email: [${request.otpID}]")
-        signUpVerifyEmail  <- signUpVerifyEmailServiceValidator.validate(request)
+        signUpVerifyEmail  <- signUpVerifyEmailPostRequestServiceValidator.validate(request)
         userOtpRowOpt      <- userOtpRepository.getUserOtpByOtpID(signUpVerifyEmail.otpID, OtpType.EmailVerification)
         userOtpRowExisting <- ZIO.getOrFailWith(
           ServiceError.UnauthorizedError.OtpValidationError(
@@ -156,7 +159,7 @@ object UserSignUpService {
           TokenType.RefreshToken,
           refreshJwt.expiresAt,
         )
-      } yield smithy.SignUpVerifyEmailResponse(
+      } yield smithy.SignUpVerifyEmailPostResponse(
         accessTokenExpiresInSeconds = accessJwt.expiresIn.toSeconds,
         onboardStage = onboardStageFromDomainToSmithy(OnboardStage.EmailVerified),
         refreshToken = refreshJwt.refreshToken.value,
@@ -170,14 +173,16 @@ object UserSignUpService {
     new smithy.UserSignUpService[Task] {
 
       /** HTTP POST /signup/email */
-      override def signUpEmail(request: smithy.SignUpEmailRequest): Task[smithy.SignUpEmailResponse] =
+      override def signUpEmailPost(request: smithy.SignUpEmailPostRequest): Task[smithy.SignUpEmailPostResponse] =
         HttpErrorHandler
-          .errorResponseHandler(service.signUpEmail(request))
+          .errorResponseHandler(service.signUpEmailPost(request))
 
       /** HTTP POST /signup/verify/email */
-      override def signUpVerifyEmail(request: smithy.SignUpVerifyEmailRequest): Task[smithy.SignUpVerifyEmailResponse] =
+      override def signUpVerifyEmailPost(
+          request: smithy.SignUpVerifyEmailPostRequest
+      ): Task[smithy.SignUpVerifyEmailPostResponse] =
         HttpErrorHandler
-          .errorResponseHandler(service.signUpVerifyEmail(request))
+          .errorResponseHandler(service.signUpVerifyEmailPost(request))
     }
 
   val local = ZLayer.derive[UserSignUpServiceImpl].project[smithy.UserSignUpService[ServiceTask]](identity)

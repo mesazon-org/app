@@ -2,26 +2,26 @@ $version: "2.0"
 
 namespace io.mesazon.gateway.smithy
 
-structure SignUpEmailRequest {
+structure SignUpEmailPostRequest {
     @required
     email: String
 }
 
-structure SignUpEmailResponse {
+structure SignUpEmailPostResponse {
     @required
     otpID: String
     @required
     otpExpiresInSeconds: Long
 }
 
-structure SignUpVerifyEmailRequest {
+structure SignUpVerifyEmailPostRequest {
     @required
     otpID: String
     @required
     otp: String
 }
 
-structure SignUpVerifyEmailResponse {
+structure SignUpVerifyEmailPostResponse {
     @required
     accessTokenExpiresInSeconds: Long
     @required

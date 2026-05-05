@@ -17,7 +17,7 @@ object UserSignInService {
   ) extends smithy.UserSignInService[ServiceTask] {
 
     /** HTTP POST /signin */
-    override def signIn(): ServiceTask[smithy.SignInResponse] = for {
+    override def signInPost(): ServiceTask[smithy.SignInPostResponse] = for {
       authedUser  <- authState.get()
       userDetails <- userDetailsRepository
         .getUserDetails(authedUser.userID)
@@ -34,7 +34,7 @@ object UserSignInService {
         tokenType = TokenType.RefreshToken,
         expiresAt = refreshJwt.expiresAt,
       )
-    } yield smithy.SignInResponse(
+    } yield smithy.SignInPostResponse(
       accessTokenExpiresInSeconds = accessJwt.expiresIn.toSeconds,
       onboardStage = onboardStageFromDomainToSmithy(userDetails.onboardStage),
       refreshToken = refreshJwt.refreshToken.value,
@@ -48,7 +48,8 @@ object UserSignInService {
     new smithy.UserSignInService[Task] {
 
       /** HTTP POST /signin */
-      override def signIn(): Task[smithy.SignInResponse] = HttpErrorHandler.errorResponseHandler(service.signIn())
+      override def signInPost(): Task[smithy.SignInPostResponse] =
+        HttpErrorHandler.errorResponseHandler(service.signInPost())
     }
 
   val local = ZLayer.derive[UserSignInServiceImpl].project[smithy.UserSignInService[ServiceTask]](identity)

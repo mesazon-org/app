@@ -8,33 +8,33 @@ import io.mesazon.gateway.validation.service.*
 import io.mesazon.testkit.base.*
 import zio.*
 
-class OnboardPasswordServiceValidatorSpec extends ZWordSpecBase, SmithyArbitraries {
+class OnboardPasswordPostRequestServiceValidatorSpec extends ZWordSpecBase, SmithyArbitraries {
 
-  "OnboardPasswordServiceValidator" should {
+  "OnboardPasswordPostRequestServiceValidator" should {
     "successfully validate valid onboard password" in {
       val onboardPasswordServiceValidator = ZIO
-        .service[OnboardPasswordServiceValidator]
+        .service[OnboardPasswordPostRequestServiceValidator]
         .provide(
-          OnboardPasswordServiceValidator.live
+          OnboardPasswordPostRequestServiceValidator.live
         )
         .zioValue
 
-      val onboardPasswordRequest = arbitrarySample[smithy.OnboardPasswordRequest]
+      val onboardPasswordPostRequest = arbitrarySample[smithy.OnboardPasswordPostRequest]
 
-      onboardPasswordServiceValidator.validate(onboardPasswordRequest).zioValue shouldBe OnboardPassword(
-        password = Password.assume(onboardPasswordRequest.password)
+      onboardPasswordServiceValidator.validate(onboardPasswordPostRequest).zioValue shouldBe OnboardPassword(
+        password = Password.assume(onboardPasswordPostRequest.password)
       )
     }
 
     "fail to validate invalid onboard password" in {
       val onboardPasswordServiceValidator = ZIO
-        .service[OnboardPasswordServiceValidator]
+        .service[OnboardPasswordPostRequestServiceValidator]
         .provide(
-          OnboardPasswordServiceValidator.live
+          OnboardPasswordPostRequestServiceValidator.live
         )
         .zioValue
 
-      val invalidOnboardPasswordRequest = smithy.OnboardPasswordRequest(password = "short")
+      val invalidOnboardPasswordRequest = smithy.OnboardPasswordPostRequest(password = "short")
 
       onboardPasswordServiceValidator.validate(invalidOnboardPasswordRequest).zioError shouldBe
         ServiceError.BadRequestError.ValidationError(

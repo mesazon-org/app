@@ -8,6 +8,7 @@ import org.scalatest.matchers.should
 import zio.*
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 trait JwtServiceMock extends ZIOTestOps, should.Matchers {
   private val generateAccessTokenCounterRef: zio.Ref[Int]  = zio.Ref.make(0).zioValue
@@ -45,7 +46,11 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
               ZIO.succeed(
-                (TokenID.assume("mock-refresh-jwt-id"), RefreshToken.assume("mock-refresh-jwt"), ExpiresAt(Instant.now))
+                (
+                  TokenID.assume("mock-refresh-jwt-id"),
+                  RefreshToken.assume("mock-refresh-jwt"),
+                  ExpiresAt(Instant.now.truncatedTo(ChronoUnit.MILLIS)),
+                )
               )
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)

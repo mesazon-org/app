@@ -2,24 +2,24 @@ $version: "2.0"
 
 namespace io.mesazon.gateway.smithy
 
-structure OnboardPasswordRequest {
+structure OnboardPasswordPostRequest {
     @required
     password: String
 }
 
-structure OnboardPasswordResponse{
+structure OnboardPasswordPostResponse{
     @required
     onboardStage: OnboardStage
 }
 
-structure OnboardDetailsRequest {
+structure OnboardDetailsPostRequest {
     @required
     fullName: String
     @required
     phoneNumber: PhoneNumberRequest
 }
 
-structure OnboardDetailsResponse {
+structure OnboardDetailsPostResponse {
     @required
     onboardStage: OnboardStage
     @required
@@ -28,14 +28,21 @@ structure OnboardDetailsResponse {
     otpExpiresInSeconds: Long
 }
 
-structure OnboardVerifyPhoneNumberRequest {
+structure OnboardVerifyPhoneNumberPostRequest {
     @required
     otpID: String
     @required
     otp: String
 }
 
-structure OnboardVerifyPhoneNumberResponse {
+structure OnboardVerifyPhoneNumberPostResponse {
     @required
     onboardStage: OnboardStage
+}
+
+structure OnboardVerifyPhoneNumberGetResponse {
+    @required
+    otpID: String
+    @required
+    otpExpiresInSeconds: Long
 }

@@ -4,7 +4,7 @@ namespace io.mesazon.gateway.smithy
 
 use alloy#simpleRestJson
 
-structure SignInResponse {
+structure SignInPostResponse {
     @required
     accessTokenExpiresInSeconds: Long
     @required

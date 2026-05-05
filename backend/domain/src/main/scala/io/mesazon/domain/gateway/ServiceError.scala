@@ -55,6 +55,8 @@ object ServiceError {
   object UnauthorizedError {
     case object TokenMissing extends UnauthorizedError("token is missing from request")
 
+    case object OtpMissing extends UnauthorizedError("otp is missing for user")
+
     case object EmailNotFound extends UnauthorizedError("email not found")
 
     case object InvalidCredentials extends UnauthorizedError("invalid credentials")
