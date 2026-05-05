@@ -856,7 +856,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           userOnboardService.onboardVerifyPhoneNumberGet().zioValue
 
         onboardVerifyPhoneNumberGetResponse.otpID shouldBe userOtpRow.otpID.value
-        onboardVerifyPhoneNumberGetResponse.otpExpiresInSeconds shouldBe ((userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds - 1) +- userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds)
+        onboardVerifyPhoneNumberGetResponse.otpExpiresInSeconds shouldBe (userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds +- 1)
 
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1

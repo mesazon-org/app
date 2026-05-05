@@ -254,7 +254,7 @@ class UserOnboardApiSpec
       }
     }
 
-    "POST onboard/details" should {
+    "POST /onboard/details" should {
       "successfully onboard details for user with valid access token" in withContext { context =>
         import context.*
 
@@ -408,7 +408,7 @@ class UserOnboardApiSpec
       }
     }
 
-    "POST onboard/verify/phone-number" should {
+    "POST /onboard/verify/phone-number" should {
       "successfully verify phone number for user with valid access token and valid otp" in withContext { context =>
         import context.*
 
@@ -755,7 +755,7 @@ class UserOnboardApiSpec
 
         onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.Ok
         onboardVerifyPhoneNumberGetResponse.body.value.otpID shouldBe userOtpRow.otpID.value
-        onboardVerifyPhoneNumberGetResponse.body.value.otpExpiresInSeconds shouldBe ((expiresInSeconds - 1) +- expiresInSeconds)
+        onboardVerifyPhoneNumberGetResponse.body.value.otpExpiresInSeconds shouldBe (expiresInSeconds +- 1)
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
