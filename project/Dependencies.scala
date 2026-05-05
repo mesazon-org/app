@@ -3,7 +3,7 @@ import sbt.*
 object Dependencies {
 
   lazy val http4sV              = "0.23.34"
-  lazy val smithy4sV            = "0.18.51"
+  lazy val smithy4sV            = "0.18.52"
   lazy val zioV                 = "2.1.25"
   lazy val zioConfigV           = "4.0.7"
   lazy val zioInteropCatsV      = "23.1.0.13"
@@ -18,7 +18,7 @@ object Dependencies {
   lazy val scalacheckV          = "1.19.0"
   lazy val testcontainersScalaV = "0.44.1"
   lazy val testcontainersV      = "2.0.5"
-  lazy val ironV                = "3.3.0"
+  lazy val ironV                = "3.3.1"
   lazy val chimneyV             = "1.10.0"
   lazy val doobieV              = "1.0.0-RC11"
   lazy val postgresqlV          = "42.7.3"
@@ -27,7 +27,7 @@ object Dependencies {
   lazy val libphonenumberV      = "9.0.29"
   lazy val circeV               = "0.14.15"
   lazy val sttpV                = "4.0.23"
-  lazy val sttpIronV            = "1.13.16"
+  lazy val sttpIronV            = "1.13.18"
   lazy val jsoniterV            = "2.38.9"
   lazy val sttpAIV              = "0.4.11"
   lazy val jmailV               = "2.1.0"
