@@ -422,7 +422,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
     val authenticationConfig = AuthenticationConfig(
       signInAttemptsMax = 5,
-      signInAttemptsBlockDuration = Duration.fromMillis(5),
+      signInAttemptsBlockDuration = Duration.fromSeconds(2),
     )
 
     def buildAuthenticationService(

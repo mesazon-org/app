@@ -54,6 +54,7 @@ object HttpApp {
 
   private val docsRoutes = docs[Task](
     smithy.UserSignUpService,
+    smithy.UserSignInService,
     smithy.UserOnboardService,
     smithy.WahaService,
   )
