@@ -135,7 +135,7 @@ object PostgreSQLTestClient {
       )
   }
 
-  private val datasourceLive = ZLayer.scoped {
+  private val datasourceLive = ZLayer {
     for {
       config     <- ZIO.service[PostgreSQLTestClientConfig]
       datasource <- ZIO.attempt {

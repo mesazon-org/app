@@ -755,7 +755,7 @@ class UserOnboardApiSpec
 
         onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.Ok
         onboardVerifyPhoneNumberGetResponse.body.value.otpID shouldBe userOtpRow.otpID.value
-        onboardVerifyPhoneNumberGetResponse.body.value.otpExpiresInSeconds shouldBe (99L +- expiresInSeconds)
+        onboardVerifyPhoneNumberGetResponse.body.value.otpExpiresInSeconds shouldBe ((expiresInSeconds - 1) +- expiresInSeconds)
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
