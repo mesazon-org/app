@@ -166,7 +166,42 @@ object UserOnboardService {
       )
 
     /** HTTP GET /onboard/verify/phone-number */
-    override def onboardVerifyPhoneNumberGet(): ServiceTask[OnboardVerifyPhoneNumberGetResponse] = ???
+    override def onboardVerifyPhoneNumberGet(): ServiceTask[OnboardVerifyPhoneNumberGetResponse] =
+      for {
+        authedUser  <- authState.get()
+        userDetails <- userDetailsRepository
+          .getUserDetails(authedUser.userID)
+          .someOrFail(
+            ServiceError.InternalServerError.UserNotFoundError(
+              s"User details not found for userID: [${authedUser.userID}]"
+            )
+          )
+        _ <- verifyOnboardStage(
+          onboardStageUser = userDetails.onboardStage,
+          onboardStagesAllowed = OnboardStage.onboardVerifyPhoneNumberStages,
+        )
+        userOtpRowOpt <- userOtpRepository.getUserOtpByUserID(authedUser.userID, OtpType.PhoneVerification)
+        userOtpRow    <- ZIO.getOrFailWith(
+          ServiceError.UnauthorizedError.OtpValidationError(
+            s"No OTP found for userID: [${authedUser.userID}] and otpType: [${OtpType.PhoneVerification}]"
+          )
+        )(userOtpRowOpt)
+        instantNow <- timeProvider.instantNow
+        _          <-
+          if (
+            userOtpRow.expiresAt.value
+              .minusSeconds(userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds)
+              .isBefore(instantNow)
+          )
+            userOtpRepository
+              .deleteUserOtp(userOtpRow.otpID, userDetails.userID, OtpType.PhoneVerification) *> ZIO.fail(
+              ServiceError.UnauthorizedError.OtpValidationError(s"OTP expired for otpID: [${userOtpRow.otpID}]")
+            )
+          else ZIO.unit
+      } yield OnboardVerifyPhoneNumberGetResponse(
+        otpID = userOtpRow.otpID.value,
+        otpExpiresInSeconds = userOtpRow.expiresAt.value.getEpochSecond - instantNow.getEpochSecond,
+      )
   }
 
   private def observed(userOnboardService: smithy.UserOnboardService[ServiceTask]): smithy.UserOnboardService[Task] =

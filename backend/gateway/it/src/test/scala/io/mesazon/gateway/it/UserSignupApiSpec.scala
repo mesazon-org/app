@@ -103,7 +103,7 @@ class UserSignupApiSpec
   }
 
   "User Signup API" when {
-    "/signup/email" should {
+    "POST /signup/email" should {
       "successfully sign up a new user with valid email" in withContext { context =>
         import context.*
 
@@ -255,7 +255,7 @@ class UserSignupApiSpec
       }
     }
 
-    "/signup/verify/email" should {
+    "POST /signup/verify/email" should {
       "successfully verify email with valid OTP and return user token" in withContext { context =>
         import context.*
 

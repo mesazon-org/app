@@ -97,7 +97,7 @@ class UserSignInApiSpec
   }
 
   "User Sign In API" when {
-    "/signin" should {
+    "POST /signin" should {
       "successfully sign in user with valid credentials" in withContext { context =>
         import context.*
 

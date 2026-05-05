@@ -55,7 +55,9 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.OnboardDetailsPostResponse]    = JsonCodecMaker.make[smithy.OnboardDetailsPostResponse]
   given JsonValueCodec[smithy.OnboardVerifyPhoneNumberPostResponse] =
     JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberPostResponse]
-  given JsonValueCodec[smithy.SignInPostResponse] = JsonCodecMaker.make[smithy.SignInPostResponse]
+  given JsonValueCodec[smithy.SignInPostResponse]                  = JsonCodecMaker.make[smithy.SignInPostResponse]
+  given JsonValueCodec[smithy.OnboardVerifyPhoneNumberGetResponse] =
+    JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberGetResponse]
 
   def liveness: Task[StatusCode] = basicRequest
     .get(healthUri.addPath("liveness"))
@@ -128,6 +130,19 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
         )
       )
       .response(asJsonEitherOrFail[E, smithy.OnboardVerifyPhoneNumberPostResponse])
+      .send(sttpBackend)
+
+  def onboardVerifyPhoneNumberGet[E: JsonValueCodec](
+      accessTokenOpt: Option[AccessToken]
+  ): Task[Response[Either[E, smithy.OnboardVerifyPhoneNumberGetResponse]]] =
+    basicRequest
+      .get(externalUri.addPath("onboard", "verify", "phone-number"))
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonEitherOrFail[E, smithy.OnboardVerifyPhoneNumberGetResponse])
       .send(sttpBackend)
 
   def signInPost[E: JsonValueCodec](

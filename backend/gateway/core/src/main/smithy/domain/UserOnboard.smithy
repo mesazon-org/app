@@ -44,5 +44,5 @@ structure OnboardVerifyPhoneNumberGetResponse {
     @required
     otpID: String
     @required
-    otp: String
+    otpExpiresInSeconds: Long
 }

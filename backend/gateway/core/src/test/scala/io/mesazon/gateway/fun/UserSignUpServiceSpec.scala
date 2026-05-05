@@ -22,7 +22,7 @@ import java.time.Instant
 class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries {
 
   "UserSignUpService" when {
-    "signUpEmail" should {
+    "signUpEmailPost" should {
       "successfully sign up a new user with valid email" in new TestContext {
 
         val userSignupService = buildUserSignupServiceLive(
@@ -223,7 +223,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkJwtService()
       }
 
-      "fail and retry sign up for already existing user when sending email when email client fails" in new TestContext {
+      "fail with UnexpectedError and retry sign up for already existing user when sending email when email client fails" in new TestContext {
         val userID                   = arbitrarySample[UserID]
         val email                    = arbitrarySample[Email]
         val onboardStagesSignupEmail = Random.shuffle(OnboardStage.signUpEmailStages).zioValue.head
@@ -259,7 +259,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkJwtService()
       }
 
-      "fail and retry sign up new user when sending email when email client fails" in new TestContext {
+      "fail with UnexpectedError and retry sign up new user when sending email when email client fails" in new TestContext {
         val userSignupService = buildUserSignupServiceLive(
           emailClientServiceErrorOpt = Some(ServiceError.InternalServerError.UnexpectedError("Email client error"))
         )
@@ -287,7 +287,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkJwtService()
       }
 
-      "fail with InternalServerError when userDetailsRepository fails to get user details by email" in new TestContext {
+      "fail with UnexpectedError when userDetailsRepository fails to get user details by email" in new TestContext {
         val userSignupService = buildUserSignupServiceLive(
           userDetailsRepositoryServiceErrorOpt =
             Some(ServiceError.InternalServerError.UnexpectedError("Database error"))
@@ -312,7 +312,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
       }
     }
 
-    "signUpVerifyEmail" should {
+    "signUpVerifyEmailPost" should {
       "successfully verify email with valid otp" in new TestContext {
         val userID     = arbitrarySample[UserID]
         val email      = arbitrarySample[Email]
@@ -357,7 +357,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         )
       }
 
-      "fail with BadRequest when verify email with invalid otp format" in new TestContext {
+      "fail with ValidationError when verify email with invalid otp format" in new TestContext {
         val userID     = arbitrarySample[UserID]
         val email      = arbitrarySample[Email]
         val userOtpRow = arbitrarySample[UserOtpRow]
@@ -399,7 +399,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkJwtService()
       }
 
-      "fail with Unauthorized when verify email with non-existing otp" in new TestContext {
+      "fail with OtpValidationError when verify email with non-existing otp" in new TestContext {
         val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest]
           .copy(otpID = OtpID.assume("non-existing-otp-id").value)
 
@@ -423,7 +423,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkJwtService()
       }
 
-      "fail with Unauthorized when verify email send for otp type non email verification" in new TestContext {
+      "fail with OtpValidationError when verify email send for otp type non email verification" in new TestContext {
         val otpTypeNonEmailVerification =
           Random.shuffle(OtpType.values.diff(List(OtpType.EmailVerification)).toList).zioValue.head
         val userOtpRow = arbitrarySample[UserOtpRow]
@@ -454,7 +454,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkJwtService()
       }
 
-      "fail with Unauthorized when verify email is send for user with no email verification stage" in new TestContext {
+      "fail with FailedOnboardStage when verify email is send for user with no email verification stage" in new TestContext {
         val userID     = arbitrarySample[UserID]
         val email      = arbitrarySample[Email]
         val userOtpRow = arbitrarySample[UserOtpRow]
@@ -493,7 +493,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkJwtService()
       }
 
-      "fail with Unauthorized when verify email with expired otp" in new TestContext {
+      "fail with OtpValidationError when verify email with expired otp" in new TestContext {
         val userID     = arbitrarySample[UserID]
         val email      = arbitrarySample[Email]
         val userOtpRow = arbitrarySample[UserOtpRow]
@@ -531,7 +531,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkJwtService()
       }
 
-      "fail with Unauthorized when verify email with wrong otp" in new TestContext {
+      "fail with OtpValidationError when verify email with wrong otp" in new TestContext {
         val userID     = arbitrarySample[UserID]
         val email      = arbitrarySample[Email]
         val userOtpRow = arbitrarySample[UserOtpRow]
@@ -569,7 +569,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkJwtService()
       }
 
-      "fail with InternalServerError when userOtpRepository fails to get user otp" in new TestContext {
+      "fail with UnexpectedError when userOtpRepository fails to get user otp" in new TestContext {
         val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest]
 
         val userSignupService = buildUserSignupServiceLive(
