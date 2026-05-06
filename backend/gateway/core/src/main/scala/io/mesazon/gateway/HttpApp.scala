@@ -3,6 +3,7 @@ package io.mesazon.gateway
 import cats.syntax.all.*
 import fs2.io.net.Network
 import io.mesazon.gateway.config.GatewayServerConfig
+import io.mesazon.gateway.config.GatewayServerConfig.ServerConfig
 import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
 import org.http4s.ember.server.EmberServerBuilder
@@ -12,8 +13,6 @@ import smithy4s.http4s.swagger.docs
 import smithy4s.kinds.FunctorAlgebra
 import zio.*
 import zio.interop.catz.*
-
-import GatewayServerConfig.ServerConfig
 
 object HttpApp {
 
@@ -39,13 +38,15 @@ object HttpApp {
   } yield healthCheckRoute
 
   private val externalRoutesResource = for {
-    userSignUpService  <- ZIO.service[smithy.UserSignUpService[Task]]
-    userSignInService  <- ZIO.service[smithy.UserSignInService[Task]]
-    userOnboardService <- ZIO.service[smithy.UserOnboardService[Task]]
-    userSignUpRoutes   <- buildRoute(userSignUpService)
-    userSignInRoutes   <- buildRoute(userSignInService)
-    userOnboardRoutes  <- buildRoute(userOnboardService)
-  } yield userSignUpRoutes <+> userOnboardRoutes <+> userSignInRoutes
+    userSignUpService         <- ZIO.service[smithy.UserSignUpService[Task]]
+    userSignInService         <- ZIO.service[smithy.UserSignInService[Task]]
+    userOnboardService        <- ZIO.service[smithy.UserOnboardService[Task]]
+    userForgotPasswordService <- ZIO.service[smithy.UserForgotPasswordService[Task]]
+    userSignUpRoutes          <- buildRoute(userSignUpService)
+    userSignInRoutes          <- buildRoute(userSignInService)
+    userOnboardRoutes         <- buildRoute(userOnboardService)
+    userForgotPasswordRoutes  <- buildRoute(userForgotPasswordService)
+  } yield userSignUpRoutes <+> userOnboardRoutes <+> userSignInRoutes <+> userForgotPasswordRoutes
 
   private val internalRoutesResource = for {
     wahaService <- ZIO.service[smithy.WahaService[Task]]
@@ -56,7 +57,7 @@ object HttpApp {
     smithy.UserSignUpService,
     smithy.UserSignInService,
     smithy.UserOnboardService,
-    smithy.WahaService,
+    smithy.UserForgotPasswordService,
   )
 
   private def server(

@@ -35,7 +35,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
 
         val signUpEmailPostResponse = userSignupService.signUpEmailPost(signUpEmailPostRequest).zioValue
 
-        signUpEmailPostResponse.otpID shouldBe OtpID.assume("otp-id").value
+        signUpEmailPostResponse.otpID shouldBe OtpID.assume("otp-id-1").value
         signUpEmailPostResponse.otpExpiresInSeconds shouldBe userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds
 
         checkUserDetailsRepository(
@@ -71,7 +71,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
 
         val signUpEmailPostResponse = userSignupService.signUpEmailPost(signUpEmailPostRequest).zioValue
 
-        signUpEmailPostResponse.otpID shouldBe OtpID.assume("otp-id").value
+        signUpEmailPostResponse.otpID shouldBe OtpID.assume("otp-id-1").value
         signUpEmailPostResponse.otpExpiresInSeconds shouldBe userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds
 
         checkUserDetailsRepository(
@@ -106,7 +106,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
 
         val signUpEmailPostResponse = userSignupService.signUpEmailPost(signUpEmailPostRequest).zioValue
 
-        signUpEmailPostResponse.otpID shouldBe OtpID.assume("otp-id").value
+        signUpEmailPostResponse.otpID shouldBe OtpID.assume("otp-id-1").value
         signUpEmailPostResponse.otpExpiresInSeconds shouldBe userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds
 
         checkUserDetailsRepository(
@@ -147,7 +147,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
 
         val signUpEmailPostResponse = userSignupService.signUpEmailPost(signUpEmailPostRequest).zioValue
 
-        signUpEmailPostResponse.otpID shouldBe OtpID.assume("otp-id").value
+        signUpEmailPostResponse.otpID shouldBe OtpID.assume("otp-id-1").value
         signUpEmailPostResponse.otpExpiresInSeconds shouldBe userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds
 
         checkUserDetailsRepository(

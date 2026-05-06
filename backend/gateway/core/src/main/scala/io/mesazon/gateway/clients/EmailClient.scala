@@ -1,6 +1,6 @@
 package io.mesazon.gateway.clients
 
-import html.{EmailVerification, Welcome}
+import html.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.EmailConfig
 import org.simplejavamail.api.mailer.config.TransportStrategy
@@ -18,6 +18,11 @@ trait EmailClient {
 
   def sendWelcomeEmail(
       email: Email
+  ): IO[ServiceError, Unit]
+
+  def sendForgotPasswordEmail(
+      email: Email,
+      otp: Otp,
   ): IO[ServiceError, Unit]
 }
 
@@ -47,7 +52,7 @@ object EmailClient {
               .to(email.value)
               .withSubject("Mesazon email verification")
               .withHTMLText(
-                EmailVerification
+                EmailVerificationHTML
                   .render(otp.value)
                   .toString()
               )
@@ -71,7 +76,7 @@ object EmailClient {
               .to(email.value)
               .withSubject("Welcome to Mesazon!")
               .withHTMLText(
-                Welcome
+                WelcomeHTML
                   .render()
                   .toString()
               )
@@ -80,9 +85,27 @@ object EmailClient {
         )
         .unit
         .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to sendWelcomeEmail", Some(error)))
+
+    override def sendForgotPasswordEmail(email: Email, otp: Otp): IO[ServiceError, Unit] =
+      ZIO
+        .fromCompletableFuture(
+          mailer.sendMail(
+            EmailBuilder
+              .startingBlank()
+              .from(emailConfig.senderEmail)
+              .to(email.value)
+              .withSubject("Mesazon password reset")
+              .withHTMLText(
+                ForgotPasswordHTML
+                  .render(otp.value)
+                  .toString()
+              )
+              .buildEmail()
+          )
+        )
+        .unit
+        .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to sendForgotEmail", Some(error)))
   }
 
-  def observed(emailClient: EmailClient): EmailClient = emailClient
-
-  val live = ZLayer.derive[EmailClientImpl] >>> ZLayer.fromFunction(observed)
+  val live = ZLayer.derive[EmailClientImpl].project[EmailClient](identity)
 }
