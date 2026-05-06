@@ -18,7 +18,6 @@ structure SignUpVerifyEmailPostRequest {
     @required
     otpID: String
     @required
-    @sensitive
     otp: String
 }
 
@@ -28,9 +27,7 @@ structure SignUpVerifyEmailPostResponse {
     @required
     onboardStage: OnboardStage
     @required
-    @sensitive
     refreshToken: String
     @required
-    @sensitive
     accessToken: String
 }

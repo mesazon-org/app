@@ -14,25 +14,21 @@ structure ForgotPasswordPostResponse {
     otpExpiresInSeconds: Long
 }
 
-structure ForgotPasswordVerifyPostRequest {
+structure ForgotPasswordVerifyOTPPostRequest {
     @required
     otpID: String
     @required
-    @sensitive
     otp: String
 }
 
-structure ForgotPasswordVerifyPostResponse {
+structure ForgotPasswordVerifyOTPPostResponse {
     @required
-    @sensitive
     resetPasswordToken: String
 }
 
 structure ResetPasswordPostRequest {
     @required
-    @sensitive
     resetPasswordToken: String
     @required
-    @sensitive
     password: String
 }

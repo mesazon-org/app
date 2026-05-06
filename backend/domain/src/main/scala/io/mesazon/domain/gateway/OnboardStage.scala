@@ -16,6 +16,8 @@ object OnboardStage {
     OnboardStage.PhoneVerified,
   )
 
+  val forgotPasswordAllowedStages = signInAllowedStages
+
   val signUpEmailStages = List(
     OnboardStage.EmailVerification,
     OnboardStage.EmailVerified,

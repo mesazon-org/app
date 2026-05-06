@@ -4,7 +4,6 @@ namespace io.mesazon.gateway.smithy
 
 structure OnboardPasswordPostRequest {
     @required
-    @sensitive
     password: String
 }
 
@@ -33,7 +32,6 @@ structure OnboardVerifyPhoneNumberPostRequest {
     @required
     otpID: String
     @required
-    @sensitive
     otp: String
 }
 

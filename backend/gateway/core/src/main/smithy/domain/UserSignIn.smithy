@@ -10,9 +10,7 @@ structure SignInPostResponse {
     @required
     onboardStage: OnboardStage
     @required
-    @sensitive
     refreshToken: String
     @required
-    @sensitive
     accessToken: String
 }
