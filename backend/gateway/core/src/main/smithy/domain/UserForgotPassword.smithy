@@ -2,19 +2,19 @@ $version: "2.0"
 
 namespace io.mesazon.gateway.smithy
 
-structure SignUpEmailPostRequest {
+structure ForgotPasswordPostRequest {
     @required
     email: String
 }
 
-structure SignUpEmailPostResponse {
+structure ForgotPasswordPostResponse {
     @required
     otpID: String
     @required
     otpExpiresInSeconds: Long
 }
 
-structure SignUpVerifyEmailPostRequest {
+structure ForgotPasswordVerifyPostRequest {
     @required
     otpID: String
     @required
@@ -22,15 +22,17 @@ structure SignUpVerifyEmailPostRequest {
     otp: String
 }
 
-structure SignUpVerifyEmailPostResponse {
-    @required
-    accessTokenExpiresInSeconds: Long
-    @required
-    onboardStage: OnboardStage
+structure ForgotPasswordVerifyPostResponse {
     @required
     @sensitive
-    refreshToken: String
+    resetPasswordToken: String
+}
+
+structure ResetPasswordPostRequest {
     @required
     @sensitive
-    accessToken: String
+    resetPasswordToken: String
+    @required
+    @sensitive
+    password: String
 }
