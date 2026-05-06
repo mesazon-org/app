@@ -18,7 +18,7 @@ operation ForgotPasswordPost {
         request: ForgotPasswordPostRequest
     }
     output: ForgotPasswordPostResponse
-    errors: [ValidationError, InternalServerError]
+    errors: [ValidationError, Unauthorized, InternalServerError]
 }
 
 @http(method: "POST", uri: "/forgot/password/verify-otp", code: 200)
