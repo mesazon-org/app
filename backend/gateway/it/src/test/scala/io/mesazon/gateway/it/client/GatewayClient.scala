@@ -46,10 +46,12 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.SignUpVerifyEmailPostRequest] = JsonCodecMaker.make[smithy.SignUpVerifyEmailPostRequest]
   given JsonValueCodec[smithy.OnboardPasswordPostRequest]   = JsonCodecMaker.make[smithy.OnboardPasswordPostRequest]
   given JsonValueCodec[smithy.OnboardDetailsPostRequest]    = JsonCodecMaker.make[smithy.OnboardDetailsPostRequest]
+  given JsonValueCodec[smithy.ForgotPasswordPostRequest]    = JsonCodecMaker.make[smithy.ForgotPasswordPostRequest]
   given JsonValueCodec[smithy.OnboardVerifyPhoneNumberPostRequest] =
     JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberPostRequest]
 
   given JsonValueCodec[smithy.SignUpEmailPostResponse]       = JsonCodecMaker.make[smithy.SignUpEmailPostResponse]
+  given JsonValueCodec[smithy.ForgotPasswordPostResponse]    = JsonCodecMaker.make[smithy.ForgotPasswordPostResponse]
   given JsonValueCodec[smithy.SignUpVerifyEmailPostResponse] = JsonCodecMaker.make[smithy.SignUpVerifyEmailPostResponse]
   given JsonValueCodec[smithy.OnboardPasswordPostResponse]   = JsonCodecMaker.make[smithy.OnboardPasswordPostResponse]
   given JsonValueCodec[smithy.OnboardDetailsPostResponse]    = JsonCodecMaker.make[smithy.OnboardDetailsPostResponse]
@@ -154,6 +156,15 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .post(externalUri.addPath("signin"))
       .pipe(request => if (addBasicAuth) request.auth.basic(email.value, password.value) else request)
       .response(asJsonEitherOrFail[E, smithy.SignInPostResponse])
+      .send(sttpBackend)
+
+  def forgotPasswordPost[E: JsonValueCodec](
+      email: Email
+  ): Task[Response[Either[E, smithy.ForgotPasswordPostResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("forgot", "password"))
+      .body(asJson(smithy.ForgotPasswordPostRequest(email.value)))
+      .response(asJsonEitherOrFail[E, smithy.ForgotPasswordPostResponse])
       .send(sttpBackend)
 }
 

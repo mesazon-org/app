@@ -51,6 +51,7 @@ object Main extends ZIOAppDefault {
       UserSignUpService.live,
       UserSignInService.live,
       UserOnboardService.live,
+      UserForgotPasswordService.live,
       JwtService.live,
       PasswordService.live,
 
@@ -94,6 +95,7 @@ object Main extends ZIOAppDefault {
       UserOnboardConfig.live,
       TwilioClientConfig.live,
       AuthenticationConfig.live,
+      UserForgotPasswordConfig.live,
 
       // Domain validators
       EmailDomainValidator.live,
@@ -108,6 +110,7 @@ object Main extends ZIOAppDefault {
       OnboardDetailsPostRequestServiceValidator.live,
       OnboardVerifyPhoneNumberPostRequestServiceValidator.live,
       WahaServiceValidator.live,
+      ForgotPasswordPostRequestServiceValidator.live,
 
       // Clients
       SttpBackend.live,

@@ -4,7 +4,7 @@ object Dependencies {
 
   lazy val http4sV              = "0.23.34"
   lazy val smithy4sV            = "0.19.4"
-  lazy val zioV                 = "2.1.25"
+  lazy val zioV                 = "2.1.26"
   lazy val zioConfigV           = "4.0.7"
   lazy val zioInteropCatsV      = "23.1.0.13"
   lazy val catsV                = "2.13.0"
@@ -28,7 +28,7 @@ object Dependencies {
   lazy val circeV               = "0.14.15"
   lazy val sttpV                = "4.0.23"
   lazy val sttpIronV            = "1.13.18"
-  lazy val jsoniterV            = "2.38.9"
+  lazy val jsoniterV            = "2.38.10"
   lazy val sttpAIV              = "0.4.11"
   lazy val jmailV               = "2.1.0"
   lazy val simplejavamailV      = "8.12.6"
