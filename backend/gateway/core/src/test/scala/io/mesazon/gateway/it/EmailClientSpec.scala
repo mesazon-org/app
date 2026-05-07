@@ -81,5 +81,23 @@ class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBas
         mailHogClient.readInbox().zioValue.total shouldBe 1
       }
     }
+
+    "sendForgotPasswordEmail" should {
+      "send email successfully" in withContext { context =>
+        import context.*
+
+        val emailClient = ZIO
+          .service[EmailClient]
+          .provide(EmailClient.live, ZLayer.succeed(emailConfig))
+          .zioValue
+
+        val email = arbitrarySample[Email]
+        val otp   = arbitrarySample[Otp]
+
+        emailClient.sendForgotPasswordEmail(email, otp).zioValue
+
+        mailHogClient.readInbox().zioValue.total shouldBe 1
+      }
+    }
   }
 }
