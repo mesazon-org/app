@@ -72,6 +72,9 @@ type ExpiresAt = ExpiresAt.T
 object RefreshToken extends RefinedType[String, NonEmptyTrimmed]
 type RefreshToken = RefreshToken.T
 
+object ResetPasswordToken extends RefinedType[String, NonEmptyTrimmed]
+type ResetPasswordToken = ResetPasswordToken.T
+
 object AccessToken extends RefinedType[String, NonEmptyTrimmed]
 type AccessToken = AccessToken.T
 

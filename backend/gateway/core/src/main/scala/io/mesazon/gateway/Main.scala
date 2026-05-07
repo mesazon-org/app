@@ -111,6 +111,7 @@ object Main extends ZIOAppDefault {
       OnboardVerifyPhoneNumberPostRequestServiceValidator.live,
       WahaServiceValidator.live,
       ForgotPasswordPostRequestServiceValidator.live,
+      ForgotPasswordVerifyOTPPostRequestServiceValidator.live,
 
       // Clients
       SttpBackend.live,
