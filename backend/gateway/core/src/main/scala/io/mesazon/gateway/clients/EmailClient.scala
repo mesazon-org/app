@@ -104,7 +104,9 @@ object EmailClient {
           )
         )
         .unit
-        .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to sendForgotEmail", Some(error)))
+        .mapError(error =>
+          ServiceError.InternalServerError.UnexpectedError("Failed to sendForgotPasswordEmail", Some(error))
+        )
   }
 
   val live = ZLayer.derive[EmailClientImpl].project[EmailClient](identity)
