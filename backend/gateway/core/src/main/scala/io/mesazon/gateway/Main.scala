@@ -39,7 +39,7 @@ object Main extends ZIOAppDefault {
 
       // Utils
       TimeProvider.liveSystemUTC,
-      IDGenerator.uuidGeneratorLive,
+      IDGenerator.uuidV7IDGeneratorLive,
       PhoneNumberUtil.live,
       OtpGenerator.live,
 

@@ -41,6 +41,7 @@ class UserForgotPasswordApiSpec
       userActionAttemptQueries: UserActionAttemptQueries,
       userTokenQueries: UserTokenQueries,
       passwordService: PasswordService,
+      jwtService: JwtService,
   )
 
   def withContext[A](f: Context => A): A = withContainers { container =>
@@ -74,6 +75,7 @@ class UserForgotPasswordApiSpec
         .service[UserTokenQueries]
         .provide(UserTokenQueries.live, RepositoryConfig.live, appNameLive)
       passwordService <- ZIO.service[PasswordService].provide(PasswordService.live, PasswordConfig.live, appNameLive)
+      jwtService      <- ZIO.service[JwtService].provide(JwtService.live, JwtConfig.live, appNameLive)
     } yield Context(
       gatewayApiClient,
       mailHogClient,
@@ -85,6 +87,7 @@ class UserForgotPasswordApiSpec
       userActionAttemptQueries,
       userTokenQueries,
       passwordService,
+      jwtService,
     )
 
     f(context.zioValue)
@@ -825,6 +828,70 @@ class UserForgotPasswordApiSpec
 
         userCredentialsRowsAll should have size 1
         userCredentialsRowsAll.head shouldBe userCredentialsRow
+      }
+    }
+
+    "POST /forgot/password/reset" should {
+      "successfully reset password with valid reset password token" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+
+        postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
+
+        val resetPasswordJwt = jwtService.generateResetPasswordToken(userDetailsRow.userID).zioValue
+
+        val userTokenRow = arbitrarySample[UserTokenRow].copy(
+          tokenID = resetPasswordJwt.tokenID,
+          userID = userDetailsRow.userID,
+          tokenType = TokenType.ResetPasswordToken,
+          expiresAt = resetPasswordJwt.expiresAt,
+        )
+
+        postgresClient.executeQuery(userTokenQueries.insertUserToken(userTokenRow)).zioValue
+
+        val passwordNew = arbitrarySample[Password]
+
+        val forgotPasswordResetPostResponse =
+          gatewayClient
+            .forgotPasswordResetPost[smithy.InternalServerError](
+              resetPasswordJwt.resetPasswordToken,
+              passwordNew,
+            )
+            .zioValue
+
+        forgotPasswordResetPostResponse.code shouldBe StatusCode.NoContent
+
+        mailHogClient.readInbox().zioValue.total shouldBe 1
+
+        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+        userOtpRowsAll should have size 0
+
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll should have size 0
+
+        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+        userTokenRowsAll should have size 0
+
+        val userCredentialsRowsAll =
+          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
+
+        userCredentialsRowsAll should have size 1
+        userCredentialsRowsAll.head.passwordHash should not be userCredentialsRow.passwordHash
+        userCredentialsRowsAll.head shouldBe userCredentialsRow.copy(
+          passwordHash = userCredentialsRowsAll.head.passwordHash,
+          updatedAt = userCredentialsRowsAll.head.updatedAt,
+        )
       }
     }
   }
