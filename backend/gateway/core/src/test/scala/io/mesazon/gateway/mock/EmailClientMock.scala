@@ -8,18 +8,21 @@ import org.scalatest.matchers.should
 import zio.*
 
 trait EmailClientMock extends ZIOTestOps, should.Matchers {
-  private val sendEmailVerificationEmailCounterRef: Ref[Int] = Ref.make(0).zioValue
-  private val sendWelcomeEmailCounterRef: Ref[Int]           = Ref.make(0).zioValue
-  private val sendForgotPasswordEmailCounterRef: Ref[Int]    = Ref.make(0).zioValue
+  private val sendEmailVerificationEmailCounterRef: Ref[Int]          = Ref.make(0).zioValue
+  private val sendWelcomeEmailCounterRef: Ref[Int]                    = Ref.make(0).zioValue
+  private val sendForgotPasswordEmailCounterRef: Ref[Int]             = Ref.make(0).zioValue
+  private val sendPasswordChangeConfirmationEmailCounterRef: Ref[Int] = Ref.make(0).zioValue
 
   def checkEmailClient(
       expectedSendEmailVerificationEmailCalls: Int = 0,
       expectedSendWelcomeEmailCalls: Int = 0,
       expectedSendForgotPasswordEmailCalls: Int = 0,
+      expectedSendPasswordChangeConfirmationEmailCalls: Int = 0,
   ): Assertion = {
     sendEmailVerificationEmailCounterRef.get.zioValue shouldBe expectedSendEmailVerificationEmailCalls
     sendWelcomeEmailCounterRef.get.zioValue shouldBe expectedSendWelcomeEmailCalls
     sendForgotPasswordEmailCounterRef.get.zioValue shouldBe expectedSendForgotPasswordEmailCalls
+    sendPasswordChangeConfirmationEmailCounterRef.get.zioValue shouldBe expectedSendPasswordChangeConfirmationEmailCalls
   }
 
   def emailClientMockLive(
@@ -38,6 +41,9 @@ trait EmailClientMock extends ZIOTestOps, should.Matchers {
 
         override def sendForgotPasswordEmail(email: Email, otp: Otp): IO[ServiceError, Unit] =
           sendForgotPasswordEmailCounterRef.incrementAndGet *> maybeServiceError.fold(ZIO.unit)(ZIO.fail)
+
+        override def sendPasswordChangeConfirmationEmail(email: Email): IO[ServiceError, Unit] =
+          sendPasswordChangeConfirmationEmailCounterRef.incrementAndGet *> maybeServiceError.fold(ZIO.unit)(ZIO.fail)
       }
     )
 }

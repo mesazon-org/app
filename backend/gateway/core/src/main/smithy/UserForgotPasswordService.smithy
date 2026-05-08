@@ -32,12 +32,12 @@ operation ForgotPasswordVerifyOTPPost {
     errors: [ValidationError, Unauthorized, TooManyRequests, InternalServerError]
 }
 
-@http(method: "POST", uri: "/forgot/password/reset", code: 200)
+@http(method: "POST", uri: "/forgot/password/reset", code: 202)
 operation ForgotPasswordResetPost {
     input := {
         @required
         @httpPayload
-        request: ResetPasswordPostRequest
+        request: ForgotPasswordResetPostRequest
     }
     errors: [ValidationError, InternalServerError]
 }

@@ -7,7 +7,7 @@ import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
-import io.mesazon.gateway.utils.RepositoryArbitraries
+import io.mesazon.gateway.utils.{RepositoryArbitraries, SmithyArbitraries}
 import io.mesazon.gateway.validation.domain.EmailDomainValidator
 import io.mesazon.gateway.validation.service.*
 import io.mesazon.testkit.base.ZWordSpecBase
@@ -16,7 +16,7 @@ import zio.*
 import java.time.temporal.ChronoUnit
 import java.time.{Clock as JavaClock, Instant}
 
-class UserForgotPasswordServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
+class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries {
 
   "UserForgotPasswordService" when {
     "forgotPassword" should {
@@ -873,6 +873,202 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, RepositoryArbitraries
           checkPasswordService()
         }
       }
+
+      "forgotPasswordResetPost" when {
+        "successfully forgot password reset" in new TestContext {
+          val userID         = UserID.assume("user-id")
+          val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage, userID = userID)
+
+          val userCredentialsRow = arbitrarySample[UserCredentialsRow]
+            .copy(userID = userID, passwordHash = PasswordHash.assume("old-password-hash"))
+
+          val tokenID      = TokenID.assume("reset-password-token-id")
+          val userTokenRow = arbitrarySample[UserTokenRow]
+            .copy(tokenID = tokenID, userID = userID, tokenType = TokenType.ResetPasswordToken)
+
+          val userForgotPasswordService = buildUserForgotPasswordService(
+            userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+            userTokenRows = Map(userTokenRow.tokenID -> userTokenRow),
+            userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
+          )
+
+          val forgotPasswordResetPostRequest = arbitrarySample[smithy.ForgotPasswordResetPostRequest]
+
+          val forgotPasswordResetPostResponse =
+            userForgotPasswordService.forgotPasswordResetPost(forgotPasswordResetPostRequest).zioEither
+
+          assert(forgotPasswordResetPostResponse.isRight)
+
+          checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
+          checkJwtService(expectedVerifyResetPasswordTokenCalls = 1)
+          checkUserTokenRepository(
+            expectedGetUserTokenCalls = 1,
+            expectedDeleteUserTokenCalls = 1,
+          )
+          checkEmailClient(expectedSendPasswordChangeConfirmationEmailCalls = 1)
+          checkUserCredentialsRepository(expectedUpdateUserCredentialsCalls = 1)
+          checkPasswordService(expectedHashPasswordCalls = 1)
+          checkUserOtpRepository()
+          checkTimeProvider()
+          checkUserActionAttemptRepository()
+          checkOtpGenerator()
+          checkIDGenerator()
+        }
+
+        "fail with ValidationError when forgot password reset request validation fails" in new TestContext {
+          val userForgotPasswordService = buildUserForgotPasswordService()
+
+          val forgotPasswordResetPostRequest = smithy.ForgotPasswordResetPostRequest(
+            resetPasswordToken = "",
+            password = "short",
+          )
+
+          val serviceError =
+            userForgotPasswordService.forgotPasswordResetPost(forgotPasswordResetPostRequest).zioError
+
+          serviceError shouldBe a[ServiceError.BadRequestError.ValidationError]
+          serviceError
+            .asInstanceOf[ServiceError.BadRequestError.ValidationError] shouldBe ServiceError.BadRequestError
+            .ValidationError(
+              invalidFields = Seq(
+                InvalidFieldError(
+                  fieldName = "resetPasswordToken",
+                  errorMessage = "Should not have leading or trailing whitespaces & Should have a minimum length of 1",
+                  invalidValue = "",
+                ),
+                InvalidFieldError(
+                  fieldName = "password",
+                  errorMessage =
+                    "Should match ^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%#*^,?)(&._-])[A-Za-z\\d@$!%#*^,?)(&._-]{8,72}$",
+                  invalidValue = "short",
+                ),
+              )
+            )
+
+          checkUserDetailsRepository()
+          checkJwtService()
+          checkUserTokenRepository()
+          checkEmailClient()
+          checkUserCredentialsRepository()
+          checkPasswordService()
+          checkUserOtpRepository()
+          checkTimeProvider()
+          checkUserActionAttemptRepository()
+          checkOtpGenerator()
+          checkIDGenerator()
+        }
+
+        "fail with TokenMissing Error when reset password token is missing" in new TestContext {
+          val userID         = UserID.assume("user-id")
+          val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage, userID = userID)
+
+          val userCredentialsRow = arbitrarySample[UserCredentialsRow]
+            .copy(userID = userID, passwordHash = PasswordHash.assume("old-password-hash"))
+
+          val userForgotPasswordService = buildUserForgotPasswordService(
+            userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+            userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
+          )
+
+          val forgotPasswordResetPostRequest = arbitrarySample[smithy.ForgotPasswordResetPostRequest]
+
+          val serviceError =
+            userForgotPasswordService.forgotPasswordResetPost(forgotPasswordResetPostRequest).zioError
+
+          serviceError shouldBe a[ServiceError.UnauthorizedError.TokenMissing.type]
+          serviceError.asInstanceOf[
+            ServiceError.UnauthorizedError.TokenMissing.type
+          ] shouldBe ServiceError.UnauthorizedError.TokenMissing
+
+          checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
+          checkJwtService(expectedVerifyResetPasswordTokenCalls = 1)
+          checkUserTokenRepository(expectedGetUserTokenCalls = 1)
+          checkEmailClient()
+          checkUserCredentialsRepository()
+          checkPasswordService()
+          checkUserOtpRepository()
+          checkTimeProvider()
+          checkUserActionAttemptRepository()
+          checkOtpGenerator()
+          checkIDGenerator()
+        }
+
+        "fail with UserNotFoundError when user details is missing for the reset password token" in new TestContext {
+          val userForgotPasswordService = buildUserForgotPasswordService()
+
+          val forgotPasswordResetPostRequest = arbitrarySample[smithy.ForgotPasswordResetPostRequest]
+
+          val serviceError =
+            userForgotPasswordService.forgotPasswordResetPost(forgotPasswordResetPostRequest).zioError
+
+          serviceError shouldBe a[ServiceError.InternalServerError.UserNotFoundError]
+          serviceError
+            .asInstanceOf[ServiceError.InternalServerError.UserNotFoundError] shouldBe ServiceError.InternalServerError
+            .UserNotFoundError("No user details found for userID: [user-id]")
+
+          checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
+          checkJwtService(expectedVerifyResetPasswordTokenCalls = 1)
+          checkUserTokenRepository()
+          checkEmailClient()
+          checkUserCredentialsRepository()
+          checkPasswordService()
+          checkUserOtpRepository()
+          checkTimeProvider()
+          checkUserActionAttemptRepository()
+          checkOtpGenerator()
+          checkIDGenerator()
+        }
+
+        "fail with FailedOnboardStage when user is not in allowed onboard stage" in new TestContext {
+          val userID       = UserID.assume("user-id")
+          val onboardStage =
+            Random.shuffle(OnboardStage.values.diff(OnboardStage.forgotPasswordAllowedStages).toList).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage, userID = userID)
+
+          val userCredentialsRow = arbitrarySample[UserCredentialsRow]
+            .copy(userID = userID, passwordHash = PasswordHash.assume("old-password-hash"))
+
+          val tokenID      = TokenID.assume("reset-password-token-id")
+          val userTokenRow = arbitrarySample[UserTokenRow]
+            .copy(tokenID = tokenID, userID = userID, tokenType = TokenType.ResetPasswordToken)
+
+          val userForgotPasswordService = buildUserForgotPasswordService(
+            userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
+            userTokenRows = Map(userTokenRow.tokenID -> userTokenRow),
+            userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
+          )
+
+          val forgotPasswordResetPostRequest = arbitrarySample[smithy.ForgotPasswordResetPostRequest]
+
+          val serviceError =
+            userForgotPasswordService.forgotPasswordResetPost(forgotPasswordResetPostRequest).zioError
+
+          serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+          serviceError
+            .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
+            .FailedOnboardStage(
+              onboardStageUser = onboardStage,
+              onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
+            )
+
+          checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
+          checkJwtService(expectedVerifyResetPasswordTokenCalls = 1)
+          checkUserTokenRepository()
+          checkUserCredentialsRepository()
+          checkPasswordService()
+          checkEmailClient()
+          checkUserOtpRepository()
+          checkTimeProvider()
+          checkUserActionAttemptRepository()
+          checkOtpGenerator()
+          checkIDGenerator()
+        }
+      }
     }
   }
 
@@ -896,6 +1092,8 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, RepositoryArbitraries
       sendForgotPasswordEmailMaxRetries = 3,
       sendForgotPasswordEmailRetryDelay = Duration.fromMillis(100),
       otpVerifyAttemptsMaxRetries = 3,
+      sendPasswordChangeConfirmationEmailMaxRetries = 3,
+      sendPasswordChangeConfirmationEmailRetryDelay = Duration.fromMillis(100),
     )
 
     def buildUserForgotPasswordService(
@@ -924,6 +1122,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, RepositoryArbitraries
           EmailDomainValidator.live,
           ForgotPasswordVerifyOTPPostRequestServiceValidator.live,
           ForgotPasswordPostRequestServiceValidator.live,
+          ForgotPasswordResetPostRequestServiceValidator.live,
           ZLayer.succeed(userForgotPasswordConfig),
           jwtServiceMockLive(maybeServiceError = jwtServiceErrorOpt),
           userDetailsRepositoryMockLive(

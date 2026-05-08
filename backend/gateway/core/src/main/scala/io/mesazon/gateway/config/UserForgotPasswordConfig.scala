@@ -9,6 +9,8 @@ case class UserForgotPasswordConfig(
     sendForgotPasswordEmailMaxRetries: Int,
     sendForgotPasswordEmailRetryDelay: Duration,
     otpVerifyAttemptsMaxRetries: Int,
+    sendPasswordChangeConfirmationEmailMaxRetries: Int,
+    sendPasswordChangeConfirmationEmailRetryDelay: Duration,
 )
 
 object UserForgotPasswordConfig {

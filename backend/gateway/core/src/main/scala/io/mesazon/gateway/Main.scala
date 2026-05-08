@@ -112,6 +112,7 @@ object Main extends ZIOAppDefault {
       WahaServiceValidator.live,
       ForgotPasswordPostRequestServiceValidator.live,
       ForgotPasswordVerifyOTPPostRequestServiceValidator.live,
+      ForgotPasswordResetPostRequestServiceValidator.live,
 
       // Clients
       SttpBackend.live,
