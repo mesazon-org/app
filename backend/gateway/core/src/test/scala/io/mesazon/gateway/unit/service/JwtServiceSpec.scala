@@ -548,7 +548,7 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .id("1")
           .subject(userID.value)
           .pipe(builder => issuerOpt.fold(builder)(builder.issuer))
-          .audience()
+          .audience
           .add("auth:reset_password")
           .and
           .expiration(Date.from(instantNow.plusSeconds(jwtConfig.resetPasswordTokenExpiresAtOffset.toSeconds)))

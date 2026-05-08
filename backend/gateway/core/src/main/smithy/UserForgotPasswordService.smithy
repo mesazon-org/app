@@ -29,7 +29,7 @@ operation ForgotPasswordVerifyOTPPost {
         request: ForgotPasswordVerifyOTPPostRequest
     }
     output: ForgotPasswordVerifyOTPPostResponse
-    errors: [ValidationError, TooManyRequests, InternalServerError]
+    errors: [ValidationError, Unauthorized, TooManyRequests, InternalServerError]
 }
 
 @http(method: "POST", uri: "/forgot/password/reset", code: 200)

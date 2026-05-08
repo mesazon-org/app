@@ -8,6 +8,7 @@ case class UserForgotPasswordConfig(
     otpResetAttemptsMaxRetries: Int,
     sendForgotPasswordEmailMaxRetries: Int,
     sendForgotPasswordEmailRetryDelay: Duration,
+    otpVerifyAttemptsMaxRetries: Int,
 )
 
 object UserForgotPasswordConfig {

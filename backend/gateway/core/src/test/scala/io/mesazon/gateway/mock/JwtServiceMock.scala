@@ -55,7 +55,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
                 (
                   TokenID.assume("refresh-token-id"),
                   RefreshToken.assume("refresh-token"),
-                  ExpiresAt(Instant.now.truncatedTo(ChronoUnit.MILLIS)),
+                  ExpiresAt(Instant.now.plusSeconds(10).truncatedTo(ChronoUnit.MILLIS)),
                 )
               )
             )(ZIO.fail(_).orDie)
@@ -69,7 +69,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
                 (
                   TokenID.assume("reset-password-token-id"),
                   ResetPasswordToken.assume("reset-password-token"),
-                  ExpiresAt(Instant.now.truncatedTo(ChronoUnit.MILLIS)),
+                  ExpiresAt(Instant.now.plusSeconds(10).truncatedTo(ChronoUnit.MILLIS)),
                 )
               )
             )(ZIO.fail(_).orDie)

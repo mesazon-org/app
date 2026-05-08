@@ -83,6 +83,10 @@ object UserForgotPasswordService {
                     otp = otpNew,
                     expiresAt = expiresAt,
                   )
+                  _ <- userActionAttemptRepository.deleteUserActionAttempt(
+                    userID = userDetails.userID,
+                    actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
+                  )
                   _ <- emailClient
                     .sendForgotPasswordEmail(
                       email = forgotPassword.email,
@@ -129,7 +133,7 @@ object UserForgotPasswordService {
         userDetailsRow <- userDetailsRepository
           .getUserDetails(userOtpRow.userID)
           .someOrFail(
-            ServiceError.InternalServerError.UnexpectedError(
+            ServiceError.InternalServerError.UserNotFoundError(
               s"No user details found for userID: [${userOtpRow.userID}] and otpID: [${userOtpRow.otpID}]"
             )
           )
@@ -137,6 +141,18 @@ object UserForgotPasswordService {
           onboardStageUser = userDetailsRow.onboardStage,
           onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
         )
+        userActionAttemptsRow <- userActionAttemptRepository.getAndIncreaseUserActionAttempt(
+          userID = userOtpRow.userID,
+          actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
+        )
+        _ <-
+          if (userActionAttemptsRow.attempts.value > userForgotPasswordConfig.otpVerifyAttemptsMaxRetries)
+            ZIO.fail(
+              ServiceError.UnauthorizedError.OtpValidationError(
+                s"OTP validation attempts exceeded for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
+              )
+            )
+          else ZIO.unit
         instantNow <- timeProvider.instantNow
         _          <-
           if (userOtpRow.otp == forgotPasswordVerifyOTP.otp && userOtpRow.expiresAt.value.isAfter(instantNow))
@@ -147,6 +163,9 @@ object UserForgotPasswordService {
             ) *> userActionAttemptRepository.deleteUserActionAttempt(
               userID = userOtpRow.userID,
               actionAttemptType = ActionAttemptType.ForgotPassword,
+            ) *> userActionAttemptRepository.deleteUserActionAttempt(
+              userID = userOtpRow.userID,
+              actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
             )
           else
             ZIO.fail(
@@ -155,12 +174,13 @@ object UserForgotPasswordService {
               )
             )
         resetPasswordJwt <- jwtService.generateResetPasswordToken(userDetailsRow.userID)
-        _                <- userTokenRepository.upsertUserToken(
-          tokenID = resetPasswordJwt.tokenID,
-          userID = userDetailsRow.userID,
-          tokenType = TokenType.ResetPasswordToken,
-          expiresAt = resetPasswordJwt.expiresAt,
-        )
+        _                <- userTokenRepository
+          .upsertUserToken(
+            tokenID = resetPasswordJwt.tokenID,
+            userID = userDetailsRow.userID,
+            tokenType = TokenType.ResetPasswordToken,
+            expiresAt = resetPasswordJwt.expiresAt,
+          )
       } yield smithy.ForgotPasswordVerifyOTPPostResponse(
         resetPasswordToken = resetPasswordJwt.resetPasswordToken.value,
         resetPasswordTokenExpiresInSeconds = resetPasswordJwt.expiresAt.value.getEpochSecond - instantNow.getEpochSecond,
