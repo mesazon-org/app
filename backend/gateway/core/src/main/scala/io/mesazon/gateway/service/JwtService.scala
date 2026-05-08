@@ -28,9 +28,10 @@ trait JwtService {
 
 object JwtService {
 
-  type AccessJwt               = (accessToken: AccessToken, expiresIn: Duration)
-  type RefreshJwt              = (tokenID: TokenID, refreshToken: RefreshToken, expiresAt: ExpiresAt)
-  type ResetPasswordJwt        = (tokenID: TokenID, resetPasswordToken: ResetPasswordToken, expiresAt: ExpiresAt)
+  type AccessJwt        = (accessToken: AccessToken, expiresIn: Duration)
+  type RefreshJwt       = (tokenID: TokenID, refreshToken: RefreshToken, expiresAt: ExpiresAt)
+  type ResetPasswordJwt =
+    (tokenID: TokenID, resetPasswordToken: ResetPasswordToken, expiresAt: ExpiresAt, expiresIn: Duration)
   type AuthedUserRefresh       = (tokenID: TokenID, userID: UserID)
   type AuthedUserResetPassword = (tokenID: TokenID, userID: UserID)
   type AuthedUserAccess        = UserID
@@ -141,7 +142,7 @@ object JwtService {
           .mapError(error =>
             ServiceError.InternalServerError.UnexpectedError("Failed to apply reset password token", Some(error))
           )
-      } yield (tokenID, resetPasswordToken, expiresAt)
+      } yield (tokenID, resetPasswordToken, expiresAt, jwtConfig.resetPasswordTokenExpiresAtOffset)
 
     override def verifyAccessToken(accessToken: AccessToken): IO[ServiceError, AuthedUserAccess] =
       for {

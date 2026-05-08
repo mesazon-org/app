@@ -772,7 +772,7 @@ class UserForgotPasswordApiSpec
         val userActionAttemptRowForgotPasswordVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
           userID = userDetailsRow.userID,
           actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
-          attempts = Attempts.assume(20), // application.conf default max attempts is 20
+          attempts = Attempts.assume(6), // application.conf
         )
 
         postgresClient
@@ -812,7 +812,7 @@ class UserForgotPasswordApiSpec
           userActionAttemptRowsAll.filter(_.actionAttemptType == ActionAttemptType.ForgotPasswordVerifyOTP).head
 
         userActionAttemptRowForgotPasswordVerifyOTPResult shouldBe userActionAttemptRowForgotPasswordVerifyOTP.copy(
-          attempts = Attempts.assume(21), // attempts should be increased by 1
+          attempts = Attempts.assume(7), // attempts should be increased by 1
           updatedAt = userActionAttemptRowForgotPasswordVerifyOTPResult.updatedAt,
         )
 

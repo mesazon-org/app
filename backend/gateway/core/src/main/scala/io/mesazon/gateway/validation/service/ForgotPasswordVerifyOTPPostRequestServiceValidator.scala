@@ -10,11 +10,11 @@ final class ForgotPasswordVerifyOTPPostRequestServiceValidator
     extends ServiceValidator[smithy.ForgotPasswordVerifyOTPPostRequest, ForgotPasswordVerifyOTP] {
 
   val domainValidator: DomainValidator[smithy.ForgotPasswordVerifyOTPPostRequest, ForgotPasswordVerifyOTP] = {
-    forgotPasswordPostRequest =>
+    forgotPasswordVerifyOTPPostRequest =>
       ZIO.succeed(
         (
-          validateRequiredField("otpID", forgotPasswordPostRequest.otpID, OtpID.either),
-          validateRequiredField("otp", forgotPasswordPostRequest.otp, Otp.either),
+          validateRequiredField("otpID", forgotPasswordVerifyOTPPostRequest.otpID, OtpID.either),
+          validateRequiredField("otp", forgotPasswordVerifyOTPPostRequest.otp, Otp.either),
         ).mapN(ForgotPasswordVerifyOTP.apply)
       )
   }

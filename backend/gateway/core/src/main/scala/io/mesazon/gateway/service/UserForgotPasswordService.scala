@@ -34,7 +34,7 @@ object UserForgotPasswordService {
     override def forgotPasswordPost(
         request: smithy.ForgotPasswordPostRequest
     ): ServiceTask[smithy.ForgotPasswordPostResponse] = for {
-      _              <- ZIO.logDebug(s"Received forgot password request: $request")
+      _              <- ZIO.logDebug(s"Received forgot password request: [$request]")
       forgotPassword <- forgotPasswordPostRequestServiceValidator.validate(request)
       userDetailsOpt <- userDetailsRepository.getUserDetailsByEmail(forgotPassword.email)
       otpID          <- userDetailsOpt match {
@@ -118,7 +118,7 @@ object UserForgotPasswordService {
         request: smithy.ForgotPasswordVerifyOTPPostRequest
     ): ServiceTask[smithy.ForgotPasswordVerifyOTPPostResponse] =
       for {
-        _                       <- ZIO.logDebug(s"Received forgot password verify OTP request: $request")
+        _                       <- ZIO.logDebug(s"Received forgot password verify OTP request for otpID: [$request]")
         forgotPasswordVerifyOTP <- forgotPasswordVerifyOTPPostRequestServiceValidator.validate(request)
         userOtpRow              <- userOtpRepository
           .getUserOtpByOtpID(
@@ -183,7 +183,7 @@ object UserForgotPasswordService {
           )
       } yield smithy.ForgotPasswordVerifyOTPPostResponse(
         resetPasswordToken = resetPasswordJwt.resetPasswordToken.value,
-        resetPasswordTokenExpiresInSeconds = resetPasswordJwt.expiresAt.value.getEpochSecond - instantNow.getEpochSecond,
+        resetPasswordTokenExpiresInSeconds = resetPasswordJwt.expiresIn.toSeconds,
       )
 
     /** HTTP POST /forgot/password/reset */

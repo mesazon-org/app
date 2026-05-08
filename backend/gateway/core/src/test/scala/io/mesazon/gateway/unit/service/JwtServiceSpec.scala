@@ -96,14 +96,16 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
           .zioValue
 
-        val resetPasswordJwtResult = jwtService.generateResetPasswordToken(userID).zioEither
+        val resetPasswordJwt = jwtService.generateResetPasswordToken(userID).zioEither
 
-        assert(resetPasswordJwtResult.isRight)
+        assert(resetPasswordJwt.isRight)
+
+        resetPasswordJwt.value.expiresIn shouldBe jwtConfig.resetPasswordTokenExpiresAtOffset
 
         val jws = Jwts.parser
           .verifyWith(jwtConfig.secretKey)
           .build
-          .parseSignedClaims(resetPasswordJwtResult.value.resetPasswordToken.value)
+          .parseSignedClaims(resetPasswordJwt.value.resetPasswordToken.value)
 
         jws.getPayload.getId shouldBe "1"
         jws.getPayload.getSubject shouldBe userID.value
@@ -429,7 +431,7 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .signWith(jwtConfig.secretKey)
           .compact
 
-        val verifyResult: Either[ServiceError, AuthedUserRefresh] =
+        val verifyResult =
           jwtService.verifyResetPasswordToken(ResetPasswordToken.assume(resetPasswordTokenRaw)).zioEither
 
         verifyResult.value shouldBe (TokenID.assume("1"), userID)
