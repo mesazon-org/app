@@ -47,6 +47,8 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.OnboardPasswordPostRequest]   = JsonCodecMaker.make[smithy.OnboardPasswordPostRequest]
   given JsonValueCodec[smithy.OnboardDetailsPostRequest]    = JsonCodecMaker.make[smithy.OnboardDetailsPostRequest]
   given JsonValueCodec[smithy.ForgotPasswordPostRequest]    = JsonCodecMaker.make[smithy.ForgotPasswordPostRequest]
+  given JsonValueCodec[smithy.ForgotPasswordVerifyOTPPostRequest] =
+    JsonCodecMaker.make[smithy.ForgotPasswordVerifyOTPPostRequest]
   given JsonValueCodec[smithy.OnboardVerifyPhoneNumberPostRequest] =
     JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberPostRequest]
 
@@ -55,6 +57,8 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.SignUpVerifyEmailPostResponse] = JsonCodecMaker.make[smithy.SignUpVerifyEmailPostResponse]
   given JsonValueCodec[smithy.OnboardPasswordPostResponse]   = JsonCodecMaker.make[smithy.OnboardPasswordPostResponse]
   given JsonValueCodec[smithy.OnboardDetailsPostResponse]    = JsonCodecMaker.make[smithy.OnboardDetailsPostResponse]
+  given JsonValueCodec[smithy.ForgotPasswordVerifyOTPPostResponse] =
+    JsonCodecMaker.make[smithy.ForgotPasswordVerifyOTPPostResponse]
   given JsonValueCodec[smithy.OnboardVerifyPhoneNumberPostResponse] =
     JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberPostResponse]
   given JsonValueCodec[smithy.SignInPostResponse]                  = JsonCodecMaker.make[smithy.SignInPostResponse]
@@ -165,6 +169,16 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .post(externalUri.addPath("forgot", "password"))
       .body(asJson(smithy.ForgotPasswordPostRequest(email.value)))
       .response(asJsonEitherOrFail[E, smithy.ForgotPasswordPostResponse])
+      .send(sttpBackend)
+
+  def forgotPasswordVerifyOTPPost[E: JsonValueCodec](
+      otpID: OtpID,
+      otp: Otp,
+  ): Task[Response[Either[E, smithy.ForgotPasswordVerifyOTPPostResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("forgot", "password", "verify-otp"))
+      .body(asJson(smithy.ForgotPasswordVerifyOTPPostRequest(otpID.value, otp.value)))
+      .response(asJsonEitherOrFail[E, smithy.ForgotPasswordVerifyOTPPostResponse])
       .send(sttpBackend)
 }
 

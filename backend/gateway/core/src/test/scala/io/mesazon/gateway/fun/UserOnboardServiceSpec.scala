@@ -3,19 +3,19 @@ package io.mesazon.gateway.fun
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
-import io.mesazon.gateway.config.{PhoneNumberValidatorConfig, UserOnboardConfig}
+import io.mesazon.gateway.config.*
 import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.*
-import io.mesazon.gateway.service.{ServiceTask, UserOnboardService}
+import io.mesazon.gateway.service.*
+import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.domain.PhoneNumberDomainValidator
 import io.mesazon.gateway.validation.service.*
-import io.mesazon.gateway.{smithy, Mocks}
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 
-import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.time.{Clock as JavaClock, Instant}
 
 class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries {
 
@@ -51,6 +51,9 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         checkPasswordService(
           expectedHashPasswordCalls = 1
         )
+        checkAuthState(expectedGetCalls = 1)
+        checkOtpGenerator()
+        checkTimeProvider()
         checkTwilioClient()
         checkUserOtpRepository()
       }
@@ -73,19 +76,18 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         onboardPasswordPostResponse.onboardStage.name shouldBe "PASSWORD_PROVIDED"
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,
           expectedUpdateUserDetailsCalls = 1,
         )
-        checkUserCredentialsRepository(
-          expectedInsertUserCredentialsCalls = 1
-        )
+        checkUserCredentialsRepository(expectedInsertUserCredentialsCalls = 1)
         checkEmailClient(
           expectedSendWelcomeEmailCalls = userOnboardConfig.sendWelcomeEmailMaxRetries + 1
         )
-        checkPasswordService(
-          expectedHashPasswordCalls = 1
-        )
+        checkPasswordService(expectedHashPasswordCalls = 1)
+        checkOtpGenerator()
+        checkTimeProvider()
         checkTwilioClient()
         checkUserOtpRepository()
       }
@@ -116,13 +118,14 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             onboardStagesAllowed = OnboardStage.onboardPasswordStages,
           )
 
-        checkUserDetailsRepository(
-          expectedGetUserDetailsCalls = 1
-        )
+        checkAuthState(expectedGetCalls = 1)
+        checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
         checkUserCredentialsRepository()
         checkEmailClient()
         checkPasswordService()
         checkTwilioClient()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkUserOtpRepository()
       }
 
@@ -154,9 +157,12 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             )
           )
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository()
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkPasswordService()
         checkTwilioClient()
         checkUserOtpRepository()
@@ -181,11 +187,12 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             s"User details not found for userID: [${authedUser.userID}]"
           )
 
-        checkUserDetailsRepository(
-          expectedGetUserDetailsCalls = 1
-        )
+        checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
+        checkAuthState(expectedGetCalls = 1)
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkPasswordService()
         checkTwilioClient()
         checkUserOtpRepository()
@@ -214,14 +221,13 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             "Password service error"
           )
 
-        checkUserDetailsRepository(
-          expectedGetUserDetailsCalls = 1
-        )
-        checkUserCredentialsRepository()
+        checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
+        checkPasswordService(expectedHashPasswordCalls = 1)
+        checkAuthState(expectedGetCalls = 1)
         checkEmailClient()
-        checkPasswordService(
-          expectedHashPasswordCalls = 1
-        )
+        checkOtpGenerator()
+        checkTimeProvider()
+        checkUserCredentialsRepository()
         checkTwilioClient()
         checkUserOtpRepository()
       }
@@ -246,6 +252,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         onboardDetailsPostResponse.onboardStage.name shouldBe "PHONE_VERIFICATION"
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,
           expectedUpdateUserDetailsCalls = 1,
@@ -254,12 +261,12 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           expectedGetUserOtpByUserIDCalls = 1,
           expectedUpsertUserOtpCalls = 1,
         )
+        checkTwilioClient(expectedSendOtpCalls = 1)
+        checkOtpGenerator(expectedGenerateCalls = 1)
+        checkTimeProvider(expectedInstantNowCalls = 1)
         checkUserCredentialsRepository()
         checkEmailClient()
         checkPasswordService()
-        checkTwilioClient(
-          expectedSendOtpCalls = 1
-        )
       }
 
       "successfully onboard details for user with non expired otp" in new TestContext {
@@ -293,12 +300,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         onboardDetailsPostResponse.onboardStage.name shouldBe "PHONE_VERIFICATION"
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
         checkUserOtpRepository(
           expectedGetUserOtpByUserIDCalls = 1
         )
+        checkTimeProvider(expectedInstantNowCalls = 1)
+        checkOtpGenerator()
         checkUserCredentialsRepository()
         checkEmailClient()
         checkPasswordService()
@@ -336,6 +346,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         onboardDetailsPostResponse.onboardStage.name shouldBe "PHONE_VERIFICATION"
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,
           expectedUpdateUserDetailsCalls = 1,
@@ -344,12 +355,14 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           expectedGetUserOtpByUserIDCalls = 1,
           expectedUpsertUserOtpCalls = 1,
         )
-        checkUserCredentialsRepository()
-        checkEmailClient()
-        checkPasswordService()
         checkTwilioClient(
           expectedSendOtpCalls = 1
         )
+        checkOtpGenerator(expectedGenerateCalls = 1)
+        checkTimeProvider(expectedInstantNowCalls = 1)
+        checkUserCredentialsRepository()
+        checkEmailClient()
+        checkPasswordService()
       }
 
       "fail with Unauthorized when onboardStage is not valid" in new TestContext {
@@ -376,10 +389,13 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             onboardStagesAllowed = OnboardStage.onboardDetailsStages,
           )
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
         checkUserOtpRepository()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkUserCredentialsRepository()
         checkEmailClient()
         checkPasswordService()
@@ -412,8 +428,11 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             )
           )
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository()
         checkUserOtpRepository()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkUserCredentialsRepository()
         checkEmailClient()
         checkPasswordService()
@@ -439,10 +458,13 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             s"User details not found for userID: [${authedUser.userID}]"
           )
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
         checkUserOtpRepository()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkUserCredentialsRepository()
         checkEmailClient()
         checkPasswordService()
@@ -470,6 +492,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
           .UnexpectedError("")
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,
           expectedUpdateUserDetailsCalls = 1,
@@ -478,12 +501,14 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           expectedGetUserOtpByUserIDCalls = 1,
           expectedUpsertUserOtpCalls = 1,
         )
-        checkUserCredentialsRepository()
-        checkEmailClient()
-        checkPasswordService()
         checkTwilioClient(
           expectedSendOtpCalls = userOnboardConfig.sendPhoneVerificationOtpMaxRetries + 1
         )
+        checkOtpGenerator(expectedGenerateCalls = 1)
+        checkTimeProvider(expectedInstantNowCalls = 1)
+        checkUserCredentialsRepository()
+        checkEmailClient()
+        checkPasswordService()
       }
 
       "fail with InternalServerError when repository fail" in new TestContext {
@@ -507,12 +532,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
           .UnexpectedError("")
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
         checkUserOtpRepository(
           expectedGetUserOtpByUserIDCalls = 1
         )
+        checkTimeProvider(expectedInstantNowCalls = 1)
+        checkOtpGenerator()
         checkUserCredentialsRepository()
         checkEmailClient()
         checkPasswordService()
@@ -555,6 +583,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         onboardVerifyPhoneNumberResponse.onboardStage.name shouldBe "PHONE_VERIFIED"
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1,
           expectedUpdateUserDetailsCalls = 1,
@@ -563,6 +592,8 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           expectedGetUserOtpCalls = 1,
           expectedDeleteUserOtpCalls = 1,
         )
+        checkTimeProvider(expectedInstantNowCalls = 1)
+        checkOtpGenerator()
         checkUserCredentialsRepository()
         checkEmailClient()
         checkPasswordService()
@@ -591,10 +622,13 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             )
           )
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository()
         checkUserOtpRepository()
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkPasswordService()
         checkTwilioClient()
       }
@@ -624,12 +658,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             onboardStagesAllowed = OnboardStage.onboardVerifyPhoneNumberStages,
           )
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
         checkUserOtpRepository()
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkPasswordService()
         checkTwilioClient()
       }
@@ -673,14 +710,17 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             s"Wrong or expired OTP provided for otpID: [${userOtpRow.otpID}]"
           )
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
         checkUserOtpRepository(
           expectedGetUserOtpCalls = 1
         )
+        checkTimeProvider(expectedInstantNowCalls = 1)
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
         checkPasswordService()
         checkTwilioClient()
       }
@@ -709,6 +749,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             s"No OTP found for otpID: [${onboardVerifyPhoneNumberPostRequest.otpID}]"
           )
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
@@ -717,6 +758,8 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         )
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkPasswordService()
         checkTwilioClient()
       }
@@ -760,14 +803,17 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             s"Wrong or expired OTP provided for otpID: [${userOtpRow.otpID}]"
           )
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
         checkUserOtpRepository(
           expectedGetUserOtpCalls = 1
         )
+        checkTimeProvider(expectedInstantNowCalls = 1)
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
         checkPasswordService()
         checkTwilioClient()
       }
@@ -793,12 +839,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             s"User details not found for userID: [${authedUser.userID}]"
           )
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
         checkUserOtpRepository()
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkPasswordService()
         checkTwilioClient()
       }
@@ -821,12 +870,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           ServiceError.InternalServerError.UnexpectedError
         ] shouldBe ServiceError.InternalServerError.UnexpectedError("")
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
         checkUserOtpRepository()
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkPasswordService()
         checkTwilioClient()
       }
@@ -858,14 +910,17 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         onboardVerifyPhoneNumberGetResponse.otpID shouldBe userOtpRow.otpID.value
         onboardVerifyPhoneNumberGetResponse.otpExpiresInSeconds shouldBe (userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds +- 1)
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
         checkUserOtpRepository(
           expectedGetUserOtpByUserIDCalls = 1
         )
+        checkTimeProvider(expectedInstantNowCalls = 1)
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
         checkPasswordService()
         checkTwilioClient()
       }
@@ -892,6 +947,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             s"No OTP found for userID: [${authedUser.userID}] and otpType: [${OtpType.PhoneVerification}]"
           )
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
@@ -900,6 +956,8 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         )
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkPasswordService()
         checkTwilioClient()
       }
@@ -933,6 +991,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             s"OTP expired for otpID: [${userOtpRow.otpID}]"
           )
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
@@ -940,8 +999,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           expectedGetUserOtpByUserIDCalls = 1,
           expectedDeleteUserOtpCalls = 1,
         )
+        checkTimeProvider(expectedInstantNowCalls = 1)
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
         checkPasswordService()
         checkTwilioClient()
       }
@@ -969,12 +1030,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             onboardStagesAllowed = OnboardStage.onboardVerifyPhoneNumberStages,
           )
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
         checkUserOtpRepository()
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkPasswordService()
         checkTwilioClient()
       }
@@ -995,12 +1059,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           ServiceError.InternalServerError.UnexpectedError
         ] shouldBe ServiceError.InternalServerError.UnexpectedError("")
 
+        checkAuthState(expectedGetCalls = 1)
         checkUserDetailsRepository(
           expectedGetUserDetailsCalls = 1
         )
         checkUserOtpRepository()
         checkUserCredentialsRepository()
         checkEmailClient()
+        checkOtpGenerator()
+        checkTimeProvider()
         checkPasswordService()
         checkTwilioClient()
       }
@@ -1013,7 +1080,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         UserOtpRepositoryMock,
         EmailClientMock,
         PasswordServiceMock,
-        TwilioClientMock {
+        TwilioClientMock,
+        AuthStateMock,
+        OtpGeneratorMock,
+        TimeProviderMock {
 
     val userOnboardConfig = UserOnboardConfig(
       otpPhoneVerificationExpiresAtOffset = 10.seconds,
@@ -1026,6 +1096,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
     def buildUserOnboardServiceLive(
         authedUser: AuthedUser,
+        javaClock: JavaClock = JavaClock.systemUTC(),
         userDetailsRows: Map[UserID, UserDetailsRow] = Map.empty,
         userCredentialsRows: Map[UserID, UserCredentialsRow] = Map.empty,
         userOtpRows: Map[OtpID, UserOtpRow] = Map.empty,
@@ -1040,25 +1111,25 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         .service[smithy.UserOnboardService[ServiceTask]]
         .provide(
           UserOnboardService.local,
-          OtpGenerator.live,
-          TimeProvider.liveSystemUTC,
+          otpGeneratorMockLive(),
+          timeProviderMockLive(javaClock),
           PhoneNumberUtil.live,
           OnboardPasswordPostRequestServiceValidator.live,
           OnboardDetailsPostRequestServiceValidator.live,
           OnboardVerifyPhoneNumberPostRequestServiceValidator.live,
+          PhoneNumberDomainValidator.live,
           ZLayer.succeed(
             PhoneNumberValidatorConfig(
               supportedPhoneRegions = Set("CY", "GB")
             )
           ),
-          PhoneNumberDomainValidator.live,
           twilioClientMockLive(
             maybeServiceError = twilioClientServiceErrorOpt
           ),
           passwordServiceMockLive(
             serviceErrorOpt = passwordServiceServiceErrorOpt
           ),
-          Mocks.authStateLive(authedUser),
+          authStateMockLive(authedUser),
           userDetailsRepositoryMockLive(
             userDetailsRows = userDetailsRows,
             serviceErrorOpt = userDetailsRepositoryServiceErrorOpt,

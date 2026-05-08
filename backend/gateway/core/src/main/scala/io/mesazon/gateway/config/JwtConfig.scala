@@ -9,6 +9,7 @@ case class JwtConfig(
     issuer: String,
     accessTokenExpiresAtOffset: Duration,
     refreshTokenExpiresAtOffset: Duration,
+    resetPasswordTokenExpiresAtOffset: Duration,
 )
 
 object JwtConfig {
