@@ -22,5 +22,4 @@ class OtpGeneratorSpec extends ZWordSpecBase {
       )
     }
   }
-
 }

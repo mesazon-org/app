@@ -2,41 +2,28 @@ package io.mesazon.gateway.unit.service
 
 import io.jsonwebtoken.Jwts
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.JwtConfig
+import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.service.JwtService.*
 import io.mesazon.testkit.base.*
 import zio.*
 
 import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant, ZoneOffset}
-import java.util.Date
-import scala.jdk.CollectionConverters.SetHasAsScala
+import java.time.{Clock as JavaClock, *}
+import java.util.{Date, UUID}
 import scala.util.chaining.scalaUtilChainingOps
 
 class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
-  val jwtConfig = JwtConfig(
-    secretKey = Jwts.SIG.HS256.key().build(),
-    issuer = "test-issuer",
-    accessTokenExpiresAtOffset = 1.minute,
-    refreshTokenExpiresAtOffset = 2.minutes,
-    resetPasswordTokenExpiresAtOffset = 1.minute,
-  )
-
-  val jwtConfigLive = ZLayer.succeed(jwtConfig)
-
   "JwtService" when {
     "generateAccessToken" should {
-      "generate a valid JWT token" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "generate a valid JWT token" in new TestContext {
+        val userID = arbitrarySample[UserID]
+
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
 
         val accessJwtResult = jwtService.generateAccessToken(userID).zioEither
 
@@ -49,23 +36,27 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .build
           .parseSignedClaims(accessJwtResult.value.accessToken.value)
 
-        jws.getPayload.getSubject shouldBe userID.value
+        jws.getPayload.getSubject shouldBe userID.value.toString
         jws.getPayload.getIssuer shouldBe jwtConfig.issuer
         jws.getPayload.getExpiration.toInstant shouldBe instantNow.plusSeconds(
           jwtConfig.accessTokenExpiresAtOffset.toSeconds
         )
+
+        checkTimeProvider(expectedInstantNowCalls = 1)
+        checkIDGenerator()
       }
     }
 
     "generateRefreshToken" should {
-      "generate a valid JWT token" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "generate a valid JWT token" in new TestContext {
+        val tokenID = arbitrarySample[TokenID]
+
+        val jwtService = buildJwtService(
+          idGeneratorID = Some(tokenID.value),
+          clock = clockFixed,
+        )
+
+        val userID = arbitrarySample[UserID]
 
         val refreshJwtResult = jwtService.generateRefreshToken(userID).zioEither
 
@@ -76,25 +67,29 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .build
           .parseSignedClaims(refreshJwtResult.value.refreshToken.value)
 
-        jws.getPayload.getId shouldBe "1"
-        jws.getPayload.getSubject shouldBe userID.value
+        jws.getPayload.getId shouldBe tokenID.value.toString
+        jws.getPayload.getSubject shouldBe userID.value.toString
         jws.getPayload.getIssuer shouldBe jwtConfig.issuer
-        jws.getPayload.getAudience.asScala shouldBe Set("auth:refresh")
+        jws.getPayload.getAudience should contain theSameElementsAs Set("auth:refresh")
         jws.getPayload.getExpiration.toInstant shouldBe instantNow.plusSeconds(
           jwtConfig.refreshTokenExpiresAtOffset.toSeconds
         )
+
+        checkIDGenerator(expectedGenerateCalls = 1)
+        checkTimeProvider(expectedInstantNowCalls = 1)
       }
     }
 
     "generateResetPasswordToken" should {
-      "generate a valid JWT token" in {
-        val instantNow = Instant.now.truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "generate a valid JWT token" in new TestContext {
+        val tokenID = arbitrarySample[TokenID]
+
+        val jwtService = buildJwtService(
+          idGeneratorID = Some(tokenID.value),
+          clock = clockFixed,
+        )
+
+        val userID = arbitrarySample[UserID]
 
         val resetPasswordJwt = jwtService.generateResetPasswordToken(userID).zioEither
 
@@ -107,28 +102,32 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
           .build
           .parseSignedClaims(resetPasswordJwt.value.resetPasswordToken.value)
 
-        jws.getPayload.getId shouldBe "1"
-        jws.getPayload.getSubject shouldBe userID.value
+        jws.getPayload.getId shouldBe tokenID.value.toString
+        jws.getPayload.getSubject shouldBe userID.value.toString
         jws.getPayload.getIssuer shouldBe jwtConfig.issuer
-        jws.getPayload.getAudience.asScala shouldBe Set("auth:reset_password")
+        jws.getPayload.getAudience should contain theSameElementsAs Set("auth:reset_password")
         jws.getPayload.getExpiration.toInstant shouldBe instantNow.plusSeconds(
           jwtConfig.resetPasswordTokenExpiresAtOffset.toSeconds
         )
+
+        checkIDGenerator(expectedGenerateCalls = 1)
+        checkTimeProvider(expectedInstantNowCalls = 1)
       }
     }
 
     "verifyAccessToken" should {
-      "successfully verify a valid JWT token and extract claims" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "successfully verify a valid JWT token and extract claims" in new TestContext {
+        val tokenID = arbitrarySample[TokenID]
+
+        val jwtService = buildJwtService(
+          idGeneratorID = Some(tokenID.value),
+          clock = clockFixed,
+        )
+
+        val userID = arbitrarySample[UserID]
 
         val accessTokenRaw = Jwts.builder.claims
-          .subject(userID.value)
+          .subject(userID.value.toString)
           .issuer(jwtConfig.issuer)
           .expiration(Date.from(instantNow.plusSeconds(jwtConfig.accessTokenExpiresAtOffset.toSeconds)))
           .and
@@ -140,14 +139,15 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         assert(verifyResult.isRight)
 
         verifyResult.value shouldBe userID
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt with invalid JWT token" in {
-        val clockFixed = Clock.fixed(Instant.now(), ZoneOffset.UTC)
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt with invalid JWT token" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
 
         val accessTokenInvalid = AccessToken.assume("invalid.access.token")
 
@@ -155,19 +155,20 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify access token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if the token is expired" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if the token is expired" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID = arbitrarySample[UserID]
 
         val accessTokenRaw = Jwts.builder.claims
-          .subject(userID.value)
+          .subject(userID.value.toString)
           .issuer(jwtConfig.issuer)
           .expiration(Date.from(instantNow.minusSeconds(1)))
           .and
@@ -178,21 +179,22 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify access token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if the token issuer is invalid or missing" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if the token issuer is invalid or missing" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID = arbitrarySample[UserID]
 
         val issuerOpt = arbitrarySample[Option[String]]
 
         val accessTokenRaw = Jwts.builder.claims
-          .subject(userID.value)
+          .subject(userID.value.toString)
           .pipe(builder => issuerOpt.fold(builder)(builder.issuer))
           .expiration(Date.from(instantNow.plusSeconds(jwtConfig.accessTokenExpiresAtOffset.toSeconds)))
           .and
@@ -203,19 +205,20 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify access token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if the token signature is invalid" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if the token signature is invalid" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID = arbitrarySample[UserID]
 
         val accessTokenRaw = Jwts.builder.claims
-          .subject(userID.value)
+          .subject(userID.value.toString)
           .issuer(jwtConfig.issuer)
           .expiration(Date.from(instantNow.plusSeconds(jwtConfig.accessTokenExpiresAtOffset.toSeconds)))
           .and
@@ -226,22 +229,24 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify access token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
     }
 
     "verifyRefreshToken" should {
-      "successfully verify a refresh token" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "successfully verify a refresh token" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID  = arbitrarySample[UserID]
+        val tokenID = arbitrarySample[TokenID]
 
         val refreshTokenRaw = Jwts.builder.claims
-          .id("1")
-          .subject(userID.value)
+          .id(tokenID.value.toString)
+          .subject(userID.value.toString)
           .issuer(jwtConfig.issuer)
           .audience()
           .add("auth:refresh")
@@ -254,15 +259,16 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         val verifyResult: Either[ServiceError, AuthedUserRefresh] =
           jwtService.verifyRefreshToken(RefreshToken.assume(refreshTokenRaw)).zioEither
 
-        verifyResult.value shouldBe (TokenID.assume("1"), userID)
+        verifyResult.value shouldBe (tokenID, userID)
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if the refresh token is invalid" in {
-        val clockFixed = Clock.fixed(Instant.now(), ZoneOffset.UTC)
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if the refresh token is invalid" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
 
         val refreshTokenInvalid = RefreshToken.assume("invalid.refresh.token")
 
@@ -270,20 +276,22 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify refresh token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if the refresh token is expired" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if the refresh token is expired" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID  = arbitrarySample[UserID]
+        val tokenID = arbitrarySample[TokenID]
 
         val refreshTokenRaw = Jwts.builder.claims
-          .id("1")
-          .subject(userID.value)
+          .id(tokenID.value.toString)
+          .subject(userID.value.toString)
           .issuer(jwtConfig.issuer)
           .audience()
           .add("auth:refresh")
@@ -297,20 +305,22 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify refresh token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if the refresh token signature is invalid" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if the refresh token signature is invalid" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID  = arbitrarySample[UserID]
+        val tokenID = arbitrarySample[TokenID]
 
         val refreshTokenRaw = Jwts.builder.claims
-          .id("1")
-          .subject(userID.value)
+          .id(tokenID.value.toString)
+          .subject(userID.value.toString)
           .issuer(jwtConfig.issuer)
           .audience()
           .add("auth:refresh")
@@ -324,19 +334,20 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify refresh token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if the refresh token id is missing" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if the refresh token id is missing" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID = arbitrarySample[UserID]
 
         val refreshTokenRaw = Jwts.builder.claims
-          .subject(userID.value)
+          .subject(userID.value.toString)
           .issuer(jwtConfig.issuer)
           .audience()
           .add("auth:refresh")
@@ -350,22 +361,24 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         failedToVerifyJwt.message shouldBe "Failed to extract token id from refresh token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if refresh token issuer is invalid or missing" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if refresh token issuer is invalid or missing" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID  = arbitrarySample[UserID]
+        val tokenID = arbitrarySample[TokenID]
 
         val issuerOpt = arbitrarySample[Option[String]]
 
         val refreshTokenRaw = Jwts.builder.claims
-          .id("1")
-          .subject(userID.value)
+          .id(tokenID.value.toString)
+          .subject(userID.value.toString)
           .pipe(builder => issuerOpt.fold(builder)(builder.issuer))
           .audience()
           .add("auth:refresh")
@@ -379,22 +392,24 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify refresh token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if refresh token audience is invalid or missing" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if refresh token audience is invalid or missing" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID  = arbitrarySample[UserID]
+        val tokenID = arbitrarySample[TokenID]
 
         val audienceOpt = arbitrarySample[Option[String]]
 
         val refreshTokenRaw = Jwts.builder.claims
-          .id("1")
-          .subject(userID.value)
+          .id(tokenID.value.toString)
+          .subject(userID.value.toString)
           .issuer(jwtConfig.issuer)
           .pipe(builder => audienceOpt.fold(builder)(builder.audience.add(_).and))
           .expiration(Date.from(instantNow.plusSeconds(jwtConfig.refreshTokenExpiresAtOffset.toSeconds)))
@@ -406,22 +421,24 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify refresh token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
     }
 
     "verifyResetPasswordToken" should {
-      "successfully verify a reset password token" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "successfully verify a reset password token" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID  = arbitrarySample[UserID]
+        val tokenID = arbitrarySample[TokenID]
 
         val resetPasswordTokenRaw = Jwts.builder.claims
-          .id("1")
-          .subject(userID.value)
+          .id(tokenID.value.toString)
+          .subject(userID.value.toString)
           .issuer(jwtConfig.issuer)
           .audience()
           .add("auth:reset_password")
@@ -434,15 +451,16 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         val verifyResult =
           jwtService.verifyResetPasswordToken(ResetPasswordToken.assume(resetPasswordTokenRaw)).zioEither
 
-        verifyResult.value shouldBe (TokenID.assume("1"), userID)
+        verifyResult.value shouldBe (tokenID, userID)
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if the reset password token is invalid" in {
-        val clockFixed = Clock.fixed(Instant.now(), ZoneOffset.UTC)
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if the reset password token is invalid" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
 
         val resetPasswordTokenInvalid = ResetPasswordToken.assume("invalid.reset.password.token")
 
@@ -450,20 +468,22 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify reset password token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if the reset password token is expired" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if the reset password token is expired" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID  = arbitrarySample[UserID]
+        val tokenID = arbitrarySample[TokenID]
 
         val resetPasswordTokenRaw = Jwts.builder.claims
-          .id("1")
-          .subject(userID.value)
+          .id(tokenID.value.toString)
+          .subject(userID.value.toString)
           .issuer(jwtConfig.issuer)
           .audience()
           .add("auth:reset_password")
@@ -478,20 +498,22 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify reset password token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if the reset password token signature is invalid" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if the reset password token signature is invalid" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID  = arbitrarySample[UserID]
+        val tokenID = arbitrarySample[TokenID]
 
         val resetPasswordTokenRaw = Jwts.builder.claims
-          .id("1")
-          .subject(userID.value)
+          .id(tokenID.value.toString)
+          .subject(userID.value.toString)
           .issuer(jwtConfig.issuer)
           .audience()
           .add("auth:reset_password")
@@ -506,19 +528,20 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify reset password token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if reset password token id is missing" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if reset password token id is missing" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID = arbitrarySample[UserID]
 
         val resetPasswordTokenRaw = Jwts.builder.claims
-          .subject(userID.value)
+          .subject(userID.value.toString)
           .issuer(jwtConfig.issuer)
           .audience()
           .add("auth:reset_password")
@@ -533,22 +556,24 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         failedToVerifyJwt.message shouldBe "Failed to extract token id from reset password token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if reset password token issuer is invalid or missing" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if reset password token issuer is invalid or missing" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID  = arbitrarySample[UserID]
+        val tokenID = arbitrarySample[TokenID]
 
         val issuerOpt = arbitrarySample[Option[String]]
 
         val resetPasswordTokenRaw = Jwts.builder.claims
-          .id("1")
-          .subject(userID.value)
+          .id(tokenID.value.toString)
+          .subject(userID.value.toString)
           .pipe(builder => issuerOpt.fold(builder)(builder.issuer))
           .audience
           .add("auth:reset_password")
@@ -563,22 +588,24 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify reset password token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
 
-      "fail with FailedToVerifyJwt if reset password token audience is invalid or missing" in {
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        val clockFixed = Clock.fixed(instantNow, ZoneOffset.UTC)
-        val userID     = arbitrarySample[UserID]
-        val jwtService = ZIO
-          .service[JwtService]
-          .provide(JwtService.live, jwtConfigLive, Mocks.timeProviderLive(clockFixed), Mocks.idGeneratorLive)
-          .zioValue
+      "fail with FailedToVerifyJwt if reset password token audience is invalid or missing" in new TestContext {
+        val jwtService = buildJwtService(
+          clock = clockFixed
+        )
+
+        val userID  = arbitrarySample[UserID]
+        val tokenID = arbitrarySample[TokenID]
 
         val audienceOpt = arbitrarySample[Option[String]]
 
         val resetPasswordTokenRaw = Jwts.builder.claims
-          .id("1")
-          .subject(userID.value)
+          .id(tokenID.value.toString)
+          .subject(userID.value.toString)
           .issuer(jwtConfig.issuer)
           .pipe(builder => audienceOpt.fold(builder)(builder.audience.add(_).and))
           .expiration(Date.from(instantNow.plusSeconds(jwtConfig.resetPasswordTokenExpiresAtOffset.toSeconds)))
@@ -591,7 +618,36 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         failedToVerifyJwt shouldBe a[ServiceError.UnauthorizedError.FailedToVerifyJwt]
         failedToVerifyJwt.message shouldBe "Failed to parse and verify reset password token"
+
+        checkTimeProvider(expectedClockCalls = 1)
+        checkIDGenerator()
       }
     }
+  }
+
+  trait TestContext extends IDGeneratorMock, TimeProviderMock {
+    val instantNow = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+    val clockFixed = JavaClock.fixed(instantNow, ZoneOffset.UTC)
+
+    val jwtConfig = JwtConfig(
+      secretKey = Jwts.SIG.HS256.key().build(),
+      issuer = "test-issuer",
+      accessTokenExpiresAtOffset = 1.minute,
+      refreshTokenExpiresAtOffset = 2.minutes,
+      resetPasswordTokenExpiresAtOffset = 1.minute,
+    )
+
+    def buildJwtService(
+        idGeneratorID: Option[UUID] = None,
+        clock: JavaClock = JavaClock.systemUTC(),
+    ): JwtService = ZIO
+      .service[JwtService]
+      .provide(
+        JwtService.live,
+        ZLayer.succeed(jwtConfig),
+        timeProviderMockLive(clock),
+        idGeneratorMockLive(idGeneratorID),
+      )
+      .zioValue
   }
 }

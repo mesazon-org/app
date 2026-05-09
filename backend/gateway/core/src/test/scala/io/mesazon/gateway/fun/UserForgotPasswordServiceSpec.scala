@@ -1,6 +1,5 @@
 package io.mesazon.gateway.fun
 
-import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.gateway.config.UserForgotPasswordConfig
@@ -8,10 +7,9 @@ import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
-import io.mesazon.gateway.utils.{RepositoryArbitraries, SmithyArbitraries}
+import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.domain.EmailDomainValidator
 import io.mesazon.gateway.validation.service.*
-import io.mesazon.generator.IDGenerator
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 
@@ -36,7 +34,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val forgotPasswordPostResponse =
           userForgotPasswordService.forgotPasswordPost(forgotPasswordPostRequest).zioValue
 
-        forgotPasswordPostResponse.otpID shouldBe "otp-id-1"
         forgotPasswordPostResponse.otpExpiresInSeconds shouldBe userForgotPasswordConfig.otpExpiresAtOffset.toSeconds
 
         checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
@@ -62,8 +59,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val instantNow                    = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-        val javaClock                     = JavaClock.fixed(instantNow, java.time.ZoneOffset.UTC)
         val userOtpExpiresAtBufferSeconds = Random.nextLongBetween(0, 1000).zioValue
         val userOtpRow                    = arbitrarySample[UserOtpRow]
           .copy(
@@ -77,7 +72,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
 
         val userForgotPasswordService = buildUserForgotPasswordService(
-          javaClock = javaClock,
+          clock = clockFixed,
           userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
@@ -111,8 +106,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val instantNow                    = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-        val javaClock                     = JavaClock.fixed(instantNow, java.time.ZoneOffset.UTC)
         val userOtpExpiresAtBufferSeconds = Random.nextLongBetween(0, 1000).zioValue
         val userOtpRow                    = arbitrarySample[UserOtpRow]
           .copy(
@@ -136,7 +129,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
 
         val userForgotPasswordService = buildUserForgotPasswordService(
-          javaClock = javaClock,
+          clock = clockFixed,
           userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
           userActionAttemptRowOpt = Some(userActionAttemptRow),
@@ -171,8 +164,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val instantNow                    = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-        val javaClock                     = JavaClock.fixed(instantNow, java.time.ZoneOffset.UTC)
         val userOtpExpiresAtBufferSeconds = Random.nextLongBetween(0, 1000).zioValue
         val userOtpRow                    = arbitrarySample[UserOtpRow]
           .copy(
@@ -196,7 +187,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
 
         val userForgotPasswordService = buildUserForgotPasswordService(
-          javaClock = javaClock,
+          clock = clockFixed,
           userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
           userActionAttemptRowOpt = Some(userActionAttemptRow),
@@ -228,8 +219,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val instantNow                    = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-        val javaClock                     = JavaClock.fixed(instantNow, java.time.ZoneOffset.UTC)
         val userOtpExpiresAtBufferSeconds =
           Random.nextLongBetween(1, 1000).zioValue
         val userOtpRow = arbitrarySample[UserOtpRow]
@@ -244,7 +233,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
 
         val userForgotPasswordService = buildUserForgotPasswordService(
-          javaClock = javaClock,
+          clock = clockFixed,
           userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
@@ -254,7 +243,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val forgotPasswordPostResponse =
           userForgotPasswordService.forgotPasswordPost(forgotPasswordPostRequest).zioValue
 
-        forgotPasswordPostResponse.otpID shouldBe "otp-id-1"
         forgotPasswordPostResponse.otpExpiresInSeconds shouldBe userForgotPasswordConfig.otpExpiresAtOffset.toSeconds
 
         checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
@@ -280,8 +268,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val instantNow                    = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-        val javaClock                     = JavaClock.fixed(instantNow, java.time.ZoneOffset.UTC)
         val userOtpExpiresAtBufferSeconds =
           Random.nextLongBetween(1, 1000).zioValue
         val userOtpRow = arbitrarySample[UserOtpRow]
@@ -306,7 +292,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
 
         val userForgotPasswordService = buildUserForgotPasswordService(
-          javaClock = javaClock,
+          clock = clockFixed,
           userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
           userActionAttemptRowOpt = Some(userActionAttemptRow),
@@ -317,7 +303,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val forgotPasswordPostResponse =
           userForgotPasswordService.forgotPasswordPost(forgotPasswordPostRequest).zioValue
 
-        forgotPasswordPostResponse.otpID shouldBe "otp-id-1"
         forgotPasswordPostResponse.otpExpiresInSeconds shouldBe userForgotPasswordConfig.otpExpiresAtOffset.toSeconds
 
         checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
@@ -347,7 +332,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val forgotPasswordPostResponse =
           userForgotPasswordService.forgotPasswordPost(forgotPasswordPostRequest).zioValue
 
-        forgotPasswordPostResponse.otpID shouldBe "id-1"
         forgotPasswordPostResponse.otpExpiresInSeconds shouldBe userForgotPasswordConfig.otpExpiresAtOffset.toSeconds
 
         checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
@@ -467,9 +451,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-        val javaClock  = JavaClock.fixed(instantNow, java.time.ZoneOffset.UTC)
-
         val userOtpExpiresAtBuffer = Random.nextLongBetween(1, 1000).zioValue
         val userOtpRow             = arbitrarySample[UserOtpRow]
           .copy(
@@ -479,7 +460,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
 
         val userForgotPasswordService = buildUserForgotPasswordService(
-          javaClock = javaClock,
+          clock = clockFixed,
           userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
@@ -525,8 +506,10 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
       "fail with ValidationError when forgot password verify otp request validation fails" in new TestContext {
         val userForgotPasswordService = buildUserForgotPasswordService()
 
+        val otpID = arbitrarySample[OtpID]
+
         val forgotPasswordVerifyOTPPostRequest = smithy.ForgotPasswordVerifyOTPPostRequest(
-          otpID = "",
+          otpID = otpID.value,
           otp = "",
         )
 
@@ -538,15 +521,10 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           .ValidationError(
             invalidFields = Seq(
               InvalidFieldError(
-                fieldName = "otpID",
-                errorMessage = "Should not have leading or trailing whitespaces & Should have a minimum length of 1",
-                invalidValue = "",
-              ),
-              InvalidFieldError(
                 fieldName = "otp",
                 errorMessage = "Should match ^[A-Z0-9]{6}$",
                 invalidValue = "",
-              ),
+              )
             )
           )
 
@@ -566,9 +544,12 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
       "fail with OtpValidationError when user otp is missing" in new TestContext {
         val userForgotPasswordService = buildUserForgotPasswordService()
 
+        val otpID = arbitrarySample[OtpID]
+        val otp   = arbitrarySample[Otp]
+
         val forgotPasswordVerifyOTPPostRequest = smithy.ForgotPasswordVerifyOTPPostRequest(
-          otpID = "non-existing-otp-id",
-          otp = "ABC123",
+          otpID = otpID.value,
+          otp = otp.value,
         )
 
         val serviceError =
@@ -578,7 +559,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         serviceError
           .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
           .OtpValidationError(
-            s"No OTP found for OTP ID [non-existing-otp-id] and OTP type [${OtpType.ForgotPassword}]"
+            s"No OTP found for OTP ID [${otpID.value}] and OTP type [${OtpType.ForgotPassword}]"
           )
 
         checkUserOtpRepository(expectedGetUserOtpByOtpIDCalls = 1)
@@ -681,9 +662,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-        val javaClock  = JavaClock.fixed(instantNow, java.time.ZoneOffset.UTC)
-
         val userOtpExpiresAtBuffer = Random.nextLongBetween(1, 1000).zioValue
         val userOtpRow             = arbitrarySample[UserOtpRow]
           .copy(
@@ -693,14 +671,16 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
 
         val userForgotPasswordService = buildUserForgotPasswordService(
-          javaClock = javaClock,
+          clock = clockFixed,
           userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
 
+        val otp = arbitrarySample[Otp]
+
         val forgotPasswordVerifyOTPPostRequest = smithy.ForgotPasswordVerifyOTPPostRequest(
           otpID = userOtpRow.otpID.value,
-          otp = "111AAA",
+          otp = otp.value,
         )
 
         val serviceError =
@@ -733,9 +713,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-        val javaClock  = JavaClock.fixed(instantNow, java.time.ZoneOffset.UTC)
-
         val userOtpExpiresAtBuffer = Random.nextLongBetween(0, 1000).zioValue
         val userOtpRow             = arbitrarySample[UserOtpRow]
           .copy(
@@ -745,7 +722,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
 
         val userForgotPasswordService = buildUserForgotPasswordService(
-          javaClock = javaClock,
+          clock = clockFixed,
           userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
         )
@@ -785,9 +762,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-        val javaClock  = JavaClock.fixed(instantNow, java.time.ZoneOffset.UTC)
-
         val userOtpExpiresAtBuffer = Random.nextLongBetween(1, 1000).zioValue
         val userOtpRow             = arbitrarySample[UserOtpRow]
           .copy(
@@ -804,7 +778,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
 
         val userForgotPasswordService = buildUserForgotPasswordService(
-          javaClock = javaClock,
+          clock = clockFixed,
           userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
           userOtpRows = Map(userOtpRow.otpID -> userOtpRow),
           userActionAttemptRowOpt = Some(userActionAttemptRow),
@@ -879,19 +853,22 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
 
     "forgotPasswordResetPost" should {
       "successfully forgot password reset" in new TestContext {
-        val userID         = UserID.assume("user-id")
+        val userID         = arbitrarySample[UserID]
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage, userID = userID)
 
+        val passwordHashOld    = arbitrarySample[PasswordHash]
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
-          .copy(userID = userID, passwordHash = PasswordHash.assume("old-password-hash"))
+          .copy(userID = userID, passwordHash = passwordHashOld)
 
-        val tokenID      = TokenID.assume("reset-password-token-id")
+        val tokenID      = arbitrarySample[TokenID]
         val userTokenRow = arbitrarySample[UserTokenRow]
           .copy(tokenID = tokenID, userID = userID, tokenType = TokenType.ResetPasswordToken)
 
         val userForgotPasswordService = buildUserForgotPasswordService(
+          jwtServiceUserIDOpt = Some(userID),
+          jwtServiceTokenIDOpt = Some(tokenID),
           userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
           userTokenRows = Map(userTokenRow.tokenID -> userTokenRow),
           userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
@@ -921,15 +898,17 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
       }
 
       "successfully forgot password reset in scenario where email client fails to send password change confirmation email" in new TestContext {
-        val userID         = UserID.assume("user-id")
+        val userID         = arbitrarySample[UserID]
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage, userID = userID)
 
-        val userCredentialsRow = arbitrarySample[UserCredentialsRow]
-          .copy(userID = userID, passwordHash = PasswordHash.assume("old-password-hash"))
+        val passwordHashOld = arbitrarySample[PasswordHash]
 
-        val tokenID      = TokenID.assume("reset-password-token-id")
+        val userCredentialsRow = arbitrarySample[UserCredentialsRow]
+          .copy(userID = userID, passwordHash = passwordHashOld)
+
+        val tokenID      = arbitrarySample[TokenID]
         val userTokenRow = arbitrarySample[UserTokenRow]
           .copy(tokenID = tokenID, userID = userID, tokenType = TokenType.ResetPasswordToken)
 
@@ -1009,15 +988,20 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
       }
 
       "fail with TokenMissing Error when reset password token is missing" in new TestContext {
-        val userID         = UserID.assume("user-id")
+        val userID         = arbitrarySample[UserID]
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage, userID = userID)
 
+        val passwordHashOld    = arbitrarySample[PasswordHash]
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
-          .copy(userID = userID, passwordHash = PasswordHash.assume("old-password-hash"))
+          .copy(userID = userID, passwordHash = passwordHashOld)
+
+        val tokenID = arbitrarySample[TokenID]
 
         val userForgotPasswordService = buildUserForgotPasswordService(
+          jwtServiceUserIDOpt = Some(userID),
+          jwtServiceTokenIDOpt = Some(tokenID),
           userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
           userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
         )
@@ -1046,7 +1030,10 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
       }
 
       "fail with UserNotFoundError when user details is missing for the reset password token" in new TestContext {
-        val userForgotPasswordService = buildUserForgotPasswordService()
+        val userID                    = arbitrarySample[UserID]
+        val userForgotPasswordService = buildUserForgotPasswordService(
+          jwtServiceUserIDOpt = Some(userID)
+        )
 
         val forgotPasswordResetPostRequest = arbitrarySample[smithy.ForgotPasswordResetPostRequest]
 
@@ -1056,7 +1043,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         serviceError shouldBe a[ServiceError.InternalServerError.UserNotFoundError]
         serviceError
           .asInstanceOf[ServiceError.InternalServerError.UserNotFoundError] shouldBe ServiceError.InternalServerError
-          .UserNotFoundError("No user details found for userID: [user-id]")
+          .UserNotFoundError(s"No user details found for userID: [${userID.value}]")
 
         checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
         checkJwtService(expectedVerifyResetPasswordTokenCalls = 1)
@@ -1072,16 +1059,17 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
       }
 
       "fail with FailedOnboardStage when user is not in allowed onboard stage" in new TestContext {
-        val userID       = UserID.assume("user-id")
+        val userID       = arbitrarySample[UserID]
         val onboardStage =
           Random.shuffle(OnboardStage.values.diff(OnboardStage.forgotPasswordAllowedStages).toList).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage, userID = userID)
 
+        val passwordHashOld    = arbitrarySample[PasswordHash]
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
-          .copy(userID = userID, passwordHash = PasswordHash.assume("old-password-hash"))
+          .copy(userID = userID, passwordHash = passwordHashOld)
 
-        val tokenID      = TokenID.assume("reset-password-token-id")
+        val tokenID      = arbitrarySample[TokenID]
         val userTokenRow = arbitrarySample[UserTokenRow]
           .copy(tokenID = tokenID, userID = userID, tokenType = TokenType.ResetPasswordToken)
 
@@ -1118,15 +1106,16 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
       }
 
       "fail with UnexpectedError when user credentials repository returns service error" in new TestContext {
-        val userID         = UserID.assume("user-id")
+        val userID         = arbitrarySample[UserID]
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage, userID = userID)
 
+        val passwordHashOld    = arbitrarySample[PasswordHash]
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
-          .copy(userID = userID, passwordHash = PasswordHash.assume("old-password-hash"))
+          .copy(userID = userID, passwordHash = passwordHashOld)
 
-        val tokenID      = TokenID.assume("reset-password-token-id")
+        val tokenID      = arbitrarySample[TokenID]
         val userTokenRow = arbitrarySample[UserTokenRow]
           .copy(tokenID = tokenID, userID = userID, tokenType = TokenType.ResetPasswordToken)
 
@@ -1159,6 +1148,8 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         checkOtpGenerator()
         checkIDGenerator()
       }
+
+      "fail "
     }
   }
 
@@ -1175,6 +1166,9 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         IDGeneratorMock,
         OtpGeneratorMock {
 
+    val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+    val clockFixed = JavaClock.fixed(instantNow, java.time.ZoneOffset.UTC)
+
     val userForgotPasswordConfig = UserForgotPasswordConfig(
       otpExpiresAtOffset = Duration.fromSeconds(60),
       otpResendCooldown = Duration.fromSeconds(20),
@@ -1187,7 +1181,9 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
     )
 
     def buildUserForgotPasswordService(
-        javaClock: JavaClock = JavaClock.systemUTC(),
+        clock: JavaClock = JavaClock.systemUTC(),
+        jwtServiceUserIDOpt: Option[UserID] = None,
+        jwtServiceTokenIDOpt: Option[TokenID] = None,
         userDetailsRows: Map[UserID, UserDetailsRow] = Map.empty,
         userOtpRows: Map[OtpID, UserOtpRow] = Map.empty,
         userTokenRows: Map[TokenID, UserTokenRow] = Map.empty,
@@ -1207,14 +1203,18 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           otpGeneratorMockLive(),
           idGeneratorMockLive(),
           userTokenRepositoryMockLive(userTokenRows = userTokenRows),
-          timeProviderMockLive(javaClock),
+          timeProviderMockLive(clock),
           UserForgotPasswordService.local,
           EmailDomainValidator.live,
           ForgotPasswordVerifyOTPPostRequestServiceValidator.live,
           ForgotPasswordPostRequestServiceValidator.live,
           ForgotPasswordResetPostRequestServiceValidator.live,
           ZLayer.succeed(userForgotPasswordConfig),
-          jwtServiceMockLive(maybeServiceError = jwtServiceErrorOpt),
+          jwtServiceMockLive(
+            tokenIDOpt = jwtServiceTokenIDOpt,
+            userIDOpt = jwtServiceUserIDOpt,
+            maybeServiceError = jwtServiceErrorOpt,
+          ),
           userDetailsRepositoryMockLive(
             userDetailsRows = userDetailsRows,
             serviceErrorOpt = userDetailsRepositoryServiceErrorOpt,

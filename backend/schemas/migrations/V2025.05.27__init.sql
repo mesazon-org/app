@@ -1,6 +1,6 @@
 create table user_credentials
 (
-    user_id       text        not null,
+    user_id       uuid        not null,
     password_hash text        not null,
     created_at    timestamptz not null,
     updated_at    timestamptz not null,
@@ -9,7 +9,7 @@ create table user_credentials
 
 create table user_details
 (
-    user_id               text        not null,
+    user_id               uuid        not null,
     email                 text        not null,
     full_name             text,
     phone_region          text,
@@ -25,8 +25,8 @@ create table user_details
 
 create table user_action_attempt
 (
-    action_attempt_id   text        not null,
-    user_id             text        not null,
+    action_attempt_id   uuid        not null,
+    user_id             uuid        not null,
     action_attempt_type text        not null,
     attempts            int         not null,
     created_at          timestamptz not null,
@@ -37,8 +37,8 @@ create table user_action_attempt
 
 create table user_otp
 (
-    otp_id     text        not null,
-    user_id    text        not null,
+    otp_id     uuid        not null,
+    user_id    uuid        not null,
     otp        text        not null,
     otp_type   text        not null,
     created_at timestamptz not null,
@@ -50,8 +50,8 @@ create table user_otp
 
 create table user_token
 (
-    token_id   text        not null,
-    user_id    text        not null,
+    token_id   uuid        not null,
+    user_id    uuid        not null,
     token_type text        not null,
     created_at timestamptz not null,
     expires_at timestamptz not null,

@@ -59,12 +59,14 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
       }
 
       "successfully authenticate user with sign in attempts under max and block duration passed" in new TestContext {
-        val password       = arbitrarySample[Password]
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
+
+        val password           = arbitrarySample[Password]
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
           .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
+
         val instantNow           = Instant.now.truncatedTo(ChronoUnit.MILLIS)
         val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
           .copy(
@@ -107,13 +109,16 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
       }
 
       "successfully authenticate user with sign in attempts at max but block duration passed" in new TestContext {
-        val password       = arbitrarySample[Password]
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
+
+        val password           = arbitrarySample[Password]
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
           .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
-        val instantNow           = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
         val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
           .copy(
             userID = userDetailsRow.userID,
@@ -216,11 +221,12 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
       }
 
       "fail with FailedOnboardStage to authenticate user with no allowed sing in onboardStage" in new TestContext {
-        val password     = arbitrarySample[Password]
         val onboardStage =
           Random.shuffle(OnboardStage.values.toList.diff(OnboardStage.signInAllowedStages)).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
+
+        val password           = arbitrarySample[Password]
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
           .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
 
@@ -255,10 +261,11 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
       }
 
       "fail with InvalidCredentials to authenticate user with invalid credentials" in new TestContext {
-        val password       = arbitrarySample[Password]
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
+
+        val password           = arbitrarySample[Password]
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
           .copy(userID = userDetailsRow.userID)
 
@@ -293,10 +300,10 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
       }
 
       "fail with TooManySignInAttempts to authenticate user with too many sign in attempts and is in blocked duration" in new TestContext {
-        val password       = arbitrarySample[Password]
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
+
         val instantNow           = Instant.now.truncatedTo(ChronoUnit.MILLIS)
         val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
           .copy(
@@ -307,6 +314,8 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
               instantNow.minusSeconds(authenticationConfig.signInAttemptsBlockDuration.toSeconds - 1)
             ),
           )
+
+        val password = arbitrarySample[Password]
 
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(
@@ -341,11 +350,12 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         checkUserCredentialsRepository()
       }
 
-      "fail with InternalServerError to authenticate user when user credentials are not found for existing user details" in new TestContext {
-        val password       = arbitrarySample[Password]
+      "fail with UnexpectedError to authenticate user when user credentials are not found for existing user details" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
+
+        val password = arbitrarySample[Password]
 
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(
@@ -378,7 +388,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
       }
 
-      "fail with InternalServerError to authenticate user when user details repository fails" in new TestContext {
+      "fail with UnexpectedError to authenticate user when user details repository fails" in new TestContext {
         val authedUser       = arbitrarySample[AuthedUser]
         val basicCredentials = arbitrarySample[BasicCredentials]
 

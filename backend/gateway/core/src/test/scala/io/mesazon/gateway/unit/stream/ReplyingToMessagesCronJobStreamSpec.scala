@@ -3,6 +3,7 @@ package io.mesazon.gateway.unit.stream
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.ReplyingToMessagesCronJobConfig
+import io.mesazon.gateway.mock.TimeProviderMock
 import io.mesazon.gateway.repository.domain.{WahaUserActivityRow, WahaUserMessageRow, WahaUserRow}
 import io.mesazon.gateway.stream.ReplyingToMessagesCronJobStream
 import io.mesazon.gateway.utils.RepositoryArbitraries
@@ -10,14 +11,12 @@ import io.mesazon.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import zio.{Clock as _, *}
 
 import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant, ZoneOffset}
+import java.time.{Clock, Instant}
 
 class ReplyingToMessagesCronJobStreamSpec extends ZWordSpecBase, RepositoryArbitraries, GatewayArbitraries {
 
   "ReplyingToMessagesCronJobStream" should {
     "stream" in new TestContext {
-      val now               = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-      val clock             = Clock.fixed(now, ZoneOffset.UTC)
       val assistantResponse = arbitrarySample[AssistantResponse]
 
       val wahaUserRow1 = arbitrarySample[WahaUserRow]
@@ -25,12 +24,16 @@ class ReplyingToMessagesCronJobStreamSpec extends ZWordSpecBase, RepositoryArbit
       val wahaUserRow3 = arbitrarySample[WahaUserRow]
       val wahaUserRow4 = arbitrarySample[WahaUserRow]
 
+      val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+      val clock      = Clock.fixed(instantNow, Clock.systemUTC().getZone)
+
       // last update is 5 seconds ago, so it should be included in the stream
       val wahaUserActivityRow1 = arbitrarySample[WahaUserActivityRow]
         .copy(
           userID = wahaUserRow1.userID,
           isWaitingAssistantReply = true,
-          lastUpdate = UpdatedAt.assume(now.minusSeconds(replyingToMessagesCronJobConfig.lastUpdateOffsetSeconds + 1)),
+          lastUpdate =
+            UpdatedAt.assume(instantNow.minusSeconds(replyingToMessagesCronJobConfig.lastUpdateOffsetSeconds + 1)),
         )
 
       // last update is 4 seconds ago, so it should not be included in the stream
@@ -38,7 +41,8 @@ class ReplyingToMessagesCronJobStreamSpec extends ZWordSpecBase, RepositoryArbit
         .copy(
           userID = wahaUserRow2.userID,
           isWaitingAssistantReply = true,
-          lastUpdate = UpdatedAt.assume(now.minusSeconds(replyingToMessagesCronJobConfig.lastUpdateOffsetSeconds)),
+          lastUpdate =
+            UpdatedAt.assume(instantNow.minusSeconds(replyingToMessagesCronJobConfig.lastUpdateOffsetSeconds)),
         )
 
       // isWaitingAssistantReply is false, so it should not be included in the stream
@@ -46,7 +50,8 @@ class ReplyingToMessagesCronJobStreamSpec extends ZWordSpecBase, RepositoryArbit
         .copy(
           userID = wahaUserRow3.userID,
           isWaitingAssistantReply = false,
-          lastUpdate = UpdatedAt.assume(now.minusSeconds(replyingToMessagesCronJobConfig.lastUpdateOffsetSeconds + 1)),
+          lastUpdate =
+            UpdatedAt.assume(instantNow.minusSeconds(replyingToMessagesCronJobConfig.lastUpdateOffsetSeconds + 1)),
         )
 
       val wahaUserMessageRows =
@@ -55,7 +60,6 @@ class ReplyingToMessagesCronJobStreamSpec extends ZWordSpecBase, RepositoryArbit
 
       val replyMessagesStream = buildReplyMessagesStream(
         assistantResponse = assistantResponse,
-        clock = clock,
         wahaUserRows = Map(
           wahaUserRow1.userID -> wahaUserRow1,
           wahaUserRow2.userID -> wahaUserRow2,
@@ -68,6 +72,7 @@ class ReplyingToMessagesCronJobStreamSpec extends ZWordSpecBase, RepositoryArbit
           wahaUserActivityRow3.userID -> wahaUserActivityRow3,
         ),
         wahaUserMessageRows = Map(wahaUserRow1.userID -> wahaUserMessageRows.toList),
+        clock = clock,
       )
 
       replyMessagesStream.stream.runHead.zioValue
@@ -85,7 +90,7 @@ class ReplyingToMessagesCronJobStreamSpec extends ZWordSpecBase, RepositoryArbit
     }
   }
 
-  trait TestContext {
+  trait TestContext extends TimeProviderMock {
     val chattingSendMessageCounterRef                          = Ref.make(0).zioValue
     val chattingSendSeenCounterRef                             = Ref.make(0).zioValue
     val messagesCounterRef                                     = Ref.make(0).zioValue
@@ -133,7 +138,7 @@ class ReplyingToMessagesCronJobStreamSpec extends ZWordSpecBase, RepositoryArbit
               getWahaUsersActivityWaitingForAssistantReplyCounterRef,
             getWahaUserMessagesCounterRef = getWahaUserMessagesCounterRef,
           ),
-          Mocks.timeProviderLive(clock),
+          timeProviderMockLive(clock),
         )
         .zioValue
   }

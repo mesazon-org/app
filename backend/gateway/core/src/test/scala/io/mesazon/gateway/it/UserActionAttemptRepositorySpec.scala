@@ -1,20 +1,18 @@
 package io.mesazon.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.utils.*
+import io.mesazon.generator.IDGenerator
 import io.mesazon.test.postgresql.*
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.*
 import zio.*
-
-import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant, ZoneOffset}
 
 class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
 
@@ -74,60 +72,51 @@ class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitrari
       "successfully insert new action attempt for a user and action type" in withContext { context =>
         import context.*
 
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
         val userActionAttemptRepository = ZIO
           .service[UserActionAttemptRepository]
           .provide(
             UserActionAttemptRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(clockNow),
+            postgresClient.databaseLive,
             ZLayer.succeed(userActionAttemptQueries),
-            Mocks.idGeneratorLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
           )
           .zioValue
 
         val userID            = arbitrarySample[UserID]
         val actionAttemptType = arbitrarySample[ActionAttemptType]
 
-        val userActionAttemptRowRetrieved = userActionAttemptRepository
+        val userActionAttemptRowGet = userActionAttemptRepository
           .getAndIncreaseUserActionAttempt(userID, actionAttemptType)
           .zioValue
-
-        val userActionAttemptRowExpected = UserActionAttemptRow(
-          actionAttemptID = ActionAttemptID.assume("1"),
-          userID = userID,
-          actionAttemptType = actionAttemptType,
-          attempts = Attempts.assume(1),
-          createdAt = CreatedAt(instantNow),
-          updatedAt = UpdatedAt(instantNow),
-        )
-
-        userActionAttemptRowRetrieved shouldBe userActionAttemptRowExpected
 
         val userActionAttemptRowsAll =
           postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
 
         userActionAttemptRowsAll should have size 1
-        userActionAttemptRowsAll should contain theSameElementsAs List(userActionAttemptRowExpected)
+        userActionAttemptRowsAll.head shouldBe userActionAttemptRowGet
+        userActionAttemptRowsAll.head shouldBe UserActionAttemptRow(
+          actionAttemptID = userActionAttemptRowsAll.head.actionAttemptID,
+          userID = userID,
+          actionAttemptType = actionAttemptType,
+          attempts = Attempts.assume(1),
+          createdAt = userActionAttemptRowsAll.head.createdAt,
+          updatedAt = userActionAttemptRowsAll.head.updatedAt,
+        )
       }
 
       "successfully get old record and increase existing action attempt count for a user and action type" in withContext {
         context =>
           import context.*
 
-          val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
           val userActionAttemptRepository = ZIO
             .service[UserActionAttemptRepository]
             .provide(
               UserActionAttemptRepository.live,
-              ZLayer.succeed(postgresClient.database),
-              Mocks.timeProviderLive(clockNow),
+              postgresClient.databaseLive,
               ZLayer.succeed(userActionAttemptQueries),
-              Mocks.idGeneratorLive,
+              TimeProvider.liveSystemUTC,
+              IDGenerator.liveUUIDv7,
             )
             .zioValue
 
@@ -139,22 +128,21 @@ class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitrari
             )
             .zioValue
 
-          val userActionAttemptRowRetrieved = userActionAttemptRepository
+          val userActionAttemptRowGet = userActionAttemptRepository
             .getAndIncreaseUserActionAttempt(userActionAttemptRow.userID, userActionAttemptRow.actionAttemptType)
             .zioValue
 
-          userActionAttemptRowRetrieved shouldBe userActionAttemptRow
-
-          val userActionAttemptRowExpected = userActionAttemptRow.copy(
-            attempts = Attempts.assume(userActionAttemptRow.attempts.value + 1),
-            updatedAt = UpdatedAt(instantNow),
-          )
+          userActionAttemptRowGet shouldBe userActionAttemptRow
 
           val userActionAttemptRowsAll =
             postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
 
           userActionAttemptRowsAll should have size 1
-          userActionAttemptRowsAll should contain theSameElementsAs List(userActionAttemptRowExpected)
+          userActionAttemptRowsAll.head.updatedAt should not be userActionAttemptRow.updatedAt
+          userActionAttemptRowsAll.head shouldBe userActionAttemptRow.copy(
+            attempts = Attempts.assume(userActionAttemptRow.attempts.value + 1),
+            updatedAt = userActionAttemptRowsAll.head.updatedAt,
+          )
       }
     }
 
@@ -166,10 +154,10 @@ class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitrari
           .service[UserActionAttemptRepository]
           .provide(
             UserActionAttemptRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            postgresClient.databaseLive,
             ZLayer.succeed(userActionAttemptQueries),
-            Mocks.idGeneratorLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
           )
           .zioValue
 
@@ -198,10 +186,10 @@ class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitrari
           .service[UserActionAttemptRepository]
           .provide(
             UserActionAttemptRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            postgresClient.databaseLive,
             ZLayer.succeed(userActionAttemptQueries),
-            Mocks.idGeneratorLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
           )
           .zioValue
 

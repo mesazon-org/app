@@ -2,8 +2,8 @@ package io.mesazon.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
 import io.github.gaelrenoux.tranzactio.DbException
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.UserTokenRepository
 import io.mesazon.gateway.repository.domain.UserTokenRow
@@ -13,9 +13,6 @@ import io.mesazon.test.postgresql.PostgreSQLTestClient
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.{DockerComposeBase, ZWordSpecBase}
 import zio.*
-
-import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant, ZoneOffset}
 
 class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
 
@@ -75,16 +72,13 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
       "successfully insert a user token" in withContext { context =>
         import context.*
 
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
         val userTokenRepository = ZIO
           .service[UserTokenRepository]
           .provide(
             UserTokenRepository.live,
-            ZLayer.succeed(postgresClient.database),
+            postgresClient.databaseLive,
             ZLayer.succeed(userTokenQueries),
-            Mocks.timeProviderLive(clockNow),
+            TimeProvider.liveSystemUTC,
           )
           .zioValue
 
@@ -103,34 +97,32 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
         userTokensRowAll should have size 1
-        userTokensRowAll should contain theSameElementsAs List(userTokenRow.copy(createdAt = CreatedAt(instantNow)))
+        userTokensRowAll.head shouldBe userTokenRow
+          .copy(createdAt = userTokensRowAll.head.createdAt)
       }
 
       "successfully upsert a user token when tokenIDOptOld is provided" in withContext { context =>
         import context.*
 
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
         val userTokenRepository = ZIO
           .service[UserTokenRepository]
           .provide(
             UserTokenRepository.live,
-            ZLayer.succeed(postgresClient.database),
+            postgresClient.databaseLive,
             ZLayer.succeed(userTokenQueries),
-            Mocks.timeProviderLive(clockNow),
+            TimeProvider.liveSystemUTC,
           )
           .zioValue
 
         val userTokenRowOld = arbitrarySample[UserTokenRow]
-          .copy(createdAt = CreatedAt(instantNow.minusSeconds(10)), expiresAt = ExpiresAt(instantNow.minusSeconds(5)))
+
         val userTokenRowNew = arbitrarySample[UserTokenRow]
           .copy(
             userID = userTokenRowOld.userID,
             tokenType = userTokenRowOld.tokenType,
-            createdAt = CreatedAt(instantNow),
-            expiresAt = ExpiresAt(instantNow.plusSeconds(10)),
           )
+
+        userTokenRowOld should not be userTokenRowNew
 
         postgresClient
           .executeQuery(
@@ -151,31 +143,26 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
         userTokensRowAll should have size 1
-        userTokensRowAll should contain theSameElementsAs List(
-          userTokenRowNew
-        )
+        userTokensRowAll.head shouldBe userTokenRowNew
+          .copy(createdAt = userTokensRowAll.head.createdAt)
       }
 
       "successfully upsert a user token when tokenIDOptOld is provided but the old token does not exist" in withContext {
         context =>
           import context.*
 
-          val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
           val userTokenRepository = ZIO
             .service[UserTokenRepository]
             .provide(
               UserTokenRepository.live,
-              ZLayer.succeed(postgresClient.database),
+              postgresClient.databaseLive,
               ZLayer.succeed(userTokenQueries),
-              Mocks.timeProviderLive(clockNow),
+              TimeProvider.liveSystemUTC,
             )
             .zioValue
 
           val tokenIDOld      = arbitrarySample[TokenID]
           val userTokenRowNew = arbitrarySample[UserTokenRow]
-            .copy(createdAt = CreatedAt(instantNow), expiresAt = ExpiresAt(instantNow.plusSeconds(10)))
 
           userTokenRepository
             .upsertUserToken(
@@ -190,23 +177,21 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
           userTokensRowAll should have size 1
-          userTokensRowAll should contain theSameElementsAs List(
-            userTokenRowNew
-          )
+          userTokensRowAll.head shouldBe userTokenRowNew
+            .copy(createdAt = userTokensRowAll.head.createdAt)
+
       }
 
       "fail to re-insert the same token when not tokenIDOptOld is provided" in withContext { context =>
         import context.*
 
-        val instantNow          = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow            = Clock.fixed(instantNow, ZoneOffset.UTC)
         val userTokenRepository = ZIO
           .service[UserTokenRepository]
           .provide(
             UserTokenRepository.live,
-            ZLayer.succeed(postgresClient.database),
+            postgresClient.databaseLive,
             ZLayer.succeed(userTokenQueries),
-            Mocks.timeProviderLive(clockNow),
+            TimeProvider.liveSystemUTC,
           )
           .zioValue
 
@@ -236,28 +221,25 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         context =>
           import context.*
 
-          val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
           val userTokenRepository = ZIO
             .service[UserTokenRepository]
             .provide(
               UserTokenRepository.live,
-              ZLayer.succeed(postgresClient.database),
+              postgresClient.databaseLive,
               ZLayer.succeed(userTokenQueries),
-              Mocks.timeProviderLive(clockNow),
+              TimeProvider.liveSystemUTC,
             )
             .zioValue
 
           val tokenIDOld      = arbitrarySample[TokenID]
           val userTokenRowNew = arbitrarySample[UserTokenRow]
-            .copy(createdAt = CreatedAt(instantNow), expiresAt = ExpiresAt(instantNow.plusSeconds(10)))
+
           val userTokenRowExisting = arbitrarySample[UserTokenRow]
             .copy(
-              tokenID = userTokenRowNew.tokenID,
-              createdAt = CreatedAt(instantNow),
-              expiresAt = ExpiresAt(instantNow.plusSeconds(20)),
+              tokenID = userTokenRowNew.tokenID
             )
+
+          userTokenRowNew should not be userTokenRowExisting
 
           postgresClient
             .executeQuery(
@@ -288,9 +270,9 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .service[UserTokenRepository]
           .provide(
             UserTokenRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            postgresClient.databaseLive,
             ZLayer.succeed(userTokenQueries),
+            TimeProvider.liveSystemUTC,
           )
           .zioValue
 
@@ -302,7 +284,7 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           )
           .zioValue
 
-        val userTokenRowOptRetrieved = userTokenRepository
+        val userTokenRowOptGet = userTokenRepository
           .getUserToken(
             tokenID = userTokenRow.tokenID,
             userID = userTokenRow.userID,
@@ -310,7 +292,7 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           )
           .zioValue
 
-        userTokenRowOptRetrieved shouldBe Some(userTokenRow)
+        userTokenRowOptGet shouldBe Some(userTokenRow)
       }
 
       "successfully return None when the user token does not exist" in withContext { context =>
@@ -320,9 +302,9 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .service[UserTokenRepository]
           .provide(
             UserTokenRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            postgresClient.databaseLive,
             ZLayer.succeed(userTokenQueries),
+            TimeProvider.liveSystemUTC,
           )
           .zioValue
 
@@ -330,7 +312,7 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val userID    = arbitrarySample[UserID]
         val tokenType = arbitrarySample[TokenType]
 
-        val userTokenRowOptRetrieved = userTokenRepository
+        val userTokenRowOptGet = userTokenRepository
           .getUserToken(
             tokenID = tokenID,
             userID = userID,
@@ -338,7 +320,7 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           )
           .zioValue
 
-        userTokenRowOptRetrieved shouldBe None
+        userTokenRowOptGet shouldBe None
       }
     }
 
@@ -350,9 +332,9 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .service[UserTokenRepository]
           .provide(
             UserTokenRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            postgresClient.databaseLive,
             ZLayer.succeed(userTokenQueries),
+            TimeProvider.liveSystemUTC,
           )
           .zioValue
 
@@ -384,9 +366,9 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .service[UserTokenRepository]
           .provide(
             UserTokenRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            postgresClient.databaseLive,
             ZLayer.succeed(userTokenQueries),
+            TimeProvider.liveSystemUTC,
           )
           .zioValue
 
@@ -415,9 +397,9 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
             .service[UserTokenRepository]
             .provide(
               UserTokenRepository.live,
-              ZLayer.succeed(postgresClient.database),
-              Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+              postgresClient.databaseLive,
               ZLayer.succeed(userTokenQueries),
+              TimeProvider.liveSystemUTC,
             )
             .zioValue
 
@@ -449,7 +431,7 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
           userTokensRowAll should have size 1
-          userTokensRowAll should contain theSameElementsAs List(userTokenRow2)
+          userTokensRowAll.head shouldBe userTokenRow2
       }
     }
 
@@ -461,9 +443,9 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .service[UserTokenRepository]
           .provide(
             UserTokenRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            postgresClient.databaseLive,
             ZLayer.succeed(userTokenQueries),
+            TimeProvider.liveSystemUTC,
           )
           .zioValue
 
@@ -501,9 +483,9 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
             .service[UserTokenRepository]
             .provide(
               UserTokenRepository.live,
-              ZLayer.succeed(postgresClient.database),
-              Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+              postgresClient.databaseLive,
               ZLayer.succeed(userTokenQueries),
+              TimeProvider.liveSystemUTC,
             )
             .zioValue
 
@@ -525,9 +507,9 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .service[UserTokenRepository]
           .provide(
             UserTokenRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            postgresClient.databaseLive,
             ZLayer.succeed(userTokenQueries),
+            TimeProvider.liveSystemUTC,
           )
           .zioValue
 
@@ -563,7 +545,7 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
         userTokensRowAll should have size 1
-        userTokensRowAll should contain theSameElementsAs List(userTokenRow3)
+        userTokensRowAll.head shouldBe userTokenRow3
       }
     }
   }

@@ -63,7 +63,7 @@ object JwtService {
         accessTokenRaw <- ZIO
           .attempt(
             Jwts.builder.claims
-              .subject(userID.value)
+              .subject(userID.value.toString)
               .issuer(jwtConfig.issuer)
               .expiration(expirationDate)
               .and
@@ -91,8 +91,8 @@ object JwtService {
         refreshTokenRaw <- ZIO
           .attempt(
             Jwts.builder.claims
-              .id(tokenID.value)
-              .subject(userID.value)
+              .id(tokenID.value.toString)
+              .subject(userID.value.toString)
               .audience()
               .add(audienceRefresh)
               .and()
@@ -123,8 +123,8 @@ object JwtService {
         resetPasswordTokenRaw <- ZIO
           .attempt(
             Jwts.builder.claims
-              .id(tokenID.value)
-              .subject(userID.value)
+              .id(tokenID.value.toString)
+              .subject(userID.value.toString)
               .issuer(jwtConfig.issuer)
               .audience()
               .add(audienceResetPassword)
@@ -173,7 +173,7 @@ object JwtService {
           )
           .flatMap(userIDRaw =>
             ZIO
-              .fromEither(UserID.either(userIDRaw))
+              .fromEither(UserID.eitherFromString(userIDRaw))
               .mapError(error =>
                 ServiceError.InternalServerError
                   .UnexpectedError(s"Failed to apply UserID from access token subject: $error")
@@ -208,7 +208,7 @@ object JwtService {
           )
           .flatMap(userIDRaw =>
             ZIO
-              .fromEither(UserID.either(userIDRaw))
+              .fromEither(UserID.eitherFromString(userIDRaw))
               .mapError(error =>
                 ServiceError.InternalServerError
                   .UnexpectedError(s"Failed to apply UserID from refresh token subject: $error")
@@ -222,7 +222,7 @@ object JwtService {
           )
           .flatMap(tokenIDRaw =>
             ZIO
-              .fromEither(TokenID.either(tokenIDRaw))
+              .fromEither(TokenID.eitherFromString(tokenIDRaw))
               .mapError(error =>
                 ServiceError.InternalServerError
                   .UnexpectedError(s"Failed to apply TokenID from refresh token id: $error")
@@ -265,7 +265,7 @@ object JwtService {
           )
           .flatMap(userIDRaw =>
             ZIO
-              .fromEither(UserID.either(userIDRaw))
+              .fromEither(UserID.eitherFromString(userIDRaw))
               .mapError(error =>
                 ServiceError.InternalServerError
                   .UnexpectedError(s"Failed to apply UserID from reset password token subject: $error")
@@ -279,7 +279,7 @@ object JwtService {
           )
           .flatMap(tokenIDRaw =>
             ZIO
-              .fromEither(TokenID.either(tokenIDRaw))
+              .fromEither(TokenID.eitherFromString(tokenIDRaw))
               .mapError(error =>
                 ServiceError.InternalServerError
                   .UnexpectedError(s"Failed to apply TokenID from reset password token id: $error")

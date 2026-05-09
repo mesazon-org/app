@@ -35,21 +35,17 @@ class SignUpVerifyEmailPostRequestServiceValidatorSpec extends ZWordSpecBase, Sm
         )
         .zioValue
 
-      val invalidSignUpVerifyEmailRequest = smithy.SignUpVerifyEmailPostRequest(otpID = "", otp = "invalid-otp")
+      val invalidSignUpVerifyEmailRequest =
+        arbitrarySample[smithy.SignUpVerifyEmailPostRequest].copy(otp = "invalid-otp")
 
       signUpVerifyEmailServiceValidator.validate(invalidSignUpVerifyEmailRequest).zioError shouldBe
         ServiceError.BadRequestError.ValidationError(
           invalidFields = List(
             InvalidFieldError(
-              fieldName = "otpID",
-              errorMessage = "Should not have leading or trailing whitespaces & Should have a minimum length of 1",
-              invalidValues = List(""),
-            ),
-            InvalidFieldError(
               fieldName = "otp",
               errorMessage = "Should match ^[A-Z0-9]{6}$",
               invalidValues = List("invalid-otp"),
-            ),
+            )
           )
         )
     }

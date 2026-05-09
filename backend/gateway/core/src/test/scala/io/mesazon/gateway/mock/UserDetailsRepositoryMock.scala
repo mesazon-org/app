@@ -40,7 +40,7 @@ trait UserDetailsRepositoryMock extends ZIOTestOps, should.Matchers {
           serviceErrorOpt.fold(
             ZIO.succeed(
               UserDetailsRow(
-                userID = UserID.assume("mock-user-id"),
+                userID = UserID.randomUUID,
                 email = email,
                 fullName = None,
                 phoneNumber = None,

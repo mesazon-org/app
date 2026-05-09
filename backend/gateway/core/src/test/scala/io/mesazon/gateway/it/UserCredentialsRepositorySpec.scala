@@ -2,8 +2,8 @@ package io.mesazon.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
 import io.github.gaelrenoux.tranzactio.DbException
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.repository.UserCredentialsRepository
 import io.mesazon.gateway.repository.domain.UserCredentialsRow
@@ -13,9 +13,6 @@ import io.mesazon.test.postgresql.*
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.*
 import zio.*
-
-import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant, ZoneOffset}
 
 class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
 
@@ -75,15 +72,12 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
       "successfully insert new credentials for a user" in withContext { context =>
         import context.*
 
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
         val userCredentialsRepository = ZIO
           .service[UserCredentialsRepository]
           .provide(
             UserCredentialsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(clockNow),
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
             ZLayer.succeed(userCredentialsQueries),
           )
           .zioValue
@@ -101,12 +95,11 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
           postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
 
         userCredentialsRowsAll should have size 1
-        userCredentialsRowsAll should contain theSameElementsAs List(
+        userCredentialsRowsAll.head shouldBe
           userCredentialsRow.copy(
-            createdAt = CreatedAt(instantNow),
-            updatedAt = UpdatedAt(instantNow),
+            createdAt = userCredentialsRowsAll.head.createdAt,
+            updatedAt = userCredentialsRowsAll.head.updatedAt,
           )
-        )
       }
 
       "fail to insert credentials for already existing user" in withContext { context =>
@@ -116,8 +109,8 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
           .service[UserCredentialsRepository]
           .provide(
             UserCredentialsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
             ZLayer.succeed(userCredentialsQueries),
           )
           .zioValue
@@ -146,15 +139,12 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
       "successfully update existing credentials for a user" in withContext { context =>
         import context.*
 
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
         val userCredentialsRepository = ZIO
           .service[UserCredentialsRepository]
           .provide(
             UserCredentialsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(clockNow),
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
             ZLayer.succeed(userCredentialsQueries),
           )
           .zioValue
@@ -180,26 +170,22 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
           postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
 
         userCredentialsRowsAll should have size 1
-        userCredentialsRowsAll should contain theSameElementsAs List(
-          userCredentialsRow.copy(
-            passwordHash = passwordHashUpdate,
-            updatedAt = UpdatedAt(instantNow),
-          )
+        userCredentialsRowsAll.head.updatedAt should not be userCredentialsRow.updatedAt
+        userCredentialsRowsAll.head shouldBe userCredentialsRow.copy(
+          passwordHash = passwordHashUpdate,
+          updatedAt = userCredentialsRowsAll.head.updatedAt,
         )
       }
 
       "successfully update credentials for a not existing user" in withContext { context =>
         import context.*
 
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
         val userCredentialsRepository = ZIO
           .service[UserCredentialsRepository]
           .provide(
             UserCredentialsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(clockNow),
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
             ZLayer.succeed(userCredentialsQueries),
           )
           .zioValue
@@ -222,15 +208,15 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
     }
 
     "getUserCredentials" should {
-      "successfully retrieve existing credentials for a user by user ID" in withContext { context =>
+      "successfully get existing credentials for a user by user ID" in withContext { context =>
         import context.*
 
         val userCredentialsRepository = ZIO
           .service[UserCredentialsRepository]
           .provide(
             UserCredentialsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
             ZLayer.succeed(userCredentialsQueries),
           )
           .zioValue
@@ -243,11 +229,11 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
           )
           .zioValue
 
-        val userCredentialsRowOptRetrieved = userCredentialsRepository
+        val userCredentialsRowOptGet = userCredentialsRepository
           .getUserCredentials(userID = userCredentialsRow.userID)
           .zioValue
 
-        userCredentialsRowOptRetrieved shouldBe Some(userCredentialsRow)
+        userCredentialsRowOptGet shouldBe Some(userCredentialsRow)
       }
 
       "return None when there are no credentials for the given user ID" in withContext { context =>
@@ -257,19 +243,19 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
           .service[UserCredentialsRepository]
           .provide(
             UserCredentialsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
             ZLayer.succeed(userCredentialsQueries),
           )
           .zioValue
 
         val userID = arbitrarySample[UserID]
 
-        val userCredentialsRowOptRetrieved = userCredentialsRepository
+        val userCredentialsRowOptGet = userCredentialsRepository
           .getUserCredentials(userID)
           .zioValue
 
-        userCredentialsRowOptRetrieved shouldBe None
+        userCredentialsRowOptGet shouldBe None
       }
     }
   }

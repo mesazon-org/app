@@ -27,12 +27,12 @@ class PingRepositorySpec extends ZWordSpecBase, SmithyArbitraries, DockerCompose
 
   "PingRepository" when {
     "ping" should {
-      "receive successful response" in withContext { (client: PostgreSQLTestClient) =>
+      "receive successful response" in withContext { postgresClient =>
         val pingRepository = ZIO
           .service[PingRepository]
           .provide(
             PingRepository.live,
-            ZLayer.succeed(client.database),
+            postgresClient.databaseLive,
           )
           .zioValue
 

@@ -9,7 +9,6 @@ import org.scalatest.matchers.should
 import zio.*
 
 import java.time.Instant
-import java.util.concurrent.atomic.AtomicInteger
 
 trait UserOtpRepositoryMock extends ZIOTestOps, should.Matchers {
   private val upsertUserOtpCounterRef: Ref[Int]      = Ref.make(0).zioValue
@@ -40,8 +39,6 @@ trait UserOtpRepositoryMock extends ZIOTestOps, should.Matchers {
       serviceErrorOpt: Option[ServiceError] = None,
   ): ULayer[UserOtpRepository] = ZLayer.succeed(
     new UserOtpRepository {
-      val atomicInteger = new AtomicInteger(0)
-
       override def upsertUserOtp(
           userID: UserID,
           otpType: OtpType,
@@ -52,7 +49,7 @@ trait UserOtpRepositoryMock extends ZIOTestOps, should.Matchers {
           serviceErrorOpt.fold(
             ZIO.succeed(
               UserOtpRow(
-                otpID = OtpID.assume(s"otp-id-${atomicInteger.incrementAndGet()}"),
+                otpID = OtpID.randomUUID,
                 userID = userID,
                 otp = otp,
                 otpType = otpType,

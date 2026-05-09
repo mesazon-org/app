@@ -35,6 +35,8 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
   }
 
   def jwtServiceMockLive(
+      tokenIDOpt: Option[TokenID] = None,
+      userIDOpt: Option[UserID] = None,
       maybeServiceError: Option[ServiceError] = None,
       maybeUnexpectedError: Option[Throwable] = None,
   ) = ZLayer.succeed(
@@ -53,7 +55,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
             maybeUnexpectedError.fold(
               ZIO.succeed(
                 (
-                  TokenID.assume("refresh-token-id"),
+                  tokenIDOpt.getOrElse(TokenID.randomUUID),
                   RefreshToken.assume("refresh-token"),
                   ExpiresAt(Instant.now.plusSeconds(10).truncatedTo(ChronoUnit.MILLIS)),
                 )
@@ -67,7 +69,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
             maybeUnexpectedError.fold(
               ZIO.succeed(
                 (
-                  TokenID.assume("reset-password-token-id"),
+                  tokenIDOpt.getOrElse(TokenID.randomUUID),
                   ResetPasswordToken.assume("reset-password-token"),
                   ExpiresAt(Instant.now.plusSeconds(10).truncatedTo(ChronoUnit.MILLIS)),
                   2.minutes,
@@ -80,7 +82,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
         verifyAccessTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed(UserID.assume("user-id"))
+              ZIO.succeed(userIDOpt.getOrElse(UserID.randomUUID))
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
@@ -88,7 +90,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
         verifyRefreshTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed((TokenID.assume("refresh-token-id"), UserID.assume("test")))
+              ZIO.succeed((tokenIDOpt.getOrElse(TokenID.randomUUID), userIDOpt.getOrElse(UserID.randomUUID)))
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
@@ -98,7 +100,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
         verifyResetPasswordTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed((TokenID.assume("reset-password-token-id"), UserID.assume("user-id")))
+              ZIO.succeed((tokenIDOpt.getOrElse(TokenID.randomUUID), userIDOpt.getOrElse(UserID.randomUUID)))
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
     }

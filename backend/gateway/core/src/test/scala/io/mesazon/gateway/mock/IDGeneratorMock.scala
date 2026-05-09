@@ -6,7 +6,7 @@ import org.scalatest.Assertion
 import org.scalatest.matchers.should
 import zio.*
 
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.UUID
 
 trait IDGeneratorMock extends ZIOTestOps, should.Matchers {
   private val generateCounterRef: Ref[Int] = Ref.make(0).zioValue
@@ -16,13 +16,11 @@ trait IDGeneratorMock extends ZIOTestOps, should.Matchers {
   ): Assertion =
     generateCounterRef.get.zioValue shouldBe expectedGenerateCalls
 
-  def idGeneratorMockLive(id: Option[String] = None): ULayer[IDGenerator] =
+  def idGeneratorMockLive(id: Option[UUID] = None): ULayer[IDGenerator] =
     ZLayer.succeed(
       new IDGenerator {
-        val atomicInt = new AtomicInteger(0)
-
-        override def generate: UIO[String] =
-          generateCounterRef.incrementAndGet *> ZIO.succeed(id.getOrElse(s"id-${atomicInt.incrementAndGet()}"))
+        override def generate: UIO[UUID] =
+          generateCounterRef.incrementAndGet *> ZIO.succeed(id.getOrElse(UUID.randomUUID()))
       }
     )
 }

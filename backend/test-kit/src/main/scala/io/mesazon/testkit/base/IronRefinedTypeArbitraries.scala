@@ -7,10 +7,15 @@ import org.scalacheck.*
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 
 trait IronRefinedTypeArbitraries {
 
-  given Arbitrary[Instant :| Pure] = Arbitrary(Gen.const(Instant.now().truncatedTo(ChronoUnit.MILLIS)))
+  given Arbitrary[Instant :| Pure] = Arbitrary(
+    Gen.choose(0, 100).map(Instant.now().truncatedTo(ChronoUnit.MILLIS).plusMillis(_))
+  )
+
+  given arbUUIDPure: Arbitrary[UUID :| Pure] = Arbitrary(Gen.uuid.map(_.refineUnsafe[Pure]))
 
   given arbNonEmpty: Arbitrary[String :| NonEmpty] = Arbitrary {
     Gen

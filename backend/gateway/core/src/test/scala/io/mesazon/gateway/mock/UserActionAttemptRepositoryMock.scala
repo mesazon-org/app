@@ -37,7 +37,7 @@ trait UserActionAttemptRepositoryMock extends ZIOTestOps with should.Matchers {
             ZIO.succeed(
               userActionAttemptRowOpt.getOrElse(
                 UserActionAttemptRow(
-                  ActionAttemptID.assume("mocked-action-attempt-id"),
+                  ActionAttemptID.randomUUID,
                   userID,
                   actionAttemptType,
                   Attempts.assume(1),

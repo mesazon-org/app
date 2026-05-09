@@ -2,7 +2,6 @@ package io.mesazon.gateway
 
 import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import io.github.gaelrenoux.tranzactio.DbException
-import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.waha
 import io.mesazon.domain.waha.WahaError
@@ -10,64 +9,17 @@ import io.mesazon.domain.waha.output.ChattingSendMessageOutput
 import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.domain.*
-import io.mesazon.gateway.service.*
-import io.mesazon.gateway.state.AuthState
-import io.mesazon.generator.IDGenerator
 import io.mesazon.testkit.base.ZIOTestOps
 import io.mesazon.waha.WahaClient
-import org.http4s.Request
 import sttp.ai.openai.requests.completions.chat.message
 import sttp.tapir.Schema
 import zio.*
 import zio.stream.*
 
-import java.time.{Clock, Instant}
+import java.time.Instant
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicInteger
 
 object Mocks extends ZIOTestOps {
-
-  def pingRepositoryLive(): ULayer[PingRepository] = ZLayer.succeed(
-    new PingRepository {
-      override def ping(): IO[ServiceError.ServiceUnavailableError.DatabaseUnavailableError, Unit] = ZIO.unit
-    }
-  )
-
-  def authStateLive(authedUser: AuthedUser): ULayer[AuthState] =
-    ZLayer.succeed(
-      new AuthState {
-        override def get(): UIO[AuthedUser] = ZIO.succeed(authedUser)
-
-        override def set(authedUser: AuthedUser): UIO[Unit] = ZIO.unit
-      }
-    )
-
-  def authorizationServiceLive(maybeError: Option[Throwable] = None): ULayer[AuthorizationService[Task]] =
-    ZLayer.succeed(
-      new AuthorizationService[Task] {
-        override def auth(request: Request[Task]): Task[Unit] =
-          maybeError.fold(ZIO.unit)(ZIO.fail(_))
-      }
-    )
-
-  def idGeneratorLive: ULayer[IDGenerator] =
-    ZLayer.succeed {
-      val atomicInt = new AtomicInteger(0)
-
-      new IDGenerator {
-        override def generate: UIO[String] = ZIO.succeed(atomicInt.incrementAndGet().toString)
-      }
-    }
-
-  def idGeneratorConstLive(id: String): ULayer[IDGenerator] =
-    ZLayer.succeed {
-      new IDGenerator {
-        override def generate: UIO[String] = ZIO.succeed(id)
-      }
-    }
-
-  def timeProviderLive(clock: Clock): ULayer[TimeProvider] =
-    ZLayer.succeed(clock) >>> TimeProvider.live
 
   def wahaClientLive(
       chattingSendSeenCounterRef: Ref[Int] = Ref.make(0).zioValue,
@@ -130,7 +82,7 @@ object Mocks extends ZIOTestOps {
         ): IO[DbException, WahaUserRow] =
           createOrGetWahaUserCounterRef.incrementAndGet *> ZIO.succeed(
             WahaUserRow(
-              UserID.assume(UUID.randomUUID().toString),
+              UserID.randomUUID,
               wahaFullName,
               wahaUserID,
               wahaUserAccountID,

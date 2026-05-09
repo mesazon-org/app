@@ -1,8 +1,7 @@
 package io.mesazon.gateway.unit.service
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.Mocks
-import io.mesazon.gateway.mock.JwtServiceMock
+import io.mesazon.gateway.mock.{AuthStateMock, JwtServiceMock}
 import io.mesazon.gateway.service.{AuthorizationService, ServiceTask}
 import io.mesazon.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import org.http4s.*
@@ -16,11 +15,20 @@ class AuthorizationServiceSpec extends ZWordSpecBase, GatewayArbitraries {
       "return a successful response" in new TestContext {
         val authedUser = arbitrarySample[AuthedUser]
         val token      = "valid-token"
-        val request    = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
+
         val authorizationService = buildAuthorizationService(authedUser)
 
         authorizationService.auth(request).zioEither.isRight shouldBe true
+
+        checkJwtService(
+          expectedVerifyAccessTokenCalls = 1
+        )
+        checkAuthState(
+          expectedSetCalls = 1
+        )
       }
 
       "fail with Unauthorized when token is missing" in new TestContext {
@@ -38,16 +46,19 @@ class AuthorizationServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         serviceError.asInstanceOf[
           ServiceError.UnauthorizedError.TokenMissing.type
         ] shouldBe ServiceError.UnauthorizedError.TokenMissing
+
+        checkJwtService()
+        checkAuthState()
       }
     }
   }
 
-  trait TestContext extends JwtServiceMock {
+  trait TestContext extends JwtServiceMock, AuthStateMock {
     def buildAuthorizationService(authedUser: AuthedUser): AuthorizationService[ServiceTask] = ZIO
       .service[AuthorizationService[ServiceTask]]
       .provide(
         AuthorizationService.local,
-        Mocks.authStateLive(authedUser),
+        authStateMockLive(authedUser),
         jwtServiceMockLive(),
       )
       .zioValue

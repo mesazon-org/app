@@ -2,20 +2,20 @@ package io.mesazon.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
 import io.github.gaelrenoux.tranzactio.DbException
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.repository.UserOtpRepository
 import io.mesazon.gateway.repository.domain.UserOtpRow
 import io.mesazon.gateway.repository.queries.UserOtpQueries
 import io.mesazon.gateway.utils.*
+import io.mesazon.generator.IDGenerator
 import io.mesazon.test.postgresql.*
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.*
 import zio.*
 
-import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant, ZoneOffset}
+import java.time.Instant
 
 class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
 
@@ -75,23 +75,20 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
       "successfully insert a new OTP for a user and return the inserted row" in withContext { context =>
         import context.*
 
-        val now      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow = Clock.fixed(now, ZoneOffset.UTC)
-
         val userOtpRepository = ZIO
           .service[UserOtpRepository]
           .provide(
             UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(clockNow),
-            Mocks.idGeneratorLive,
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
 
         val userOtpRow = arbitrarySample[UserOtpRow]
 
-        val userOtpRowInserted = userOtpRepository
+        val userOtpRowUpsert = userOtpRepository
           .upsertUserOtp(
             userID = userOtpRow.userID,
             otp = userOtpRow.otp,
@@ -104,22 +101,24 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll should have size 1
-        userOtpRowsAll should contain theSameElementsAs List(userOtpRowInserted)
+        userOtpRowsAll.head shouldBe userOtpRowUpsert
+        userOtpRowsAll.head shouldBe userOtpRow.copy(
+          otpID = userOtpRowsAll.head.otpID,
+          createdAt = userOtpRowsAll.head.createdAt,
+          updatedAt = userOtpRowsAll.head.updatedAt,
+        )
       }
 
       "successfully upsert an existing OTP for a user and return the updated row" in withContext { context =>
         import context.*
 
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
         val userOtpRepository = ZIO
           .service[UserOtpRepository]
           .provide(
             UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(clockNow),
-            Mocks.idGeneratorLive,
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
@@ -135,7 +134,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
         val expiresAtUpdate = ExpiresAt(userOtpRow.expiresAt.value.plusSeconds(1))
         val otpUpdate       = arbitrarySample[Otp]
 
-        val userOtpRowUpdated = userOtpRepository
+        val userOtpRowUpsert = userOtpRepository
           .upsertUserOtp(
             userID = userOtpRow.userID,
             otp = otpUpdate,
@@ -148,32 +147,29 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll should have size 1
-        userOtpRowsAll should contain theSameElementsAs List(
-          userOtpRow.copy(
-            otpID = OtpID.assume("1"),
-            otp = otpUpdate,
-            createdAt = CreatedAt(instantNow),
-            expiresAt = expiresAtUpdate,
-            updatedAt = UpdatedAt(instantNow),
-          )
-        )
-        userOtpRowsAll should contain theSameElementsAs List(
-          userOtpRowUpdated
+        userOtpRowsAll.head.updatedAt should not be userOtpRow.updatedAt
+        userOtpRowsAll.head shouldBe userOtpRowUpsert
+        userOtpRowsAll.head shouldBe userOtpRow.copy(
+          otpID = userOtpRowsAll.head.otpID,
+          otp = otpUpdate,
+          createdAt = userOtpRowsAll.head.createdAt,
+          expiresAt = expiresAtUpdate,
+          updatedAt = userOtpRowsAll.head.updatedAt,
         )
       }
     }
 
     "getUserOtp" should {
-      "successfully retrieve an existing OTP for a user by OTP ID, User ID and OTP type" in withContext { context =>
+      "successfully get an existing OTP for a user by OTP ID, User ID and OTP type" in withContext { context =>
         import context.*
 
         val userOtpRepository = ZIO
           .service[UserOtpRepository]
           .provide(
             UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
@@ -186,11 +182,11 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           )
           .zioValue
 
-        val userOtpRowOptRetrieved = userOtpRepository
+        val userOtpRowOptGet = userOtpRepository
           .getUserOtp(userOtpRow.otpID, userOtpRow.userID, userOtpRow.otpType)
           .zioValue
 
-        userOtpRowOptRetrieved shouldBe Some(userOtpRow)
+        userOtpRowOptGet shouldBe Some(userOtpRow)
       }
 
       "return None when there is no OTP for the given OTP ID, User ID and OTP type" in withContext { context =>
@@ -200,9 +196,9 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .service[UserOtpRepository]
           .provide(
             UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
@@ -211,11 +207,11 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
         val userID  = arbitrarySample[UserID]
         val otpType = arbitrarySample[OtpType]
 
-        val userOtpRowOptRetrieved = userOtpRepository
+        val userOtpRowOptGet = userOtpRepository
           .getUserOtp(otpID, userID, otpType)
           .zioValue
 
-        userOtpRowOptRetrieved shouldBe None
+        userOtpRowOptGet shouldBe None
       }
     }
 
@@ -227,9 +223,9 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .service[UserOtpRepository]
           .provide(
             UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
@@ -242,11 +238,11 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           )
           .zioValue
 
-        val userOtpRowOptRetrieved = userOtpRepository
+        val userOtpRowOptGet = userOtpRepository
           .getUserOtpByOtpID(otpID = userOtpRow.otpID, otpType = userOtpRow.otpType)
           .zioValue
 
-        userOtpRowOptRetrieved shouldBe Some(userOtpRow)
+        userOtpRowOptGet shouldBe Some(userOtpRow)
       }
 
       "return None when there is no OTP for the given OTP ID and OTP type" in withContext { context =>
@@ -256,9 +252,9 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .service[UserOtpRepository]
           .provide(
             UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
@@ -266,11 +262,11 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
         val otpID   = arbitrarySample[OtpID]
         val otpType = arbitrarySample[OtpType]
 
-        val userOtpRowOptRetrieved = userOtpRepository
+        val userOtpRowOptGet = userOtpRepository
           .getUserOtpByOtpID(otpID, otpType)
           .zioValue
 
-        userOtpRowOptRetrieved shouldBe None
+        userOtpRowOptGet shouldBe None
       }
     }
 
@@ -282,9 +278,9 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .service[UserOtpRepository]
           .provide(
             UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
@@ -297,11 +293,11 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           )
           .zioValue
 
-        val userOtpRowOptRetrieved = userOtpRepository
+        val userOtpRowOptGet = userOtpRepository
           .getUserOtpByUserID(userID = userOtpRow.userID, otpType = userOtpRow.otpType)
           .zioValue
 
-        userOtpRowOptRetrieved shouldBe Some(userOtpRow)
+        userOtpRowOptGet shouldBe Some(userOtpRow)
       }
 
       "return None when there is no OTP for the given user ID and OTP type" in withContext { context =>
@@ -311,9 +307,9 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .service[UserOtpRepository]
           .provide(
             UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
@@ -321,11 +317,11 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
         val userID  = arbitrarySample[UserID]
         val otpType = arbitrarySample[OtpType]
 
-        val userOtpRowOptRetrieved = userOtpRepository
+        val userOtpRowOptGet = userOtpRepository
           .getUserOtpByUserID(userID, otpType)
           .zioValue
 
-        userOtpRowOptRetrieved shouldBe None
+        userOtpRowOptGet shouldBe None
       }
     }
 
@@ -333,16 +329,13 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
       "successfully update an existing OTP for a user and return the updated row" in withContext { context =>
         import context.*
 
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
         val userOtpRepository = ZIO
           .service[UserOtpRepository]
           .provide(
             UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(clockNow),
-            Mocks.idGeneratorLive,
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
@@ -370,15 +363,13 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll should have size 1
-        userOtpRowsAll should contain theSameElementsAs List(
+        userOtpRowsAll.head shouldBe
           userOtpRow.copy(
             expiresAt = expiresAtUpdate,
-            updatedAt = UpdatedAt(instantNow),
+            updatedAt = userOtpRowsAll.head.updatedAt,
           )
-        )
-        userOtpRowsAll should contain theSameElementsAs List(
-          userOtpRowUpdated
-        )
+
+        userOtpRowsAll.head shouldBe userOtpRowUpdated
       }
 
       "fail to update a non existing user OTP" in withContext { context =>
@@ -388,9 +379,9 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .service[UserOtpRepository]
           .provide(
             UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
@@ -421,9 +412,9 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .service[UserOtpRepository]
           .provide(
             UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
@@ -457,9 +448,9 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           .service[UserOtpRepository]
           .provide(
             UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
+            postgresClient.databaseLive,
+            TimeProvider.liveSystemUTC,
+            IDGenerator.liveUUIDv7,
             ZLayer.succeed(userOtpQueries),
           )
           .zioValue
