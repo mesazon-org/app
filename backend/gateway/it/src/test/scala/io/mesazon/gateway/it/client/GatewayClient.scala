@@ -9,7 +9,7 @@ import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.smithy
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
-import sttp.client4.jsoniter.{asJson, asJsonEitherOrFail}
+import sttp.client4.jsoniter.*
 import sttp.model.*
 import zio.*
 import zio.interop.catz.*
@@ -190,7 +190,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     basicRequest
       .post(externalUri.addPath("forgot", "password", "reset"))
       .body(asJson(smithy.ForgotPasswordResetPostRequest(resetPasswordToken.value, password.value)))
-      .response(asJsonEitherOrFail[E, Unit])
+      .response(asEither(asJson[E].map(_.fold(e => throw e, identity)), ignore))
       .send(sttpBackend)
 }
 

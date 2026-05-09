@@ -1,5 +1,6 @@
 package io.mesazon.gateway.it
 
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.it.client.GatewayClient
@@ -10,6 +11,7 @@ import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.utils.MailHogClient.MailHogClientConfig
+import io.mesazon.generator.IDGenerator
 import io.mesazon.test.postgresql.PostgreSQLTestClient
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.*
@@ -75,7 +77,15 @@ class UserForgotPasswordApiSpec
         .service[UserTokenQueries]
         .provide(UserTokenQueries.live, RepositoryConfig.live, appNameLive)
       passwordService <- ZIO.service[PasswordService].provide(PasswordService.live, PasswordConfig.live, appNameLive)
-      jwtService      <- ZIO.service[JwtService].provide(JwtService.live, JwtConfig.live, appNameLive)
+      jwtService      <- ZIO
+        .service[JwtService]
+        .provide(
+          JwtService.live,
+          JwtConfig.live,
+          IDGenerator.liveUUIDv7,
+          TimeProvider.liveSystemUTC,
+          appNameLive,
+        )
     } yield Context(
       gatewayApiClient,
       mailHogClient,

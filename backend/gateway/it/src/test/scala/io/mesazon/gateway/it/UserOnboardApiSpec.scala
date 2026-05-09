@@ -54,7 +54,7 @@ class UserOnboardApiSpec
           JwtService.live,
           JwtConfig.live,
           TimeProvider.liveSystemUTC,
-          IDGenerator.uuidGeneratorLive,
+          IDGenerator.liveUUIDv7,
           appNameLive,
         )
       repositoryConfig <- ZIO.service[RepositoryConfig].provide(RepositoryConfig.live, appNameLive)

@@ -10,15 +10,9 @@ trait IDGenerator {
 
 object IDGenerator {
 
-  private object UUIDGenerator extends IDGenerator {
-    override def generate: UIO[String] = Random.nextUUID.map(_.toString)
-  }
-
-  private final class UUIDv7IDGenerator(timeProvider: TimeProvider) extends IDGenerator {
+  private final class IDGeneratorUUIDv7(timeProvider: TimeProvider) extends IDGenerator {
     override def generate: UIO[String] = timeProvider.instantNow.map(UuidCreator.getTimeOrderedEpoch).map(_.toString)
   }
 
-  val uuidGeneratorLive: ULayer[IDGenerator] = ZLayer.succeed(UUIDGenerator)
-
-  val uuidV7IDGeneratorLive: URLayer[TimeProvider, IDGenerator] = ZLayer.fromFunction(new UUIDv7IDGenerator(_))
+  val liveUUIDv7: URLayer[TimeProvider, IDGenerator] = ZLayer.fromFunction(new IDGeneratorUUIDv7(_))
 }
