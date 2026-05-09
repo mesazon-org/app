@@ -190,7 +190,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     basicRequest
       .post(externalUri.addPath("forgot", "password", "reset"))
       .body(asJson(smithy.ForgotPasswordResetPostRequest(resetPasswordToken.value, password.value)))
-      .response(asEither(asJson[E].map(_.fold(e => throw e, identity)), ignore))
+      .response(asEither(asJsonAlways[E].map(_.fold(e => throw e, identity)), ignore))
       .send(sttpBackend)
 }
 
