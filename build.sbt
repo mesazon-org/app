@@ -57,7 +57,11 @@ lazy val backendClockModule = createBackendModule("clock")(None)
   .withDependencies(Dependencies.zio)
 
 lazy val backendGeneratorModule = createBackendModule("generator")(None)
-  .withDependencies(Dependencies.zio)
+  .dependsOn(backendClockModule)
+  .withDependencies(
+    Dependencies.zio,
+    Dependencies.uuidCreator,
+  )
 
 lazy val backendTestKitModule = createBackendModule("test-kit")(None)
   .dependsOn(backendDomainModule)

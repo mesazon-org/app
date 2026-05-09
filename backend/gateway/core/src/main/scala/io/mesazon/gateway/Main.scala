@@ -39,7 +39,7 @@ object Main extends ZIOAppDefault {
 
       // Utils
       TimeProvider.liveSystemUTC,
-      IDGenerator.uuidGeneratorLive,
+      IDGenerator.liveUUIDv7,
       PhoneNumberUtil.live,
       OtpGenerator.live,
 
@@ -112,6 +112,7 @@ object Main extends ZIOAppDefault {
       WahaServiceValidator.live,
       ForgotPasswordPostRequestServiceValidator.live,
       ForgotPasswordVerifyOTPPostRequestServiceValidator.live,
+      ForgotPasswordResetPostRequestServiceValidator.live,
 
       // Clients
       SttpBackend.live,

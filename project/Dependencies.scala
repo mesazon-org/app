@@ -35,6 +35,7 @@ object Dependencies {
   lazy val jjwtV                = "0.13.0"
   lazy val springSecurityV      = "7.0.5"
   lazy val bouncyCastleV        = "1.84"
+  lazy val uuidCreatorV         = "6.1.1"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -129,4 +130,7 @@ object Dependencies {
   // Spring Security Crypto
   lazy val springSecurityCrypto = "org.springframework.security" % "spring-security-crypto" % springSecurityV
   lazy val bouncyCastle         = "org.bouncycastle"             % "bcprov-jdk18on"         % bouncyCastleV
+
+  // UUID Creator
+  lazy val uuidCreator = "com.github.f4b6a3" % "uuid-creator" % uuidCreatorV
 }

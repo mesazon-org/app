@@ -24,6 +24,10 @@ trait EmailClient {
       email: Email,
       otp: Otp,
   ): IO[ServiceError, Unit]
+
+  def sendPasswordChangeConfirmationEmail(
+      email: Email
+  ): IO[ServiceError, Unit]
 }
 
 object EmailClient {
@@ -106,6 +110,28 @@ object EmailClient {
         .unit
         .mapError(error =>
           ServiceError.InternalServerError.UnexpectedError("Failed to sendForgotPasswordEmail", Some(error))
+        )
+
+    override def sendPasswordChangeConfirmationEmail(email: Email): IO[ServiceError, Unit] =
+      ZIO
+        .fromCompletableFuture(
+          mailer.sendMail(
+            EmailBuilder
+              .startingBlank()
+              .from(emailConfig.senderEmail)
+              .to(email.value)
+              .withSubject("Mesazon password change confirmation")
+              .withHTMLText(
+                PasswordChangeConfirmationHTML
+                  .render()
+                  .toString()
+              )
+              .buildEmail()
+          )
+        )
+        .unit
+        .mapError(error =>
+          ServiceError.InternalServerError.UnexpectedError("Failed to sendPasswordChangeConfirmationEmail", Some(error))
         )
   }
 

@@ -28,6 +28,7 @@ object UserForgotPasswordService {
       timeProvider: TimeProvider,
       forgotPasswordPostRequestServiceValidator: ForgotPasswordPostRequestServiceValidator,
       forgotPasswordVerifyOTPPostRequestServiceValidator: ForgotPasswordVerifyOTPPostRequestServiceValidator,
+      forgotPasswordResetPostRequestServiceValidator: ForgotPasswordResetPostRequestServiceValidator,
   ) extends smithy.UserForgotPasswordService[ServiceTask] {
 
     /** HTTP POST /forgot/password */
@@ -187,10 +188,56 @@ object UserForgotPasswordService {
       )
 
     /** HTTP POST /forgot/password/reset */
-    override def forgotPasswordResetPost(request: smithy.ResetPasswordPostRequest): ServiceTask[Unit] =
-      userCredentialsRepository.getUserCredentials(UserID.assume("")) *> passwordService.hashPassword(
-        Password.assume(" ")
-      ) *> ZIO.unit
+    override def forgotPasswordResetPost(request: smithy.ForgotPasswordResetPostRequest): ServiceTask[Unit] =
+      for {
+        _                       <- ZIO.logDebug("Received forgot password reset request")
+        forgotPasswordReset     <- forgotPasswordResetPostRequestServiceValidator.validate(request)
+        authedUserResetPassword <- jwtService.verifyResetPasswordToken(forgotPasswordReset.resetPasswordToken)
+        userDetailsRow          <- userDetailsRepository
+          .getUserDetails(authedUserResetPassword.userID)
+          .someOrFail(
+            ServiceError.InternalServerError.UserNotFoundError(
+              s"No user details found for userID: [${authedUserResetPassword.userID}]"
+            )
+          )
+        _ <- verifyOnboardStage(
+          onboardStageUser = userDetailsRow.onboardStage,
+          onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
+        )
+        userTokenRow <- userTokenRepository
+          .getUserToken(
+            tokenID = authedUserResetPassword.tokenID,
+            userID = authedUserResetPassword.userID,
+            tokenType = TokenType.ResetPasswordToken,
+          )
+          .someOrFail(
+            ServiceError.UnauthorizedError.TokenMissing
+          )
+        passwordHash <- passwordService.hashPassword(forgotPasswordReset.password)
+        _            <- userCredentialsRepository.updateUserCredentials(
+          userID = authedUserResetPassword.userID,
+          passwordHashUpdate = passwordHash,
+        )
+        _ <- userTokenRepository.deleteUserToken(
+          tokenID = userTokenRow.tokenID,
+          userID = userTokenRow.userID,
+          tokenType = TokenType.ResetPasswordToken,
+        )
+        _ <- emailClient
+          .sendPasswordChangeConfirmationEmail(
+            email = userDetailsRow.email
+          )
+          .retry(
+            Schedule.recurs(userForgotPasswordConfig.sendPasswordChangeConfirmationEmailMaxRetries) && Schedule
+              .exponential(userForgotPasswordConfig.sendPasswordChangeConfirmationEmailRetryDelay)
+          )
+          .catchAllCause(cause =>
+            ZIO.logErrorCause(
+              s"Failed to send password change confirmation email for userID: [${authedUserResetPassword.userID}]",
+              cause,
+            )
+          )
+      } yield ()
   }
 
   private def observed(service: smithy.UserForgotPasswordService[ServiceTask]): smithy.UserForgotPasswordService[Task] =
@@ -205,7 +252,7 @@ object UserForgotPasswordService {
       ): Task[smithy.ForgotPasswordVerifyOTPPostResponse] =
         HttpErrorHandler.errorResponseHandler(service.forgotPasswordVerifyOTPPost(request))
 
-      override def forgotPasswordResetPost(request: smithy.ResetPasswordPostRequest): Task[Unit] =
+      override def forgotPasswordResetPost(request: smithy.ForgotPasswordResetPostRequest): Task[Unit] =
         HttpErrorHandler.errorResponseHandler(service.forgotPasswordResetPost(request))
     }
 

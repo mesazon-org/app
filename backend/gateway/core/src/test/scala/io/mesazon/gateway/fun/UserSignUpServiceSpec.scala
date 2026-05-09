@@ -25,7 +25,6 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
   "UserSignUpService" when {
     "signUpEmailPost" should {
       "successfully sign up a new user with valid email" in new TestContext {
-
         val userSignupService = buildUserSignupServiceLive(
           userDetailsRows = Map.empty,
           userOtpRows = Map.empty,
@@ -50,6 +49,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           expectedSendEmailVerificationEmailCalls = 1
         )
         checkJwtService()
+        checkIDGenerator()
       }
 
       "successfully re-sign up a user with sign up email stages with otp found and not expired" in new TestContext {
@@ -87,6 +87,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           expectedSendEmailVerificationEmailCalls = 1
         )
         checkJwtService()
+        checkIDGenerator()
       }
 
       "successfully re-sign up a user with sign up email when no otp found" in new TestContext {
@@ -122,6 +123,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           expectedSendEmailVerificationEmailCalls = 1
         )
         checkJwtService()
+        checkIDGenerator()
       }
 
       "successfully re-sign up a user with sign up email when otp found but expired" in new TestContext {
@@ -163,6 +165,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           expectedSendEmailVerificationEmailCalls = 1
         )
         checkJwtService()
+        checkIDGenerator()
       }
 
       "successfully fake sign up a user when onboard stage is not in sign up email stages" in new TestContext {
@@ -192,6 +195,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkUserOtpRepository(
           expectedGetUserOtpByUserIDCalls = 1
         )
+        checkIDGenerator(expectedGenerateCalls = 1)
         checkEmailClient()
         checkJwtService()
       }
@@ -222,6 +226,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkUserOtpRepository()
         checkEmailClient()
         checkJwtService()
+        checkIDGenerator()
       }
 
       "fail with UnexpectedError and retry sign up for already existing user when sending email when email client fails" in new TestContext {
@@ -258,6 +263,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           expectedSendEmailVerificationEmailCalls = userSignUpConfig.sendEmailVerificationEmailMaxRetries + 1
         )
         checkJwtService()
+        checkIDGenerator()
       }
 
       "fail with UnexpectedError and retry sign up new user when sending email when email client fails" in new TestContext {
@@ -286,6 +292,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           expectedSendEmailVerificationEmailCalls = userSignUpConfig.sendEmailVerificationEmailMaxRetries + 1
         )
         checkJwtService()
+        checkIDGenerator()
       }
 
       "fail with UnexpectedError when userDetailsRepository fails to get user details by email" in new TestContext {
@@ -310,6 +317,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkUserOtpRepository()
         checkEmailClient()
         checkJwtService()
+        checkIDGenerator()
       }
     }
 
@@ -356,6 +364,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           expectedGenerateAccessTokenCalls = 1,
           expectedGenerateRefreshTokenCalls = 1,
         )
+        checkIDGenerator()
       }
 
       "fail with ValidationError when verify email with invalid otp format" in new TestContext {
@@ -398,6 +407,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         checkUserOtpRepository()
         checkEmailClient()
         checkJwtService()
+        checkIDGenerator()
       }
 
       "fail with OtpValidationError when verify email with non-existing otp" in new TestContext {
@@ -422,6 +432,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         )
         checkEmailClient()
         checkJwtService()
+        checkIDGenerator()
       }
 
       "fail with OtpValidationError when verify email send for otp type non email verification" in new TestContext {
@@ -453,6 +464,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         )
         checkEmailClient()
         checkJwtService()
+        checkIDGenerator()
       }
 
       "fail with FailedOnboardStage when verify email is send for user with no email verification stage" in new TestContext {
@@ -492,6 +504,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         )
         checkEmailClient()
         checkJwtService()
+        checkIDGenerator()
       }
 
       "fail with OtpValidationError when verify email with expired otp" in new TestContext {
@@ -530,6 +543,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         )
         checkEmailClient()
         checkJwtService()
+        checkIDGenerator()
       }
 
       "fail with OtpValidationError when verify email with wrong otp" in new TestContext {
@@ -568,6 +582,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         )
         checkEmailClient()
         checkJwtService()
+        checkIDGenerator()
       }
 
       "fail with UnexpectedError when userOtpRepository fails to get user otp" in new TestContext {
@@ -584,13 +599,12 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
           .UnexpectedError("Database error")
 
+        checkUserOtpRepository(expectedGetUserOtpByOtpIDCalls = 1)
         checkUserDetailsRepository()
         checkUserTokenRepository()
-        checkUserOtpRepository(
-          expectedGetUserOtpByOtpIDCalls = 1
-        )
         checkEmailClient()
         checkJwtService()
+        checkIDGenerator()
       }
     }
   }
@@ -600,7 +614,8 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         UserTokenRepositoryMock,
         UserOtpRepositoryMock,
         JwtServiceMock,
-        EmailClientMock {
+        EmailClientMock,
+        IDGeneratorMock {
 
     val userSignUpConfig = UserSignUpConfig(
       otpEmailVerificationExpiresAtOffset = 10.seconds,
@@ -643,7 +658,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           emailClientMockLive(
             maybeServiceError = emailClientServiceErrorOpt
           ),
-          IDGenerator.uuidGeneratorLive,
+          idGeneratorMockLive(),
           OtpGenerator.live,
           TimeProvider.liveSystemUTC,
           SignUpEmailPostRequestServiceValidator.live,

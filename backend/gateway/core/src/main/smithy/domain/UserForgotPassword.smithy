@@ -28,7 +28,7 @@ structure ForgotPasswordVerifyOTPPostResponse {
     resetPasswordTokenExpiresInSeconds: Long
 }
 
-structure ResetPasswordPostRequest {
+structure ForgotPasswordResetPostRequest {
     @required
     resetPasswordToken: String
     @required
