@@ -114,8 +114,6 @@ class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBas
         emailClient.sendPasswordChangeConfirmationEmail(email).zioValue
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
-
-        Thread.sleep(3000)
       }
     }
   }
