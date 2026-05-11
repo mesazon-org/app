@@ -2,6 +2,7 @@ package io.mesazon.gateway.unit.service
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.mock.{AuthStateMock, JwtServiceMock}
+import io.mesazon.gateway.service.JwtService.AuthedUserAccess
 import io.mesazon.gateway.service.{AuthorizationService, ServiceTask}
 import io.mesazon.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import org.http4s.*
@@ -19,7 +20,14 @@ class AuthorizationServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
 
-        val authorizationService = buildAuthorizationService(authedUser)
+        val authedUserAccess = AuthedUserAccess(
+          userID = authedUser.userID
+        )
+
+        val authorizationService = buildAuthorizationService(
+          authedUser,
+          verifyAccessTokenOutput = Some(authedUserAccess),
+        )
 
         authorizationService.auth(request).zioEither.isRight shouldBe true
 
@@ -54,12 +62,17 @@ class AuthorizationServiceSpec extends ZWordSpecBase, GatewayArbitraries {
   }
 
   trait TestContext extends JwtServiceMock, AuthStateMock {
-    def buildAuthorizationService(authedUser: AuthedUser): AuthorizationService[ServiceTask] = ZIO
+    def buildAuthorizationService(
+        authedUser: AuthedUser,
+        verifyAccessTokenOutput: Option[AuthedUserAccess] = None,
+    ): AuthorizationService[ServiceTask] = ZIO
       .service[AuthorizationService[ServiceTask]]
       .provide(
         AuthorizationService.local,
         authStateMockLive(authedUser),
-        jwtServiceMockLive(),
+        jwtServiceMockLive(
+          verifyAccessTokenOutput = verifyAccessTokenOutput
+        ),
       )
       .zioValue
   }

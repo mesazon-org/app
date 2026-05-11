@@ -7,9 +7,6 @@ import io.mesazon.testkit.base.ZIOTestOps
 import org.scalatest.matchers.should
 import zio.*
 
-import java.time.Instant
-import java.time.temporal.ChronoUnit
-
 trait JwtServiceMock extends ZIOTestOps, should.Matchers {
   private val generateAccessTokenCounterRef: zio.Ref[Int]        = zio.Ref.make(0).zioValue
   private val generateRefreshTokenCounterRef: zio.Ref[Int]       = zio.Ref.make(0).zioValue
@@ -35,8 +32,12 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
   }
 
   def jwtServiceMockLive(
-      tokenIDOpt: Option[TokenID] = None,
-      userIDOpt: Option[UserID] = None,
+      generateAccessTokenOutput: Option[AccessJwt] = None,
+      generateRefreshTokenOutput: Option[RefreshJwt] = None,
+      generateResetPasswordTokenOutput: Option[ResetPasswordJwt] = None,
+      verifyAccessTokenOutput: Option[AuthedUserAccess] = None,
+      verifyRefreshTokenOutput: Option[AuthedUserRefresh] = None,
+      verifyResetPasswordTokenOutput: Option[AuthedUserResetPassword] = None,
       maybeServiceError: Option[ServiceError] = None,
       maybeUnexpectedError: Option[Throwable] = None,
   ) = ZLayer.succeed(
@@ -45,7 +46,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
         generateAccessTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed((AccessToken.assume("access-token"), 1.minute))
+              ZIO.succeed(generateAccessTokenOutput.get)
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
@@ -53,13 +54,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
         generateRefreshTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed(
-                (
-                  tokenIDOpt.getOrElse(TokenID.randomUUID),
-                  RefreshToken.assume("refresh-token"),
-                  ExpiresAt(Instant.now.plusSeconds(10).truncatedTo(ChronoUnit.MILLIS)),
-                )
-              )
+              ZIO.succeed(generateRefreshTokenOutput.get)
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
@@ -67,14 +62,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
         generateResetPasswordTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed(
-                (
-                  tokenIDOpt.getOrElse(TokenID.randomUUID),
-                  ResetPasswordToken.assume("reset-password-token"),
-                  ExpiresAt(Instant.now.plusSeconds(10).truncatedTo(ChronoUnit.MILLIS)),
-                  2.minutes,
-                )
-              )
+              ZIO.succeed(generateResetPasswordTokenOutput.get)
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
@@ -82,7 +70,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
         verifyAccessTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed(userIDOpt.getOrElse(UserID.randomUUID))
+              ZIO.succeed(verifyAccessTokenOutput.get)
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
@@ -90,7 +78,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
         verifyRefreshTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed((tokenIDOpt.getOrElse(TokenID.randomUUID), userIDOpt.getOrElse(UserID.randomUUID)))
+              ZIO.succeed(verifyRefreshTokenOutput.get)
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
 
@@ -100,7 +88,7 @@ trait JwtServiceMock extends ZIOTestOps, should.Matchers {
         verifyResetPasswordTokenCounterRef.incrementAndGet *>
           maybeServiceError.fold(
             maybeUnexpectedError.fold(
-              ZIO.succeed((tokenIDOpt.getOrElse(TokenID.randomUUID), userIDOpt.getOrElse(UserID.randomUUID)))
+              ZIO.succeed(verifyResetPasswordTokenOutput.get)
             )(ZIO.fail(_).orDie)
           )(ZIO.fail)
     }

@@ -28,13 +28,17 @@ trait JwtService {
 
 object JwtService {
 
-  type AccessJwt        = (accessToken: AccessToken, expiresIn: Duration)
-  type RefreshJwt       = (tokenID: TokenID, refreshToken: RefreshToken, expiresAt: ExpiresAt)
-  type ResetPasswordJwt =
-    (tokenID: TokenID, resetPasswordToken: ResetPasswordToken, expiresAt: ExpiresAt, expiresIn: Duration)
-  type AuthedUserRefresh       = (tokenID: TokenID, userID: UserID)
-  type AuthedUserResetPassword = (tokenID: TokenID, userID: UserID)
-  type AuthedUserAccess        = UserID
+  case class AccessJwt(accessToken: AccessToken, expiresIn: Duration)
+  case class RefreshJwt(tokenID: TokenID, refreshToken: RefreshToken, expiresAt: ExpiresAt)
+  case class ResetPasswordJwt(
+      tokenID: TokenID,
+      resetPasswordToken: ResetPasswordToken,
+      expiresAt: ExpiresAt,
+      expiresIn: Duration,
+  )
+  case class AuthedUserRefresh(tokenID: TokenID, userID: UserID)
+  case class AuthedUserResetPassword(tokenID: TokenID, userID: UserID)
+  case class AuthedUserAccess(userID: UserID)
 
   private final class JwtServiceImpl(
       jwtConfig: JwtConfig,
@@ -78,12 +82,12 @@ object JwtService {
           .mapError(error =>
             ServiceError.InternalServerError.UnexpectedError("Failed to apply access token", Some(error))
           )
-      } yield (accessToken, jwtConfig.accessTokenExpiresAtOffset)
+      } yield AccessJwt(accessToken, jwtConfig.accessTokenExpiresAtOffset)
 
     override def generateRefreshToken(userID: UserID): IO[ServiceError, RefreshJwt] =
       for {
         instantNow <- timeProvider.instantNow
-        tokenIDRaw <- idGenerator.generate
+        tokenIDRaw <- idGenerator.generateID
         expiresAt = ExpiresAt(instantNow.plusSeconds(jwtConfig.refreshTokenExpiresAtOffset.toSeconds))
         tokenID <- ZIO
           .attempt(TokenID.applyUnsafe(tokenIDRaw))
@@ -110,12 +114,12 @@ object JwtService {
           .mapError(error =>
             ServiceError.InternalServerError.UnexpectedError("Failed to apply refresh token", Some(error))
           )
-      } yield (tokenID, refreshToken, expiresAt)
+      } yield RefreshJwt(tokenID, refreshToken, expiresAt)
 
     override def generateResetPasswordToken(userID: UserID): IO[ServiceError, ResetPasswordJwt] =
       for {
         instantNow <- timeProvider.instantNow
-        tokenIDRaw <- idGenerator.generate
+        tokenIDRaw <- idGenerator.generateID
         expiresAt = ExpiresAt(instantNow.plusSeconds(jwtConfig.resetPasswordTokenExpiresAtOffset.toSeconds))
         tokenID <- ZIO
           .attempt(TokenID.applyUnsafe(tokenIDRaw))
@@ -142,7 +146,7 @@ object JwtService {
           .mapError(error =>
             ServiceError.InternalServerError.UnexpectedError("Failed to apply reset password token", Some(error))
           )
-      } yield (tokenID, resetPasswordToken, expiresAt, jwtConfig.resetPasswordTokenExpiresAtOffset)
+      } yield ResetPasswordJwt(tokenID, resetPasswordToken, expiresAt, jwtConfig.resetPasswordTokenExpiresAtOffset)
 
     override def verifyAccessToken(accessToken: AccessToken): IO[ServiceError, AuthedUserAccess] =
       for {
@@ -179,7 +183,7 @@ object JwtService {
                   .UnexpectedError(s"Failed to apply UserID from access token subject: $error")
               )
           )
-      } yield userID
+      } yield AuthedUserAccess(userID = userID)
 
     override def verifyRefreshToken(refreshToken: RefreshToken): IO[ServiceError, AuthedUserRefresh] =
       for {
@@ -228,7 +232,7 @@ object JwtService {
                   .UnexpectedError(s"Failed to apply TokenID from refresh token id: $error")
               )
           )
-      } yield (tokenID, userID)
+      } yield AuthedUserRefresh(tokenID, userID)
 
     override def verifyResetPasswordToken(
         resetPasswordToken: ResetPasswordToken
@@ -285,7 +289,7 @@ object JwtService {
                   .UnexpectedError(s"Failed to apply TokenID from reset password token id: $error")
               )
           )
-      } yield (tokenID, userID)
+      } yield AuthedUserResetPassword(tokenID, userID)
   }
 
   private def observed(service: JwtService): JwtService = service

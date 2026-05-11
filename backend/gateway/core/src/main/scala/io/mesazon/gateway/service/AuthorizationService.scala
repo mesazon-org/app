@@ -33,7 +33,7 @@ object AuthorizationService {
               )
           )
         authedUserAccess <- jwtService.verifyAccessToken(accessToken)
-        _                <- authState.set(AuthedUser(authedUserAccess))
+        _                <- authState.set(AuthedUser(authedUserAccess.userID))
       } yield ()
   }
 

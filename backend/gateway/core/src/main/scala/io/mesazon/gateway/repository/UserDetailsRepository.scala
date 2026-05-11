@@ -39,7 +39,7 @@ object UserDetailsRepository {
     override def insertUserDetails(email: Email, onboardStage: OnboardStage): IO[ServiceError, UserDetailsRow] =
       for {
         instantNow <- timeProvider.instantNow
-        userID     <- idGenerator.generate
+        userID     <- idGenerator.generateID
           .map(UserID.either)
           .flatMap(
             ZIO

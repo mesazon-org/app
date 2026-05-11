@@ -28,8 +28,16 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
+
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
           .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
+
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.SignIn,
+            attempts = Attempts.assume(1),
+          )
 
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(
@@ -40,8 +48,9 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val authenticationService = buildAuthenticationService(
           authedUser = AuthedUser(userID = userDetailsRow.userID),
-          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
-          userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
+          getUserCredentialsOutput = Some(userCredentialsRow),
+          getUserDetailsByEmailOutput = Some(userDetailsRow),
+          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
         )
 
         val authenticationResponse = authenticationService.auth(request).zioEither
@@ -89,9 +98,9 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val authenticationService = buildAuthenticationService(
           authedUser = AuthedUser(userID = userDetailsRow.userID),
-          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
-          userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
-          userActionAttemptRowOpt = Some(userActionAttemptRow),
+          getUserCredentialsOutput = Some(userCredentialsRow),
+          getUserDetailsByEmailOutput = Some(userDetailsRow),
+          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
         )
 
         val authenticationResponse = authenticationService.auth(request).zioEither
@@ -140,9 +149,9 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val authenticationService = buildAuthenticationService(
           authedUser = AuthedUser(userID = userDetailsRow.userID),
-          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
-          userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
-          userActionAttemptRowOpt = Some(userActionAttemptRow),
+          getUserCredentialsOutput = Some(userCredentialsRow),
+          getUserDetailsByEmailOutput = Some(userDetailsRow),
+          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
         )
 
         val authenticationResponse = authenticationService.auth(request).zioEither
@@ -232,8 +241,8 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val authenticationService = buildAuthenticationService(
           authedUser = AuthedUser(userID = userDetailsRow.userID),
-          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
-          userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
+          getUserCredentialsOutput = Some(userCredentialsRow),
+          getUserDetailsByEmailOutput = Some(userDetailsRow),
         )
 
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
@@ -269,6 +278,13 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
           .copy(userID = userDetailsRow.userID)
 
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.SignIn,
+            attempts = Attempts.assume(1),
+          )
+
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(
             Authorization(
@@ -278,8 +294,10 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val authenticationService = buildAuthenticationService(
           authedUser = AuthedUser(userID = userDetailsRow.userID),
-          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
-          userCredentialsRows = Map(userCredentialsRow.userID -> userCredentialsRow),
+          verifyPasswordOutput = false, // Password verification fails
+          getUserCredentialsOutput = Some(userCredentialsRow),
+          getUserDetailsByEmailOutput = Some(userDetailsRow),
+          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
         )
 
         val serviceError = authenticationService.auth(request).zioError
@@ -326,8 +344,8 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val authenticationService = buildAuthenticationService(
           authedUser = AuthedUser(userID = userDetailsRow.userID),
-          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
-          userActionAttemptRowOpt = Some(userActionAttemptRow),
+          getUserDetailsByEmailOutput = Some(userDetailsRow),
+          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
         )
 
         val serviceError = authenticationService.auth(request).zioError
@@ -355,6 +373,13 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.SignIn,
+            attempts = Attempts.assume(1),
+          )
+
         val password = arbitrarySample[Password]
 
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
@@ -366,8 +391,8 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val authenticationService = buildAuthenticationService(
           authedUser = AuthedUser(userID = userDetailsRow.userID),
-          userDetailsRows = Map(userDetailsRow.userID -> userDetailsRow),
-          userCredentialsRows = Map.empty, // No credentials for existing user details
+          getUserDetailsByEmailOutput = Some(userDetailsRow),
+          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
         )
 
         val serviceError = authenticationService.auth(request).zioError
@@ -437,9 +462,10 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
     def buildAuthenticationService(
         authedUser: AuthedUser,
-        userDetailsRows: Map[UserID, UserDetailsRow] = Map.empty,
-        userCredentialsRows: Map[UserID, UserCredentialsRow] = Map.empty,
-        userActionAttemptRowOpt: Option[UserActionAttemptRow] = None,
+        verifyPasswordOutput: Boolean = true,
+        getUserCredentialsOutput: Option[UserCredentialsRow] = None,
+        getUserDetailsByEmailOutput: Option[UserDetailsRow] = None,
+        getAndIncreaseUserActionAttemptOutput: Option[UserActionAttemptRow] = None,
         passwordServiceErrorOpt: Option[ServiceError] = None,
         userDetailsRepositoryServiceErrorOpt: Option[ServiceError] = None,
         userCredentialsRepositoryServiceErrorOpt: Option[ServiceError] = None,
@@ -449,20 +475,23 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         AuthenticationService.local,
         EmailDomainValidator.live,
         BasicCredentialsRequestServiceValidator.live,
-        authStateMockLive(authedUser = authedUser),
+        authStateMockLive(
+          authedUser = authedUser
+        ),
         userActionAttemptRepositoryMockLive(
-          userActionAttemptRowOpt = userActionAttemptRowOpt
+          getAndIncreaseUserActionAttemptOutput = getAndIncreaseUserActionAttemptOutput
         ),
         TimeProvider.liveSystemUTC,
         passwordServiceMockLive(
-          serviceErrorOpt = passwordServiceErrorOpt
+          verifyPasswordOutput = verifyPasswordOutput,
+          serviceErrorOpt = passwordServiceErrorOpt,
         ),
         userDetailsRepositoryMockLive(
-          userDetailsRows = userDetailsRows,
+          getUserDetailsByEmailOutput = getUserDetailsByEmailOutput,
           serviceErrorOpt = userDetailsRepositoryServiceErrorOpt,
         ),
         userCredentialsRepositoryMockLive(
-          userCredentialsRows = userCredentialsRows,
+          getUserCredentialsOutput = getUserCredentialsOutput,
           serviceErrorOpt = userCredentialsRepositoryServiceErrorOpt,
         ),
         ZLayer.succeed(authenticationConfig),

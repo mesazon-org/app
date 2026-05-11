@@ -27,7 +27,7 @@ trait UserTokenRepositoryMock extends ZIOTestOps, should.Matchers {
   }
 
   def userTokenRepositoryMockLive(
-      userTokenRows: Map[TokenID, UserTokenRow] = Map.empty,
+      getUserTokenOutput: Option[UserTokenRow] = None,
       maybeServiceError: Option[ServiceError] = None,
       maybeUnexpectedError: Option[Throwable] = None,
   ): ULayer[UserTokenRepository] = ZLayer.succeed(
@@ -52,9 +52,7 @@ trait UserTokenRepositoryMock extends ZIOTestOps, should.Matchers {
       ): IO[ServiceError, Option[UserTokenRow]] =
         getUserTokenCounterRef.incrementAndGet *> maybeUnexpectedError.fold(
           maybeServiceError.fold[IO[ServiceError, Option[UserTokenRow]]](
-            ZIO.succeed(
-              userTokenRows.get(tokenID).filter(row => row.userID == userID && row.tokenType == tokenType)
-            )
+            ZIO.succeed(getUserTokenOutput)
           )(ZIO.fail)
         )(ZIO.fail(_).orDie)
 

@@ -63,7 +63,7 @@ object UserOtpRepository {
         expiresAt: ExpiresAt,
     ): IO[ServiceError, UserOtpRow] = for {
       instantNow <- timeProvider.instantNow
-      otpID      <- idGenerator.generate
+      otpID      <- idGenerator.generateID
         .map(OtpID.either)
         .flatMap(
           ZIO

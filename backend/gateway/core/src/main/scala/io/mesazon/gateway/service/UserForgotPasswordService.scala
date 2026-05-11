@@ -76,7 +76,7 @@ object UserForgotPasswordService {
                 } yield otpID
               case _ =>
                 for {
-                  otpNew <- otpGenerator.generate
+                  otpNew <- otpGenerator.generateOtp
                   expiresAt = ExpiresAt(instantNow.plusSeconds(userForgotPasswordConfig.otpExpiresAtOffset.toSeconds))
                   userOtpRow <- userOtpRepository.upsertUserOtp(
                     userID = userDetails.userID,
@@ -101,7 +101,7 @@ object UserForgotPasswordService {
             }
           } yield otpID
         case None =>
-          idGenerator.generate
+          idGenerator.generateID
             .map(OtpID.either)
             .flatMap(
               ZIO

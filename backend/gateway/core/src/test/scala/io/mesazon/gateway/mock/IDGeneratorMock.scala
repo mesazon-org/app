@@ -16,11 +16,11 @@ trait IDGeneratorMock extends ZIOTestOps, should.Matchers {
   ): Assertion =
     generateCounterRef.get.zioValue shouldBe expectedGenerateCalls
 
-  def idGeneratorMockLive(id: Option[UUID] = None): ULayer[IDGenerator] =
+  def idGeneratorMockLive(generateIDOutput: Option[UUID] = None): ULayer[IDGenerator] =
     ZLayer.succeed(
       new IDGenerator {
-        override def generate: UIO[UUID] =
-          generateCounterRef.incrementAndGet *> ZIO.succeed(id.getOrElse(UUID.randomUUID()))
+        override def generateID: UIO[UUID] =
+          generateCounterRef.incrementAndGet *> ZIO.succeed(generateIDOutput.getOrElse(UUID.randomUUID()))
       }
     )
 }

@@ -38,7 +38,7 @@ object UserActionAttemptRepository {
         actionAttemptType: ActionAttemptType,
     ): IO[ServiceError, UserActionAttemptRow] = for {
       instantNow      <- timeProvider.instantNow
-      actionAttemptID <- idGenerator.generate
+      actionAttemptID <- idGenerator.generateID
         .map(ActionAttemptID.either)
         .flatMap(
           ZIO

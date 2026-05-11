@@ -4,7 +4,7 @@ import io.mesazon.domain.gateway.*
 import zio.*
 
 trait OtpGenerator {
-  def generate: UIO[Otp]
+  def generateOtp: UIO[Otp]
 }
 
 object OtpGenerator {
@@ -16,7 +16,7 @@ object OtpGenerator {
     inline private val letters                 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     inline private val digits                  = "0123456789"
 
-    override def generate: UIO[Otp] = (for {
+    override def generateOtp: UIO[Otp] = (for {
       random        <- ZIO.random
       randomLetters <- random.nextIntBetween(minInclusiveCharPerEach, maxExclusiveCharPerEach)
       randomDigits = maxChars - randomLetters

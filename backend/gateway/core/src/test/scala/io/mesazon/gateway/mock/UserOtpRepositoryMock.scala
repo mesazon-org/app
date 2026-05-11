@@ -8,8 +8,6 @@ import org.scalatest.Assertion
 import org.scalatest.matchers.should
 import zio.*
 
-import java.time.Instant
-
 trait UserOtpRepositoryMock extends ZIOTestOps, should.Matchers {
   private val upsertUserOtpCounterRef: Ref[Int]      = Ref.make(0).zioValue
   private val updateUserOtpCounterRef: Ref[Int]      = Ref.make(0).zioValue
@@ -35,7 +33,11 @@ trait UserOtpRepositoryMock extends ZIOTestOps, should.Matchers {
   }
 
   def userOtpRepositoryMockLive(
-      userOtpRows: Map[OtpID, UserOtpRow] = Map.empty,
+      upsertUserOtpOutput: Option[UserOtpRow] = None,
+      getUserOtpOutput: Option[UserOtpRow] = None,
+      getUserOtpByOtpIDOutput: Option[UserOtpRow] = None,
+      getUserOtpByUserIDOutput: Option[UserOtpRow] = None,
+      updateUserOtpOutput: Option[UserOtpRow] = None,
       serviceErrorOpt: Option[ServiceError] = None,
   ): ULayer[UserOtpRepository] = ZLayer.succeed(
     new UserOtpRepository {
@@ -47,41 +49,25 @@ trait UserOtpRepositoryMock extends ZIOTestOps, should.Matchers {
       ): IO[ServiceError, UserOtpRow] =
         upsertUserOtpCounterRef.incrementAndGet *>
           serviceErrorOpt.fold(
-            ZIO.succeed(
-              UserOtpRow(
-                otpID = OtpID.randomUUID,
-                userID = userID,
-                otp = otp,
-                otpType = otpType,
-                createdAt = CreatedAt(Instant.now),
-                updatedAt = UpdatedAt(Instant.now),
-                expiresAt = expiresAt,
-              )
-            )
+            ZIO.succeed(upsertUserOtpOutput.get)
           )(ZIO.fail)
 
       override def getUserOtp(otpID: OtpID, userID: UserID, otpType: OtpType): IO[ServiceError, Option[UserOtpRow]] =
         getUserOtpCounterRef.incrementAndGet *>
           serviceErrorOpt.fold[IO[ServiceError, Option[UserOtpRow]]](
-            ZIO.succeed(
-              userOtpRows.get(otpID).filter(_.userID == userID).filter(_.otpType == otpType)
-            )
+            ZIO.succeed(getUserOtpOutput)
           )(ZIO.fail)
 
       override def getUserOtpByOtpID(otpID: OtpID, otpType: OtpType): IO[ServiceError, Option[UserOtpRow]] =
         getUserOtpByOtpIDCounterRef.incrementAndGet *>
           serviceErrorOpt.fold[IO[ServiceError, Option[UserOtpRow]]](
-            ZIO.succeed(
-              userOtpRows.get(otpID).filter(_.otpType == otpType)
-            )
+            ZIO.succeed(getUserOtpByOtpIDOutput)
           )(ZIO.fail)
 
       override def getUserOtpByUserID(userID: UserID, otpType: OtpType): IO[ServiceError, Option[UserOtpRow]] =
         getUserOtpByUserIDCounterRef.incrementAndGet *>
           serviceErrorOpt.fold[IO[ServiceError, Option[UserOtpRow]]](
-            ZIO.succeed(
-              userOtpRows.values.find(row => row.userID == userID && row.otpType == otpType)
-            )
+            ZIO.succeed(getUserOtpByUserIDOutput)
           )(ZIO.fail)
 
       override def updateUserOtp(
@@ -92,9 +78,7 @@ trait UserOtpRepositoryMock extends ZIOTestOps, should.Matchers {
       ): IO[ServiceError, UserOtpRow] =
         updateUserOtpCounterRef.incrementAndGet *>
           serviceErrorOpt.fold(
-            ZIO.succeed(
-              userOtpRows(otpID)
-            )
+            ZIO.succeed(updateUserOtpOutput.get)
           )(ZIO.fail)
 
       override def deleteUserOtp(otpID: OtpID, userID: UserID, otpType: OtpType): IO[ServiceError, Unit] =

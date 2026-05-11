@@ -24,7 +24,7 @@ trait UserCredentialsRepositoryMock extends ZIOTestOps with should.Matchers {
   }
 
   def userCredentialsRepositoryMockLive(
-      userCredentialsRows: Map[UserID, UserCredentialsRow] = Map.empty,
+      getUserCredentialsOutput: Option[UserCredentialsRow] = None,
       serviceErrorOpt: Option[ServiceError] = None,
   ): ULayer[UserCredentialsRepository] = ZLayer.succeed(
     new UserCredentialsRepository {
@@ -38,7 +38,7 @@ trait UserCredentialsRepositoryMock extends ZIOTestOps with should.Matchers {
       override def getUserCredentials(userID: UserID): IO[ServiceError, Option[UserCredentialsRow]] =
         getUserCredentialsCounterRef.incrementAndGet *>
           serviceErrorOpt.fold(
-            ZIO.succeed(userCredentialsRows.get(userID))
+            ZIO.succeed(getUserCredentialsOutput)
           )(ZIO.fail)
 
       override def updateUserCredentials(userID: UserID, passwordHashUpdate: PasswordHash): IO[ServiceError, Unit] =

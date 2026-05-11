@@ -20,18 +20,20 @@ trait PasswordServiceMock extends ZIOTestOps, should.Matchers {
   }
 
   def passwordServiceMockLive(
-      serviceErrorOpt: Option[ServiceError] = None
+      hashPasswordOutput: Option[PasswordHash] = None,
+      verifyPasswordOutput: Boolean = true,
+      serviceErrorOpt: Option[ServiceError] = None,
   ): ULayer[PasswordService] =
     ZLayer.succeed(
       new PasswordService {
         override def hashPassword(password: Password): IO[ServiceError, PasswordHash] =
           hashPasswordCounterRef.incrementAndGet *> serviceErrorOpt.fold(
-            ZIO.succeed(PasswordHash.assume(s"hashed-${password.value}"))
+            ZIO.succeed(hashPasswordOutput.get)
           )(ZIO.fail)
 
         override def verifyPassword(password: Password, passwordHash: PasswordHash): IO[ServiceError, Boolean] =
           verifyPasswordCounterRef.incrementAndGet *> serviceErrorOpt.fold(
-            ZIO.succeed(passwordHash.value == password.value)
+            ZIO.succeed(verifyPasswordOutput)
           )(ZIO.fail)
       }
     )

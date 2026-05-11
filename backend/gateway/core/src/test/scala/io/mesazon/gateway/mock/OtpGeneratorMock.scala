@@ -7,8 +7,6 @@ import org.scalatest.Assertion
 import org.scalatest.matchers.should
 import zio.*
 
-import java.util.concurrent.atomic.AtomicInteger
-
 trait OtpGeneratorMock extends ZIOTestOps, should.Matchers {
   private val generateCounterRef: Ref[Int] = Ref.make(0).zioValue
 
@@ -17,15 +15,11 @@ trait OtpGeneratorMock extends ZIOTestOps, should.Matchers {
   ): Assertion =
     generateCounterRef.get.zioValue shouldBe expectedGenerateCalls
 
-  def otpGeneratorMockLive(otp: Option[Otp] = None): ULayer[OtpGenerator] =
+  def otpGeneratorMockLive(generateOtpOutput: Option[Otp] = None): ULayer[OtpGenerator] =
     ZLayer.succeed(
       new OtpGenerator {
-        val atomicInt = new AtomicInteger(0)
-
-        override def generate: UIO[Otp] =
-          generateCounterRef.incrementAndGet *> ZIO.succeed(
-            otp.getOrElse(Otp.applyUnsafe(s"OTPID${atomicInt.incrementAndGet()}"))
-          )
+        override def generateOtp: UIO[Otp] =
+          generateCounterRef.incrementAndGet *> ZIO.succeed(generateOtpOutput.get)
       }
     )
 }

@@ -13,7 +13,7 @@ class OtpGeneratorSpec extends ZWordSpecBase {
         .provide(OtpGenerator.live)
         .zioValue
 
-      val otp = otpUtil.generate.zioValue
+      val otp = otpUtil.generateOtp.zioValue
 
       assert(otp.value.length == 6, s"Expected Otp length to be 6, but got ${otp.value.length}")
       assert(

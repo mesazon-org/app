@@ -8,8 +8,6 @@ import org.scalatest.Assertion
 import org.scalatest.matchers.should
 import zio.*
 
-import java.time.Instant
-
 trait UserDetailsRepositoryMock extends ZIOTestOps, should.Matchers {
   private val insertUserDetailsCounterRef: Ref[Int]     = Ref.make(0).zioValue
   private val updateUserDetailsCounterRef: Ref[Int]     = Ref.make(0).zioValue
@@ -29,7 +27,10 @@ trait UserDetailsRepositoryMock extends ZIOTestOps, should.Matchers {
   }
 
   def userDetailsRepositoryMockLive(
-      userDetailsRows: Map[UserID, UserDetailsRow] = Map.empty,
+      insertUserDetailsOutput: Option[UserDetailsRow] = None,
+      updateUserDetailsOutput: Option[UserDetailsRow] = None,
+      getUserDetailsOutput: Option[UserDetailsRow] = None,
+      getUserDetailsByEmailOutput: Option[UserDetailsRow] = None,
       serviceErrorOpt: Option[ServiceError] = None,
       maybeUnexpectedError: Option[Throwable] = None,
   ): ULayer[UserDetailsRepository] = ZLayer.succeed(
@@ -38,17 +39,7 @@ trait UserDetailsRepositoryMock extends ZIOTestOps, should.Matchers {
       override def insertUserDetails(email: Email, onboardStage: OnboardStage): IO[ServiceError, UserDetailsRow] =
         insertUserDetailsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(
           serviceErrorOpt.fold(
-            ZIO.succeed(
-              UserDetailsRow(
-                userID = UserID.randomUUID,
-                email = email,
-                fullName = None,
-                phoneNumber = None,
-                onboardStage = onboardStage,
-                createdAt = CreatedAt.assume(Instant.now),
-                updatedAt = UpdatedAt.assume(Instant.now),
-              )
-            )
+            ZIO.succeed(insertUserDetailsOutput.get)
           )(ZIO.fail)
         )(ZIO.fail(_).orDie)
 
@@ -59,29 +50,21 @@ trait UserDetailsRepositoryMock extends ZIOTestOps, should.Matchers {
           phoneNumberOptUpdate: Option[PhoneNumber],
       ): IO[ServiceError, UserDetailsRow] = updateUserDetailsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(
         serviceErrorOpt.fold(
-          ZIO.succeed(
-            userDetailsRows(userID)
-              .copy(
-                onboardStage = onboardStageUpdate,
-                fullName = fullNameOptUpdate.orElse(userDetailsRows(userID).fullName),
-                phoneNumber = phoneNumberOptUpdate.orElse(userDetailsRows(userID).phoneNumber),
-                updatedAt = UpdatedAt.assume(Instant.now),
-              )
-          )
+          ZIO.succeed(updateUserDetailsOutput.get)
         )(ZIO.fail)
       )(ZIO.fail(_).orDie)
 
       override def getUserDetails(userID: UserID): IO[ServiceError, Option[UserDetailsRow]] =
         getUserDetailsCounterRef.incrementAndGet *> maybeUnexpectedError.fold(
           serviceErrorOpt.fold(
-            ZIO.succeed(userDetailsRows.get(userID))
+            ZIO.succeed(getUserDetailsOutput)
           )(ZIO.fail)
         )(ZIO.fail(_).orDie)
 
       override def getUserDetailsByEmail(email: Email): IO[ServiceError, Option[UserDetailsRow]] =
         getUserDetailsByEmailCounterRef.incrementAndGet *> maybeUnexpectedError.fold(
           serviceErrorOpt.fold(
-            ZIO.succeed(userDetailsRows.values.find(_.email == email))
+            ZIO.succeed(getUserDetailsByEmailOutput)
           )(ZIO.fail)
         )(ZIO.fail(_).orDie)
     }

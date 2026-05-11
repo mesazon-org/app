@@ -8,8 +8,6 @@ import org.scalatest.Assertion
 import org.scalatest.matchers.should
 import zio.*
 
-import java.time.Instant
-
 trait UserActionAttemptRepositoryMock extends ZIOTestOps with should.Matchers {
   private val getAndIncreaseUserActionAttemptCounterRef: Ref[Int] = Ref.make(0).zioValue
   private val deleteUserActionAttemptCounterRef: Ref[Int]         = Ref.make(0).zioValue
@@ -23,7 +21,7 @@ trait UserActionAttemptRepositoryMock extends ZIOTestOps with should.Matchers {
   }
 
   def userActionAttemptRepositoryMockLive(
-      userActionAttemptRowOpt: Option[UserActionAttemptRow] = None,
+      getAndIncreaseUserActionAttemptOutput: Option[UserActionAttemptRow] = None,
       serviceErrorOpt: Option[ServiceError] = None,
   ): ULayer[UserActionAttemptRepository] = ZLayer.succeed(
     new UserActionAttemptRepository {
@@ -34,18 +32,7 @@ trait UserActionAttemptRepositoryMock extends ZIOTestOps with should.Matchers {
       ): IO[ServiceError, UserActionAttemptRow] =
         getAndIncreaseUserActionAttemptCounterRef.incrementAndGet *>
           serviceErrorOpt.fold(
-            ZIO.succeed(
-              userActionAttemptRowOpt.getOrElse(
-                UserActionAttemptRow(
-                  ActionAttemptID.randomUUID,
-                  userID,
-                  actionAttemptType,
-                  Attempts.assume(1),
-                  CreatedAt(Instant.now()),
-                  UpdatedAt(Instant.now()),
-                )
-              )
-            )
+            ZIO.succeed(getAndIncreaseUserActionAttemptOutput.get)
           )(ZIO.fail)
 
       override def deleteUserActionAttempt(

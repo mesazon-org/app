@@ -94,7 +94,7 @@ object UserOnboardService {
             ZIO.succeed((userOtpRow, otpExpiresInSeconds))
           case _ =>
             for {
-              otp        <- otpGenerator.generate
+              otp        <- otpGenerator.generateOtp
               userOtpRow <- userOtpRepository.upsertUserOtp(
                 authedUser.userID,
                 OtpType.PhoneVerification,
