@@ -1,6 +1,7 @@
 package io.mesazon.testkit.base
 
 import org.scalacheck.{Arbitrary, Gen}
+import org.scalamock.scalatest.MockFactory
 import org.scalatest.*
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.matchers.should
@@ -11,6 +12,7 @@ import scala.concurrent.duration.DurationInt
 
 open class WordSpecBase
     extends AnyWordSpec
+    with MockFactory
     with PropertyBase
     with should.Matchers
     with OptionValues

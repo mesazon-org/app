@@ -159,6 +159,8 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
 
         val passwordHashUpdate = arbitrarySample[PasswordHash]
 
+        Thread.sleep(10)
+
         userCredentialsRepository
           .updateUserCredentials(
             userID = userCredentialsRow.userID,

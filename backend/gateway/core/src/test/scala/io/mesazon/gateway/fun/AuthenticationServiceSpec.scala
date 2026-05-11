@@ -1,12 +1,13 @@
 package io.mesazon.gateway.fun
 
 import io.mesazon.clock.TimeProvider
-import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.domain.gateway.{ActionAttemptType, *}
 import io.mesazon.gateway.config.AuthenticationConfig
-import io.mesazon.gateway.mock.*
 import io.mesazon.gateway.repository.domain.*
+import io.mesazon.gateway.repository.{UserActionAttemptRepository, UserCredentialsRepository, UserDetailsRepository}
 import io.mesazon.gateway.service.*
+import io.mesazon.gateway.state.AuthState
 import io.mesazon.gateway.utils.RepositoryArbitraries
 import io.mesazon.gateway.validation.domain.EmailDomainValidator
 import io.mesazon.gateway.validation.service.BasicCredentialsRequestServiceValidator
@@ -23,14 +24,13 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
   "AuthenticationService" when {
     "auth" should {
       "successfully authenticate user" in new TestContext {
-        val password     = arbitrarySample[Password]
         val onboardStage = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
 
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
-          .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
+          .copy(userID = userDetailsRow.userID)
 
         val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
           .copy(
@@ -39,6 +39,8 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             attempts = Attempts.assume(1),
           )
 
+        val password = arbitrarySample[Password]
+
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(
             Authorization(
@@ -46,25 +48,36 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             )
           )
 
-        val authenticationService = buildAuthenticationService(
-          authedUser = AuthedUser(userID = userDetailsRow.userID),
-          getUserCredentialsOutput = Some(userCredentialsRow),
-          getUserDetailsByEmailOutput = Some(userDetailsRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          userCredentialsRepositoryMock.getUserCredentials
+            .expects(userDetailsRow.userID)
+            .returningZIO(Some(userCredentialsRow))
+            .once(),
+          passwordServiceMock.verifyPassword
+            .expects(password, userCredentialsRow.passwordHash)
+            .returningZIO(true)
+            .once(),
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
+            .returningZIOUnit,
+          authStateMock.set.expects(AuthedUser(userDetailsRow.userID)).returningZIOUnit,
         )
+
+        timeProviderStub.instantNow.succeedsWith(instantNow).zioValue
+
+        val authenticationService = buildAuthenticationService
 
         val authenticationResponse = authenticationService.auth(request).zioEither
 
         assert(authenticationResponse.isRight)
-
-        checkAuthState(expectedSetCalls = 1)
-        checkUserActionAttemptRepository(
-          expectedGetAndIncreaseUserActionAttemptCalls = 1,
-          expectedDeleteUserActionAttemptCalls = 1,
-        )
-        checkPasswordService(expectedVerifyPasswordCalls = 1)
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
       }
 
       "successfully authenticate user with sign in attempts under max and block duration passed" in new TestContext {
@@ -76,7 +89,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
           .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
 
-        val instantNow           = Instant.now.truncatedTo(ChronoUnit.MILLIS)
         val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
           .copy(
             userID = userDetailsRow.userID,
@@ -96,25 +108,36 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             )
           )
 
-        val authenticationService = buildAuthenticationService(
-          authedUser = AuthedUser(userID = userDetailsRow.userID),
-          getUserCredentialsOutput = Some(userCredentialsRow),
-          getUserDetailsByEmailOutput = Some(userDetailsRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          userCredentialsRepositoryMock.getUserCredentials
+            .expects(userDetailsRow.userID)
+            .returningZIO(Some(userCredentialsRow))
+            .once(),
+          passwordServiceMock.verifyPassword
+            .expects(password, userCredentialsRow.passwordHash)
+            .returningZIO(true)
+            .once(),
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
+            .returningZIOUnit,
+          authStateMock.set.expects(AuthedUser(userDetailsRow.userID)).returningZIOUnit,
         )
+
+        timeProviderStub.instantNow.succeedsWith(instantNow).zioValue
+
+        val authenticationService = buildAuthenticationService
 
         val authenticationResponse = authenticationService.auth(request).zioEither
 
         assert(authenticationResponse.isRight)
-
-        checkAuthState(expectedSetCalls = 1)
-        checkUserActionAttemptRepository(
-          expectedGetAndIncreaseUserActionAttemptCalls = 1,
-          expectedDeleteUserActionAttemptCalls = 1,
-        )
-        checkPasswordService(expectedVerifyPasswordCalls = 1)
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
       }
 
       "successfully authenticate user with sign in attempts at max but block duration passed" in new TestContext {
@@ -125,8 +148,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         val password           = arbitrarySample[Password]
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
           .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
-
-        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
         val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
           .copy(
@@ -147,33 +168,40 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             )
           )
 
-        val authenticationService = buildAuthenticationService(
-          authedUser = AuthedUser(userID = userDetailsRow.userID),
-          getUserCredentialsOutput = Some(userCredentialsRow),
-          getUserDetailsByEmailOutput = Some(userDetailsRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          userCredentialsRepositoryMock.getUserCredentials
+            .expects(userDetailsRow.userID)
+            .returningZIO(Some(userCredentialsRow))
+            .once(),
+          passwordServiceMock.verifyPassword
+            .expects(password, userCredentialsRow.passwordHash)
+            .returningZIO(true)
+            .once(),
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
+            .returningZIOUnit,
+          authStateMock.set.expects(AuthedUser(userDetailsRow.userID)).returningZIOUnit,
         )
+
+        timeProviderStub.instantNow.succeedsWith(instantNow).zioValue
+
+        val authenticationService = buildAuthenticationService
 
         val authenticationResponse = authenticationService.auth(request).zioEither
 
         assert(authenticationResponse.isRight)
-
-        checkAuthState(expectedSetCalls = 1)
-        checkUserActionAttemptRepository(
-          expectedGetAndIncreaseUserActionAttemptCalls = 1,
-          expectedDeleteUserActionAttemptCalls = 1,
-        )
-        checkPasswordService(expectedVerifyPasswordCalls = 1)
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
       }
 
       "fail with BasicCredentialsMissing to authenticate user with missing basic credentials" in new TestContext {
-        val authedUser = arbitrarySample[AuthedUser]
-
-        val authenticationService = buildAuthenticationService(
-          authedUser = authedUser
-        )
+        val authenticationService = buildAuthenticationService
 
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
 
@@ -184,20 +212,10 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           .asInstanceOf[
             ServiceError.BadRequestError.BasicCredentialsMissing.type
           ] shouldBe ServiceError.BadRequestError.BasicCredentialsMissing
-
-        checkAuthState()
-        checkUserActionAttemptRepository()
-        checkPasswordService()
-        checkUserDetailsRepository()
-        checkUserCredentialsRepository()
       }
 
       "fail with ValidationError to authenticate user with invalid basic credentials" in new TestContext {
-        val authedUser = arbitrarySample[AuthedUser]
-
-        val authenticationService = buildAuthenticationService(
-          authedUser = authedUser
-        )
+        val authenticationService = buildAuthenticationService
 
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(
@@ -221,12 +239,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
               ),
             )
           )
-
-        checkAuthState()
-        checkUserActionAttemptRepository()
-        checkPasswordService()
-        checkUserDetailsRepository()
-        checkUserCredentialsRepository()
       }
 
       "fail with FailedOnboardStage to authenticate user with no allowed sing in onboardStage" in new TestContext {
@@ -235,15 +247,16 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val password           = arbitrarySample[Password]
-        val userCredentialsRow = arbitrarySample[UserCredentialsRow]
-          .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
-
-        val authenticationService = buildAuthenticationService(
-          authedUser = AuthedUser(userID = userDetailsRow.userID),
-          getUserCredentialsOutput = Some(userCredentialsRow),
-          getUserDetailsByEmailOutput = Some(userDetailsRow),
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once()
         )
+
+        val authenticationService = buildAuthenticationService
+
+        val password = arbitrarySample[Password]
 
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(
@@ -262,11 +275,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             onboardStagesAllowed = OnboardStage.signInAllowedStages,
           )
 
-        checkAuthState()
-        checkUserActionAttemptRepository()
-        checkPasswordService()
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserCredentialsRepository()
       }
 
       "fail with InvalidCredentials to authenticate user with invalid credentials" in new TestContext {
@@ -292,13 +300,28 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             )
           )
 
-        val authenticationService = buildAuthenticationService(
-          authedUser = AuthedUser(userID = userDetailsRow.userID),
-          verifyPasswordOutput = false, // Password verification fails
-          getUserCredentialsOutput = Some(userCredentialsRow),
-          getUserDetailsByEmailOutput = Some(userDetailsRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          userCredentialsRepositoryMock.getUserCredentials
+            .expects(userDetailsRow.userID)
+            .returningZIO(Some(userCredentialsRow))
+            .once(),
+          passwordServiceMock.verifyPassword
+            .expects(password, userCredentialsRow.passwordHash)
+            .returningZIO(false)
+            .once(),
         )
+
+        timeProviderStub.instantNow.succeedsWith(instantNow).zioValue
+
+        val authenticationService = buildAuthenticationService
 
         val serviceError = authenticationService.auth(request).zioError
 
@@ -307,14 +330,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           .asInstanceOf[
             ServiceError.UnauthorizedError.InvalidCredentials.type
           ] shouldBe ServiceError.UnauthorizedError.InvalidCredentials
-
-        checkAuthState()
-        checkUserActionAttemptRepository(
-          expectedGetAndIncreaseUserActionAttemptCalls = 1
-        )
-        checkPasswordService(expectedVerifyPasswordCalls = 1)
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
       }
 
       "fail with TooManySignInAttempts to authenticate user with too many sign in attempts and is in blocked duration" in new TestContext {
@@ -322,7 +337,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val instantNow           = Instant.now.truncatedTo(ChronoUnit.MILLIS)
         val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
           .copy(
             userID = userDetailsRow.userID,
@@ -333,6 +347,21 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             ),
           )
 
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+        )
+
+        timeProviderStub.instantNow.succeedsWith(instantNow).zioValue
+
+        val authenticationService = buildAuthenticationService
+
         val password = arbitrarySample[Password]
 
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
@@ -341,12 +370,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
               Http4sBasicCredentials(userDetailsRow.email.value, password.value)
             )
           )
-
-        val authenticationService = buildAuthenticationService(
-          authedUser = AuthedUser(userID = userDetailsRow.userID),
-          getUserDetailsByEmailOutput = Some(userDetailsRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
-        )
 
         val serviceError = authenticationService.auth(request).zioError
 
@@ -358,14 +381,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             actionAttemptType = ActionAttemptType.SignIn,
             blockDurationSeconds = authenticationConfig.signInAttemptsBlockDuration.toSeconds,
           )
-
-        checkAuthState()
-        checkUserActionAttemptRepository(
-          expectedGetAndIncreaseUserActionAttemptCalls = 1
-        )
-        checkPasswordService()
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserCredentialsRepository()
       }
 
       "fail with UnexpectedError to authenticate user when user credentials are not found for existing user details" in new TestContext {
@@ -389,11 +404,24 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             )
           )
 
-        val authenticationService = buildAuthenticationService(
-          authedUser = AuthedUser(userID = userDetailsRow.userID),
-          getUserDetailsByEmailOutput = Some(userDetailsRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          userCredentialsRepositoryMock.getUserCredentials
+            .expects(userDetailsRow.userID)
+            .returningZIO(None) // No user credentials found for existing user details
+            .once(),
         )
+
+        timeProviderStub.instantNow.succeedsWith(instantNow).zioValue
+
+        val authenticationService = buildAuthenticationService
 
         val serviceError = authenticationService.auth(request).zioError
 
@@ -403,25 +431,19 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           .UnexpectedError(
             s"User credentials not found for userID: [${userDetailsRow.userID}], could only occur if user details exist but credentials do not"
           )
-
-        checkAuthState()
-        checkUserActionAttemptRepository(
-          expectedGetAndIncreaseUserActionAttemptCalls = 1
-        )
-        checkPasswordService()
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserCredentialsRepository(expectedGetUserCredentialsCalls = 1)
       }
 
       "fail with UnexpectedError to authenticate user when user details repository fails" in new TestContext {
-        val authedUser       = arbitrarySample[AuthedUser]
         val basicCredentials = arbitrarySample[BasicCredentials]
 
-        val authenticationService = buildAuthenticationService(
-          authedUser = authedUser,
-          userDetailsRepositoryServiceErrorOpt =
-            Some(ServiceError.InternalServerError.UnexpectedError("Database connection error")),
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(basicCredentials.email)
+            .failingZIO(ServiceError.InternalServerError.UnexpectedError("Database connection error"))
+            .once()
         )
+
+        val authenticationService = buildAuthenticationService
 
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(
@@ -438,63 +460,38 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           .UnexpectedError(
             "Database connection error"
           )
-
-        checkAuthState()
-        checkUserActionAttemptRepository()
-        checkPasswordService()
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserCredentialsRepository()
       }
     }
   }
 
-  trait TestContext
-      extends UserDetailsRepositoryMock,
-        UserCredentialsRepositoryMock,
-        PasswordServiceMock,
-        AuthStateMock,
-        UserActionAttemptRepositoryMock {
+  trait TestContext {
+    val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
 
     val authenticationConfig = AuthenticationConfig(
       signInAttemptsMax = 5,
       signInAttemptsBlockDuration = Duration.fromSeconds(2),
     )
 
-    def buildAuthenticationService(
-        authedUser: AuthedUser,
-        verifyPasswordOutput: Boolean = true,
-        getUserCredentialsOutput: Option[UserCredentialsRow] = None,
-        getUserDetailsByEmailOutput: Option[UserDetailsRow] = None,
-        getAndIncreaseUserActionAttemptOutput: Option[UserActionAttemptRow] = None,
-        passwordServiceErrorOpt: Option[ServiceError] = None,
-        userDetailsRepositoryServiceErrorOpt: Option[ServiceError] = None,
-        userCredentialsRepositoryServiceErrorOpt: Option[ServiceError] = None,
-    ): AuthenticationService[ServiceTask] = ZIO
+    val userDetailsRepositoryMock       = mock[UserDetailsRepository]
+    val authStateMock                   = mock[AuthState]
+    val userActionAttemptRepositoryMock = mock[UserActionAttemptRepository]
+    val timeProviderStub                = stub[TimeProvider]
+    val passwordServiceMock             = mock[PasswordService]
+    val userCredentialsRepositoryMock   = mock[UserCredentialsRepository]
+
+    def buildAuthenticationService: AuthenticationService[ServiceTask] = ZIO
       .service[AuthenticationService[ServiceTask]]
       .provide(
         AuthenticationService.local,
         EmailDomainValidator.live,
         BasicCredentialsRequestServiceValidator.live,
-        authStateMockLive(
-          authedUser = authedUser
-        ),
-        userActionAttemptRepositoryMockLive(
-          getAndIncreaseUserActionAttemptOutput = getAndIncreaseUserActionAttemptOutput
-        ),
-        TimeProvider.liveSystemUTC,
-        passwordServiceMockLive(
-          verifyPasswordOutput = verifyPasswordOutput,
-          serviceErrorOpt = passwordServiceErrorOpt,
-        ),
-        userDetailsRepositoryMockLive(
-          getUserDetailsByEmailOutput = getUserDetailsByEmailOutput,
-          serviceErrorOpt = userDetailsRepositoryServiceErrorOpt,
-        ),
-        userCredentialsRepositoryMockLive(
-          getUserCredentialsOutput = getUserCredentialsOutput,
-          serviceErrorOpt = userCredentialsRepositoryServiceErrorOpt,
-        ),
         ZLayer.succeed(authenticationConfig),
+        ZLayer.succeed(authStateMock),
+        ZLayer.succeed(userActionAttemptRepositoryMock),
+        ZLayer.succeed(timeProviderStub),
+        ZLayer.succeed(passwordServiceMock),
+        ZLayer.succeed(userDetailsRepositoryMock),
+        ZLayer.succeed(userCredentialsRepositoryMock),
       )
       .zioValue
   }
