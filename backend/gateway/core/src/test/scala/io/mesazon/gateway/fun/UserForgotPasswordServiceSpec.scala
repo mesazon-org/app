@@ -1,16 +1,20 @@
 package io.mesazon.gateway.fun
 
-import io.mesazon.domain.gateway.*
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.domain.gateway.{OtpType, *}
+import io.mesazon.gateway.clients.EmailClient
 import io.mesazon.gateway.config.UserForgotPasswordConfig
 import io.mesazon.gateway.mock.*
+import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.*
-import io.mesazon.gateway.service.JwtService.{AuthedUserResetPassword, ResetPasswordJwt}
+import io.mesazon.gateway.service.JwtService.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.domain.EmailDomainValidator
 import io.mesazon.gateway.validation.service.*
+import io.mesazon.generator.IDGenerator
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 
@@ -31,14 +35,32 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           .copy(
             userID = userDetailsRow.userID,
             otpType = OtpType.ForgotPassword,
+            expiresAt = ExpiresAt(instantNow.plusSeconds(userForgotPasswordConfig.otpExpiresAtOffset.toSeconds)),
           )
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          instantNowOutput = Some(instantNow),
-          upsertUserOtpOutput = Some(userOtpRow),
-          getUserDetailsByEmailOutput = Some(userDetailsRow),
-          generateOtpOutput = Some(userOtpRow.otp),
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userOtpRepositoryMock.getUserOtpByUserID
+            .expects(userDetailsRow.userID, OtpType.ForgotPassword)
+            .returningZIO(None)
+            .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          (() => otpGeneratorMock.generateOtp).expects().returningZIO(userOtpRow.otp).once(),
+          userOtpRepositoryMock.upsertUserOtp
+            .expects(userDetailsRow.userID, OtpType.ForgotPassword, userOtpRow.otp, userOtpRow.expiresAt)
+            .returningZIO(userOtpRow)
+            .once(),
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.ForgotPasswordVerifyOTP)
+            .returnsZIOUnit
+            .once(),
+          emailClientMock.sendForgotPasswordEmail.expects(userDetailsRow.email, userOtpRow.otp).returningZIOUnit.once(),
         )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordPostRequest = smithy.ForgotPasswordPostRequest(email = userDetailsRow.email.value)
 
@@ -47,23 +69,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
 
         forgotPasswordPostResponse.otpID shouldBe userOtpRow.otpID.value
         forgotPasswordPostResponse.otpExpiresInSeconds shouldBe userForgotPasswordConfig.otpExpiresAtOffset.toSeconds
-
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserOtpRepository(
-          expectedGetUserOtpByUserIDCalls = 1,
-          expectedUpsertUserOtpCalls = 1,
-        )
-        checkEmailClient(expectedSendForgotPasswordEmailCalls = 1)
-        checkTimeProvider(expectedInstantNowCalls = 1)
-        checkOtpGenerator(expectedGenerateCalls = 1)
-        checkUserActionAttemptRepository(
-          expectedDeleteUserActionAttemptCalls = 1
-        )
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
-        checkUserTokenRepository()
-        checkJwtService()
       }
 
       "successfully process forgot password request with resend otp within cooldown and not action attempts registered" in new TestContext {
@@ -90,13 +95,32 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
             attempts = Attempts.assume(1),
           )
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          instantNowOutput = Some(instantNow),
-          getUserDetailsByEmailOutput = Some(userDetailsRow),
-          getUserOtpByUserIDOutput = Some(userOtpRow),
-          updateUserOtpOutput = Some(userOtpRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userOtpRepositoryMock.getUserOtpByUserID
+            .expects(userDetailsRow.userID, OtpType.ForgotPassword)
+            .returningZIO(Some(userOtpRow))
+            .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.ForgotPassword)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          userOtpRepositoryMock.updateUserOtp
+            .expects(
+              userOtpRow.otpID,
+              userDetailsRow.userID,
+              OtpType.ForgotPassword,
+              ExpiresAt(instantNow.plusSeconds(userForgotPasswordConfig.otpExpiresAtOffset.toSeconds)),
+            )
+            .returningZIO(userOtpRow)
+            .once(),
         )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordPostRequest = smithy.ForgotPasswordPostRequest(email = userDetailsRow.email.value)
 
@@ -105,21 +129,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
 
         forgotPasswordPostResponse.otpID shouldBe userOtpRow.otpID.value
         forgotPasswordPostResponse.otpExpiresInSeconds shouldBe userForgotPasswordConfig.otpExpiresAtOffset.toSeconds
-
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserOtpRepository(
-          expectedGetUserOtpByUserIDCalls = 1,
-          expectedUpdateUserOtpCalls = 1,
-        )
-        checkTimeProvider(expectedInstantNowCalls = 1)
-        checkUserActionAttemptRepository(expectedGetAndIncreaseUserActionAttemptCalls = 1)
-        checkEmailClient()
-        checkOtpGenerator()
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
-        checkUserTokenRepository()
-        checkJwtService()
       }
 
       "successfully process forgot password request with resend otp within cooldown and action attempts registered but under max retries" in new TestContext {
@@ -149,13 +158,32 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
               Attempts.assume(userForgotPasswordConfig.otpResetAttemptsMaxRetries - otpResetAttemptsMaxRetriesBuffer),
           )
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          instantNowOutput = Some(instantNow),
-          getUserDetailsByEmailOutput = Some(userDetailsRow),
-          getUserOtpByUserIDOutput = Some(userOtpRow),
-          updateUserOtpOutput = Some(userOtpRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userOtpRepositoryMock.getUserOtpByUserID
+            .expects(userDetailsRow.userID, OtpType.ForgotPassword)
+            .returningZIO(Some(userOtpRow))
+            .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.ForgotPassword)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          userOtpRepositoryMock.updateUserOtp
+            .expects(
+              userOtpRow.otpID,
+              userDetailsRow.userID,
+              OtpType.ForgotPassword,
+              ExpiresAt(instantNow.plusSeconds(userForgotPasswordConfig.otpExpiresAtOffset.toSeconds)),
+            )
+            .returningZIO(userOtpRow)
+            .once(),
         )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordPostRequest = smithy.ForgotPasswordPostRequest(email = userDetailsRow.email.value)
 
@@ -164,21 +192,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
 
         forgotPasswordPostResponse.otpID shouldBe userOtpRow.otpID.value
         forgotPasswordPostResponse.otpExpiresInSeconds shouldBe userForgotPasswordConfig.otpExpiresAtOffset.toSeconds
-
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserOtpRepository(
-          expectedGetUserOtpByUserIDCalls = 1,
-          expectedUpdateUserOtpCalls = 1,
-        )
-        checkTimeProvider(expectedInstantNowCalls = 1)
-        checkUserActionAttemptRepository(expectedGetAndIncreaseUserActionAttemptCalls = 1)
-        checkEmailClient()
-        checkOtpGenerator()
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
-        checkUserTokenRepository()
-        checkJwtService()
       }
 
       "successfully process forgot password request with resend otp within cooldown and action attempts registered at max retries" in new TestContext {
@@ -208,12 +221,23 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
               Attempts.assume(userForgotPasswordConfig.otpResetAttemptsMaxRetries + otpResetAttemptsMaxRetriesBuffer),
           )
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          instantNowOutput = Some(instantNow),
-          getUserDetailsByEmailOutput = Some(userDetailsRow),
-          getUserOtpByUserIDOutput = Some(userOtpRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userOtpRepositoryMock.getUserOtpByUserID
+            .expects(userDetailsRow.userID, OtpType.ForgotPassword)
+            .returningZIO(Some(userOtpRow))
+            .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.ForgotPassword)
+            .returningZIO(userActionAttemptRow)
+            .once(),
         )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordPostRequest = smithy.ForgotPasswordPostRequest(email = userDetailsRow.email.value)
 
@@ -222,18 +246,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
 
         forgotPasswordPostResponse.otpID shouldBe userOtpRow.otpID.value
         forgotPasswordPostResponse.otpExpiresInSeconds shouldBe userForgotPasswordConfig.otpExpiresAtOffset.toSeconds
-
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserOtpRepository(expectedGetUserOtpByUserIDCalls = 1)
-        checkTimeProvider(expectedInstantNowCalls = 1)
-        checkUserActionAttemptRepository(expectedGetAndIncreaseUserActionAttemptCalls = 1)
-        checkEmailClient()
-        checkOtpGenerator()
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
-        checkUserTokenRepository()
-        checkJwtService()
       }
 
       "successfully process forgot password request with otp being expired" in new TestContext {
@@ -254,13 +266,34 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
             ),
           )
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          instantNowOutput = Some(instantNow),
-          getUserDetailsByEmailOutput = Some(userDetailsRow),
-          upsertUserOtpOutput = Some(userOtpRow),
-          generateOtpOutput = Some(userOtpRow.otp),
-          getUserOtpByUserIDOutput = Some(userOtpRow),
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userOtpRepositoryMock.getUserOtpByUserID
+            .expects(userDetailsRow.userID, OtpType.ForgotPassword)
+            .returningZIO(None)
+            .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          (() => otpGeneratorMock.generateOtp).expects().returningZIO(userOtpRow.otp).once(),
+          userOtpRepositoryMock.upsertUserOtp
+            .expects(
+              userDetailsRow.userID,
+              OtpType.ForgotPassword,
+              userOtpRow.otp,
+              ExpiresAt(instantNow.plusSeconds(userForgotPasswordConfig.otpExpiresAtOffset.toSeconds)),
+            )
+            .returningZIO(userOtpRow)
+            .once(),
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.ForgotPasswordVerifyOTP)
+            .returnsZIOUnit
+            .once(),
+          emailClientMock.sendForgotPasswordEmail.expects(userDetailsRow.email, userOtpRow.otp).returningZIOUnit.once(),
         )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordPostRequest = smithy.ForgotPasswordPostRequest(email = userDetailsRow.email.value)
 
@@ -269,23 +302,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
 
         forgotPasswordPostResponse.otpID shouldBe userOtpRow.otpID.value
         forgotPasswordPostResponse.otpExpiresInSeconds shouldBe userForgotPasswordConfig.otpExpiresAtOffset.toSeconds
-
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserOtpRepository(
-          expectedGetUserOtpByUserIDCalls = 1,
-          expectedUpsertUserOtpCalls = 1,
-        )
-        checkEmailClient(expectedSendForgotPasswordEmailCalls = 1)
-        checkTimeProvider(expectedInstantNowCalls = 1)
-        checkOtpGenerator(expectedGenerateCalls = 1)
-        checkUserActionAttemptRepository(
-          expectedDeleteUserActionAttemptCalls = 1
-        )
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
-        checkUserTokenRepository()
-        checkJwtService()
       }
 
       "successfully process forgot password request with otp expired and action attempts registered at max retries" in new TestContext {
@@ -316,14 +332,39 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
               Attempts.assume(userForgotPasswordConfig.otpResetAttemptsMaxRetries + otpResetAttemptsMaxRetriesBuffer),
           )
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          instantNowOutput = Some(instantNow),
-          getUserDetailsByEmailOutput = Some(userDetailsRow),
-          generateOtpOutput = Some(userOtpRow.otp),
-          getUserOtpByUserIDOutput = Some(userOtpRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
-          upsertUserOtpOutput = Some(userOtpRow),
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userOtpRepositoryMock.getUserOtpByUserID
+            .expects(userDetailsRow.userID, OtpType.ForgotPassword)
+            .returningZIO(None)
+            .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          (() => otpGeneratorMock.generateOtp).expects().returningZIO(userOtpRow.otp).once(),
+          userOtpRepositoryMock.upsertUserOtp
+            .expects(
+              userDetailsRow.userID,
+              OtpType.ForgotPassword,
+              userOtpRow.otp,
+              ExpiresAt(instantNow.plusSeconds(userForgotPasswordConfig.otpExpiresAtOffset.toSeconds)),
+            )
+            .returningZIO(userOtpRow)
+            .once(),
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.ForgotPasswordVerifyOTP)
+            .returnsZIOUnit
+            .once(),
+          emailClientMock.sendForgotPasswordEmail.expects(userDetailsRow.email, userOtpRow.otp).returningZIOUnit.once(),
         )
+
+        userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+          .expects(userDetailsRow.userID, ActionAttemptType.ForgotPassword)
+          .returningZIO(userActionAttemptRow)
+          .never()
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordPostRequest = smithy.ForgotPasswordPostRequest(email = userDetailsRow.email.value)
 
@@ -331,51 +372,33 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           userForgotPasswordService.forgotPasswordPost(forgotPasswordPostRequest).zioValue
 
         forgotPasswordPostResponse.otpExpiresInSeconds shouldBe userForgotPasswordConfig.otpExpiresAtOffset.toSeconds
-
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkUserOtpRepository(
-          expectedGetUserOtpByUserIDCalls = 1,
-          expectedUpsertUserOtpCalls = 1,
-        )
-        checkEmailClient(expectedSendForgotPasswordEmailCalls = 1)
-        checkTimeProvider(expectedInstantNowCalls = 1)
-        checkOtpGenerator(expectedGenerateCalls = 1)
-        checkUserActionAttemptRepository(
-          expectedDeleteUserActionAttemptCalls = 1
-        )
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
-        checkUserTokenRepository()
       }
 
       "successfully process forgot password request with no user details found" in new TestContext {
         val email = arbitrarySample[Email]
+        val otpID = arbitrarySample[OtpID]
 
-        val userForgotPasswordService = buildUserForgotPasswordService()
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(email)
+            .returningZIO(None)
+            .once(),
+          (() => idGeneratorMock.generateID).expects().returnsZIO(otpID.value),
+        )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordPostRequest = smithy.ForgotPasswordPostRequest(email = email.value)
 
         val forgotPasswordPostResponse =
           userForgotPasswordService.forgotPasswordPost(forgotPasswordPostRequest).zioValue
 
+        forgotPasswordPostResponse.otpID shouldBe otpID.value
         forgotPasswordPostResponse.otpExpiresInSeconds shouldBe userForgotPasswordConfig.otpExpiresAtOffset.toSeconds
-
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkIDGenerator(expectedGenerateCalls = 1)
-        checkUserOtpRepository()
-        checkEmailClient()
-        checkTimeProvider()
-        checkOtpGenerator()
-        checkUserActionAttemptRepository()
-        checkUserCredentialsRepository()
-        checkPasswordService()
-        checkUserTokenRepository()
-        checkJwtService()
       }
 
       "fail with ValidationError when request validation fails" in new TestContext {
-        val userForgotPasswordService = buildUserForgotPasswordService()
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordPostRequest = smithy.ForgotPasswordPostRequest(email = "invalid-email")
 
@@ -392,18 +415,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
               )
             )
           )
-
-        checkUserDetailsRepository()
-        checkIDGenerator()
-        checkUserOtpRepository()
-        checkEmailClient()
-        checkTimeProvider()
-        checkOtpGenerator()
-        checkUserActionAttemptRepository()
-        checkUserCredentialsRepository()
-        checkPasswordService()
-        checkUserTokenRepository()
-        checkJwtService()
       }
 
       "fail with FailedOnboardStage when user is not in allowed onboard stage" in new TestContext {
@@ -412,9 +423,14 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          getUserDetailsByEmailOutput = Some(userDetailsRow)
+        inSequence(
+          userDetailsRepositoryMock.getUserDetailsByEmail
+            .expects(userDetailsRow.email)
+            .returningZIO(Some(userDetailsRow))
+            .once()
         )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordPostRequest = smithy.ForgotPasswordPostRequest(email = userDetailsRow.email.value)
 
@@ -427,48 +443,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
           )
-
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkIDGenerator()
-        checkUserOtpRepository()
-        checkEmailClient()
-        checkTimeProvider()
-        checkOtpGenerator()
-        checkUserActionAttemptRepository()
-        checkUserCredentialsRepository()
-        checkPasswordService()
-        checkUserTokenRepository()
-        checkJwtService()
-      }
-
-      "fail with UnexpectedError when user details repository returns service error" in new TestContext {
-        val email = arbitrarySample[Email]
-
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          userDetailsRepositoryServiceErrorOpt =
-            Some(ServiceError.InternalServerError.UnexpectedError("DB connection error"))
-        )
-
-        val forgotPasswordPostRequest = smithy.ForgotPasswordPostRequest(email = email.value)
-
-        val serviceError = userForgotPasswordService.forgotPasswordPost(forgotPasswordPostRequest).zioError
-
-        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
-        serviceError
-          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
-          .UnexpectedError("DB connection error")
-
-        checkUserDetailsRepository(expectedGetUserDetailsByEmailCalls = 1)
-        checkIDGenerator()
-        checkUserOtpRepository()
-        checkEmailClient()
-        checkTimeProvider()
-        checkOtpGenerator()
-        checkUserActionAttemptRepository()
-        checkUserCredentialsRepository()
-        checkPasswordService()
-        checkUserTokenRepository()
-        checkJwtService()
       }
     }
 
@@ -495,13 +469,46 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
 
         val resetPasswordJwt = arbitrarySample[ResetPasswordJwt]
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          instantNowOutput = Some(instantNow),
-          generateResetPasswordTokenOutput = Some(resetPasswordJwt),
-          getUserDetailsOutput = Some(userDetailsRow),
-          getUserOtpByOtpIDOutput = Some(userOtpRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
+        inSequence(
+          userOtpRepositoryMock.getUserOtpByOtpID
+            .expects(userOtpRow.otpID, OtpType.ForgotPassword)
+            .returnsZIO(Some(userOtpRow))
+            .once(),
+          userDetailsRepositoryMock.getUserDetails.expects(userOtpRow.userID).returningZIO(Some(userDetailsRow)).once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userOtpRow.userID, ActionAttemptType.ForgotPasswordVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          userOtpRepositoryMock.deleteUserOtp
+            .expects(userOtpRow.otpID, userOtpRow.userID, OtpType.ForgotPassword)
+            .returningZIOUnit
+            .once(),
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(userOtpRow.userID, ActionAttemptType.ForgotPassword)
+            .returnsZIOUnit
+            .once(),
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(userOtpRow.userID, ActionAttemptType.ForgotPasswordVerifyOTP)
+            .returnsZIOUnit
+            .once(),
+          jwtServiceMock.generateResetPasswordToken
+            .expects(userDetailsRow.userID)
+            .returningZIO(resetPasswordJwt)
+            .once(),
+          userTokenRepositoryMock.upsertUserToken
+            .expects(
+              resetPasswordJwt.tokenID,
+              userDetailsRow.userID,
+              TokenType.ResetPasswordToken,
+              resetPasswordJwt.expiresAt,
+              None,
+            )
+            .returnsZIOUnit
+            .once(),
         )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordVerifyOTPPostRequest = smithy.ForgotPasswordVerifyOTPPostRequest(
           otpID = userOtpRow.otpID.value,
@@ -513,36 +520,10 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
 
         forgotPasswordVerifyOTPPostResponse.resetPasswordToken shouldBe resetPasswordJwt.resetPasswordToken.value
         forgotPasswordVerifyOTPPostResponse.resetPasswordTokenExpiresInSeconds shouldBe resetPasswordJwt.expiresIn.toSeconds
-
-        checkUserOtpRepository(
-          expectedGetUserOtpByOtpIDCalls = 1,
-          expectedDeleteUserOtpCalls = 1,
-        )
-        checkUserDetailsRepository(
-          expectedGetUserDetailsCalls = 1
-        )
-        checkJwtService(
-          expectedGenerateResetPasswordTokenCalls = 1
-        )
-        checkUserTokenRepository(
-          expectedUpsertUserTokenCalls = 1
-        )
-        checkTimeProvider(
-          expectedInstantNowCalls = 1
-        )
-        checkUserActionAttemptRepository(
-          expectedDeleteUserActionAttemptCalls = 2,
-          expectedGetAndIncreaseUserActionAttemptCalls = 1,
-        )
-        checkEmailClient()
-        checkOtpGenerator()
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
       }
 
       "fail with ValidationError when forgot password verify otp request validation fails" in new TestContext {
-        val userForgotPasswordService = buildUserForgotPasswordService()
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val otpID = arbitrarySample[OtpID]
 
@@ -565,25 +546,20 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
               )
             )
           )
-
-        checkUserOtpRepository()
-        checkUserDetailsRepository()
-        checkJwtService()
-        checkUserTokenRepository()
-        checkTimeProvider()
-        checkUserActionAttemptRepository()
-        checkEmailClient()
-        checkOtpGenerator()
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
       }
 
       "fail with OtpValidationError when user otp is missing" in new TestContext {
-        val userForgotPasswordService = buildUserForgotPasswordService()
-
         val otpID = arbitrarySample[OtpID]
         val otp   = arbitrarySample[Otp]
+
+        inSequence(
+          userOtpRepositoryMock.getUserOtpByOtpID
+            .expects(otpID, OtpType.ForgotPassword)
+            .returnsZIO(None)
+            .once()
+        )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordVerifyOTPPostRequest = smithy.ForgotPasswordVerifyOTPPostRequest(
           otpID = otpID.value,
@@ -599,28 +575,21 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           .OtpValidationError(
             s"No OTP found for OTP ID [${otpID.value}] and OTP type [${OtpType.ForgotPassword}]"
           )
-
-        checkUserOtpRepository(expectedGetUserOtpByOtpIDCalls = 1)
-        checkUserDetailsRepository()
-        checkJwtService()
-        checkUserTokenRepository()
-        checkTimeProvider()
-        checkUserActionAttemptRepository()
-        checkEmailClient()
-        checkOtpGenerator()
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
       }
 
       "fail with UserNotFoundError when user details is missing for the user otp" in new TestContext {
         val userOtpRow = arbitrarySample[UserOtpRow]
           .copy(otpType = OtpType.ForgotPassword)
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          instantNowOutput = Some(instantNow),
-          getUserOtpByOtpIDOutput = Some(userOtpRow),
+        inSequence(
+          userOtpRepositoryMock.getUserOtpByOtpID
+            .expects(userOtpRow.otpID, OtpType.ForgotPassword)
+            .returnsZIO(Some(userOtpRow))
+            .once(),
+          userDetailsRepositoryMock.getUserDetails.expects(userOtpRow.userID).returningZIO(None).once(),
         )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordVerifyOTPPostRequest = smithy.ForgotPasswordVerifyOTPPostRequest(
           otpID = userOtpRow.otpID.value,
@@ -636,18 +605,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           .UserNotFoundError(
             s"No user details found for userID: [${userOtpRow.userID}] and otpID: [${userOtpRow.otpID}]"
           )
-
-        checkUserOtpRepository(expectedGetUserOtpByOtpIDCalls = 1)
-        checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
-        checkJwtService()
-        checkUserTokenRepository()
-        checkTimeProvider()
-        checkUserActionAttemptRepository()
-        checkEmailClient()
-        checkOtpGenerator()
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
       }
 
       "fail with FailedOnboardStage when user is not in allowed onboard stage" in new TestContext {
@@ -662,11 +619,15 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
             otpType = OtpType.ForgotPassword,
           )
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          instantNowOutput = Some(instantNow),
-          getUserDetailsOutput = Some(userDetailsRow),
-          getUserOtpByOtpIDOutput = Some(userOtpRow),
+        inSequence(
+          userOtpRepositoryMock.getUserOtpByOtpID
+            .expects(userOtpRow.otpID, OtpType.ForgotPassword)
+            .returnsZIO(Some(userOtpRow))
+            .once(),
+          userDetailsRepositoryMock.getUserDetails.expects(userOtpRow.userID).returningZIO(Some(userDetailsRow)).once(),
         )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordVerifyOTPPostRequest = smithy.ForgotPasswordVerifyOTPPostRequest(
           otpID = userOtpRow.otpID.value,
@@ -683,18 +644,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
           )
-
-        checkUserOtpRepository(expectedGetUserOtpByOtpIDCalls = 1)
-        checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
-        checkJwtService()
-        checkUserTokenRepository()
-        checkTimeProvider()
-        checkUserActionAttemptRepository()
-        checkEmailClient()
-        checkOtpGenerator()
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
       }
 
       "fail with OtpValidationError when wrong OTP provided" in new TestContext {
@@ -717,12 +666,20 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
             attempts = Attempts.assume(1),
           )
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          instantNowOutput = Some(instantNow),
-          getUserDetailsOutput = Some(userDetailsRow),
-          getUserOtpByOtpIDOutput = Some(userOtpRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
+        inSequence(
+          userOtpRepositoryMock.getUserOtpByOtpID
+            .expects(userOtpRow.otpID, OtpType.ForgotPassword)
+            .returnsZIO(Some(userOtpRow))
+            .once(),
+          userDetailsRepositoryMock.getUserDetails.expects(userOtpRow.userID).returningZIO(Some(userDetailsRow)).once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userOtpRow.userID, ActionAttemptType.ForgotPasswordVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
         )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val otp = arbitrarySample[Otp]
 
@@ -740,20 +697,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           .OtpValidationError(
             s"Wrong or expired OTP provided for OTP ID [${userOtpRow.otpID}] and OTP type [${OtpType.ForgotPassword}]"
           )
-
-        checkUserOtpRepository(expectedGetUserOtpByOtpIDCalls = 1)
-        checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
-        checkTimeProvider(expectedInstantNowCalls = 1)
-        checkJwtService()
-        checkUserTokenRepository()
-        checkUserActionAttemptRepository(
-          expectedGetAndIncreaseUserActionAttemptCalls = 1
-        )
-        checkEmailClient()
-        checkOtpGenerator()
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
       }
 
       "fail with OtpValidationError when expired OTP provided" in new TestContext {
@@ -776,12 +719,20 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
             attempts = Attempts.assume(1),
           )
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          instantNowOutput = Some(instantNow),
-          getUserDetailsOutput = Some(userDetailsRow),
-          getUserOtpByOtpIDOutput = Some(userOtpRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
+        inSequence(
+          userOtpRepositoryMock.getUserOtpByOtpID
+            .expects(userOtpRow.otpID, OtpType.ForgotPassword)
+            .returnsZIO(Some(userOtpRow))
+            .once(),
+          userDetailsRepositoryMock.getUserDetails.expects(userOtpRow.userID).returningZIO(Some(userDetailsRow)).once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userOtpRow.userID, ActionAttemptType.ForgotPasswordVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
         )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordVerifyOTPPostRequest = smithy.ForgotPasswordVerifyOTPPostRequest(
           otpID = userOtpRow.otpID.value,
@@ -797,20 +748,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           .OtpValidationError(
             s"Wrong or expired OTP provided for OTP ID [${userOtpRow.otpID}] and OTP type [${OtpType.ForgotPassword}]"
           )
-
-        checkUserOtpRepository(expectedGetUserOtpByOtpIDCalls = 1)
-        checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
-        checkTimeProvider(expectedInstantNowCalls = 1)
-        checkUserActionAttemptRepository(
-          expectedGetAndIncreaseUserActionAttemptCalls = 1
-        )
-        checkJwtService()
-        checkUserTokenRepository()
-        checkEmailClient()
-        checkOtpGenerator()
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
       }
 
       "fail with OtpValidationError when verify action attempts has reached the limit" in new TestContext {
@@ -833,12 +770,19 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
             attempts = Attempts.assume(userForgotPasswordConfig.otpVerifyAttemptsMaxRetries + 1),
           )
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          instantNowOutput = Some(instantNow),
-          getUserDetailsOutput = Some(userDetailsRow),
-          getUserOtpByOtpIDOutput = Some(userOtpRow),
-          getAndIncreaseUserActionAttemptOutput = Some(userActionAttemptRow),
+        inSequence(
+          userOtpRepositoryMock.getUserOtpByOtpID
+            .expects(userOtpRow.otpID, OtpType.ForgotPassword)
+            .returnsZIO(Some(userOtpRow))
+            .once(),
+          userDetailsRepositoryMock.getUserDetails.expects(userOtpRow.userID).returningZIO(Some(userDetailsRow)).once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userOtpRow.userID, ActionAttemptType.ForgotPasswordVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
         )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordVerifyOTPPostRequest = smithy.ForgotPasswordVerifyOTPPostRequest(
           otpID = userOtpRow.otpID.value,
@@ -854,56 +798,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           .OtpValidationError(
             s"OTP validation attempts exceeded for OTP ID [${userOtpRow.otpID}] and OTP type [${OtpType.ForgotPassword}]"
           )
-
-        checkUserOtpRepository(expectedGetUserOtpByOtpIDCalls = 1)
-        checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
-        checkUserActionAttemptRepository(
-          expectedGetAndIncreaseUserActionAttemptCalls = 1
-        )
-        checkTimeProvider()
-        checkJwtService()
-        checkUserTokenRepository()
-        checkEmailClient()
-        checkOtpGenerator()
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
-      }
-
-      "fail with UnexpectedError when user otp repository returns service error" in new TestContext {
-        val userOtpRow = arbitrarySample[UserOtpRow]
-          .copy(otpType = OtpType.ForgotPassword)
-
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          getUserOtpByOtpIDOutput = Some(userOtpRow),
-          userOtpRepositoryServiceErrorOpt =
-            Some(ServiceError.InternalServerError.UnexpectedError("DB connection error")),
-        )
-
-        val forgotPasswordVerifyOTPPostRequest = smithy.ForgotPasswordVerifyOTPPostRequest(
-          otpID = userOtpRow.otpID.value,
-          otp = userOtpRow.otp.value,
-        )
-
-        val serviceError =
-          userForgotPasswordService.forgotPasswordVerifyOTPPost(forgotPasswordVerifyOTPPostRequest).zioError
-
-        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
-        serviceError
-          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
-          .UnexpectedError("DB connection error")
-
-        checkUserOtpRepository(expectedGetUserOtpByOtpIDCalls = 1)
-        checkUserDetailsRepository()
-        checkJwtService()
-        checkUserTokenRepository()
-        checkTimeProvider()
-        checkUserActionAttemptRepository()
-        checkEmailClient()
-        checkOtpGenerator()
-        checkIDGenerator()
-        checkUserCredentialsRepository()
-        checkPasswordService()
       }
     }
 
@@ -914,10 +808,6 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage, userID = userID)
 
-        val passwordHashOld    = arbitrarySample[PasswordHash]
-        val userCredentialsRow = arbitrarySample[UserCredentialsRow]
-          .copy(userID = userID, passwordHash = passwordHashOld)
-
         val tokenID      = arbitrarySample[TokenID]
         val userTokenRow = arbitrarySample[UserTokenRow]
           .copy(tokenID = tokenID, userID = userID, tokenType = TokenType.ResetPasswordToken)
@@ -925,37 +815,42 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val passwordHashNew = arbitrarySample[PasswordHash]
 
         val authedUserResetPassword = arbitrarySample[AuthedUserResetPassword]
-          .copy(userID = userID)
+          .copy(tokenID = tokenID, userID = userID)
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          getUserDetailsOutput = Some(userDetailsRow),
-          getUserTokenOutput = Some(userTokenRow),
-          getUserCredentialsOutput = Some(userCredentialsRow),
-          hashPasswordOutput = Some(passwordHashNew),
-          verifyResetPasswordTokenOutput = Some(authedUserResetPassword),
-        )
+        val resetPasswordToken = arbitrarySample[ResetPasswordToken]
+        val passwordNew        = arbitrarySample[Password]
 
         val forgotPasswordResetPostRequest = arbitrarySample[smithy.ForgotPasswordResetPostRequest]
+          .copy(resetPasswordToken = resetPasswordToken.value, password = passwordNew.value)
+
+        inSequence(
+          jwtServiceMock.verifyResetPasswordToken
+            .expects(resetPasswordToken)
+            .returningZIO(authedUserResetPassword)
+            .once(),
+          userDetailsRepositoryMock.getUserDetails.expects(userID).returningZIO(Some(userDetailsRow)).once(),
+          userTokenRepositoryMock.getUserToken
+            .expects(authedUserResetPassword.tokenID, userID, TokenType.ResetPasswordToken)
+            .returningZIO(Some(userTokenRow))
+            .once(),
+          passwordServiceMock.hashPassword
+            .expects(passwordNew)
+            .returningZIO(passwordHashNew)
+            .once(),
+          userCredentialsRepositoryMock.updateUserCredentials.expects(userID, passwordHashNew).returnsZIOUnit.once(),
+          userTokenRepositoryMock.deleteUserToken
+            .expects(userTokenRow.tokenID, userID, TokenType.ResetPasswordToken)
+            .returnsZIOUnit
+            .once(),
+          emailClientMock.sendPasswordChangeConfirmationEmail.expects(userDetailsRow.email).returnsZIOUnit.once(),
+        )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordResetPostResponse =
           userForgotPasswordService.forgotPasswordResetPost(forgotPasswordResetPostRequest).zioEither
 
         assert(forgotPasswordResetPostResponse.isRight)
-
-        checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
-        checkJwtService(expectedVerifyResetPasswordTokenCalls = 1)
-        checkUserTokenRepository(
-          expectedGetUserTokenCalls = 1,
-          expectedDeleteUserTokenCalls = 1,
-        )
-        checkEmailClient(expectedSendPasswordChangeConfirmationEmailCalls = 1)
-        checkUserCredentialsRepository(expectedUpdateUserCredentialsCalls = 1)
-        checkPasswordService(expectedHashPasswordCalls = 1)
-        checkUserOtpRepository()
-        checkTimeProvider()
-        checkUserActionAttemptRepository()
-        checkOtpGenerator()
-        checkIDGenerator()
       }
 
       "successfully forgot password reset in scenario where email client fails to send password change confirmation email" in new TestContext {
@@ -971,42 +866,47 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val passwordHashNew = arbitrarySample[PasswordHash]
 
         val authedUserResetPassword = arbitrarySample[AuthedUserResetPassword]
-          .copy(userID = userID)
+          .copy(tokenID = tokenID, userID = userID)
 
-        val userForgotPasswordService = buildUserForgotPasswordService(
-          getUserDetailsOutput = Some(userDetailsRow),
-          getUserTokenOutput = Some(userTokenRow),
-          hashPasswordOutput = Some(passwordHashNew),
-          verifyResetPasswordTokenOutput = Some(authedUserResetPassword),
-          emailClientServiceErrorOpt = Some(ServiceError.InternalServerError.UnexpectedError("Email service error")),
-        )
+        val resetPasswordToken = arbitrarySample[ResetPasswordToken]
+        val passwordNew        = arbitrarySample[Password]
 
         val forgotPasswordResetPostRequest = arbitrarySample[smithy.ForgotPasswordResetPostRequest]
+          .copy(resetPasswordToken = resetPasswordToken.value, password = passwordNew.value)
+
+        inSequence(
+          jwtServiceMock.verifyResetPasswordToken
+            .expects(resetPasswordToken)
+            .returningZIO(authedUserResetPassword)
+            .once(),
+          userDetailsRepositoryMock.getUserDetails.expects(userID).returningZIO(Some(userDetailsRow)).once(),
+          userTokenRepositoryMock.getUserToken
+            .expects(authedUserResetPassword.tokenID, userID, TokenType.ResetPasswordToken)
+            .returningZIO(Some(userTokenRow))
+            .once(),
+          passwordServiceMock.hashPassword
+            .expects(passwordNew)
+            .returningZIO(passwordHashNew)
+            .once(),
+          userCredentialsRepositoryMock.updateUserCredentials.expects(userID, passwordHashNew).returnsZIOUnit.once(),
+          userTokenRepositoryMock.deleteUserToken
+            .expects(userTokenRow.tokenID, userID, TokenType.ResetPasswordToken)
+            .returnsZIOUnit
+            .once(),
+          emailClientMock.sendPasswordChangeConfirmationEmail
+            .expects(userDetailsRow.email)
+            .failingZIO(ServiceError.InternalServerError.UnexpectedError("Email service error")),
+        )
+
+        val userForgotPasswordService = buildUserForgotPasswordService
 
         val forgotPasswordResetPostResponse =
           userForgotPasswordService.forgotPasswordResetPost(forgotPasswordResetPostRequest).zioEither
 
         assert(forgotPasswordResetPostResponse.isRight)
-
-        checkUserDetailsRepository(expectedGetUserDetailsCalls = 1)
-        checkJwtService(expectedVerifyResetPasswordTokenCalls = 1)
-        checkUserTokenRepository(
-          expectedGetUserTokenCalls = 1,
-          expectedDeleteUserTokenCalls = 1,
-        )
-        checkEmailClient(expectedSendPasswordChangeConfirmationEmailCalls =
-          userForgotPasswordConfig.sendPasswordChangeConfirmationEmailMaxRetries + 1
-        )
-        checkUserCredentialsRepository(expectedUpdateUserCredentialsCalls = 1)
-        checkPasswordService(expectedHashPasswordCalls = 1)
-        checkUserOtpRepository()
-        checkTimeProvider()
-        checkUserActionAttemptRepository()
-        checkOtpGenerator()
-        checkIDGenerator()
       }
 
-      "fail with ValidationError when forgot password reset request validation fails" in new TestContext {
+      "fail with ValidationError when forgot password reset request validation fails" in new TestContext2 {
         val userForgotPasswordService = buildUserForgotPasswordService()
 
         val forgotPasswordResetPostRequest = smithy.ForgotPasswordResetPostRequest(
@@ -1049,7 +949,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         checkIDGenerator()
       }
 
-      "fail with TokenMissing Error when reset password token is missing" in new TestContext {
+      "fail with TokenMissing Error when reset password token is missing" in new TestContext2 {
         val userID         = arbitrarySample[UserID]
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -1086,7 +986,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         checkIDGenerator()
       }
 
-      "fail with UserNotFoundError when user details is missing for the reset password token" in new TestContext {
+      "fail with UserNotFoundError when user details is missing for the reset password token" in new TestContext2 {
         val authedUserResetPassword = arbitrarySample[AuthedUserResetPassword]
 
         val userForgotPasswordService = buildUserForgotPasswordService(
@@ -1116,7 +1016,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         checkIDGenerator()
       }
 
-      "fail with FailedOnboardStage when user is not in allowed onboard stage" in new TestContext {
+      "fail with FailedOnboardStage when user is not in allowed onboard stage" in new TestContext2 {
         val userID       = arbitrarySample[UserID]
         val onboardStage =
           Random.shuffle(OnboardStage.values.diff(OnboardStage.forgotPasswordAllowedStages).toList).zioValue.head
@@ -1161,7 +1061,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         checkIDGenerator()
       }
 
-      "fail with UnexpectedError when user credentials repository returns service error" in new TestContext {
+      "fail with UnexpectedError when user credentials repository returns service error" in new TestContext2 {
         val userID         = arbitrarySample[UserID]
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -1208,7 +1108,57 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
     }
   }
 
-  trait TestContext
+  trait TestContext {
+    val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+    val userForgotPasswordConfig = UserForgotPasswordConfig(
+      otpExpiresAtOffset = Duration.fromSeconds(60),
+      otpResendCooldown = Duration.fromSeconds(20),
+      otpResetAttemptsMaxRetries = 3,
+      sendForgotPasswordEmailMaxRetries = 3,
+      sendForgotPasswordEmailRetryDelay = Duration.fromMillis(100),
+      otpVerifyAttemptsMaxRetries = 3,
+      sendPasswordChangeConfirmationEmailMaxRetries = 3,
+      sendPasswordChangeConfirmationEmailRetryDelay = Duration.fromMillis(100),
+    )
+
+    val otpGeneratorMock                = mock[OtpGenerator]
+    val idGeneratorMock                 = mock[IDGenerator]
+    val userTokenRepositoryMock         = mock[UserTokenRepository]
+    val timeProviderMock                = mock[TimeProvider]
+    val jwtServiceMock                  = mock[JwtService]
+    val userDetailsRepositoryMock       = mock[UserDetailsRepository]
+    val userActionAttemptRepositoryMock = mock[UserActionAttemptRepository]
+    val userOtpRepositoryMock           = mock[UserOtpRepository]
+    val userCredentialsRepositoryMock   = mock[UserCredentialsRepository]
+    val passwordServiceMock             = mock[PasswordService]
+    val emailClientMock                 = mock[EmailClient]
+
+    def buildUserForgotPasswordService: smithy.UserForgotPasswordService[ServiceTask] = ZIO
+      .service[smithy.UserForgotPasswordService[ServiceTask]]
+      .provide(
+        UserForgotPasswordService.local,
+        EmailDomainValidator.live,
+        ForgotPasswordVerifyOTPPostRequestServiceValidator.live,
+        ForgotPasswordPostRequestServiceValidator.live,
+        ForgotPasswordResetPostRequestServiceValidator.live,
+        ZLayer.succeed(userForgotPasswordConfig),
+        ZLayer.succeed(otpGeneratorMock),
+        ZLayer.succeed(idGeneratorMock),
+        ZLayer.succeed(userTokenRepositoryMock),
+        ZLayer.succeed(timeProviderMock),
+        ZLayer.succeed(jwtServiceMock),
+        ZLayer.succeed(userDetailsRepositoryMock),
+        ZLayer.succeed(userActionAttemptRepositoryMock),
+        ZLayer.succeed(userOtpRepositoryMock),
+        ZLayer.succeed(userCredentialsRepositoryMock),
+        ZLayer.succeed(passwordServiceMock),
+        ZLayer.succeed(emailClientMock),
+      )
+      .zioValue
+  }
+
+  trait TestContext2
       extends UserDetailsRepositoryMock,
         UserActionAttemptRepositoryMock,
         UserOtpRepositoryMock,

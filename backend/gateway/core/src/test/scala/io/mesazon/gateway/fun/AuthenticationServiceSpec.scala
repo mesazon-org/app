@@ -57,6 +57,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
             .returningZIO(userActionAttemptRow)
             .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userCredentialsRepositoryMock.getUserCredentials
             .expects(userDetailsRow.userID)
             .returningZIO(Some(userCredentialsRow))
@@ -70,8 +71,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             .returningZIOUnit,
           authStateMock.set.expects(AuthedUser(userDetailsRow.userID)).returningZIOUnit,
         )
-
-        timeProviderStub.instantNow.succeedsWith(instantNow).zioValue
 
         val authenticationService = buildAuthenticationService
 
@@ -117,6 +116,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
             .returningZIO(userActionAttemptRow)
             .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userCredentialsRepositoryMock.getUserCredentials
             .expects(userDetailsRow.userID)
             .returningZIO(Some(userCredentialsRow))
@@ -130,8 +130,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             .returningZIOUnit,
           authStateMock.set.expects(AuthedUser(userDetailsRow.userID)).returningZIOUnit,
         )
-
-        timeProviderStub.instantNow.succeedsWith(instantNow).zioValue
 
         val authenticationService = buildAuthenticationService
 
@@ -177,6 +175,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
             .returningZIO(userActionAttemptRow)
             .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userCredentialsRepositoryMock.getUserCredentials
             .expects(userDetailsRow.userID)
             .returningZIO(Some(userCredentialsRow))
@@ -190,8 +189,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             .returningZIOUnit,
           authStateMock.set.expects(AuthedUser(userDetailsRow.userID)).returningZIOUnit,
         )
-
-        timeProviderStub.instantNow.succeedsWith(instantNow).zioValue
 
         val authenticationService = buildAuthenticationService
 
@@ -309,6 +306,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
             .returningZIO(userActionAttemptRow)
             .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userCredentialsRepositoryMock.getUserCredentials
             .expects(userDetailsRow.userID)
             .returningZIO(Some(userCredentialsRow))
@@ -318,8 +316,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             .returningZIO(false)
             .once(),
         )
-
-        timeProviderStub.instantNow.succeedsWith(instantNow).zioValue
 
         val authenticationService = buildAuthenticationService
 
@@ -356,9 +352,8 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
             .returningZIO(userActionAttemptRow)
             .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
         )
-
-        timeProviderStub.instantNow.succeedsWith(instantNow).zioValue
 
         val authenticationService = buildAuthenticationService
 
@@ -413,13 +408,12 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             .expects(userDetailsRow.userID, ActionAttemptType.SignIn)
             .returningZIO(userActionAttemptRow)
             .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userCredentialsRepositoryMock.getUserCredentials
             .expects(userDetailsRow.userID)
             .returningZIO(None) // No user credentials found for existing user details
             .once(),
         )
-
-        timeProviderStub.instantNow.succeedsWith(instantNow).zioValue
 
         val authenticationService = buildAuthenticationService
 
@@ -475,7 +469,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
     val userDetailsRepositoryMock       = mock[UserDetailsRepository]
     val authStateMock                   = mock[AuthState]
     val userActionAttemptRepositoryMock = mock[UserActionAttemptRepository]
-    val timeProviderStub                = stub[TimeProvider]
+    val timeProviderMock                = mock[TimeProvider]
     val passwordServiceMock             = mock[PasswordService]
     val userCredentialsRepositoryMock   = mock[UserCredentialsRepository]
 
@@ -488,12 +482,11 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         ZLayer.succeed(authenticationConfig),
         ZLayer.succeed(authStateMock),
         ZLayer.succeed(userActionAttemptRepositoryMock),
-        ZLayer.succeed(timeProviderStub),
+        ZLayer.succeed(timeProviderMock),
         ZLayer.succeed(passwordServiceMock),
         ZLayer.succeed(userDetailsRepositoryMock),
         ZLayer.succeed(userCredentialsRepositoryMock),
       )
       .zioValue
   }
-
 }
