@@ -1,7 +1,6 @@
 package io.mesazon.gateway.unit.service
 
-import io.mesazon.domain.gateway.ServiceError
-import io.mesazon.gateway.mock.PingRepositoryMock
+import io.mesazon.gateway.repository.PingRepository
 import io.mesazon.gateway.service.{HealthCheckService, ServiceTask}
 import io.mesazon.gateway.smithy
 import io.mesazon.testkit.base.ZWordSpecBase
@@ -14,7 +13,7 @@ class HealthCheckServiceSpec extends ZWordSpecBase {
   "HealthCheckService" when {
     "liveness" should {
       "return a successful response" in new TestContext {
-        val healthCheckService = buildHealthCheckService()
+        val healthCheckService = buildHealthCheckService
 
         healthCheckService.liveness().zioEither.isRight shouldBe true
       }
@@ -22,25 +21,27 @@ class HealthCheckServiceSpec extends ZWordSpecBase {
 
     "readiness" should {
       "return a successful response" in new TestContext {
-        val healthCheckService = buildHealthCheckService()
+        (() => pingRepositoryMock.ping)
+          .expects()
+          .returningZIOUnit
+
+        val healthCheckService = buildHealthCheckService
 
         healthCheckService.readiness().zioEither.isRight shouldBe true
       }
     }
   }
 
-  trait TestContext extends PingRepositoryMock {
+  trait TestContext {
 
-    def buildHealthCheckService(
-        pingRepositoryServiceErrorOpt: Option[ServiceError.ServiceUnavailableError.DatabaseUnavailableError] = None
-    ): smithy.HealthCheckService[ServiceTask] =
+    val pingRepositoryMock = mock[PingRepository]
+
+    def buildHealthCheckService: smithy.HealthCheckService[ServiceTask] =
       ZIO
         .service[smithy.HealthCheckService[ServiceTask]]
         .provide(
           HealthCheckService.local,
-          pingRepositoryLive(
-            serviceErrorOpt = pingRepositoryServiceErrorOpt
-          ),
+          ZLayer.succeed(pingRepositoryMock),
         )
         .zioValue
   }

@@ -21,7 +21,7 @@ class AuthStateSpec extends ZWordSpecBase, GatewayArbitraries {
             ZLayer.scoped(FiberRef.make(Option.empty[AuthedUser])),
           )
         _     <- authState.set(authedUser)
-        state <- authState.get()
+        state <- authState.get
       } yield state
 
       stateResult.zioValue shouldBe authedUser
@@ -36,7 +36,7 @@ class AuthStateSpec extends ZWordSpecBase, GatewayArbitraries {
             ZLayer.scoped(FiberRef.make(Option.empty[AuthedUser])),
           )
         _          <- authState.set(authedUser) // Set the state in a main fiber
-        stateFiber <- authState.get().fork      // Get the state in a sub fiber
+        stateFiber <- authState.get.fork        // Get the state in a sub fiber
         state      <- stateFiber.join
       } yield state
 
@@ -52,7 +52,7 @@ class AuthStateSpec extends ZWordSpecBase, GatewayArbitraries {
             ZLayer.scoped(FiberRef.make(Option.empty[AuthedUser])),
           )
         _          <- authState.set(authedUser).fork // Set the state in a different fiber
-        stateFiber <- authState.get().fork           // Get the state in a different fiber
+        stateFiber <- authState.get.fork             // Get the state in a different fiber
         state      <- stateFiber.join
       } yield state
 

@@ -37,7 +37,7 @@ class PingRepositorySpec extends ZWordSpecBase, SmithyArbitraries, DockerCompose
           .zioValue
 
         eventually(
-          assert(pingRepository.ping().zioEither.isRight)
+          assert(pingRepository.ping.zioEither.isRight)
         )
       }
     }

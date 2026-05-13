@@ -12,6 +12,8 @@ trait ZIOTestOps {
 
   private val configProvider = TypesafeConfigProvider.fromResourcePath()
 
+  val counterRef = Ref.make(0)
+
   extension [E, A](zio: IO[E, A]) {
     private def zioEnv: IO[E, A] = zio
       .provideLayer(loggerLayer)

@@ -13,7 +13,7 @@ object HealthCheckService {
     override def liveness(): IO[ServiceError, Unit] = ZIO.unit
 
     override def readiness(): IO[ServiceError, Unit] =
-      repository.ping()
+      repository.ping
   }
 
   private def observed(
