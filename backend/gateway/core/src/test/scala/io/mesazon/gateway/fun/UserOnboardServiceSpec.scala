@@ -278,10 +278,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
       }
 
       "successfully onboard details for user with non expired otp" in new TestContext {
-        val authedUser        = arbitrarySample[AuthedUser]
-        val onboardStageValid = Random.shuffle(OnboardStage.onboardDetailsStages).zioValue.head
-        val userDetailsRow    = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
+        val authedUser     = arbitrarySample[AuthedUser]
+        val onboardStage   = Random.shuffle(OnboardStage.onboardDetailsStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
 
         val buffer    = Random.nextIntBetween(1, 300).zioValue
         val expiresAt =
@@ -322,10 +322,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
       }
 
       "successfully onboard details for user with expired otp" in new TestContext {
-        val authedUser        = arbitrarySample[AuthedUser]
-        val onboardStageValid = Random.shuffle(OnboardStage.onboardDetailsStages).zioValue.head
-        val userDetailsRow    = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
+        val authedUser     = arbitrarySample[AuthedUser]
+        val onboardStage   = Random.shuffle(OnboardStage.onboardDetailsStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
 
         val buffer    = Random.nextIntBetween(1, 300).zioValue
         val expiresAt =
@@ -398,11 +398,11 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
       }
 
       "fail with FailedOnboardStage when onboardStage is not valid" in new TestContext {
-        val authedUser          = arbitrarySample[AuthedUser]
-        val onboardStageInvalid =
+        val authedUser   = arbitrarySample[AuthedUser]
+        val onboardStage =
           Random.shuffle(OnboardStage.values.diff(OnboardStage.onboardDetailsStages).toList).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onboardStageInvalid)
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
 
         inSequence(
           (() => authStateMock.get).expects().returningZIO(authedUser).once(),
@@ -563,20 +563,19 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
     "onboardVerifyPhoneNumberPost" should {
       "successfully onboard verify phone number for user in valid onboard stage" in new TestContext {
-        val authedUser        = arbitrarySample[AuthedUser]
-        val onboardStageValid = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
-        val userDetailsRow    = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
+        val authedUser     = arbitrarySample[AuthedUser]
+        val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
 
-        val buffer    = Random.nextIntBetween(1, 300).zioValue
-        val expiresAt =
-          ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds + buffer))
-
-        val userOtpRow = arbitrarySample[UserOtpRow]
+        val expiresAtBuffer = Random.nextIntBetween(1, 1000).zioValue
+        val userOtpRow      = arbitrarySample[UserOtpRow]
           .copy(
             userID = authedUser.userID,
             otpType = OtpType.PhoneVerification,
-            expiresAt = expiresAt,
+            expiresAt = ExpiresAt(
+              instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds + expiresAtBuffer)
+            ),
           )
 
         inSequence(
@@ -641,11 +640,11 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
       }
 
       "fail with FailedOnboardStage when onboard stage is not valid" in new TestContext {
-        val authedUser          = arbitrarySample[AuthedUser]
-        val onboardStageInvalid =
+        val authedUser   = arbitrarySample[AuthedUser]
+        val onboardStage =
           Random.shuffle(OnboardStage.values.diff(OnboardStage.onboardVerifyPhoneNumberStages).toList).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onboardStageInvalid)
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
 
         inSequence(
           (() => authStateMock.get).expects().returningZIO(authedUser).once(),
@@ -672,20 +671,17 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
       }
 
       "fail with OtpValidationError when otp is expired" in new TestContext {
-        val authedUser        = arbitrarySample[AuthedUser]
-        val onboardStageValid = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
-        val userDetailsRow    = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
+        val authedUser     = arbitrarySample[AuthedUser]
+        val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
 
-        val buffer    = Random.nextIntBetween(1, 300).zioValue
-        val expiresAt =
-          ExpiresAt(instantNow.minusSeconds(buffer))
-
-        val userOtpRow = arbitrarySample[UserOtpRow]
+        val expiresAtbuffer = Random.nextIntBetween(1, 1000).zioValue
+        val userOtpRow      = arbitrarySample[UserOtpRow]
           .copy(
             userID = authedUser.userID,
             otpType = OtpType.PhoneVerification,
-            expiresAt = expiresAt,
+            expiresAt = ExpiresAt(instantNow.minusSeconds(expiresAtbuffer)),
           )
 
         inSequence(
@@ -720,10 +716,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
       }
 
       "fail with OtpValidationError when otp does not exist" in new TestContext {
-        val authedUser        = arbitrarySample[AuthedUser]
-        val onboardStageValid = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
-        val userDetailsRow    = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
+        val authedUser     = arbitrarySample[AuthedUser]
+        val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
 
         val otpID = arbitrarySample[OtpID]
 
@@ -756,20 +752,19 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
       }
 
       "fail with OtpValidationError when otp is wrong" in new TestContext {
-        val authedUser        = arbitrarySample[AuthedUser]
-        val onboardStageValid = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
-        val userDetailsRow    = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
+        val authedUser     = arbitrarySample[AuthedUser]
+        val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
 
-        val buffer    = Random.nextIntBetween(1, 300).zioValue
-        val expiresAt =
-          ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds + buffer))
-
-        val userOtpRow = arbitrarySample[UserOtpRow]
+        val expiresAtBuffer = Random.nextIntBetween(1, 300).zioValue
+        val userOtpRow      = arbitrarySample[UserOtpRow]
           .copy(
             userID = authedUser.userID,
             otpType = OtpType.PhoneVerification,
-            expiresAt = expiresAt,
+            expiresAt = ExpiresAt(
+              instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds + expiresAtBuffer)
+            ),
           )
 
         inSequence(
@@ -833,10 +828,11 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
     "onboardVerifyPhoneNumberGet" when {
       "successfully get phone verification otp for user in valid onboard stage" in new TestContext {
-        val authedUser        = arbitrarySample[AuthedUser]
-        val onboardStageValid = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
-        val userDetailsRow    = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
+        val authedUser     = arbitrarySample[AuthedUser]
+        val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
+
         val userOtpRow = arbitrarySample[UserOtpRow]
           .copy(
             userID = authedUser.userID,
@@ -870,10 +866,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
       }
 
       "fail with OtpValidationError when otp does not exist for user" in new TestContext {
-        val authedUser        = arbitrarySample[AuthedUser]
-        val onboardStageValid = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
-        val userDetailsRow    = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
+        val authedUser     = arbitrarySample[AuthedUser]
+        val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
 
         inSequence(
           (() => authStateMock.get).expects().returningZIO(authedUser).once(),
@@ -901,10 +897,11 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
       }
 
       "fail with OtpValidationError when otp is expired for user" in new TestContext {
-        val authedUser        = arbitrarySample[AuthedUser]
-        val onboardStageValid = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
-        val userDetailsRow    = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onboardStageValid)
+        val authedUser     = arbitrarySample[AuthedUser]
+        val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
+
         val userOtpRow = arbitrarySample[UserOtpRow]
           .copy(
             userID = authedUser.userID,
@@ -944,11 +941,11 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
       }
 
       "fail with FailedOnboardStage when onboard stage is not valid" in new TestContext {
-        val authedUser          = arbitrarySample[AuthedUser]
-        val onboardStageInvalid =
+        val authedUser   = arbitrarySample[AuthedUser]
+        val onboardStage =
           Random.shuffle(OnboardStage.values.diff(OnboardStage.onboardVerifyPhoneNumberStages).toList).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onboardStageInvalid)
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
 
         inSequence(
           (() => authStateMock.get).expects().returningZIO(authedUser).once(),

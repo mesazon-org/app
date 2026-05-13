@@ -24,8 +24,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
   "AuthenticationService" when {
     "auth" should {
       "successfully authenticate user" in new TestContext {
-        val onboardStage = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
-
+        val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
@@ -41,13 +40,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val password = arbitrarySample[Password]
 
-        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
-          .withHeaders(
-            Authorization(
-              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
-            )
-          )
-
         inSequence(
           userDetailsRepositoryMock.getUserDetailsByEmail
             .expects(userDetailsRow.email)
@@ -74,6 +66,13 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val authenticationService = buildAuthenticationService
 
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(
+              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
+            )
+          )
+
         val authenticationResponse = authenticationService.auth(request).zioEither
 
         assert(authenticationResponse.isRight)
@@ -84,9 +83,9 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val password           = arbitrarySample[Password]
+        val passwordHash       = arbitrarySample[PasswordHash]
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
-          .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
+          .copy(userID = userDetailsRow.userID, passwordHash = passwordHash)
 
         val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
           .copy(
@@ -100,12 +99,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             ),
           )
 
-        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
-          .withHeaders(
-            Authorization(
-              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
-            )
-          )
+        val password = arbitrarySample[Password]
 
         inSequence(
           userDetailsRepositoryMock.getUserDetailsByEmail
@@ -133,6 +127,13 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val authenticationService = buildAuthenticationService
 
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(
+              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
+            )
+          )
+
         val authenticationResponse = authenticationService.auth(request).zioEither
 
         assert(authenticationResponse.isRight)
@@ -143,9 +144,9 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val password           = arbitrarySample[Password]
+        val passwordHash       = arbitrarySample[PasswordHash]
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
-          .copy(userID = userDetailsRow.userID, passwordHash = PasswordHash.assume(password.value))
+          .copy(userID = userDetailsRow.userID, passwordHash = passwordHash)
 
         val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
           .copy(
@@ -159,12 +160,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             ),
           )
 
-        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
-          .withHeaders(
-            Authorization(
-              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
-            )
-          )
+        val password = arbitrarySample[Password]
 
         inSequence(
           userDetailsRepositoryMock.getUserDetailsByEmail
@@ -191,6 +187,13 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         )
 
         val authenticationService = buildAuthenticationService
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(
+              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
+            )
+          )
 
         val authenticationResponse = authenticationService.auth(request).zioEither
 
@@ -290,13 +293,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
             attempts = Attempts.assume(1),
           )
 
-        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
-          .withHeaders(
-            Authorization(
-              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
-            )
-          )
-
         inSequence(
           userDetailsRepositoryMock.getUserDetailsByEmail
             .expects(userDetailsRow.email)
@@ -318,6 +314,13 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         )
 
         val authenticationService = buildAuthenticationService
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(
+              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
+            )
+          )
 
         val serviceError = authenticationService.auth(request).zioError
 
@@ -392,13 +395,6 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val password = arbitrarySample[Password]
 
-        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
-          .withHeaders(
-            Authorization(
-              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
-            )
-          )
-
         inSequence(
           userDetailsRepositoryMock.getUserDetailsByEmail
             .expects(userDetailsRow.email)
@@ -416,6 +412,13 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         )
 
         val authenticationService = buildAuthenticationService
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(
+              Http4sBasicCredentials(userDetailsRow.email.value, password.value)
+            )
+          )
 
         val serviceError = authenticationService.auth(request).zioError
 

@@ -802,19 +802,18 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
 
     "forgotPasswordResetPost" should {
       "successfully forgot password reset" in new TestContext {
-        val userID         = arbitrarySample[UserID]
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage, userID = userID)
+          .copy(onboardStage = onboardStage)
 
         val tokenID      = arbitrarySample[TokenID]
         val userTokenRow = arbitrarySample[UserTokenRow]
-          .copy(tokenID = tokenID, userID = userID, tokenType = TokenType.ResetPasswordToken)
+          .copy(tokenID = tokenID, userID = userDetailsRow.userID, tokenType = TokenType.ResetPasswordToken)
 
         val passwordHashNew = arbitrarySample[PasswordHash]
 
         val authedUserResetPassword = arbitrarySample[AuthedUserResetPassword]
-          .copy(tokenID = tokenID, userID = userID)
+          .copy(tokenID = tokenID, userID = userDetailsRow.userID)
 
         val resetPasswordToken = arbitrarySample[ResetPasswordToken]
         val passwordNew        = arbitrarySample[Password]
@@ -827,18 +826,24 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
             .expects(resetPasswordToken)
             .returningZIO(authedUserResetPassword)
             .once(),
-          userDetailsRepositoryMock.getUserDetails.expects(userID).returningZIO(Some(userDetailsRow)).once(),
+          userDetailsRepositoryMock.getUserDetails
+            .expects(userDetailsRow.userID)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
           userTokenRepositoryMock.getUserToken
-            .expects(authedUserResetPassword.tokenID, userID, TokenType.ResetPasswordToken)
+            .expects(authedUserResetPassword.tokenID, userDetailsRow.userID, TokenType.ResetPasswordToken)
             .returningZIO(Some(userTokenRow))
             .once(),
           passwordServiceMock.hashPassword
             .expects(passwordNew)
             .returningZIO(passwordHashNew)
             .once(),
-          userCredentialsRepositoryMock.updateUserCredentials.expects(userID, passwordHashNew).returnsZIOUnit.once(),
+          userCredentialsRepositoryMock.updateUserCredentials
+            .expects(userDetailsRow.userID, passwordHashNew)
+            .returnsZIOUnit
+            .once(),
           userTokenRepositoryMock.deleteUserToken
-            .expects(userTokenRow.tokenID, userID, TokenType.ResetPasswordToken)
+            .expects(userTokenRow.tokenID, userDetailsRow.userID, TokenType.ResetPasswordToken)
             .returnsZIOUnit
             .once(),
           emailClientMock.sendPasswordChangeConfirmationEmail.expects(userDetailsRow.email).returnsZIOUnit.once(),
@@ -853,25 +858,20 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
       }
 
       "successfully forgot password reset in scenario where email client fails to send password change confirmation email" in new TestContext {
-        val userID         = arbitrarySample[UserID]
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage, userID = userID)
+          .copy(onboardStage = onboardStage)
 
-        val tokenID      = arbitrarySample[TokenID]
         val userTokenRow = arbitrarySample[UserTokenRow]
-          .copy(tokenID = tokenID, userID = userID, tokenType = TokenType.ResetPasswordToken)
-
-        val passwordHashNew = arbitrarySample[PasswordHash]
+          .copy(userID = userDetailsRow.userID, tokenType = TokenType.ResetPasswordToken)
 
         val authedUserResetPassword = arbitrarySample[AuthedUserResetPassword]
-          .copy(tokenID = tokenID, userID = userID)
+          .copy(tokenID = userTokenRow.tokenID, userID = userDetailsRow.userID)
 
         val resetPasswordToken = arbitrarySample[ResetPasswordToken]
-        val passwordNew        = arbitrarySample[Password]
 
-        val forgotPasswordResetPostRequest = arbitrarySample[smithy.ForgotPasswordResetPostRequest]
-          .copy(resetPasswordToken = resetPasswordToken.value, password = passwordNew.value)
+        val passwordNew     = arbitrarySample[Password]
+        val passwordHashNew = arbitrarySample[PasswordHash]
 
         val sendPasswordChangeConfirmationEmailCounter = counterRef.zioValue
 
@@ -880,18 +880,24 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
             .expects(resetPasswordToken)
             .returningZIO(authedUserResetPassword)
             .once(),
-          userDetailsRepositoryMock.getUserDetails.expects(userID).returningZIO(Some(userDetailsRow)).once(),
+          userDetailsRepositoryMock.getUserDetails
+            .expects(userDetailsRow.userID)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
           userTokenRepositoryMock.getUserToken
-            .expects(authedUserResetPassword.tokenID, userID, TokenType.ResetPasswordToken)
+            .expects(authedUserResetPassword.tokenID, userDetailsRow.userID, TokenType.ResetPasswordToken)
             .returningZIO(Some(userTokenRow))
             .once(),
           passwordServiceMock.hashPassword
             .expects(passwordNew)
             .returningZIO(passwordHashNew)
             .once(),
-          userCredentialsRepositoryMock.updateUserCredentials.expects(userID, passwordHashNew).returnsZIOUnit.once(),
+          userCredentialsRepositoryMock.updateUserCredentials
+            .expects(userDetailsRow.userID, passwordHashNew)
+            .returnsZIOUnit
+            .once(),
           userTokenRepositoryMock.deleteUserToken
-            .expects(userTokenRow.tokenID, userID, TokenType.ResetPasswordToken)
+            .expects(userTokenRow.tokenID, userDetailsRow.userID, TokenType.ResetPasswordToken)
             .returnsZIOUnit
             .once(),
           emailClientMock.sendPasswordChangeConfirmationEmail
@@ -905,6 +911,9 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         )
 
         val userForgotPasswordService = buildUserForgotPasswordService
+
+        val forgotPasswordResetPostRequest = arbitrarySample[smithy.ForgotPasswordResetPostRequest]
+          .copy(resetPasswordToken = resetPasswordToken.value, password = passwordNew.value)
 
         val forgotPasswordResetPostResponse =
           userForgotPasswordService.forgotPasswordResetPost(forgotPasswordResetPostRequest).zioEither
@@ -946,13 +955,12 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
       }
 
       "fail with TokenMissing Error when reset password token is missing" in new TestContext {
-        val userID         = arbitrarySample[UserID]
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage, userID = userID)
+          .copy(onboardStage = onboardStage)
 
         val authedUserResetPassword = arbitrarySample[AuthedUserResetPassword]
-          .copy(userID = userID)
+          .copy(userID = userDetailsRow.userID)
 
         val resetPasswordToken = arbitrarySample[ResetPasswordToken]
 
@@ -961,9 +969,12 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
             .expects(resetPasswordToken)
             .returningZIO(authedUserResetPassword)
             .once(),
-          userDetailsRepositoryMock.getUserDetails.expects(userID).returningZIO(Some(userDetailsRow)).once(),
+          userDetailsRepositoryMock.getUserDetails
+            .expects(userDetailsRow.userID)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
           userTokenRepositoryMock.getUserToken
-            .expects(authedUserResetPassword.tokenID, userID, TokenType.ResetPasswordToken)
+            .expects(authedUserResetPassword.tokenID, userDetailsRow.userID, TokenType.ResetPasswordToken)
             .returningZIO(None)
             .once(),
         )
@@ -1010,14 +1021,13 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
       }
 
       "fail with FailedOnboardStage when user is not in allowed onboard stage" in new TestContext {
-        val userID       = arbitrarySample[UserID]
         val onboardStage =
           Random.shuffle(OnboardStage.values.diff(OnboardStage.forgotPasswordAllowedStages).toList).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage, userID = userID)
+          .copy(onboardStage = onboardStage)
 
         val authedUserResetPassword = arbitrarySample[AuthedUserResetPassword]
-          .copy(userID = userID)
+          .copy(userID = userDetailsRow.userID)
 
         val resetPasswordToken = arbitrarySample[ResetPasswordToken]
 
@@ -1027,7 +1037,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
             .returningZIO(authedUserResetPassword)
             .once(),
           userDetailsRepositoryMock.getUserDetails
-            .expects(authedUserResetPassword.userID)
+            .expects(userDetailsRow.userID)
             .returningZIO(Some(userDetailsRow))
             .once(),
         )

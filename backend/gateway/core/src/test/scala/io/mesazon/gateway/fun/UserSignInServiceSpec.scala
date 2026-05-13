@@ -20,16 +20,19 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(userID = authedUser.userID)
 
-        val accessJwt  = arbitrarySample[AccessJwt]
-        val refreshJwt = arbitrarySample[RefreshJwt]
-
         val userTokenRow = arbitrarySample[UserTokenRow]
           .copy(
-            tokenID = refreshJwt.tokenID,
             userID = authedUser.userID,
             tokenType = TokenType.RefreshToken,
-            expiresAt = refreshJwt.expiresAt,
           )
+
+        val refreshJwt = arbitrarySample[RefreshJwt]
+          .copy(
+            tokenID = userTokenRow.tokenID,
+            expiresAt = userTokenRow.expiresAt,
+          )
+
+        val accessJwt = arbitrarySample[AccessJwt]
 
         inSequence(
           (() => authStateMock.get)
