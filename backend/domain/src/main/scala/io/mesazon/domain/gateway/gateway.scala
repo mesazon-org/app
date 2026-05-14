@@ -5,7 +5,6 @@ import io.github.iltotore.iron.constraint.all.Positive
 import io.mesazon.domain.*
 
 import java.time.Instant
-import java.util.UUID
 
 object AppName extends RefinedType[String, Pure]
 type AppName = AppName.T

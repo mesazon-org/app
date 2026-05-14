@@ -11,17 +11,17 @@ import zio.NonEmptyChunk
 import scala.concurrent.duration.DurationInt
 
 open class WordSpecBase
-    extends AnyWordSpec
-    with MockFactory
-    with PropertyBase
-    with should.Matchers
-    with OptionValues
-    with EitherValues
-    with Eventually
-    with ScalaFutures
-    with LoneElement
-    with BeforeAndAfterAll
-    with BeforeAndAfterEach {
+    extends AnyWordSpec,
+      MockFactory,
+      PropertyBase,
+      should.Matchers,
+      OptionValues,
+      EitherValues,
+      Eventually,
+      ScalaFutures,
+      LoneElement,
+      BeforeAndAfterAll,
+      BeforeAndAfterEach {
 
   override implicit val patienceConfig: PatienceConfig = PatienceConfig(25.seconds, 1.second)
 
