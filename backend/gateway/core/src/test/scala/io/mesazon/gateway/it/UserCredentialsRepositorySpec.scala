@@ -14,41 +14,20 @@ import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfi
 import io.mesazon.testkit.base.*
 import zio.*
 
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+
 class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
 
   override def dockerComposeFile: String = "./src/test/resources/repository.yaml"
 
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 
-  val repositoryConfig = RepositoryConfig(
-    schema = "local_schema",
-    userCredentialsTable = "user_credentials",
-  )
-
-  case class Context(
-      postgresClient: PostgreSQLTestClient,
-      userCredentialsQueries: UserCredentialsQueries,
-  )
-
-  def withContext[A](f: Context => A): A = withContainers { container =>
-    val config               = PostgreSQLTestClientConfig.from(container)
-    val postgreSQLTestClient = ZIO
-      .service[PostgreSQLTestClient]
-      .provide(PostgreSQLTestClient.live, ZLayer.succeed(config))
-      .zioValue
-    val userCredentialsQueries =
-      ZIO
-        .service[UserCredentialsQueries]
-        .provide(UserCredentialsQueries.live, ZLayer.succeed(repositoryConfig))
-        .zioValue
-
-    f(Context(postgreSQLTestClient, userCredentialsQueries))
-  }
-
-  override def beforeAll(): Unit = withContext { context =>
-    import context.*
-
+  override def beforeAll(): Unit = {
     super.beforeAll()
+
+    val context = new TestContext {}
+    import context.*
 
     eventually {
       postgresClient
@@ -57,10 +36,11 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
     }
   }
 
-  override def beforeEach(): Unit = withContext { context =>
-    import context.*
-
+  override def beforeEach(): Unit = {
     super.beforeEach()
+
+    val context = new TestContext {}
+    import context.*
 
     eventually {
       postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.userCredentialsTable).zioValue
@@ -69,18 +49,13 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
 
   "UserCredentialsRepository" when {
     "insertUserCredentials" should {
-      "successfully insert new credentials for a user" in withContext { context =>
-        import context.*
-
-        val userCredentialsRepository = ZIO
-          .service[UserCredentialsRepository]
-          .provide(
-            UserCredentialsRepository.live,
-            postgresClient.databaseLive,
-            TimeProvider.liveSystemUTC,
-            ZLayer.succeed(userCredentialsQueries),
-          )
-          .zioValue
+      "successfully insert new credentials for a user" in new TestContext {
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once()
+        )
 
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
 
@@ -97,23 +72,18 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
         userCredentialsRowsAll should have size 1
         userCredentialsRowsAll.head shouldBe
           userCredentialsRow.copy(
-            createdAt = userCredentialsRowsAll.head.createdAt,
-            updatedAt = userCredentialsRowsAll.head.updatedAt,
+            createdAt = CreatedAt(instantNow),
+            updatedAt = UpdatedAt(instantNow),
           )
       }
 
-      "fail to insert credentials for already existing user" in withContext { context =>
-        import context.*
-
-        val userCredentialsRepository = ZIO
-          .service[UserCredentialsRepository]
-          .provide(
-            UserCredentialsRepository.live,
-            postgresClient.databaseLive,
-            TimeProvider.liveSystemUTC,
-            ZLayer.succeed(userCredentialsQueries),
-          )
-          .zioValue
+      "fail to insert credentials for already existing user" in new TestContext {
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once()
+        )
 
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
 
@@ -136,18 +106,14 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
     }
 
     "updateUserCredentials" should {
-      "successfully update existing credentials for a user" in withContext { context =>
-        import context.*
-
-        val userCredentialsRepository = ZIO
-          .service[UserCredentialsRepository]
-          .provide(
-            UserCredentialsRepository.live,
-            postgresClient.databaseLive,
-            TimeProvider.liveSystemUTC,
-            ZLayer.succeed(userCredentialsQueries),
-          )
-          .zioValue
+      "successfully update existing credentials for a user" in new TestContext {
+        val instantNowUpdate = instantNow.plusSeconds(10)
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNowUpdate)
+            .once()
+        )
 
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
 
@@ -170,25 +136,23 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
           postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
 
         userCredentialsRowsAll should have size 1
+        userCredentialsRowsAll.head.userID shouldBe userCredentialsRow.userID
+        userCredentialsRowsAll.head.passwordHash should not be userCredentialsRow.passwordHash
+        userCredentialsRowsAll.head.createdAt shouldBe userCredentialsRow.createdAt
         userCredentialsRowsAll.head.updatedAt should not be userCredentialsRow.updatedAt
         userCredentialsRowsAll.head shouldBe userCredentialsRow.copy(
           passwordHash = passwordHashUpdate,
-          updatedAt = userCredentialsRowsAll.head.updatedAt,
+          updatedAt = UpdatedAt(instantNowUpdate),
         )
       }
 
-      "successfully update credentials for a not existing user" in withContext { context =>
-        import context.*
-
-        val userCredentialsRepository = ZIO
-          .service[UserCredentialsRepository]
-          .provide(
-            UserCredentialsRepository.live,
-            postgresClient.databaseLive,
-            TimeProvider.liveSystemUTC,
-            ZLayer.succeed(userCredentialsQueries),
-          )
-          .zioValue
+      "successfully update credentials for a not existing user" in new TestContext {
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once()
+        )
 
         val userID             = arbitrarySample[UserID]
         val passwordHashUpdate = arbitrarySample[PasswordHash]
@@ -208,19 +172,7 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
     }
 
     "getUserCredentials" should {
-      "successfully get existing credentials for a user by user ID" in withContext { context =>
-        import context.*
-
-        val userCredentialsRepository = ZIO
-          .service[UserCredentialsRepository]
-          .provide(
-            UserCredentialsRepository.live,
-            postgresClient.databaseLive,
-            TimeProvider.liveSystemUTC,
-            ZLayer.succeed(userCredentialsQueries),
-          )
-          .zioValue
-
+      "successfully get existing credentials for a user by user ID" in new TestContext {
         val userCredentialsRow = arbitrarySample[UserCredentialsRow]
 
         postgresClient
@@ -236,19 +188,7 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
         userCredentialsRowOptGet shouldBe Some(userCredentialsRow)
       }
 
-      "return None when there are no credentials for the given user ID" in withContext { context =>
-        import context.*
-
-        val userCredentialsRepository = ZIO
-          .service[UserCredentialsRepository]
-          .provide(
-            UserCredentialsRepository.live,
-            postgresClient.databaseLive,
-            TimeProvider.liveSystemUTC,
-            ZLayer.succeed(userCredentialsQueries),
-          )
-          .zioValue
-
+      "return None when there are no credentials for the given user ID" in new TestContext {
         val userID = arbitrarySample[UserID]
 
         val userCredentialsRowOptGet = userCredentialsRepository
@@ -258,5 +198,39 @@ class UserCredentialsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries
         userCredentialsRowOptGet shouldBe None
       }
     }
+  }
+
+  trait TestContext {
+    val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+    val repositoryConfig = RepositoryConfig(
+      schema = "local_schema",
+      userCredentialsTable = "user_credentials",
+    )
+
+    val postgreSQLTestClientConfig = withContainers(PostgreSQLTestClientConfig.from(_))
+
+    val postgresClient = ZIO
+      .service[PostgreSQLTestClient]
+      .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgreSQLTestClientConfig))
+      .zioValue
+
+    val userCredentialsQueries =
+      ZIO
+        .service[UserCredentialsQueries]
+        .provide(UserCredentialsQueries.live, ZLayer.succeed(repositoryConfig))
+        .zioValue
+
+    val timeProviderMock = mock[TimeProvider]
+
+    def userCredentialsRepository = ZIO
+      .service[UserCredentialsRepository]
+      .provide(
+        UserCredentialsRepository.live,
+        postgresClient.databaseLive,
+        ZLayer.succeed(userCredentialsQueries),
+        ZLayer.succeed(timeProviderMock),
+      )
+      .zioValue
   }
 }
