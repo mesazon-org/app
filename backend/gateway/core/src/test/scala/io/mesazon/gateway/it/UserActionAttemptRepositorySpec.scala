@@ -1,20 +1,21 @@
 package io.mesazon.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.utils.*
+import io.mesazon.generator.IDGenerator
 import io.mesazon.test.postgresql.*
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.*
 import zio.*
 
+import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant, ZoneOffset}
 
 class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
 
@@ -22,35 +23,11 @@ class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitrari
 
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 
-  val repositoryConfig = RepositoryConfig(
-    schema = "local_schema",
-    userActionAttemptTable = "user_action_attempt",
-  )
-
-  case class Context(
-      postgresClient: PostgreSQLTestClient,
-      userActionAttemptQueries: UserActionAttemptQueries,
-  )
-
-  def withContext[A](f: Context => A): A = withContainers { container =>
-    val config               = PostgreSQLTestClientConfig.from(container)
-    val postgreSQLTestClient = ZIO
-      .service[PostgreSQLTestClient]
-      .provide(PostgreSQLTestClient.live, ZLayer.succeed(config))
-      .zioValue
-    val userActionAttemptQueries =
-      ZIO
-        .service[UserActionAttemptQueries]
-        .provide(UserActionAttemptQueries.live, ZLayer.succeed(repositoryConfig))
-        .zioValue
-
-    f(Context(postgreSQLTestClient, userActionAttemptQueries))
-  }
-
-  override def beforeAll(): Unit = withContext { context =>
-    import context.*
-
+  override def beforeAll(): Unit = {
     super.beforeAll()
+
+    val context = new TestContext {}
+    import context.*
 
     eventually {
       postgresClient
@@ -59,10 +36,11 @@ class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitrari
     }
   }
 
-  override def beforeEach(): Unit = withContext { context =>
-    import context.*
-
+  override def beforeEach(): Unit = {
     super.beforeEach()
+
+    val context = new TestContext {}
+    import context.*
 
     eventually {
       postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.userActionAttemptTable).zioValue
@@ -71,108 +49,96 @@ class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitrari
 
   "UserActionAttemptRepository" when {
     "getAndIncreaseUserActionAttempt" should {
-      "successfully insert new action attempt for a user and action type" in withContext { context =>
-        import context.*
-
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
-        val userActionAttemptRepository = ZIO
-          .service[UserActionAttemptRepository]
-          .provide(
-            UserActionAttemptRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(clockNow),
-            ZLayer.succeed(userActionAttemptQueries),
-            Mocks.idGeneratorLive,
-          )
-          .zioValue
-
+      "successfully insert new action attempt for a user and action type" in new TestContext {
         val userID            = arbitrarySample[UserID]
         val actionAttemptType = arbitrarySample[ActionAttemptType]
 
-        val userActionAttemptRowRetrieved = userActionAttemptRepository
+        val actionAttemptID = arbitrarySample[ActionAttemptID]
+
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once(),
+          (() => idGeneratorMock.generateID)
+            .expects()
+            .returningZIO(actionAttemptID.value)
+            .once(),
+        )
+
+        val userActionAttemptRowGet = userActionAttemptRepository
           .getAndIncreaseUserActionAttempt(userID, actionAttemptType)
           .zioValue
 
-        val userActionAttemptRowExpected = UserActionAttemptRow(
-          actionAttemptID = ActionAttemptID.assume("1"),
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll should have size 1
+        userActionAttemptRowsAll.head shouldBe userActionAttemptRowGet
+        userActionAttemptRowsAll.head shouldBe UserActionAttemptRow(
+          actionAttemptID = actionAttemptID,
           userID = userID,
           actionAttemptType = actionAttemptType,
           attempts = Attempts.assume(1),
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
         )
+      }
 
-        userActionAttemptRowRetrieved shouldBe userActionAttemptRowExpected
+      "successfully get old record and increase existing action attempt count for a user and action type" in new TestContext {
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            createdAt = CreatedAt(instantNow),
+            updatedAt = UpdatedAt(instantNow),
+          )
+
+        val actionAttemptID2 = arbitrarySample[ActionAttemptID]
+        val instantNowUpdate = instantNow.plusSeconds(10)
+
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNowUpdate)
+            .once(),
+          (() => idGeneratorMock.generateID)
+            .expects()
+            .returningZIO(actionAttemptID2.value)
+            .once(),
+        )
+
+        postgresClient
+          .executeQuery(
+            userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRow)
+          )
+          .zioValue
+
+        val userActionAttemptRowGet = userActionAttemptRepository
+          .getAndIncreaseUserActionAttempt(userActionAttemptRow.userID, userActionAttemptRow.actionAttemptType)
+          .zioValue
+
+        userActionAttemptRowGet shouldBe userActionAttemptRow
 
         val userActionAttemptRowsAll =
           postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
 
         userActionAttemptRowsAll should have size 1
-        userActionAttemptRowsAll should contain theSameElementsAs List(userActionAttemptRowExpected)
-      }
 
-      "successfully get old record and increase existing action attempt count for a user and action type" in withContext {
-        context =>
-          import context.*
+        userActionAttemptRowsAll.head.actionAttemptID shouldBe userActionAttemptRow.actionAttemptID
+        userActionAttemptRowsAll.head.userID shouldBe userActionAttemptRow.userID
+        userActionAttemptRowsAll.head.actionAttemptType shouldBe userActionAttemptRow.actionAttemptType
+        userActionAttemptRowsAll.head.attempts should not be userActionAttemptRow.attempts
+        userActionAttemptRowsAll.head.createdAt shouldBe userActionAttemptRow.createdAt
+        userActionAttemptRowsAll.head.updatedAt should not be userActionAttemptRow.updatedAt
 
-          val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-          val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
-          val userActionAttemptRepository = ZIO
-            .service[UserActionAttemptRepository]
-            .provide(
-              UserActionAttemptRepository.live,
-              ZLayer.succeed(postgresClient.database),
-              Mocks.timeProviderLive(clockNow),
-              ZLayer.succeed(userActionAttemptQueries),
-              Mocks.idGeneratorLive,
-            )
-            .zioValue
-
-          val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
-
-          postgresClient
-            .executeQuery(
-              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRow)
-            )
-            .zioValue
-
-          val userActionAttemptRowRetrieved = userActionAttemptRepository
-            .getAndIncreaseUserActionAttempt(userActionAttemptRow.userID, userActionAttemptRow.actionAttemptType)
-            .zioValue
-
-          userActionAttemptRowRetrieved shouldBe userActionAttemptRow
-
-          val userActionAttemptRowExpected = userActionAttemptRow.copy(
-            attempts = Attempts.assume(userActionAttemptRow.attempts.value + 1),
-            updatedAt = UpdatedAt(instantNow),
-          )
-
-          val userActionAttemptRowsAll =
-            postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-          userActionAttemptRowsAll should have size 1
-          userActionAttemptRowsAll should contain theSameElementsAs List(userActionAttemptRowExpected)
+        userActionAttemptRowsAll.head shouldBe userActionAttemptRow.copy(
+          attempts = Attempts.assume(userActionAttemptRow.attempts.value + 1),
+          updatedAt = UpdatedAt(instantNowUpdate),
+        )
       }
     }
 
     "deleteUserActionAttempt" should {
-      "successfully delete existing action attempt for a user and action type" in withContext { context =>
-        import context.*
-
-        val userActionAttemptRepository = ZIO
-          .service[UserActionAttemptRepository]
-          .provide(
-            UserActionAttemptRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            ZLayer.succeed(userActionAttemptQueries),
-            Mocks.idGeneratorLive,
-          )
-          .zioValue
-
+      "successfully delete existing action attempt for a user and action type" in new TestContext {
         val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
 
         postgresClient
@@ -191,20 +157,7 @@ class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitrari
         userActionAttemptRowsAll shouldBe empty
       }
 
-      "successfully delete non existing action attempt for a user and action type" in withContext { context =>
-        import context.*
-
-        val userActionAttemptRepository = ZIO
-          .service[UserActionAttemptRepository]
-          .provide(
-            UserActionAttemptRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            ZLayer.succeed(userActionAttemptQueries),
-            Mocks.idGeneratorLive,
-          )
-          .zioValue
-
+      "successfully delete non existing action attempt for a user and action type" in new TestContext {
         val userID            = arbitrarySample[UserID]
         val actionAttemptType = arbitrarySample[ActionAttemptType]
 
@@ -218,5 +171,40 @@ class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitrari
         userActionAttemptRowsAll shouldBe empty
       }
     }
+  }
+
+  trait TestContext {
+    val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+    val repositoryConfig = RepositoryConfig(
+      schema = "local_schema",
+      userActionAttemptTable = "user_action_attempt",
+    )
+
+    val postgreSQLTestClientConfig = withContainers(PostgreSQLTestClientConfig.from(_))
+
+    val postgresClient = ZIO
+      .service[PostgreSQLTestClient]
+      .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgreSQLTestClientConfig))
+      .zioValue
+    val userActionAttemptQueries =
+      ZIO
+        .service[UserActionAttemptQueries]
+        .provide(UserActionAttemptQueries.live, ZLayer.succeed(repositoryConfig))
+        .zioValue
+
+    val timeProviderMock = mock[TimeProvider]
+    val idGeneratorMock  = mock[IDGenerator]
+
+    def userActionAttemptRepository = ZIO
+      .service[UserActionAttemptRepository]
+      .provide(
+        UserActionAttemptRepository.live,
+        postgresClient.databaseLive,
+        ZLayer.succeed(userActionAttemptQueries),
+        ZLayer.succeed(timeProviderMock),
+        ZLayer.succeed(idGeneratorMock),
+      )
+      .zioValue
   }
 }

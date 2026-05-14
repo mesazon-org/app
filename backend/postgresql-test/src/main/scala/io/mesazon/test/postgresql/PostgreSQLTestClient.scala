@@ -15,6 +15,8 @@ case class PostgreSQLTestClient(
     database: DatabaseOps.ServiceOps[Transactor[Task]],
 ) {
 
+  val databaseLive = ZLayer.succeed(database)
+
   private def checkIfTableExistsQuery(schema: String, table: String): TranzactIO[Boolean] =
     tzio {
       sql"""

@@ -2,6 +2,8 @@ $version: "2.0"
 
 namespace io.mesazon.gateway.smithy
 
+use alloy#UUID
+
 structure SignUpEmailPostRequest {
     @required
     email: String
@@ -9,14 +11,14 @@ structure SignUpEmailPostRequest {
 
 structure SignUpEmailPostResponse {
     @required
-    otpID: String
+    otpID: UUID
     @required
     otpExpiresInSeconds: Long
 }
 
 structure SignUpVerifyEmailPostRequest {
     @required
-    otpID: String
+    otpID: UUID
     @required
     otp: String
 }

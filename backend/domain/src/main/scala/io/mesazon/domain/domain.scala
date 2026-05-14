@@ -1,6 +1,10 @@
 package io.mesazon.domain
 
+import io.github.iltotore.iron.RefinedType
 import io.github.iltotore.iron.constraint.all.*
+
+import java.util.UUID
+import scala.util.control.Exception.allCatch
 
 type NonEmptyTrimmedLowerCase = Trimmed & LettersLowerCase & MinLength[1]
 type NonEmptyTrimmed          = Trimmed & MinLength[1]
@@ -14,3 +18,10 @@ type WahaIDPredicate      = NonEmptyTrimmedLowerCase & EndWith["@c.us"]
 type WahaGroupIDPredicate = NonEmptyTrimmedLowerCase & EndWith["@g.us"]
 type WahaUserIDPredicate  = NonEmptyTrimmedLowerCase & EndWith["@lid"]
 type WhatsappIDPredicate  = NonEmptyTrimmedLowerCase & EndWith["@s.whatsapp.net"]
+
+trait RefinedTypeUUID extends RefinedType[UUID, Pure] {
+  def eitherFromString(s: String): Either[String, T] =
+    allCatch.either(apply(UUID.fromString(s))).left.map(error => s"Invalid UUID format error: [${error.getMessage}]")
+
+  def randomUUID: T = apply(UUID.randomUUID())
+}

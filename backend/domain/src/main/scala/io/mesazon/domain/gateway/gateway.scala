@@ -9,17 +9,14 @@ import java.time.Instant
 object AppName extends RefinedType[String, Pure]
 type AppName = AppName.T
 
-object UserID extends RefinedType[String, NonEmptyTrimmed]
+object UserID extends RefinedTypeUUID
 type UserID = UserID.T
 
-object ActionAttemptID extends RefinedType[String, NonEmptyTrimmed]
+object ActionAttemptID extends RefinedTypeUUID
 type ActionAttemptID = ActionAttemptID.T
 
-object TokenID extends RefinedType[String, NonEmptyTrimmed]
+object TokenID extends RefinedTypeUUID
 type TokenID = TokenID.T
-
-object UserContactID extends RefinedType[String, NonEmptyTrimmed]
-type UserContactID = UserContactID.T
 
 object Email extends RefinedType[String, EmailPredicate]
 type Email = Email.T
@@ -42,10 +39,7 @@ type PhoneCountryCode = PhoneCountryCode.T
 object PhoneNationalNumber extends RefinedType[String, NonEmptyTrimmed]
 type PhoneNationalNumber = PhoneNationalNumber.T
 
-object PhoneNumberE164 extends RefinedType[String, NonEmptyTrimmed] {
-  def cy(phoneNationalNumber: String): PhoneNumberE164.T =
-    assume(s"+357$phoneNationalNumber")
-}
+object PhoneNumberE164 extends RefinedType[String, NonEmptyTrimmed]
 type PhoneNumberE164 = PhoneNumberE164.T
 
 object Message extends RefinedType[String, NonEmpty]
@@ -54,10 +48,7 @@ type Message = Message.T
 object Otp extends RefinedType[String, OtpPredicate]
 type Otp = Otp.T
 
-object Retries extends RefinedType[Int, Positive]
-type Retries = Retries.T
-
-object OtpID extends RefinedType[String, NonEmptyTrimmed]
+object OtpID extends RefinedTypeUUID
 type OtpID = OtpID.T
 
 object CreatedAt extends RefinedType[Instant, Pure]

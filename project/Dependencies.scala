@@ -36,6 +36,7 @@ object Dependencies {
   lazy val springSecurityV      = "7.0.5"
   lazy val bouncyCastleV        = "1.84"
   lazy val uuidCreatorV         = "6.1.1"
+  lazy val scalamockV           = "7.5.5"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -85,6 +86,8 @@ object Dependencies {
   lazy val scalacheck                   = "org.scalacheck"    %% "scalacheck"                     % scalacheckV
   lazy val testcontainers               = "org.testcontainers" % "testcontainers"                 % testcontainersV
   lazy val testcontainersScalaScalatest = "com.dimafeng"      %% "testcontainers-scala-scalatest" % testcontainersScalaV
+  lazy val scalamock                    = "org.scalamock"     %% "scalamock"                      % scalamockV
+  lazy val scalamockZIO                 = "org.scalamock"     %% "scalamock-zio"                  % scalamockV
 
   // Chimney
   lazy val chimney = "io.scalaland" %% "chimney" % chimneyV

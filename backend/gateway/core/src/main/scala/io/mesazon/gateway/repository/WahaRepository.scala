@@ -63,7 +63,7 @@ object WahaRepository {
         phoneNumber: PhoneNumberE164,
     ): IO[DbException, WahaUserRow] =
       for {
-        userID <- idGenerator.generate.map(UserID.applyUnsafe)
+        userID <- idGenerator.generateID.map(UserID.applyUnsafe)
         now    <- timeProvider.instantNow
         row = WahaUserRow(
           userID = userID,

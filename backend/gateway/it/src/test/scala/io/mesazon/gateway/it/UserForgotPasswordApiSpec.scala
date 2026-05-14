@@ -379,7 +379,6 @@ class UserForgotPasswordApiSpec
           gatewayClient.forgotPasswordPost[smithy.InternalServerError](email).zioValue
 
         forgotPasswordPostResponse.code shouldBe StatusCode.Ok
-        forgotPasswordPostResponse.body.value.otpID should not be empty
         forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 2.minutes.toSeconds // application.conf default value
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
@@ -550,18 +549,18 @@ class UserForgotPasswordApiSpec
       "fail with BadRequest ValidationError when request is not valid format" in withContext { context =>
         import context.*
 
+        val otpID = arbitrarySample[OtpID]
+
         val forgotPasswordVerifyOTPPostResponse =
           gatewayClient
             .forgotPasswordVerifyOTPPost[smithy.ValidationError](
-              otpID = OtpID.assume(""),
+              otpID = otpID,
               otp = Otp.assume("invalid-otp"),
             )
             .zioValue
 
         forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
-        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.ValidationError(fields =
-          List("otpID", "otp")
-        )
+        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("otp"))
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -591,10 +590,12 @@ class UserForgotPasswordApiSpec
       "fail with Unauthorized when otp id does not exist" in withContext { context =>
         import context.*
 
+        val otpID = arbitrarySample[OtpID]
+
         val forgotPasswordVerifyOTPPostResponse =
           gatewayClient
             .forgotPasswordVerifyOTPPost[smithy.Unauthorized](
-              otpID = OtpID.assume("non-existing-otp-id"),
+              otpID = otpID,
               otp = Otp.assume("111AAA"),
             )
             .zioValue

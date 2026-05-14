@@ -18,7 +18,7 @@ object UserSignInService {
 
     /** HTTP POST /signin */
     override def signInPost(): ServiceTask[smithy.SignInPostResponse] = for {
-      authedUser  <- authState.get()
+      authedUser  <- authState.get
       userDetails <- userDetailsRepository
         .getUserDetails(authedUser.userID)
         .someOrFail(

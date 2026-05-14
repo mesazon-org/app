@@ -56,8 +56,8 @@ object UserSignUpService {
                 OnboardStage.EmailVerification,
               )
               otpNew <-
-                if (isEmptyOrExpiredOrExpiringSoon) otpGenerator.generate
-                else userOtpRowOpt.map(_.otp).fold(otpGenerator.generate)(ZIO.succeed(_))
+                if (isEmptyOrExpiredOrExpiringSoon) otpGenerator.generateOtp
+                else userOtpRowOpt.map(_.otp).fold(otpGenerator.generateOtp)(ZIO.succeed(_))
               expiresAtNew <-
                 timeProvider.instantNow
                   .map(_.plusSeconds(userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds))
@@ -84,7 +84,7 @@ object UserSignUpService {
               expiresAtNew <- timeProvider.instantNow
                 .map(_.plusSeconds(userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds))
                 .map(ExpiresAt.assume)
-              otpNew        <- otpGenerator.generate
+              otpNew        <- otpGenerator.generateOtp
               userOtpRowNew <- userOtpRepository.upsertUserOtp(
                 userDetailsRowNew.userID,
                 OtpType.EmailVerification,
@@ -98,7 +98,7 @@ object UserSignUpService {
                     .exponential(userSignUpConfig.sendEmailVerificationEmailRetryDelay)
                 )
             } yield userOtpRowNew.otpID
-          case _ => idGenerator.generate.map(OtpID.assume)
+          case _ => idGenerator.generateID.map(OtpID.assume)
         }
       } yield smithy.SignUpEmailPostResponse(
         otpID.value,

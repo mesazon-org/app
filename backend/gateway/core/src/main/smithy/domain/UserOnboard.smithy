@@ -2,6 +2,8 @@ $version: "2.0"
 
 namespace io.mesazon.gateway.smithy
 
+use alloy#UUID
+
 structure OnboardPasswordPostRequest {
     @required
     password: String
@@ -23,14 +25,14 @@ structure OnboardDetailsPostResponse {
     @required
     onboardStage: OnboardStage
     @required
-    otpID: String
+    otpID: UUID
     @required
     otpExpiresInSeconds: Long
 }
 
 structure OnboardVerifyPhoneNumberPostRequest {
     @required
-    otpID: String
+    otpID: UUID
     @required
     otp: String
 }
@@ -42,7 +44,7 @@ structure OnboardVerifyPhoneNumberPostResponse {
 
 structure OnboardVerifyPhoneNumberGetResponse {
     @required
-    otpID: String
+    otpID: UUID
     @required
     otpExpiresInSeconds: Long
 }
