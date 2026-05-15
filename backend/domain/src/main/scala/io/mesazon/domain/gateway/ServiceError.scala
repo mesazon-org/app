@@ -55,7 +55,8 @@ object ServiceError {
   object UnauthorizedError {
     case object TokenMissing extends UnauthorizedError("token is missing from request")
 
-    case object OtpMissing extends UnauthorizedError("otp is missing for user")
+    case class TokenFailedAuthorization(error: String, throwable: Option[Throwable] = None)
+        extends UnauthorizedError(error, throwable)
 
     case object EmailNotFound extends UnauthorizedError("email not found")
 
@@ -73,9 +74,6 @@ object ServiceError {
           s"Failed onboard stage user [$onboardStageUser], allowed: [$onboardStagesAllowed]",
           None,
         )
-
-    case class TokenFailedAuthorization(throwable: Throwable)
-        extends UnauthorizedError("token failed authorization", Some(throwable))
 
     case class TooManySignInAttempts(userID: UserID, actionAttemptType: ActionAttemptType, blockDurationSeconds: Long)
         extends UnauthorizedError(

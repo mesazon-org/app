@@ -47,6 +47,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.OnboardPasswordPostRequest]     = JsonCodecMaker.make[smithy.OnboardPasswordPostRequest]
   given JsonValueCodec[smithy.OnboardDetailsPostRequest]      = JsonCodecMaker.make[smithy.OnboardDetailsPostRequest]
   given JsonValueCodec[smithy.ForgotPasswordPostRequest]      = JsonCodecMaker.make[smithy.ForgotPasswordPostRequest]
+  given JsonValueCodec[smithy.TokenRefreshPostRequest]        = JsonCodecMaker.make[smithy.TokenRefreshPostRequest]
   given JsonValueCodec[smithy.ForgotPasswordResetPostRequest] =
     JsonCodecMaker.make[smithy.ForgotPasswordResetPostRequest]
   given JsonValueCodec[smithy.ForgotPasswordVerifyOTPPostRequest] =
@@ -55,6 +56,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberPostRequest]
 
   given JsonValueCodec[smithy.SignUpEmailPostResponse]       = JsonCodecMaker.make[smithy.SignUpEmailPostResponse]
+  given JsonValueCodec[smithy.TokenRefreshPostResponse]      = JsonCodecMaker.make[smithy.TokenRefreshPostResponse]
   given JsonValueCodec[smithy.ForgotPasswordPostResponse]    = JsonCodecMaker.make[smithy.ForgotPasswordPostResponse]
   given JsonValueCodec[smithy.SignUpVerifyEmailPostResponse] = JsonCodecMaker.make[smithy.SignUpVerifyEmailPostResponse]
   given JsonValueCodec[smithy.OnboardPasswordPostResponse]   = JsonCodecMaker.make[smithy.OnboardPasswordPostResponse]
@@ -66,6 +68,9 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.SignInPostResponse]                  = JsonCodecMaker.make[smithy.SignInPostResponse]
   given JsonValueCodec[smithy.OnboardVerifyPhoneNumberGetResponse] =
     JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberGetResponse]
+
+  private def asJsonErrorUnit[E: JsonValueCodec]: ResponseAs[Either[E, Unit]] =
+    asEither(asJsonAlways[E].map(_.fold(e => throw e, identity)), ignore)
 
   def liveness: Task[StatusCode] = basicRequest
     .get(healthUri.addPath("liveness"))
@@ -190,7 +195,16 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     basicRequest
       .post(externalUri.addPath("forgot", "password", "reset"))
       .body(asJson(smithy.ForgotPasswordResetPostRequest(resetPasswordToken.value, password.value)))
-      .response(asEither(asJsonAlways[E].map(_.fold(e => throw e, identity)), ignore))
+      .response(asJsonErrorUnit[E])
+      .send(sttpBackend)
+
+  def tokenRefreshPost[E: JsonValueCodec](
+      refreshToken: RefreshToken
+  ): Task[Response[Either[E, smithy.TokenRefreshPostResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("token", "refresh"))
+      .body(asJson(smithy.TokenRefreshPostRequest(refreshToken.value)))
+      .response(asJsonEitherOrFail[E, smithy.TokenRefreshPostResponse])
       .send(sttpBackend)
 }
 
