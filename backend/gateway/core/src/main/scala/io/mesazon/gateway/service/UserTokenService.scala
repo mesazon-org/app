@@ -19,7 +19,7 @@ object UserTokenService {
         request: smithy.TokenRefreshPostRequest
     ): ServiceTask[smithy.TokenRefreshPostResponse] =
       for {
-        _                 <- ZIO.logDebug(s"Refreshing user token with request: $request")
+        _                 <- ZIO.logDebug("Refreshing user token")
         tokenRefresh      <- tokenRefreshPostRequestServiceValidator.validate(request)
         authedUserRefresh <- jwtService.verifyRefreshToken(tokenRefresh.refreshToken)
         userTokenRow      <- userTokenRepository

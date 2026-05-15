@@ -8,9 +8,9 @@ import zio.*
 final class TokenRefreshPostRequestServiceValidator
     extends ServiceValidator[smithy.TokenRefreshPostRequest, TokenRefresh] {
 
-  val domainValidator: DomainValidator[smithy.TokenRefreshPostRequest, TokenRefresh] = { onboardPasswordPostRequest =>
+  val domainValidator: DomainValidator[smithy.TokenRefreshPostRequest, TokenRefresh] = { TokenRefreshPostRequest =>
     ZIO.succeed(
-      validateRequiredField("refreshToken", onboardPasswordPostRequest.refreshToken, RefreshToken.either).map(
+      validateRequiredField("refreshToken", TokenRefreshPostRequest.refreshToken, RefreshToken.either).map(
         TokenRefresh.apply
       )
     )
