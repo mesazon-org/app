@@ -122,7 +122,7 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .copy(createdAt = CreatedAt(instantNowUpdated))
       }
 
-      "successfully upsert a user token when tokenIDOptOld is provided but the old token does not exist" in new TestContext {
+      "fail to upsert a user token when tokenIDOptOld is provided but the old token does not exist" in new TestContext {
         inSequence(
           (() => timeProviderMock.instantNow)
             .expects()
@@ -133,7 +133,7 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val tokenIDOld      = arbitrarySample[TokenID]
         val userTokenRowNew = arbitrarySample[UserTokenRow]
 
-        userTokenRepository
+        val serviceError = userTokenRepository
           .upsertUserToken(
             tokenID = userTokenRowNew.tokenID,
             userID = userTokenRowNew.userID,
@@ -141,13 +141,13 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
             expiresAt = userTokenRowNew.expiresAt,
             tokenIDOptOld = Some(tokenIDOld),
           )
-          .zioValue
+          .zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.DatabaseError]
 
         val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
-        userTokensRowAll should have size 1
-        userTokensRowAll.head shouldBe userTokenRowNew
-          .copy(createdAt = CreatedAt(instantNow))
+        userTokensRowAll should have size 0
 
       }
 
@@ -281,18 +281,20 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         userTokensRowAll should have size 0
       }
 
-      "successfully do nothing when trying to delete a non-existing user token" in new TestContext {
+      "fail with DatabaseError when trying to delete a non-existing user tokening when trying to delete a non-existing user token" in new TestContext {
         val tokenID   = arbitrarySample[TokenID]
         val userID    = arbitrarySample[UserID]
         val tokenType = arbitrarySample[TokenType]
 
-        userTokenRepository
+        val serviceError = userTokenRepository
           .deleteUserToken(
             tokenID = tokenID,
             userID = userID,
             tokenType = tokenType,
           )
-          .zioValue shouldBe ()
+          .zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.DatabaseError]
 
         val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
