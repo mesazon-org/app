@@ -200,18 +200,18 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         assert(authenticationResponse.isRight)
       }
 
-      "fail with BasicCredentialsMissing to authenticate user with missing basic credentials" in new TestContext {
+      "fail with AuthenticationCredentialsMissing to authenticate user with missing basic credentials" in new TestContext {
         val authenticationService = buildAuthenticationService
 
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
 
         val serviceError = authenticationService.auth(request).zioError
 
-        serviceError shouldBe a[ServiceError.BadRequestError.BasicCredentialsMissing.type]
+        serviceError shouldBe a[ServiceError.BadRequestError.AuthenticationCredentialsMissing.type]
         serviceError
           .asInstanceOf[
-            ServiceError.BadRequestError.BasicCredentialsMissing.type
-          ] shouldBe ServiceError.BadRequestError.BasicCredentialsMissing
+            ServiceError.BadRequestError.AuthenticationCredentialsMissing.type
+          ] shouldBe ServiceError.BadRequestError.AuthenticationCredentialsMissing
       }
 
       "fail with ValidationError to authenticate user with invalid basic credentials" in new TestContext {
@@ -277,7 +277,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
       }
 
-      "fail with InvalidCredentials to authenticate user with invalid credentials" in new TestContext {
+      "fail with AuthenticationInvalidCredentials to authenticate user with invalid credentials" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -324,14 +324,14 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val serviceError = authenticationService.auth(request).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.InvalidCredentials.type]
+        serviceError shouldBe a[ServiceError.UnauthorizedError.AuthenticationInvalidCredentials.type]
         serviceError
           .asInstanceOf[
-            ServiceError.UnauthorizedError.InvalidCredentials.type
-          ] shouldBe ServiceError.UnauthorizedError.InvalidCredentials
+            ServiceError.UnauthorizedError.AuthenticationInvalidCredentials.type
+          ] shouldBe ServiceError.UnauthorizedError.AuthenticationInvalidCredentials
       }
 
-      "fail with TooManySignInAttempts to authenticate user with too many sign in attempts and is in blocked duration" in new TestContext {
+      "fail with AuthenticationTooManySignInAttempts to authenticate user with too many sign in attempts and is in blocked duration" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -371,17 +371,17 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val serviceError = authenticationService.auth(request).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.TooManySignInAttempts]
+        serviceError shouldBe a[ServiceError.UnauthorizedError.AuthenticationTooManySignInAttempts]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.TooManySignInAttempts] shouldBe
-          ServiceError.UnauthorizedError.TooManySignInAttempts(
+          .asInstanceOf[ServiceError.UnauthorizedError.AuthenticationTooManySignInAttempts] shouldBe
+          ServiceError.UnauthorizedError.AuthenticationTooManySignInAttempts(
             userID = userDetailsRow.userID,
             actionAttemptType = ActionAttemptType.SignIn,
             blockDurationSeconds = authenticationConfig.signInAttemptsBlockDuration.toSeconds,
           )
       }
 
-      "fail with UnexpectedError to authenticate user when user credentials are not found for existing user details" in new TestContext {
+      "fail with AuthenticationError to authenticate user when user credentials are not found for existing user details" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -422,10 +422,10 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val serviceError = authenticationService.auth(request).zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError shouldBe a[ServiceError.InternalServerError.AuthenticationError]
         serviceError
-          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
-          .UnexpectedError(
+          .asInstanceOf[ServiceError.InternalServerError.AuthenticationError] shouldBe ServiceError.InternalServerError
+          .AuthenticationError(
             s"User credentials not found for userID: [${userDetailsRow.userID}], could only occur if user details exist but credentials do not"
           )
       }

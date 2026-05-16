@@ -559,7 +559,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           )
       }
 
-      "fail with OtpValidationError when verify email with non-existing otp" in new TestContext {
+      "fail with UnexpectedError when verify email with non-existing otp" in new TestContext {
         val otpID = arbitrarySample[OtpID]
 
         inSequence(
@@ -575,10 +575,10 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
 
         val serviceError = userSignUpService.signUpVerifyEmailPost(signUpVerifyEmailPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
-          .OtpValidationError(
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError(
             s"No otp found for otpID: [${signUpVerifyEmailPostRequest.otpID}] and otpType: [${OtpType.EmailVerification}]"
           )
       }
@@ -616,7 +616,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           )
       }
 
-      "fail with OtpValidationError when verify email with expired otp" in new TestContext {
+      "fail with OtpExpiredError when verify email with expired otp" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -635,6 +635,10 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
             .once(),
           userDetailsRepositoryMock.getUserDetails.expects(userOtpRow.userID).returningZIO(Some(userDetailsRow)).once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          userOtpRepositoryMock.deleteUserOtp
+            .expects(userOtpRow.otpID, userDetailsRow.userID, OtpType.EmailVerification)
+            .returnsZIOUnit
+            .once(),
         )
 
         val userSignUpService = buildUserSignUpServiceLive
@@ -644,13 +648,13 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
 
         val serviceError = userSignUpService.signUpVerifyEmailPost(signUpVerifyEmailPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpExpiredError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
-          .OtpValidationError(s"Wrong or expired OTP provided for otpID: [${userOtpRow.otpID}]")
+          .asInstanceOf[ServiceError.UnauthorizedError.OtpExpiredError] shouldBe ServiceError.UnauthorizedError
+          .OtpExpiredError(s"Expired OTP provided for otpID: [${userOtpRow.otpID}]")
       }
 
-      "fail with OtpValidationError when verify email with wrong otp" in new TestContext {
+      "fail with OtpVerifyError when verify email with wrong otp" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -678,10 +682,10 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
 
         val serviceError = userSignUpService.signUpVerifyEmailPost(signUpVerifyEmailPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError shouldBe a[ServiceError.BadRequestError.OtpVerifyError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
-          .OtpValidationError(s"Wrong or expired OTP provided for otpID: [${userOtpRow.otpID}]")
+          .asInstanceOf[ServiceError.BadRequestError.OtpVerifyError] shouldBe ServiceError.BadRequestError
+          .OtpVerifyError(s"Wrong OTP provided for otpID: [${userOtpRow.otpID}]")
       }
     }
   }

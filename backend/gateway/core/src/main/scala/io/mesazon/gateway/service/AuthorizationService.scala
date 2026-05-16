@@ -24,12 +24,12 @@ object AuthorizationService {
           .get[`Authorization`]
           .collect { case Authorization(Credentials.Token(AuthScheme.Bearer, token)) => token }
         accessToken <- ZIO
-          .getOrFailWith(ServiceError.UnauthorizedError.TokenMissing)(maybeBearerToken)
+          .getOrFailWith(ServiceError.UnauthorizedError.AuthorizationTokenMissing)(maybeBearerToken)
           .flatMap(accessTokenRaw =>
             ZIO
               .fromEither(AccessToken.either(accessTokenRaw))
               .mapError(error =>
-                ServiceError.UnauthorizedError.FailedToVerifyJwt(s"Failed to apply AccessToken: $error")
+                ServiceError.InternalServerError.AuthorizationError(s"Failed to apply AccessToken: $error")
               )
           )
         authedUserAccess <- jwtService.verifyAccessToken(accessToken)

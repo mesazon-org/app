@@ -325,7 +325,7 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         failedToVerifyJwt.message shouldBe "Failed to parse and verify refresh token"
       }
 
-      "fail with FailedToVerifyJwt if the refresh token id is missing" in new TestContext {
+      "fail with JwtServiceError if the refresh token id is missing" in new TestContext {
         inSequence(
           (() => timeProviderMock.clock).expects().returningZIO(clockFixed).once()
         )
@@ -347,8 +347,10 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
 
         val failedToVerifyJwt = jwtService.verifyRefreshToken(RefreshToken.assume(refreshTokenRaw)).zioError
 
-        failedToVerifyJwt shouldBe a[ServiceError.InternalServerError.UnexpectedError]
-        failedToVerifyJwt.message shouldBe "Failed to extract token id from refresh token"
+        failedToVerifyJwt shouldBe a[ServiceError.InternalServerError.JwtServiceError]
+        failedToVerifyJwt
+          .asInstanceOf[ServiceError.InternalServerError.JwtServiceError] shouldBe ServiceError.InternalServerError
+          .JwtServiceError("Failed to extract token id from refresh token")
       }
 
       "fail with FailedToVerifyJwt if refresh token issuer is invalid or missing" in new TestContext {
@@ -512,7 +514,7 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         failedToVerifyJwt.message shouldBe "Failed to parse and verify reset password token"
       }
 
-      "fail with FailedToVerifyJwt if reset password token id is missing" in new TestContext {
+      "fail with JwtServiceError if reset password token id is missing" in new TestContext {
         inSequence(
           (() => timeProviderMock.clock).expects().returningZIO(clockFixed).once()
         )
@@ -535,8 +537,10 @@ class JwtServiceSpec extends ZWordSpecBase, GatewayArbitraries {
         val failedToVerifyJwt =
           jwtService.verifyResetPasswordToken(ResetPasswordToken.assume(resetPasswordTokenRaw)).zioError
 
-        failedToVerifyJwt shouldBe a[ServiceError.InternalServerError.UnexpectedError]
-        failedToVerifyJwt.message shouldBe "Failed to extract token id from reset password token"
+        failedToVerifyJwt shouldBe a[ServiceError.InternalServerError.JwtServiceError]
+        failedToVerifyJwt
+          .asInstanceOf[ServiceError.InternalServerError.JwtServiceError] shouldBe ServiceError.InternalServerError
+          .JwtServiceError("Failed to extract token id from reset password token")
       }
 
       "fail with FailedToVerifyJwt if reset password token issuer is invalid or missing" in new TestContext {

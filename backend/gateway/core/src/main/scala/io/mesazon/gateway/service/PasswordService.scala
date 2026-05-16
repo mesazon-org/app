@@ -29,16 +29,20 @@ object PasswordService {
       for {
         passwordHashRaw <- ZIO
           .attemptBlocking(argon2PasswordEncoder.encode(password.value))
-          .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to hash password", Some(error)))
+          .mapError(error =>
+            ServiceError.InternalServerError.PasswordServiceError("Failed to hash password", Some(error))
+          )
         passwordHash <- ZIO
           .fromEither(PasswordHash.either(passwordHashRaw))
-          .mapError(_ => ServiceError.InternalServerError.UnexpectedError("Failed construct PasswordHash"))
+          .mapError(_ => ServiceError.InternalServerError.PasswordServiceError("Failed construct PasswordHash"))
       } yield passwordHash
 
     override def verifyPassword(password: Password, passwordHash: PasswordHash): IO[ServiceError, Boolean] =
       ZIO
         .attemptBlocking(argon2PasswordEncoder.matches(password.value, passwordHash.value))
-        .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to verify password", Some(error)))
+        .mapError(error =>
+          ServiceError.InternalServerError.PasswordServiceError("Failed to verify password", Some(error))
+        )
   }
 
   private def observed(passwordService: PasswordService): PasswordService = passwordService

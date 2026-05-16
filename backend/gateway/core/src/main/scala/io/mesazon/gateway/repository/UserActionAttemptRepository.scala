@@ -61,7 +61,7 @@ object UserActionAttemptRepository {
             .getAndIncrease(userActionAttemptRow)
         )
         .mapError(e =>
-          ServiceError.InternalServerError.DatabaseError(
+          ServiceError.InternalServerError.RepositoryError(
             s"Failed to get and increase user action attempt for user ID: [$userID] and action attempt type: [$actionAttemptType]",
             e,
           )
@@ -76,7 +76,7 @@ object UserActionAttemptRepository {
         userActionAttemptQueries.delete(userID, actionAttemptType)
       )
       .mapError(e =>
-        ServiceError.InternalServerError.DatabaseError(
+        ServiceError.InternalServerError.RepositoryError(
           s"Failed to delete user action attempt for user ID: [$userID] and action attempt type: [$actionAttemptType]",
           e,
         )
