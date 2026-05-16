@@ -50,6 +50,7 @@ object Main extends ZIOAppDefault {
       WahaService.live,
       UserSignUpService.live,
       UserSignInService.live,
+      UserTokenService.live,
       UserOnboardService.live,
       UserForgotPasswordService.live,
       JwtService.live,
@@ -113,6 +114,7 @@ object Main extends ZIOAppDefault {
       ForgotPasswordPostRequestServiceValidator.live,
       ForgotPasswordVerifyOTPPostRequestServiceValidator.live,
       ForgotPasswordResetPostRequestServiceValidator.live,
+      TokenRefreshPostRequestServiceValidator.live,
 
       // Clients
       SttpBackend.live,

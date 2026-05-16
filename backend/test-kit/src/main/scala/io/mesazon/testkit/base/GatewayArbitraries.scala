@@ -68,4 +68,6 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
   given Arbitrary[BasicCredentials] = Arbitrary(Gen.resultOf(BasicCredentials.apply))
 
   given Arbitrary[ForgotPasswordReset] = Arbitrary(Gen.resultOf(ForgotPasswordReset.apply))
+
+  given Arbitrary[TokenRefresh] = Arbitrary(Gen.resultOf(TokenRefresh.apply))
 }
