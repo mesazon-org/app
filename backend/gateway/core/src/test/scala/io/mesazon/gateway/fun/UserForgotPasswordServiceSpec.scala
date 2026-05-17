@@ -547,7 +547,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
       }
 
-      "fail with OtpValidationError when user otp is missing" in new TestContext {
+      "fail with UnexpectedError when user otp is missing" in new TestContext {
         val otpID = arbitrarySample[OtpID]
         val otp   = arbitrarySample[Otp]
 
@@ -568,15 +568,15 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val serviceError =
           userForgotPasswordService.forgotPasswordVerifyOTPPost(forgotPasswordVerifyOTPPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
-          .OtpValidationError(
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError(
             s"No OTP found for OTP ID [${otpID.value}] and OTP type [${OtpType.ForgotPassword}]"
           )
       }
 
-      "fail with UserNotFoundError when user details is missing for the user otp" in new TestContext {
+      "fail with UnexpectedError when user details is missing for the user otp" in new TestContext {
         val userOtpRow = arbitrarySample[UserOtpRow]
           .copy(otpType = OtpType.ForgotPassword)
 
@@ -598,10 +598,10 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val serviceError =
           userForgotPasswordService.forgotPasswordVerifyOTPPost(forgotPasswordVerifyOTPPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.UserNotFoundError]
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         serviceError
-          .asInstanceOf[ServiceError.InternalServerError.UserNotFoundError] shouldBe ServiceError.InternalServerError
-          .UserNotFoundError(
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError(
             s"No user details found for userID: [${userOtpRow.userID}] and otpID: [${userOtpRow.otpID}]"
           )
       }
@@ -645,7 +645,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
       }
 
-      "fail with OtpValidationError when wrong OTP provided" in new TestContext {
+      "fail with OtpVerifyError when wrong OTP provided" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -690,15 +690,15 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val serviceError =
           userForgotPasswordService.forgotPasswordVerifyOTPPost(forgotPasswordVerifyOTPPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError shouldBe a[ServiceError.BadRequestError.OtpVerifyError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
-          .OtpValidationError(
-            s"Wrong or expired OTP provided for OTP ID [${userOtpRow.otpID}] and OTP type [${OtpType.ForgotPassword}]"
+          .asInstanceOf[ServiceError.BadRequestError.OtpVerifyError] shouldBe ServiceError.BadRequestError
+          .OtpVerifyError(
+            s"Wrong OTP provided for OTP ID [${forgotPasswordVerifyOTPPostRequest.otpID}] and OTP type [${OtpType.ForgotPassword}]"
           )
       }
 
-      "fail with OtpValidationError when expired OTP provided" in new TestContext {
+      "fail with OtpExpiredError when expired OTP provided" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -729,6 +729,10 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
             .returningZIO(userActionAttemptRow)
             .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          userOtpRepositoryMock.deleteUserOtp
+            .expects(userOtpRow.otpID, userOtpRow.userID, OtpType.ForgotPassword)
+            .returningZIOUnit
+            .once(),
         )
 
         val userForgotPasswordService = buildUserForgotPasswordService
@@ -741,15 +745,15 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val serviceError =
           userForgotPasswordService.forgotPasswordVerifyOTPPost(forgotPasswordVerifyOTPPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpExpiredError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
-          .OtpValidationError(
-            s"Wrong or expired OTP provided for OTP ID [${userOtpRow.otpID}] and OTP type [${OtpType.ForgotPassword}]"
+          .asInstanceOf[ServiceError.UnauthorizedError.OtpExpiredError] shouldBe ServiceError.UnauthorizedError
+          .OtpExpiredError(
+            s"Expired OTP provided for OTP ID [${forgotPasswordVerifyOTPPostRequest.otpID}] and OTP type [${OtpType.ForgotPassword}]"
           )
       }
 
-      "fail with OtpValidationError when verify action attempts has reached the limit" in new TestContext {
+      "fail with OtpVerifyError when verify action attempts has reached the limit" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -791,11 +795,11 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val serviceError =
           userForgotPasswordService.forgotPasswordVerifyOTPPost(forgotPasswordVerifyOTPPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError shouldBe a[ServiceError.BadRequestError.OtpVerifyError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
-          .OtpValidationError(
-            s"OTP validation attempts exceeded for OTP ID [${userOtpRow.otpID}] and OTP type [${OtpType.ForgotPassword}]"
+          .asInstanceOf[ServiceError.BadRequestError.OtpVerifyError] shouldBe ServiceError.BadRequestError
+          .OtpVerifyError(
+            s"OTP validation attempts exceeded for OTP ID [${forgotPasswordVerifyOTPPostRequest.otpID}] and OTP type [${OtpType.ForgotPassword}]"
           )
       }
     }
@@ -954,7 +958,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
       }
 
-      "fail with TokenMissing Error when reset password token is missing" in new TestContext {
+      "fail with UnexpectedError Error when reset password token is missing" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -987,13 +991,15 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val serviceError =
           userForgotPasswordService.forgotPasswordResetPost(forgotPasswordResetPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.TokenMissing.type]
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         serviceError.asInstanceOf[
-          ServiceError.UnauthorizedError.TokenMissing.type
-        ] shouldBe ServiceError.UnauthorizedError.TokenMissing
+          ServiceError.InternalServerError.UnexpectedError
+        ] shouldBe ServiceError.InternalServerError.UnexpectedError(
+          s"Reset password token not found for tokenID: [${authedUserResetPassword.tokenID}], userID: [${authedUserResetPassword.userID}] and tokenType: [${TokenType.ResetPasswordToken}]"
+        )
       }
 
-      "fail with UserNotFoundError when user details is missing for the reset password token" in new TestContext {
+      "fail with UnexpectedError when user details is missing for the reset password token" in new TestContext {
         val authedUserResetPassword = arbitrarySample[AuthedUserResetPassword]
 
         val resetPasswordToken = arbitrarySample[ResetPasswordToken]
@@ -1014,10 +1020,10 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val serviceError =
           userForgotPasswordService.forgotPasswordResetPost(forgotPasswordResetPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.UserNotFoundError]
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         serviceError
-          .asInstanceOf[ServiceError.InternalServerError.UserNotFoundError] shouldBe ServiceError.InternalServerError
-          .UserNotFoundError(s"No user details found for userID: [${authedUserResetPassword.userID.value}]")
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError(s"No user details found for userID: [${authedUserResetPassword.userID.value}]")
       }
 
       "fail with FailedOnboardStage when user is not in allowed onboard stage" in new TestContext {

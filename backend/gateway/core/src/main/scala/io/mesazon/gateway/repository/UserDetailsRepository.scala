@@ -61,7 +61,7 @@ object UserDetailsRepository {
           )
           .mapError(e =>
             ServiceError.InternalServerError
-              .DatabaseError(s"Failed to insertUserDetails: [$email], [$onboardStage]", e)
+              .RepositoryError(s"Failed to insertUserDetails: [$email], [$onboardStage]", e)
           )
       } yield userDetailsRow
 
@@ -84,7 +84,7 @@ object UserDetailsRepository {
         )
         .mapError(e =>
           ServiceError.InternalServerError
-            .DatabaseError(
+            .RepositoryError(
               s"Failed to updateUserDetails: [$userID], [$onboardStageUpdate], [$fullNameOptUpdate], [$phoneNumberOptUpdate]",
               e,
             )
@@ -97,7 +97,7 @@ object UserDetailsRepository {
           userDetailsQueries.getUserDetails(userID)
         )
         .mapError(e =>
-          ServiceError.InternalServerError.DatabaseError(s"Failed to getUserDetails by user ID: [$userID]", e)
+          ServiceError.InternalServerError.RepositoryError(s"Failed to getUserDetails by user ID: [$userID]", e)
         )
 
     override def getUserDetailsByEmail(email: Email): IO[ServiceError, Option[UserDetailsRow]] =
@@ -105,7 +105,9 @@ object UserDetailsRepository {
         .transactionOrWiden(
           userDetailsQueries.getUserDetailsByEmail(email)
         )
-        .mapError(e => ServiceError.InternalServerError.DatabaseError(s"Failed to getUserDetailsByEmail: [$email]", e))
+        .mapError(e =>
+          ServiceError.InternalServerError.RepositoryError(s"Failed to getUserDetailsByEmail: [$email]", e)
+        )
   }
 
   private def observed(repository: UserDetailsRepository): UserDetailsRepository = repository

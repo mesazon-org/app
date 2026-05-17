@@ -42,7 +42,7 @@ object UserCredentialsRepository {
         )
         .mapError(e =>
           ServiceError.InternalServerError
-            .DatabaseError(s"Failed to insert user credentials for user ID: [$userID]", e)
+            .RepositoryError(s"Failed to insert user credentials for user ID: [$userID]", e)
         )
     } yield ()
 
@@ -52,7 +52,7 @@ object UserCredentialsRepository {
           userCredentialsQueries.getUserCredentials(userID)
         )
         .mapError(e =>
-          ServiceError.InternalServerError.DatabaseError(s"Failed to get user credentials by user ID: [$userID]", e)
+          ServiceError.InternalServerError.RepositoryError(s"Failed to get user credentials by user ID: [$userID]", e)
         )
 
     override def updateUserCredentials(
@@ -65,7 +65,8 @@ object UserCredentialsRepository {
           userCredentialsQueries.updateUserCredentials(userID, passwordHashUpdate, UpdatedAt(instantNow))
         )
         .mapError(e =>
-          ServiceError.InternalServerError.DatabaseError(s"Failed to update user credentials for user ID: [$userID]", e)
+          ServiceError.InternalServerError
+            .RepositoryError(s"Failed to update user credentials for user ID: [$userID]", e)
         )
     } yield ()
 

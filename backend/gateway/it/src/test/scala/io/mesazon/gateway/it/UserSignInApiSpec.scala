@@ -137,7 +137,7 @@ class UserSignInApiSpec
         userTokenRowsAll.head.tokenType shouldBe TokenType.RefreshToken
       }
 
-      "successfully sign in user with valid credentials should create 2 refresh tokens if user already has 1 existing refresh token" in withContext {
+      "successfully sign in user with valid credentials should delete all users refresh tokens and create a new one" in withContext {
         context =>
           import context.*
 
@@ -182,7 +182,7 @@ class UserSignInApiSpec
 
           val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
-          userTokenRowsAll should have size 2
+          userTokenRowsAll should have size 1
 
           all(userTokenRowsAll.map(_.tokenType)) shouldBe TokenType.RefreshToken
       }

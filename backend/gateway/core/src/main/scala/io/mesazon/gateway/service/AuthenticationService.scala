@@ -38,14 +38,14 @@ object AuthenticationService {
           .collect { case Authorization(Http4sBasicCredentials(email, password)) =>
             BasicCredentialsRequest(email, password)
           }
-        basicCredentialsRequest <- ZIO.getOrFailWith(ServiceError.BadRequestError.BasicCredentialsMissing)(
+        basicCredentialsRequest <- ZIO.getOrFailWith(ServiceError.BadRequestError.AuthenticationCredentialsMissing)(
           basicCredentialsRequestOpt
         )
         basicCredentials <- basicCredentialsRequestServiceValidator.validate(basicCredentialsRequest)
         userDetails      <- userDetailsRepository
           .getUserDetailsByEmail(basicCredentials.email)
           .someOrFail(
-            ServiceError.UnauthorizedError.EmailNotFound
+            ServiceError.UnauthorizedError.AuthenticationEmailNotFound
           )
         _ <- verifyOnboardStage(
           onboardStageUser = userDetails.onboardStage,
@@ -65,7 +65,7 @@ object AuthenticationService {
               .isAfter(instantNow)
           )
             ZIO.fail(
-              ServiceError.UnauthorizedError.TooManySignInAttempts(
+              ServiceError.UnauthorizedError.AuthenticationTooManySignInAttempts(
                 userDetails.userID,
                 ActionAttemptType.SignIn,
                 authenticationConfig.signInAttemptsBlockDuration.toSeconds,
@@ -75,7 +75,7 @@ object AuthenticationService {
         userCredentials <- userCredentialsRepository
           .getUserCredentials(userDetails.userID)
           .someOrFail(
-            ServiceError.InternalServerError.UnexpectedError(
+            ServiceError.InternalServerError.AuthenticationError(
               s"User credentials not found for userID: [${userDetails.userID}], could only occur if user details exist but credentials do not"
             )
           )
@@ -83,7 +83,7 @@ object AuthenticationService {
         _                  <-
           if (isPasswordVerified)
             userActionAttemptRepository.deleteUserActionAttempt(userDetails.userID, ActionAttemptType.SignIn)
-          else ZIO.fail(ServiceError.UnauthorizedError.InvalidCredentials)
+          else ZIO.fail(ServiceError.UnauthorizedError.AuthenticationInvalidCredentials)
         _ <- authState.set(AuthedUser(userDetails.userID))
       } yield ()
   }

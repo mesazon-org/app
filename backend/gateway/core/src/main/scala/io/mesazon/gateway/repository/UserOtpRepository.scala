@@ -80,7 +80,7 @@ object UserOtpRepository {
         )
         .mapError(e =>
           ServiceError.InternalServerError
-            .DatabaseError(s"Failed to upsert user OTP: [$userID], [$otp], [$otpType], [$expiresAt]", e)
+            .RepositoryError(s"Failed to upsert user OTP: [$userID], [$otp], [$otpType], [$expiresAt]", e)
         )
     } yield userOtpRow
 
@@ -106,7 +106,7 @@ object UserOtpRepository {
           )
           .mapError(e =>
             ServiceError.InternalServerError
-              .DatabaseError(s"Failed to update user OTP: [$otpID], [$userID], [$otpType], [$expiresAtUpdate]", e)
+              .RepositoryError(s"Failed to update user OTP: [$otpID], [$userID], [$otpType], [$expiresAtUpdate]", e)
           )
       } yield updatedUserOtpRow
 
@@ -116,7 +116,8 @@ object UserOtpRepository {
           userOtpQueries.getUserOtp(otpID, userID, otpType)
         )
         .mapError(e =>
-          ServiceError.InternalServerError.DatabaseError(s"Failed to get user OTP: [$otpID], [$userID], [$otpType]", e)
+          ServiceError.InternalServerError
+            .RepositoryError(s"Failed to get user OTP: [$otpID], [$userID], [$otpType]", e)
         )
 
     override def getUserOtpByOtpID(
@@ -128,7 +129,7 @@ object UserOtpRepository {
           userOtpQueries.getUserOtpByOtpID(otpID, otpType)
         )
         .mapError(e =>
-          ServiceError.InternalServerError.DatabaseError(s"Failed to get user OTP by OTP ID: [$otpID], [$otpType]", e)
+          ServiceError.InternalServerError.RepositoryError(s"Failed to get user OTP by OTP ID: [$otpID], [$otpType]", e)
         )
 
     override def getUserOtpByUserID(
@@ -140,7 +141,8 @@ object UserOtpRepository {
           userOtpQueries.getUserOtpByUserID(userID, otpType)
         )
         .mapError(e =>
-          ServiceError.InternalServerError.DatabaseError(s"Failed to get user OTP by user ID: [$userID], [$otpType]", e)
+          ServiceError.InternalServerError
+            .RepositoryError(s"Failed to get user OTP by user ID: [$userID], [$otpType]", e)
         )
 
     def deleteUserOtp(otpID: OtpID, userID: UserID, otpType: OtpType): IO[ServiceError, Unit] =
@@ -150,7 +152,7 @@ object UserOtpRepository {
         )
         .mapError(e =>
           ServiceError.InternalServerError
-            .DatabaseError(s"Failed to delete user OTP: [$otpID], [$userID], [$otpType]", e)
+            .RepositoryError(s"Failed to delete user OTP: [$otpID], [$userID], [$otpType]", e)
         )
   }
 

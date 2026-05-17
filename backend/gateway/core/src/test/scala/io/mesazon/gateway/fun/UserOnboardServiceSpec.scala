@@ -177,7 +177,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           )
       }
 
-      "fail with UserNotFoundError when user details does not exist" in new TestContext {
+      "fail with UnexpectedError when user details does not exist" in new TestContext {
         val authedUser = arbitrarySample[AuthedUser]
 
         inSequence(
@@ -194,10 +194,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val serviceError = userOnboardService.onboardPasswordPost(onboardPasswordPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.UserNotFoundError]
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         serviceError
-          .asInstanceOf[ServiceError.InternalServerError.UserNotFoundError] shouldBe ServiceError.InternalServerError
-          .UserNotFoundError(
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError(
             s"User details not found for userID: [${authedUser.userID}]"
           )
       }
@@ -456,7 +456,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           )
       }
 
-      "fail with UserNotFoundError when user details does not exist" in new TestContext {
+      "fail with UnexpectedError when user details does not exist" in new TestContext {
         val authedUser = arbitrarySample[AuthedUser]
 
         inSequence(
@@ -473,10 +473,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val serviceError = userOnboardService.onboardDetailsPost(onboardDetailsPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.UserNotFoundError]
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         serviceError
-          .asInstanceOf[ServiceError.InternalServerError.UserNotFoundError] shouldBe ServiceError.InternalServerError
-          .UserNotFoundError(
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError(
             s"User details not found for userID: [${authedUser.userID}]"
           )
       }
@@ -670,7 +670,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           )
       }
 
-      "fail with OtpValidationError when otp is expired" in new TestContext {
+      "fail with OtpExpiredError when otp is expired" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -695,6 +695,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .returningZIO(Some(userOtpRow))
             .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          userOtpRepositoryMock.deleteUserOtp
+            .expects(userOtpRow.otpID, authedUser.userID, OtpType.PhoneVerification)
+            .returningZIOUnit
+            .once(),
         )
 
         val userOnboardService = buildUserOnboardServiceLive
@@ -707,15 +711,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpExpiredError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
-          .OtpValidationError(
-            s"Wrong or expired OTP provided for otpID: [${userOtpRow.otpID}]"
+          .asInstanceOf[ServiceError.UnauthorizedError.OtpExpiredError] shouldBe ServiceError.UnauthorizedError
+          .OtpExpiredError(
+            s"Expired OTP provided for otpID: [${userOtpRow.otpID}]"
           )
       }
 
-      "fail with OtpValidationError when otp does not exist" in new TestContext {
+      "fail with UnexpectedError when otp does not exist" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -743,15 +747,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
-          .OtpValidationError(
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError(
             s"No OTP found for otpID: [${onboardVerifyPhoneNumberPostRequest.otpID}]"
           )
       }
 
-      "fail with OtpValidationError when otp is wrong" in new TestContext {
+      "fail with OtpVerifyError when otp is wrong" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -790,15 +794,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError shouldBe a[ServiceError.BadRequestError.OtpVerifyError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
-          .OtpValidationError(
-            s"Wrong or expired OTP provided for otpID: [${userOtpRow.otpID}]"
+          .asInstanceOf[ServiceError.BadRequestError.OtpVerifyError] shouldBe ServiceError.BadRequestError
+          .OtpVerifyError(
+            s"Wrong OTP provided for otpID: [${userOtpRow.otpID}]"
           )
       }
 
-      "fail with UserNotFoundError when user details does not exist" in new TestContext {
+      "fail with UnexpectedError when user details does not exist" in new TestContext {
         val authedUser = arbitrarySample[AuthedUser]
 
         inSequence(
@@ -816,11 +820,11 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.UserNotFoundError]
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         serviceError.asInstanceOf[
-          ServiceError.InternalServerError.UserNotFoundError
+          ServiceError.InternalServerError.UnexpectedError
         ] shouldBe ServiceError.InternalServerError
-          .UserNotFoundError(
+          .UnexpectedError(
             s"User details not found for userID: [${authedUser.userID}]"
           )
       }
@@ -865,7 +869,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         )
       }
 
-      "fail with OtpValidationError when otp does not exist for user" in new TestContext {
+      "fail with UnexpectedError when otp does not exist for user" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -888,15 +892,15 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberGet().zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
-          .OtpValidationError(
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError(
             s"No OTP found for userID: [${authedUser.userID}] and otpType: [${OtpType.PhoneVerification}]"
           )
       }
 
-      "fail with OtpValidationError when otp is expired for user" in new TestContext {
+      "fail with OtpExpiredError when otp is expired for user" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -932,10 +936,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberGet().zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpValidationError]
+        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpExpiredError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpValidationError] shouldBe ServiceError.UnauthorizedError
-          .OtpValidationError(
+          .asInstanceOf[ServiceError.UnauthorizedError.OtpExpiredError] shouldBe ServiceError.UnauthorizedError
+          .OtpExpiredError(
             s"OTP expired for otpID: [${userOtpRow.otpID}]"
           )
       }

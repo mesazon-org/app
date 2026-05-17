@@ -281,6 +281,7 @@ class UserOnboardApiSpec
 
         onboardDetailsPostResponse.code shouldBe StatusCode.Ok
         onboardDetailsPostResponse.body.value.onboardStage.name shouldBe "PHONE_VERIFICATION"
+        onboardDetailsPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -559,7 +560,7 @@ class UserOnboardApiSpec
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
-      "fail with Unauthorized when OTP is wrong" in withContext { context =>
+      "fail with BadRequest when OTP is wrong" in withContext { context =>
         import context.*
 
         val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
@@ -593,14 +594,14 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumberPost[smithy.Unauthorized](
+          .onboardVerifyPhoneNumberPost[smithy.BadRequest](
             onboardVerifyPhoneNumberPostRequest,
             Some(accessToken),
           )
           .zioValue
 
-        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
-        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Unauthorized()
+        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.BadRequest
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.BadRequest()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -671,11 +672,10 @@ class UserOnboardApiSpec
         val userOtpRowsAll =
           postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
-        userOtpRowsAll should have size 1
-        userOtpRowsAll.head shouldBe userOtpRow
+        userOtpRowsAll should have size 0
       }
 
-      "fail with Unauthorized when OTP is missing" in withContext { context =>
+      "fail with InternalServerError when OTP is missing" in withContext { context =>
         import context.*
 
         val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
@@ -695,14 +695,14 @@ class UserOnboardApiSpec
         val onboardVerifyPhoneNumberPostRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest]
 
         val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumberPost[smithy.Unauthorized](
+          .onboardVerifyPhoneNumberPost[smithy.InternalServerError](
             onboardVerifyPhoneNumberPostRequest,
             Some(accessToken),
           )
           .zioValue
 
-        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
-        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Unauthorized()
+        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.InternalServerError
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.InternalServerError()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -772,7 +772,7 @@ class UserOnboardApiSpec
         userOtpRowsAll.head shouldBe userOtpRow
       }
 
-      "fail with Unauthorized when OTP is missing for user" in withContext { context =>
+      "fail with InternalServerError when OTP is missing for user" in withContext { context =>
         import context.*
 
         val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
@@ -790,13 +790,13 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardVerifyPhoneNumberGetResponse = gatewayClient
-          .onboardVerifyPhoneNumberGet[smithy.Unauthorized](
+          .onboardVerifyPhoneNumberGet[smithy.InternalServerError](
             Some(accessToken)
           )
           .zioValue
 
-        onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.Unauthorized
-        onboardVerifyPhoneNumberGetResponse.body.left.value shouldBe smithy.Unauthorized()
+        onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.InternalServerError
+        onboardVerifyPhoneNumberGetResponse.body.left.value shouldBe smithy.InternalServerError()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 

@@ -43,6 +43,10 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
             .expects(authedUser.userID)
             .returningZIO(Some(userDetailsRow))
             .once(),
+          userTokenRepositoryMock.deleteAllUserTokens
+            .expects(authedUser.userID)
+            .returnsZIOUnit
+            .once(),
           jwtServiceMock.generateAccessToken
             .expects(authedUser.userID)
             .returningZIO(accessJwt)
@@ -69,7 +73,7 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         )
       }
 
-      "fail with UserNotFoundError when user details not found" in new TestContext {
+      "fail with UnexpectedError when user details not found" in new TestContext {
         val authedUser = arbitrarySample[AuthedUser]
 
         inSequence(
@@ -87,10 +91,10 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
 
         val serviceError = userSignInService.signInPost().zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.UserNotFoundError]
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         serviceError
-          .asInstanceOf[ServiceError.InternalServerError.UserNotFoundError] shouldBe ServiceError.InternalServerError
-          .UserNotFoundError(
+          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
+          .UnexpectedError(
             s"User details not found for userID: [${authedUser.userID}]"
           )
       }

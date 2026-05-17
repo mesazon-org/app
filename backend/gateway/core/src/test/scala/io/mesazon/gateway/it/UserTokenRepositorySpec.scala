@@ -122,7 +122,7 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .copy(createdAt = CreatedAt(instantNowUpdated))
       }
 
-      "fail to upsert a user token when tokenIDOptOld is provided but the old token does not exist" in new TestContext {
+      "fail with RepositoryError to upsert a user token when tokenIDOptOld is provided but the old token does not exist" in new TestContext {
         inSequence(
           (() => timeProviderMock.instantNow)
             .expects()
@@ -143,7 +143,7 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           )
           .zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.DatabaseError]
+        serviceError shouldBe a[ServiceError.InternalServerError.RepositoryError]
 
         val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
@@ -281,7 +281,7 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         userTokensRowAll should have size 0
       }
 
-      "fail with DatabaseError when trying to delete a non-existing user tokening when trying to delete a non-existing user token" in new TestContext {
+      "fail with RepositoryError when trying to delete a non-existing user token" in new TestContext {
         val tokenID   = arbitrarySample[TokenID]
         val userID    = arbitrarySample[UserID]
         val tokenType = arbitrarySample[TokenType]
@@ -294,7 +294,7 @@ class UserTokenRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           )
           .zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.DatabaseError]
+        serviceError shouldBe a[ServiceError.InternalServerError.RepositoryError]
 
         val userTokensRowAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
 
