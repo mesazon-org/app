@@ -37,7 +37,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, GatewayArbitraries, TokenA
         authorizationService.auth(request).zioEither.isRight shouldBe true
       }
 
-      "fail with UnexpectedError when token is missing" in new TestContext {
+      "fail with AuthorizationTokenMissing when token is missing" in new TestContext {
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
 //          .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token))) //  Missing Authorization header
 

@@ -361,7 +361,7 @@ class UserSignUpApiSpec
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
           userID = userDetailsRow.userID,
           otpType = OtpType.EmailVerification,
-          expiresAt = ExpiresAt.assume(Instant.now.plusSeconds(10)),
+          expiresAt = ExpiresAt.assume(Instant.now.plusSeconds(10).truncatedTo(ChronoUnit.MILLIS)),
         )
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
