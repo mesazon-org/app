@@ -20,7 +20,7 @@ import zio.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-class UserSignupApiSpec
+class UserSignUpApiSpec
     extends ZWordSpecBase,
       DockerComposeBase,
       SmithyArbitraries,
@@ -113,6 +113,7 @@ class UserSignupApiSpec
           gatewayClient.signUpEmailPost[smithy.InternalServerError](signUpEmailPostRequest).zioValue
 
         signUpEmailPostResponse.code shouldBe StatusCode.Ok
+        signUpEmailPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
 
@@ -157,6 +158,7 @@ class UserSignupApiSpec
           gatewayClient.signUpEmailPost[smithy.InternalServerError](signUpEmailPostRequest).zioValue
 
         signUpEmailPostResponse1.code shouldBe StatusCode.Ok
+        signUpEmailPostResponse1.body.value.otpExpiresInSeconds shouldBe 45 // application.conf
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
 
@@ -166,6 +168,7 @@ class UserSignupApiSpec
           gatewayClient.signUpEmailPost[smithy.InternalServerError](signUpEmailPostRequest).zioValue
 
         signUpEmailPostResponse2.code shouldBe StatusCode.Ok
+        signUpEmailPostResponse2.body.value.otpExpiresInSeconds shouldBe 45 // application.conf
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
 
@@ -225,6 +228,7 @@ class UserSignupApiSpec
           gatewayClient.signUpEmailPost[smithy.InternalServerError](signUpEmailPostRequest).zioValue
 
         signUpEmailPostResponse.code shouldBe StatusCode.Ok
+        signUpEmailPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -285,6 +289,7 @@ class UserSignupApiSpec
           gatewayClient.signUpVerifyEmailPost[smithy.InternalServerError](signUpVerifyEmailPostRequest).zioValue
 
         signUpVerifyEmailPostResponse.code shouldBe StatusCode.Ok
+        signUpVerifyEmailPostResponse.body.value.accessTokenExpiresInSeconds shouldBe 15.minutes.toSeconds
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -345,7 +350,7 @@ class UserSignupApiSpec
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
-      "fail with Unauthorized when OTP is wrong" in withContext { context =>
+      "fail with BadRequest when OTP is wrong" in withContext { context =>
         import context.*
 
         val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
@@ -356,6 +361,7 @@ class UserSignupApiSpec
         val userOtpRow = arbitrarySample[UserOtpRow].copy(
           userID = userDetailsRow.userID,
           otpType = OtpType.EmailVerification,
+          expiresAt = ExpiresAt.assume(Instant.now.plusSeconds(10)),
         )
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
@@ -367,43 +373,22 @@ class UserSignupApiSpec
         )
 
         val signUpVerifyEmailPostResponse =
-          gatewayClient.signUpVerifyEmailPost[smithy.Unauthorized](signUpVerifyEmailPostRequest).zioValue
+          gatewayClient.signUpVerifyEmailPost[smithy.BadRequest](signUpVerifyEmailPostRequest).zioValue
 
-        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Unauthorized
-        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-      }
-
-      "fail with Unauthorized when otp type is in not what expected" in withContext { context =>
-        import context.*
-
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
-          onboardStage = OnboardStage.EmailVerification
-        )
-
-        val otpTypeInvalid = Random.shuffle(OtpType.values.toList diff List(OtpType.EmailVerification)).zioValue.head
-
-        val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          userID = userDetailsRow.userID,
-          otpType = otpTypeInvalid,
-        )
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
-
-        val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest].copy(
-          otpID = userOtpRow.otpID.value,
-          otp = userOtpRow.otp.value,
-        )
-
-        val signUpVerifyEmailPostResponse =
-          gatewayClient.signUpVerifyEmailPost[smithy.Unauthorized](signUpVerifyEmailPostRequest).zioValue
-
-        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Unauthorized
-        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        signUpVerifyEmailPostResponse.code shouldBe StatusCode.BadRequest
+        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.BadRequest()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
+
+        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+
+        userDetailsRowsAll should have size 1
+        userDetailsRowsAll should contain theSameElementsAs List(userDetailsRow)
+
+        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+        userOtpRowsAll should have size 1
+        userOtpRowsAll should contain theSameElementsAs List(userOtpRow)
       }
 
       "fail with Unauthorized when user is in wrong onboard stage" in withContext { context =>

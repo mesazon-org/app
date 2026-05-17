@@ -42,7 +42,7 @@ operation OnboardVerifyPhoneNumberPost {
         request: OnboardVerifyPhoneNumberPostRequest
     }
     output: OnboardVerifyPhoneNumberPostResponse
-    errors: [Unauthorized, ValidationError, InternalServerError]
+    errors: [ValidationError, BadRequest, Unauthorized, InternalServerError]
 }
 
 @http(method: "GET", uri: "/onboard/verify/phone-number", code: 200)

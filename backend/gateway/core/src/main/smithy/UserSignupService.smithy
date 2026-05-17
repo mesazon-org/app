@@ -29,5 +29,5 @@ operation SignUpVerifyEmailPost {
         request: SignUpVerifyEmailPostRequest
     }
     output: SignUpVerifyEmailPostResponse
-    errors: [ValidationError, Unauthorized, InternalServerError]
+    errors: [ValidationError, BadRequest, Unauthorized, InternalServerError]
 }
