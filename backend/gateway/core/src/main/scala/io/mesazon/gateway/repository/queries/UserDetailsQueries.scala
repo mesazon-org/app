@@ -9,7 +9,7 @@ import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.domain.*
 import zio.*
 
-class UserDetailsQueries(config: RepositoryConfig) {
+final class UserDetailsQueries(config: RepositoryConfig) {
 
   private val frSchema           = Fragment.const(config.schema)
   private val frUserDetailsTable = Fragment.const(config.userDetailsTable)

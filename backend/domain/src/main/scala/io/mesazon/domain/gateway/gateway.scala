@@ -18,6 +18,30 @@ type ActionAttemptID = ActionAttemptID.T
 object TokenID extends RefinedTypeUUID
 type TokenID = TokenID.T
 
+object OrganizationID extends RefinedTypeUUID
+type OrganizationID = OrganizationID.T
+
+object OrganizationName extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationName = OrganizationName.T
+
+object OrganizationSlug extends RefinedType[String, SlugPredicate]
+type OrganizationSlug = OrganizationSlug.T
+
+object OrganizationAddressLine1 extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationAddressLine1 = OrganizationAddressLine1.T
+
+object OrganizationAddressLine2 extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationAddressLine2 = OrganizationAddressLine2.T
+
+object OrganizationCity extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationCity = OrganizationCity.T
+
+object OrganizationPostalCode extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationPostalCode = OrganizationPostalCode.T
+
+object OrganizationCountry extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationCountry = OrganizationCountry.T
+
 object Email extends RefinedType[String, EmailPredicate]
 type Email = Email.T
 

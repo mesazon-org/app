@@ -3,6 +3,7 @@ package io.mesazon.testkit.base
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.all.Positive
 import io.mesazon.domain.*
+import io.mesazon.domain.gateway.OrganizationSlug
 import org.scalacheck.*
 
 import java.time.Instant
@@ -35,6 +36,13 @@ trait IronRefinedTypeArbitraries {
       .choose(1, Int.MaxValue)
       .map(_.refineUnsafe[Positive])
   }
+
+  given Arbitrary[String :| SlugPredicate] = Arbitrary(
+    Gen
+      .nonEmptyListOf(Gen.alphaLowerChar)
+      .map(_.take(20).mkString)
+      .map(_.refineUnsafe[SlugPredicate])
+  )
 
   given arbNonEmptyTrimmedLowerCase: Arbitrary[String :| NonEmptyTrimmedLowerCase] = Arbitrary {
     Gen
