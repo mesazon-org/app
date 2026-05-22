@@ -11,7 +11,7 @@ import PostgreSQLTestClient.PostgreSQLTestClientConfig
 
 class PingRepositorySpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBase {
 
-  override def dockerComposeFile: String = "./src/test/resources/compose.yaml"
+  override def dockerComposeFile: String = "./src/test/resources/repository.yaml"
 
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 
@@ -27,17 +27,17 @@ class PingRepositorySpec extends ZWordSpecBase, SmithyArbitraries, DockerCompose
 
   "PingRepository" when {
     "ping" should {
-      "receive successful response" in withContext { (client: PostgreSQLTestClient) =>
+      "receive successful response" in withContext { postgresClient =>
         val pingRepository = ZIO
           .service[PingRepository]
           .provide(
             PingRepository.live,
-            ZLayer.succeed(client.database),
+            postgresClient.databaseLive,
           )
           .zioValue
 
         eventually(
-          assert(pingRepository.ping().zioEither.isRight)
+          assert(pingRepository.ping.zioEither.isRight)
         )
       }
     }

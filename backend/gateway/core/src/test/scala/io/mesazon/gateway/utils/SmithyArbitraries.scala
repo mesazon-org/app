@@ -3,7 +3,7 @@ package io.mesazon.gateway.utils
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.waha
 import io.mesazon.gateway.smithy
-import io.mesazon.testkit.base.{GatewayArbitraries, IronRefinedTypeTransformer}
+import io.mesazon.testkit.base.*
 import io.scalaland.chimney.dsl.*
 import org.scalacheck.*
 
@@ -13,45 +13,6 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
     phoneNumberPrefix <- Gen.oneOf("99", "97", "96")
     phoneNumberSuffix <- Gen.choose(100000, 999999)
   } yield s"$phoneNumberPrefix$phoneNumberSuffix"
-
-  given Arbitrary[smithy.OnboardUserDetailsRequest] = Arbitrary {
-    for {
-      onboardUserDetails  <- Arbitrary.arbitrary[OnboardUserDetails]
-      phoneRegion         <- Gen.oneOf(Seq("CY"))
-      phoneNationalNumber <- genCyPhoneNationalNumber
-      onboardUserDetailsRequest = onboardUserDetails
-        .into[smithy.OnboardUserDetailsRequest]
-        .withFieldConst(_.phoneRegion, phoneRegion)
-        .withFieldConst(_.phoneNationalNumber, phoneNationalNumber)
-        .transform
-    } yield onboardUserDetailsRequest
-  }
-
-  given Arbitrary[smithy.UpdateUserDetailsRequest] = Arbitrary {
-    for {
-      updateUserDetails   <- Arbitrary.arbitrary[UpdateUserDetails]
-      phoneRegion         <- Gen.option(Gen.oneOf(Seq("CY")))
-      phoneNationalNumber <- Gen.option(genCyPhoneNationalNumber)
-      updateUserDetailsRequest = updateUserDetails
-        .into[smithy.UpdateUserDetailsRequest]
-        .withFieldConst(_.phoneRegion, phoneRegion)
-        .withFieldConst(_.phoneNationalNumber, phoneNationalNumber)
-        .transform
-    } yield updateUserDetailsRequest
-  }
-
-  given Arbitrary[smithy.UpsertUserContactRequest] = Arbitrary {
-    for {
-      upsertUserContact   <- Arbitrary.arbitrary[UpsertUserContact]
-      phoneRegion         <- Gen.oneOf(Seq("CY"))
-      phoneNationalNumber <- genCyPhoneNationalNumber
-      upsertUserContactRequest = upsertUserContact
-        .into[smithy.UpsertUserContactRequest]
-        .withFieldConst(_.phoneRegion, phoneRegion)
-        .withFieldConst(_.phoneNationalNumber, phoneNationalNumber)
-        .transform
-    } yield upsertUserContactRequest
-  }
 
   given Arbitrary[smithy.WahaMessageTextRequest] = Arbitrary {
     for {
@@ -73,10 +34,41 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
     } yield request
   }
 
-  given Arbitrary[smithy.SignUpEmailRequest] = Arbitrary {
+  given Arbitrary[smithy.SignUpEmailPostRequest] = Arbitrary {
+    Arbitrary.arbitrary[SignUpEmail].map(_.transformInto[smithy.SignUpEmailPostRequest])
+  }
+
+  given Arbitrary[smithy.SignUpVerifyEmailPostRequest] = Arbitrary {
     for {
-      email <- Arbitrary.arbitrary[Email]
-      request = smithy.SignUpEmailRequest(email = email.value)
+      verifyEmail <- Arbitrary.arbitrary[SignUpVerifyEmail]
+      request = smithy.SignUpVerifyEmailPostRequest(otpID = verifyEmail.otpID.value, otp = verifyEmail.otp.value)
     } yield request
   }
+
+  given Arbitrary[smithy.OnboardPasswordPostRequest] = Arbitrary(
+    Arbitrary.arbitrary[OnboardPassword].map(_.transformInto[smithy.OnboardPasswordPostRequest])
+  )
+
+  given Arbitrary[smithy.OnboardDetailsPostRequest] = Arbitrary(
+    Arbitrary
+      .arbitrary[OnboardDetails]
+      .map(
+        _.into[smithy.OnboardDetailsPostRequest]
+          .withFieldComputed(_.phoneNumber.phoneCountryCode, _.phoneNumber.phoneCountryCode.value)
+          .withFieldComputed(_.phoneNumber.phoneNationalNumber, _.phoneNumber.phoneNationalNumber.value)
+          .transform
+      )
+  )
+
+  given Arbitrary[smithy.OnboardVerifyPhoneNumberPostRequest] = Arbitrary(
+    Arbitrary.arbitrary[OnboardVerifyPhoneNumber].map(_.transformInto[smithy.OnboardVerifyPhoneNumberPostRequest])
+  )
+
+  given Arbitrary[smithy.ForgotPasswordResetPostRequest] = Arbitrary(
+    Arbitrary.arbitrary[ForgotPasswordReset].map(_.transformInto[smithy.ForgotPasswordResetPostRequest])
+  )
+
+  given Arbitrary[smithy.TokenRefreshPostRequest] = Arbitrary(
+    Arbitrary.arbitrary[TokenRefresh].map(_.transformInto[smithy.TokenRefreshPostRequest])
+  )
 }

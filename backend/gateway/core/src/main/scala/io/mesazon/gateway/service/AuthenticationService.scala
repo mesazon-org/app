@@ -1,42 +1,97 @@
 package io.mesazon.gateway.service
 
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.repository.UserManagementRepository
-import io.mesazon.gateway.smithy.SignUpEmailRequest
-import io.mesazon.gateway.validation.EmailValidator.EmailRaw
-import io.mesazon.gateway.validation.ServiceValidator
-import io.mesazon.gateway.{smithy, HttpErrorHandler}
+import io.mesazon.gateway.HttpErrorHandler
+import io.mesazon.gateway.config.AuthenticationConfig
+import io.mesazon.gateway.repository.{UserActionAttemptRepository, UserCredentialsRepository, UserDetailsRepository}
+import io.mesazon.gateway.state.AuthState
+import io.mesazon.gateway.validation.service.BasicCredentialsRequestServiceValidator
+import org.http4s.headers.Authorization
+import org.http4s.{BasicCredentials as Http4sBasicCredentials, *}
 import zio.*
+
+trait AuthenticationService[F[_]] {
+  def auth(request: Request[Task]): F[Unit]
+}
 
 object AuthenticationService {
 
-  private final class AuthenticationServiceImpl(
-      userManagementRepository: UserManagementRepository,
-      emailValidator: ServiceValidator[EmailRaw, Email],
-  ) extends smithy.AuthenticationService[ServiceTask] {
+  case class BasicCredentialsRequest(email: String, password: String)
 
-    /** HTTP POST /signup/email */
-    override def signUpEmail(request: SignUpEmailRequest): ServiceTask[Unit] = for {
-      _     <- ZIO.logDebug(s"Signing up user with email: ${request.email}")
-      email <- emailValidator.validate(request.email)
-      _     <- userManagementRepository.insertUserOnboardEmail(email, OnboardStage.EmailConfirmation).unit.catchSome {
-        case error: ServiceError.ConflictError.UserAlreadyExists =>
-          ZIO.logDebug(s"User with the provided email already exists. ${error.message}") *>
-            ZIO.unit
-      }
-    } yield ()
+  private final class AuthenticationServiceImpl(
+      authenticationConfig: AuthenticationConfig,
+      userDetailsRepository: UserDetailsRepository,
+      userCredentialsRepository: UserCredentialsRepository,
+      userActionAttemptRepository: UserActionAttemptRepository,
+      passwordService: PasswordService,
+      authState: AuthState,
+      basicCredentialsRequestServiceValidator: BasicCredentialsRequestServiceValidator,
+      timeProvider: TimeProvider,
+  ) extends AuthenticationService[ServiceTask] {
+
+    override def auth(request: Request[Task]): ServiceTask[Unit] =
+      for {
+        _ <- ZIO.logDebug("AuthenticationService: auth called")
+        basicCredentialsRequestOpt = request.headers
+          .get[`Authorization`]
+          .collect { case Authorization(Http4sBasicCredentials(email, password)) =>
+            BasicCredentialsRequest(email, password)
+          }
+        basicCredentialsRequest <- ZIO.getOrFailWith(ServiceError.BadRequestError.AuthenticationCredentialsMissing)(
+          basicCredentialsRequestOpt
+        )
+        basicCredentials <- basicCredentialsRequestServiceValidator.validate(basicCredentialsRequest)
+        userDetails      <- userDetailsRepository
+          .getUserDetailsByEmail(basicCredentials.email)
+          .someOrFail(
+            ServiceError.UnauthorizedError.AuthenticationEmailNotFound
+          )
+        _ <- verifyOnboardStage(
+          onboardStageUser = userDetails.onboardStage,
+          onboardStagesAllowed = OnboardStage.signInAllowedStages,
+        )
+        userActionAttemptRow <- userActionAttemptRepository
+          .getAndIncreaseUserActionAttempt(
+            userDetails.userID,
+            ActionAttemptType.SignIn,
+          )
+        instantNow <- timeProvider.instantNow
+        _          <-
+          if (
+            userActionAttemptRow.attempts.value > authenticationConfig.signInAttemptsMax &&
+            userActionAttemptRow.updatedAt.value
+              .plusSeconds(authenticationConfig.signInAttemptsBlockDuration.toSeconds)
+              .isAfter(instantNow)
+          )
+            ZIO.fail(
+              ServiceError.UnauthorizedError.AuthenticationTooManySignInAttempts(
+                userDetails.userID,
+                ActionAttemptType.SignIn,
+                authenticationConfig.signInAttemptsBlockDuration.toSeconds,
+              )
+            )
+          else ZIO.unit
+        userCredentials <- userCredentialsRepository
+          .getUserCredentials(userDetails.userID)
+          .someOrFail(
+            ServiceError.InternalServerError.AuthenticationError(
+              s"User credentials not found for userID: [${userDetails.userID}], could only occur if user details exist but credentials do not"
+            )
+          )
+        isPasswordVerified <- passwordService.verifyPassword(basicCredentials.password, userCredentials.passwordHash)
+        _                  <-
+          if (isPasswordVerified)
+            userActionAttemptRepository.deleteUserActionAttempt(userDetails.userID, ActionAttemptType.SignIn)
+          else ZIO.fail(ServiceError.UnauthorizedError.AuthenticationInvalidCredentials)
+        _ <- authState.set(AuthedUser(userDetails.userID))
+      } yield ()
   }
 
-  private def observed(
-      service: smithy.AuthenticationService[ServiceTask]
-  ): smithy.AuthenticationService[Task] =
-    new smithy.AuthenticationService[Task] {
+  def observed(service: AuthenticationService[ServiceTask]): AuthenticationService[Task] =
+    (request: Request[Task]) => HttpErrorHandler.errorResponseHandler(service.auth(request))
 
-      /** HTTP POST /signup/email */
-      override def signUpEmail(request: SignUpEmailRequest): Task[Unit] =
-        HttpErrorHandler
-          .errorResponseHandler(service.signUpEmail(request))
-    }
+  val local = ZLayer.derive[AuthenticationServiceImpl].project[AuthenticationService[ServiceTask]](identity)
 
-  val live = ZLayer.derive[AuthenticationServiceImpl] >>> ZLayer.fromFunction(observed)
+  val live = local >>> ZLayer.fromFunction(observed)
 }

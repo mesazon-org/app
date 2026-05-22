@@ -1,16 +1,20 @@
 package io.mesazon.generator
 
+import com.github.f4b6a3.uuid.UuidCreator
+import io.mesazon.clock.TimeProvider
 import zio.*
 
+import java.util.UUID
+
 trait IDGenerator {
-  def generate: UIO[String]
+  def generateID: UIO[UUID]
 }
 
 object IDGenerator {
 
-  private object UUIDGenerator extends IDGenerator {
-    override def generate: UIO[String] = Random.nextUUID.map(_.toString)
+  private final class IDGeneratorUUIDv7(timeProvider: TimeProvider) extends IDGenerator {
+    override def generateID: UIO[UUID] = timeProvider.instantNow.map(UuidCreator.getTimeOrderedEpoch)
   }
 
-  val uuidGeneratorLive: ULayer[IDGenerator] = ZLayer.succeed(UUIDGenerator)
+  val liveUUIDv7: URLayer[TimeProvider, IDGenerator] = ZLayer.fromFunction(new IDGeneratorUUIDv7(_))
 }

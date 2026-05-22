@@ -1,24 +1,24 @@
 package io.mesazon.gateway
 
-import com.google.i18n.phonenumbers.*
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.auth.*
 import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.middleware.ServerMiddleware
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.service.*
+import io.mesazon.gateway.state.*
 import io.mesazon.gateway.stream.*
+import io.mesazon.gateway.utils.*
+import io.mesazon.gateway.validation.domain.*
+import io.mesazon.gateway.validation.service.*
 import io.mesazon.generator.IDGenerator
 import io.mesazon.waha.*
 import org.slf4j.bridge.SLF4JBridgeHandler
 import zio.*
 import zio.config.typesafe.TypesafeConfigProvider
 import zio.logging.backend.SLF4J
-
-import validation.*
 
 object Main extends ZIOAppDefault {
 
@@ -39,31 +39,43 @@ object Main extends ZIOAppDefault {
 
       // Utils
       TimeProvider.liveSystemUTC,
-      IDGenerator.uuidGeneratorLive,
-      ZLayer.succeed(PhoneNumberUtil.getInstance()),
+      IDGenerator.liveUUIDv7,
+      PhoneNumberUtil.live,
+      OtpGenerator.live,
 
       // Services
-      HealthCheckService.live,
-      UserManagementService.live,
-      UserContactsService.live,
-      WahaService.live,
       AuthenticationService.live,
+      AuthorizationService.live,
+      HealthCheckService.live,
+      WahaService.live,
+      UserSignUpService.live,
+      UserSignInService.live,
+      UserTokenService.live,
+      UserOnboardService.live,
+      UserForgotPasswordService.live,
+      JwtService.live,
+      PasswordService.live,
 
       // Repository
       PostgresTransactor.live,
       PingRepository.live,
-      UserManagementRepository.live,
-      UserContactRepository.live,
       WahaRepository.live,
+      UserOtpRepository.live,
+      UserTokenRepository.live,
+      UserDetailsRepository.live,
+      UserCredentialsRepository.live,
+      UserActionAttemptRepository.live,
 
       // Queries
       WahaQueries.live,
-      UserManagementQueries.live,
-      UserContactQueries.live,
+      UserOtpQueries.live,
+      UserTokenQueries.live,
+      UserDetailsQueries.live,
+      UserCredentialsQueries.live,
+      UserActionAttemptQueries.live,
 
-      // Auth
-      AuthorizationService.live,
-      AuthorizationState.live,
+      // State
+      AuthState.live,
 
       // Middleware
       ServerMiddleware.live,
@@ -77,21 +89,39 @@ object Main extends ZIOAppDefault {
       RepositoryConfig.live,
       HttpClientConfig.live,
       OpenAIClientConfig.live,
+      EmailConfig.live,
+      UserSignUpConfig.live,
+      JwtConfig.live,
+      PasswordConfig.live,
+      UserOnboardConfig.live,
+      TwilioClientConfig.live,
+      AuthenticationConfig.live,
+      UserForgotPasswordConfig.live,
 
-      // Validators
-      EmailValidator.emailValidatorLive,
-      PhoneNumberValidator.phoneNumberRegionValidatorLive,
-      PhoneNumberValidator.wahaPhoneNumberValidatorLive,
-      UserManagementValidators.onboardUserDetailsRequestValidatorLive,
-      UserManagementValidators.updateUserDetailsRequestValidatorLive,
-      UserContactsValidators.upsertUserContactsValidatorLive,
-      WahaValidator.wahaMessageRequestValidatorLive,
+      // Domain validators
+      EmailDomainValidator.live,
+      PhoneNumberDomainValidator.live,
+      WahaPhoneNumberDomainValidator.live,
+
+      // Service validators
+      SignUpEmailPostRequestServiceValidator.live,
+      BasicCredentialsRequestServiceValidator.live,
+      SignUpVerifyEmailPostRequestServiceValidator.live,
+      OnboardPasswordPostRequestServiceValidator.live,
+      OnboardDetailsPostRequestServiceValidator.live,
+      OnboardVerifyPhoneNumberPostRequestServiceValidator.live,
+      WahaServiceValidator.live,
+      ForgotPasswordPostRequestServiceValidator.live,
+      ForgotPasswordVerifyOTPPostRequestServiceValidator.live,
+      ForgotPasswordResetPostRequestServiceValidator.live,
+      TokenRefreshPostRequestServiceValidator.live,
 
       // Clients
       SttpBackend.live,
       WahaClient.live,
-      OpenAIClient.openAILive,
       OpenAIClient.live,
+      EmailClient.live,
+      TwilioClient.live,
 
       // Streams
       ReplyingToMessagesCronJobStream.live,

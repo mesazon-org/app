@@ -2,34 +2,41 @@ import sbt.*
 
 object Dependencies {
 
-  lazy val http4sV              = "0.23.33"
-  lazy val smithy4sV            = "0.18.50"
-  lazy val zioV                 = "2.1.24"
+  lazy val http4sV              = "0.23.34"
+  lazy val smithy4sV            = "0.19.4"
+  lazy val zioV                 = "2.1.26"
   lazy val zioConfigV           = "4.0.7"
   lazy val zioInteropCatsV      = "23.1.0.13"
   lazy val catsV                = "2.13.0"
   lazy val zioLoggingV          = "2.5.3"
   lazy val logbackV             = "1.5.32"
-  lazy val julToSlf4jV          = "2.0.17"
+  lazy val julToSlf4jV          = "2.0.18"
+  lazy val jclToSlf4jV          = "2.0.18"
   lazy val pureconfigV          = "0.17.10"
   lazy val scalaTestV           = "3.2.20"
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
   lazy val scalacheckV          = "1.19.0"
   lazy val testcontainersScalaV = "0.44.1"
-  lazy val testcontainersV      = "2.0.4"
-  lazy val ironV                = "3.3.0"
-  lazy val chimneyV             = "1.9.0"
+  lazy val testcontainersV      = "2.0.5"
+  lazy val ironV                = "3.3.1"
+  lazy val chimneyV             = "1.10.0"
   lazy val doobieV              = "1.0.0-RC11"
   lazy val postgresqlV          = "42.7.3"
   lazy val hikariCPV            = "7.0.2"
   lazy val doobieTranzactioV    = "5.7.0"
-  lazy val libphonenumberV      = "9.0.27"
+  lazy val libphonenumberV      = "9.0.30"
   lazy val circeV               = "0.14.15"
-  lazy val sttpV                = "4.0.21"
-  lazy val sttpIronV            = "1.13.14"
-  lazy val jsoniterV            = "2.38.9"
-  lazy val sttpAIV              = "0.4.8"
+  lazy val sttpV                = "4.0.23"
+  lazy val sttpIronV            = "1.13.19"
+  lazy val jsoniterV            = "2.38.12"
+  lazy val sttpAIV              = "0.4.12"
   lazy val jmailV               = "2.1.0"
+  lazy val simplejavamailV      = "8.12.6"
+  lazy val jjwtV                = "0.13.0"
+  lazy val springSecurityV      = "7.0.5"
+  lazy val bouncyCastleV        = "1.84"
+  lazy val uuidCreatorV         = "6.1.1"
+  lazy val scalamockV           = "7.5.5"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -71,14 +78,16 @@ object Dependencies {
   // Logging
   lazy val logback    = "ch.qos.logback" % "logback-classic" % logbackV
   lazy val julToSlf4j = "org.slf4j"      % "jul-to-slf4j"    % julToSlf4jV
+  lazy val jclToSlf4j = "org.slf4j"      % "jcl-over-slf4j"  % jclToSlf4jV
 
   // Test
-  lazy val scalaTest          = "org.scalatest"     %% "scalatest"       % scalaTestV
-  lazy val scalaTestPlusCheck = "org.scalatestplus" %% "scalacheck-1-15" % scalaTestPlusCheckV
-  lazy val scalacheck         = "org.scalacheck"    %% "scalacheck"      % scalacheckV
-  lazy val testcontainers     = "org.testcontainers" % "testcontainers"  % testcontainersV
-  lazy val testcontainersScalaPostgresql = "com.dimafeng" %% "testcontainers-scala-postgresql" % testcontainersScalaV
-  lazy val testcontainersScalaScalatest  = "com.dimafeng" %% "testcontainers-scala-scalatest"  % testcontainersScalaV
+  lazy val scalaTest                    = "org.scalatest"     %% "scalatest"                      % scalaTestV
+  lazy val scalaTestPlusCheck           = "org.scalatestplus" %% "scalacheck-1-15"                % scalaTestPlusCheckV
+  lazy val scalacheck                   = "org.scalacheck"    %% "scalacheck"                     % scalacheckV
+  lazy val testcontainers               = "org.testcontainers" % "testcontainers"                 % testcontainersV
+  lazy val testcontainersScalaScalatest = "com.dimafeng"      %% "testcontainers-scala-scalatest" % testcontainersScalaV
+  lazy val scalamock                    = "org.scalamock"     %% "scalamock"                      % scalamockV
+  lazy val scalamockZIO                 = "org.scalamock"     %% "scalamock-zio"                  % scalamockV
 
   // Chimney
   lazy val chimney = "io.scalaland" %% "chimney" % chimneyV
@@ -112,4 +121,19 @@ object Dependencies {
 
   // JMail
   val jmail = "com.sanctionco.jmail" % "jmail" % jmailV
+
+  // Simple Java Mail
+  val simplejavamail = "org.simplejavamail" % "simple-java-mail" % simplejavamailV
+
+  // JJWT
+  lazy val jjwtApi     = "io.jsonwebtoken" % "jjwt-api"     % jjwtV
+  lazy val jjwtImpl    = "io.jsonwebtoken" % "jjwt-impl"    % jjwtV % "runtime"
+  lazy val jjwtJackson = "io.jsonwebtoken" % "jjwt-jackson" % jjwtV % "runtime"
+
+  // Spring Security Crypto
+  lazy val springSecurityCrypto = "org.springframework.security" % "spring-security-crypto" % springSecurityV
+  lazy val bouncyCastle         = "org.bouncycastle"             % "bcprov-jdk18on"         % bouncyCastleV
+
+  // UUID Creator
+  lazy val uuidCreator = "com.github.f4b6a3" % "uuid-creator" % uuidCreatorV
 }

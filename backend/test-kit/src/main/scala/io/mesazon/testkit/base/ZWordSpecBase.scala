@@ -1,3 +1,5 @@
 package io.mesazon.testkit.base
 
-open class ZWordSpecBase extends WordSpecBase with ZIOTestOps
+import org.scalamock.stubs.ZIOStubs
+
+open class ZWordSpecBase extends WordSpecBase, ZIOStubs, ZIOTestOps

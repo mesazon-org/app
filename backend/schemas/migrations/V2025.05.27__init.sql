@@ -1,59 +1,97 @@
-create table user_onboard
+create table user_credentials
 (
-    user_id       text        not null,
-    email         text        not null,
-    full_name     text,
-    phone_number  text,
-    password_hash text,
-    stage         text        not null,
+    user_id       uuid        not null,
+    password_hash text        not null,
     created_at    timestamptz not null,
     updated_at    timestamptz not null,
-    primary key (user_id),
-    unique (email)
+    primary key (user_id)
 );
-
-create index idx_user_onboard_email on user_onboard (email);
 
 create table user_details
 (
-    user_id        text        not null,
-    email          text        not null,
-    first_name     text        not null,
-    last_name      text        not null,
-    phone_number   text        not null,
-    address_line_1 text        not null,
-    address_line_2 text,
-    city           text        not null,
-    postal_code    text        not null,
-    company        text        not null,
-    created_at     timestamptz not null,
-    updated_at     timestamptz not null,
+    user_id               uuid        not null,
+    email                 text        not null,
+    full_name             text,
+    phone_region          text,
+    phone_country_code    text,
+    phone_national_number text,
+    phone_number_e164     text,
+    onboard_stage         text        not null,
+    created_at            timestamptz not null,
+    updated_at            timestamptz not null,
     primary key (user_id),
     unique (email)
 );
 
-create table user_contact
+create table user_action_attempt
 (
-    user_contact_id text        not null,
-    user_id         text        not null,
-    display_name    text        not null,
-    first_name      text        not null,
-    phone_number    text        not null,
-    last_name       text,
-    company         text,
-    email           text,
-    address_line_1  text,
-    address_line_2  text,
-    city            text,
-    postal_code     text,
-    created_at      timestamptz not null,
-    updated_at      timestamptz not null,
-    primary key (user_contact_id),
-    unique (phone_number, user_id),
-    constraint user_details_fk foreign key (user_id) references user_details (user_id)
+    action_attempt_id   uuid        not null,
+    user_id             uuid        not null,
+    action_attempt_type text        not null,
+    attempts            int         not null,
+    created_at          timestamptz not null,
+    updated_at          timestamptz not null,
+    primary key (action_attempt_id),
+    unique (user_id, action_attempt_type)
 );
 
-create index idx_user_contact_user_id on user_contact (user_id);
+create table user_otp
+(
+    otp_id     uuid        not null,
+    user_id    uuid        not null,
+    otp        text        not null,
+    otp_type   text        not null,
+    created_at timestamptz not null,
+    updated_at timestamptz not null,
+    expires_at timestamptz not null,
+    primary key (otp_id),
+    unique (user_id, otp_type)
+);
+
+create table user_token
+(
+    token_id   uuid        not null,
+    user_id    uuid        not null,
+    token_type text        not null,
+    created_at timestamptz not null,
+    expires_at timestamptz not null,
+    primary key (token_id)
+);
+
+create index idx_user_token_user_id on user_token using hash (user_id);
+
+
+create table organization_details
+(
+    organization_id       uuid        not null,
+    name                  text        not null,
+    slug                  text        not null,
+    phone_region          text        not null,
+    phone_country_code    text        not null,
+    phone_national_number text        not null,
+    phone_number_e164     text        not null,
+    email                 text        not null,
+    organization_stage    text        not null,
+    address_line_1        text        not null,
+    address_line_2        text,
+    city                  text        not null,
+    postal_code           text        not null,
+    country               text        not null,
+    created_at            timestamptz not null,
+    updated_at            timestamptz not null,
+    primary key (organization_id),
+    unique (slug)
+);
+
+create table organization_user
+(
+    organization_id uuid        not null,
+    user_id         uuid        not null,
+    user_role       text        not null,
+    created_at      timestamptz not null,
+    updated_at      timestamptz not null,
+    primary key (organization_id, user_id)
+);
 
 create table waha_user
 (

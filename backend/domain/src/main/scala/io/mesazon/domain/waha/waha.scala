@@ -24,7 +24,7 @@ object FileTypeURL extends RefinedType[String, NonEmptyTrimmed]
 type FileTypeData = FileTypeData.T
 object FileTypeData extends RefinedType[String, NonEmptyTrimmed]
 
-type WahaPhone = WahaPhone.T
+type WahaPhoneNumber = WahaPhone.T
 object WahaPhone extends RefinedType[String, NonEmptyTrimmedLowerCase] {
   def fromE164(phoneNumber: String): T =
     assume(phoneNumber.drop(1)) // drop the '+' sign

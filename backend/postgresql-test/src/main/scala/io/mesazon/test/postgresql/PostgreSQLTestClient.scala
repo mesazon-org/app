@@ -1,11 +1,11 @@
 package io.mesazon.test.postgresql
 
 import com.dimafeng.testcontainers.*
-import com.zaxxer.hikari.*
 import doobie.*
 import doobie.implicits.*
 import io.github.gaelrenoux.tranzactio.doobie.{tzio, Database, DbContext, TranzactIO}
 import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
+import org.postgresql.ds.PGSimpleDataSource
 import zio.*
 
 import PostgreSQLTestClient.PostgreSQLTestClientConfig
@@ -14,6 +14,8 @@ case class PostgreSQLTestClient(
     config: PostgreSQLTestClientConfig,
     database: DatabaseOps.ServiceOps[Transactor[Task]],
 ) {
+
+  val databaseLive = ZLayer.succeed(database)
 
   private def checkIfTableExistsQuery(schema: String, table: String): TranzactIO[Boolean] =
     tzio {
@@ -49,7 +51,6 @@ object PostgreSQLTestClient {
   private lazy val defaultDatabase = "local_db"
   private lazy val defaultUsername = "local_test_user"
   private lazy val defaultPassword = "local_test_password"
-  private lazy val maxPoolSize     = 3
 
   lazy val ServiceName     = "postgres"
   lazy val ServicePort     = 5432
@@ -57,7 +58,7 @@ object PostgreSQLTestClient {
 
   case class PostgreSQLTestClientConfig(
       host: String = "localhost",
-      port: Int = 5432,
+      port: Int = ServicePort,
       database: String = defaultDatabase,
       username: String = defaultUsername,
       password: String = defaultPassword,
@@ -139,14 +140,12 @@ object PostgreSQLTestClient {
   private val datasourceLive = ZLayer {
     for {
       config     <- ZIO.service[PostgreSQLTestClientConfig]
-      datasource <- ZIO.attemptBlocking {
-        val hikariDataSource = new HikariDataSource()
-        hikariDataSource.setDriverClassName(config.driver)
-        hikariDataSource.setJdbcUrl(config.url)
-        hikariDataSource.setUsername(config.username)
-        hikariDataSource.setPassword(config.password)
-        hikariDataSource.setMaximumPoolSize(maxPoolSize)
-        hikariDataSource
+      datasource <- ZIO.attempt {
+        val pgDataSource = new PGSimpleDataSource()
+        pgDataSource.setUrl(config.url)
+        pgDataSource.setUser(config.username)
+        pgDataSource.setPassword(config.password)
+        pgDataSource
       }
     } yield datasource
   }

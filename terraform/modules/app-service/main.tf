@@ -22,9 +22,9 @@ resource "digitalocean_app" "app_service" {
       name               = local.service_name
       instance_count     = var.replicas
       instance_size_slug = var.app_size
-      http_port          = 8080
+      http_port          = var.service_port
 
-      internal_ports = [8081]
+      internal_ports = var.internal_ports
 
       image {
         registry_type = var.registry_type
@@ -34,7 +34,7 @@ resource "digitalocean_app" "app_service" {
 
       health_check {
         http_path             = "/readiness"
-        port                  = 8081
+        port                  = var.readiness_port
         initial_delay_seconds = 5
         period_seconds        = 10
         timeout_seconds       = 5

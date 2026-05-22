@@ -20,12 +20,6 @@ object ServiceError {
       override val underlying: Option[Throwable] = None,
   ) extends ServiceError("UnauthorizedError", message, underlying)
 
-  // 409
-  sealed abstract class ConflictError(
-      override val message: String,
-      override val underlying: Option[Throwable] = None,
-  ) extends ServiceError("ConflictError", message, underlying)
-
   // 500
   sealed abstract class InternalServerError(
       override val message: String,
@@ -46,26 +40,63 @@ object ServiceError {
         InvalidFieldError(fieldName, errorMessage, Seq(invalidValue))
     }
 
-    case class FormValidationError(invalidFields: Seq[InvalidFieldError])
+    case object AuthenticationCredentialsMissing
+        extends BadRequestError("authentication credentials are missing from request")
+
+    case class ValidationError(invalidFields: Seq[InvalidFieldError])
         extends BadRequestError(s"request validation error ${invalidFields.mkString("[", ",", "]")}")
+
+    case class OtpVerifyError(error: String) extends BadRequestError(error)
   }
 
   object UnauthorizedError {
-    case object TokenMissing extends UnauthorizedError("token is missing from request")
+    case object AuthorizationTokenMissing extends UnauthorizedError("token is missing from request")
 
-    case class TokenFailedAuthorization(throwable: Throwable)
-        extends UnauthorizedError("token failed authorization", Some(throwable))
-  }
+    case class TokenFailedAuthorization(error: String, throwable: Option[Throwable] = None)
+        extends UnauthorizedError(error, throwable)
 
-  object ConflictError {
-    case class UserAlreadyExists(userID: UserID, email: Email)
-        extends ConflictError(s"user with id [$userID] and email [$email] already exists")
+    case object AuthenticationEmailNotFound extends UnauthorizedError("Authentication email not found")
+
+    case object AuthenticationInvalidCredentials extends UnauthorizedError("invalid credentials")
+
+    case class FailedToVerifyJwt(error: String, throwable: Option[Throwable] = None)
+        extends UnauthorizedError(error, throwable)
+
+    case class OtpExpiredError(error: String) extends UnauthorizedError(error)
+
+    case class FailedOnboardStage(
+        onboardStageUser: OnboardStage,
+        onboardStagesAllowed: List[OnboardStage],
+    ) extends UnauthorizedError(
+          s"Failed onboard stage user [$onboardStageUser], allowed: [$onboardStagesAllowed]",
+          None,
+        )
+
+    case class AuthenticationTooManySignInAttempts(
+        userID: UserID,
+        actionAttemptType: ActionAttemptType,
+        blockDurationSeconds: Long,
+    ) extends UnauthorizedError(
+          s"too many requests for user [$userID] and action attempt type [$actionAttemptType], block for [$blockDurationSeconds] seconds"
+        )
   }
 
   object InternalServerError {
-    case class UserNotFoundError(error: String) extends InternalServerError(error)
+    case class RepositoryError(error: String, throwable: Throwable) extends InternalServerError(error, Some(throwable))
 
-    case class UnexpectedError(error: String, throwable: Option[Throwable])
+    case class PasswordServiceError(error: String, throwable: Option[Throwable] = None)
+        extends InternalServerError(error, throwable)
+
+    case class JwtServiceError(error: String, throwable: Option[Throwable] = None)
+        extends InternalServerError(error, throwable)
+
+    case class AuthenticationError(error: String, throwable: Option[Throwable] = None)
+        extends InternalServerError(error, throwable)
+
+    case class AuthorizationError(error: String, throwable: Option[Throwable] = None)
+        extends InternalServerError(error, throwable)
+
+    case class UnexpectedError(error: String, throwable: Option[Throwable] = None)
         extends InternalServerError(error, throwable)
   }
 
