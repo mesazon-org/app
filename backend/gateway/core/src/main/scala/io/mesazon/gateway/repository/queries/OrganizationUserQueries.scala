@@ -13,8 +13,8 @@ final class OrganizationUserQueries(
     config: RepositoryConfig
 ) {
 
-  private val frSchema                   = Fragment.const(config.schema)
-  private val frOrganizationDetailsTable = Fragment.const(config.organizationUserTable)
+  private val frSchema                = Fragment.const(config.schema)
+  private val frOrganizationUserTable = Fragment.const(config.organizationUserTable)
 
   val organizationUserFields =
     fr"""
@@ -28,7 +28,7 @@ final class OrganizationUserQueries(
   def insert(organizationUserRow: OrganizationUserRow): TranzactIO[OrganizationUserRow] =
     tzio {
       sql"""
-           |INSERT INTO $frSchema.$frOrganizationDetailsTable ($organizationUserFields)
+           |INSERT INTO $frSchema.$frOrganizationUserTable ($organizationUserFields)
            |VALUES ($organizationUserRow)
            |RETURNING $organizationUserFields
            |""".stripMargin.query[OrganizationUserRow].unique
@@ -39,7 +39,7 @@ final class OrganizationUserQueries(
     tzio {
       sql"""
            |SELECT $organizationUserFields
-           |FROM $frSchema.$frOrganizationDetailsTable
+           |FROM $frSchema.$frOrganizationUserTable
            |""".stripMargin.query[OrganizationUserRow].to[List]
     }
 }
