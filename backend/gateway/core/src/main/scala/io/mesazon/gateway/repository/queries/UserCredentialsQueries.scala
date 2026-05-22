@@ -9,7 +9,7 @@ import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.domain.*
 import zio.*
 
-class UserCredentialsQueries(
+final class UserCredentialsQueries(
     config: RepositoryConfig
 ) {
 

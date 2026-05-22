@@ -7,6 +7,8 @@ case class RepositoryConfig(
     userDetailsTable: String = "",
     userOtpTable: String = "",
     userTokenTable: String = "",
+    organizationDetailsTable: String = "",
+    organizationUserTable: String = "",
     wahaUserTable: String = "",
     wahaUserActivityTable: String = "",
     wahaUserMessageTable: String = "",

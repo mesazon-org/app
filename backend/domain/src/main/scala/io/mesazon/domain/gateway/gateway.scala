@@ -60,14 +60,44 @@ type UpdatedAt = UpdatedAt.T
 object ExpiresAt extends RefinedType[Instant, Pure]
 type ExpiresAt = ExpiresAt.T
 
-object RefreshToken extends RefinedType[String, NonEmptyTrimmed]
+object RefreshToken extends RefinedType[String, TokenPredicate]
 type RefreshToken = RefreshToken.T
 
-object ResetPasswordToken extends RefinedType[String, NonEmptyTrimmed]
+object ResetPasswordToken extends RefinedType[String, TokenPredicate]
 type ResetPasswordToken = ResetPasswordToken.T
 
-object AccessToken extends RefinedType[String, NonEmptyTrimmed]
+object AccessToken extends RefinedType[String, TokenPredicate]
 type AccessToken = AccessToken.T
 
 object Attempts extends RefinedType[Int, Positive]
 type Attempts = Attempts.T
+
+object OrganizationID extends RefinedTypeUUID
+type OrganizationID = OrganizationID.T
+
+object OrganizationName extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationName = OrganizationName.T
+
+object OrganizationSlug extends RefinedType[String, NonEmptyTrimmedLowerCase]
+type OrganizationSlug = OrganizationSlug.T
+
+object OrganizationEmail extends RefinedType[String, EmailPredicate]
+type OrganizationEmail = OrganizationEmail.T
+
+object OrganizationPhoneNumber extends RefinedType[PhoneNumber, Pure]
+type OrganizationPhoneNumber = OrganizationPhoneNumber.T
+
+object OrganizationAddressLine1 extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationAddressLine1 = OrganizationAddressLine1.T
+
+object OrganizationAddressLine2 extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationAddressLine2 = OrganizationAddressLine2.T
+
+object OrganizationCity extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationCity = OrganizationCity.T
+
+object OrganizationPostalCode extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationPostalCode = OrganizationPostalCode.T
+
+object OrganizationCountry extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationCountry = OrganizationCountry.T
