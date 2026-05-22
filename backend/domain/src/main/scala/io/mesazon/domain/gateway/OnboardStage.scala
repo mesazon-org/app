@@ -10,6 +10,10 @@ enum OnboardStage {
 }
 
 object OnboardStage {
+  val completedStages = List(
+    OnboardStage.PhoneVerified
+  )
+
   val signInAllowedStages = List(
     OnboardStage.PasswordProvided,
     OnboardStage.PhoneVerification,

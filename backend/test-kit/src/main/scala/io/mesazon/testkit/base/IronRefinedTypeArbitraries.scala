@@ -19,7 +19,9 @@ trait IronRefinedTypeArbitraries {
 
   given arbNonEmpty: Arbitrary[String :| NonEmpty] = Arbitrary {
     Gen
-      .nonEmptyStringOf(Gen.alphaNumChar)
+      .choose(1, 255)
+      .flatMap(Gen.listOfN(_, Gen.alphaNumChar))
+      .map(_.mkString)
       .map(_.refineUnsafe[NonEmpty])
   }
 
@@ -38,21 +40,30 @@ trait IronRefinedTypeArbitraries {
 
   given arbNonEmptyTrimmedLowerCase: Arbitrary[String :| NonEmptyTrimmedLowerCase] = Arbitrary {
     Gen
-      .nonEmptyStringOf(Gen.alphaNumChar)
-      .map(_.trim.toLowerCase)
+      .choose(1, 255)
+      .flatMap(Gen.listOfN(_, Gen.alphaNumChar))
+      .map(_.mkString.trim.toLowerCase)
       .map(_.refineUnsafe[NonEmptyTrimmedLowerCase])
   }
 
   given arbNonEmptyTrimmed: Arbitrary[String :| NonEmptyTrimmed] = Arbitrary {
     Gen
+      .choose(1, 255)
+      .flatMap(Gen.listOfN(_, Gen.alphaNumChar))
+      .map(_.mkString.trim)
+      .map(_.refineUnsafe[NonEmptyTrimmed])
+  }
+
+  given arbTokenPredicate: Arbitrary[String :| TokenPredicate] = Arbitrary {
+    Gen
       .nonEmptyStringOf(Gen.alphaNumChar)
       .map(_.trim)
-      .map(_.refineUnsafe[NonEmptyTrimmed])
+      .map(_.refineUnsafe[TokenPredicate])
   }
 
   given arbEmailPredicate: Arbitrary[String :| EmailPredicate] = Arbitrary {
     Gen
-      .choose(5, 20)
+      .choose(3, 20)
       .flatMap(Gen.listOfN(_, Gen.alphaNumChar))
       .map(_.mkString.trim.toLowerCase)
       .map(_ + "@example.com")
@@ -98,6 +109,9 @@ trait IronRefinedTypeArbitraries {
       .map(_ + "@s.whatsapp.net")
       .map(_.refineUnsafe[WhatsappIDPredicate])
   }
+
+  given [Internal](using arb: Arbitrary[Internal]): Arbitrary[Internal :| Pure] =
+    arb.asInstanceOf[Arbitrary[Internal :| Pure]]
 
   given [WrappedType](using
       mirror: RefinedType.Mirror[WrappedType],

@@ -16,3 +16,6 @@ structure PhoneNumberRequest {
     @required
     phoneCountryCode: String
 }
+
+@trait(selector: "service")
+structure completedOnboardStage {}
