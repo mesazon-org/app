@@ -8,7 +8,8 @@ use alloy#simpleRestJson
 /// **Required Onboard Stage:** **COMPLETED**
 ///
 /// All endpoints in this service require the user to have finished
-/// the onboarding flow (Phone & Email Verified).@simpleRestJson
+/// the onboarding flow (Phone & Email Verified).
+@simpleRestJson
 @completedOnboardStage
 @httpBearerAuth
 service OrganizationManagementService {
