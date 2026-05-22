@@ -373,7 +373,7 @@ class UserForgotPasswordApiSpec
       "successfully send forgot password with non existing user for that email" in withContext { context =>
         import context.*
 
-        val email = arbitrarySample[Email]
+        val email = arbitrarySample[UserEmail]
 
         val forgotPasswordPostResponse =
           gatewayClient.forgotPasswordPost[smithy.InternalServerError](email).zioValue
@@ -406,7 +406,7 @@ class UserForgotPasswordApiSpec
         import context.*
 
         val forgotPasswordPostResponse =
-          gatewayClient.forgotPasswordPost[smithy.ValidationError](Email.assume("invalid-email")).zioValue
+          gatewayClient.forgotPasswordPost[smithy.ValidationError](UserEmail.assume("invalid-email")).zioValue
 
         forgotPasswordPostResponse.code shouldBe StatusCode.BadRequest
         forgotPasswordPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("email"))

@@ -27,7 +27,7 @@ class EmailDomainValidatorSpec extends ZWordSpecBase {
           .zioValue
 
         ZIO.foreach(validEmails)(emailDomainValidator.validate).zioValue.map(_.toEither.value) shouldBe
-          validEmails.map(e => Email.assume(e.trim.toLowerCase))
+          validEmails.map(e => UserEmail.assume(e.trim.toLowerCase))
       }
 
       "fail to validate invalid email addresses" in {

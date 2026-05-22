@@ -21,7 +21,7 @@ final class OnboardDetailsPostRequestServiceValidator(phoneNumberValidator: Phon
         .map(phoneNumberValidated =>
           (
             validateRequiredField("fullName", onboardDetailsPostRequest.fullName, FullName.either),
-            phoneNumberValidated,
+            phoneNumberValidated.map(UserPhoneNumber.apply),
           ).mapN(OnboardDetails.apply)
         )
   }

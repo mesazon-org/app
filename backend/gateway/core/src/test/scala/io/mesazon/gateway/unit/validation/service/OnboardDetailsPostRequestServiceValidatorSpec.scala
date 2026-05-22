@@ -34,11 +34,13 @@ class OnboardDetailsPostRequestServiceValidatorSpec extends ZWordSpecBase, Smith
 
       onboardDetailsServiceValidator.validate(onboardDetailsPostRequest).zioValue shouldBe OnboardDetails(
         fullName = FullName.assume(onboardDetailsPostRequest.fullName),
-        phoneNumber = PhoneNumber(
-          phoneRegion = PhoneRegion.assume("CY"),
-          phoneCountryCode = PhoneCountryCode.assume("+357"),
-          phoneNationalNumber = PhoneNationalNumber.assume("99135215"),
-          phoneNumberE164 = PhoneNumberE164.assume("+35799135215"),
+        phoneNumber = UserPhoneNumber(
+          PhoneNumber(
+            phoneRegion = PhoneRegion.assume("CY"),
+            phoneCountryCode = PhoneCountryCode.assume("+357"),
+            phoneNationalNumber = PhoneNationalNumber.assume("99135215"),
+            phoneNumberE164 = PhoneNumberE164.assume("+35799135215"),
+          )
         ),
       )
     }
@@ -67,7 +69,8 @@ class OnboardDetailsPostRequestServiceValidatorSpec extends ZWordSpecBase, Smith
           invalidFields = List(
             InvalidFieldError(
               fieldName = "fullName",
-              errorMessage = "Should not have leading or trailing whitespaces & Should have a minimum length of 1",
+              errorMessage =
+                "Should not have leading or trailing whitespaces & Should have a minimum length of 1 & Should have a maximum length of 255",
               invalidValues = List(""),
             ),
             InvalidFieldError(

@@ -159,7 +159,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .send(sttpBackend)
 
   def signInPost[E: JsonValueCodec](
-      email: Email,
+      email: UserEmail,
       password: Password,
       addBasicAuth: Boolean = true,
   ): Task[Response[Either[E, smithy.SignInPostResponse]]] =
@@ -170,7 +170,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .send(sttpBackend)
 
   def forgotPasswordPost[E: JsonValueCodec](
-      email: Email
+      email: UserEmail
   ): Task[Response[Either[E, smithy.ForgotPasswordPostResponse]]] =
     basicRequest
       .post(externalUri.addPath("forgot", "password"))

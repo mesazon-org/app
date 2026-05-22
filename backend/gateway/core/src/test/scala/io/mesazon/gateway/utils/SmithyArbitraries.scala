@@ -54,8 +54,8 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
       .arbitrary[OnboardDetails]
       .map(
         _.into[smithy.OnboardDetailsPostRequest]
-          .withFieldComputed(_.phoneNumber.phoneCountryCode, _.phoneNumber.phoneCountryCode.value)
-          .withFieldComputed(_.phoneNumber.phoneNationalNumber, _.phoneNumber.phoneNationalNumber.value)
+          .withFieldComputed(_.phoneNumber.phoneCountryCode, _.phoneNumber.value.phoneCountryCode.value)
+          .withFieldComputed(_.phoneNumber.phoneNationalNumber, _.phoneNumber.value.phoneNationalNumber.value)
           .transform
       )
   )

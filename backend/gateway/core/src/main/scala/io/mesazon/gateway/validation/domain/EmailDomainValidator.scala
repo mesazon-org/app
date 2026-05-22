@@ -1,15 +1,16 @@
 package io.mesazon.gateway.validation.domain
 
-import cats.data.{NonEmptyChain, ValidatedNec}
+import cats.data.*
 import cats.syntax.all.*
 import com.sanctionco.jmail.JMail
-import io.mesazon.domain.gateway.Email
+import io.github.iltotore.iron.*
+import io.mesazon.domain.EmailPredicate
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import zio.*
 
-final class EmailDomainValidator extends DomainValidator[String, Email] {
+final class EmailDomainValidator extends DomainValidator[String, String :| EmailPredicate] {
 
-  override def validate(emailRaw: String): UIO[ValidatedNec[InvalidFieldError, Email]] = (for {
+  override def validate(emailRaw: String): UIO[ValidatedNec[InvalidFieldError, String :| EmailPredicate]] = (for {
     emailRawFormatted = emailRaw.trim.toLowerCase
     _ <- ZIO
       .attempt(JMail.enforceValid(emailRawFormatted))
@@ -23,7 +24,7 @@ final class EmailDomainValidator extends DomainValidator[String, Email] {
         )
       )
     email <- ZIO
-      .fromEither(Email.either(emailRawFormatted))
+      .fromEither(emailRawFormatted.refineEither[EmailPredicate])
       .mapError(errorMessage =>
         NonEmptyChain(
           InvalidFieldError(

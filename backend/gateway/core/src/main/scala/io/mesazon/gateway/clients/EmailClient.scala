@@ -12,21 +12,21 @@ import scala.util.chaining.scalaUtilChainingOps
 
 trait EmailClient {
   def sendEmailVerificationEmail(
-      email: Email,
+      email: UserEmail,
       otp: Otp,
   ): IO[ServiceError, Unit]
 
   def sendWelcomeEmail(
-      email: Email
+      email: UserEmail
   ): IO[ServiceError, Unit]
 
   def sendForgotPasswordEmail(
-      email: Email,
+      email: UserEmail,
       otp: Otp,
   ): IO[ServiceError, Unit]
 
   def sendPasswordChangeConfirmationEmail(
-      email: Email
+      email: UserEmail
   ): IO[ServiceError, Unit]
 }
 
@@ -44,7 +44,7 @@ object EmailClient {
         .buildMailer()
 
     override def sendEmailVerificationEmail(
-        email: Email,
+        email: UserEmail,
         otp: Otp,
     ): IO[ServiceError, Unit] =
       ZIO
@@ -69,7 +69,7 @@ object EmailClient {
         )
 
     override def sendWelcomeEmail(
-        email: Email
+        email: UserEmail
     ): IO[ServiceError, Unit] =
       ZIO
         .fromCompletableFuture(
@@ -90,7 +90,7 @@ object EmailClient {
         .unit
         .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to sendWelcomeEmail", Some(error)))
 
-    override def sendForgotPasswordEmail(email: Email, otp: Otp): IO[ServiceError, Unit] =
+    override def sendForgotPasswordEmail(email: UserEmail, otp: Otp): IO[ServiceError, Unit] =
       ZIO
         .fromCompletableFuture(
           mailer.sendMail(
@@ -112,7 +112,7 @@ object EmailClient {
           ServiceError.InternalServerError.UnexpectedError("Failed to sendForgotPasswordEmail", Some(error))
         )
 
-    override def sendPasswordChangeConfirmationEmail(email: Email): IO[ServiceError, Unit] =
+    override def sendPasswordChangeConfirmationEmail(email: UserEmail): IO[ServiceError, Unit] =
       ZIO
         .fromCompletableFuture(
           mailer.sendMail(

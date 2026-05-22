@@ -21,6 +21,11 @@ final class OrganizationDetailsQueries(
             |organization_id,
             |name,
             |slug,
+            |email,
+            |phone_region,
+            |phone_country_code,
+            |phone_national_number,
+            |phone_number_e164,
             |organization_stage,
             |address_line_1,
             |address_line_2,
@@ -36,12 +41,10 @@ final class OrganizationDetailsQueries(
       sql"""
            |INSERT INTO $frSchema.$frOrganizationDetailsTable ($organizationDetailsFields)
            |VALUES ($organizationDetailsRow)
-           |RETURNING 1
-           |""".stripMargin.query.unique
+           |""".stripMargin.update.run.map(_ => ())
     }
 
   // Testing
-
   def getAllOrganizationDetailsTesting: TranzactIO[List[OrganizationDetailsRow]] =
     tzio {
       sql"""

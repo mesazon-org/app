@@ -8,9 +8,9 @@ import scala.util.control.Exception.allCatch
 
 type NonEmptyTrimmedLowerCase = Trimmed & LettersLowerCase & MinLength[1] & MaxLength[255]
 type NonEmptyTrimmed          = Trimmed & MinLength[1] & MaxLength[255]
-type NonEmpty                 = MinLength[1]
+type TokenPredicate           = Trimmed & MinLength[1]
+type NonEmpty                 = MinLength[1] & MaxLength[1000]
 
-type SlugPredicate     = Match["^[a-z0-9]+(?:-[a-z0-9]+)*$"] & MaxLength[255]
 type PasswordPredicate =
   Match["^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%#*^,?)(&._-])[A-Za-z\\d@$!%#*^,?)(&._-]{8,72}$"]
 type EmailPredicate       = Match["^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"] & MaxLength[255]

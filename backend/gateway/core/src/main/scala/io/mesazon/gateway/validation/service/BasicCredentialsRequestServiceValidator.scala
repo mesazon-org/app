@@ -16,7 +16,7 @@ final class BasicCredentialsRequestServiceValidator(
         .validate(basicCredentialsRequest.email)
         .map(validatedEmail =>
           (
-            validatedEmail,
+            validatedEmail.map(UserEmail.apply),
             validateRequiredField("password", basicCredentialsRequest.password, Password.either),
           ).mapN(BasicCredentials.apply)
         )

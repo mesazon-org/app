@@ -71,6 +71,8 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             userID = userID,
             name = organizationDetailsRow.name,
             slug = organizationDetailsRow.slug,
+            email = organizationDetailsRow.email,
+            phoneNumber = organizationDetailsRow.phoneNumber,
             organizationStage = organizationDetailsRow.organizationStage,
             addressLine1 = organizationDetailsRow.addressLine1,
             addressLine2 = organizationDetailsRow.addressLine2,
@@ -80,20 +82,20 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           )
           .zioValue
 
-        val orgDetailsRowsAll =
+        val organizationDetailsRowsAll =
           postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
 
-        orgDetailsRowsAll should have size 1
-        orgDetailsRowsAll.head shouldBe organizationDetailsRow.copy(
+        organizationDetailsRowsAll should have size 1
+        organizationDetailsRowsAll.head shouldBe organizationDetailsRow.copy(
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
         )
 
-        val orgUserRowsAll =
+        val organizationUserRowsAll =
           postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUserTesting).zioValue
 
-        orgUserRowsAll should have size 1
-        orgUserRowsAll.head shouldBe OrganizationUserRow(
+        organizationUserRowsAll should have size 1
+        organizationUserRowsAll.head shouldBe OrganizationUserRow(
           organizationID = organizationDetailsRow.organizationID,
           userID = userID,
           userRole = UserRole.Owner,
@@ -102,15 +104,116 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
         )
       }
 
-      "fail to create an organization with a duplicate slug" in new TestContext {
-        val existingOrgDetailsRow = arbitrarySample[OrganizationDetailsRow]
+      "successfully create a multiple organizations with the owner user being the same" in new TestContext {
+        val instantNow1             = instantNow
+        val instantNow2             = instantNow.plusSeconds(10)
+        val organizationID1         = arbitrarySample[OrganizationID]
+        val organizationID2         = arbitrarySample[OrganizationID]
+        val organizationDetailsRow1 = arbitrarySample[OrganizationDetailsRow]
+          .copy(
+            organizationID = organizationID1,
+            createdAt = CreatedAt(instantNow1),
+            updatedAt = UpdatedAt(instantNow1),
+          )
+        val organizationDetailsRow2 = arbitrarySample[OrganizationDetailsRow]
+          .copy(
+            organizationID = organizationID2,
+            createdAt = CreatedAt(instantNow2),
+            updatedAt = UpdatedAt(instantNow2),
+          )
+        val userID = arbitrarySample[UserID]
 
-        postgresClient
-          .executeQuery(organizationDetailsQueries.insert(existingOrgDetailsRow))
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow1)
+            .once(),
+          (() => idGeneratorMock.generateID)
+            .expects()
+            .returningZIO(organizationDetailsRow1.organizationID.value)
+            .once(),
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow2)
+            .once(),
+          (() => idGeneratorMock.generateID)
+            .expects()
+            .returningZIO(organizationDetailsRow2.organizationID.value)
+            .once(),
+        )
+
+        organizationManagementRepository
+          .createOrganization(
+            userID = userID,
+            name = organizationDetailsRow1.name,
+            slug = organizationDetailsRow1.slug,
+            email = organizationDetailsRow1.email,
+            phoneNumber = organizationDetailsRow1.phoneNumber,
+            organizationStage = organizationDetailsRow1.organizationStage,
+            addressLine1 = organizationDetailsRow1.addressLine1,
+            addressLine2 = organizationDetailsRow1.addressLine2,
+            city = organizationDetailsRow1.city,
+            postalCode = organizationDetailsRow1.postalCode,
+            country = organizationDetailsRow1.country,
+          )
           .zioValue
 
-        val newOrgID = arbitrarySample[OrganizationID]
-        val userID   = arbitrarySample[UserID]
+        organizationManagementRepository
+          .createOrganization(
+            userID = userID,
+            name = organizationDetailsRow2.name,
+            slug = organizationDetailsRow2.slug,
+            email = organizationDetailsRow2.email,
+            phoneNumber = organizationDetailsRow2.phoneNumber,
+            organizationStage = organizationDetailsRow2.organizationStage,
+            addressLine1 = organizationDetailsRow2.addressLine1,
+            addressLine2 = organizationDetailsRow2.addressLine2,
+            city = organizationDetailsRow2.city,
+            postalCode = organizationDetailsRow2.postalCode,
+            country = organizationDetailsRow2.country,
+          )
+          .zioValue
+
+        val organizationDetailsRowsAll =
+          postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
+
+        organizationDetailsRowsAll should have size 2
+        organizationDetailsRowsAll should contain theSameElementsAs List(
+          organizationDetailsRow1,
+          organizationDetailsRow2,
+        )
+
+        val organizationUserRowsAll =
+          postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUserTesting).zioValue
+
+        organizationUserRowsAll should have size 2
+        organizationUserRowsAll should contain theSameElementsAs List(
+          OrganizationUserRow(
+            organizationID = organizationDetailsRow1.organizationID,
+            userID = userID,
+            userRole = UserRole.Owner,
+            createdAt = CreatedAt(instantNow1),
+            updatedAt = UpdatedAt(instantNow1),
+          ),
+          OrganizationUserRow(
+            organizationID = organizationDetailsRow2.organizationID,
+            userID = userID,
+            userRole = UserRole.Owner,
+            createdAt = CreatedAt(instantNow2),
+            updatedAt = UpdatedAt(instantNow2),
+          ),
+        )
+      }
+
+      "fail to create an organization with a duplicate slug" in new TestContext {
+        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+
+        postgresClient
+          .executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+          .zioValue
+
+        val organizationIDNew = arbitrarySample[OrganizationID]
+        val userID            = arbitrarySample[UserID]
 
         inSequence(
           (() => timeProviderMock.instantNow)
@@ -119,37 +222,39 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             .once(),
           (() => idGeneratorMock.generateID)
             .expects()
-            .returningZIO(newOrgID.value)
+            .returningZIO(organizationIDNew.value)
             .once(),
         )
 
         val serviceError = organizationManagementRepository
           .createOrganization(
             userID = userID,
-            name = existingOrgDetailsRow.name,
-            slug = existingOrgDetailsRow.slug,
-            organizationStage = existingOrgDetailsRow.organizationStage,
-            addressLine1 = existingOrgDetailsRow.addressLine1,
-            addressLine2 = existingOrgDetailsRow.addressLine2,
-            city = existingOrgDetailsRow.city,
-            postalCode = existingOrgDetailsRow.postalCode,
-            country = existingOrgDetailsRow.country,
+            name = organizationDetailsRow.name,
+            slug = organizationDetailsRow.slug,
+            email = organizationDetailsRow.email,
+            phoneNumber = organizationDetailsRow.phoneNumber,
+            organizationStage = organizationDetailsRow.organizationStage,
+            addressLine1 = organizationDetailsRow.addressLine1,
+            addressLine2 = organizationDetailsRow.addressLine2,
+            city = organizationDetailsRow.city,
+            postalCode = organizationDetailsRow.postalCode,
+            country = organizationDetailsRow.country,
           )
           .zioError
 
-        serviceError.message shouldBe s"Failed to create organization with ID: [$newOrgID]"
+        serviceError.message shouldBe s"Failed to create organization with ID: [$organizationIDNew]"
         serviceError.underlying.value shouldBe a[DbException]
 
-        val orgDetailsRowsAll =
+        val organizationDetailsRowsAll =
           postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
 
-        orgDetailsRowsAll should have size 1
-        orgDetailsRowsAll.head shouldBe existingOrgDetailsRow
+        organizationDetailsRowsAll should have size 1
+        organizationDetailsRowsAll.head shouldBe organizationDetailsRow
 
-        val orgUserRowsAll =
+        val organizationUserRowsAll =
           postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUserTesting).zioValue
 
-        orgUserRowsAll shouldBe empty
+        organizationUserRowsAll shouldBe empty
       }
     }
   }

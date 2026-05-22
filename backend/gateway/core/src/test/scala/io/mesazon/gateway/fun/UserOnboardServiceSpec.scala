@@ -220,14 +220,14 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           )
 
         val fullName    = arbitrarySample[FullName]
-        val phoneNumber = arbitrarySample[PhoneNumber]
+        val phoneNumber = arbitrarySample[UserPhoneNumber]
 
         val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
           .copy(
             fullName = fullName.value,
             phoneNumber = smithy.PhoneNumberRequest(
-              phoneNumber.phoneNationalNumber.value,
-              phoneNumber.phoneCountryCode.value,
+              phoneNumber.value.phoneNationalNumber.value,
+              phoneNumber.value.phoneCountryCode.value,
             ),
           )
 
@@ -258,7 +258,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
           twilioClientMock.sendOtpSms
             .expects(
-              phoneNumber.phoneNumberE164,
+              phoneNumber.value.phoneNumberE164,
               userOtpRow.otp,
             )
             .returningZIOUnit
@@ -339,7 +339,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           )
 
         val fullName    = arbitrarySample[FullName]
-        val phoneNumber = arbitrarySample[PhoneNumber]
+        val phoneNumber = arbitrarySample[UserPhoneNumber]
 
         inSequence(
           (() => authStateMock.get).expects().returningZIO(authedUser).once(),
@@ -373,7 +373,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
           twilioClientMock.sendOtpSms
             .expects(
-              phoneNumber.phoneNumberE164,
+              phoneNumber.value.phoneNumberE164,
               userOtpRow.otp,
             )
             .returningZIOUnit
@@ -386,8 +386,8 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           .copy(
             fullName = fullName.value,
             phoneNumber = smithy.PhoneNumberRequest(
-              phoneNumber.phoneNationalNumber.value,
-              phoneNumber.phoneCountryCode.value,
+              phoneNumber.value.phoneNationalNumber.value,
+              phoneNumber.value.phoneCountryCode.value,
             ),
           )
 
@@ -449,7 +449,8 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             invalidFields = List(
               InvalidFieldError(
                 fieldName = "fullName",
-                errorMessage = "Should not have leading or trailing whitespaces & Should have a minimum length of 1",
+                errorMessage =
+                  "Should not have leading or trailing whitespaces & Should have a minimum length of 1 & Should have a maximum length of 255",
                 invalidValues = Seq(""),
               )
             )
@@ -497,7 +498,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           )
 
         val fullName    = arbitrarySample[FullName]
-        val phoneNumber = arbitrarySample[PhoneNumber]
+        val phoneNumber = arbitrarySample[UserPhoneNumber]
 
         val sendOtpSmsCounter = counterRef.zioValue
 
@@ -528,7 +529,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
           twilioClientMock.sendOtpSms
             .expects(
-              phoneNumber.phoneNumberE164,
+              phoneNumber.value.phoneNumberE164,
               userOtpRow.otp,
             )
             .returns(
@@ -545,8 +546,8 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           .copy(
             fullName = fullName.value,
             phoneNumber = smithy.PhoneNumberRequest(
-              phoneNumber.phoneNationalNumber.value,
-              phoneNumber.phoneCountryCode.value,
+              phoneNumber.value.phoneNationalNumber.value,
+              phoneNumber.value.phoneCountryCode.value,
             ),
           )
 

@@ -374,7 +374,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
       }
 
       "successfully process forgot password request with no user details found" in new TestContext {
-        val email = arbitrarySample[Email]
+        val email = arbitrarySample[UserEmail]
         val otpID = arbitrarySample[OtpID]
 
         inSequence(

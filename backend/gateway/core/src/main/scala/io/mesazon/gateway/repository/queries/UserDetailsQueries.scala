@@ -41,18 +41,20 @@ final class UserDetailsQueries(config: RepositoryConfig) {
       onboardStageUpdate: OnboardStage,
       updatedAtUpdate: UpdatedAt,
       fullNameOptUpdate: Option[FullName] = None,
-      phoneNumberOptUpdate: Option[PhoneNumber] = None,
+      phoneNumberOptUpdate: Option[UserPhoneNumber] = None,
   ): TranzactIO[UserDetailsRow] =
     tzio {
       sql"""
            |UPDATE $frSchema.$frUserDetailsTable
            |SET full_name = COALESCE($fullNameOptUpdate, full_name),
-           |    phone_region = COALESCE(${phoneNumberOptUpdate.map(_.phoneRegion)}, phone_region),
-           |    phone_country_code = COALESCE(${phoneNumberOptUpdate.map(_.phoneCountryCode)}, phone_country_code),
+           |    phone_region = COALESCE(${phoneNumberOptUpdate.map(_.value.phoneRegion)}, phone_region),
+           |    phone_country_code = COALESCE(${phoneNumberOptUpdate.map(
+            _.value.phoneCountryCode
+          )}, phone_country_code),
            |    phone_national_number = COALESCE(${phoneNumberOptUpdate.map(
-            _.phoneNationalNumber
+            _.value.phoneNationalNumber
           )}, phone_national_number),
-           |    phone_number_e164 = COALESCE(${phoneNumberOptUpdate.map(_.phoneNumberE164)}, phone_number_e164),
+           |    phone_number_e164 = COALESCE(${phoneNumberOptUpdate.map(_.value.phoneNumberE164)}, phone_number_e164),
            |    onboard_stage = $onboardStageUpdate,
            |    updated_at = $updatedAtUpdate
            |WHERE user_id = $userID
@@ -69,7 +71,7 @@ final class UserDetailsQueries(config: RepositoryConfig) {
            |""".stripMargin.query[UserDetailsRow].option
     }
 
-  def getUserDetailsByEmail(email: Email): TranzactIO[Option[UserDetailsRow]] =
+  def getUserDetailsByEmail(email: UserEmail): TranzactIO[Option[UserDetailsRow]] =
     tzio {
       sql"""
            |SELECT $userDetailsFields

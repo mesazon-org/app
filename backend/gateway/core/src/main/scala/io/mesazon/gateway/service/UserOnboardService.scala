@@ -109,7 +109,7 @@ object UserOnboardService {
                   Some(onboardDetails.phoneNumber),
                 )
               _ <- twilioClient
-                .sendOtpSms(onboardDetails.phoneNumber.phoneNumberE164, userOtpRow.otp)
+                .sendOtpSms(onboardDetails.phoneNumber.value.phoneNumberE164, userOtpRow.otp)
                 .retry(
                   Schedule.recurs(userOnboardConfig.sendPhoneVerificationOtpMaxRetries) && Schedule
                     .exponential(userOnboardConfig.sendPhoneVerificationOtpRetryDelay)

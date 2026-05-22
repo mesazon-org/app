@@ -1,13 +1,15 @@
 package io.mesazon.gateway.service
 
 import io.mesazon.gateway.repository.*
+import io.mesazon.gateway.state.AuthState
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import zio.*
 
 object OrganizationManagementService {
 
   private final class OrganizationManagementServiceImpl(
-      _organizationManagementRepository: OrganizationManagementRepository
+      authState: AuthState,
+      organizationManagementRepository: OrganizationManagementRepository,
   ) extends smithy.OrganizationManagementService[ServiceTask] {
 
     /** **Required Onboard Stage:** **COMPLETED**
@@ -16,7 +18,23 @@ object OrganizationManagementService {
       */
     override def createOrganizationPost(
         request: smithy.CreateOrganizationPostRequest
-    ): ServiceTask[smithy.CreateOrganizationPostResponse] = ???
+    ): ServiceTask[smithy.CreateOrganizationPostResponse] = for {
+      authedUser <- authState.get
+      _          <- organizationManagementRepository.createOrganization(
+        authedUser.userID,
+        ???,
+        ???,
+        ???,
+        ???,
+        ???,
+        ???,
+        ???,
+        ???,
+        ???,
+        ???,
+      )
+    } yield ???
+
   }
 
   def observed(

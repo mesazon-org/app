@@ -1,6 +1,6 @@
 package io.mesazon.gateway.repository.queries
 
-import doobie.util.{Get, Put}
+import _root_.doobie.{Get, Meta, Put, Read, Write}
 import io.github.iltotore.iron.RefinedType
 
 import scala.deriving.Mirror
@@ -8,13 +8,26 @@ import scala.reflect.Enum
 
 given [WrappedType](using
     mirror: RefinedType.Mirror[WrappedType],
+    read: Read[mirror.BaseType],
+): Read[mirror.FinalType] = read.asInstanceOf[Read[mirror.FinalType]]
+
+given [WrappedType](using
+    mirror: RefinedType.Mirror[WrappedType],
+    write: Write[mirror.BaseType],
+): Write[mirror.FinalType] = write.asInstanceOf[Write[mirror.FinalType]]
+
+given [WrappedType](using
+    mirror: RefinedType.Mirror[WrappedType],
     put: Put[mirror.BaseType],
-): Put[mirror.FinalType] = put.tcontramap(i => i.asInstanceOf[mirror.BaseType])
+): Put[mirror.FinalType] = put.asInstanceOf[Put[mirror.FinalType]]
 
 given [WrappedType](using
     mirror: RefinedType.Mirror[WrappedType],
     get: Get[mirror.BaseType],
-): Get[mirror.FinalType] = get.tmap(_.asInstanceOf[mirror.FinalType])
+): Get[mirror.FinalType] = get.asInstanceOf[Get[mirror.FinalType]]
+
+given [WrappedType](using mirror: RefinedType.Mirror[WrappedType], ev: Meta[mirror.BaseType]): Meta[mirror.FinalType] =
+  ev.asInstanceOf[Meta[mirror.FinalType]]
 
 inline given [A <: Enum](using mirror: Mirror.SumOf[A]): Get[A] = Get.deriveEnumString[A]
 

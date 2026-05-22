@@ -64,7 +64,7 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
             .once(),
         )
 
-        val email        = arbitrarySample[Email]
+        val email        = arbitrarySample[UserEmail]
         val onboardStage = arbitrarySample[OnboardStage]
 
         val userDetailsRowInsert = userDetailsRepository.insertUserDetails(email, onboardStage).zioValue
@@ -130,7 +130,7 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
 
         val onboardStageUpdate   = arbitrarySample[OnboardStage]
         val fullNameOptUpdate    = arbitrarySample[Option[FullName]]
-        val phoneNumberOptUpdate = arbitrarySample[Option[PhoneNumber]]
+        val phoneNumberOptUpdate = arbitrarySample[Option[UserPhoneNumber]]
 
         val userDetailsRowUpdate = userDetailsRepository
           .updateUserDetails(
@@ -169,7 +169,7 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
         val userID               = arbitrarySample[UserID]
         val onboardStageUpdate   = arbitrarySample[OnboardStage]
         val fullNameOptUpdate    = arbitrarySample[Option[FullName]]
-        val phoneNumberOptUpdate = arbitrarySample[Option[PhoneNumber]]
+        val phoneNumberOptUpdate = arbitrarySample[Option[UserPhoneNumber]]
 
         val serviceError = userDetailsRepository
           .updateUserDetails(
@@ -223,7 +223,7 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
       }
 
       "return None when there are no details for the given email" in new TestContext {
-        val email = arbitrarySample[Email]
+        val email = arbitrarySample[UserEmail]
 
         val userDetailsRowOptGet = userDetailsRepository
           .getUserDetailsByEmail(email)

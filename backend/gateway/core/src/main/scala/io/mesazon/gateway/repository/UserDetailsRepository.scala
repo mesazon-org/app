@@ -11,7 +11,7 @@ import zio.*
 
 trait UserDetailsRepository {
   def insertUserDetails(
-      email: Email,
+      email: UserEmail,
       onboardStage: OnboardStage,
   ): IO[ServiceError, UserDetailsRow]
 
@@ -19,12 +19,12 @@ trait UserDetailsRepository {
       userID: UserID,
       onboardStageUpdate: OnboardStage,
       fullNameOptUpdate: Option[FullName] = None,
-      phoneNumberOptUpdate: Option[PhoneNumber] = None,
+      phoneNumberOptUpdate: Option[UserPhoneNumber] = None,
   ): IO[ServiceError, UserDetailsRow]
 
   def getUserDetails(userID: UserID): IO[ServiceError, Option[UserDetailsRow]]
 
-  def getUserDetailsByEmail(email: Email): IO[ServiceError, Option[UserDetailsRow]]
+  def getUserDetailsByEmail(email: UserEmail): IO[ServiceError, Option[UserDetailsRow]]
 }
 
 object UserDetailsRepository {
@@ -36,7 +36,7 @@ object UserDetailsRepository {
       userDetailsQueries: UserDetailsQueries,
   ) extends UserDetailsRepository {
 
-    override def insertUserDetails(email: Email, onboardStage: OnboardStage): IO[ServiceError, UserDetailsRow] =
+    override def insertUserDetails(email: UserEmail, onboardStage: OnboardStage): IO[ServiceError, UserDetailsRow] =
       for {
         instantNow <- timeProvider.instantNow
         userID     <- idGenerator.generateID
@@ -69,7 +69,7 @@ object UserDetailsRepository {
         userID: UserID,
         onboardStageUpdate: OnboardStage,
         fullNameOptUpdate: Option[FullName],
-        phoneNumberOptUpdate: Option[PhoneNumber],
+        phoneNumberOptUpdate: Option[UserPhoneNumber],
     ): IO[ServiceError, UserDetailsRow] = for {
       instantNow     <- timeProvider.instantNow
       userDetailsRow <- database
@@ -100,7 +100,7 @@ object UserDetailsRepository {
           ServiceError.InternalServerError.RepositoryError(s"Failed to getUserDetails by user ID: [$userID]", e)
         )
 
-    override def getUserDetailsByEmail(email: Email): IO[ServiceError, Option[UserDetailsRow]] =
+    override def getUserDetailsByEmail(email: UserEmail): IO[ServiceError, Option[UserDetailsRow]] =
       database
         .transactionOrWiden(
           userDetailsQueries.getUserDetailsByEmail(email)

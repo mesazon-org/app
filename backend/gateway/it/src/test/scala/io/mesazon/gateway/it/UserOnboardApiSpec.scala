@@ -416,7 +416,7 @@ class UserOnboardApiSpec
         val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
 
         val fullName       = arbitrarySample[FullName]
-        val phoneNumber    = arbitrarySample[PhoneNumber]
+        val phoneNumber    = arbitrarySample[UserPhoneNumber]
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
           onboardStage = onboardStage,
           fullName = Some(fullName),
@@ -479,7 +479,7 @@ class UserOnboardApiSpec
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
           onboardStage = onboardStageInvalid,
           fullName = Some(arbitrarySample[FullName]),
-          phoneNumber = Some(arbitrarySample[PhoneNumber]),
+          phoneNumber = Some(arbitrarySample[UserPhoneNumber]),
         )
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
@@ -566,7 +566,7 @@ class UserOnboardApiSpec
         val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
 
         val fullName       = arbitrarySample[FullName]
-        val phoneNumber    = arbitrarySample[PhoneNumber]
+        val phoneNumber    = arbitrarySample[UserPhoneNumber]
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
           onboardStage = onboardStage,
           fullName = Some(fullName),
@@ -624,7 +624,7 @@ class UserOnboardApiSpec
         val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
 
         val fullName       = arbitrarySample[FullName]
-        val phoneNumber    = arbitrarySample[PhoneNumber]
+        val phoneNumber    = arbitrarySample[UserPhoneNumber]
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
           onboardStage = onboardStage,
           fullName = Some(fullName),
@@ -681,7 +681,7 @@ class UserOnboardApiSpec
         val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
 
         val fullName       = arbitrarySample[FullName]
-        val phoneNumber    = arbitrarySample[PhoneNumber]
+        val phoneNumber    = arbitrarySample[UserPhoneNumber]
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
           onboardStage = onboardStage,
           fullName = Some(fullName),
@@ -726,7 +726,7 @@ class UserOnboardApiSpec
         val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
 
         val fullName       = arbitrarySample[FullName]
-        val phoneNumber    = arbitrarySample[PhoneNumber]
+        val phoneNumber    = arbitrarySample[UserPhoneNumber]
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
           onboardStage = onboardStage,
           fullName = Some(fullName),
@@ -778,7 +778,7 @@ class UserOnboardApiSpec
         val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
 
         val fullName       = arbitrarySample[FullName]
-        val phoneNumber    = arbitrarySample[PhoneNumber]
+        val phoneNumber    = arbitrarySample[UserPhoneNumber]
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
           onboardStage = onboardStage,
           fullName = Some(fullName),
@@ -818,7 +818,7 @@ class UserOnboardApiSpec
         val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
 
         val fullName       = arbitrarySample[FullName]
-        val phoneNumber    = arbitrarySample[PhoneNumber]
+        val phoneNumber    = arbitrarySample[UserPhoneNumber]
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
           onboardStage = onboardStage,
           fullName = Some(fullName),
@@ -915,7 +915,7 @@ class UserOnboardApiSpec
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
           onboardStage = onboardStageInvalid,
           fullName = Some(arbitrarySample[FullName]),
-          phoneNumber = Some(arbitrarySample[PhoneNumber]),
+          phoneNumber = Some(arbitrarySample[UserPhoneNumber]),
         )
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue

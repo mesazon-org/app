@@ -23,10 +23,6 @@ trait RepositoryArbitraries extends GatewayArbitraries, IronRefinedTypeArbitrari
 
   given Arbitrary[UserActionAttemptRow] = Arbitrary(Gen.resultOf(UserActionAttemptRow.apply))
 
-  given Arbitrary[OrganizationStage] = Arbitrary(Gen.oneOf(OrganizationStage.values.toIndexedSeq))
-
-  given Arbitrary[UserRole] = Arbitrary(Gen.oneOf(UserRole.values.toIndexedSeq))
-
   given Arbitrary[OrganizationDetailsRow] = Arbitrary(Gen.resultOf(OrganizationDetailsRow.apply))
 
   given Arbitrary[OrganizationUserRow] = Arbitrary(Gen.resultOf(OrganizationUserRow.apply))

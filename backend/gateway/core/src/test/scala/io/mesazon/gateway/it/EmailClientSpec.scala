@@ -56,7 +56,7 @@ class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBas
           .provide(EmailClient.live, ZLayer.succeed(emailConfig))
           .zioValue
 
-        val email = arbitrarySample[Email]
+        val email = arbitrarySample[UserEmail]
         val otp   = arbitrarySample[Otp]
 
         emailClient.sendEmailVerificationEmail(email, otp).zioValue
@@ -74,7 +74,7 @@ class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBas
           .provide(EmailClient.live, ZLayer.succeed(emailConfig))
           .zioValue
 
-        val email = arbitrarySample[Email]
+        val email = arbitrarySample[UserEmail]
 
         emailClient.sendWelcomeEmail(email).zioValue
 
@@ -91,7 +91,7 @@ class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBas
           .provide(EmailClient.live, ZLayer.succeed(emailConfig))
           .zioValue
 
-        val email = arbitrarySample[Email]
+        val email = arbitrarySample[UserEmail]
         val otp   = arbitrarySample[Otp]
 
         emailClient.sendForgotPasswordEmail(email, otp).zioValue
@@ -109,7 +109,7 @@ class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBas
           .provide(EmailClient.live, ZLayer.succeed(emailConfig))
           .zioValue
 
-        val email = arbitrarySample[Email]
+        val email = arbitrarySample[UserEmail]
 
         emailClient.sendPasswordChangeConfirmationEmail(email).zioValue
 

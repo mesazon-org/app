@@ -35,6 +35,10 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
 
   given Arbitrary[OnboardStage] = Arbitrary(Gen.oneOf(OnboardStage.values.toIndexedSeq))
 
+  given Arbitrary[OrganizationStage] = Arbitrary(Gen.oneOf(OrganizationStage.values.toIndexedSeq))
+
+  given Arbitrary[UserRole] = Arbitrary(Gen.oneOf(UserRole.values.toIndexedSeq))
+
   given Arbitrary[TokenType] = Arbitrary(Gen.oneOf(TokenType.values.toIndexedSeq))
 
   given Arbitrary[ActionAttemptType] = Arbitrary(Gen.oneOf(ActionAttemptType.values.toIndexedSeq))

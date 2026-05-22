@@ -236,7 +236,7 @@ class UserSignInApiSpec
       "fail with BadRequest when basic credentials is missing" in withContext { context =>
         import context.*
 
-        val email    = arbitrarySample[Email]
+        val email    = arbitrarySample[UserEmail]
         val password = arbitrarySample[Password]
 
         val signInPostResponse =
@@ -258,7 +258,7 @@ class UserSignInApiSpec
       "fail with BadRequest ValidationError if email is invalid" in withContext { context =>
         import context.*
 
-        val invalidEmail = Email.assume("invalid-email-format")
+        val invalidEmail = UserEmail.assume("invalid-email-format")
         val password     = arbitrarySample[Password]
 
         val signInPostResponse = gatewayClient.signInPost[smithy.ValidationError](invalidEmail, password).zioValue

@@ -62,17 +62,22 @@ create index idx_user_token_user_id on user_token using hash (user_id);
 
 create table organization_details
 (
-    organization_id   uuid        not null,
-    name              text        not null,
-    slug              text        not null,
-    organization_stage text        not null,
-    address_line_1    text        not null,
-    address_line_2    text,
-    city              text        not null,
-    postal_code       text        not null,
-    country           text        not null,
-    created_at       timestamptz not null,
-    updated_at       timestamptz not null,
+    organization_id       uuid        not null,
+    name                  text        not null,
+    slug                  text        not null,
+    phone_region          text        not null,
+    phone_country_code    text        not null,
+    phone_national_number text        not null,
+    phone_number_e164     text        not null,
+    email                 text        not null,
+    organization_stage    text        not null,
+    address_line_1        text        not null,
+    address_line_2        text,
+    city                  text        not null,
+    postal_code           text        not null,
+    country               text        not null,
+    created_at            timestamptz not null,
+    updated_at            timestamptz not null,
     primary key (organization_id),
     unique (slug)
 );
@@ -81,7 +86,7 @@ create table organization_user
 (
     organization_id uuid        not null,
     user_id         uuid        not null,
-    user_role            text        not null,
+    user_role       text        not null,
     created_at      timestamptz not null,
     updated_at      timestamptz not null,
     primary key (organization_id, user_id)

@@ -5,12 +5,16 @@ import io.mesazon.gateway.smithy
 import io.mesazon.gateway.validation.domain.*
 import zio.*
 
+import scala.util.chaining.scalaUtilChainingOps
+
 final class SignUpEmailPostRequestServiceValidator(
     emailDomainValidator: EmailDomainValidator
 ) extends ServiceValidator[smithy.SignUpEmailPostRequest, SignUpEmail] {
 
   val domainValidator: DomainValidator[smithy.SignUpEmailPostRequest, SignUpEmail] = { signUpEmailPostRequest =>
-    emailDomainValidator.validate(signUpEmailPostRequest.email).map(_.map(SignUpEmail.apply))
+    emailDomainValidator
+      .validate(signUpEmailPostRequest.email)
+      .map(_.map(_.pipe(UserEmail.apply).pipe(SignUpEmail.apply)))
   }
 }
 

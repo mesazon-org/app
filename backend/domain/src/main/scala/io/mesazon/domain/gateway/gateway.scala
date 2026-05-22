@@ -18,14 +18,23 @@ type ActionAttemptID = ActionAttemptID.T
 object TokenID extends RefinedTypeUUID
 type TokenID = TokenID.T
 
+object UserPhoneNumber extends RefinedType[PhoneNumber, Pure]
+type UserPhoneNumber = UserPhoneNumber.T
+
 object OrganizationID extends RefinedTypeUUID
 type OrganizationID = OrganizationID.T
 
 object OrganizationName extends RefinedType[String, NonEmptyTrimmed]
 type OrganizationName = OrganizationName.T
 
-object OrganizationSlug extends RefinedType[String, SlugPredicate]
+object OrganizationSlug extends RefinedType[String, NonEmptyTrimmedLowerCase]
 type OrganizationSlug = OrganizationSlug.T
+
+object OrganizationEmail extends RefinedType[String, EmailPredicate]
+type OrganizationEmail = OrganizationEmail.T
+
+object OrganizationPhoneNumber extends RefinedType[PhoneNumber, Pure]
+type OrganizationPhoneNumber = OrganizationPhoneNumber.T
 
 object OrganizationAddressLine1 extends RefinedType[String, NonEmptyTrimmed]
 type OrganizationAddressLine1 = OrganizationAddressLine1.T
@@ -42,8 +51,8 @@ type OrganizationPostalCode = OrganizationPostalCode.T
 object OrganizationCountry extends RefinedType[String, NonEmptyTrimmed]
 type OrganizationCountry = OrganizationCountry.T
 
-object Email extends RefinedType[String, EmailPredicate]
-type Email = Email.T
+object UserEmail extends RefinedType[String, EmailPredicate]
+type UserEmail = UserEmail.T
 
 object FullName extends RefinedType[String, NonEmptyTrimmed]
 type FullName = FullName.T
@@ -84,13 +93,13 @@ type UpdatedAt = UpdatedAt.T
 object ExpiresAt extends RefinedType[Instant, Pure]
 type ExpiresAt = ExpiresAt.T
 
-object RefreshToken extends RefinedType[String, NonEmptyTrimmed]
+object RefreshToken extends RefinedType[String, TokenPredicate]
 type RefreshToken = RefreshToken.T
 
-object ResetPasswordToken extends RefinedType[String, NonEmptyTrimmed]
+object ResetPasswordToken extends RefinedType[String, TokenPredicate]
 type ResetPasswordToken = ResetPasswordToken.T
 
-object AccessToken extends RefinedType[String, NonEmptyTrimmed]
+object AccessToken extends RefinedType[String, TokenPredicate]
 type AccessToken = AccessToken.T
 
 object Attempts extends RefinedType[Int, Positive]
