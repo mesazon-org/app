@@ -35,12 +35,12 @@ object UserOnboardService {
         request: smithy.OnboardPasswordPostRequest
     ): ServiceTask[smithy.OnboardPasswordPostResponse] =
       for {
-        authedUser      <- authState.get()
+        authedUser      <- authState.get
         onboardPassword <- onboardPasswordPostRequestServiceValidator.validate(request)
         userDetails     <- userDetailsRepository
           .getUserDetails(authedUser.userID)
           .someOrFail(
-            ServiceError.InternalServerError.UserNotFoundError(
+            ServiceError.InternalServerError.UnexpectedError(
               s"User details not found for userID: [${authedUser.userID}]"
             )
           )
@@ -70,12 +70,12 @@ object UserOnboardService {
         request: smithy.OnboardDetailsPostRequest
     ): ServiceTask[smithy.OnboardDetailsPostResponse] =
       for {
-        authedUser     <- authState.get()
+        authedUser     <- authState.get
         onboardDetails <- onboardDetailsPostRequestServiceValidator.validate(request)
         userDetails    <- userDetailsRepository
           .getUserDetails(authedUser.userID)
           .someOrFail(
-            ServiceError.InternalServerError.UserNotFoundError(
+            ServiceError.InternalServerError.UnexpectedError(
               s"User details not found for userID: [${authedUser.userID}]"
             )
           )
@@ -94,7 +94,7 @@ object UserOnboardService {
             ZIO.succeed((userOtpRow, otpExpiresInSeconds))
           case _ =>
             for {
-              otp        <- otpGenerator.generate
+              otp        <- otpGenerator.generateOtp
               userOtpRow <- userOtpRepository.upsertUserOtp(
                 authedUser.userID,
                 OtpType.PhoneVerification,
@@ -127,12 +127,12 @@ object UserOnboardService {
         request: smithy.OnboardVerifyPhoneNumberPostRequest
     ): ServiceTask[smithy.OnboardVerifyPhoneNumberPostResponse] =
       for {
-        authedUser               <- authState.get()
+        authedUser               <- authState.get
         onboardVerifyPhoneNumber <- onboardVerifyPhoneNumberPostRequestServiceValidator.validate(request)
         userDetails              <- userDetailsRepository
           .getUserDetails(authedUser.userID)
           .someOrFail(
-            ServiceError.InternalServerError.UserNotFoundError(
+            ServiceError.InternalServerError.UnexpectedError(
               s"User details not found for userID: [${authedUser.userID}]"
             )
           )
@@ -143,24 +143,30 @@ object UserOnboardService {
         userOtpRow <- userOtpRepository
           .getUserOtp(onboardVerifyPhoneNumber.otpID, authedUser.userID, OtpType.PhoneVerification)
           .someOrFail(
-            ServiceError.UnauthorizedError
-              .OtpValidationError(s"No OTP found for otpID: [${onboardVerifyPhoneNumber.otpID}]")
+            ServiceError.InternalServerError
+              .UnexpectedError(s"No OTP found for otpID: [${onboardVerifyPhoneNumber.otpID}]")
           )
         instantNow <- timeProvider.instantNow
         _          <-
-          if (userOtpRow.otp == onboardVerifyPhoneNumber.otp && userOtpRow.expiresAt.value.isAfter(instantNow))
-            for {
-              _ <- userDetailsRepository.updateUserDetails(
-                authedUser.userID,
-                OnboardStage.PhoneVerified,
-              )
-              _ <- userOtpRepository.deleteUserOtp(userOtpRow.otpID, userOtpRow.userID, userOtpRow.otpType)
-            } yield ()
-          else
-            ZIO.fail(
+          if (userOtpRow.expiresAt.value.isBefore(instantNow))
+            userOtpRepository.deleteUserOtp(
+              userOtpRow.otpID,
+              userOtpRow.userID,
+              userOtpRow.otpType,
+            ) *> ZIO.fail(
               ServiceError.UnauthorizedError
-                .OtpValidationError(s"Wrong or expired OTP provided for otpID: [${onboardVerifyPhoneNumber.otpID}]")
+                .OtpExpiredError(s"Expired OTP provided for otpID: [${onboardVerifyPhoneNumber.otpID}]")
             )
+          else if (userOtpRow.otp != onboardVerifyPhoneNumber.otp)
+            ZIO.fail(
+              ServiceError.BadRequestError
+                .OtpVerifyError(s"Wrong OTP provided for otpID: [${onboardVerifyPhoneNumber.otpID}]")
+            )
+          else
+            userDetailsRepository.updateUserDetails(
+              authedUser.userID,
+              OnboardStage.PhoneVerified,
+            ) *> userOtpRepository.deleteUserOtp(userOtpRow.otpID, userOtpRow.userID, OtpType.PhoneVerification)
       } yield smithy.OnboardVerifyPhoneNumberPostResponse(
         onboardStage = onboardStageFromDomainToSmithy(OnboardStage.PhoneVerified)
       )
@@ -168,11 +174,11 @@ object UserOnboardService {
     /** HTTP GET /onboard/verify/phone-number */
     override def onboardVerifyPhoneNumberGet(): ServiceTask[OnboardVerifyPhoneNumberGetResponse] =
       for {
-        authedUser  <- authState.get()
+        authedUser  <- authState.get
         userDetails <- userDetailsRepository
           .getUserDetails(authedUser.userID)
           .someOrFail(
-            ServiceError.InternalServerError.UserNotFoundError(
+            ServiceError.InternalServerError.UnexpectedError(
               s"User details not found for userID: [${authedUser.userID}]"
             )
           )
@@ -180,12 +186,14 @@ object UserOnboardService {
           onboardStageUser = userDetails.onboardStage,
           onboardStagesAllowed = OnboardStage.onboardVerifyPhoneNumberStages,
         )
-        userOtpRowOpt <- userOtpRepository.getUserOtpByUserID(authedUser.userID, OtpType.PhoneVerification)
-        userOtpRow    <- ZIO.getOrFailWith(
-          ServiceError.UnauthorizedError.OtpValidationError(
-            s"No OTP found for userID: [${authedUser.userID}] and otpType: [${OtpType.PhoneVerification}]"
-          )
-        )(userOtpRowOpt)
+        userOtpRow <-
+          userOtpRepository
+            .getUserOtpByUserID(authedUser.userID, OtpType.PhoneVerification)
+            .someOrFail(
+              ServiceError.InternalServerError.UnexpectedError(
+                s"No OTP found for userID: [${authedUser.userID}] and otpType: [${OtpType.PhoneVerification}]"
+              )
+            )
         instantNow <- timeProvider.instantNow
         _          <-
           if (
@@ -195,7 +203,7 @@ object UserOnboardService {
           )
             userOtpRepository
               .deleteUserOtp(userOtpRow.otpID, userDetails.userID, OtpType.PhoneVerification) *> ZIO.fail(
-              ServiceError.UnauthorizedError.OtpValidationError(s"OTP expired for otpID: [${userOtpRow.otpID}]")
+              ServiceError.UnauthorizedError.OtpExpiredError(s"OTP expired for otpID: [${userOtpRow.otpID}]")
             )
           else ZIO.unit
       } yield OnboardVerifyPhoneNumberGetResponse(

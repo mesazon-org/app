@@ -76,7 +76,7 @@ object UserForgotPasswordService {
                 } yield otpID
               case _ =>
                 for {
-                  otpNew <- otpGenerator.generate
+                  otpNew <- otpGenerator.generateOtp
                   expiresAt = ExpiresAt(instantNow.plusSeconds(userForgotPasswordConfig.otpExpiresAtOffset.toSeconds))
                   userOtpRow <- userOtpRepository.upsertUserOtp(
                     userID = userDetails.userID,
@@ -101,7 +101,7 @@ object UserForgotPasswordService {
             }
           } yield otpID
         case None =>
-          idGenerator.generate
+          idGenerator.generateID
             .map(OtpID.either)
             .flatMap(
               ZIO
@@ -127,14 +127,14 @@ object UserForgotPasswordService {
             OtpType.ForgotPassword,
           )
           .someOrFail(
-            ServiceError.UnauthorizedError.OtpValidationError(
+            ServiceError.InternalServerError.UnexpectedError(
               s"No OTP found for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
             )
           )
         userDetailsRow <- userDetailsRepository
           .getUserDetails(userOtpRow.userID)
           .someOrFail(
-            ServiceError.InternalServerError.UserNotFoundError(
+            ServiceError.InternalServerError.UnexpectedError(
               s"No user details found for userID: [${userOtpRow.userID}] and otpID: [${userOtpRow.otpID}]"
             )
           )
@@ -149,14 +149,30 @@ object UserForgotPasswordService {
         _ <-
           if (userActionAttemptsRow.attempts.value > userForgotPasswordConfig.otpVerifyAttemptsMaxRetries)
             ZIO.fail(
-              ServiceError.UnauthorizedError.OtpValidationError(
+              ServiceError.BadRequestError.OtpVerifyError(
                 s"OTP validation attempts exceeded for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
               )
             )
           else ZIO.unit
         instantNow <- timeProvider.instantNow
         _          <-
-          if (userOtpRow.otp == forgotPasswordVerifyOTP.otp && userOtpRow.expiresAt.value.isAfter(instantNow))
+          if (userOtpRow.expiresAt.value.isBefore(instantNow))
+            userOtpRepository.deleteUserOtp(
+              otpID = userOtpRow.otpID,
+              userID = userOtpRow.userID,
+              otpType = userOtpRow.otpType,
+            ) *> ZIO.fail(
+              ServiceError.UnauthorizedError.OtpExpiredError(
+                s"Expired OTP provided for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
+              )
+            )
+          else if (userOtpRow.otp != forgotPasswordVerifyOTP.otp)
+            ZIO.fail(
+              ServiceError.BadRequestError.OtpVerifyError(
+                s"Wrong OTP provided for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
+              )
+            )
+          else
             userOtpRepository.deleteUserOtp(
               otpID = forgotPasswordVerifyOTP.otpID,
               userID = userOtpRow.userID,
@@ -167,12 +183,6 @@ object UserForgotPasswordService {
             ) *> userActionAttemptRepository.deleteUserActionAttempt(
               userID = userOtpRow.userID,
               actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
-            )
-          else
-            ZIO.fail(
-              ServiceError.UnauthorizedError.OtpValidationError(
-                s"Wrong or expired OTP provided for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
-              )
             )
         resetPasswordJwt <- jwtService.generateResetPasswordToken(userDetailsRow.userID)
         _                <- userTokenRepository
@@ -196,7 +206,7 @@ object UserForgotPasswordService {
         userDetailsRow          <- userDetailsRepository
           .getUserDetails(authedUserResetPassword.userID)
           .someOrFail(
-            ServiceError.InternalServerError.UserNotFoundError(
+            ServiceError.InternalServerError.UnexpectedError(
               s"No user details found for userID: [${authedUserResetPassword.userID}]"
             )
           )
@@ -211,7 +221,9 @@ object UserForgotPasswordService {
             tokenType = TokenType.ResetPasswordToken,
           )
           .someOrFail(
-            ServiceError.UnauthorizedError.TokenMissing
+            ServiceError.InternalServerError.UnexpectedError(
+              s"Reset password token not found for tokenID: [${authedUserResetPassword.tokenID}], userID: [${authedUserResetPassword.userID}] and tokenType: [${TokenType.ResetPasswordToken}]"
+            )
           )
         passwordHash <- passwordService.hashPassword(forgotPasswordReset.password)
         _            <- userCredentialsRepository.updateUserCredentials(

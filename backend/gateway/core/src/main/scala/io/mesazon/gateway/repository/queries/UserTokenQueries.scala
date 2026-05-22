@@ -9,7 +9,7 @@ import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.domain.*
 import zio.*
 
-class UserTokenQueries(
+final class UserTokenQueries(
     config: RepositoryConfig
 ) {
 
@@ -47,8 +47,9 @@ class UserTokenQueries(
       sql"""
            |DELETE FROM $frSchema.$frUserTokensTable
            |WHERE token_id = $tokenID AND user_id = $userID AND token_type = $tokenType
-           |""".stripMargin.update.run
-    }.unit
+           |RETURNING 1
+           |""".stripMargin.query[Int].unique.map(_ => ())
+    }
 
   def deleteAllUserTokensForUser(userID: UserID): TranzactIO[Unit] =
     tzio {

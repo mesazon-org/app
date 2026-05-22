@@ -2,20 +2,21 @@ package io.mesazon.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
 import io.github.gaelrenoux.tranzactio.DbException
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.repository.UserOtpRepository
 import io.mesazon.gateway.repository.domain.UserOtpRow
 import io.mesazon.gateway.repository.queries.UserOtpQueries
 import io.mesazon.gateway.utils.*
+import io.mesazon.generator.IDGenerator
 import io.mesazon.test.postgresql.*
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.*
 import zio.*
 
+import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant, ZoneOffset}
 
 class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
 
@@ -23,35 +24,11 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
 
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 
-  val repositoryConfig = RepositoryConfig(
-    schema = "local_schema",
-    userOtpTable = "user_otp",
-  )
-
-  case class Context(
-      postgresClient: PostgreSQLTestClient,
-      userOtpQueries: UserOtpQueries,
-  )
-
-  def withContext[A](f: Context => A): A = withContainers { container =>
-    val config               = PostgreSQLTestClientConfig.from(container)
-    val postgreSQLTestClient = ZIO
-      .service[PostgreSQLTestClient]
-      .provide(PostgreSQLTestClient.live, ZLayer.succeed(config))
-      .zioValue
-    val userOtpQueries =
-      ZIO
-        .service[UserOtpQueries]
-        .provide(UserOtpQueries.live, ZLayer.succeed(repositoryConfig))
-        .zioValue
-
-    f(Context(postgreSQLTestClient, userOtpQueries))
-  }
-
-  override def beforeAll(): Unit = withContext { context =>
-    import context.*
-
+  override def beforeAll(): Unit = {
     super.beforeAll()
+
+    val context = new TestContext {}
+    import context.*
 
     eventually {
       postgresClient
@@ -60,10 +37,11 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
     }
   }
 
-  override def beforeEach(): Unit = withContext { context =>
-    import context.*
-
+  override def beforeEach(): Unit = {
     super.beforeEach()
+
+    val context = new TestContext {}
+    import context.*
 
     eventually {
       postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.userOtpTable).zioValue
@@ -72,26 +50,23 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
 
   "UserOtpRepository" when {
     "upsertUserOtp" should {
-      "successfully insert a new OTP for a user and return the inserted row" in withContext { context =>
-        import context.*
+      "successfully insert a new OTP for a user and return the inserted row" in new TestContext {
+        val otpID = arbitrarySample[OtpID]
 
-        val now      = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow = Clock.fixed(now, ZoneOffset.UTC)
-
-        val userOtpRepository = ZIO
-          .service[UserOtpRepository]
-          .provide(
-            UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(clockNow),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userOtpQueries),
-          )
-          .zioValue
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once(),
+          (() => idGeneratorMock.generateID)
+            .expects()
+            .returningZIO(otpID.value)
+            .once(),
+        )
 
         val userOtpRow = arbitrarySample[UserOtpRow]
 
-        val userOtpRowInserted = userOtpRepository
+        val userOtpRowUpsert = userOtpRepository
           .upsertUserOtp(
             userID = userOtpRow.userID,
             otp = userOtpRow.otp,
@@ -104,25 +79,28 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll should have size 1
-        userOtpRowsAll should contain theSameElementsAs List(userOtpRowInserted)
+        userOtpRowsAll.head shouldBe userOtpRowUpsert
+        userOtpRowsAll.head shouldBe userOtpRow.copy(
+          otpID = otpID,
+          createdAt = CreatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow),
+        )
       }
 
-      "successfully upsert an existing OTP for a user and return the updated row" in withContext { context =>
-        import context.*
+      "successfully upsert an existing OTP for a user and return the updated row" in new TestContext {
+        val otpID             = arbitrarySample[OtpID]
+        val instantNowUpdated = instantNow.plusSeconds(10)
 
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
-        val userOtpRepository = ZIO
-          .service[UserOtpRepository]
-          .provide(
-            UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(clockNow),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userOtpQueries),
-          )
-          .zioValue
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNowUpdated)
+            .once(),
+          (() => idGeneratorMock.generateID)
+            .expects()
+            .returningZIO(otpID.value)
+            .once(),
+        )
 
         val userOtpRow = arbitrarySample[UserOtpRow]
 
@@ -135,7 +113,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
         val expiresAtUpdate = ExpiresAt(userOtpRow.expiresAt.value.plusSeconds(1))
         val otpUpdate       = arbitrarySample[Otp]
 
-        val userOtpRowUpdated = userOtpRepository
+        val userOtpRowUpsert = userOtpRepository
           .upsertUserOtp(
             userID = userOtpRow.userID,
             otp = otpUpdate,
@@ -148,36 +126,26 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll should have size 1
-        userOtpRowsAll should contain theSameElementsAs List(
-          userOtpRow.copy(
-            otpID = OtpID.assume("1"),
-            otp = otpUpdate,
-            createdAt = CreatedAt(instantNow),
-            expiresAt = expiresAtUpdate,
-            updatedAt = UpdatedAt(instantNow),
-          )
-        )
-        userOtpRowsAll should contain theSameElementsAs List(
-          userOtpRowUpdated
+        userOtpRowsAll.head.userID shouldBe userOtpRow.userID
+        userOtpRowsAll.head.otpID should not be userOtpRow.otpID
+        userOtpRowsAll.head.otp should not be userOtpRow.otp
+        userOtpRowsAll.head.otpType shouldBe userOtpRow.otpType
+        userOtpRowsAll.head.createdAt should not be userOtpRow.createdAt
+        userOtpRowsAll.head.updatedAt should not be userOtpRow.updatedAt
+        userOtpRowsAll.head.expiresAt should not be userOtpRow.expiresAt
+        userOtpRowsAll.head shouldBe userOtpRowUpsert
+        userOtpRowsAll.head shouldBe userOtpRow.copy(
+          otpID = otpID,
+          otp = otpUpdate,
+          createdAt = CreatedAt(instantNowUpdated),
+          expiresAt = expiresAtUpdate,
+          updatedAt = UpdatedAt(instantNowUpdated),
         )
       }
     }
 
     "getUserOtp" should {
-      "successfully retrieve an existing OTP for a user by OTP ID, User ID and OTP type" in withContext { context =>
-        import context.*
-
-        val userOtpRepository = ZIO
-          .service[UserOtpRepository]
-          .provide(
-            UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userOtpQueries),
-          )
-          .zioValue
-
+      "successfully get an existing OTP for a user by OTP ID, User ID and OTP type" in new TestContext {
         val userOtpRow = arbitrarySample[UserOtpRow]
 
         postgresClient
@@ -186,54 +154,28 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           )
           .zioValue
 
-        val userOtpRowOptRetrieved = userOtpRepository
+        val userOtpRowOptGet = userOtpRepository
           .getUserOtp(userOtpRow.otpID, userOtpRow.userID, userOtpRow.otpType)
           .zioValue
 
-        userOtpRowOptRetrieved shouldBe Some(userOtpRow)
+        userOtpRowOptGet shouldBe Some(userOtpRow)
       }
 
-      "return None when there is no OTP for the given OTP ID, User ID and OTP type" in withContext { context =>
-        import context.*
-
-        val userOtpRepository = ZIO
-          .service[UserOtpRepository]
-          .provide(
-            UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userOtpQueries),
-          )
-          .zioValue
-
+      "return None when there is no OTP for the given OTP ID, User ID and OTP type" in new TestContext {
         val otpID   = arbitrarySample[OtpID]
         val userID  = arbitrarySample[UserID]
         val otpType = arbitrarySample[OtpType]
 
-        val userOtpRowOptRetrieved = userOtpRepository
+        val userOtpRowOptGet = userOtpRepository
           .getUserOtp(otpID, userID, otpType)
           .zioValue
 
-        userOtpRowOptRetrieved shouldBe None
+        userOtpRowOptGet shouldBe None
       }
     }
 
     "getUserOtpByOtpID" should {
-      "successfully retrieve an existing OTP for a user by OTP ID and OTP type" in withContext { context =>
-        import context.*
-
-        val userOtpRepository = ZIO
-          .service[UserOtpRepository]
-          .provide(
-            UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userOtpQueries),
-          )
-          .zioValue
-
+      "successfully retrieve an existing OTP for a user by OTP ID and OTP type" in new TestContext {
         val userOtpRow = arbitrarySample[UserOtpRow]
 
         postgresClient
@@ -242,53 +184,27 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           )
           .zioValue
 
-        val userOtpRowOptRetrieved = userOtpRepository
+        val userOtpRowOptGet = userOtpRepository
           .getUserOtpByOtpID(otpID = userOtpRow.otpID, otpType = userOtpRow.otpType)
           .zioValue
 
-        userOtpRowOptRetrieved shouldBe Some(userOtpRow)
+        userOtpRowOptGet shouldBe Some(userOtpRow)
       }
 
-      "return None when there is no OTP for the given OTP ID and OTP type" in withContext { context =>
-        import context.*
-
-        val userOtpRepository = ZIO
-          .service[UserOtpRepository]
-          .provide(
-            UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userOtpQueries),
-          )
-          .zioValue
-
+      "return None when there is no OTP for the given OTP ID and OTP type" in new TestContext {
         val otpID   = arbitrarySample[OtpID]
         val otpType = arbitrarySample[OtpType]
 
-        val userOtpRowOptRetrieved = userOtpRepository
+        val userOtpRowOptGet = userOtpRepository
           .getUserOtpByOtpID(otpID, otpType)
           .zioValue
 
-        userOtpRowOptRetrieved shouldBe None
+        userOtpRowOptGet shouldBe None
       }
     }
 
     "getUserOtpByUserID" should {
-      "successfully retrieve an existing OTP for a user by user ID and OTP type" in withContext { context =>
-        import context.*
-
-        val userOtpRepository = ZIO
-          .service[UserOtpRepository]
-          .provide(
-            UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userOtpQueries),
-          )
-          .zioValue
-
+      "successfully retrieve an existing OTP for a user by user ID and OTP type" in new TestContext {
         val userOtpRow = arbitrarySample[UserOtpRow]
 
         postgresClient
@@ -297,55 +213,35 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           )
           .zioValue
 
-        val userOtpRowOptRetrieved = userOtpRepository
+        val userOtpRowOptGet = userOtpRepository
           .getUserOtpByUserID(userID = userOtpRow.userID, otpType = userOtpRow.otpType)
           .zioValue
 
-        userOtpRowOptRetrieved shouldBe Some(userOtpRow)
+        userOtpRowOptGet shouldBe Some(userOtpRow)
       }
 
-      "return None when there is no OTP for the given user ID and OTP type" in withContext { context =>
-        import context.*
-
-        val userOtpRepository = ZIO
-          .service[UserOtpRepository]
-          .provide(
-            UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userOtpQueries),
-          )
-          .zioValue
-
+      "return None when there is no OTP for the given user ID and OTP type" in new TestContext {
         val userID  = arbitrarySample[UserID]
         val otpType = arbitrarySample[OtpType]
 
-        val userOtpRowOptRetrieved = userOtpRepository
+        val userOtpRowOptGet = userOtpRepository
           .getUserOtpByUserID(userID, otpType)
           .zioValue
 
-        userOtpRowOptRetrieved shouldBe None
+        userOtpRowOptGet shouldBe None
       }
     }
 
     "updateUserOtp" should {
-      "successfully update an existing OTP for a user and return the updated row" in withContext { context =>
-        import context.*
+      "successfully update an existing OTP for a user and return the updated row" in new TestContext {
+        val instantNowUpdated = instantNow.plusSeconds(10)
 
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-        val clockNow   = Clock.fixed(instantNow, ZoneOffset.UTC)
-
-        val userOtpRepository = ZIO
-          .service[UserOtpRepository]
-          .provide(
-            UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(clockNow),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userOtpQueries),
-          )
-          .zioValue
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNowUpdated)
+            .once()
+        )
 
         val userOtpRow = arbitrarySample[UserOtpRow]
 
@@ -370,30 +266,27 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
           postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll should have size 1
-        userOtpRowsAll should contain theSameElementsAs List(
-          userOtpRow.copy(
-            expiresAt = expiresAtUpdate,
-            updatedAt = UpdatedAt(instantNow),
-          )
-        )
-        userOtpRowsAll should contain theSameElementsAs List(
-          userOtpRowUpdated
+        userOtpRowsAll.head.userID shouldBe userOtpRow.userID
+        userOtpRowsAll.head.otpID shouldBe userOtpRow.otpID
+        userOtpRowsAll.head.otp shouldBe userOtpRow.otp
+        userOtpRowsAll.head.otpType shouldBe userOtpRow.otpType
+        userOtpRowsAll.head.createdAt shouldBe userOtpRow.createdAt
+        userOtpRowsAll.head.updatedAt should not be userOtpRow.updatedAt
+        userOtpRowsAll.head.expiresAt should not be userOtpRow.expiresAt
+        userOtpRowsAll.head shouldBe userOtpRowUpdated
+        userOtpRowsAll.head shouldBe userOtpRow.copy(
+          expiresAt = expiresAtUpdate,
+          updatedAt = UpdatedAt(instantNowUpdated),
         )
       }
 
-      "fail to update a non existing user OTP" in withContext { context =>
-        import context.*
-
-        val userOtpRepository = ZIO
-          .service[UserOtpRepository]
-          .provide(
-            UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userOtpQueries),
-          )
-          .zioValue
+      "fail to update a non existing user OTP" in new TestContext {
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once()
+        )
 
         val userOtpRow = arbitrarySample[UserOtpRow]
 
@@ -414,20 +307,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
     }
 
     "deleteUserOtp" should {
-      "successfully delete an existing OTP for a user" in withContext { context =>
-        import context.*
-
-        val userOtpRepository = ZIO
-          .service[UserOtpRepository]
-          .provide(
-            UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userOtpQueries),
-          )
-          .zioValue
-
+      "successfully delete an existing OTP for a user" in new TestContext {
         val userOtpRow = arbitrarySample[UserOtpRow]
 
         postgresClient
@@ -450,20 +330,7 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
         userOtpRowsAll shouldBe empty
       }
 
-      "successfully delete a non existin user OTP" in withContext { context =>
-        import context.*
-
-        val userOtpRepository = ZIO
-          .service[UserOtpRepository]
-          .provide(
-            UserOtpRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userOtpQueries),
-          )
-          .zioValue
-
+      "successfully delete a non existin user OTP" in new TestContext {
         val userOtpRow = arbitrarySample[UserOtpRow]
 
         userOtpRepository
@@ -480,5 +347,41 @@ class UserOtpRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Docker
         userOtpRowsAll shouldBe empty
       }
     }
+  }
+
+  trait TestContext {
+    val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+    val repositoryConfig = RepositoryConfig(
+      schema = "local_schema",
+      userOtpTable = "user_otp",
+    )
+
+    val postgreSQLTestClientConfig = withContainers(PostgreSQLTestClientConfig.from(_))
+
+    val postgresClient = ZIO
+      .service[PostgreSQLTestClient]
+      .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgreSQLTestClientConfig))
+      .zioValue
+
+    val userOtpQueries =
+      ZIO
+        .service[UserOtpQueries]
+        .provide(UserOtpQueries.live, ZLayer.succeed(repositoryConfig))
+        .zioValue
+
+    val timeProviderMock = mock[TimeProvider]
+    val idGeneratorMock  = mock[IDGenerator]
+
+    val userOtpRepository = ZIO
+      .service[UserOtpRepository]
+      .provide(
+        UserOtpRepository.live,
+        postgresClient.databaseLive,
+        ZLayer.succeed(userOtpQueries),
+        ZLayer.succeed(idGeneratorMock),
+        ZLayer.succeed(timeProviderMock),
+      )
+      .zioValue
   }
 }

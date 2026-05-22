@@ -71,9 +71,6 @@ class TwilioClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBa
       "successfully send OTP SMS" in withContext { context =>
         import context.*
 
-        val phoneNumberE164 = arbitrarySample[PhoneNumberE164]
-        val otp             = arbitrarySample[Otp]
-
         val twilioClient = ZIO
           .service[TwilioClient]
           .provide(
@@ -82,6 +79,9 @@ class TwilioClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBa
             HttpClientZioBackend.layer(),
           )
           .zioValue
+
+        val phoneNumberE164 = arbitrarySample[PhoneNumberE164]
+        val otp             = arbitrarySample[Otp]
 
         twilioClient.sendOtpSms(phoneNumberE164, otp).zioValue
 
@@ -98,9 +98,6 @@ class TwilioClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBa
       "fail to send OTP SMS when Twilio API returns an error" in withContext { context =>
         import context.*
 
-        val phoneNumberE164 = arbitrarySample[PhoneNumberE164]
-        val otp             = arbitrarySample[Otp]
-
         val twilioClient = ZIO
           .service[TwilioClient]
           .provide(
@@ -109,6 +106,9 @@ class TwilioClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBa
             HttpClientZioBackend.layer(),
           )
           .zioValue
+
+        val phoneNumberE164 = arbitrarySample[PhoneNumberE164]
+        val otp             = arbitrarySample[Otp]
 
         val serviceError = twilioClient.sendOtpSms(phoneNumberE164, otp).zioError
 

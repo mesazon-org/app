@@ -56,8 +56,8 @@ object UserSignUpService {
                 OnboardStage.EmailVerification,
               )
               otpNew <-
-                if (isEmptyOrExpiredOrExpiringSoon) otpGenerator.generate
-                else userOtpRowOpt.map(_.otp).fold(otpGenerator.generate)(ZIO.succeed(_))
+                if (isEmptyOrExpiredOrExpiringSoon) otpGenerator.generateOtp
+                else userOtpRowOpt.map(_.otp).fold(otpGenerator.generateOtp)(ZIO.succeed(_))
               expiresAtNew <-
                 timeProvider.instantNow
                   .map(_.plusSeconds(userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds))
@@ -84,7 +84,7 @@ object UserSignUpService {
               expiresAtNew <- timeProvider.instantNow
                 .map(_.plusSeconds(userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds))
                 .map(ExpiresAt.assume)
-              otpNew        <- otpGenerator.generate
+              otpNew        <- otpGenerator.generateOtp
               userOtpRowNew <- userOtpRepository.upsertUserOtp(
                 userDetailsRowNew.userID,
                 OtpType.EmailVerification,
@@ -98,7 +98,7 @@ object UserSignUpService {
                     .exponential(userSignUpConfig.sendEmailVerificationEmailRetryDelay)
                 )
             } yield userOtpRowNew.otpID
-          case _ => idGenerator.generate.map(OtpID.assume)
+          case _ => idGenerator.generateID.map(OtpID.assume)
         }
       } yield smithy.SignUpEmailPostResponse(
         otpID.value,
@@ -110,52 +110,61 @@ object UserSignUpService {
         request: smithy.SignUpVerifyEmailPostRequest
     ): ServiceTask[smithy.SignUpVerifyEmailPostResponse] =
       for {
-        _                  <- ZIO.logDebug(s"Verify email: [${request.otpID}]")
-        signUpVerifyEmail  <- signUpVerifyEmailPostRequestServiceValidator.validate(request)
-        userOtpRowOpt      <- userOtpRepository.getUserOtpByOtpID(signUpVerifyEmail.otpID, OtpType.EmailVerification)
-        userOtpRowExisting <- ZIO.getOrFailWith(
-          ServiceError.UnauthorizedError.OtpValidationError(
-            s"No otp found for otpID: [${signUpVerifyEmail.otpID}] and otpType: [${OtpType.EmailVerification}]"
+        _                 <- ZIO.logDebug(s"Verify email: [${request.otpID}]")
+        signUpVerifyEmail <- signUpVerifyEmailPostRequestServiceValidator.validate(request)
+        userOtpRow        <- userOtpRepository
+          .getUserOtpByOtpID(signUpVerifyEmail.otpID, OtpType.EmailVerification)
+          .someOrFail(
+            ServiceError.InternalServerError.UnexpectedError(
+              s"No otp found for otpID: [${signUpVerifyEmail.otpID}] and otpType: [${OtpType.EmailVerification}]"
+            )
           )
-        )(userOtpRowOpt)
-        userDetailsRowOpt      <- userDetailsRepository.getUserDetails(userOtpRowExisting.userID)
-        userDetailsRowExisting <- ZIO.getOrFailWith(
-          ServiceError.InternalServerError.UnexpectedError(
-            s"No user details found for userID: [${userOtpRowExisting.userID}] and otpID: [${userOtpRowExisting.otpID}]"
+        userDetailsRow <- userDetailsRepository
+          .getUserDetails(userOtpRow.userID)
+          .someOrFail(
+            ServiceError.InternalServerError.UnexpectedError(
+              s"No user details found for userID: [${userOtpRow.userID}] and otpID: [${userOtpRow.otpID}]"
+            )
           )
-        )(userDetailsRowOpt)
         _ <- verifyOnboardStage(
-          onboardStageUser = userDetailsRowExisting.onboardStage,
+          onboardStageUser = userDetailsRow.onboardStage,
           onboardStagesAllowed = OnboardStage.signUpVerifyEmailStages,
         )
         instantNow <- timeProvider.instantNow
-        _          <- userOtpRowExisting.otpType match {
-          case OtpType.EmailVerification
-              if userOtpRowExisting.otp == signUpVerifyEmail.otp && userOtpRowExisting.expiresAt.value.isAfter(
-                instantNow
-              ) =>
-            userDetailsRepository
-              .updateUserDetails(
-                userDetailsRowExisting.userID,
-                OnboardStage.EmailVerified,
-              ) *> userOtpRepository.deleteUserOtp(
-              userOtpRowExisting.otpID,
-              userOtpRowExisting.userID,
-              userOtpRowExisting.otpType,
-            )
-          case _ =>
-            ZIO.fail(
-              ServiceError.UnauthorizedError.OtpValidationError(
-                s"Wrong or expired OTP provided for otpID: [${userOtpRowExisting.otpID}]"
+        _          <-
+          if (userOtpRow.expiresAt.value.isBefore(instantNow))
+            userOtpRepository
+              .deleteUserOtp(
+                userOtpRow.otpID,
+                userOtpRow.userID,
+                userOtpRow.otpType,
+              ) *> ZIO.fail(
+              ServiceError.UnauthorizedError.OtpExpiredError(
+                s"Expired OTP provided for otpID: [${userOtpRow.otpID}]"
               )
             )
-        }
-        _          <- userTokenRepository.deleteAllUserTokens(userDetailsRowExisting.userID)
-        accessJwt  <- jwtService.generateAccessToken(userDetailsRowExisting.userID)
-        refreshJwt <- jwtService.generateRefreshToken(userDetailsRowExisting.userID)
+          else if (userOtpRow.otp != signUpVerifyEmail.otp)
+            ZIO.fail(
+              ServiceError.BadRequestError.OtpVerifyError(
+                s"Wrong OTP provided for otpID: [${userOtpRow.otpID}]"
+              )
+            )
+          else
+            userDetailsRepository
+              .updateUserDetails(
+                userDetailsRow.userID,
+                OnboardStage.EmailVerified,
+              ) *> userOtpRepository.deleteUserOtp(
+              userOtpRow.otpID,
+              userDetailsRow.userID,
+              userOtpRow.otpType,
+            )
+        _          <- userTokenRepository.deleteAllUserTokens(userDetailsRow.userID)
+        accessJwt  <- jwtService.generateAccessToken(userDetailsRow.userID)
+        refreshJwt <- jwtService.generateRefreshToken(userDetailsRow.userID)
         _          <- userTokenRepository.upsertUserToken(
           refreshJwt.tokenID,
-          userDetailsRowExisting.userID,
+          userDetailsRow.userID,
           TokenType.RefreshToken,
           refreshJwt.expiresAt,
         )

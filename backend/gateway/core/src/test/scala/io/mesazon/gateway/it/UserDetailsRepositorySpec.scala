@@ -2,20 +2,21 @@ package io.mesazon.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
 import io.github.gaelrenoux.tranzactio.DbException
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.Mocks
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.repository.UserDetailsRepository
 import io.mesazon.gateway.repository.domain.UserDetailsRow
 import io.mesazon.gateway.repository.queries.UserDetailsQueries
 import io.mesazon.gateway.utils.*
+import io.mesazon.generator.IDGenerator
 import io.mesazon.test.postgresql.*
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.*
 import zio.*
 
+import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant, ZoneOffset}
 
 class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
 
@@ -23,35 +24,11 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
 
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 
-  val repositoryConfig = RepositoryConfig(
-    schema = "local_schema",
-    userDetailsTable = "user_details",
-  )
-
-  case class Context(
-      postgresClient: PostgreSQLTestClient,
-      userDetailsQueries: UserDetailsQueries,
-  )
-
-  def withContext[A](f: Context => A): A = withContainers { container =>
-    val config               = PostgreSQLTestClientConfig.from(container)
-    val postgreSQLTestClient = ZIO
-      .service[PostgreSQLTestClient]
-      .provide(PostgreSQLTestClient.live, ZLayer.succeed(config))
-      .zioValue
-    val userDetailsQueries =
-      ZIO
-        .service[UserDetailsQueries]
-        .provide(UserDetailsQueries.live, ZLayer.succeed(repositoryConfig))
-        .zioValue
-
-    f(Context(postgreSQLTestClient, userDetailsQueries))
-  }
-
-  override def beforeAll(): Unit = withContext { context =>
-    import context.*
-
+  override def beforeAll(): Unit = {
     super.beforeAll()
+
+    val context = new TestContext {}
+    import context.*
 
     eventually {
       postgresClient
@@ -60,10 +37,11 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
     }
   }
 
-  override def beforeEach(): Unit = withContext { context =>
-    import context.*
-
+  override def beforeEach(): Unit = {
     super.beforeEach()
+
+    val context = new TestContext {}
+    import context.*
 
     eventually {
       postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.userDetailsTable).zioValue
@@ -72,34 +50,33 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
 
   "UserDetailsRepository" when {
     "insertUserDetails" should {
-      "successfully insert new details for a user" in withContext { context =>
-        import context.*
+      "successfully insert new details for a user" in new TestContext {
+        val userID = arbitrarySample[UserID]
 
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-
-        val userDetailsRepository = ZIO
-          .service[UserDetailsRepository]
-          .provide(
-            UserDetailsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(instantNow, ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userDetailsQueries),
-          )
-          .zioValue
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once(),
+          (() => idGeneratorMock.generateID)
+            .expects()
+            .returningZIO(userID.value)
+            .once(),
+        )
 
         val email        = arbitrarySample[Email]
         val onboardStage = arbitrarySample[OnboardStage]
 
-        userDetailsRepository.insertUserDetails(email, onboardStage).zioValue
+        val userDetailsRowInsert = userDetailsRepository.insertUserDetails(email, onboardStage).zioValue
 
         val userDetailsRowsAll =
           postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
 
         userDetailsRowsAll should have size 1
-        userDetailsRowsAll should contain theSameElementsAs List(
+        userDetailsRowsAll.head shouldBe userDetailsRowInsert
+        userDetailsRowsAll.head shouldBe
           UserDetailsRow(
-            userID = UserID.assume("1"),
+            userID = userID,
             email = email,
             fullName = None,
             phoneNumber = None,
@@ -107,24 +84,21 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
             createdAt = CreatedAt(instantNow),
             updatedAt = UpdatedAt(instantNow),
           )
-        )
       }
 
-      "fail to insert details for already existing email" in withContext { context =>
-        import context.*
-
-        val userDetailsRepository = ZIO
-          .service[UserDetailsRepository]
-          .provide(
-            UserDetailsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userDetailsQueries),
-          )
-          .zioValue
-
+      "fail to insert details for already existing email" in new TestContext {
         val userDetailsRow = arbitrarySample[UserDetailsRow]
+
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once(),
+          (() => idGeneratorMock.generateID)
+            .expects()
+            .returningZIO(userDetailsRow.userID.value)
+            .once(),
+        )
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
@@ -137,23 +111,20 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
     }
 
     "updateUserDetails" should {
-      "successfully update existing details for a user" in withContext { context =>
-        import context.*
-
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-
-        val userDetailsRepository = ZIO
-          .service[UserDetailsRepository]
-          .provide(
-            UserDetailsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(instantNow, ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userDetailsQueries),
-          )
-          .zioValue
-
+      "successfully update existing details for a user" in new TestContext {
         val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(
+            createdAt = CreatedAt(instantNow),
+            updatedAt = UpdatedAt(instantNow),
+          )
+
+        val instantNowUpdated = instantNow.plusSeconds(10)
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNowUpdated)
+            .once()
+        )
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
@@ -161,7 +132,7 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
         val fullNameOptUpdate    = arbitrarySample[Option[FullName]]
         val phoneNumberOptUpdate = arbitrarySample[Option[PhoneNumber]]
 
-        userDetailsRepository
+        val userDetailsRowUpdate = userDetailsRepository
           .updateUserDetails(
             userID = userDetailsRow.userID,
             onboardStageUpdate = onboardStageUpdate,
@@ -174,31 +145,26 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
           postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
 
         userDetailsRowsAll should have size 1
-        userDetailsRowsAll should contain theSameElementsAs List(
-          userDetailsRow.copy(
-            onboardStage = onboardStageUpdate,
-            fullName = fullNameOptUpdate orElse userDetailsRow.fullName,
-            phoneNumber = phoneNumberOptUpdate orElse userDetailsRow.phoneNumber,
-            updatedAt = UpdatedAt(instantNow),
-          )
+        userDetailsRowsAll.head.userID shouldBe userDetailsRow.userID
+        userDetailsRowsAll.head.email shouldBe userDetailsRow.email
+        userDetailsRowsAll.head.createdAt shouldBe userDetailsRow.createdAt
+        userDetailsRowsAll.head.updatedAt should not be userDetailsRow.updatedAt
+        userDetailsRowsAll.head shouldBe userDetailsRowUpdate
+        userDetailsRowsAll.head shouldBe userDetailsRow.copy(
+          onboardStage = onboardStageUpdate,
+          fullName = fullNameOptUpdate orElse userDetailsRow.fullName,
+          phoneNumber = phoneNumberOptUpdate orElse userDetailsRow.phoneNumber,
+          updatedAt = UpdatedAt(instantNowUpdated),
         )
       }
 
-      "fail to update details for a not existing user" in withContext { context =>
-        import context.*
-
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-
-        val userDetailsRepository = ZIO
-          .service[UserDetailsRepository]
-          .provide(
-            UserDetailsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(instantNow, ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userDetailsQueries),
-          )
-          .zioValue
+      "fail to update details for a not existing user" in new TestContext {
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once()
+        )
 
         val userID               = arbitrarySample[UserID]
         val onboardStageUpdate   = arbitrarySample[OnboardStage]
@@ -220,103 +186,87 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
     }
 
     "getUserDetails" should {
-      "successfully retrieve existing details for a user by user ID" in withContext { context =>
-        import context.*
-
-        val userDetailsRepository = ZIO
-          .service[UserDetailsRepository]
-          .provide(
-            UserDetailsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userDetailsQueries),
-          )
-          .zioValue
-
+      "successfully get existing details for a user by user ID" in new TestContext {
         val userDetailsRow = arbitrarySample[UserDetailsRow]
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        val userDetailsRowOptRetrieved = userDetailsRepository
+        val userDetailsRowOptGet = userDetailsRepository
           .getUserDetails(userID = userDetailsRow.userID)
           .zioValue
 
-        userDetailsRowOptRetrieved shouldBe Some(userDetailsRow)
+        userDetailsRowOptGet shouldBe Some(userDetailsRow)
       }
 
-      "return None when there are no user details for the given user ID" in withContext { context =>
-        import context.*
-
-        val userDetailsRepository = ZIO
-          .service[UserDetailsRepository]
-          .provide(
-            UserDetailsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userDetailsQueries),
-          )
-          .zioValue
-
+      "return None when there are no user details for the given user ID" in new TestContext {
         val userID = arbitrarySample[UserID]
 
-        val userDetailsRowOptRetrieved = userDetailsRepository
+        val userDetailsRowOptGet = userDetailsRepository
           .getUserDetails(userID)
           .zioValue
 
-        userDetailsRowOptRetrieved shouldBe None
+        userDetailsRowOptGet shouldBe None
       }
     }
 
     "getUserDetailsByEmail" should {
-      "successfully retrieve existing user details for a user by email" in withContext { context =>
-        import context.*
-
-        val userDetailsRepository = ZIO
-          .service[UserDetailsRepository]
-          .provide(
-            UserDetailsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userDetailsQueries),
-          )
-          .zioValue
-
+      "successfully get existing user details for a user by email" in new TestContext {
         val userDetailsRow = arbitrarySample[UserDetailsRow]
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        val userDetailsRowOptRetrieved = userDetailsRepository
+        val userDetailsRowOptGet = userDetailsRepository
           .getUserDetailsByEmail(email = userDetailsRow.email)
           .zioValue
 
-        userDetailsRowOptRetrieved shouldBe Some(userDetailsRow)
+        userDetailsRowOptGet shouldBe Some(userDetailsRow)
       }
 
-      "return None when there are no details for the given email" in withContext { context =>
-        import context.*
-
-        val userDetailsRepository = ZIO
-          .service[UserDetailsRepository]
-          .provide(
-            UserDetailsRepository.live,
-            ZLayer.succeed(postgresClient.database),
-            Mocks.timeProviderLive(Clock.fixed(Instant.now(), ZoneOffset.UTC)),
-            Mocks.idGeneratorLive,
-            ZLayer.succeed(userDetailsQueries),
-          )
-          .zioValue
-
+      "return None when there are no details for the given email" in new TestContext {
         val email = arbitrarySample[Email]
 
-        val userDetailsRowOptRetrieved = userDetailsRepository
+        val userDetailsRowOptGet = userDetailsRepository
           .getUserDetailsByEmail(email)
           .zioValue
 
-        userDetailsRowOptRetrieved shouldBe None
+        userDetailsRowOptGet shouldBe None
       }
     }
+  }
+
+  trait TestContext {
+    val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+    val repositoryConfig = RepositoryConfig(
+      schema = "local_schema",
+      userDetailsTable = "user_details",
+    )
+
+    val postgreSQLTestClientConfig = withContainers(PostgreSQLTestClientConfig.from(_))
+
+    val postgresClient = ZIO
+      .service[PostgreSQLTestClient]
+      .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgreSQLTestClientConfig))
+      .zioValue
+
+    val userDetailsQueries =
+      ZIO
+        .service[UserDetailsQueries]
+        .provide(UserDetailsQueries.live, ZLayer.succeed(repositoryConfig))
+        .zioValue
+
+    val timeProviderMock = mock[TimeProvider]
+    val idGeneratorMock  = mock[IDGenerator]
+
+    val userDetailsRepository = ZIO
+      .service[UserDetailsRepository]
+      .provide(
+        UserDetailsRepository.live,
+        postgresClient.databaseLive,
+        ZLayer.succeed(timeProviderMock),
+        ZLayer.succeed(idGeneratorMock),
+        ZLayer.succeed(userDetailsQueries),
+      )
+      .zioValue
   }
 }

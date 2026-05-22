@@ -9,17 +9,14 @@ import java.time.Instant
 object AppName extends RefinedType[String, Pure]
 type AppName = AppName.T
 
-object UserID extends RefinedType[String, NonEmptyTrimmed]
+object UserID extends RefinedTypeUUID
 type UserID = UserID.T
 
-object ActionAttemptID extends RefinedType[String, NonEmptyTrimmed]
+object ActionAttemptID extends RefinedTypeUUID
 type ActionAttemptID = ActionAttemptID.T
 
-object TokenID extends RefinedType[String, NonEmptyTrimmed]
+object TokenID extends RefinedTypeUUID
 type TokenID = TokenID.T
-
-object UserContactID extends RefinedType[String, NonEmptyTrimmed]
-type UserContactID = UserContactID.T
 
 object Email extends RefinedType[String, EmailPredicate]
 type Email = Email.T
@@ -42,10 +39,7 @@ type PhoneCountryCode = PhoneCountryCode.T
 object PhoneNationalNumber extends RefinedType[String, NonEmptyTrimmed]
 type PhoneNationalNumber = PhoneNationalNumber.T
 
-object PhoneNumberE164 extends RefinedType[String, NonEmptyTrimmed] {
-  def cy(phoneNationalNumber: String): PhoneNumberE164.T =
-    assume(s"+357$phoneNationalNumber")
-}
+object PhoneNumberE164 extends RefinedType[String, NonEmptyTrimmed]
 type PhoneNumberE164 = PhoneNumberE164.T
 
 object Message extends RefinedType[String, NonEmpty]
@@ -54,10 +48,7 @@ type Message = Message.T
 object Otp extends RefinedType[String, OtpPredicate]
 type Otp = Otp.T
 
-object Retries extends RefinedType[Int, Positive]
-type Retries = Retries.T
-
-object OtpID extends RefinedType[String, NonEmptyTrimmed]
+object OtpID extends RefinedTypeUUID
 type OtpID = OtpID.T
 
 object CreatedAt extends RefinedType[Instant, Pure]
@@ -69,14 +60,44 @@ type UpdatedAt = UpdatedAt.T
 object ExpiresAt extends RefinedType[Instant, Pure]
 type ExpiresAt = ExpiresAt.T
 
-object RefreshToken extends RefinedType[String, NonEmptyTrimmed]
+object RefreshToken extends RefinedType[String, TokenPredicate]
 type RefreshToken = RefreshToken.T
 
-object ResetPasswordToken extends RefinedType[String, NonEmptyTrimmed]
+object ResetPasswordToken extends RefinedType[String, TokenPredicate]
 type ResetPasswordToken = ResetPasswordToken.T
 
-object AccessToken extends RefinedType[String, NonEmptyTrimmed]
+object AccessToken extends RefinedType[String, TokenPredicate]
 type AccessToken = AccessToken.T
 
 object Attempts extends RefinedType[Int, Positive]
 type Attempts = Attempts.T
+
+object OrganizationID extends RefinedTypeUUID
+type OrganizationID = OrganizationID.T
+
+object OrganizationName extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationName = OrganizationName.T
+
+object OrganizationSlug extends RefinedType[String, NonEmptyTrimmedLowerCase]
+type OrganizationSlug = OrganizationSlug.T
+
+object OrganizationEmail extends RefinedType[String, EmailPredicate]
+type OrganizationEmail = OrganizationEmail.T
+
+object OrganizationPhoneNumber extends RefinedType[PhoneNumber, Pure]
+type OrganizationPhoneNumber = OrganizationPhoneNumber.T
+
+object OrganizationAddressLine1 extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationAddressLine1 = OrganizationAddressLine1.T
+
+object OrganizationAddressLine2 extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationAddressLine2 = OrganizationAddressLine2.T
+
+object OrganizationCity extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationCity = OrganizationCity.T
+
+object OrganizationPostalCode extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationPostalCode = OrganizationPostalCode.T
+
+object OrganizationCountry extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationCountry = OrganizationCountry.T

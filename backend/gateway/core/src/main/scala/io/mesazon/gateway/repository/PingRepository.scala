@@ -8,7 +8,7 @@ import io.mesazon.domain.gateway.ServiceError
 import zio.*
 
 trait PingRepository {
-  def ping(): IO[ServiceError.ServiceUnavailableError.DatabaseUnavailableError, Unit]
+  def ping: IO[ServiceError.ServiceUnavailableError.DatabaseUnavailableError, Unit]
 }
 
 object PingRepository {
@@ -17,7 +17,7 @@ object PingRepository {
       database: DatabaseOps.ServiceOps[Transactor[Task]]
   ) extends PingRepository {
 
-    override def ping(): IO[ServiceError.ServiceUnavailableError.DatabaseUnavailableError, Unit] = database
+    override def ping: IO[ServiceError.ServiceUnavailableError.DatabaseUnavailableError, Unit] = database
       .transactionOrDie(
         tzio(
           sql"SELECT 1".query[Int].unique.map(_ == 1)

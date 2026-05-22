@@ -67,4 +67,8 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
   given Arbitrary[smithy.ForgotPasswordResetPostRequest] = Arbitrary(
     Arbitrary.arbitrary[ForgotPasswordReset].map(_.transformInto[smithy.ForgotPasswordResetPostRequest])
   )
+
+  given Arbitrary[smithy.TokenRefreshPostRequest] = Arbitrary(
+    Arbitrary.arbitrary[TokenRefresh].map(_.transformInto[smithy.TokenRefreshPostRequest])
+  )
 }

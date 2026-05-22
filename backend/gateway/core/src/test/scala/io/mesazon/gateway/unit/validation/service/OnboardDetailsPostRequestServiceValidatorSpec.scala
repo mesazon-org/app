@@ -67,7 +67,8 @@ class OnboardDetailsPostRequestServiceValidatorSpec extends ZWordSpecBase, Smith
           invalidFields = List(
             InvalidFieldError(
               fieldName = "fullName",
-              errorMessage = "Should not have leading or trailing whitespaces & Should have a minimum length of 1",
+              errorMessage =
+                "Should not have leading or trailing whitespaces & Should have a minimum length of 1 & Should have a maximum length of 255",
               invalidValues = List(""),
             ),
             InvalidFieldError(

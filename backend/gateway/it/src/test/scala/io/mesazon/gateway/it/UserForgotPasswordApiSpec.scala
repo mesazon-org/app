@@ -334,7 +334,7 @@ class UserForgotPasswordApiSpec
 
         forgotPasswordPostResponse.code shouldBe StatusCode.Ok
         forgotPasswordPostResponse.body.value.otpID shouldBe userOtpRow.otpID.value
-        forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 2.minutes.toSeconds // application.conf default value
+        forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf default value
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -379,8 +379,7 @@ class UserForgotPasswordApiSpec
           gatewayClient.forgotPasswordPost[smithy.InternalServerError](email).zioValue
 
         forgotPasswordPostResponse.code shouldBe StatusCode.Ok
-        forgotPasswordPostResponse.body.value.otpID should not be empty
-        forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 2.minutes.toSeconds // application.conf default value
+        forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf default value
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -550,18 +549,18 @@ class UserForgotPasswordApiSpec
       "fail with BadRequest ValidationError when request is not valid format" in withContext { context =>
         import context.*
 
+        val otpID = arbitrarySample[OtpID]
+
         val forgotPasswordVerifyOTPPostResponse =
           gatewayClient
             .forgotPasswordVerifyOTPPost[smithy.ValidationError](
-              otpID = OtpID.assume(""),
+              otpID = otpID,
               otp = Otp.assume("invalid-otp"),
             )
             .zioValue
 
         forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
-        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.ValidationError(fields =
-          List("otpID", "otp")
-        )
+        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("otp"))
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -588,46 +587,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll should have size 0
       }
 
-      "fail with Unauthorized when otp id does not exist" in withContext { context =>
-        import context.*
-
-        val forgotPasswordVerifyOTPPostResponse =
-          gatewayClient
-            .forgotPasswordVerifyOTPPost[smithy.Unauthorized](
-              otpID = OtpID.assume("non-existing-otp-id"),
-              otp = Otp.assume("111AAA"),
-            )
-            .zioValue
-
-        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.Unauthorized
-        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
-
-        userDetailsRowsAll should have size 0
-
-        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowsAll should have size 0
-
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-        userActionAttemptRowsAll should have size 0
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll should have size 0
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 0
-      }
-
-      "fail with Unauthorized when otp is wrong" in withContext { context =>
+      "fail with BadRequest when otp is wrong" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
@@ -662,14 +622,14 @@ class UserForgotPasswordApiSpec
 
         val forgotPasswordVerifyOTPPostResponse =
           gatewayClient
-            .forgotPasswordVerifyOTPPost[smithy.Unauthorized](
+            .forgotPasswordVerifyOTPPost[smithy.BadRequest](
               userOtpRow.otpID,
               Otp.assume("111AAA"), // wrong otp
             )
             .zioValue
 
-        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.Unauthorized
-        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
+        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.BadRequest()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -767,8 +727,7 @@ class UserForgotPasswordApiSpec
 
         val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
-        userOtpRowsAll should have size 1
-        userOtpRowsAll.head shouldBe userOtpRow
+        userOtpRowsAll should have size 0
 
         val userActionAttemptRowsAll =
           postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
@@ -801,7 +760,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll.head shouldBe userCredentialsRow
       }
 
-      "fail with Unauthorized when verify otp attempts has reached the limit" in withContext { context =>
+      "fail with BadRequest when verify otp attempts has reached the limit" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
@@ -847,14 +806,14 @@ class UserForgotPasswordApiSpec
 
         val forgotPasswordVerifyOTPPostResponse =
           gatewayClient
-            .forgotPasswordVerifyOTPPost[smithy.Unauthorized](
+            .forgotPasswordVerifyOTPPost[smithy.BadRequest](
               userOtpRow.otpID,
               userOtpRow.otp,
             )
             .zioValue
 
-        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.Unauthorized
-        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
+        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.BadRequest()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -894,6 +853,47 @@ class UserForgotPasswordApiSpec
 
         userCredentialsRowsAll should have size 1
         userCredentialsRowsAll.head shouldBe userCredentialsRow
+      }
+
+      "fail with InternalServerError when otp id does not exist" in withContext { context =>
+        import context.*
+
+        val otpID = arbitrarySample[OtpID]
+
+        val forgotPasswordVerifyOTPPostResponse =
+          gatewayClient
+            .forgotPasswordVerifyOTPPost[smithy.InternalServerError](
+              otpID = otpID,
+              otp = Otp.assume("111AAA"),
+            )
+            .zioValue
+
+        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.InternalServerError
+        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.InternalServerError()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
+
+        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+
+        userDetailsRowsAll should have size 0
+
+        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+        userOtpRowsAll should have size 0
+
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll should have size 0
+
+        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+        userTokenRowsAll should have size 0
+
+        val userCredentialsRowsAll =
+          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
+
+        userCredentialsRowsAll should have size 0
       }
     }
 
@@ -1007,7 +1007,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll should have size 0
       }
 
-      "fail with Unauthorized when reset password token is not found" in withContext { context =>
+      "fail with InternalServerError when reset password token is not found" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
@@ -1026,14 +1026,14 @@ class UserForgotPasswordApiSpec
 
         val forgotPasswordResetPostResponse =
           gatewayClient
-            .forgotPasswordResetPost[smithy.Unauthorized](
+            .forgotPasswordResetPost[smithy.InternalServerError](
               resetPasswordToken = resetPasswordJwt.resetPasswordToken,
               password = passwordNew,
             )
             .zioValue
 
-        forgotPasswordResetPostResponse.code shouldBe StatusCode.Unauthorized
-        forgotPasswordResetPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        forgotPasswordResetPostResponse.code shouldBe StatusCode.InternalServerError
+        forgotPasswordResetPostResponse.body.left.value shouldBe smithy.InternalServerError()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 

@@ -18,14 +18,15 @@ object UserSignInService {
 
     /** HTTP POST /signin */
     override def signInPost(): ServiceTask[smithy.SignInPostResponse] = for {
-      authedUser  <- authState.get()
+      authedUser  <- authState.get
       userDetails <- userDetailsRepository
         .getUserDetails(authedUser.userID)
         .someOrFail(
-          ServiceError.InternalServerError.UserNotFoundError(
+          ServiceError.InternalServerError.UnexpectedError(
             s"User details not found for userID: [${authedUser.userID}]"
           )
         )
+      _          <- userTokenRepository.deleteAllUserTokens(authedUser.userID)
       accessJwt  <- jwtService.generateAccessToken(authedUser.userID)
       refreshJwt <- jwtService.generateRefreshToken(authedUser.userID)
       _          <- userTokenRepository.upsertUserToken(

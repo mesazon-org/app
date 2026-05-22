@@ -35,9 +35,6 @@ object HttpErrorHandler {
       case error: ServiceError.UnauthorizedError =>
         logError(error)
           .map(_ => smithy.Unauthorized())
-      case error: ServiceError.ConflictError =>
-        logWarning(error)
-          .map(_ => smithy.Conflict())
       case error: ServiceError.InternalServerError =>
         logWarning(error)
           .map(_ => smithy.InternalServerError())

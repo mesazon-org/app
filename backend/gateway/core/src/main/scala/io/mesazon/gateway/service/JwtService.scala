@@ -28,13 +28,17 @@ trait JwtService {
 
 object JwtService {
 
-  type AccessJwt        = (accessToken: AccessToken, expiresIn: Duration)
-  type RefreshJwt       = (tokenID: TokenID, refreshToken: RefreshToken, expiresAt: ExpiresAt)
-  type ResetPasswordJwt =
-    (tokenID: TokenID, resetPasswordToken: ResetPasswordToken, expiresAt: ExpiresAt, expiresIn: Duration)
-  type AuthedUserRefresh       = (tokenID: TokenID, userID: UserID)
-  type AuthedUserResetPassword = (tokenID: TokenID, userID: UserID)
-  type AuthedUserAccess        = UserID
+  case class AccessJwt(accessToken: AccessToken, expiresIn: Duration)
+  case class RefreshJwt(tokenID: TokenID, refreshToken: RefreshToken, expiresAt: ExpiresAt)
+  case class ResetPasswordJwt(
+      tokenID: TokenID,
+      resetPasswordToken: ResetPasswordToken,
+      expiresAt: ExpiresAt,
+      expiresIn: Duration,
+  )
+  case class AuthedUserRefresh(tokenID: TokenID, userID: UserID)
+  case class AuthedUserResetPassword(tokenID: TokenID, userID: UserID)
+  case class AuthedUserAccess(userID: UserID)
 
   private final class JwtServiceImpl(
       jwtConfig: JwtConfig,
@@ -58,12 +62,12 @@ object JwtService {
           .attempt(Date.from(instantNow.plusSeconds(jwtConfig.accessTokenExpiresAtOffset.toSeconds)))
           .mapError(error =>
             ServiceError.InternalServerError
-              .UnexpectedError("Failed to calculate access token expiration date", Some(error))
+              .JwtServiceError("Failed to calculate access token expiration date", Some(error))
           )
         accessTokenRaw <- ZIO
           .attempt(
             Jwts.builder.claims
-              .subject(userID.value)
+              .subject(userID.value.toString)
               .issuer(jwtConfig.issuer)
               .expiration(expirationDate)
               .and
@@ -71,28 +75,28 @@ object JwtService {
               .compact
           )
           .mapError(error =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to generate access token", Some(error))
+            ServiceError.InternalServerError.JwtServiceError("Failed to generate access token", Some(error))
           )
         accessToken <- ZIO
           .attempt(AccessToken.applyUnsafe(accessTokenRaw))
           .mapError(error =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to apply access token", Some(error))
+            ServiceError.InternalServerError.JwtServiceError("Failed to apply access token", Some(error))
           )
-      } yield (accessToken, jwtConfig.accessTokenExpiresAtOffset)
+      } yield AccessJwt(accessToken, jwtConfig.accessTokenExpiresAtOffset)
 
     override def generateRefreshToken(userID: UserID): IO[ServiceError, RefreshJwt] =
       for {
         instantNow <- timeProvider.instantNow
-        tokenIDRaw <- idGenerator.generate
+        tokenIDRaw <- idGenerator.generateID
         expiresAt = ExpiresAt(instantNow.plusSeconds(jwtConfig.refreshTokenExpiresAtOffset.toSeconds))
         tokenID <- ZIO
           .attempt(TokenID.applyUnsafe(tokenIDRaw))
-          .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to apply TokenID", Some(error)))
+          .mapError(error => ServiceError.InternalServerError.JwtServiceError("Failed to apply TokenID", Some(error)))
         refreshTokenRaw <- ZIO
           .attempt(
             Jwts.builder.claims
-              .id(tokenID.value)
-              .subject(userID.value)
+              .id(tokenID.value.toString)
+              .subject(userID.value.toString)
               .audience()
               .add(audienceRefresh)
               .and()
@@ -103,28 +107,28 @@ object JwtService {
               .compact
           )
           .mapError(error =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to generate refresh token", Some(error))
+            ServiceError.InternalServerError.JwtServiceError("Failed to generate refresh token", Some(error))
           )
         refreshToken <- ZIO
           .attempt(RefreshToken.applyUnsafe(refreshTokenRaw))
           .mapError(error =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to apply refresh token", Some(error))
+            ServiceError.InternalServerError.JwtServiceError("Failed to apply refresh token", Some(error))
           )
-      } yield (tokenID, refreshToken, expiresAt)
+      } yield RefreshJwt(tokenID, refreshToken, expiresAt)
 
     override def generateResetPasswordToken(userID: UserID): IO[ServiceError, ResetPasswordJwt] =
       for {
         instantNow <- timeProvider.instantNow
-        tokenIDRaw <- idGenerator.generate
+        tokenIDRaw <- idGenerator.generateID
         expiresAt = ExpiresAt(instantNow.plusSeconds(jwtConfig.resetPasswordTokenExpiresAtOffset.toSeconds))
         tokenID <- ZIO
           .attempt(TokenID.applyUnsafe(tokenIDRaw))
-          .mapError(error => ServiceError.InternalServerError.UnexpectedError("Failed to apply TokenID", Some(error)))
+          .mapError(error => ServiceError.InternalServerError.JwtServiceError("Failed to apply TokenID", Some(error)))
         resetPasswordTokenRaw <- ZIO
           .attempt(
             Jwts.builder.claims
-              .id(tokenID.value)
-              .subject(userID.value)
+              .id(tokenID.value.toString)
+              .subject(userID.value.toString)
               .issuer(jwtConfig.issuer)
               .audience()
               .add(audienceResetPassword)
@@ -135,14 +139,14 @@ object JwtService {
               .compact
           )
           .mapError(error =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to generate reset password token", Some(error))
+            ServiceError.InternalServerError.JwtServiceError("Failed to generate reset password token", Some(error))
           )
         resetPasswordToken <- ZIO
           .attempt(ResetPasswordToken.applyUnsafe(resetPasswordTokenRaw))
           .mapError(error =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to apply reset password token", Some(error))
+            ServiceError.InternalServerError.JwtServiceError("Failed to apply reset password token", Some(error))
           )
-      } yield (tokenID, resetPasswordToken, expiresAt, jwtConfig.resetPasswordTokenExpiresAtOffset)
+      } yield ResetPasswordJwt(tokenID, resetPasswordToken, expiresAt, jwtConfig.resetPasswordTokenExpiresAtOffset)
 
     override def verifyAccessToken(accessToken: AccessToken): IO[ServiceError, AuthedUserAccess] =
       for {
@@ -160,26 +164,26 @@ object JwtService {
             case error: JwtException =>
               ServiceError.UnauthorizedError.FailedToVerifyJwt("Failed to parse and verify access token", Some(error))
             case error =>
-              ServiceError.InternalServerError.UnexpectedError(
+              ServiceError.InternalServerError.JwtServiceError(
                 "Unexpected failed to parse and verify access token",
                 Some(error),
               )
           }
         userID <- ZIO
           .getOrFailWith(
-            ServiceError.InternalServerError.UnexpectedError("Failed to extract subject from access token")
+            ServiceError.InternalServerError.JwtServiceError("Failed to extract subject from access token")
           )(
             Option(jws.getPayload.getSubject)
           )
           .flatMap(userIDRaw =>
             ZIO
-              .fromEither(UserID.either(userIDRaw))
+              .fromEither(UserID.eitherFromString(userIDRaw))
               .mapError(error =>
                 ServiceError.InternalServerError
-                  .UnexpectedError(s"Failed to apply UserID from access token subject: $error")
+                  .JwtServiceError(s"Failed to apply UserID from access token subject: $error")
               )
           )
-      } yield userID
+      } yield AuthedUserAccess(userID = userID)
 
     override def verifyRefreshToken(refreshToken: RefreshToken): IO[ServiceError, AuthedUserRefresh] =
       for {
@@ -198,37 +202,37 @@ object JwtService {
             case error: JwtException =>
               ServiceError.UnauthorizedError.FailedToVerifyJwt("Failed to parse and verify refresh token", Some(error))
             case error =>
-              ServiceError.InternalServerError.UnexpectedError("Unexpected failed to parse refresh token", Some(error))
+              ServiceError.InternalServerError.JwtServiceError("Unexpected failed to parse refresh token", Some(error))
           }
         userID <- ZIO
           .getOrFailWith(
-            ServiceError.InternalServerError.UnexpectedError("Failed to extract subject from refresh token")
+            ServiceError.InternalServerError.JwtServiceError("Failed to extract subject from refresh token")
           )(
             Option(jws.getPayload.getSubject)
           )
           .flatMap(userIDRaw =>
             ZIO
-              .fromEither(UserID.either(userIDRaw))
+              .fromEither(UserID.eitherFromString(userIDRaw))
               .mapError(error =>
                 ServiceError.InternalServerError
-                  .UnexpectedError(s"Failed to apply UserID from refresh token subject: $error")
+                  .JwtServiceError(s"Failed to apply UserID from refresh token subject: $error")
               )
           )
         tokenID <- ZIO
           .getOrFailWith(
-            ServiceError.InternalServerError.UnexpectedError("Failed to extract token id from refresh token")
+            ServiceError.InternalServerError.JwtServiceError("Failed to extract token id from refresh token")
           )(
             Option(jws.getPayload.getId)
           )
           .flatMap(tokenIDRaw =>
             ZIO
-              .fromEither(TokenID.either(tokenIDRaw))
+              .fromEither(TokenID.eitherFromString(tokenIDRaw))
               .mapError(error =>
                 ServiceError.InternalServerError
-                  .UnexpectedError(s"Failed to apply TokenID from refresh token id: $error")
+                  .JwtServiceError(s"Failed to apply TokenID from refresh token id: $error")
               )
           )
-      } yield (tokenID, userID)
+      } yield AuthedUserRefresh(tokenID, userID)
 
     override def verifyResetPasswordToken(
         resetPasswordToken: ResetPasswordToken
@@ -252,40 +256,40 @@ object JwtService {
                 Some(error),
               )
             case error =>
-              ServiceError.InternalServerError.UnexpectedError(
+              ServiceError.InternalServerError.JwtServiceError(
                 "Unexpected failed to parse reset password token",
                 Some(error),
               )
           }
         userID <- ZIO
           .getOrFailWith(
-            ServiceError.InternalServerError.UnexpectedError("Failed to extract subject from reset password token")
+            ServiceError.InternalServerError.JwtServiceError("Failed to extract subject from reset password token")
           )(
             Option(jws.getPayload.getSubject)
           )
           .flatMap(userIDRaw =>
             ZIO
-              .fromEither(UserID.either(userIDRaw))
+              .fromEither(UserID.eitherFromString(userIDRaw))
               .mapError(error =>
                 ServiceError.InternalServerError
-                  .UnexpectedError(s"Failed to apply UserID from reset password token subject: $error")
+                  .JwtServiceError(s"Failed to apply UserID from reset password token subject: $error")
               )
           )
         tokenID <- ZIO
           .getOrFailWith(
-            ServiceError.InternalServerError.UnexpectedError("Failed to extract token id from reset password token")
+            ServiceError.InternalServerError.JwtServiceError("Failed to extract token id from reset password token")
           )(
             Option(jws.getPayload.getId)
           )
           .flatMap(tokenIDRaw =>
             ZIO
-              .fromEither(TokenID.either(tokenIDRaw))
+              .fromEither(TokenID.eitherFromString(tokenIDRaw))
               .mapError(error =>
                 ServiceError.InternalServerError
-                  .UnexpectedError(s"Failed to apply TokenID from reset password token id: $error")
+                  .JwtServiceError(s"Failed to apply TokenID from reset password token id: $error")
               )
           )
-      } yield (tokenID, userID)
+      } yield AuthedUserResetPassword(tokenID, userID)
   }
 
   private def observed(service: JwtService): JwtService = service

@@ -57,7 +57,7 @@ object UserTokenRepository {
               } yield ())
               .mapError(e =>
                 ServiceError.InternalServerError
-                  .DatabaseError(
+                  .RepositoryError(
                     s"Failed to upsert user token: [$tokenIDOld], [$tokenID], [$tokenType], [$userID], [$expiresAt]",
                     e,
                   )
@@ -67,7 +67,7 @@ object UserTokenRepository {
               .transactionOrWiden(userTokenQueries.insertUserToken(userTokenRowNew))
               .mapError(e =>
                 ServiceError.InternalServerError
-                  .DatabaseError(s"Failed to insert user token: [$tokenID], [$tokenType], [$userID], [$expiresAt]", e)
+                  .RepositoryError(s"Failed to insert user token: [$tokenID], [$tokenType], [$userID], [$expiresAt]", e)
               )
         }
       } yield ()
@@ -81,7 +81,7 @@ object UserTokenRepository {
         .transactionOrWiden(userTokenQueries.getUserToken(tokenID, userID, tokenType))
         .mapError(e =>
           ServiceError.InternalServerError
-            .DatabaseError(s"Failed to get user token: [$tokenID], [$tokenType], [$userID]", e)
+            .RepositoryError(s"Failed to get user token: [$tokenID], [$tokenType], [$userID]", e)
         )
 
     override def deleteUserToken(tokenID: TokenID, userID: UserID, tokenType: TokenType): IO[ServiceError, Unit] =
@@ -89,7 +89,7 @@ object UserTokenRepository {
         .transactionOrWiden(userTokenQueries.deleteUserToken(tokenID, userID, tokenType))
         .mapError(e =>
           ServiceError.InternalServerError
-            .DatabaseError(s"Failed to delete user token: [$tokenID], [$tokenType], [$userID]", e)
+            .RepositoryError(s"Failed to delete user token: [$tokenID], [$tokenType], [$userID]", e)
         )
 
     override def deleteAllUserTokens(userID: UserID): IO[ServiceError, Unit] =
@@ -97,7 +97,7 @@ object UserTokenRepository {
         .transactionOrWiden(userTokenQueries.deleteAllUserTokensForUser(userID))
         .mapError(e =>
           ServiceError.InternalServerError
-            .DatabaseError(s"Failed to delete all user tokens for user: [$userID]", e)
+            .RepositoryError(s"Failed to delete all user tokens for user: [$userID]", e)
         )
   }
 

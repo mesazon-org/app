@@ -38,7 +38,7 @@ object UserActionAttemptRepository {
         actionAttemptType: ActionAttemptType,
     ): IO[ServiceError, UserActionAttemptRow] = for {
       instantNow      <- timeProvider.instantNow
-      actionAttemptID <- idGenerator.generate
+      actionAttemptID <- idGenerator.generateID
         .map(ActionAttemptID.either)
         .flatMap(
           ZIO
@@ -61,7 +61,7 @@ object UserActionAttemptRepository {
             .getAndIncrease(userActionAttemptRow)
         )
         .mapError(e =>
-          ServiceError.InternalServerError.DatabaseError(
+          ServiceError.InternalServerError.RepositoryError(
             s"Failed to get and increase user action attempt for user ID: [$userID] and action attempt type: [$actionAttemptType]",
             e,
           )
@@ -76,7 +76,7 @@ object UserActionAttemptRepository {
         userActionAttemptQueries.delete(userID, actionAttemptType)
       )
       .mapError(e =>
-        ServiceError.InternalServerError.DatabaseError(
+        ServiceError.InternalServerError.RepositoryError(
           s"Failed to delete user action attempt for user ID: [$userID] and action attempt type: [$actionAttemptType]",
           e,
         )

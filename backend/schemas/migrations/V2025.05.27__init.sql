@@ -1,6 +1,6 @@
 create table user_credentials
 (
-    user_id       text        not null,
+    user_id       uuid        not null,
     password_hash text        not null,
     created_at    timestamptz not null,
     updated_at    timestamptz not null,
@@ -9,7 +9,7 @@ create table user_credentials
 
 create table user_details
 (
-    user_id               text        not null,
+    user_id               uuid        not null,
     email                 text        not null,
     full_name             text,
     phone_region          text,
@@ -25,8 +25,8 @@ create table user_details
 
 create table user_action_attempt
 (
-    action_attempt_id   text        not null,
-    user_id             text        not null,
+    action_attempt_id   uuid        not null,
+    user_id             uuid        not null,
     action_attempt_type text        not null,
     attempts            int         not null,
     created_at          timestamptz not null,
@@ -37,8 +37,8 @@ create table user_action_attempt
 
 create table user_otp
 (
-    otp_id     text        not null,
-    user_id    text        not null,
+    otp_id     uuid        not null,
+    user_id    uuid        not null,
     otp        text        not null,
     otp_type   text        not null,
     created_at timestamptz not null,
@@ -50,8 +50,8 @@ create table user_otp
 
 create table user_token
 (
-    token_id   text        not null,
-    user_id    text        not null,
+    token_id   uuid        not null,
+    user_id    uuid        not null,
     token_type text        not null,
     created_at timestamptz not null,
     expires_at timestamptz not null,
@@ -59,6 +59,39 @@ create table user_token
 );
 
 create index idx_user_token_user_id on user_token using hash (user_id);
+
+
+create table organization_details
+(
+    organization_id       uuid        not null,
+    name                  text        not null,
+    slug                  text        not null,
+    phone_region          text        not null,
+    phone_country_code    text        not null,
+    phone_national_number text        not null,
+    phone_number_e164     text        not null,
+    email                 text        not null,
+    organization_stage    text        not null,
+    address_line_1        text        not null,
+    address_line_2        text,
+    city                  text        not null,
+    postal_code           text        not null,
+    country               text        not null,
+    created_at            timestamptz not null,
+    updated_at            timestamptz not null,
+    primary key (organization_id),
+    unique (slug)
+);
+
+create table organization_user
+(
+    organization_id uuid        not null,
+    user_id         uuid        not null,
+    user_role       text        not null,
+    created_at      timestamptz not null,
+    updated_at      timestamptz not null,
+    primary key (organization_id, user_id)
+);
 
 create table waha_user
 (

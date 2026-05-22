@@ -31,6 +31,10 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
     Gen.oneOf(Seq("+447756745643", "+35799545545").map(PhoneNumberE164.assume))
   )
 
+  given Arbitrary[OrganizationStage] = Arbitrary(Gen.oneOf(OrganizationStage.values.toIndexedSeq))
+
+  given Arbitrary[UserRole] = Arbitrary(Gen.oneOf(UserRole.values.toIndexedSeq))
+
   given Arbitrary[OtpType] = Arbitrary(Gen.oneOf(OtpType.values.toIndexedSeq))
 
   given Arbitrary[OnboardStage] = Arbitrary(Gen.oneOf(OnboardStage.values.toIndexedSeq))
@@ -68,4 +72,6 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
   given Arbitrary[BasicCredentials] = Arbitrary(Gen.resultOf(BasicCredentials.apply))
 
   given Arbitrary[ForgotPasswordReset] = Arbitrary(Gen.resultOf(ForgotPasswordReset.apply))
+
+  given Arbitrary[TokenRefresh] = Arbitrary(Gen.resultOf(TokenRefresh.apply))
 }
