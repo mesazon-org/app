@@ -25,17 +25,16 @@ final class OrganizationUserQueries(
         |updated_at
           """.stripMargin
 
-  def insert(organizationUserRow: OrganizationUserRow): TranzactIO[OrganizationUserRow] =
+  def insert(organizationUserRow: OrganizationUserRow): TranzactIO[Unit] =
     tzio {
       sql"""
            |INSERT INTO $frSchema.$frOrganizationUserTable ($organizationUserFields)
            |VALUES ($organizationUserRow)
-           |RETURNING $organizationUserFields
-           |""".stripMargin.query[OrganizationUserRow].unique
+           |""".stripMargin.update.run.map(_ => ())
     }
 
   // Testing
-  def getAllOrganizationUserTesting: TranzactIO[List[OrganizationUserRow]] =
+  def getAllOrganizationUsersTesting: TranzactIO[List[OrganizationUserRow]] =
     tzio {
       sql"""
            |SELECT $organizationUserFields

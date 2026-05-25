@@ -116,5 +116,23 @@ class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBas
         mailHogClient.readInbox().zioValue.total shouldBe 1
       }
     }
+
+    "send organization created email" should {
+      "send email successfully" in withContext { context =>
+        import context.*
+
+        val emailClient = ZIO
+          .service[EmailClient]
+          .provide(EmailClient.live, ZLayer.succeed(emailConfig))
+          .zioValue
+
+        val email            = arbitrarySample[Email]
+        val organizationName = arbitrarySample[OrganizationName]
+
+        emailClient.sendOrganizationCreatedEmail(email, organizationName).zioValue
+
+        mailHogClient.readInbox().zioValue.total shouldBe 1
+      }
+    }
   }
 }

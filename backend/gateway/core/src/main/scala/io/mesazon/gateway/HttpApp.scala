@@ -38,17 +38,19 @@ object HttpApp {
   } yield healthCheckRoute
 
   private val externalRoutesResource = for {
-    userSignUpService         <- ZIO.service[smithy.UserSignUpService[Task]]
-    userSignInService         <- ZIO.service[smithy.UserSignInService[Task]]
-    userOnboardService        <- ZIO.service[smithy.UserOnboardService[Task]]
-    userForgotPasswordService <- ZIO.service[smithy.UserForgotPasswordService[Task]]
-    userTokenService          <- ZIO.service[smithy.UserTokenService[Task]]
-    userSignUpRoutes          <- buildRoute(userSignUpService)
-    userSignInRoutes          <- buildRoute(userSignInService)
-    userOnboardRoutes         <- buildRoute(userOnboardService)
-    userForgotPasswordRoutes  <- buildRoute(userForgotPasswordService)
-    userTokenServiceRoutes    <- buildRoute(userTokenService)
-  } yield userSignUpRoutes <+> userOnboardRoutes <+> userSignInRoutes <+> userForgotPasswordRoutes <+> userTokenServiceRoutes
+    userSignUpService                   <- ZIO.service[smithy.UserSignUpService[Task]]
+    userSignInService                   <- ZIO.service[smithy.UserSignInService[Task]]
+    userOnboardService                  <- ZIO.service[smithy.UserOnboardService[Task]]
+    userForgotPasswordService           <- ZIO.service[smithy.UserForgotPasswordService[Task]]
+    userTokenService                    <- ZIO.service[smithy.UserTokenService[Task]]
+    organizationManagementService       <- ZIO.service[smithy.OrganizationManagementService[Task]]
+    userSignUpRoutes                    <- buildRoute(userSignUpService)
+    userSignInRoutes                    <- buildRoute(userSignInService)
+    userOnboardRoutes                   <- buildRoute(userOnboardService)
+    userForgotPasswordRoutes            <- buildRoute(userForgotPasswordService)
+    userTokenServiceRoutes              <- buildRoute(userTokenService)
+    organizationManagementServiceRoutes <- buildRoute(organizationManagementService)
+  } yield userSignUpRoutes <+> userOnboardRoutes <+> userSignInRoutes <+> userForgotPasswordRoutes <+> userTokenServiceRoutes <+> organizationManagementServiceRoutes
 
   private val internalRoutesResource = for {
     wahaService <- ZIO.service[smithy.WahaService[Task]]
@@ -61,6 +63,7 @@ object HttpApp {
     smithy.UserOnboardService,
     smithy.UserForgotPasswordService,
     smithy.UserTokenService,
+    smithy.OrganizationManagementService,
   )
 
   private def server(

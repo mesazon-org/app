@@ -67,6 +67,8 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
 
   given Arbitrary[OnboardDetails] = Arbitrary(Gen.resultOf(OnboardDetails.apply))
 
+  given Arbitrary[CreateOrganization] = Arbitrary(Gen.resultOf(CreateOrganization.apply))
+
   given Arbitrary[OnboardVerifyPhoneNumber] = Arbitrary(Gen.resultOf(OnboardVerifyPhoneNumber.apply))
 
   given Arbitrary[BasicCredentials] = Arbitrary(Gen.resultOf(BasicCredentials.apply))

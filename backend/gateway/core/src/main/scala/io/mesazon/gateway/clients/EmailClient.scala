@@ -28,6 +28,11 @@ trait EmailClient {
   def sendPasswordChangeConfirmationEmail(
       email: Email
   ): IO[ServiceError, Unit]
+
+  def sendOrganizationCreatedEmail(
+      email: Email,
+      organizationName: OrganizationName,
+  ): IO[ServiceError, Unit]
 }
 
 object EmailClient {
@@ -132,6 +137,31 @@ object EmailClient {
         .unit
         .mapError(error =>
           ServiceError.InternalServerError.UnexpectedError("Failed to sendPasswordChangeConfirmationEmail", Some(error))
+        )
+
+    override def sendOrganizationCreatedEmail(
+        email: Email,
+        organizationName: OrganizationName,
+    ): IO[ServiceError, Unit] =
+      ZIO
+        .fromCompletableFuture(
+          mailer.sendMail(
+            EmailBuilder
+              .startingBlank()
+              .from(emailConfig.senderEmail)
+              .to(email.value)
+              .withSubject(s"Your $organizationName organization has been created!")
+              .withHTMLText(
+                OrganizationCreatedHTML
+                  .render(organizationName.value)
+                  .toString()
+              )
+              .buildEmail()
+          )
+        )
+        .unit
+        .mapError(error =>
+          ServiceError.InternalServerError.UnexpectedError("Failed to sendOrganizationCreatedEmail", Some(error))
         )
   }
 

@@ -7,6 +7,7 @@ import fs2.io.net.Network
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.smithy
+import io.mesazon.gateway.smithy.PhoneNumberRequest
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.client4.jsoniter.*
@@ -42,12 +43,13 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     override def nullValue: smithy.OnboardStage = null
   }
 
-  given JsonValueCodec[smithy.SignUpEmailPostRequest]         = JsonCodecMaker.make[smithy.SignUpEmailPostRequest]
-  given JsonValueCodec[smithy.SignUpVerifyEmailPostRequest]   = JsonCodecMaker.make[smithy.SignUpVerifyEmailPostRequest]
-  given JsonValueCodec[smithy.OnboardPasswordPostRequest]     = JsonCodecMaker.make[smithy.OnboardPasswordPostRequest]
-  given JsonValueCodec[smithy.OnboardDetailsPostRequest]      = JsonCodecMaker.make[smithy.OnboardDetailsPostRequest]
-  given JsonValueCodec[smithy.ForgotPasswordPostRequest]      = JsonCodecMaker.make[smithy.ForgotPasswordPostRequest]
-  given JsonValueCodec[smithy.TokenRefreshPostRequest]        = JsonCodecMaker.make[smithy.TokenRefreshPostRequest]
+  given JsonValueCodec[smithy.SignUpEmailPostRequest]        = JsonCodecMaker.make[smithy.SignUpEmailPostRequest]
+  given JsonValueCodec[smithy.SignUpVerifyEmailPostRequest]  = JsonCodecMaker.make[smithy.SignUpVerifyEmailPostRequest]
+  given JsonValueCodec[smithy.OnboardPasswordPostRequest]    = JsonCodecMaker.make[smithy.OnboardPasswordPostRequest]
+  given JsonValueCodec[smithy.OnboardDetailsPostRequest]     = JsonCodecMaker.make[smithy.OnboardDetailsPostRequest]
+  given JsonValueCodec[smithy.ForgotPasswordPostRequest]     = JsonCodecMaker.make[smithy.ForgotPasswordPostRequest]
+  given JsonValueCodec[smithy.TokenRefreshPostRequest]       = JsonCodecMaker.make[smithy.TokenRefreshPostRequest]
+  given JsonValueCodec[smithy.CreateOrganizationPostRequest] = JsonCodecMaker.make[smithy.CreateOrganizationPostRequest]
   given JsonValueCodec[smithy.ForgotPasswordResetPostRequest] =
     JsonCodecMaker.make[smithy.ForgotPasswordResetPostRequest]
   given JsonValueCodec[smithy.ForgotPasswordVerifyOTPPostRequest] =
@@ -55,7 +57,9 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.OnboardVerifyPhoneNumberPostRequest] =
     JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberPostRequest]
 
-  given JsonValueCodec[smithy.SignUpEmailPostResponse]       = JsonCodecMaker.make[smithy.SignUpEmailPostResponse]
+  given JsonValueCodec[smithy.SignUpEmailPostResponse]        = JsonCodecMaker.make[smithy.SignUpEmailPostResponse]
+  given JsonValueCodec[smithy.CreateOrganizationPostResponse] =
+    JsonCodecMaker.make[smithy.CreateOrganizationPostResponse]
   given JsonValueCodec[smithy.TokenRefreshPostResponse]      = JsonCodecMaker.make[smithy.TokenRefreshPostResponse]
   given JsonValueCodec[smithy.ForgotPasswordPostResponse]    = JsonCodecMaker.make[smithy.ForgotPasswordPostResponse]
   given JsonValueCodec[smithy.SignUpVerifyEmailPostResponse] = JsonCodecMaker.make[smithy.SignUpVerifyEmailPostResponse]
@@ -205,6 +209,46 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .post(externalUri.addPath("token", "refresh"))
       .body(asJson(smithy.TokenRefreshPostRequest(refreshToken.value)))
       .response(asJsonEitherOrFail[E, smithy.TokenRefreshPostResponse])
+      .send(sttpBackend)
+
+  def createOrganizationPost[E: JsonValueCodec](
+      name: OrganizationName,
+      slug: OrganizationSlug,
+      email: OrganizationEmail,
+      phoneNumber: OrganizationPhoneNumber,
+      addressLine1: OrganizationAddressLine1,
+      addressLine2: Option[OrganizationAddressLine2],
+      city: OrganizationCity,
+      postalCode: OrganizationPostalCode,
+      country: OrganizationCountry,
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, smithy.CreateOrganizationPostResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("create", "organization"))
+      .body(
+        asJson(
+          smithy.CreateOrganizationPostRequest(
+            name = name.value,
+            slug = slug.value,
+            email = email.value,
+            phoneNumber = smithy.PhoneNumberRequest(
+              phoneNumber.value.phoneNationalNumber.value,
+              phoneNumber.value.phoneCountryCode.value,
+            ),
+            addressLine1 = addressLine1.value,
+            addressLine2 = addressLine2.map(_.value),
+            city = city.value,
+            postalCode = postalCode.value,
+            country = country.value,
+          )
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonEitherOrFail[E, smithy.CreateOrganizationPostResponse])
       .send(sttpBackend)
 }
 

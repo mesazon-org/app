@@ -55,6 +55,7 @@ object Main extends ZIOAppDefault {
       UserForgotPasswordService.live,
       JwtService.live,
       PasswordService.live,
+      OrganizationManagementService.live,
 
       // Repository
       PostgresTransactor.live,
@@ -65,6 +66,7 @@ object Main extends ZIOAppDefault {
       UserDetailsRepository.live,
       UserCredentialsRepository.live,
       UserActionAttemptRepository.live,
+      OrganizationManagementRepository.live,
 
       // Queries
       WahaQueries.live,
@@ -73,6 +75,8 @@ object Main extends ZIOAppDefault {
       UserDetailsQueries.live,
       UserCredentialsQueries.live,
       UserActionAttemptQueries.live,
+      OrganizationDetailsQueries.live,
+      OrganizationUserQueries.live,
 
       // State
       AuthState.live,
@@ -97,6 +101,7 @@ object Main extends ZIOAppDefault {
       TwilioClientConfig.live,
       AuthenticationConfig.live,
       UserForgotPasswordConfig.live,
+      OrganizationManagementConfig.live,
 
       // Domain validators
       EmailDomainValidator.live,
@@ -115,6 +120,7 @@ object Main extends ZIOAppDefault {
       ForgotPasswordVerifyOTPPostRequestServiceValidator.live,
       ForgotPasswordResetPostRequestServiceValidator.live,
       TokenRefreshPostRequestServiceValidator.live,
+      CreateOrganizationPostRequestServiceValidator.live,
 
       // Clients
       SttpBackend.live,
