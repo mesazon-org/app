@@ -23,9 +23,9 @@ class OrganizationManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries
     "createOrganizationPost" should {
       "successfully create organization for user in completed onboard stage" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
-        val onbaordStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onbaordStage)
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
         val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
           .copy(organizationStage = OrganizationStage.DetailsProvided)
 
@@ -82,11 +82,11 @@ class OrganizationManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries
         )
       }
 
-      "successfully create organization for user event if email client fails" in new TestContext {
+      "successfully create organization for user even if email client fails" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
-        val onbaordStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(userID = authedUser.userID, onboardStage = onbaordStage)
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
         val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
           .copy(organizationStage = OrganizationStage.DetailsProvided)
 

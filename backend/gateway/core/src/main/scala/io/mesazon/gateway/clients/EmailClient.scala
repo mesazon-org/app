@@ -150,7 +150,7 @@ object EmailClient {
               .startingBlank()
               .from(emailConfig.senderEmail)
               .to(email.value)
-              .withSubject(s"Your $organizationName organization has been created!")
+              .withSubject("Your organization has been created!")
               .withHTMLText(
                 OrganizationCreatedHTML
                   .render(organizationName.value)
