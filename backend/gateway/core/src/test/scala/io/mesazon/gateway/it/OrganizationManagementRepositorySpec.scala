@@ -66,7 +66,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             .once(),
         )
 
-        organizationManagementRepository
+        val organizationDetailsRowInsert = organizationManagementRepository
           .createOrganization(
             userID = userID,
             name = organizationDetailsRow.name,
@@ -86,13 +86,14 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
 
         organizationDetailsRowsAll should have size 1
+        organizationDetailsRowsAll.head shouldBe organizationDetailsRowInsert
         organizationDetailsRowsAll.head shouldBe organizationDetailsRow.copy(
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
         )
 
         val organizationUserRowsAll =
-          postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUserTesting).zioValue
+          postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUsersTesting).zioValue
 
         organizationUserRowsAll should have size 1
         organizationUserRowsAll.head shouldBe OrganizationUserRow(
@@ -142,7 +143,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             .once(),
         )
 
-        organizationManagementRepository
+        val organizationDetailsRowInsert1 = organizationManagementRepository
           .createOrganization(
             userID = userID,
             name = organizationDetailsRow1.name,
@@ -158,7 +159,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           )
           .zioValue
 
-        organizationManagementRepository
+        val organizationDetailsRowInsert2 = organizationManagementRepository
           .createOrganization(
             userID = userID,
             name = organizationDetailsRow2.name,
@@ -179,12 +180,16 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
 
         organizationDetailsRowsAll should have size 2
         organizationDetailsRowsAll should contain theSameElementsAs List(
+          organizationDetailsRowInsert1,
+          organizationDetailsRowInsert2,
+        )
+        organizationDetailsRowsAll should contain theSameElementsAs List(
           organizationDetailsRow1,
           organizationDetailsRow2,
         )
 
         val organizationUserRowsAll =
-          postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUserTesting).zioValue
+          postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUsersTesting).zioValue
 
         organizationUserRowsAll should have size 2
         organizationUserRowsAll should contain theSameElementsAs List(
@@ -252,7 +257,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
         organizationDetailsRowsAll.head shouldBe organizationDetailsRow
 
         val organizationUserRowsAll =
-          postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUserTesting).zioValue
+          postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUsersTesting).zioValue
 
         organizationUserRowsAll shouldBe empty
       }

@@ -22,7 +22,7 @@ trait OrganizationManagementRepository {
       city: OrganizationCity,
       postalCode: OrganizationPostalCode,
       country: OrganizationCountry,
-  ): IO[ServiceError, Unit]
+  ): IO[ServiceError, OrganizationDetailsRow]
 }
 
 object OrganizationManagementRepository {
@@ -47,7 +47,7 @@ object OrganizationManagementRepository {
         city: OrganizationCity,
         postalCode: OrganizationPostalCode,
         country: OrganizationCountry,
-    ): IO[ServiceError, Unit] = for {
+    ): IO[ServiceError, OrganizationDetailsRow] = for {
       instantNow     <- timeProvider.instantNow
       organizationID <- idGenerator.generateID
         .map(OrganizationID.either)
@@ -93,7 +93,7 @@ object OrganizationManagementRepository {
             e,
           )
         )
-    } yield ()
+    } yield organizationDetailsRow
   }
 
   val live = ZLayer.derive[OrganizationManagementRepositoryImpl].project[OrganizationManagementRepository](identity)

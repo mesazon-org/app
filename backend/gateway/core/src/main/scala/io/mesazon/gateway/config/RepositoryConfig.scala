@@ -19,6 +19,8 @@ case class RepositoryConfig(
     userDetailsTable,
     userOtpTable,
     userTokenTable,
+    organizationDetailsTable,
+    organizationUserTable,
     wahaUserTable,
     wahaUserActivityTable,
     wahaUserMessageTable,
