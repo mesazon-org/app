@@ -40,7 +40,7 @@ object PostgresTransactor {
         hikariDataSource.setPassword(config.password)
         hikariDataSource.setMaximumPoolSize(config.threadPoolSize)
         hikariDataSource
-      })(ds => ZIO.attemptBlocking(ds.close()).orDie <* ZIO.logWarning("HikariDataSource closed"))
+      })(ds => ZIO.attemptBlocking(ds.close()).orDie <* ZIO.logError("HikariDataSource closed"))
     } yield datasource
   }
 

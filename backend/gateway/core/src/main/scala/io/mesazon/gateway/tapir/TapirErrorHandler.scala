@@ -1,9 +1,10 @@
-package io.mesazon.gateway
+package io.mesazon.gateway.tapir
 
-import io.mesazon.domain.gateway.ServiceError
+import io.mesazon.domain.gateway.{ServiceError, TapirServerError}
+import sttp.model.StatusCode
 import zio.*
 
-object HttpErrorHandler {
+object TapirErrorHandler {
 
   private def logWarning(serviceError: ServiceError)(using trace: Trace): UIO[Unit] =
     for {
@@ -24,26 +25,39 @@ object HttpErrorHandler {
         )
     )
 
-  def errorResponseHandler[A](response: IO[ServiceError, A])(using trace: Trace): Task[A] =
+  def handleError[A](response: IO[ServiceError, A])(using trace: Trace): IO[(StatusCode, TapirServerError), A] =
     response.flatMapError {
-      case error @ ServiceError.BadRequestError.ValidationError(invalidFields) =>
-        logWarning(error)
-          .as(smithy.ValidationError(fields = invalidFields.map(_.fieldName).toList))
       case error: ServiceError.BadRequestError =>
         logWarning(error)
-          .as(smithy.BadRequest())
+          .as(
+            (
+              StatusCode.BadRequest,
+              TapirServerError("BAD_REQUEST_ERROR", "Bad request."),
+            )
+          )
       case error: ServiceError.UnauthorizedError =>
         logError(error)
-          .as(smithy.Unauthorized())
+          .as(
+            (
+              StatusCode.Unauthorized,
+              TapirServerError("UNAUTHORIZED_ERROR", "Unauthorized connection."),
+            )
+          )
       case error: ServiceError.InternalServerError =>
-        logWarning(error)
-          .as(smithy.InternalServerError())
+        logError(error)
+          .as(
+            (
+              StatusCode.InternalServerError,
+              TapirServerError("INTERNAL_SERVER_ERROR", "Internal server error."),
+            )
+          )
       case error: ServiceError.ServiceUnavailableError =>
-        logWarning(error)
-          .as(smithy.ServiceUnavailable())
+        ZIO.succeed((StatusCode.ServiceUnavailable, TapirServerError("ServiceUnavailable", error.message)))
     }.catchSomeCause { case cause: Cause.Die =>
       ZIO
         .logErrorCause(s"$trace: Unexpected failure", cause)
-        *> ZIO.fail(smithy.InternalServerError())
+        *> ZIO.fail(
+          (StatusCode.InternalServerError, TapirServerError("INTERNAL_SERVER_ERROR", "Internal server error."))
+        )
     }
 }

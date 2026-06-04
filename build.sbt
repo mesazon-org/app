@@ -42,6 +42,7 @@ lazy val backendModule = Project("backend", file("backend"))
     backendGeneratorModule,
     backendTestKitModule,
     backendPostgreSQLTestModule,
+    backendS3TestModule,
     backendGatewayRoot,
     backendSchemas,
     backendWiremock,
@@ -91,6 +92,14 @@ lazy val backendPostgreSQLTestModule = createBackendModule("postgresql-test")(No
     Dependencies.doobiePostgres,
     Dependencies.doobieTranzactio,
     Dependencies.hikariCP,
+  )
+
+lazy val backendS3TestModule = createBackendModule("s3-test")(None)
+  .dependsOn(backendTestKitModule)
+  .withDependencies(
+    Dependencies.awssdkS3,
+    Dependencies.zio,
+    Dependencies.zioInteropCats,
   )
 
 lazy val backendSchemas = createBackendModule("schemas")(None)
@@ -163,6 +172,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
   .dependsOn(backendTestKitModule % Test)
   .dependsOn(backendWiremock % Test)
   .dependsOn(backendPostgreSQLTestModule % Test)
+  .dependsOn(backendS3TestModule % Test)
   .settings(DockerSettings.compileScope)
   .withDependencies(
     Dependencies.zio,
@@ -191,7 +201,12 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.libphonenumber,
     Dependencies.sttpOpenAI,
     Dependencies.sttpOpenAIZIO,
-    Dependencies.sttpIron,
+    Dependencies.tapirIron,
+    Dependencies.tapirHttp4sServerZIO,
+    Dependencies.tapirJsoniterScala,
+    Dependencies.tapirZIO,
+    Dependencies.tapirHttp4s,
+    Dependencies.tapirSwaggerUIBundle,
     Dependencies.sttpClient4Core,
     Dependencies.sttpClient4Slf4j,
     Dependencies.sttpClient4ZIO,
@@ -201,6 +216,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.jjwtApi,
     Dependencies.jjwtImpl,
     Dependencies.jjwtJackson,
+    Dependencies.awssdkS3,
     Dependencies.springSecurityCrypto,
     Dependencies.bouncyCastle,
   )
