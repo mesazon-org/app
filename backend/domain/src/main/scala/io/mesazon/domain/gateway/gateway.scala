@@ -75,6 +75,9 @@ type Attempts = Attempts.T
 object OrganizationID extends RefinedTypeUUID
 type OrganizationID = OrganizationID.T
 
+object OrganizationLogoFileName extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationLogoFileName = OrganizationLogoFileName.T
+
 object OrganizationName extends RefinedType[String, NonEmptyTrimmed]
 type OrganizationName = OrganizationName.T
 

@@ -8,5 +8,7 @@ import sttp.tapir.Schema
 import sttp.tapir.codec.iron.given
 
 given Schema[AssistantResponse] = Schema.derived[AssistantResponse]
+given Schema[TapirServerError]  = Schema.derived[TapirServerError]
 
 given JsonValueCodec[AssistantResponse] = JsonCodecMaker.make[AssistantResponse]
+given JsonValueCodec[TapirServerError]  = JsonCodecMaker.make[TapirServerError]
