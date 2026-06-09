@@ -46,19 +46,19 @@ trait IronRefinedTypeArbitraries {
       .map(_.refineUnsafe[NonEmptyTrimmedLowerCase])
   }
 
-  given arbNonEmptyTrimmed: Arbitrary[String :| NonEmptyTrimmed] = Arbitrary {
+  given arbNonEmptyTrimmed: Arbitrary[String :| NonEmptyTrimmedCap] = Arbitrary {
     Gen
       .choose(1, 255)
       .flatMap(Gen.listOfN(_, Gen.alphaNumChar))
       .map(_.mkString.trim)
-      .map(_.refineUnsafe[NonEmptyTrimmed])
+      .map(_.refineUnsafe[NonEmptyTrimmedCap])
   }
 
-  given arbTokenPredicate: Arbitrary[String :| TokenPredicate] = Arbitrary {
+  given arbTokenPredicate: Arbitrary[String :| NonEmptyTrimmed] = Arbitrary {
     Gen
       .nonEmptyStringOf(Gen.alphaNumChar)
       .map(_.trim)
-      .map(_.refineUnsafe[TokenPredicate])
+      .map(_.refineUnsafe[NonEmptyTrimmed])
   }
 
   given arbEmailPredicate: Arbitrary[String :| EmailPredicate] = Arbitrary {

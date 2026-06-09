@@ -1,12 +1,13 @@
 package io.mesazon.gateway.clients
 
+import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.InternalServerError
-import io.mesazon.domain.gateway.{OrganizationID, OrganizationLogoFileName, ServiceError}
 import io.mesazon.gateway.config.OrganizationS3ClientConfig
-import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
+import software.amazon.awssdk.auth.credentials.*
 import software.amazon.awssdk.core.async.AsyncRequestBody
-import software.amazon.awssdk.services.s3.model.PutObjectRequest
-import software.amazon.awssdk.services.s3.{S3AsyncClient, S3Configuration}
+import software.amazon.awssdk.services.s3.*
+import software.amazon.awssdk.services.s3.model.{GetObjectRequest, PutObjectRequest}
+import software.amazon.awssdk.services.s3.presigner.S3Presigner
 import zio.*
 import zio.stream.{ZSink, ZStream}
 
@@ -18,6 +19,11 @@ trait OrganizationS3Client {
       organizationID: OrganizationID,
       organizationLogoFileName: OrganizationLogoFileName,
       organizationLogoBytes: ZStream[Any, Throwable, Byte],
+  ): IO[ServiceError, OrganizationLogoBucketKey]
+
+  def getLogoUrl(
+      organizationLogoBucketKey: OrganizationLogoBucketKey,
+      expiresDuration: Duration,
   ): IO[ServiceError, String]
 }
 
@@ -26,6 +32,7 @@ object OrganizationS3Client {
   final class OrganizationS3ClientImpl(
       organizationS3ClientConfig: OrganizationS3ClientConfig,
       s3AsyncClient: S3AsyncClient,
+      s3Presigner: S3Presigner,
   ) extends OrganizationS3Client {
 
     private def createTempFileScoped: ZIO[Scope, InternalServerError.UnexpectedError, Path] =
@@ -39,31 +46,33 @@ object OrganizationS3Client {
         organizationID: OrganizationID,
         organizationLogoFileName: OrganizationLogoFileName,
         organizationLogoBytes: ZStream[Any, Throwable, Byte],
-    ): IO[ServiceError, String] =
+    ): IO[ServiceError, OrganizationLogoBucketKey] =
       ZIO.scoped {
         for {
-          _   = println("Starting uploadLogo")
-          key =
-            s"${organizationS3ClientConfig.organizationLogoKeyPrefix}/${organizationID.value}/${organizationLogoFileName.value}"
-          tempPath     <- ZIO.scoped(createTempFileScoped)
-          bytesWritten <- organizationLogoBytes
+          organizationLogoBucketKey <- ZIO
+            .fromEither(
+              OrganizationLogoBucketKey.either(
+                s"${organizationS3ClientConfig.organizationLogoKeyPrefix}/${organizationID.value}/${organizationLogoFileName.value}"
+              )
+            )
+            .mapError(e =>
+              ServiceError.InternalServerError
+                .UnexpectedError(s"Failed to create organization logo bucket key [$e]")
+            )
+          tempPath  <- ZIO.scoped(createTempFileScoped)
+          bytesSize <- organizationLogoBytes
             .run(ZSink.fromPath(tempPath))
             .mapError(e =>
               ServiceError.InternalServerError
                 .UnexpectedError("Failed to write organization logo to temp file", Some(e))
             )
-          _ = println(s"Wrote $bytesWritten bytes to temp file at $tempPath")
-          fileSize <- ZIO
-            .attempt(Files.size(tempPath))
-            .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to get size of temp file", Some(e)))
-          _ = println(s"Size of temp file: $fileSize bytes")
           putObjectRequest <- ZIO
             .attempt(
               PutObjectRequest
                 .builder()
                 .bucket(organizationS3ClientConfig.organizationLogoBucket)
-                .key(key)
-                .contentLength(fileSize)
+                .key(organizationLogoBucketKey.value)
+                .contentLength(bytesSize)
                 .build()
             )
             .mapError(e =>
@@ -82,16 +91,41 @@ object OrganizationS3Client {
             .mapError(e =>
               ServiceError.InternalServerError.UnexpectedError("Failed to upload organization logo to S3", Some(e))
             )
-        } yield key
+        } yield organizationLogoBucketKey
       }
+
+    override def getLogoUrl(
+        organizationLogoBucketKey: OrganizationLogoBucketKey,
+        expiresDuration: zio.Duration,
+    ): IO[ServiceError, String] =
+      for {
+        getObjectRequest <- ZIO
+          .attempt(
+            GetObjectRequest
+              .builder()
+              .bucket(organizationS3ClientConfig.organizationLogoBucket)
+              .key(organizationLogoBucketKey.value)
+              .build()
+          )
+          .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to create GetObjectRequest", Some(e)))
+        _ <- ZIO
+          .attempt(
+            PresignGetObjectRequest
+              .builder()
+              .getObjectRequest(getObjectRequest)
+              .signatureDuration(expiresDuration.toJava)
+              .build()
+          )
+        _ <- s3Presigner.presignGetObject(presignGetObjectRequest).url().toString
+
+      } yield ???
   }
 
   private val s3AsyncClientLayer: ZLayer[OrganizationS3ClientConfig, Throwable, S3AsyncClient] =
     ZLayer.scoped(
       for {
         organizationS3ClientConfig <- ZIO.service[OrganizationS3ClientConfig]
-        _ = println("Creating S3AsyncClient with config: " + organizationS3ClientConfig)
-        s3AsyncClient <- ZIO.acquireRelease(
+        s3AsyncClient              <- ZIO.acquireRelease(
           ZIO.attemptBlocking(
             S3AsyncClient
               .builder()
@@ -115,12 +149,38 @@ object OrganizationS3Client {
               .build()
           )
         )(client =>
-          ZIO.succeed(println("Closing resource")) *> ZIO.succeed(client.close()) <* ZIO.logError(
+          ZIO.succeed(client.close()) <* ZIO.logError(
             "S3AsyncClient closed"
           )
         )
-        _ = println("S3AsyncClient created successfully")
       } yield s3AsyncClient
+    )
+
+  private val s3PresignerLayer: ZLayer[OrganizationS3ClientConfig, Throwable, S3Presigner] =
+    ZLayer.scoped(
+      for {
+        organizationS3ClientConfig <- ZIO.service[OrganizationS3ClientConfig]
+        s3Presigner                <- ZIO.acquireRelease(
+          ZIO.attemptBlocking(
+            S3Presigner
+              .builder()
+              .region(organizationS3ClientConfig.region)
+              .credentialsProvider(
+                StaticCredentialsProvider.create(
+                  AwsBasicCredentials
+                    .create(organizationS3ClientConfig.accessKeyId, organizationS3ClientConfig.secretAccessKey)
+                )
+              )
+              .pipe { builder =>
+                if (organizationS3ClientConfig.useMock)
+                  builder.endpointOverride(organizationS3ClientConfig.uri.toJavaUri)
+                else
+                  builder
+              }
+              .build()
+          )
+        )(presigner => ZIO.succeed(presigner.close()) <* ZIO.logError("S3Presigner closed"))
+      } yield s3Presigner
     )
 
   private def observed(organizationS3Client: OrganizationS3Client): OrganizationS3Client = new OrganizationS3Client {
@@ -128,9 +188,12 @@ object OrganizationS3Client {
         organizationID: OrganizationID,
         organizationLogoFileName: OrganizationLogoFileName,
         organizationLogoBytes: ZStream[Any, Throwable, Byte],
-    ): IO[ServiceError, String] =
+    ): IO[ServiceError, OrganizationLogoBucketKey] =
       organizationS3Client.uploadLogo(organizationID, organizationLogoFileName, organizationLogoBytes)
   }
 
-  val live = s3AsyncClientLayer >>> ZLayer.derive[OrganizationS3ClientImpl] >>> ZLayer.fromFunction(observed)
+  val live =
+    s3PresignerLayer zipWith s3AsyncClientLayer >>> ZLayer.derive[OrganizationS3ClientImpl] >>> ZLayer.fromFunction(
+      observed
+    )
 }

@@ -4,25 +4,25 @@ import io.github.iltotore.iron.RefinedType
 import io.mesazon.domain.*
 
 type GroupName = GroupName.T
-object GroupName extends RefinedType[String, NonEmptyTrimmed]
+object GroupName extends RefinedType[String, NonEmptyTrimmedCap]
 
 type GroupID = GroupID.T
 object GroupID extends RefinedType[String, WahaGroupIDPredicate]
 
 type GroupDescription = GroupDescription.T
-object GroupDescription extends RefinedType[String, NonEmptyTrimmed]
+object GroupDescription extends RefinedType[String, NonEmptyTrimmedCap]
 
 type FileTypeMimeType = FileTypeMimeType.T
-object FileTypeMimeType extends RefinedType[String, NonEmptyTrimmed]
+object FileTypeMimeType extends RefinedType[String, NonEmptyTrimmedCap]
 
 type FileTypeFileName = FileTypeFileName.T
-object FileTypeFileName extends RefinedType[String, NonEmptyTrimmed]
+object FileTypeFileName extends RefinedType[String, NonEmptyTrimmedCap]
 
 type FileTypeURL = FileTypeURL.T
-object FileTypeURL extends RefinedType[String, NonEmptyTrimmed]
+object FileTypeURL extends RefinedType[String, NonEmptyTrimmedCap]
 
 type FileTypeData = FileTypeData.T
-object FileTypeData extends RefinedType[String, NonEmptyTrimmed]
+object FileTypeData extends RefinedType[String, NonEmptyTrimmedCap]
 
 type WahaPhoneNumber = WahaPhone.T
 object WahaPhone extends RefinedType[String, NonEmptyTrimmedLowerCase] {
@@ -79,22 +79,22 @@ object ChatID extends RefinedType[String, WahaIDPredicate] {
 }
 
 type MessageID = MessageID.T
-object MessageID extends RefinedType[String, NonEmptyTrimmed]
+object MessageID extends RefinedType[String, NonEmptyTrimmedCap]
 
 type SessionID = SessionID.T
-object SessionID extends RefinedType[String, NonEmptyTrimmed]
+object SessionID extends RefinedType[String, NonEmptyTrimmedCap]
 
 type GroupInviteUrl = GroupInviteUrl.T
-object GroupInviteUrl extends RefinedType[String, NonEmptyTrimmed]
+object GroupInviteUrl extends RefinedType[String, NonEmptyTrimmedCap]
 
 type GroupPictureUrl = GroupPictureUrl.T
-object GroupPictureUrl extends RefinedType[String, NonEmptyTrimmed]
+object GroupPictureUrl extends RefinedType[String, NonEmptyTrimmedCap]
 
 type MessageText = MessageText.T
 object MessageText extends RefinedType[String, NonEmpty]
 
-object FullName extends RefinedType[String, NonEmptyTrimmed]
+object FullName extends RefinedType[String, NonEmptyTrimmedCap]
 type FullName = FullName.T
 
 type MessageCaption = MessageCaption.T
-object MessageCaption extends RefinedType[String, NonEmptyTrimmed]
+object MessageCaption extends RefinedType[String, NonEmptyTrimmedCap]
