@@ -11,32 +11,14 @@ import sttp.model.Uri
 import zio.*
 import zio.stream.ZStream
 
+import scala.io.Source
+import scala.util.Using
+
 class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, DockerComposeBase {
 
   override def dockerComposeFile: String = "./src/test/resources/s3.yaml"
 
   override def exposedServices: Set[ExposedService] = S3TestClient.ExposedServices
-
-  case class Context(organizationS3ClientConfig: OrganizationS3ClientConfig, s3TestClient: S3TestClient)
-
-  def withContext[A](f: Context => A): A = withContainers { container =>
-    val s3TestClientConfig = S3TestClientConfig.from(container)
-    val s3TestClient       = ZIO
-      .service[S3TestClient]
-      .provide(S3TestClient.live, ZLayer.succeed(s3TestClientConfig))
-      .zioValue
-    val organizationS3ClientConfig = OrganizationS3ClientConfig(
-      useMock = true,
-      uri = Uri.apply(s3TestClientConfig.uri),
-      region = s3TestClientConfig.region,
-      accessKeyId = "access-key-id",
-      secretAccessKey = "secret-access-key",
-      organizationLogoBucket = "organization-logo-bucket",
-      organizationLogoKeyPrefix = "organization-logo-key-prefix",
-    )
-
-    f(Context(organizationS3ClientConfig, s3TestClient))
-  }
 
   "OrganizationS3Client" when {
     "uploadLogo" should {
@@ -45,7 +27,7 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
         val organizationLogoFileName = arbitrarySample[OrganizationLogoFileName]
         val organizationLogoBytes    = ZStream.fromResource("test-logo.jpeg")
 
-        val key =
+        val organizationLogoBucketKey =
           ZIO
             .serviceWithZIO[OrganizationS3Client](
               _.uploadLogo(organizationID, organizationLogoFileName, organizationLogoBytes)
@@ -59,10 +41,50 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
         s3TestClient
           .getObject(
             organizationS3ClientConfig.organizationLogoBucket,
-            key.value,
+            organizationLogoBucketKey.value,
           )
           .runCollect
           .zioValue should contain theSameElementsInOrderAs organizationLogoBytes.runCollect.zioValue
+      }
+    }
+
+    "getLogoUrl" should {
+      "successfully return a presigned URL for the logo" in new TestContext {
+        val organizationID           = arbitrarySample[OrganizationID]
+        val organizationLogoFileName = arbitrarySample[OrganizationLogoFileName]
+        val organizationLogoBytes    = ZStream.fromResource("test-logo.jpeg")
+
+        // First, upload the logo to S3
+        val organizationLogoBucketKey =
+          ZIO
+            .serviceWithZIO[OrganizationS3Client](
+              _.uploadLogo(organizationID, organizationLogoFileName, organizationLogoBytes)
+            )
+            .provide(
+              OrganizationS3Client.live,
+              ZLayer.succeed(organizationS3ClientConfig),
+            )
+            .zioValue
+
+        // Then, get the presigned URL for the uploaded logo
+        val presignedUrl =
+          ZIO
+            .serviceWithZIO[OrganizationS3Client](
+              _.getLogoUrl(organizationLogoBucketKey)
+            )
+            .provide(
+              OrganizationS3Client.live,
+              ZLayer.succeed(organizationS3ClientConfig),
+            )
+            .zioValue
+
+        val logoBytesFromPresignedUrl = Using(Source.fromURL(Uri.unsafeApply(presignedUrl.value).toJavaUri.toURL)) {
+          bufferedSource => bufferedSource.map(_.toByte).toArray
+        }.getOrElse(Array.emptyByteArray)
+
+        Chunk.from(
+          logoBytesFromPresignedUrl
+        ) should contain theSameElementsInOrderAs organizationLogoBytes.runCollect.zioValue
       }
     }
   }
@@ -78,6 +100,7 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
       secretAccessKey = "secret-access-key",
       organizationLogoBucket = "organization-logo-bucket",
       organizationLogoKeyPrefix = "organization-logo-key-prefix",
+      organizationLogoUrlExpiresAtOffset = 1.minute,
     )
 
     val s3TestClient = ZIO
