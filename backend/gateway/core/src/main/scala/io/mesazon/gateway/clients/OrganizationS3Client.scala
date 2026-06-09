@@ -8,8 +8,9 @@ import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.*
 import software.amazon.awssdk.services.s3.model.{GetObjectRequest, PutObjectRequest}
 import software.amazon.awssdk.services.s3.presigner.S3Presigner
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
 import zio.*
-import zio.stream.{ZSink, ZStream}
+import zio.stream.*
 
 import java.nio.file.{Files, Path}
 import scala.util.chaining.scalaUtilChainingOps
@@ -22,9 +23,8 @@ trait OrganizationS3Client {
   ): IO[ServiceError, OrganizationLogoBucketKey]
 
   def getLogoUrl(
-      organizationLogoBucketKey: OrganizationLogoBucketKey,
-      expiresDuration: Duration,
-  ): IO[ServiceError, String]
+      organizationLogoBucketKey: OrganizationLogoBucketKey
+  ): IO[ServiceError, OrganizationLogoUrl]
 }
 
 object OrganizationS3Client {
@@ -95,9 +95,8 @@ object OrganizationS3Client {
       }
 
     override def getLogoUrl(
-        organizationLogoBucketKey: OrganizationLogoBucketKey,
-        expiresDuration: zio.Duration,
-    ): IO[ServiceError, String] =
+        organizationLogoBucketKey: OrganizationLogoBucketKey
+    ): IO[ServiceError, OrganizationLogoUrl] =
       for {
         getObjectRequest <- ZIO
           .attempt(
@@ -108,17 +107,31 @@ object OrganizationS3Client {
               .build()
           )
           .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to create GetObjectRequest", Some(e)))
-        _ <- ZIO
+        presignGetObjectRequest <- ZIO
           .attempt(
-            PresignGetObjectRequest
+            GetObjectPresignRequest
               .builder()
               .getObjectRequest(getObjectRequest)
-              .signatureDuration(expiresDuration.toJava)
+              .signatureDuration(organizationS3ClientConfig.organizationLogoUrlExpiresAtOffset)
               .build()
           )
-        _ <- s3Presigner.presignGetObject(presignGetObjectRequest).url().toString
-
-      } yield ???
+          .mapError(e =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to create GetObjectPresignRequest", Some(e))
+          )
+        urlRaw <- ZIO
+          .attempt(s3Presigner.presignGetObject(presignGetObjectRequest).url())
+          .mapError(e =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to presignGetObject request", Some(e))
+          )
+        organizationLogoUrl <- ZIO
+          .fromEither(
+            OrganizationLogoUrl
+              .either(urlRaw.toString)
+          )
+          .mapError(e =>
+            ServiceError.InternalServerError.UnexpectedError(s"Failed to construct OrganizationLogoUrl: [$e]")
+          )
+      } yield organizationLogoUrl
   }
 
   private val s3AsyncClientLayer: ZLayer[OrganizationS3ClientConfig, Throwable, S3AsyncClient] =
@@ -179,7 +192,7 @@ object OrganizationS3Client {
               }
               .build()
           )
-        )(presigner => ZIO.succeed(presigner.close()) <* ZIO.logError("S3Presigner closed"))
+        )(s3Presigner => ZIO.succeed(s3Presigner.close()) <* ZIO.logError("S3Presigner closed"))
       } yield s3Presigner
     )
 
@@ -190,10 +203,14 @@ object OrganizationS3Client {
         organizationLogoBytes: ZStream[Any, Throwable, Byte],
     ): IO[ServiceError, OrganizationLogoBucketKey] =
       organizationS3Client.uploadLogo(organizationID, organizationLogoFileName, organizationLogoBytes)
+
+    override def getLogoUrl(
+        organizationLogoBucketKey: OrganizationLogoBucketKey
+    ): IO[ServiceError, OrganizationLogoUrl] =
+      organizationS3Client.getLogoUrl(organizationLogoBucketKey)
   }
 
   val live =
-    s3PresignerLayer zipWith s3AsyncClientLayer >>> ZLayer.derive[OrganizationS3ClientImpl] >>> ZLayer.fromFunction(
-      observed
-    )
+    (s3PresignerLayer ++ s3AsyncClientLayer) >>> ZLayer.derive[OrganizationS3ClientImpl] >>>
+      ZLayer.fromFunction(observed)
 }

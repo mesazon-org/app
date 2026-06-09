@@ -78,6 +78,9 @@ type OrganizationID = OrganizationID.T
 object OrganizationLogoFileName extends RefinedType[String, NonEmptyTrimmedCap]
 type OrganizationLogoFileName = OrganizationLogoFileName.T
 
+object OrganizationLogoUrl extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationLogoUrl = OrganizationLogoUrl.T
+
 object OrganizationLogoBucketKey extends RefinedType[String, NonEmptyTrimmed]
 type OrganizationLogoBucketKey = OrganizationLogoBucketKey.T
 
