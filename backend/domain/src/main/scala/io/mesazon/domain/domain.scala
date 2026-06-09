@@ -7,8 +7,8 @@ import java.util.UUID
 import scala.util.control.Exception.allCatch
 
 type NonEmptyTrimmedLowerCase = Trimmed & LettersLowerCase & MinLength[1] & MaxLength[255]
-type NonEmptyTrimmed          = Trimmed & MinLength[1] & MaxLength[255]
-type TokenPredicate           = Trimmed & MinLength[1]
+type NonEmptyTrimmedCap       = Trimmed & MinLength[1] & MaxLength[255]
+type NonEmptyTrimmed          = Trimmed & MinLength[1]
 type NonEmpty                 = MinLength[1] & MaxLength[1000]
 
 type PasswordPredicate =

@@ -39,8 +39,8 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
   }
 
   "OrganizationS3Client" when {
-    "uploading an object" should {
-      "succeed" in new TestContext {
+    "uploadLogo" should {
+      "successfully upload the logo and return the key" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
         val organizationLogoFileName = arbitrarySample[OrganizationLogoFileName]
         val organizationLogoBytes    = ZStream.fromResource("test-logo.jpeg")
@@ -56,12 +56,10 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
             )
             .zioValue
 
-        println(s"Uploaded object key: $key")
-
         s3TestClient
           .getObject(
             organizationS3ClientConfig.organizationLogoBucket,
-            key,
+            key.value,
           )
           .runCollect
           .zioValue should contain theSameElementsInOrderAs organizationLogoBytes.runCollect.zioValue

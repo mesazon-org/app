@@ -2,9 +2,10 @@ package io.mesazon.test.s3
 
 import com.dimafeng.testcontainers.*
 import io.mesazon.test.s3.S3TestClient.S3TestClientConfig
+import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.services.s3.S3Client
-import software.amazon.awssdk.services.s3.model.GetObjectRequest
+import software.amazon.awssdk.services.s3.*
+import software.amazon.awssdk.services.s3.model.*
 import zio.*
 import zio.stream.*
 
@@ -14,6 +15,12 @@ case class S3TestClient(
     s3TestClientConfig: S3TestClientConfig
 ) {
 
+  private val credentialsProvider = StaticCredentialsProvider.create(
+    AwsBasicCredentials.create("test", "test")
+  )
+
+  private val s3Configuration = S3Configuration.builder().pathStyleAccessEnabled(true).build()
+
   private def s3ClientScope: ZIO[Scope, Throwable, S3Client] =
     ZIO.acquireRelease(
       ZIO.attempt {
@@ -21,6 +28,8 @@ case class S3TestClient(
           .builder()
           .region(s3TestClientConfig.region)
           .endpointOverride(s3TestClientConfig.uri)
+          .credentialsProvider(credentialsProvider)
+          .serviceConfiguration(s3Configuration)
           .build()
       }
     )(client => ZIO.succeed(client.close()))
