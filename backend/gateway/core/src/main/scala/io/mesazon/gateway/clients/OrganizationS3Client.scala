@@ -186,7 +186,11 @@ object OrganizationS3Client {
               )
               .pipe { builder =>
                 if (organizationS3ClientConfig.useMock)
-                  builder.endpointOverride(organizationS3ClientConfig.uri.toJavaUri)
+                  builder
+                    .endpointOverride(organizationS3ClientConfig.uri.toJavaUri)
+                    .serviceConfiguration(
+                      S3Configuration.builder().pathStyleAccessEnabled(true).build()
+                    )
                 else
                   builder
               }
