@@ -64,7 +64,6 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
             )
             .zioValue
 
-        // Then, get the presigned URL for the uploaded logo
         val presignedUrl =
           ZIO
             .serviceWithZIO[OrganizationS3Client](

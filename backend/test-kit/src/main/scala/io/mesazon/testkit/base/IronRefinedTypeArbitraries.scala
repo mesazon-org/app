@@ -54,7 +54,7 @@ trait IronRefinedTypeArbitraries {
       .map(_.refineUnsafe[NonEmptyTrimmed])
   }
 
-  given arbTokenPredicate: Arbitrary[String :| NonEmptyTrimmedUnsafe] = Arbitrary {
+  given arbNonEmptyTrimmedUnsafe: Arbitrary[String :| NonEmptyTrimmedUnsafe] = Arbitrary {
     Gen
       .nonEmptyStringOf(Gen.alphaNumChar)
       .map(_.trim)
