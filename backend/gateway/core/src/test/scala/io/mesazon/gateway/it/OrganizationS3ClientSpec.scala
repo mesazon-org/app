@@ -7,12 +7,10 @@ import io.mesazon.gateway.config.OrganizationS3ClientConfig
 import io.mesazon.test.s3.S3TestClient
 import io.mesazon.test.s3.S3TestClient.S3TestClientConfig
 import io.mesazon.testkit.base.{DockerComposeBase, GatewayArbitraries, ZWordSpecBase}
+import sttp.client4.quick.*
 import sttp.model.Uri
 import zio.*
 import zio.stream.ZStream
-
-import scala.io.Source
-import scala.util.Using
 
 class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, DockerComposeBase {
 
@@ -78,12 +76,16 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
             )
             .zioValue
 
-        val logoBytesFromPresignedUrl = Using(Source.fromURL(Uri.unsafeApply(presignedUrl.value).toJavaUri.toURL)) {
-          bufferedSource => bufferedSource.map(_.toByte).toArray
-        }.getOrElse(Array.emptyByteArray)
+        val organizationLogoBytesFromPresignedUrl =
+          quickRequest
+            .get(uri"${presignedUrl.value}")
+            .response(asByteArray)
+            .send()
+            .body
+            .getOrElse(Array.emptyByteArray)
 
         Chunk.from(
-          logoBytesFromPresignedUrl
+          organizationLogoBytesFromPresignedUrl
         ) should contain theSameElementsInOrderAs organizationLogoBytes.runCollect.zioValue
       }
     }
