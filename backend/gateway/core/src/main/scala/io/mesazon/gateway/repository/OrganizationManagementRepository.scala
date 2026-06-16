@@ -10,6 +10,10 @@ import io.mesazon.generator.IDGenerator
 import zio.*
 
 trait OrganizationManagementRepository {
+  def getOrganization(
+      organizationID: OrganizationID
+  ): IO[ServiceError, Option[OrganizationDetailsRow]]
+
   def createOrganization(
       userID: UserID,
       name: OrganizationName,
@@ -23,6 +27,26 @@ trait OrganizationManagementRepository {
       postalCode: OrganizationPostalCode,
       country: OrganizationCountry,
   ): IO[ServiceError, OrganizationDetailsRow]
+
+  def updateOrganization(
+      organizationID: OrganizationID,
+      organizationStage: OrganizationStage,
+      nameUpdate: Option[OrganizationName] = None,
+      slugUpdate: Option[OrganizationSlug] = None,
+      emailUpdate: Option[OrganizationEmail] = None,
+      phoneNumberUpdate: Option[OrganizationPhoneNumber] = None,
+      addressLine1Update: Option[OrganizationAddressLine1] = None,
+      addressLine2Update: Option[OrganizationAddressLine2] = None,
+      cityUpdate: Option[OrganizationCity] = None,
+      postalCodeUpdate: Option[OrganizationPostalCode] = None,
+      countryUpdate: Option[OrganizationCountry] = None,
+      logoBucketKeyUpdate: Option[OrganizationLogoBucketKey] = None,
+      logoFileNameUpdate: Option[OrganizationLogoFileName] = None,
+  ): IO[ServiceError, OrganizationDetailsRow]
+
+  def isOrganizationSlugExists(
+      slug: OrganizationSlug
+  ): IO[ServiceError, Boolean]
 }
 
 object OrganizationManagementRepository {
@@ -34,6 +58,18 @@ object OrganizationManagementRepository {
       timeProvider: TimeProvider,
       idGenerator: IDGenerator,
   ) extends OrganizationManagementRepository {
+
+    override def getOrganization(organizationID: OrganizationID): IO[ServiceError, Option[OrganizationDetailsRow]] =
+      database
+        .transactionOrWiden(
+          organizationDetailsQueries.get(organizationID)
+        )
+        .mapError(e =>
+          ServiceError.InternalServerError.RepositoryError(
+            s"Failed to get organization by ID: [$organizationID]",
+            e,
+          )
+        )
 
     override def createOrganization(
         userID: UserID,
@@ -70,6 +106,8 @@ object OrganizationManagementRepository {
         city,
         postalCode,
         country,
+        None,
+        None,
         CreatedAt(instantNow),
         UpdatedAt(instantNow),
       )
@@ -94,6 +132,61 @@ object OrganizationManagementRepository {
           )
         )
     } yield organizationDetailsRow
+
+    override def updateOrganization(
+        organizationID: OrganizationID,
+        organizationStage: OrganizationStage,
+        nameUpdate: Option[OrganizationName],
+        slugUpdate: Option[OrganizationSlug],
+        emailUpdate: Option[OrganizationEmail],
+        phoneNumberUpdate: Option[OrganizationPhoneNumber],
+        addressLine1Update: Option[OrganizationAddressLine1],
+        addressLine2Update: Option[OrganizationAddressLine2],
+        cityUpdate: Option[OrganizationCity],
+        postalCodeUpdate: Option[OrganizationPostalCode],
+        countryUpdate: Option[OrganizationCountry],
+        logoBucketKeyUpdate: Option[OrganizationLogoBucketKey],
+        logoFileNameUpdate: Option[OrganizationLogoFileName],
+    ): IO[ServiceError, OrganizationDetailsRow] = for {
+      instantNow                    <- timeProvider.instantNow
+      organizationDetailsRowUpdated <- database
+        .transactionOrWiden(
+          organizationDetailsQueries.update(
+            organizationID,
+            organizationStage,
+            UpdatedAt(instantNow),
+            nameUpdate,
+            slugUpdate,
+            emailUpdate,
+            phoneNumberUpdate,
+            addressLine1Update,
+            addressLine2Update,
+            cityUpdate,
+            postalCodeUpdate,
+            countryUpdate,
+            logoBucketKeyUpdate,
+            logoFileNameUpdate,
+          )
+        )
+        .mapError(e =>
+          ServiceError.InternalServerError.RepositoryError(
+            s"Failed to update organization with ID: [$organizationID]",
+            e,
+          )
+        )
+    } yield organizationDetailsRowUpdated
+
+    override def isOrganizationSlugExists(slug: OrganizationSlug): IO[ServiceError, Boolean] =
+      database
+        .transactionOrWiden(
+          organizationDetailsQueries.slugExist(slug)
+        )
+        .mapError(e =>
+          ServiceError.InternalServerError.RepositoryError(
+            s"Failed to check slug uniqueness for slug: [$slug]",
+            e,
+          )
+        )
   }
 
   val live = ZLayer.derive[OrganizationManagementRepositoryImpl].project[OrganizationManagementRepository](identity)

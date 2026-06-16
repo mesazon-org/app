@@ -77,6 +77,8 @@ create table organization_details
     city                  text        not null,
     postal_code           text        not null,
     country               text        not null,
+    logo_file_name        text,
+    logo_bucket_key       text,
     created_at            timestamptz not null,
     updated_at            timestamptz not null,
     primary key (organization_id),

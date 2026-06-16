@@ -6,7 +6,7 @@ import io.mesazon.gateway.config.OrganizationS3ClientConfig
 import software.amazon.awssdk.auth.credentials.*
 import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.*
-import software.amazon.awssdk.services.s3.model.{GetObjectRequest, PutObjectRequest}
+import software.amazon.awssdk.services.s3.model.{DeleteObjectRequest, GetObjectRequest, PutObjectRequest}
 import software.amazon.awssdk.services.s3.presigner.S3Presigner
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
 import zio.*
@@ -22,6 +22,10 @@ trait OrganizationS3Client {
       organizationLogoBytes: ZStream[Any, Throwable, Byte],
   ): IO[ServiceError, OrganizationLogoBucketKey]
 
+  def deleteLogo(
+      organizationLogoBucketKey: OrganizationLogoBucketKey
+  ): IO[ServiceError, Unit]
+
   def getLogoUrl(
       organizationLogoBucketKey: OrganizationLogoBucketKey
   ): IO[ServiceError, OrganizationLogoUrl]
@@ -29,7 +33,7 @@ trait OrganizationS3Client {
 
 object OrganizationS3Client {
 
-  final class OrganizationS3ClientImpl(
+  private final class OrganizationS3ClientImpl(
       organizationS3ClientConfig: OrganizationS3ClientConfig,
       s3AsyncClient: S3AsyncClient,
       s3Presigner: S3Presigner,
@@ -76,7 +80,8 @@ object OrganizationS3Client {
                 .build()
             )
             .mapError(e =>
-              ServiceError.InternalServerError.UnexpectedError("Failed to create PutObjectRequest", Some(e))
+              ServiceError.InternalServerError
+                .UnexpectedError("Failed to create PutObjectRequest", Some(e))
             )
           asyncRequestBody <- ZIO
             .attempt(AsyncRequestBody.fromFile(tempPath))
@@ -93,6 +98,31 @@ object OrganizationS3Client {
             )
         } yield organizationLogoBucketKey
       }
+
+    override def deleteLogo(
+        organizationLogoBucketKey: OrganizationLogoBucketKey
+    ): IO[ServiceError, Unit] =
+      for {
+        deleteObjectRequest <- ZIO
+          .attempt(
+            DeleteObjectRequest
+              .builder()
+              .bucket(organizationS3ClientConfig.organizationLogoBucket)
+              .key(organizationLogoBucketKey.value)
+              .build()
+          )
+          .mapError(e =>
+            ServiceError.InternalServerError
+              .UnexpectedError("Failed to create DeleteObjectRequest", Some(e))
+          )
+        _ <- ZIO
+          .fromCompletableFuture(
+            s3AsyncClient.deleteObject(deleteObjectRequest)
+          )
+          .mapError(e =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to delete organization logo from S3", Some(e))
+          )
+      } yield ()
 
     override def getLogoUrl(
         organizationLogoBucketKey: OrganizationLogoBucketKey
@@ -212,6 +242,9 @@ object OrganizationS3Client {
         organizationLogoBucketKey: OrganizationLogoBucketKey
     ): IO[ServiceError, OrganizationLogoUrl] =
       organizationS3Client.getLogoUrl(organizationLogoBucketKey)
+
+    override def deleteLogo(organizationLogoBucketKey: OrganizationLogoBucketKey): IO[ServiceError, Unit] =
+      organizationS3Client.deleteLogo(organizationLogoBucketKey)
   }
 
   val live =

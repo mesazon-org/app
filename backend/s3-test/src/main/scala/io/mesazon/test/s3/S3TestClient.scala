@@ -10,6 +10,7 @@ import zio.*
 import zio.stream.*
 
 import java.net.URI
+import scala.jdk.CollectionConverters.IterableHasAsScala
 
 case class S3TestClient(
     s3TestClientConfig: S3TestClientConfig
@@ -34,20 +35,46 @@ case class S3TestClient(
       }
     )(client => ZIO.succeed(client.close()))
 
-  def getObject(bucket: String, key: String): Stream[Throwable, Byte] =
-    (for {
-      getObjectRequest <- ZStream.fromZIO(
-        ZIO.attempt(
-          GetObjectRequest
-            .builder()
-            .bucket(bucket)
-            .key(key)
-            .build()
+  def getObject(bucket: String, key: String): Task[Chunk[Byte]] =
+    ZIO.scoped {
+      (for {
+        getObjectRequest <- ZStream.fromZIO(
+          ZIO.attempt(
+            GetObjectRequest
+              .builder()
+              .bucket(bucket)
+              .key(key)
+              .build()
+          )
         )
-      )
-      s3Client <- ZStream.fromZIO(s3ClientScope)
-      byte     <- ZStream.fromInputStream(s3Client.getObject(getObjectRequest))
-    } yield byte).provideLayer(Scope.default)
+        s3Client    <- ZStream.fromZIO(s3ClientScope)
+        inputStream <- ZStream.fromZIO(ZIO.attemptBlocking(s3Client.getObject(getObjectRequest)))
+        byte        <- ZStream.fromInputStream(inputStream)
+      } yield byte).runCollect
+    }
+
+  def emptyAllBuckets(): Task[Unit] =
+    ZIO.scoped {
+      for {
+        s3Client            <- s3ClientScope
+        listBucketsResponse <- ZIO.attempt(s3Client.listBuckets())
+        buckets = listBucketsResponse.buckets().asScala
+        _ <- ZIO.foreachDiscard(buckets) { bucket =>
+          val bucketName = bucket.name()
+          for {
+            listObjectsResponse <- ZIO.attempt(
+              s3Client.listObjectsV2(ListObjectsV2Request.builder().bucket(bucketName).build())
+            )
+            objects = listObjectsResponse.contents().asScala
+            _ <- ZIO.foreach(objects) { obj =>
+              ZIO.attempt(
+                s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(obj.key()).build())
+              )
+            }
+          } yield ()
+        }
+      } yield ()
+    }
 }
 
 object S3TestClient {

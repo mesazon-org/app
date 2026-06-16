@@ -4,15 +4,19 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.json.given
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.StatusCode
-import sttp.tapir.CodecFormat
+import sttp.tapir.{CodecFormat, Endpoint, EndpointOutput}
 import sttp.tapir.codec.iron.given
 import sttp.tapir.json.jsoniter.*
 import sttp.tapir.ztapir.*
+import zio.stream
 
 object TapirEndpoints {
 
-//  val uploadOrganizationLogoPostEndpoint =
-  val _ =
+  private val baseEndpoint =
+    endpoint
+      .securityIn(auth.bearer[AccessToken]())
+
+  val uploadOrganizationLogoPostEndpoint =
     endpoint
       .name("Upload Organization Logo")
       .summary("Stream-upload a logo image for an organization")
@@ -22,11 +26,10 @@ object TapirEndpoints {
           "onboard stage. Maximum body size: 2 MB (enforced by the server-level EntityLimiter)."
       )
       .post
-      .securityIn(auth.bearer[String]())
       .in("upload" / "organization" / "logo" / path[OrganizationID]("organizationID"))
-      .in(header[String]("X-File-Name").description("The original name of the file being uploaded"))
+      .in(header[OrganizationLogoFileName]("X-File-Name").description("The original name of the file being uploaded"))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
       .out(statusCode(StatusCode.Ok))
-      .errorOut(statusCode.and(jsonBody[TapirServerError]))
+      .errorOut(statusCode and jsonBody[TapirServerError])
       .tag("File")
 }
