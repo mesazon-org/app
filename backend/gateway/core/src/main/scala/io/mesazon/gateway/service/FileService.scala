@@ -18,46 +18,6 @@ trait FileService[F[_]] {
 
 object FileService {
 
-//  val buildRoutes =
-//    for {
-//      fileService          <- ZIO.service[FileService[ServiceTask]]
-//      authState            <- ZIO.service[AuthState]
-//      authorizationService <- ZIO.service[AuthorizationService[ServiceTask]]
-//    } yield {
-//      val serverEndpoint: ZServerEndpoint[Any, ZioStreams] =
-//        TapirEndpoints.uploadOrganizationLogoPostEndpoint.zServerSecurityLogic { accessTokenRaw =>
-//          TapirErrorHandler.handleError(
-//            authorizationService.auth(
-//              request = Request[Task]().putHeaders(
-//                Authorization(Credentials.Token(AuthScheme.Bearer, accessTokenRaw))
-//              ),
-//              requiresCompletedOnboardStage = true,
-//            )
-//          ) *> authState.get
-//        }.serverLogic { authedUserAccess =>
-//          { case (organizationID, bodyStream) =>
-//            TapirErrorHandler.handleError(
-//              fileService
-//                .uploadOrganizationLogo(authedUserAccess.userID, organizationID, bodyStream)
-//            )
-//          }
-//        }
-//
-//      ZHttp4sServerInterpreter().from(serverEndpoint).toRoutes
-//    }
-
-//  def swaggerRoutes: HttpRoutes[Task] = {
-//    val swaggerEndpoints =
-//      SwaggerInterpreter(
-//        swaggerUIOptions = SwaggerUIOptions.default.copy(pathPrefix = List("file-docs"))
-//      ).fromEndpoints[Task](
-//        List(uploadOrganizationLogoEndpoint),
-//        "File API",
-//        "1.0",
-//      )
-//    Http4sServerInterpreter[Task]().toRoutes(swaggerEndpoints)
-//  }
-
   private final class FileServiceImpl(
       organizationManagementRepository: OrganizationManagementRepository,
       organizationS3Client: OrganizationS3Client,

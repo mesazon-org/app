@@ -37,7 +37,8 @@ object Dependencies {
   lazy val bouncyCastleV        = "1.84"
   lazy val uuidCreatorV         = "6.1.1"
   lazy val scalamockV           = "7.5.5"
-  lazy val scrimageV            = "4.6.0"
+  lazy val scrimageV            = "4.6.4"
+  lazy val tikaV                = "3.3.1"
   lazy val awssdkV              = "2.45.1"
   lazy val zioS3V               = "0.4.4"
 
@@ -118,6 +119,7 @@ object Dependencies {
   // STTP Iron
 
   // Tapir
+  lazy val tapirCore            = "com.softwaremill.sttp.tapir" %% "tapir-core"              % tapirV
   lazy val tapirZIO             = "com.softwaremill.sttp.tapir" %% "tapir-zio"               % tapirV
   lazy val tapirHttp4s          = "com.softwaremill.sttp.tapir" %% "tapir-http4s-server"     % tapirV
   lazy val tapirSwaggerUIBundle = "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % tapirV
@@ -146,6 +148,11 @@ object Dependencies {
 
   // UUID Creator
   lazy val uuidCreator = "com.github.f4b6a3" % "uuid-creator" % uuidCreatorV
+
+  // Scrimage
+  lazy val scrimageCore = "com.sksamuel.scrimage" % "scrimage-core" % scrimageV
+  lazy val scrimageWebp = "com.sksamuel.scrimage" % "scrimage-webp" % scrimageV
+  lazy val tikaCore     = "org.apache.tika"       % "tika-core"     % tikaV
 
   // AWS SDK
   val awssdkS3 = "software.amazon.awssdk" % "s3" % awssdkV

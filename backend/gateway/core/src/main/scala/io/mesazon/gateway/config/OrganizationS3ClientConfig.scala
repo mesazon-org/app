@@ -11,7 +11,7 @@ case class OrganizationS3ClientConfig(
     accessKeyId: String,
     secretAccessKey: String,
     organizationLogoBucket: String,
-    organizationLogoKeyPrefix: String,
+    organizationLogoPathPrefix: String,
     organizationLogoUrlExpiresAtOffset: Duration,
 )
 

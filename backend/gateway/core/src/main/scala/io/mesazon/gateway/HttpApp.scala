@@ -4,28 +4,21 @@ import cats.syntax.all.*
 import fs2.io.net.Network
 import io.mesazon.gateway.config.GatewayServerConfig
 import io.mesazon.gateway.config.GatewayServerConfig.ServerConfig
+import io.mesazon.gateway.service.FileService
 import io.mesazon.gateway.tapir.*
-import io.mesazon.gateway.service.*
-import org.http4s.HttpRoutes
-import org.http4s.dsl.Http4sDsl
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.EntityLimiter
+import org.http4s.{HttpRoutes, Response, Status}
 import smithy4s.http4s.*
 import smithy4s.http4s.swagger.docs
 import smithy4s.kinds.FunctorAlgebra
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
-import sttp.tapir.swagger.SwaggerUIOptions
-import sttp.tapir.swagger.bundle.SwaggerInterpreter
-import zio.*
-import sttp.tapir.ztapir.*
 import zio.*
 import zio.interop.catz.*
 
 object HttpApp {
 
   given Network[Task] = Network.forAsync[Task]
-  private val dsl     = Http4sDsl[Task]
-  import dsl.*
 
   private def buildSmihtyRoute[Alg[_[_, _, _, _, _]]](
       impl: FunctorAlgebra[Alg, Task]
@@ -59,36 +52,29 @@ object HttpApp {
     organizationManagementServiceRoutes <- buildSmihtyRoute(organizationManagementService)
   } yield userSignUpRoutes <+> userOnboardRoutes <+> userSignInRoutes <+> userForgotPasswordRoutes <+> userTokenServiceRoutes <+> organizationManagementServiceRoutes
 
-  private val externalTapirRoutes = for {
-    fileService <- ZIO.service[FileService[TapirTask]]
-    uploadOrganizationLogoEndpoint = TapirEndpoints.uploadOrganizationLogoPostEndpoint.zServerLogic[Any](
-      fileService.uploadOrganizationLogo
-    )
-    routes = ZHttp4sServerInterpreter()
-      .from(
-        List(
-          uploadOrganizationLogoEndpoint
-        )
+  private def externalTapirAndDocsRoutes(enableDocs: Boolean): ZIO[FileService[TapirTask], Nothing, HttpRoutes[Task]] =
+    for {
+      (streamEndpoints, swaggerEndpointsOpt) <- TapirEndpoints.allRoutesAndDocsEndpoints(enableDocs)
+
+      streamRoutes: HttpRoutes[Task] =
+        ZHttp4sServerInterpreter()
+          .from(streamEndpoints)
+          .toRoutes
+
+      docsRoutes: Option[HttpRoutes[Task]] = swaggerEndpointsOpt.map(
+        ZHttp4sServerInterpreter()
+          .from(_)
+          .toRoutes
       )
-      .toRoutes
-    swaggerEndpoints = SwaggerInterpreter(
-      swaggerUIOptions = SwaggerUIOptions.default.copy(pathPrefix = List("file-docs"))
-    ).fromServerEndpoints(
-      List(
-        uploadOrganizationLogoEndpoint.widen[Clock]
-      ),
-      "File API",
-      "1.0",
-    )
-    swaggerRoutes = ZHttp4sServerInterpreter().from(swaggerEndpoints).toRoutes
-  } yield routes -> swaggerRoutes
+
+    } yield streamRoutes <+> docsRoutes.getOrElse(HttpRoutes.empty)
 
   private val internalSmithyRoutes = for {
     wahaService <- ZIO.service[smithy.WahaService[Task]]
     routes      <- buildSmihtyRoute(wahaService)
   } yield routes
 
-  private val docsSmithyRoutes = docs[Task](
+  private lazy val externalSmithySwaggerRoutes = docs[Task](
     smithy.UserSignUpService,
     smithy.UserSignInService,
     smithy.UserOnboardService,
@@ -107,9 +93,11 @@ object HttpApp {
       .withPort(config.port)
       .withHttpApp(EntityLimiter.httpRoutes(routes).orNotFound) // Limits the size of the request body to 2MB
       .withErrorHandler(error =>
-        ZIO.fiberId.flatMap(fid =>
-          ZIO.logErrorCause("Unexpected failure", Cause.die(error, StackTrace.fromJava(fid, error.getStackTrace)))
-        ) *> InternalServerError()
+        ZIO.fiberId
+          .flatMap(fid =>
+            ZIO.logErrorCause("Unexpected failure", Cause.die(error, StackTrace.fromJava(fid, error.getStackTrace)))
+          )
+          .as(Response[Task](Status.InternalServerError))
       )
       .build
       .toScopedZIO
@@ -117,15 +105,14 @@ object HttpApp {
 
   val serverLayer = ZLayer.scoped {
     (for {
-      config                                 <- ZIO.service[GatewayServerConfig]
-      healthSmithyRoutes                     <- healthSmihtyRoutes
-      externalSmithyRoutes                   <- externalSmithyRoutes
-      (externalTapirRoutes, docsTapirRoutes) <- externalTapirRoutes
-      externalRoutes = externalSmithyRoutes <+> externalTapirRoutes
+      config                     <- ZIO.service[GatewayServerConfig]
+      healthSmithyRoutes         <- healthSmihtyRoutes
+      externalSmithyRoutes       <- externalSmithyRoutes
+      externalTapirAndDocsRoutes <- externalTapirAndDocsRoutes(config.enableDocs)
+      externalRoutes = externalSmithyRoutes <+> externalTapirAndDocsRoutes
       internalSmithyRoutes <- internalSmithyRoutes
-      externalWithDocsRoutes = Option
-        .when(config.enableDocs)(externalRoutes <+> docsSmithyRoutes <+> docsTapirRoutes)
-        .getOrElse(externalRoutes)
+      externalSwaggerRoutes  = Option.when(config.enableDocs)(externalSmithySwaggerRoutes)
+      externalWithDocsRoutes = externalSwaggerRoutes.map(_ <+> externalRoutes).getOrElse(externalRoutes)
       servers <-
         server(config.health, healthSmithyRoutes) &>
           server(config.external, externalWithDocsRoutes) &>

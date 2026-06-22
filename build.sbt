@@ -217,6 +217,9 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.jjwtImpl,
     Dependencies.jjwtJackson,
     Dependencies.awssdkS3,
+    Dependencies.scrimageCore,
+    Dependencies.scrimageWebp,
+    Dependencies.tikaCore,
     Dependencies.springSecurityCrypto,
     Dependencies.bouncyCastle,
   )

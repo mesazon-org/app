@@ -56,7 +56,7 @@ object OrganizationS3Client {
           organizationLogoBucketKey <- ZIO
             .fromEither(
               OrganizationLogoBucketKey.either(
-                s"${organizationS3ClientConfig.organizationLogoKeyPrefix}/${organizationID.value}/${organizationLogoFileName.value}"
+                s"${organizationS3ClientConfig.organizationLogoPathPrefix}/${organizationID.value}/${organizationLogoFileName.value}"
               )
             )
             .mapError(e =>

@@ -219,7 +219,7 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
       accessKeyId = "access-key-id",
       secretAccessKey = "secret-access-key",
       organizationLogoBucket = "organization-logo-bucket",
-      organizationLogoKeyPrefix = "organization-logo-key-prefix",
+      organizationLogoPathPrefix = "organization/logos",
       organizationLogoUrlExpiresAtOffset = 1.minute,
     )
 

@@ -17,6 +17,8 @@ services:
       SERVER_ENABLE_DOCS: "true"
       EMAIL_PROVIDER_HOST: mailhog
       EMAIL_PROVIDER_PORT: 1025
+      JWT_SECRET_KEY: "Yk8zYkwwNGtVa0JvbE1NSU5lS2dtODdIMWlITzA4cDlZSkRiaFhBZmE4TT0="
+      ORGANIZATION_S3_CLIENT_URI: http://s3:9090
 
 #  ubuntu:
 #    image: michaelirey/ubuntu-with-tools:latest
@@ -70,3 +72,17 @@ services:
     ports:
       - "1025:1025"
       - "8025:8025"
+
+  wiremock:
+    image: local/wiremock:latest
+    #    ports:
+    #      - "8080:8080"
+
+  s3:
+    image: adobe/s3mock:5.0.0
+    restart: always
+    ports:
+      - "9090:9090" # HTTP port
+    environment:
+      - COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=organization-logo-bucket
+      - COM_ADOBE_TESTING_S3MOCK_STORE_RETAIN_FILES_ON_EXIT=true
