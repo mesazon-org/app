@@ -13,7 +13,7 @@ import zio.*
 
 class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBase {
 
-  override def dockerComposeFile: String = "./src/test/resources/email.yaml"
+  override def dockerComposeFile: String = "./src/test/resources/docker-compose/email.yaml"
 
   override def exposedServices: Set[ExposedService] = MailHogClient.ExposedServices
 

@@ -14,7 +14,7 @@ import zio.*
 
 class TwilioClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBase {
 
-  override def dockerComposeFile: String = "./src/test/resources/wiremock.yaml"
+  override def dockerComposeFile: String = "./src/test/resources/docker-compose/wiremock.yaml"
 
   override def exposedServices: Set[ExposedService] = WiremockClient.ExposedServices
 

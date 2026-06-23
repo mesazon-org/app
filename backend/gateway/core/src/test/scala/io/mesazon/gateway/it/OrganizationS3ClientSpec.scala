@@ -14,7 +14,7 @@ import zio.stream.ZStream
 
 class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, DockerComposeBase {
 
-  override def dockerComposeFile: String = "./src/test/resources/s3.yaml"
+  override def dockerComposeFile: String = "./src/test/resources/docker-compose/s3.yaml"
 
   override def exposedServices: Set[ExposedService] = S3TestClient.ExposedServices
 
@@ -32,7 +32,7 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
       "successfully upload the logo and return the key" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
         val organizationLogoFileName = arbitrarySample[OrganizationLogoFileName]
-        val organizationLogoBytes    = ZStream.fromResource("test-logo-1.jpeg")
+        val organizationLogoBytes    = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val organizationLogoBucketKey =
           ZIO
@@ -56,7 +56,7 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
       "successfully upload the same logo and return the key" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
         val organizationLogoFileName = arbitrarySample[OrganizationLogoFileName]
-        val organizationLogoBytes    = ZStream.fromResource("test-logo-1.jpeg")
+        val organizationLogoBytes    = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val organizationLogoBucketKey1 =
           ZIO
@@ -93,8 +93,8 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
       "successfully upload the different logo and but with the same name" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
         val organizationLogoFileName = arbitrarySample[OrganizationLogoFileName]
-        val organizationLogoBytes1   = ZStream.fromResource("test-logo-1.jpeg")
-        val organizationLogoBytes2   = ZStream.fromResource("test-logo-2.webp")
+        val organizationLogoBytes1   = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val organizationLogoBytes2   = ZStream.fromResource("assets/test-logo-2.webp")
 
         val organizationLogoBucketKey1 =
           ZIO
@@ -133,7 +133,7 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
       "successfully delete the logo from S3" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
         val organizationLogoFileName = arbitrarySample[OrganizationLogoFileName]
-        val organizationLogoBytes    = ZStream.fromResource("test-logo-1.jpeg")
+        val organizationLogoBytes    = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val organizationLogoBucketKey =
           ZIO
@@ -170,7 +170,7 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
       "successfully return a presigned URL for the logo" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
         val organizationLogoFileName = arbitrarySample[OrganizationLogoFileName]
-        val organizationLogoBytes    = ZStream.fromResource("test-logo-1.jpeg")
+        val organizationLogoBytes    = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val organizationLogoBucketKey =
           ZIO

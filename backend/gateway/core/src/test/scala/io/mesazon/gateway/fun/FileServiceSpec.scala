@@ -25,7 +25,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           )
         val organizationStage         = OrganizationStage.LogoProvided
         val organizationLogoFileName  = arbitrarySample[OrganizationLogoFileName]
-        val organizationLogoBytes     = ZStream.fromResource("test-logo-1.jpeg")
+        val organizationLogoBytes     = ZStream.fromResource("assets/test-logo-1.jpeg")
         val organizationLogoBucketKey = arbitrarySample[OrganizationLogoBucketKey]
 
         inSequence(
@@ -90,7 +90,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             logoFileName = Some(organizationLogoFileName1),
             logoBucketKey = Some(organizationLogoBucketKey1),
           )
-        val organizationLogoBytes = ZStream.fromResource("test-logo-1.jpeg")
+        val organizationLogoBytes = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         inSequence(
           organizationManagementRepositoryMock.getOrganization
@@ -158,7 +158,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             logoFileName = Some(organizationLogoFileName1),
             logoBucketKey = Some(organizationLogoBucketKey1),
           )
-        val organizationLogoBytes = ZStream.fromResource("test-logo-1.jpeg")
+        val organizationLogoBytes = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         inSequence(
           organizationManagementRepositoryMock.getOrganization
@@ -222,7 +222,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             logoFileName = Some(organizationLogoFileName),
             logoBucketKey = Some(organizationLogoBucketKey),
           )
-        val organizationLogoBytes = ZStream.fromResource("test-logo-1.jpeg")
+        val organizationLogoBytes = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         inSequence(
           organizationManagementRepositoryMock.getOrganization

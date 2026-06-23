@@ -1,8 +1,8 @@
 package io.mesazon.gateway.clients
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.domain.gateway.ServiceError.InternalServerError
 import io.mesazon.gateway.config.OrganizationS3ClientConfig
+import io.mesazon.gateway.utils.TempFile
 import software.amazon.awssdk.auth.credentials.*
 import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.*
@@ -12,7 +12,6 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 import zio.*
 import zio.stream.*
 
-import java.nio.file.{Files, Path}
 import scala.util.chaining.scalaUtilChainingOps
 
 trait OrganizationS3Client {
@@ -39,13 +38,6 @@ object OrganizationS3Client {
       s3Presigner: S3Presigner,
   ) extends OrganizationS3Client {
 
-    private def createTempFileScoped: ZIO[Scope, InternalServerError.UnexpectedError, Path] =
-      ZIO
-        .acquireRelease(
-          ZIO.attempt(Files.createTempFile("s3-upload-", ".tmp"))
-        )(path => ZIO.attempt(Files.deleteIfExists(path)).ignoreLogged)
-        .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to create temp file", Some(e)))
-
     override def uploadLogo(
         organizationID: OrganizationID,
         organizationLogoFileName: OrganizationLogoFileName,
@@ -63,7 +55,7 @@ object OrganizationS3Client {
               ServiceError.InternalServerError
                 .UnexpectedError(s"Failed to create organization logo bucket key [$e]")
             )
-          tempPath  <- ZIO.scoped(createTempFileScoped)
+          tempPath  <- TempFile.createScoped("s3-upload-")
           bytesSize <- organizationLogoBytes
             .run(ZSink.fromPath(tempPath))
             .mapError(e =>

@@ -20,7 +20,7 @@ import java.time.temporal.ChronoUnit
 
 class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
 
-  override def dockerComposeFile: String = "./src/test/resources/repository.yaml"
+  override def dockerComposeFile: String = "./src/test/resources/docker-compose/repository.yaml"
 
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 
