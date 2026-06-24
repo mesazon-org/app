@@ -3,8 +3,11 @@ package io.mesazon.gateway.service
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
 import io.mesazon.gateway.clients.OrganizationS3Client
+import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.repository.OrganizationManagementRepository
 import io.mesazon.gateway.tapir.TapirTask
+import io.mesazon.gateway.utils.ImageProcessing.OrganizationLogosProcessed
+import io.mesazon.gateway.utils.{FileScanner, ImageProcessing}
 import zio.*
 import zio.stream.*
 
@@ -19,7 +22,10 @@ trait FileService[F[_]] {
 object FileService {
 
   private final class FileServiceImpl(
+      fileServiceConfig: FileServiceConfig,
       organizationManagementRepository: OrganizationManagementRepository,
+      fileScanner: FileScanner,
+      imageProcessing: ImageProcessing,
       organizationS3Client: OrganizationS3Client,
   ) extends FileService[ServiceTask] {
 
@@ -27,15 +33,24 @@ object FileService {
         organizationID: OrganizationID,
         organizationLogoFileName: OrganizationLogoFileName,
         organizationLogoFile: ZStream[Any, Throwable, Byte],
-    ): ServiceTask[Unit] = for {
+    ): ServiceTask[Unit] = ZIO.scoped(for {
       organizationDetailsRow <- organizationManagementRepository
         .getOrganization(organizationID)
         .someOrFail(
           ServiceError.InternalServerError.UnexpectedError(s"Organization not found for ID: [$organizationID]")
         )
+      organizationLogoBytesScanned <- fileScanner.scan(
+        organizationLogoFile,
+        SupportedMediaTypes.images,
+        fileServiceConfig.maxOrganizationLogoBytes,
+      )
+      organizationLogosProcessed <- imageProcessing.processOrganizationLogo(
+        organizationLogoBytesScanned,
+        SupportedMediaTypes.images,
+      )
       organizationLogoBucketKey <-
         organizationS3Client
-          .uploadLogo(organizationID, organizationLogoFileName, organizationLogoFile)
+          .uploadLogos(organizationID, organizationLogoFileName, organizationLogoFile)
       _ <- organizationManagementRepository
         .updateOrganization(
           organizationID = organizationID,
@@ -55,7 +70,7 @@ object FileService {
             cause,
           )
         )
-    } yield ()
+    } yield ())
   }
 
   def observed(service: FileService[ServiceTask]): FileService[TapirTask] =

@@ -2,7 +2,7 @@ package io.mesazon.gateway.clients
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.OrganizationS3ClientConfig
-import io.mesazon.gateway.utils.TempFile
+import io.mesazon.gateway.utils.*
 import software.amazon.awssdk.auth.credentials.*
 import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.*
@@ -15,11 +15,12 @@ import zio.stream.*
 import scala.util.chaining.scalaUtilChainingOps
 
 trait OrganizationS3Client {
-  def uploadLogo(
+  def uploadLogos(
       organizationID: OrganizationID,
-      organizationLogoFileName: OrganizationLogoFileName,
-      organizationLogoBytes: ZStream[Any, Throwable, Byte],
-  ): IO[ServiceError, OrganizationLogoBucketKey]
+      originalLogoProcessed: OriginalLogoProcessed,
+      normalizedLogoProcessed: NormalizedLogoProcessed,
+      whatsAppLogoProcessed: WhatsAppLogoProcessed,
+  ): IO[ServiceError, OrganizationS3Client.UploadedLogoKeys]
 
   def deleteLogo(
       organizationLogoBucketKey: OrganizationLogoBucketKey
@@ -32,15 +33,45 @@ trait OrganizationS3Client {
 
 object OrganizationS3Client {
 
+  case class UploadedLogoKeys(
+      originalLogoBucketKey: OrganizationLogoBucketKey,
+      normalizedLogoBucketKey: OrganizationLogoBucketKey,
+      whatsAppLogoBucketKey: OrganizationLogoBucketKey,
+  )
+
   private final class OrganizationS3ClientImpl(
       organizationS3ClientConfig: OrganizationS3ClientConfig,
       s3AsyncClient: S3AsyncClient,
       s3Presigner: S3Presigner,
   ) extends OrganizationS3Client {
 
-    override def uploadLogo(
+    override def uploadLogos(
         organizationID: OrganizationID,
-        organizationLogoFileName: OrganizationLogoFileName,
+        originalLogoProcessed: OriginalLogoProcessed,
+        normalizedLogoProcessed: NormalizedLogoProcessed,
+        whatsAppLogoProcessed: WhatsAppLogoProcessed,
+    ): IO[ServiceError, UploadedLogoKeys] =
+      for {
+        originalLogoBucketKey <- uploadRendition(
+          organizationID,
+          processedLogo.originalLogo,
+        )
+        normalizedLogoBucketKey <- uploadRendition(
+          organizationID,
+          processedLogo.normalizedLogoFileName.value,
+          processedLogo.normalizedLogo,
+        )
+        whatsAppLogoBucketKey <- uploadRendition(
+          organizationID,
+          processedLogo.whatsAppLogoFileName.value,
+          processedLogo.whatsAppLogo,
+        )
+      } yield UploadedLogoKeys(originalLogoBucketKey, normalizedLogoBucketKey, whatsAppLogoBucketKey)
+
+    // Streams a single rendition to a temp file first so it is uploaded from disk, keeping memory usage flat.
+    private def uploadRendition(
+        organizationID: OrganizationID,
+        organizationLogoFileName: String,
         organizationLogoBytes: ZStream[Any, Throwable, Byte],
     ): IO[ServiceError, OrganizationLogoBucketKey] =
       ZIO.scoped {
@@ -48,7 +79,7 @@ object OrganizationS3Client {
           organizationLogoBucketKey <- ZIO
             .fromEither(
               OrganizationLogoBucketKey.either(
-                s"${organizationS3ClientConfig.organizationLogoPathPrefix}/${organizationID.value}/${organizationLogoFileName.value}"
+                s"${organizationS3ClientConfig.organizationLogoPathPrefix}/${organizationID.value}/${organizationLogoFileName}"
               )
             )
             .mapError(e =>
@@ -225,10 +256,9 @@ object OrganizationS3Client {
   private def observed(organizationS3Client: OrganizationS3Client): OrganizationS3Client = new OrganizationS3Client {
     override def uploadLogo(
         organizationID: OrganizationID,
-        organizationLogoFileName: OrganizationLogoFileName,
-        organizationLogoBytes: ZStream[Any, Throwable, Byte],
-    ): IO[ServiceError, OrganizationLogoBucketKey] =
-      organizationS3Client.uploadLogo(organizationID, organizationLogoFileName, organizationLogoBytes)
+        processedLogo: ImageProcessing.ProcessedLogo,
+    ): IO[ServiceError, UploadedLogoKeys] =
+      organizationS3Client.uploadLogos(organizationID, processedLogo)
 
     override def getLogoUrl(
         organizationLogoBucketKey: OrganizationLogoBucketKey

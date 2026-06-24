@@ -33,7 +33,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(organizationDetailsRow.organizationID)
             .returningZIO(Some(organizationDetailsRow))
             .once(),
-          organizationS3ClientMock.uploadLogo
+          organizationS3ClientMock.uploadLogos
             .expects(organizationDetailsRow.organizationID, organizationLogoFileName, organizationLogoBytes)
             .returningZIO(organizationLogoBucketKey)
             .once(),
@@ -97,7 +97,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(organizationDetailsRow.organizationID)
             .returningZIO(Some(organizationDetailsRow))
             .once(),
-          organizationS3ClientMock.uploadLogo
+          organizationS3ClientMock.uploadLogos
             .expects(organizationDetailsRow.organizationID, organizationLogoFileName2, organizationLogoBytes)
             .returningZIO(organizationLogoBucketKey2)
             .once(),
@@ -165,7 +165,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(organizationDetailsRow.organizationID)
             .returningZIO(Some(organizationDetailsRow))
             .once(),
-          organizationS3ClientMock.uploadLogo
+          organizationS3ClientMock.uploadLogos
             .expects(organizationDetailsRow.organizationID, organizationLogoFileName2, organizationLogoBytes)
             .returningZIO(organizationLogoBucketKey2)
             .once(),
@@ -229,7 +229,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(organizationDetailsRow.organizationID)
             .returningZIO(Some(organizationDetailsRow))
             .once(),
-          organizationS3ClientMock.uploadLogo
+          organizationS3ClientMock.uploadLogos
             .expects(organizationDetailsRow.organizationID, organizationLogoFileName, organizationLogoBytes)
             .returningZIO(organizationLogoBucketKey)
             .once(),

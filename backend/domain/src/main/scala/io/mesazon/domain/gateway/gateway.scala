@@ -75,8 +75,20 @@ type Attempts = Attempts.T
 object OrganizationID extends RefinedTypeUUID
 type OrganizationID = OrganizationID.T
 
+// This is the name provided by the user when uploading the logo file.
+// Should be used for displaying the logo file name in the UI or when downloading the logo file from s3.
 object OrganizationLogoFileName extends RefinedType[String, NonEmptyTrimmed]
 type OrganizationLogoFileName = OrganizationLogoFileName.T
+
+// This is the s3 original name which is configured not the one provided by the user.
+object OrganizationOriginalLogoFileName extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationOriginalLogoFileName = OrganizationLogoFileName.T
+
+object OrganizationNormalizedLogoFileName extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationNormalizedLogoFileName = OrganizationNormalizedLogoFileName.T
+
+object OrganizationWhatsAppLogoFileName extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationWhatsAppLogoFileName = OrganizationWhatsAppLogoFileName.T
 
 object OrganizationLogoUrl extends RefinedType[String, NonEmptyTrimmedUnsafe]
 type OrganizationLogoUrl = OrganizationLogoUrl.T
