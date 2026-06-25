@@ -25,7 +25,7 @@ object Dependencies {
   lazy val hikariCPV            = "7.1.0"
   lazy val doobieTranzactioV    = "5.7.0"
   lazy val libphonenumberV      = "9.0.32"
-  lazy val circeV               = "0.14.15"
+  lazy val circeV               = "0.14.16"
   lazy val sttpV                = "4.0.25"
   lazy val sttpIronV            = "1.13.21"
   lazy val jsoniterV            = "2.38.14"
