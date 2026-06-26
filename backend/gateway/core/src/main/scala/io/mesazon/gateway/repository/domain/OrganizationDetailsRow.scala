@@ -14,8 +14,9 @@ case class OrganizationDetailsRow(
     city: OrganizationCity,
     postalCode: OrganizationPostalCode,
     country: OrganizationCountry,
-    logoFileName: Option[OrganizationLogoFileName],
-    logoBucketKey: Option[OrganizationLogoBucketKey],
+    logoOriginalBucketKey: Option[OrganizationLogoOriginalBucketKey],
+    logoNormalizedBucketKey: Option[OrganizationLogoNormalizedBucketKey],
+    logoOriginalFileName: Option[OrganizationLogoOriginalFileName],
     createdAt: CreatedAt,
     updatedAt: UpdatedAt,
 )

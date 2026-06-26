@@ -42,6 +42,8 @@ object Main extends ZIOAppDefault {
       IDGenerator.liveUUIDv7,
       PhoneNumberUtil.live,
       OtpGenerator.live,
+      FileScanner.live,
+      ImageProcessing.live,
 
       // Services
       AuthenticationService.live,
@@ -104,6 +106,7 @@ object Main extends ZIOAppDefault {
       UserForgotPasswordConfig.live,
       OrganizationManagementConfig.live,
       OrganizationS3ClientConfig.live,
+      FileServiceConfig.live,
 
       // Domain validators
       EmailDomainValidator.live,

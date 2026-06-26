@@ -1,7 +1,7 @@
 package io.mesazon.gateway.unit.utils
 
 import io.mesazon.domain.gateway.{ServiceError, SupportedMediaTypes}
-import io.mesazon.gateway.utils.ImageProcessing
+import io.mesazon.gateway.utils.{FileByteStreamScanned, ImageProcessing}
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 import zio.stream.ZStream
@@ -14,106 +14,104 @@ class ImageProcessingSpec extends ZWordSpecBase {
 
   private def createOrGetGolden(fileName: String, actual: Chunk[Byte]): Chunk[Byte] = {
     val golden = goldenDir.resolve(fileName)
-    if (!Files.exists(golden)) Chunk.fromArray(Files.write(golden, actual.toArray))
+
+    val _ = if (!Files.exists(golden)) Files.write(golden, actual.toArray) else ()
+
     Chunk.fromArray(Files.readAllBytes(golden))
   }
 
   "ImageProcessing" when {
-    "processLogo" should {
-      "derive the normalized WebP and WhatsApp JPEG icon from a JPEG upload matching the golden bytes" in {
+    "normalize" should {
+      "return a successful result when a JPEG logo is uploaded" in {
         val imageProcessing = ZIO
           .service[ImageProcessing]
           .provide(ImageProcessing.live)
           .zioValue
 
-        val originalLogoFileStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val logoOriginalByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         ZIO
           .scoped(for {
-            processedLogo <- imageProcessing.processOrganizationLogo(originalLogoFileStream, SupportedMediaTypes.images)
+            normalizeResult <- imageProcessing.normalize(
+              FileByteStreamScanned(logoOriginalByteStream),
+              SupportedMediaTypes.images,
+            )
           } yield {
-            processedLogo.originalLogoFileName.value shouldBe "original.jpeg"
-            processedLogo.normalizedLogoFileName.value shouldBe "normalized.webp"
-            processedLogo.whatsAppLogoFileName.value shouldBe "whatsapp.jpeg"
+            val logoOriginalBytes   = normalizeResult.imageOriginalByteStream.value.runCollect.zioValue
+            val logoNormalizedBytes = normalizeResult.imageNormalizedByteStream.value.runCollect.zioValue
 
-            val originalLogoBytes   = processedLogo.originalLogo.runCollect.zioValue
-            val normalizedLogoBytes = processedLogo.normalizedLogo.runCollect.zioValue
-            val whatsAppLogoBytes   = processedLogo.whatsAppLogo.runCollect.zioValue
-
-            originalLogoBytes shouldBe originalLogoFileStream.runCollect.zioValue
-            normalizedLogoBytes shouldBe createOrGetGolden("normalized-logo-1.webp", normalizedLogoBytes)
-            whatsAppLogoBytes shouldBe createOrGetGolden("whatsapp-logo-1.jpeg", whatsAppLogoBytes)
+            logoOriginalBytes shouldBe logoOriginalByteStream.runCollect.zioValue
+            logoNormalizedBytes shouldBe createOrGetGolden("normalized-logo-1.webp", logoNormalizedBytes)
           })
           .zioValue
       }
 
-      "derive the normalized WebP and WhatsApp JPEG icon from a WebP upload matching the golden bytes" in {
+      "return a successful result when a WebP logo is uploaded" in {
         val imageProcessing = ZIO
           .service[ImageProcessing]
           .provide(ImageProcessing.live)
           .zioValue
 
-        val originalLogoFileStream = ZStream.fromResource("assets/test-logo-2.webp")
+        val logoOriginalByteStream = ZStream.fromResource("assets/test-logo-2.webp")
 
         ZIO
           .scoped(for {
-            processedLogo <- imageProcessing.processOrganizationLogo(originalLogoFileStream, SupportedMediaTypes.images)
+            normalizeResult <- imageProcessing.normalize(
+              FileByteStreamScanned(logoOriginalByteStream),
+              SupportedMediaTypes.images,
+            )
           } yield {
-            processedLogo.originalLogoFileName.value shouldBe "original.webp"
-            processedLogo.normalizedLogoFileName.value shouldBe "normalized.webp"
-            processedLogo.whatsAppLogoFileName.value shouldBe "whatsapp.jpeg"
+            val logoOriginalBytes   = normalizeResult.imageOriginalByteStream.value.runCollect.zioValue
+            val logoNormalizedBytes = normalizeResult.imageNormalizedByteStream.value.runCollect.zioValue
 
-            val originalLogoBytes   = processedLogo.originalLogo.runCollect.zioValue
-            val normalizedLogoBytes = processedLogo.normalizedLogo.runCollect.zioValue
-            val whatsAppLogoBytes   = processedLogo.whatsAppLogo.runCollect.zioValue
-
-            originalLogoBytes shouldBe originalLogoFileStream.runCollect.zioValue
-            normalizedLogoBytes shouldBe createOrGetGolden("normalized-logo-2.webp", normalizedLogoBytes)
-            whatsAppLogoBytes shouldBe createOrGetGolden("whatsapp-logo-2.jpeg", whatsAppLogoBytes)
+            logoOriginalBytes shouldBe logoOriginalByteStream.runCollect.zioValue
+            logoNormalizedBytes shouldBe createOrGetGolden("normalized-logo-2.webp", logoNormalizedBytes)
           })
           .zioValue
       }
 
-      "derive the normalized WebP and WhatsApp JPEG icon from a PNG upload matching the golden bytes" in {
+      "return a successful result when a PNG logo is uploaded" in {
         val imageProcessing = ZIO
           .service[ImageProcessing]
           .provide(ImageProcessing.live)
           .zioValue
 
-        val originalLogoFileStream = ZStream.fromResource("assets/test-logo-3.png")
+        val logoOriginalByteStream = ZStream.fromResource("assets/test-logo-3.png")
 
         ZIO
           .scoped(for {
-            processedLogo <- imageProcessing.processOrganizationLogo(originalLogoFileStream, SupportedMediaTypes.images)
+            normalizeResult <- imageProcessing.normalize(
+              FileByteStreamScanned(logoOriginalByteStream),
+              SupportedMediaTypes.images,
+            )
           } yield {
-            processedLogo.originalLogoFileName.value shouldBe "original.png"
-            processedLogo.normalizedLogoFileName.value shouldBe "normalized.webp"
-            processedLogo.whatsAppLogoFileName.value shouldBe "whatsapp.jpeg"
+            val logoOriginalBytes   = normalizeResult.imageOriginalByteStream.value.runCollect.zioValue
+            val logoNormalizedBytes = normalizeResult.imageNormalizedByteStream.value.runCollect.zioValue
 
-            val originalLogoBytes   = processedLogo.originalLogo.runCollect.zioValue
-            val normalizedLogoBytes = processedLogo.normalizedLogo.runCollect.zioValue
-            val whatsAppLogoBytes   = processedLogo.whatsAppLogo.runCollect.zioValue
-
-            originalLogoBytes shouldBe originalLogoFileStream.runCollect.zioValue
-            normalizedLogoBytes shouldBe createOrGetGolden("normalized-logo-3.webp", normalizedLogoBytes)
-            whatsAppLogoBytes shouldBe createOrGetGolden("whatsapp-logo-3.jpeg", whatsAppLogoBytes)
+            logoOriginalBytes shouldBe logoOriginalByteStream.runCollect.zioValue
+            logoNormalizedBytes shouldBe createOrGetGolden("normalized-logo-3.webp", logoNormalizedBytes)
           })
           .zioValue
       }
 
-      "fail to decode when the bytes are not a real image" in {
+      "fail when an unsupported file is uploaded" in {
         val imageProcessing = ZIO
           .service[ImageProcessing]
           .provide(ImageProcessing.live)
           .zioValue
 
         val result = ZIO
-          .scoped(imageProcessing.processOrganizationLogo(ZStream.fromResource("assets/malformed.png"), SupportedMediaTypes.images))
+          .scoped(
+            imageProcessing.normalize(
+              FileByteStreamScanned(ZStream.fromResource("assets/malformed.png")),
+              SupportedMediaTypes.images,
+            )
+          )
           .zioEither
 
         result.left.value shouldBe a[ServiceError.InternalServerError.UnexpectedError]
         result.left.value.asInstanceOf[ServiceError.InternalServerError.UnexpectedError].error shouldBe
-          "Failed to decode organization logo"
+          "Unsupported organization logo format"
       }
     }
   }

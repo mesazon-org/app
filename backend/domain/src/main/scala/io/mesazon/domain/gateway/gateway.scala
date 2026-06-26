@@ -75,26 +75,20 @@ type Attempts = Attempts.T
 object OrganizationID extends RefinedTypeUUID
 type OrganizationID = OrganizationID.T
 
-// This is the name provided by the user when uploading the logo file.
-// Should be used for displaying the logo file name in the UI or when downloading the logo file from s3.
-object OrganizationLogoFileName extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationLogoFileName = OrganizationLogoFileName.T
+object OrganizationLogoOriginalFileName extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationLogoOriginalFileName = OrganizationLogoOriginalFileName.T
 
-// This is the s3 original name which is configured not the one provided by the user.
-object OrganizationOriginalLogoFileName extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationOriginalLogoFileName = OrganizationLogoFileName.T
+object OrganizationLogoOriginalUrl extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type OrganizationLogoOriginalUrl = OrganizationLogoOriginalUrl.T
 
-object OrganizationNormalizedLogoFileName extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationNormalizedLogoFileName = OrganizationNormalizedLogoFileName.T
+object OrganizationLogoNormalizedUrl extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type OrganizationLogoNormalizedUrl = OrganizationLogoNormalizedUrl.T
 
-object OrganizationWhatsAppLogoFileName extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationWhatsAppLogoFileName = OrganizationWhatsAppLogoFileName.T
+object OrganizationLogoOriginalBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type OrganizationLogoOriginalBucketKey = OrganizationLogoOriginalBucketKey.T
 
-object OrganizationLogoUrl extends RefinedType[String, NonEmptyTrimmedUnsafe]
-type OrganizationLogoUrl = OrganizationLogoUrl.T
-
-object OrganizationLogoBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
-type OrganizationLogoBucketKey = OrganizationLogoBucketKey.T
+object OrganizationLogoNormalizedBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type OrganizationLogoNormalizedBucketKey = OrganizationLogoNormalizedBucketKey.T
 
 object OrganizationName extends RefinedType[String, NonEmptyTrimmed]
 type OrganizationName = OrganizationName.T

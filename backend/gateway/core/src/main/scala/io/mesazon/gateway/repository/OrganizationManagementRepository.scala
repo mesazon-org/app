@@ -40,8 +40,9 @@ trait OrganizationManagementRepository {
       cityUpdate: Option[OrganizationCity] = None,
       postalCodeUpdate: Option[OrganizationPostalCode] = None,
       countryUpdate: Option[OrganizationCountry] = None,
-      logoBucketKeyUpdate: Option[OrganizationLogoBucketKey] = None,
-      logoFileNameUpdate: Option[OrganizationLogoFileName] = None,
+      logoOriginalBucketKeyUpdate: Option[OrganizationLogoOriginalBucketKey] = None,
+      logoNormalizedBucketKeyUpdate: Option[OrganizationLogoNormalizedBucketKey] = None,
+      logoOriginalFileNameUpdate: Option[OrganizationLogoOriginalFileName] = None,
   ): IO[ServiceError, OrganizationDetailsRow]
 
   def isOrganizationSlugExists(
@@ -108,6 +109,7 @@ object OrganizationManagementRepository {
         country,
         None,
         None,
+        None,
         CreatedAt(instantNow),
         UpdatedAt(instantNow),
       )
@@ -145,8 +147,9 @@ object OrganizationManagementRepository {
         cityUpdate: Option[OrganizationCity],
         postalCodeUpdate: Option[OrganizationPostalCode],
         countryUpdate: Option[OrganizationCountry],
-        logoBucketKeyUpdate: Option[OrganizationLogoBucketKey],
-        logoFileNameUpdate: Option[OrganizationLogoFileName],
+        logoOriginalBucketKeyUpdate: Option[OrganizationLogoOriginalBucketKey] = None,
+        logoNormalizedBucketKeyUpdate: Option[OrganizationLogoNormalizedBucketKey] = None,
+        logoOriginalFileNameUpdate: Option[OrganizationLogoOriginalFileName] = None,
     ): IO[ServiceError, OrganizationDetailsRow] = for {
       instantNow                    <- timeProvider.instantNow
       organizationDetailsRowUpdated <- database
@@ -164,8 +167,9 @@ object OrganizationManagementRepository {
             cityUpdate,
             postalCodeUpdate,
             countryUpdate,
-            logoBucketKeyUpdate,
-            logoFileNameUpdate,
+            logoOriginalBucketKeyUpdate,
+            logoNormalizedBucketKeyUpdate,
+            logoOriginalFileNameUpdate,
           )
         )
         .mapError(e =>

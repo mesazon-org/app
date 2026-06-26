@@ -1,12 +1,7 @@
 package io.mesazon.gateway.config
 
-import io.mesazon.domain.gateway.*
-
 case class FileServiceConfig(
-    maxOrganizationLogoBytes: Long,
-    organizationOriginalLogoFileName: OrganizationOriginalLogoFileName,
-    organizationNormalizedLogoFileName: OrganizationNormalizedLogoFileName,
-    organizationWhatsAppLogoFileName: OrganizationWhatsAppLogoFileName,
+    maxOrganizationLogoBytes: Long
 )
 
 object FileServiceConfig {

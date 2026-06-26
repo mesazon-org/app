@@ -114,8 +114,9 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
         organizationDetailsRowsAll should have size 1
         organizationDetailsRowsAll.head shouldBe organizationDetailsRowInsert
         organizationDetailsRowsAll.head shouldBe organizationDetailsRow.copy(
-          logoFileName = None,
-          logoBucketKey = None,
+          logoOriginalBucketKey = None,
+          logoNormalizedBucketKey = None,
+          logoOriginalFileName = None,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
         )
@@ -213,12 +214,14 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
         )
         organizationDetailsRowsAll should contain theSameElementsAs List(
           organizationDetailsRow1.copy(
-            logoFileName = None,
-            logoBucketKey = None,
+            logoOriginalBucketKey = None,
+            logoNormalizedBucketKey = None,
+            logoOriginalFileName = None,
           ),
           organizationDetailsRow2.copy(
-            logoFileName = None,
-            logoBucketKey = None,
+            logoOriginalBucketKey = None,
+            logoNormalizedBucketKey = None,
+            logoOriginalFileName = None,
           ),
         )
 
@@ -305,18 +308,19 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           .executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
           .zioValue
 
-        val nameUpdate              = arbitrarySample[Option[OrganizationName]]
-        val slugUpdate              = arbitrarySample[Option[OrganizationSlug]]
-        val emailUpdate             = arbitrarySample[Option[OrganizationEmail]]
-        val phoneNumberUpdate       = arbitrarySample[Option[OrganizationPhoneNumber]]
-        val organizationStageUpdate = arbitrarySample[OrganizationStage]
-        val addressLine1Update      = arbitrarySample[Option[OrganizationAddressLine1]]
-        val addressLine2Update      = arbitrarySample[Option[OrganizationAddressLine2]]
-        val cityUpdate              = arbitrarySample[Option[OrganizationCity]]
-        val postalCodeUpdate        = arbitrarySample[Option[OrganizationPostalCode]]
-        val countryUpdate           = arbitrarySample[Option[OrganizationCountry]]
-        val logoFileNameUpdate      = arbitrarySample[Option[OrganizationLogoFileName]]
-        val logoBucketKeyUpdate     = arbitrarySample[Option[OrganizationLogoBucketKey]]
+        val nameUpdate                    = arbitrarySample[Option[OrganizationName]]
+        val slugUpdate                    = arbitrarySample[Option[OrganizationSlug]]
+        val emailUpdate                   = arbitrarySample[Option[OrganizationEmail]]
+        val phoneNumberUpdate             = arbitrarySample[Option[OrganizationPhoneNumber]]
+        val organizationStageUpdate       = arbitrarySample[OrganizationStage]
+        val addressLine1Update            = arbitrarySample[Option[OrganizationAddressLine1]]
+        val addressLine2Update            = arbitrarySample[Option[OrganizationAddressLine2]]
+        val cityUpdate                    = arbitrarySample[Option[OrganizationCity]]
+        val postalCodeUpdate              = arbitrarySample[Option[OrganizationPostalCode]]
+        val countryUpdate                 = arbitrarySample[Option[OrganizationCountry]]
+        val logoOriginalBucketKeyUpdate   = arbitrarySample[Option[OrganizationLogoOriginalBucketKey]]
+        val logoNormalizedBucketKeyUpdate = arbitrarySample[Option[OrganizationLogoNormalizedBucketKey]]
+        val logoOriginalFileNameUpdate    = arbitrarySample[Option[OrganizationLogoOriginalFileName]]
 
         inSequence(
           (() => timeProviderMock.instantNow)
@@ -338,8 +342,9 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             cityUpdate = cityUpdate,
             postalCodeUpdate = postalCodeUpdate,
             countryUpdate = countryUpdate,
-            logoBucketKeyUpdate = logoBucketKeyUpdate,
-            logoFileNameUpdate = logoFileNameUpdate,
+            logoOriginalBucketKeyUpdate = logoOriginalBucketKeyUpdate,
+            logoNormalizedBucketKeyUpdate = logoNormalizedBucketKeyUpdate,
+            logoOriginalFileNameUpdate = logoOriginalFileNameUpdate,
           )
           .zioValue
 
@@ -354,8 +359,10 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           city = cityUpdate.getOrElse(organizationDetailsRow.city),
           postalCode = postalCodeUpdate.getOrElse(organizationDetailsRow.postalCode),
           country = countryUpdate.getOrElse(organizationDetailsRow.country),
-          logoFileName = logoFileNameUpdate.orElse(organizationDetailsRow.logoFileName),
-          logoBucketKey = logoBucketKeyUpdate.orElse(organizationDetailsRow.logoBucketKey),
+          logoOriginalBucketKey = logoOriginalBucketKeyUpdate.orElse(organizationDetailsRow.logoOriginalBucketKey),
+          logoNormalizedBucketKey =
+            logoNormalizedBucketKeyUpdate.orElse(organizationDetailsRow.logoNormalizedBucketKey),
+          logoOriginalFileName = logoOriginalFileNameUpdate.orElse(organizationDetailsRow.logoOriginalFileName),
           updatedAt = UpdatedAt(instantNow),
         )
       }

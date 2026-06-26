@@ -36,8 +36,9 @@ final class OrganizationDetailsQueries(
         |city,
         |postal_code,
         |country,
-        |logo_file_name,
-        |logo_bucket_key,
+        |logo_original_bucket_key,
+        |logo_normalized_bucket_key,
+        |logo_original_file_name,
         |created_at,
         |updated_at
          """.stripMargin
@@ -74,8 +75,9 @@ final class OrganizationDetailsQueries(
       cityUpdate: Option[OrganizationCity],
       postalCodeUpdate: Option[OrganizationPostalCode],
       countryUpdate: Option[OrganizationCountry],
-      logoBucketKeyUpdate: Option[OrganizationLogoBucketKey],
-      logoFileNameUpdate: Option[OrganizationLogoFileName],
+      logoOriginalBucketKeyUpdate: Option[OrganizationLogoOriginalBucketKey] = None,
+      logoNormalizedBucketKeyUpdate: Option[OrganizationLogoNormalizedBucketKey] = None,
+      logoOriginalFileNameUpdate: Option[OrganizationLogoOriginalFileName] = None,
   ): TranzactIO[OrganizationDetailsRow] = {
     val updates = NonEmptyList.of(
       fr"organization_stage = $organizationStage",
@@ -93,8 +95,9 @@ final class OrganizationDetailsQueries(
       cityUpdate.map(v => fr"city = $v"),
       postalCodeUpdate.map(v => fr"postal_code = $v"),
       countryUpdate.map(v => fr"country = $v"),
-      logoBucketKeyUpdate.map(v => fr"logo_bucket_key = $v"),
-      logoFileNameUpdate.map(v => fr"logo_file_name = $v"),
+      logoOriginalBucketKeyUpdate.map(v => fr"logo_original_bucket_key = $v"),
+      logoNormalizedBucketKeyUpdate.map(v => fr"logo_normalized_bucket_key = $v"),
+      logoOriginalFileNameUpdate.map(v => fr"logo_original_file_name = $v"),
     ).flatten
 
     tzio {

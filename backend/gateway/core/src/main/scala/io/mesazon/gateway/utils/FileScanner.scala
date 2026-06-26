@@ -7,27 +7,28 @@ import zio.stream.*
 
 trait FileScanner {
   def scan(
-      fileBytes: ZStream[Any, Throwable, Byte],
+      fileByteStream: ZStream[Any, Throwable, Byte],
       supportedMediaTypes: List[SupportedMediaTypes],
       maxFileBytes: Long,
-  ): ZIO[Scope, ServiceError, FileBytesScanned]
+  ): ZIO[Scope, ServiceError, FileByteStreamScanned]
 }
 
 object FileScanner {
 
   private final class FileScannerImpl extends FileScanner {
 
-    private val tika = new Tika()
+    private val ExtraBytesToRead = 1L // Read one extra byte to check if the file exceeds the max size
+    private val tika             = new Tika()
 
     override def scan(
-        fileBytes: ZStream[Any, Throwable, Byte],
+        fileByteStream: ZStream[Any, Throwable, Byte],
         supportedMediaTypes: List[SupportedMediaTypes],
         maxFileBytes: Long,
-    ): ZIO[Scope, ServiceError, FileBytesScanned] =
+    ): ZIO[Scope, ServiceError, FileByteStreamScanned] =
       for {
         tempFile     <- TempFile.createScoped("file-")
-        bytesWritten <- fileBytes
-          .take(maxFileBytes + 1)
+        bytesWritten <- fileByteStream
+          .take(maxFileBytes + ExtraBytesToRead)
           .run(ZSink.fromPath(tempFile))
           .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to write file to temp file", Some(e)))
         _ <-
@@ -49,7 +50,7 @@ object FileScanner {
               )
             )
           )
-      } yield FileBytesScanned(ZStream.fromPath(tempFile))
+      } yield FileByteStreamScanned(ZStream.fromPath(tempFile))
   }
 
   val live = ZLayer.derive[FileScannerImpl].project[FileScanner](identity)

@@ -24,7 +24,7 @@ object TapirEndpoints {
   private val uploadOrganizationLogoPostEndpoint =
     endpoint.post
       .in("upload" / "organization" / "logo" / path[OrganizationID]("organizationID"))
-      .in(header[OrganizationLogoFileName]("X-File-Name"))
+      .in(header[OrganizationLogoOriginalFileName]("X-File-Name"))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
       .out(statusCode(StatusCode.Ok))
       .errorOut(statusCode and jsonBody[TapirServerError])

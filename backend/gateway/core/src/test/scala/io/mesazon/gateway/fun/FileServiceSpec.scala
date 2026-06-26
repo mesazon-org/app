@@ -2,6 +2,7 @@ package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.OrganizationS3Client
+import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.*
@@ -10,37 +11,46 @@ import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 import zio.stream.ZStream
 
-import java.time.Instant
-import java.time.temporal.ChronoUnit
-
 class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries, TokenArbitraries {
 
   "FileService" when {
     "uploadOrganizationLogo" should {
-      "successfully process organization logo upload request" in new TestContext {
-        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
-          .copy(
-            logoFileName = None,
-            logoBucketKey = None,
+      "successfully scan, normalize, upload and persist the organization logo" in new TestContext {
+        val organizationID                   = arbitrarySample[OrganizationID]
+        val organizationLogoOriginalFileName = arbitrarySample[OrganizationLogoOriginalFileName]
+        val organizationLogoByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+
+        val scannedByteStream    = FileByteStreamScanned(ZStream.fromResource("assets/test-logo-1.jpeg"))
+        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg"))
+        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/test-logo-2.webp"))
+        val normalizeResult: NormalizeResult =
+          (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
+
+        val organizationLogoOriginalBucketKey   = arbitrarySample[OrganizationLogoOriginalBucketKey]
+        val organizationLogoNormalizedBucketKey = arbitrarySample[OrganizationLogoNormalizedBucketKey]
+        val uploadedLogoResult: OrganizationS3Client.UploadedLogoResult =
+          (
+            organizationLogoOriginalBucketKey = organizationLogoOriginalBucketKey,
+            organizationLogoNormalizedBucketKey = organizationLogoNormalizedBucketKey,
           )
-        val organizationStage         = OrganizationStage.LogoProvided
-        val organizationLogoFileName  = arbitrarySample[OrganizationLogoFileName]
-        val organizationLogoBytes     = ZStream.fromResource("assets/test-logo-1.jpeg")
-        val organizationLogoBucketKey = arbitrarySample[OrganizationLogoBucketKey]
 
         inSequence(
-          organizationManagementRepositoryMock.getOrganization
-            .expects(organizationDetailsRow.organizationID)
-            .returningZIO(Some(organizationDetailsRow))
+          fileScannerMock.scan
+            .expects(organizationLogoByteStream, SupportedMediaTypes.images, fileServiceConfig.maxOrganizationLogoBytes)
+            .returns(ZIO.succeed(scannedByteStream))
+            .once(),
+          imageProcessingMock.normalize
+            .expects(scannedByteStream, SupportedMediaTypes.images)
+            .returns(ZIO.succeed(normalizeResult))
             .once(),
           organizationS3ClientMock.uploadLogos
-            .expects(organizationDetailsRow.organizationID, organizationLogoFileName, organizationLogoBytes)
-            .returningZIO(organizationLogoBucketKey)
+            .expects(organizationID, originalByteStream, normalizedByteStream)
+            .returningZIO(uploadedLogoResult)
             .once(),
           organizationManagementRepositoryMock.updateOrganization
             .expects(
-              organizationDetailsRow.organizationID,
-              organizationStage,
+              organizationID,
+              OrganizationStage.LogoProvided,
               None,
               None,
               None,
@@ -50,16 +60,11 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
               None,
               None,
               None,
-              Some(organizationLogoBucketKey),
-              Some(organizationLogoFileName),
+              Some(organizationLogoOriginalBucketKey),
+              Some(organizationLogoNormalizedBucketKey),
+              Some(organizationLogoOriginalFileName),
             )
-            .returningZIO(
-              organizationDetailsRow.copy(
-                organizationStage = organizationStage,
-                logoFileName = Some(organizationLogoFileName),
-                logoBucketKey = Some(organizationLogoBucketKey),
-              )
-            )
+            .returningZIO(arbitrarySample[OrganizationDetailsRow])
             .once(),
         )
 
@@ -67,225 +72,204 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
         val response = fileService
           .uploadOrganizationLogo(
-            organizationID = organizationDetailsRow.organizationID,
-            organizationLogoFileName = organizationLogoFileName,
-            organizationLogoFile = organizationLogoBytes,
+            organizationID = organizationID,
+            organizationLogoOriginalFileName = organizationLogoOriginalFileName,
+            organizationLogoFile = organizationLogoByteStream,
           )
           .zioEither
 
-        assert(response.isRight)
+        response shouldBe Right(())
       }
 
-      "successfully process request organization logo upload when logo already exist" in new TestContext {
-        val organizationStage = OrganizationStage.LogoProvided
+      "fail and stop the pipeline when scanning the organization logo fails" in new TestContext {
+        val organizationID                   = arbitrarySample[OrganizationID]
+        val organizationLogoOriginalFileName = arbitrarySample[OrganizationLogoOriginalFileName]
+        val organizationLogoByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
-        val organizationLogoFileName1  = OrganizationLogoFileName.assume("test-logo-1.jpeg")
-        val organizationLogoBucketKey1 = arbitrarySample[OrganizationLogoBucketKey]
-
-        val organizationLogoFileName2  = OrganizationLogoFileName.assume("test-logo-2.jpeg")
-        val organizationLogoBucketKey2 = arbitrarySample[OrganizationLogoBucketKey]
-
-        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
-          .copy(
-            logoFileName = Some(organizationLogoFileName1),
-            logoBucketKey = Some(organizationLogoBucketKey1),
-          )
-        val organizationLogoBytes = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val scanError = ServiceError.InternalServerError.UnexpectedError("Failed to scan organization logo")
 
         inSequence(
-          organizationManagementRepositoryMock.getOrganization
-            .expects(organizationDetailsRow.organizationID)
-            .returningZIO(Some(organizationDetailsRow))
-            .once(),
-          organizationS3ClientMock.uploadLogos
-            .expects(organizationDetailsRow.organizationID, organizationLogoFileName2, organizationLogoBytes)
-            .returningZIO(organizationLogoBucketKey2)
-            .once(),
-          organizationManagementRepositoryMock.updateOrganization
-            .expects(
-              organizationDetailsRow.organizationID,
-              organizationStage,
-              None,
-              None,
-              None,
-              None,
-              None,
-              None,
-              None,
-              None,
-              None,
-              Some(organizationLogoBucketKey2),
-              Some(organizationLogoFileName2),
-            )
-            .returningZIO(
-              organizationDetailsRow.copy(
-                organizationStage = organizationStage,
-                logoFileName = Some(organizationLogoFileName2),
-                logoBucketKey = Some(organizationLogoBucketKey2),
-              )
-            )
-            .once(),
-          organizationS3ClientMock.deleteLogo
-            .expects(organizationLogoBucketKey1)
-            .returningZIOUnit
-            .once(),
+          fileScannerMock.scan
+            .expects(organizationLogoByteStream, SupportedMediaTypes.images, fileServiceConfig.maxOrganizationLogoBytes)
+            .returns(ZIO.fail(scanError))
+            .once()
         )
 
         val fileService = buildFileService
 
-        val response = fileService
+        val serviceError = fileService
           .uploadOrganizationLogo(
-            organizationID = organizationDetailsRow.organizationID,
-            organizationLogoFileName = organizationLogoFileName2,
-            organizationLogoFile = organizationLogoBytes,
+            organizationID = organizationID,
+            organizationLogoOriginalFileName = organizationLogoOriginalFileName,
+            organizationLogoFile = organizationLogoByteStream,
           )
-          .zioEither
+          .zioError
 
-        assert(response.isRight)
+        serviceError shouldBe scanError
       }
 
-      "successfully process request organization logo upload even when delete old logo fails" in new TestContext {
-        val organizationStage = OrganizationStage.LogoProvided
+      "fail and stop the pipeline when normalizing the organization logo fails" in new TestContext {
+        val organizationID                   = arbitrarySample[OrganizationID]
+        val organizationLogoOriginalFileName = arbitrarySample[OrganizationLogoOriginalFileName]
+        val organizationLogoByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
-        val organizationLogoFileName1  = OrganizationLogoFileName.assume("test-logo-1.jpeg")
-        val organizationLogoBucketKey1 = arbitrarySample[OrganizationLogoBucketKey]
-
-        val organizationLogoFileName2  = OrganizationLogoFileName.assume("test-logo-2.jpeg")
-        val organizationLogoBucketKey2 = arbitrarySample[OrganizationLogoBucketKey]
-
-        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
-          .copy(
-            logoFileName = Some(organizationLogoFileName1),
-            logoBucketKey = Some(organizationLogoBucketKey1),
-          )
-        val organizationLogoBytes = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val scannedByteStream = FileByteStreamScanned(ZStream.fromResource("assets/test-logo-1.jpeg"))
+        val normalizeError = ServiceError.InternalServerError.UnexpectedError("Failed to normalize organization logo")
 
         inSequence(
-          organizationManagementRepositoryMock.getOrganization
-            .expects(organizationDetailsRow.organizationID)
-            .returningZIO(Some(organizationDetailsRow))
+          fileScannerMock.scan
+            .expects(organizationLogoByteStream, SupportedMediaTypes.images, fileServiceConfig.maxOrganizationLogoBytes)
+            .returns(ZIO.succeed(scannedByteStream))
             .once(),
-          organizationS3ClientMock.uploadLogos
-            .expects(organizationDetailsRow.organizationID, organizationLogoFileName2, organizationLogoBytes)
-            .returningZIO(organizationLogoBucketKey2)
-            .once(),
-          organizationManagementRepositoryMock.updateOrganization
-            .expects(
-              organizationDetailsRow.organizationID,
-              organizationStage,
-              None,
-              None,
-              None,
-              None,
-              None,
-              None,
-              None,
-              None,
-              None,
-              Some(organizationLogoBucketKey2),
-              Some(organizationLogoFileName2),
-            )
-            .returningZIO(
-              organizationDetailsRow.copy(
-                organizationStage = organizationStage,
-                logoFileName = Some(organizationLogoFileName2),
-                logoBucketKey = Some(organizationLogoBucketKey2),
-              )
-            )
-            .once(),
-          organizationS3ClientMock.deleteLogo
-            .expects(organizationLogoBucketKey1)
-            .returns(ZIO.fail(ServiceError.InternalServerError.UnexpectedError("Failed to delete old logo")))
+          imageProcessingMock.normalize
+            .expects(scannedByteStream, SupportedMediaTypes.images)
+            .returns(ZIO.fail(normalizeError))
             .once(),
         )
 
         val fileService = buildFileService
 
-        val response = fileService
+        val serviceError = fileService
           .uploadOrganizationLogo(
-            organizationID = organizationDetailsRow.organizationID,
-            organizationLogoFileName = organizationLogoFileName2,
-            organizationLogoFile = organizationLogoBytes,
+            organizationID = organizationID,
+            organizationLogoOriginalFileName = organizationLogoOriginalFileName,
+            organizationLogoFile = organizationLogoByteStream,
           )
-          .zioEither
+          .zioError
 
-        assert(response.isRight)
+        serviceError shouldBe normalizeError
       }
 
-      "successfully process request organization logo upload when already exist with the same name" in new TestContext {
-        val organizationStage         = OrganizationStage.LogoProvided
-        val organizationLogoFileName  = arbitrarySample[OrganizationLogoFileName]
-        val organizationLogoBucketKey = arbitrarySample[OrganizationLogoBucketKey]
+      "fail and stop the pipeline when uploading the organization logo to S3 fails" in new TestContext {
+        val organizationID                   = arbitrarySample[OrganizationID]
+        val organizationLogoOriginalFileName = arbitrarySample[OrganizationLogoOriginalFileName]
+        val organizationLogoByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
-        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
-          .copy(
-            logoFileName = Some(organizationLogoFileName),
-            logoBucketKey = Some(organizationLogoBucketKey),
-          )
-        val organizationLogoBytes = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val scannedByteStream    = FileByteStreamScanned(ZStream.fromResource("assets/test-logo-1.jpeg"))
+        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg"))
+        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/test-logo-2.webp"))
+        val normalizeResult: NormalizeResult =
+          (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
+
+        val uploadError = ServiceError.InternalServerError.UnexpectedError("Failed to upload organization logo to S3")
 
         inSequence(
-          organizationManagementRepositoryMock.getOrganization
-            .expects(organizationDetailsRow.organizationID)
-            .returningZIO(Some(organizationDetailsRow))
+          fileScannerMock.scan
+            .expects(organizationLogoByteStream, SupportedMediaTypes.images, fileServiceConfig.maxOrganizationLogoBytes)
+            .returns(ZIO.succeed(scannedByteStream))
+            .once(),
+          imageProcessingMock.normalize
+            .expects(scannedByteStream, SupportedMediaTypes.images)
+            .returns(ZIO.succeed(normalizeResult))
             .once(),
           organizationS3ClientMock.uploadLogos
-            .expects(organizationDetailsRow.organizationID, organizationLogoFileName, organizationLogoBytes)
-            .returningZIO(organizationLogoBucketKey)
-            .once(),
-          organizationManagementRepositoryMock.updateOrganization
-            .expects(
-              organizationDetailsRow.organizationID,
-              organizationStage,
-              None,
-              None,
-              None,
-              None,
-              None,
-              None,
-              None,
-              None,
-              None,
-              Some(organizationLogoBucketKey),
-              Some(organizationLogoFileName),
-            )
-            .returningZIO(
-              organizationDetailsRow.copy(
-                organizationStage = organizationStage,
-                logoFileName = Some(organizationLogoFileName),
-                logoBucketKey = Some(organizationLogoBucketKey),
-              )
-            )
+            .expects(organizationID, originalByteStream, normalizedByteStream)
+            .failingZIO(uploadError)
             .once(),
         )
 
         val fileService = buildFileService
 
-        val response = fileService
+        val serviceError = fileService
           .uploadOrganizationLogo(
-            organizationID = organizationDetailsRow.organizationID,
-            organizationLogoFileName = organizationLogoFileName,
-            organizationLogoFile = organizationLogoBytes,
+            organizationID = organizationID,
+            organizationLogoOriginalFileName = organizationLogoOriginalFileName,
+            organizationLogoFile = organizationLogoByteStream,
           )
-          .zioEither
+          .zioError
 
-        assert(response.isRight)
+        serviceError shouldBe uploadError
+      }
+
+      "fail when persisting the organization logo details fails" in new TestContext {
+        val organizationID                   = arbitrarySample[OrganizationID]
+        val organizationLogoOriginalFileName = arbitrarySample[OrganizationLogoOriginalFileName]
+        val organizationLogoByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+
+        val scannedByteStream    = FileByteStreamScanned(ZStream.fromResource("assets/test-logo-1.jpeg"))
+        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg"))
+        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/test-logo-2.webp"))
+        val normalizeResult: NormalizeResult =
+          (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
+
+        val organizationLogoOriginalBucketKey   = arbitrarySample[OrganizationLogoOriginalBucketKey]
+        val organizationLogoNormalizedBucketKey = arbitrarySample[OrganizationLogoNormalizedBucketKey]
+        val uploadedLogoResult: OrganizationS3Client.UploadedLogoResult =
+          (
+            organizationLogoOriginalBucketKey = organizationLogoOriginalBucketKey,
+            organizationLogoNormalizedBucketKey = organizationLogoNormalizedBucketKey,
+          )
+
+        val updateError = ServiceError.InternalServerError.UnexpectedError("Failed to persist organization logo")
+
+        inSequence(
+          fileScannerMock.scan
+            .expects(organizationLogoByteStream, SupportedMediaTypes.images, fileServiceConfig.maxOrganizationLogoBytes)
+            .returns(ZIO.succeed(scannedByteStream))
+            .once(),
+          imageProcessingMock.normalize
+            .expects(scannedByteStream, SupportedMediaTypes.images)
+            .returns(ZIO.succeed(normalizeResult))
+            .once(),
+          organizationS3ClientMock.uploadLogos
+            .expects(organizationID, originalByteStream, normalizedByteStream)
+            .returningZIO(uploadedLogoResult)
+            .once(),
+          organizationManagementRepositoryMock.updateOrganization
+            .expects(
+              organizationID,
+              OrganizationStage.LogoProvided,
+              None,
+              None,
+              None,
+              None,
+              None,
+              None,
+              None,
+              None,
+              None,
+              Some(organizationLogoOriginalBucketKey),
+              Some(organizationLogoNormalizedBucketKey),
+              Some(organizationLogoOriginalFileName),
+            )
+            .failingZIO(updateError)
+            .once(),
+        )
+
+        val fileService = buildFileService
+
+        val serviceError = fileService
+          .uploadOrganizationLogo(
+            organizationID = organizationID,
+            organizationLogoOriginalFileName = organizationLogoOriginalFileName,
+            organizationLogoFile = organizationLogoByteStream,
+          )
+          .zioError
+
+        serviceError shouldBe updateError
       }
     }
   }
 
   trait TestContext {
-    val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+    val fileServiceConfig = FileServiceConfig(
+      maxOrganizationLogoBytes = 5L * 1024 * 1024
+    )
 
-    val organizationManagementRepositoryMock = mock[OrganizationManagementRepository]
+    val fileScannerMock                      = mock[FileScanner]
+    val imageProcessingMock                  = mock[ImageProcessing]
     val organizationS3ClientMock             = mock[OrganizationS3Client]
+    val organizationManagementRepositoryMock = mock[OrganizationManagementRepository]
 
     def buildFileService: FileService[ServiceTask] = ZIO
       .service[FileService[ServiceTask]]
       .provide(
         FileService.local,
-        ZLayer.succeed(organizationManagementRepositoryMock),
+        ZLayer.succeed(fileServiceConfig),
+        ZLayer.succeed(fileScannerMock),
+        ZLayer.succeed(imageProcessingMock),
         ZLayer.succeed(organizationS3ClientMock),
+        ZLayer.succeed(organizationManagementRepositoryMock),
       )
       .zioValue
   }

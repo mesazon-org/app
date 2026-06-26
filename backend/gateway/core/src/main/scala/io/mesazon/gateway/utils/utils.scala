@@ -3,14 +3,14 @@ package io.mesazon.gateway.utils
 import io.github.iltotore.iron.{Pure, RefinedType}
 import zio.stream.ZStream
 
-object FileBytesScanned extends RefinedType[ZStream[Any, Throwable, Byte], Pure]
-type FileBytesScanned = FileBytesScanned.T
+object FileByteStreamScanned extends RefinedType[ZStream[Any, Throwable, Byte], Pure]
+type FileByteStreamScanned = FileByteStreamScanned.T
 
-object OriginalLogoProcessed extends RefinedType[ZStream[Any, Throwable, Byte], Pure]
-type OriginalLogoProcessed = OriginalLogoProcessed.T
+object ImageNormalizedByteStream extends RefinedType[ZStream[Any, Throwable, Byte], Pure]
+type ImageNormalizedByteStream = ImageNormalizedByteStream.T
 
-object NormalizedLogoProcessed extends RefinedType[ZStream[Any, Throwable, Byte], Pure]
-type NormalizedLogoProcessed = NormalizedLogoProcessed.T
+object ImageOriginalByteStream extends RefinedType[ZStream[Any, Throwable, Byte], Pure]
+type ImageOriginalByteStream = ImageOriginalByteStream.T
 
-object WhatsAppLogoProcessed extends RefinedType[ZStream[Any, Throwable, Byte], Pure]
-type WhatsAppLogoProcessed = WhatsAppLogoProcessed.T
+type NormalizeResult =
+  (imageOriginalByteStream: ImageOriginalByteStream, imageNormalizedByteStream: ImageNormalizedByteStream)

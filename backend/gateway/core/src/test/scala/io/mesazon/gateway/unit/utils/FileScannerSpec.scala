@@ -1,92 +1,121 @@
 package io.mesazon.gateway.unit.utils
 
-import io.mesazon.domain.gateway.ServiceError
-import io.mesazon.gateway.utils.*
-import io.mesazon.gateway.utils.FileScanner.SupportedTypes
+import io.mesazon.domain.gateway.{ServiceError, SupportedMediaTypes}
+import io.mesazon.gateway.utils.FileScanner
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 import zio.stream.ZStream
 
 class FileScannerSpec extends ZWordSpecBase {
 
-  private def resourceBytes(name: String): Chunk[Byte] =
-    ZStream.fromResource(name).runCollect.zioValue
-
-  private val fileScanner = ZIO
-    .service[FileScanner]
-    .provide(FileScanner.live)
-    .zioValue
-
-  private val fiveMb = 5 * 1024 * 1024L
-
   "FileScanner" when {
     "scan" should {
       "return a stream of the file bytes when it is a supported type within the size limit" in {
-        val bytes = ZIO
+        val fileScanner = ZIO
+          .service[FileScanner]
+          .provide(FileScanner.live)
+          .zioValue
+
+        val maxByteSize5Mb = 5 * 1024 * 1024L
+        val fileByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+
+        val scannedFileBytes = ZIO
           .scoped(
             fileScanner
-              .scan(ZStream.fromResource("assets/test-logo-1.jpeg"), SupportedTypes.images, fiveMb)
-              .flatMap(_.runCollect)
+              .scan(fileByteStream, SupportedMediaTypes.images, maxByteSize5Mb)
+              .flatMap(_.value.runCollect)
           )
           .zioValue
 
-        bytes.toArray shouldBe resourceBytes("assets/test-logo-1.jpeg").toArray
+        scannedFileBytes shouldBe fileByteStream.runCollect.zioValue
       }
 
-      "fail when the file size exceeds the maximum allowed" in {
-        val oneKb = 1024L
+      "fail when the file size exceeds the maximum bytes allowed" in {
+        val fileScanner = ZIO
+          .service[FileScanner]
+          .provide(FileScanner.live)
+          .zioValue
 
-        val result = ZIO
-          .scoped(fileScanner.scan(ZStream.fromResource("assets/test-logo-1.jpeg"), SupportedTypes.images, oneKb))
-          .zioEither
+        val maxByteSize1kb = 1024L
+        val fileByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
 
-        result.left.value shouldBe ServiceError.InternalServerError.UnexpectedError(
+        val serviceError = ZIO
+          .scoped(fileScanner.scan(fileByteStream, SupportedMediaTypes.images, maxByteSize1kb))
+          .zioError
+
+        serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
           "File size exceeds the maximum allowed size of [1024 bytes]"
         )
       }
 
-      "fail when is one extra than the maximum allowed size" in {
-        val file    = ZStream.fromResource("assets/test-logo-1.jpeg")
-        val size    = file.runCount.zioValue
-        val maxSize = size - 1
+      "fail when is one extra than the maximum bytes allowed size" in {
+        val fileScanner = ZIO
+          .service[FileScanner]
+          .provide(FileScanner.live)
+          .zioValue
 
-        val result = ZIO
-          .scoped(fileScanner.scan(ZStream.fromResource("assets/test-logo-1.jpeg"), SupportedTypes.images, maxSize))
-          .zioEither
+        val fileByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val maxByteSize    = fileByteStream.runCount.zioValue - 1
 
-        result.left.value shouldBe ServiceError.InternalServerError.UnexpectedError(
+        val serviceError = ZIO
+          .scoped(fileScanner.scan(fileByteStream, SupportedMediaTypes.images, maxByteSize))
+          .zioError
+
+        serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
           "File size exceeds the maximum allowed size of [49800 bytes]"
         )
       }
 
       "fail with not supported type when an unsupported file is provided" in {
-        val result = ZIO
-          .scoped(fileScanner.scan(ZStream.fromResource("docker-compose/s3.yaml"), SupportedTypes.images, fiveMb))
-          .zioEither
+        val fileScanner = ZIO
+          .service[FileScanner]
+          .provide(FileScanner.live)
+          .zioValue
 
-        result.left.value shouldBe ServiceError.InternalServerError.UnexpectedError(
-          "Unsupported file type: [text/plain]. Supported types are: [image/png, image/jpeg, image/webp]"
+        val maxByteSize5Mb = 5 * 1024 * 1024L
+        val fileByteStream = ZStream.fromResource("docker-compose/s3.yaml")
+
+        val serviceError = ZIO
+          .scoped(fileScanner.scan(fileByteStream, SupportedMediaTypes.images, maxByteSize5Mb))
+          .zioError
+
+        serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
+          "Unsupported file type: [text/plain]. Supported file types are: [image/png, image/jpeg, image/webp]"
         )
       }
 
       "fail with not supported type when the file extension is changed but content is not an image" in {
-        val result = ZIO
-          .scoped(fileScanner.scan(ZStream.fromResource("assets/malformed.png"), SupportedTypes.images, fiveMb))
-          .zioEither
+        val fileScanner = ZIO
+          .service[FileScanner]
+          .provide(FileScanner.live)
+          .zioValue
 
-        result.left.value shouldBe ServiceError.InternalServerError.UnexpectedError(
-          "Unsupported file type: [text/plain]. Supported types are: [image/png, image/jpeg, image/webp]"
+        val maxByteSize5Mb = 5 * 1024 * 1024L
+        val fileByteStream = ZStream.fromResource("assets/malformed.png")
+
+        val serviceError = ZIO
+          .scoped(fileScanner.scan(fileByteStream, SupportedMediaTypes.images, maxByteSize5Mb))
+          .zioError
+
+        serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
+          "Unsupported file type: [text/plain]. Supported file types are: [image/png, image/jpeg, image/webp]"
         )
       }
 
       "validate the size before the type when both are invalid" in {
-        val oneByte = 1L
+        val fileScanner = ZIO
+          .service[FileScanner]
+          .provide(FileScanner.live)
+          .zioValue
 
-        val result = ZIO
-          .scoped(fileScanner.scan(ZStream.fromResource("docker-compose/s3.yaml"), SupportedTypes.images, oneByte))
-          .zioEither
+        val maxByteSize1b  = 1L
+        val fileByteStream = ZStream.fromResource("docker-compose/s3.yaml")
 
-        result.left.value shouldBe ServiceError.InternalServerError.UnexpectedError(
+        val serviceError = ZIO
+          .scoped(fileScanner.scan(fileByteStream, SupportedMediaTypes.images, maxByteSize1b))
+          .zioError
+
+        serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
           "File size exceeds the maximum allowed size of [1 bytes]"
         )
       }

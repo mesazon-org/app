@@ -1,10 +1,10 @@
 package io.mesazon.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
-import io.mesazon.domain.gateway.{OrganizationID, OrganizationLogoFileName}
+import io.mesazon.domain.gateway.OrganizationID
 import io.mesazon.gateway.clients.OrganizationS3Client
 import io.mesazon.gateway.config.OrganizationS3ClientConfig
-import io.mesazon.gateway.utils.ImageProcessing
+import io.mesazon.gateway.utils.{ImageNormalizedByteStream, ImageOriginalByteStream}
 import io.mesazon.test.s3.S3TestClient
 import io.mesazon.test.s3.S3TestClient.S3TestClientConfig
 import io.mesazon.testkit.base.{DockerComposeBase, GatewayArbitraries, ZWordSpecBase}
@@ -29,114 +29,19 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
   }
 
   "OrganizationS3Client" when {
-    "uploadLogo" should {
-      "successfully upload all three renditions and return their keys" in new TestContext {
-        val organizationID = arbitrarySample[OrganizationID]
-        val originalLogo   = ZStream.fromResource("assets/test-logo-1.jpeg")
-        val normalizedLogo = ZStream.fromResource("assets/test-logo-2.webp")
-        val whatsAppLogo   = ZStream.fromResource("assets/test-logo-3.png")
+    "uploadLogos" should {
+      "upload the original and normalized logos and return their bucket keys" in new TestContext {
+        val organizationID           = arbitrarySample[OrganizationID]
+        val logoOriginalByteStream   = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val logoNormalizedByteStream = ZStream.fromResource("assets/test-logo-2.webp")
 
-        val processedLogo = ImageProcessing.ProcessedLogo(
-          originalLogo = originalLogo,
-          originalLogoFileName = OrganizationLogoFileName.assume("original.jpeg"),
-          normalizedLogo = normalizedLogo,
-          normalizedLogoFileName = OrganizationLogoFileName.assume("normalized.webp"),
-          whatsAppLogo = whatsAppLogo,
-          whatsAppLogoFileName = OrganizationLogoFileName.assume("whatsapp.jpeg"),
-        )
-
-        val uploadedLogoKeys =
-          ZIO
-            .serviceWithZIO[OrganizationS3Client](
-              _.uploadLogos(organizationID, processedLogo)
-            )
-            .provide(
-              OrganizationS3Client.live,
-              ZLayer.succeed(organizationS3ClientConfig),
-            )
-            .zioValue
-
-        val expectedPrefix =
-          s"${organizationS3ClientConfig.organizationLogoPathPrefix}/${organizationID.value}"
-        uploadedLogoKeys.originalLogoBucketKey.value shouldBe s"$expectedPrefix/original.jpeg"
-        uploadedLogoKeys.normalizedLogoBucketKey.value shouldBe s"$expectedPrefix/normalized.webp"
-        uploadedLogoKeys.whatsAppLogoBucketKey.value shouldBe s"$expectedPrefix/whatsapp.jpeg"
-
-        s3TestClient
-          .getObject(organizationS3ClientConfig.organizationLogoBucket, uploadedLogoKeys.originalLogoBucketKey.value)
-          .zioValue should contain theSameElementsInOrderAs originalLogo.runCollect.zioValue
-        s3TestClient
-          .getObject(organizationS3ClientConfig.organizationLogoBucket, uploadedLogoKeys.normalizedLogoBucketKey.value)
-          .zioValue should contain theSameElementsInOrderAs normalizedLogo.runCollect.zioValue
-        s3TestClient
-          .getObject(organizationS3ClientConfig.organizationLogoBucket, uploadedLogoKeys.whatsAppLogoBucketKey.value)
-          .zioValue should contain theSameElementsInOrderAs whatsAppLogo.runCollect.zioValue
-      }
-
-      "successfully overwrite previously uploaded renditions when uploading again with the same names" in new TestContext {
-        val organizationID = arbitrarySample[OrganizationID]
-        val originalLogo1  = ZStream.fromResource("assets/test-logo-1.jpeg")
-        val originalLogo2  = ZStream.fromResource("assets/test-logo-2.webp")
-
-        def processedLogo(originalLogo: ZStream[Any, Throwable, Byte]) =
-          ImageProcessing.ProcessedLogo(
-            originalLogo = originalLogo,
-            originalLogoFileName = OrganizationLogoFileName.assume("original.jpeg"),
-            normalizedLogo = ZStream.fromResource("assets/test-logo-2.webp"),
-            normalizedLogoFileName = OrganizationLogoFileName.assume("normalized.webp"),
-            whatsAppLogo = ZStream.fromResource("assets/test-logo-3.png"),
-            whatsAppLogoFileName = OrganizationLogoFileName.assume("whatsapp.jpeg"),
-          )
-
-        def upload(originalLogo: ZStream[Any, Throwable, Byte]) =
-          ZIO
-            .serviceWithZIO[OrganizationS3Client](
-              _.uploadLogos(organizationID, processedLogo(originalLogo))
-            )
-            .provide(
-              OrganizationS3Client.live,
-              ZLayer.succeed(organizationS3ClientConfig),
-            )
-            .zioValue
-
-        val uploadedLogoKeys1 = upload(originalLogo1)
-        val uploadedLogoKeys2 = upload(originalLogo2)
-
-        uploadedLogoKeys1 shouldEqual uploadedLogoKeys2
-
-        s3TestClient
-          .getObject(organizationS3ClientConfig.organizationLogoBucket, uploadedLogoKeys2.originalLogoBucketKey.value)
-          .zioValue should contain theSameElementsInOrderAs originalLogo2.runCollect.zioValue
-      }
-    }
-
-    "deleteLogo" should {
-      "successfully delete the logo from S3" in new TestContext {
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val processedLogo = ImageProcessing.ProcessedLogo(
-          originalLogo = ZStream.fromResource("assets/test-logo-1.jpeg"),
-          originalLogoFileName = OrganizationLogoFileName.assume("original.jpeg"),
-          normalizedLogo = ZStream.fromResource("assets/test-logo-2.webp"),
-          normalizedLogoFileName = OrganizationLogoFileName.assume("normalized.webp"),
-          whatsAppLogo = ZStream.fromResource("assets/test-logo-3.png"),
-          whatsAppLogoFileName = OrganizationLogoFileName.assume("whatsapp.jpeg"),
-        )
-
-        val uploadedLogoKeys =
-          ZIO
-            .serviceWithZIO[OrganizationS3Client](
-              _.uploadLogos(organizationID, processedLogo)
-            )
-            .provide(
-              OrganizationS3Client.live,
-              ZLayer.succeed(organizationS3ClientConfig),
-            )
-            .zioValue
-
-        val _ = ZIO
+        val uploadedLogoBucketKeys = ZIO
           .serviceWithZIO[OrganizationS3Client](
-            _.deleteLogo(uploadedLogoKeys.originalLogoBucketKey)
+            _.uploadLogos(
+              organizationID,
+              ImageOriginalByteStream(logoOriginalByteStream),
+              ImageNormalizedByteStream(logoNormalizedByteStream),
+            )
           )
           .provide(
             OrganizationS3Client.live,
@@ -144,63 +49,161 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
           )
           .zioValue
 
+        val expectedBucketKeyPrefix =
+          s"${organizationS3ClientConfig.organizationLogoBucketPathPrefix}/${organizationID.value}"
+
+        uploadedLogoBucketKeys.organizationLogoOriginalBucketKey.value shouldBe
+          s"$expectedBucketKeyPrefix/${organizationS3ClientConfig.organizationLogoOriginalFileName}"
+
+        uploadedLogoBucketKeys.organizationLogoNormalizedBucketKey.value shouldBe
+          s"$expectedBucketKeyPrefix/${organizationS3ClientConfig.organizationLogoNormalizedFileName}"
+
         s3TestClient
           .getObject(
             organizationS3ClientConfig.organizationLogoBucket,
-            uploadedLogoKeys.originalLogoBucketKey.value,
+            uploadedLogoBucketKeys.organizationLogoOriginalBucketKey.value,
           )
-          .zioEither
-          .isLeft shouldBe true
+          .zioValue should contain theSameElementsInOrderAs logoOriginalByteStream.runCollect.zioValue
+
+        s3TestClient
+          .getObject(
+            organizationS3ClientConfig.organizationLogoBucket,
+            uploadedLogoBucketKeys.organizationLogoNormalizedBucketKey.value,
+          )
+          .zioValue should contain theSameElementsInOrderAs logoNormalizedByteStream.runCollect.zioValue
+      }
+
+      "overwrite the existing logos when uploading again with the same names" in new TestContext {
+        val organizationID          = arbitrarySample[OrganizationID]
+        val logoOriginalByteStream1 = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val logoOriginalByteStream2 = ZStream.fromResource("assets/test-logo-2.webp")
+        val logoOriginalByteStream3 = ZStream.fromResource("assets/test-logo-3.png")
+
+        val uploadedLogoBucketKeys1 = ZIO
+          .serviceWithZIO[OrganizationS3Client](
+            _.uploadLogos(
+              organizationID,
+              ImageOriginalByteStream(logoOriginalByteStream1),
+              ImageNormalizedByteStream(logoOriginalByteStream2),
+            )
+          )
+          .provide(
+            OrganizationS3Client.live,
+            ZLayer.succeed(organizationS3ClientConfig),
+          )
+          .zioValue
+
+        val uploadedLogoBucketKeys2 = ZIO
+          .serviceWithZIO[OrganizationS3Client](
+            _.uploadLogos(
+              organizationID,
+              ImageOriginalByteStream(logoOriginalByteStream2),
+              ImageNormalizedByteStream(logoOriginalByteStream3),
+            )
+          )
+          .provide(
+            OrganizationS3Client.live,
+            ZLayer.succeed(organizationS3ClientConfig),
+          )
+          .zioValue
+
+        uploadedLogoBucketKeys1 shouldEqual uploadedLogoBucketKeys2
+
+        s3TestClient
+          .getObject(
+            organizationS3ClientConfig.organizationLogoBucket,
+            uploadedLogoBucketKeys2.organizationLogoOriginalBucketKey.value,
+          )
+          .zioValue should contain theSameElementsInOrderAs logoOriginalByteStream2.runCollect.zioValue
+
+        s3TestClient
+          .getObject(
+            organizationS3ClientConfig.organizationLogoBucket,
+            uploadedLogoBucketKeys2.organizationLogoNormalizedBucketKey.value,
+          )
+          .zioValue should contain theSameElementsInOrderAs logoOriginalByteStream3.runCollect.zioValue
       }
     }
 
-    "getLogoUrl" should {
-      "successfully return a presigned URL for the logo" in new TestContext {
-        val organizationID = arbitrarySample[OrganizationID]
-        val originalLogo   = ZStream.fromResource("assets/test-logo-1.jpeg")
+    "getLogoOriginalUrl" should {
+      "return a presigned URL that serves the original logo" in new TestContext {
+        val organizationID         = arbitrarySample[OrganizationID]
+        val logoOriginalByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
 
-        val processedLogo = ImageProcessing.ProcessedLogo(
-          originalLogo = originalLogo,
-          originalLogoFileName = OrganizationLogoFileName.assume("original.jpeg"),
-          normalizedLogo = ZStream.fromResource("assets/test-logo-2.webp"),
-          normalizedLogoFileName = OrganizationLogoFileName.assume("normalized.webp"),
-          whatsAppLogo = ZStream.fromResource("assets/test-logo-3.png"),
-          whatsAppLogoFileName = OrganizationLogoFileName.assume("whatsapp.jpeg"),
-        )
-
-        val uploadedLogoKeys =
-          ZIO
-            .serviceWithZIO[OrganizationS3Client](
-              _.uploadLogos(organizationID, processedLogo)
+        val uploadedLogoBucketKeys = ZIO
+          .serviceWithZIO[OrganizationS3Client](
+            _.uploadLogos(
+              organizationID,
+              ImageOriginalByteStream(logoOriginalByteStream),
+              ImageNormalizedByteStream(ZStream.fromResource("assets/test-logo-2.webp")),
             )
-            .provide(
-              OrganizationS3Client.live,
-              ZLayer.succeed(organizationS3ClientConfig),
-            )
-            .zioValue
+          )
+          .provide(
+            OrganizationS3Client.live,
+            ZLayer.succeed(organizationS3ClientConfig),
+          )
+          .zioValue
 
-        val presignedUrl =
-          ZIO
-            .serviceWithZIO[OrganizationS3Client](
-              _.getLogoUrl(uploadedLogoKeys.originalLogoBucketKey)
-            )
-            .provide(
-              OrganizationS3Client.live,
-              ZLayer.succeed(organizationS3ClientConfig),
-            )
-            .zioValue
+        val logoOriginalPresignedUrl = ZIO
+          .serviceWithZIO[OrganizationS3Client](
+            _.getLogoOriginalUrl(uploadedLogoBucketKeys.organizationLogoOriginalBucketKey)
+          )
+          .provide(
+            OrganizationS3Client.live,
+            ZLayer.succeed(organizationS3ClientConfig),
+          )
+          .zioValue
 
-        val organizationLogoBytesFromPresignedUrl =
-          quickRequest
-            .get(uri"${presignedUrl.value}")
-            .response(asByteArray)
-            .send()
-            .body
-            .getOrElse(Array.emptyByteArray)
+        val logoBytesFromPresignedUrl = quickRequest
+          .get(uri"${logoOriginalPresignedUrl.value}")
+          .response(asByteArray)
+          .send()
+          .body
+          .getOrElse(Array.emptyByteArray)
 
-        Chunk.from(
-          organizationLogoBytesFromPresignedUrl
-        ) should contain theSameElementsInOrderAs originalLogo.runCollect.zioValue
+        Chunk.from(logoBytesFromPresignedUrl) should contain theSameElementsInOrderAs
+          logoOriginalByteStream.runCollect.zioValue
+      }
+    }
+
+    "getLogoNormalizedUrl" should {
+      "return a presigned URL that serves the normalized logo" in new TestContext {
+        val organizationID           = arbitrarySample[OrganizationID]
+        val logoNormalizedByteStream = ZStream.fromResource("assets/test-logo-2.webp")
+
+        val uploadedLogoBucketKeys = ZIO
+          .serviceWithZIO[OrganizationS3Client](
+            _.uploadLogos(
+              organizationID,
+              ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg")),
+              ImageNormalizedByteStream(logoNormalizedByteStream),
+            )
+          )
+          .provide(
+            OrganizationS3Client.live,
+            ZLayer.succeed(organizationS3ClientConfig),
+          )
+          .zioValue
+
+        val logoNormalizedPresignedUrl = ZIO
+          .serviceWithZIO[OrganizationS3Client](
+            _.getLogoNormalizedUrl(uploadedLogoBucketKeys.organizationLogoNormalizedBucketKey)
+          )
+          .provide(
+            OrganizationS3Client.live,
+            ZLayer.succeed(organizationS3ClientConfig),
+          )
+          .zioValue
+
+        val logoBytesFromPresignedUrl = quickRequest
+          .get(uri"${logoNormalizedPresignedUrl.value}")
+          .response(asByteArray)
+          .send()
+          .body
+          .getOrElse(Array.emptyByteArray)
+
+        Chunk.from(logoBytesFromPresignedUrl) should contain theSameElementsInOrderAs
+          logoNormalizedByteStream.runCollect.zioValue
       }
     }
   }
@@ -215,7 +218,9 @@ class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, Docker
       accessKeyId = "access-key-id",
       secretAccessKey = "secret-access-key",
       organizationLogoBucket = "organization-logo-bucket",
-      organizationLogoPathPrefix = "organization/logos",
+      organizationLogoBucketPathPrefix = "organization/logos",
+      organizationLogoOriginalFileName = "original",
+      organizationLogoNormalizedFileName = "normalized",
       organizationLogoUrlExpiresAtOffset = 1.minute,
     )
 

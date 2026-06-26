@@ -2,10 +2,8 @@ package io.mesazon.gateway.utils
 
 import com.sksamuel.scrimage.ImmutableImage
 import com.sksamuel.scrimage.format.{Format, FormatDetector}
-import com.sksamuel.scrimage.nio.JpegWriter
 import com.sksamuel.scrimage.webp.WebpWriter
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.utils.ImageProcessing.OrganizationLogosProcessed
 import zio.*
 import zio.stream.*
 
@@ -13,45 +11,37 @@ import java.nio.file.Files
 import scala.jdk.OptionConverters.*
 
 trait ImageProcessing {
-  def processOrganizationLogo(
-      originalLogoBytes: FileBytesScanned,
+  def normalize(
+      imageByteStream: FileByteStreamScanned,
       supportedMediaTypes: List[SupportedMediaTypes],
-  ): ZIO[Scope, ServiceError, OrganizationLogosProcessed]
+  ): ZIO[Scope, ServiceError, NormalizeResult]
 }
 
 object ImageProcessing {
 
-  type OrganizationLogosProcessed = (
-      originalLogoProcessed: OriginalLogoProcessed,
-      normalizedLogoProcessed: NormalizedLogoProcessed,
-      whatsAppLogoProcessed: WhatsAppLogoProcessed,
-  )
-
-  private val MaxDimensionPixels  = 512
-  private val WhatsAppIconPixels  = 640
-  private val WhatsAppJpegQuality = 80
+  private val MaxDimensionPixels = 640
 
   private final class ImageProcessingImpl() extends ImageProcessing {
 
     private def isSupportedFormat(
-        format: Format,
+        imageFormat: Format,
         supportedMediaTypes: List[SupportedMediaTypes],
     ): Boolean =
-      supportedMediaTypes.exists(mt => format.toString.equalsIgnoreCase(mt.toString))
+      supportedMediaTypes.exists(mt => imageFormat.toString.equalsIgnoreCase(mt.toString))
 
-    override def processOrganizationLogo(
-        originalLogoBytes: FileBytesScanned,
+    override def normalize(
+        imageByteStream: FileByteStreamScanned,
         supportedMediaTypes: List[SupportedMediaTypes],
-    ): ZIO[Scope, ServiceError, OrganizationLogosProcessed] =
+    ): ZIO[Scope, ServiceError, NormalizeResult] =
       for {
-        originalLogoFile <- TempFile.createScoped("original-logo-")
-        _                <- originalLogoBytes.value
-          .run(ZSink.fromPath(originalLogoFile))
+        imagePath <- TempFile.createScoped("image-")
+        _         <- imageByteStream.value
+          .run(ZSink.fromPath(imagePath))
           .mapError(e =>
             ServiceError.InternalServerError.UnexpectedError("Failed to write image to temp file", Some(e))
           )
-        originalFormat <- ZIO
-          .fromAutoCloseable(ZIO.attemptBlocking(Files.newInputStream(originalLogoFile)))
+        imageFormat <- ZIO
+          .fromAutoCloseable(ZIO.attemptBlocking(Files.newInputStream(imagePath)))
           .flatMap(inputStream => ZIO.attemptBlocking(FormatDetector.detect(inputStream).toScala))
           .mapError(e =>
             ServiceError.InternalServerError.UnexpectedError("Failed to detect organization logo format", Some(e))
@@ -60,44 +50,30 @@ object ImageProcessing {
             ServiceError.InternalServerError.UnexpectedError("Unsupported organization logo format")
           )
         _ <-
-          if (isSupportedFormat(originalFormat, supportedMediaTypes)) ZIO.unit
+          if (isSupportedFormat(imageFormat, supportedMediaTypes)) ZIO.unit
           else
             ZIO.fail(
               ServiceError.InternalServerError.UnexpectedError(
-                s"Unsupported organization logo format: [${originalFormat.toString}]. Supported formats are: [${supportedMediaTypes.map(_.toString).mkString(", ")}]"
+                s"Unsupported organization logo format: [${imageFormat.toString}]. Supported formats are: [${supportedMediaTypes.map(_.toString).mkString(", ")}]"
               )
             )
         immutableImage <- ZIO
-          .attemptBlocking(ImmutableImage.loader().fromPath(originalLogoFile))
+          .attemptBlocking(ImmutableImage.loader().fromPath(imagePath))
           .mapError(e =>
             ServiceError.InternalServerError.UnexpectedError("Failed to decode organization logo", Some(e))
           )
-        normalizedLogoFile <- TempFile.createScoped("normalized-logo-")
-        _                  <- ZIO
+        imageNormalized <- TempFile.createScoped("image-normalized-")
+        _               <- ZIO
           .attemptBlocking(
             immutableImage
               .bound(MaxDimensionPixels, MaxDimensionPixels)
               .forWriter(WebpWriter.DEFAULT.withLossless())
-              .write(normalizedLogoFile)
+              .write(imageNormalized)
           )
-          .mapError(e =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to write organization normalized logo", Some(e))
-          )
-        whatsAppLogoFile <- TempFile.createScoped("normalized-logo-")
-        _                <- ZIO
-          .attemptBlocking(
-            immutableImage
-              .cover(WhatsAppIconPixels, WhatsAppIconPixels)
-              .forWriter(JpegWriter.compression(WhatsAppJpegQuality))
-              .write(whatsAppLogoFile)
-          )
-          .mapError(e =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to write organization whats app logo", Some(e))
-          )
+          .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to write normalized image", Some(e)))
       } yield (
-        OriginalLogoProcessed(ZStream.fromPath(originalLogoFile)),
-        NormalizedLogoProcessed(ZStream.fromPath(normalizedLogoFile)),
-        WhatsAppLogoProcessed(ZStream.fromPath(whatsAppLogoFile)),
+        ImageOriginalByteStream(ZStream.fromPath(imagePath)),
+        ImageNormalizedByteStream(ZStream.fromPath(imageNormalized)),
       )
   }
 
