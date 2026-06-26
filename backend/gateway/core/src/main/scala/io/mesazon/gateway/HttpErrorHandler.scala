@@ -2,7 +2,6 @@ package io.mesazon.gateway
 
 import io.mesazon.domain.gateway.{ServiceError, TapirServerError}
 import io.mesazon.gateway.tapir.TapirTask
-import sttp.model.StatusCode
 import zio.*
 
 object HttpErrorHandler {
@@ -53,19 +52,19 @@ object HttpErrorHandler {
     response.flatMapError {
       case error: ServiceError.BadRequestError =>
         logWarning(error)
-          .as((StatusCode.BadRequest, TapirServerError("BAD_REQUEST_ERROR", "Bad request")))
+          .as(TapirServerError.BadRequestError)
       case error: ServiceError.UnauthorizedError =>
         logError(error)
-          .as((StatusCode.Unauthorized, TapirServerError("UNAUTHORIZED_ERROR", "Unauthorized")))
+          .as(TapirServerError.UnauthorizedError)
       case error: ServiceError.InternalServerError =>
         logWarning(error)
-          .as((StatusCode.InternalServerError, TapirServerError("INTERNAL_SERVER_ERROR", "Internal server error")))
+          .as(TapirServerError.InternalServerError)
       case error: ServiceError.ServiceUnavailableError =>
         logWarning(error)
-          .as((StatusCode.ServiceUnavailable, TapirServerError("SERVICE_UNAVAILABLE_ERROR", "Service unavailable")))
+          .as(TapirServerError.ServiceUnavailableError)
     }.catchSomeCause { case cause: Cause.Die =>
       ZIO
         .logErrorCause(s"$trace: Unexpected failure", cause)
-        *> ZIO.fail((StatusCode.Unauthorized, TapirServerError("INTERNAL_SERVER_ERROR", "Internal server error")))
+        *> ZIO.fail(TapirServerError.InternalServerError)
     }
 }

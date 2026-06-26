@@ -1,15 +1,13 @@
 package io.mesazon.gateway.it
 
-import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.it.client.GatewayClient
-import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
+import io.mesazon.gateway.it.client.GatewayClient.{GatewayClientConfig, given}
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.repository.queries.*
-import io.mesazon.gateway.service.*
+import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
-import io.mesazon.generator.IDGenerator
 import io.mesazon.test.postgresql.PostgreSQLTestClient
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.test.s3.S3TestClient
@@ -17,6 +15,7 @@ import io.mesazon.test.s3.S3TestClient.S3TestClientConfig
 import io.mesazon.testkit.base.*
 import sttp.model.*
 import zio.*
+import zio.stream.ZStream
 
 class FileServiceSpec
     extends ZWordSpecBase,
@@ -28,13 +27,16 @@ class FileServiceSpec
   override def exposedServices =
     GatewayClient.ExposedServices ++ PostgreSQLTestClient.ExposedServices ++ S3TestClient.ExposedServices
 
+  // Mirrors the gateway container's organization-s3-client config (application.conf)
+  private val organizationLogoBucket           = "organization-logo-bucket"
+  private val organizationLogoBucketPathPrefix = "organization/logos"
+
   case class Context(
       gatewayClient: GatewayClient,
       postgresClient: PostgreSQLTestClient,
       s3TestClient: S3TestClient,
       repositoryConfig: RepositoryConfig,
       organizationDetailsQueries: OrganizationDetailsQueries,
-      jwtService: JwtService,
   )
 
   def withContext[A](f: Context => A): A = withContainers { container =>
@@ -55,22 +57,12 @@ class FileServiceSpec
       organizationDetailsQueries <- ZIO
         .service[OrganizationDetailsQueries]
         .provide(OrganizationDetailsQueries.live, RepositoryConfig.live, appNameLive)
-      jwtService <- ZIO
-        .service[JwtService]
-        .provide(
-          JwtService.live,
-          JwtConfig.live,
-          appNameLive,
-          IDGenerator.liveUUIDv7,
-          TimeProvider.liveSystemUTC,
-        )
     } yield Context(
       gatewayApiClient,
       postgreSQLClient,
       s3TestClient,
       repositoryConfig,
       organizationDetailsQueries,
-      jwtService,
     )
 
     f(context.zioValue)
@@ -96,20 +88,128 @@ class FileServiceSpec
         postgresClient.truncateTable(repositoryConfig.schema, tableName)
       )
       .zioValue
+
+    s3TestClient.emptyAllBuckets().zioValue
   }
 
   "File Service API" when {
     "/upload/organization/logo/{organizationID}" should {
-      "successfully upload organization logo" in withContext { context =>
+      "upload the logo and store the original and normalized objects in S3" in withContext { context =>
         import context.*
 
-        val organizationID = arbitrarySample[OrganizationID]
-
         val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
-          .copy(organizationID = organizationID)
+          .copy(
+            logoOriginalBucketKey = None,
+            logoNormalizedBucketKey = None,
+            logoOriginalFileName = None,
+          )
 
         postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow)).zioValue
 
+        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationID                   = organizationDetailsRow.organizationID
+        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+
+        val uploadOrganizationLogoResponse = gatewayClient
+          .uploadOrganizationLogoPost[smithy.InternalServerError](
+            organizationID,
+            Some(organizationLogoOriginalFileName),
+            logoBytes,
+          )
+          .zioValue
+
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.Ok
+
+        assert(uploadOrganizationLogoResponse.body.isRight)
+
+        val expectedBucketKeyPrefix = s"$organizationLogoBucketPathPrefix/${organizationID.value}"
+
+        val logoOriginalObjectBytes = s3TestClient
+          .getObject(organizationLogoBucket, s"$expectedBucketKeyPrefix/original")
+          .zioValue
+
+        val logoNormalizedObjectBytes = s3TestClient
+          .getObject(organizationLogoBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioValue
+
+        logoOriginalObjectBytes shouldBe logoBytes
+        logoNormalizedObjectBytes.size should be > 0
+
+        val organizationDetailsRowUpdated = postgresClient
+          .executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting)
+          .zioValue
+          .head
+
+        organizationDetailsRowUpdated.organizationStage shouldBe OrganizationStage.LogoProvided
+        organizationDetailsRowUpdated.logoOriginalFileName shouldBe Some(organizationLogoOriginalFileName)
+        organizationDetailsRowUpdated.logoOriginalBucketKey.map(_.value) shouldBe
+          Some(s"$expectedBucketKeyPrefix/original")
+        organizationDetailsRowUpdated.logoNormalizedBucketKey.map(_.value) shouldBe
+          Some(s"$expectedBucketKeyPrefix/normalized")
+      }
+
+      "fail with 500 when the uploaded file is not a supported image" in withContext { context =>
+        import context.*
+
+        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+          .copy(
+            logoOriginalBucketKey = None,
+            logoNormalizedBucketKey = None,
+            logoOriginalFileName = None,
+          )
+
+        postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow)).zioValue
+
+        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("malformed.png")
+        val organizationID                   = organizationDetailsRow.organizationID
+        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+
+        val uploadOrganizationLogoResponse = gatewayClient
+          .uploadOrganizationLogoPost[smithy.InternalServerError](
+            organizationID,
+            Some(organizationLogoOriginalFileName),
+            logoBytes,
+          )
+          .zioValue
+
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.InternalServerError
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.InternalServerError()
+
+        val organizationDetailsRowUpdated = postgresClient
+          .executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting)
+          .zioValue
+          .head
+
+        organizationDetailsRowUpdated.organizationStage shouldBe organizationDetailsRowUpdated.organizationStage
+        organizationDetailsRowUpdated.logoOriginalFileName shouldBe None
+        organizationDetailsRowUpdated.logoOriginalBucketKey shouldBe None
+        organizationDetailsRowUpdated.logoNormalizedBucketKey shouldBe None
+
+        val expectedBucketKeyPrefix = s"$organizationLogoBucketPathPrefix/${organizationID.value}"
+
+        s3TestClient
+          .getObject(organizationLogoBucket, s"$expectedBucketKeyPrefix/original")
+          .zioEither
+          .isLeft shouldBe true
+
+        s3TestClient
+          .getObject(organizationLogoBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioEither
+          .isLeft shouldBe true
+      }
+
+      "fail with 400 when the file name header is missing" in withContext { context =>
+        import context.*
+
+        val organizationID = arbitrarySample[OrganizationID]
+        val logoBytes      = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
+
+        val uploadOrganizationLogoResponse = gatewayClient
+          .uploadOrganizationLogoPost[smithy.BadRequest](organizationID, None, logoBytes)
+          .zioValue
+
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.BadRequest
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.BadRequest()
       }
     }
   }

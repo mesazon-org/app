@@ -40,7 +40,6 @@ services:
 
   flyway:
     image: flyway/flyway:12.0.0-alpine
-    restart: on-failure
     command: -configFiles=/flyway/conf/flyway.config -locations=filesystem:/flyway/sql -schemas=local_schema -connectRetries=60 migrate
     volumes:
       - ../backend/schemas/migrations:/flyway/sql

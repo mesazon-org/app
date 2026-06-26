@@ -1,25 +1,19 @@
 package io.mesazon.gateway.tapir
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.json.given
 import io.mesazon.gateway.service.FileService
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.StatusCode
 import sttp.tapir.CodecFormat
 import sttp.tapir.codec.iron.given
-import sttp.tapir.json.jsoniter.*
+import sttp.tapir.server.http4s.Http4sServerOptions
 import sttp.tapir.swagger.SwaggerUIOptions
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir.*
 import zio.*
+import zio.interop.catz.*
 
 object TapirEndpoints {
-
-  private val TapirDocsPath: List[String] =
-    List("tapir-docs")
-
-  private val TapirOpenApiYamlName: String =
-    "openapi.yaml"
 
   private val uploadOrganizationLogoPostEndpoint =
     endpoint.post
@@ -27,17 +21,30 @@ object TapirEndpoints {
       .in(header[OrganizationLogoOriginalFileName]("X-File-Name"))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
       .out(statusCode(StatusCode.Ok))
-      .errorOut(statusCode and jsonBody[TapirServerError])
+      .errorOut(
+        tapirServerErrorOut(
+          NonEmptyChunk(
+            TapirServerError.BadRequestError,
+            TapirServerError.InternalServerError,
+          )
+        )
+      )
 
-  def allRoutesAndDocsEndpoints(enableDocs: Boolean) =
+  val serverOptions: Http4sServerOptions[Task] =
+    Http4sServerOptions
+      .customiseInterceptors[Task]
+      .decodeFailureHandler(decodeFailureHandler)
+      .options
+
+  def allRoutesAndDocsEndpoints(
+      enableDocs: Boolean
+  ): ZIO[FileService[TapirTask], Nothing, TapirEndpoints] =
     for {
       fileService <- ZIO.service[FileService[TapirTask]]
-
       streamEndpoints: List[ZServerEndpoint[Any, ZioStreams]] = List(
         uploadOrganizationLogoPostEndpoint.zServerLogic(fileService.uploadOrganizationLogo)
       )
-
-      swaggerEndpointsOpt: Option[List[ZServerEndpoint[Any, ZioStreams]]] = Option.when(enableDocs)(
+      docsEndpointsOpt: Option[List[ZServerEndpoint[Any, ZioStreams]]] = Option.when(enableDocs)(
         SwaggerInterpreter(
           swaggerUIOptions = SwaggerUIOptions.default.copy(
             pathPrefix = TapirDocsPath,
@@ -49,6 +56,5 @@ object TapirEndpoints {
           "1.0",
         )
       )
-
-    } yield (streamEndpoints, swaggerEndpointsOpt)
+    } yield (streamEndpoints, docsEndpointsOpt)
 }

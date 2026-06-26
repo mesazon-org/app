@@ -54,19 +54,16 @@ object HttpApp {
 
   private def externalTapirAndDocsRoutes(enableDocs: Boolean): ZIO[FileService[TapirTask], Nothing, HttpRoutes[Task]] =
     for {
-      (streamEndpoints, swaggerEndpointsOpt) <- TapirEndpoints.allRoutesAndDocsEndpoints(enableDocs)
-
+      endpoints <- TapirEndpoints.allRoutesAndDocsEndpoints(enableDocs)
       streamRoutes: HttpRoutes[Task] =
-        ZHttp4sServerInterpreter()
-          .from(streamEndpoints)
+        ZHttp4sServerInterpreter(TapirEndpoints.serverOptions)
+          .from(endpoints.stream)
           .toRoutes
-
-      docsRoutes: Option[HttpRoutes[Task]] = swaggerEndpointsOpt.map(
+      docsRoutes: Option[HttpRoutes[Task]] = endpoints.docsOpt.map(
         ZHttp4sServerInterpreter()
           .from(_)
           .toRoutes
       )
-
     } yield streamRoutes <+> docsRoutes.getOrElse(HttpRoutes.empty)
 
   private val internalSmithyRoutes = for {
