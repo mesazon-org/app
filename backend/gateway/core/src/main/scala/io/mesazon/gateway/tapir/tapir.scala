@@ -2,7 +2,7 @@ package io.mesazon.gateway.tapir
 
 import io.github.iltotore.iron.constraint.all.Trimmed
 import io.mesazon.domain.gateway.TapirServerError
-import io.mesazon.gateway.json.given
+import io.mesazon.gateway.json.{tapirServerErrorSchemas, given}
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.StatusCode
 import sttp.monad.MonadError
@@ -73,13 +73,13 @@ private def tapirServerErrorOut(
     tapirServerErrors.map(tapirServerError =>
       oneOfVariantExactMatcher(
         statusCodeFor(tapirServerError),
-        jsonBody[TapirServerError].example(tapirServerError),
+        jsonBody[TapirServerError].schema(tapirServerErrorSchemas(tapirServerError)),
       )(tapirServerError)
     )
 
   val default = oneOfDefaultVariant(
     statusCode(StatusCode.InternalServerError)
-      .and(jsonBody[TapirServerError].example(TapirServerError.InternalServerError))
+      .and(jsonBody[TapirServerError].schema(tapirServerErrorSchemas(TapirServerError.InternalServerError)))
   )
 
   oneOf[TapirServerError](default, variants*)

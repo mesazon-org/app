@@ -17,6 +17,18 @@ private given JsonValueCodec[TapirServerErrorBody] = JsonCodecMaker.make[TapirSe
 private val tapirServerErrorByCode: Map[String, TapirServerError] =
   TapirServerError.values.map(tapirServerError => tapirServerError.code -> tapirServerError).toMap
 
+private def tapirServerErrorSchema(tapirServerError: TapirServerError): Schema[TapirServerError] =
+  Schema
+    .derived[TapirServerErrorBody]
+    .modify(_.code)(_.default(tapirServerError.code))
+    .modify(_.message)(_.default(tapirServerError.message))
+    .as[TapirServerError]
+    .name(Schema.SName(tapirServerError.schemaName))
+
+val tapirServerErrorSchemas: Map[TapirServerError, Schema[TapirServerError]] =
+  TapirServerError.values.map(error => error -> tapirServerErrorSchema(error)).toMap
+
+// Fallback schema used where a specific variant is not known (e.g. decode-failure handler).
 given Schema[TapirServerError] =
   Schema
     .derived[TapirServerErrorBody]
