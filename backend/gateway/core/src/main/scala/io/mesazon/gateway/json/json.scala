@@ -15,19 +15,13 @@ private final case class TapirServerErrorBody(code: String, message: String)
 private given JsonValueCodec[TapirServerErrorBody] = JsonCodecMaker.make[TapirServerErrorBody]
 
 private val tapirServerErrorByCode: Map[String, TapirServerError] =
-  List(
-    TapirServerError.BadRequestError,
-    TapirServerError.UnauthorizedError,
-    TapirServerError.NotFoundError,
-    TapirServerError.InternalServerError,
-    TapirServerError.ServiceUnavailableError,
-  ).map(tapirServerError => tapirServerError.code -> tapirServerError).toMap
+  TapirServerError.values.map(tapirServerError => tapirServerError.code -> tapirServerError).toMap
 
 given Schema[TapirServerError] =
   Schema
     .derived[TapirServerErrorBody]
     .as[TapirServerError]
-    .name(Schema.SName("TapirServerError"))
+    .name(Schema.SName("ServerError"))
 
 given JsonValueCodec[TapirServerError] = new JsonValueCodec[TapirServerError] {
   private val bodyCodec = summon[JsonValueCodec[TapirServerErrorBody]]

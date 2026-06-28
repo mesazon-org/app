@@ -71,10 +71,16 @@ private def tapirServerErrorOut(
 ): EndpointOutput.OneOf[TapirServerError, TapirServerError] = {
   val variants =
     tapirServerErrors.map(tapirServerError =>
-      oneOfVariantExactMatcher(statusCodeFor(tapirServerError), jsonBody[TapirServerError])(tapirServerError)
+      oneOfVariantExactMatcher(
+        statusCodeFor(tapirServerError),
+        jsonBody[TapirServerError].example(tapirServerError),
+      )(tapirServerError)
     )
 
-  val default = oneOfDefaultVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[TapirServerError]))
+  val default = oneOfDefaultVariant(
+    statusCode(StatusCode.InternalServerError)
+      .and(jsonBody[TapirServerError].example(TapirServerError.InternalServerError))
+  )
 
   oneOf[TapirServerError](default, variants*)
 }
