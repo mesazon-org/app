@@ -11,9 +11,6 @@ given Schema[AssistantResponse] = Schema.derived[AssistantResponse]
 
 given JsonValueCodec[AssistantResponse] = JsonCodecMaker.make[AssistantResponse]
 
-// TapirServerError is a sealed hierarchy of field-less case objects, so deriving its schema/codec directly yields an
-// empty `{}` body. It is exposed over the wire as a flat { code, message } object; the wire record below pins that JSON
-// shape (and OpenAPI schema) for every variant.
 private final case class TapirServerErrorBody(code: String, message: String)
 private given JsonValueCodec[TapirServerErrorBody] = JsonCodecMaker.make[TapirServerErrorBody]
 
@@ -27,7 +24,10 @@ private val tapirServerErrorByCode: Map[String, TapirServerError] =
   ).map(tapirServerError => tapirServerError.code -> tapirServerError).toMap
 
 given Schema[TapirServerError] =
-  Schema.derived[TapirServerErrorBody].as[TapirServerError].name(Schema.SName("TapirServerError"))
+  Schema
+    .derived[TapirServerErrorBody]
+    .as[TapirServerError]
+    .name(Schema.SName("TapirServerError"))
 
 given JsonValueCodec[TapirServerError] = new JsonValueCodec[TapirServerError] {
   private val bodyCodec = summon[JsonValueCodec[TapirServerErrorBody]]
