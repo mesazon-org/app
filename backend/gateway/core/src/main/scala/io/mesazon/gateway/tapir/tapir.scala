@@ -15,12 +15,7 @@ import sttp.tapir.ztapir.*
 import sttp.tapir.{EndpointOutput, ValidationError, Validator}
 import zio.*
 
-type TapirTask[A] = IO[TapirServerError, A]
-
-type TapirEndpoints =
-  (stream: List[ZServerEndpoint[Any, ZioStreams]], docsOpt: Option[List[ZServerEndpoint[Any, ZioStreams]]])
-
-private given ValidatorForPredicate[String, Trimmed] = new ValidatorForPredicate[String, Trimmed] {
+private[tapir] given ValidatorForPredicate[String, Trimmed] = new ValidatorForPredicate[String, Trimmed] {
   override def validator: Validator[String] =
     Validator.pattern[String]("""^$|^\S(?:.*\S)?$""")
 
@@ -28,13 +23,13 @@ private given ValidatorForPredicate[String, Trimmed] = new ValidatorForPredicate
     validator.apply(value).map(_.copy(customMessage = Some(errorMessage)))
 }
 
-private val TapirDocsPath: List[String] =
+private[tapir] val TapirDocsPath: List[String] =
   List("tapir-docs")
 
-private val TapirOpenApiYamlName: String =
+private[tapir] val TapirOpenApiYamlName: String =
   "openapi.yaml"
 
-private val staticBodyDecodeFailureHandler: DefaultDecodeFailureHandler[Task] =
+private[tapir] val staticBodyDecodeFailureHandler: DefaultDecodeFailureHandler[Task] =
   DefaultDecodeFailureHandler[Task].response { _ =>
     ValuedEndpointOutput(
       jsonBody[TapirServerError],
@@ -42,7 +37,7 @@ private val staticBodyDecodeFailureHandler: DefaultDecodeFailureHandler[Task] =
     )
   }
 
-private val decodeFailureHandler: DecodeFailureHandler[Task] =
+private[tapir] val decodeFailureHandler: DecodeFailureHandler[Task] =
   new DecodeFailureHandler[Task] {
     override def apply(ctx: DecodeFailureContext)(implicit
         monad: MonadError[Task]
@@ -57,7 +52,7 @@ private val decodeFailureHandler: DecodeFailureHandler[Task] =
       }
   }
 
-private def statusCodeFor(tapirServerError: TapirServerError): StatusCode =
+private[tapir] def statusCodeFor(tapirServerError: TapirServerError): StatusCode =
   tapirServerError match {
     case TapirServerError.BadRequestError         => StatusCode.BadRequest
     case TapirServerError.UnauthorizedError       => StatusCode.Unauthorized
@@ -66,7 +61,7 @@ private def statusCodeFor(tapirServerError: TapirServerError): StatusCode =
     case TapirServerError.ServiceUnavailableError => StatusCode.ServiceUnavailable
   }
 
-private def tapirServerErrorOut(
+private[tapir] def tapirServerErrorOut(
     tapirServerErrors: NonEmptyChunk[TapirServerError]
 ): EndpointOutput.OneOf[TapirServerError, TapirServerError] = {
   val variants =
@@ -84,3 +79,8 @@ private def tapirServerErrorOut(
 
   oneOf[TapirServerError](default, variants*)
 }
+
+type TapirTask[A] = IO[TapirServerError, A]
+
+type TapirEndpoints =
+  (stream: List[ZServerEndpoint[Any, ZioStreams]], docsOpt: Option[List[ZServerEndpoint[Any, ZioStreams]]])

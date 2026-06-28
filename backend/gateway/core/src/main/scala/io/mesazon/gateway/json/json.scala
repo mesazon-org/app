@@ -12,6 +12,7 @@ given Schema[AssistantResponse] = Schema.derived[AssistantResponse]
 given JsonValueCodec[AssistantResponse] = JsonCodecMaker.make[AssistantResponse]
 
 private final case class TapirServerErrorBody(code: String, message: String)
+
 private given JsonValueCodec[TapirServerErrorBody] = JsonCodecMaker.make[TapirServerErrorBody]
 
 private val tapirServerErrorByCode: Map[String, TapirServerError] =
