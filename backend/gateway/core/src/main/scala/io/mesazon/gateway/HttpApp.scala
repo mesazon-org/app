@@ -20,7 +20,7 @@ object HttpApp {
 
   given Network[Task] = Network.forAsync[Task]
 
-  private def buildSmihtyRoute[Alg[_[_, _, _, _, _]]](
+  private def buildSmithyRoute[Alg[_[_, _, _, _, _]]](
       impl: FunctorAlgebra[Alg, Task]
   )(using smithy4s.Service[Alg]): ZIO[Scope & ServerEndpointMiddleware.Simple[Task], Throwable, HttpRoutes[Task]] =
     for {
@@ -32,9 +32,9 @@ object HttpApp {
         .toScopedZIO
     } yield httpRoutes
 
-  private val healthSmihtyRoutes = for {
+  private val healthSmithyRoutes = for {
     healthCheckService <- ZIO.service[smithy.HealthCheckService[Task]]
-    healthCheckRoute   <- buildSmihtyRoute(healthCheckService)
+    healthCheckRoute   <- buildSmithyRoute(healthCheckService)
   } yield healthCheckRoute
 
   private val externalSmithyRoutes = for {
@@ -44,12 +44,12 @@ object HttpApp {
     userForgotPasswordService           <- ZIO.service[smithy.UserForgotPasswordService[Task]]
     userTokenService                    <- ZIO.service[smithy.UserTokenService[Task]]
     organizationManagementService       <- ZIO.service[smithy.OrganizationManagementService[Task]]
-    userSignUpRoutes                    <- buildSmihtyRoute(userSignUpService)
-    userSignInRoutes                    <- buildSmihtyRoute(userSignInService)
-    userOnboardRoutes                   <- buildSmihtyRoute(userOnboardService)
-    userForgotPasswordRoutes            <- buildSmihtyRoute(userForgotPasswordService)
-    userTokenServiceRoutes              <- buildSmihtyRoute(userTokenService)
-    organizationManagementServiceRoutes <- buildSmihtyRoute(organizationManagementService)
+    userSignUpRoutes                    <- buildSmithyRoute(userSignUpService)
+    userSignInRoutes                    <- buildSmithyRoute(userSignInService)
+    userOnboardRoutes                   <- buildSmithyRoute(userOnboardService)
+    userForgotPasswordRoutes            <- buildSmithyRoute(userForgotPasswordService)
+    userTokenServiceRoutes              <- buildSmithyRoute(userTokenService)
+    organizationManagementServiceRoutes <- buildSmithyRoute(organizationManagementService)
   } yield userSignUpRoutes <+> userOnboardRoutes <+> userSignInRoutes <+> userForgotPasswordRoutes <+> userTokenServiceRoutes <+> organizationManagementServiceRoutes
 
   private def externalTapirAndDocsRoutes(enableDocs: Boolean): ZIO[FileService[TapirTask], Nothing, HttpRoutes[Task]] =
@@ -68,7 +68,7 @@ object HttpApp {
 
   private val internalSmithyRoutes = for {
     wahaService <- ZIO.service[smithy.WahaService[Task]]
-    routes      <- buildSmihtyRoute(wahaService)
+    routes      <- buildSmithyRoute(wahaService)
   } yield routes
 
   private lazy val externalSmithySwaggerRoutes = docs[Task](
@@ -103,7 +103,7 @@ object HttpApp {
   val serverLayer = ZLayer.scoped {
     (for {
       config                     <- ZIO.service[GatewayServerConfig]
-      healthSmithyRoutes         <- healthSmihtyRoutes
+      healthSmithyRoutes         <- healthSmithyRoutes
       externalSmithyRoutes       <- externalSmithyRoutes
       externalTapirAndDocsRoutes <- externalTapirAndDocsRoutes(config.enableDocs)
       externalRoutes = externalSmithyRoutes <+> externalTapirAndDocsRoutes

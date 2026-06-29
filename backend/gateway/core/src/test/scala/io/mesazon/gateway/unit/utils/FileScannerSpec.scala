@@ -73,7 +73,7 @@ class FileScannerSpec extends ZWordSpecBase {
           .zioValue
 
         val maxByteSize5Mb = 5 * 1024 * 1024L
-        val fileByteStream = ZStream.fromResource("docker-compose/s3.yaml")
+        val fileByteStream = ZStream.fromResource("compose/s3.yaml")
 
         val serviceError = ZIO
           .scoped(fileScanner.scan(fileByteStream, SupportedMediaTypes.images, maxByteSize5Mb))
@@ -109,7 +109,7 @@ class FileScannerSpec extends ZWordSpecBase {
           .zioValue
 
         val maxByteSize1b  = 1L
-        val fileByteStream = ZStream.fromResource("docker-compose/s3.yaml")
+        val fileByteStream = ZStream.fromResource("compose/s3.yaml")
 
         val serviceError = ZIO
           .scoped(fileScanner.scan(fileByteStream, SupportedMediaTypes.images, maxByteSize1b))

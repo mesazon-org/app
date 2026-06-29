@@ -15,7 +15,7 @@ import zio.stream.ZStream
 
 class OrganizationS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, DockerComposeBase {
 
-  override def dockerComposeFile: String = "./src/test/resources/docker-compose/s3.yaml"
+  override def dockerComposeFile: String = "./src/test/resources/compose/s3.yaml"
 
   override def exposedServices: Set[ExposedService] = S3TestClient.ExposedServices
 

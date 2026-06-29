@@ -99,7 +99,7 @@ object S3TestClient {
       * @param servicePort
       *   Int container port
       * @return
-      *   PostgreSQLTestClientConfig
+      *   S3TestClientConfig
       */
     def from(
         containers: DockerComposeContainer,

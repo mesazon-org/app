@@ -40,7 +40,7 @@ object FileScanner {
             )
           )
         mimeTypeDetected <- ZIO
-          .attempt(tika.detect(tempFile))
+          .attemptBlocking(tika.detect(tempFile))
           .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to detect file type", Some(e)))
         _ <-
           ZIO.unless(supportedMediaTypes.exists(_.mime == mimeTypeDetected))(

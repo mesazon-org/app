@@ -33,7 +33,7 @@ module "gateway_core_app" {
     REPOSITORY_SCHEMA               = local.repository_schema
     SERVER_ENABLE_DOCS              = "true"
     ORGANIZATION_S3_CLIENT_USE_MOCK = "false"
-    JAVA_OPTS                       = "-XX:InitialRAMPercentage=65.0 -XX:MaxRAMPercentage=65.0 -XX:MaxMetaspaceSize=256m -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ExitOnOutOfMemoryError"
+    JAVA_OPTS                       = "-XX:InitialRAMPercentage=65.0 -XX:MaxRAMPercentage=65.0 -XX:MaxMetaspaceSize=256m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -XX:+UseContainerSupport"
     DATABASE_NAME                   = local.database_name
     DATABASE_HOST                   = data.digitalocean_database_cluster.postgres_cluster.private_host
     DATABASE_PORT                   = data.digitalocean_database_cluster.postgres_cluster.port
