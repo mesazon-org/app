@@ -60,13 +60,13 @@ type UpdatedAt = UpdatedAt.T
 object ExpiresAt extends RefinedType[Instant, Pure]
 type ExpiresAt = ExpiresAt.T
 
-object RefreshToken extends RefinedType[String, TokenPredicate]
+object RefreshToken extends RefinedType[String, NonEmptyTrimmedUnsafe]
 type RefreshToken = RefreshToken.T
 
-object ResetPasswordToken extends RefinedType[String, TokenPredicate]
+object ResetPasswordToken extends RefinedType[String, NonEmptyTrimmedUnsafe]
 type ResetPasswordToken = ResetPasswordToken.T
 
-object AccessToken extends RefinedType[String, TokenPredicate]
+object AccessToken extends RefinedType[String, NonEmptyTrimmedUnsafe]
 type AccessToken = AccessToken.T
 
 object Attempts extends RefinedType[Int, Positive]
@@ -74,6 +74,21 @@ type Attempts = Attempts.T
 
 object OrganizationID extends RefinedTypeUUID
 type OrganizationID = OrganizationID.T
+
+object OrganizationLogoOriginalFileName extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationLogoOriginalFileName = OrganizationLogoOriginalFileName.T
+
+object OrganizationLogoOriginalUrl extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type OrganizationLogoOriginalUrl = OrganizationLogoOriginalUrl.T
+
+object OrganizationLogoNormalizedUrl extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type OrganizationLogoNormalizedUrl = OrganizationLogoNormalizedUrl.T
+
+object OrganizationLogoOriginalBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type OrganizationLogoOriginalBucketKey = OrganizationLogoOriginalBucketKey.T
+
+object OrganizationLogoNormalizedBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type OrganizationLogoNormalizedBucketKey = OrganizationLogoNormalizedBucketKey.T
 
 object OrganizationName extends RefinedType[String, NonEmptyTrimmed]
 type OrganizationName = OrganizationName.T

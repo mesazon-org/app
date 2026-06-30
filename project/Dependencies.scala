@@ -27,7 +27,7 @@ object Dependencies {
   lazy val libphonenumberV      = "9.0.33"
   lazy val circeV               = "0.14.16"
   lazy val sttpV                = "4.0.25"
-  lazy val sttpIronV            = "1.13.23"
+  lazy val tapirV               = "1.13.23"
   lazy val jsoniterV            = "2.38.16"
   lazy val sttpAIV              = "0.4.14"
   lazy val jmailV               = "2.1.0"
@@ -37,6 +37,10 @@ object Dependencies {
   lazy val bouncyCastleV        = "1.84"
   lazy val uuidCreatorV         = "6.1.1"
   lazy val scalamockV           = "7.5.5"
+  lazy val scrimageV            = "4.6.4"
+  lazy val tikaV                = "3.3.1"
+  lazy val awssdkV              = "2.45.1"
+  lazy val zioS3V               = "0.4.4"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -113,7 +117,15 @@ object Dependencies {
   lazy val jsoniterScalaMacro = "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterV
 
   // STTP Iron
-  val sttpIron = "com.softwaremill.sttp.tapir" %% "tapir-iron" % sttpIronV
+
+  // Tapir
+  lazy val tapirCore            = "com.softwaremill.sttp.tapir" %% "tapir-core"              % tapirV
+  lazy val tapirZIO             = "com.softwaremill.sttp.tapir" %% "tapir-zio"               % tapirV
+  lazy val tapirHttp4s          = "com.softwaremill.sttp.tapir" %% "tapir-http4s-server"     % tapirV
+  lazy val tapirSwaggerUIBundle = "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % tapirV
+  lazy val tapirIron            = "com.softwaremill.sttp.tapir" %% "tapir-iron"              % tapirV
+  lazy val tapirHttp4sServerZIO = "com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio" % tapirV
+  lazy val tapirJsoniterScala   = "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala"    % tapirV
 
   // STTP AI
   lazy val sttpOpenAI    = "com.softwaremill.sttp.ai" %% "openai" % sttpAIV
@@ -136,4 +148,12 @@ object Dependencies {
 
   // UUID Creator
   lazy val uuidCreator = "com.github.f4b6a3" % "uuid-creator" % uuidCreatorV
+
+  // Scrimage
+  lazy val scrimageCore = "com.sksamuel.scrimage" % "scrimage-core" % scrimageV
+  lazy val scrimageWebp = "com.sksamuel.scrimage" % "scrimage-webp" % scrimageV
+  lazy val tikaCore     = "org.apache.tika"       % "tika-core"     % tikaV
+
+  // AWS SDK
+  val awssdkS3 = "software.amazon.awssdk" % "s3" % awssdkV
 }

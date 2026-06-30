@@ -210,7 +210,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val expiresAtBuffer   = Random.nextIntBetween(0, 1000).zioValue
+        val expiresAtBuffer   = Random.nextIntBetween(1, 1000).zioValue
         val userOtpRowExpired = arbitrarySample[UserOtpRow]
           .copy(
             userID = userDetailsRow.userID,

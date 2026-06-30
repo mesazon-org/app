@@ -250,6 +250,23 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       )
       .response(asJsonEitherOrFail[E, smithy.CreateOrganizationPostResponse])
       .send(sttpBackend)
+
+  def uploadOrganizationLogoPost[E: JsonValueCodec](
+      organizationID: OrganizationID,
+      organizationLogoOriginalFileNameOpt: Option[OrganizationLogoOriginalFileName],
+      logoBytes: Chunk[Byte],
+  ): Task[Response[Either[E, Unit]]] =
+    basicRequest
+      .post(externalUri.addPath("upload", "organization", "logo", organizationID.value.toString))
+      .pipe(request =>
+        organizationLogoOriginalFileNameOpt.fold(request)(organizationLogoOriginalFileName =>
+          request.header("X-File-Name", organizationLogoOriginalFileName.value)
+        )
+      )
+      .body(logoBytes.toArray)
+      .contentType(MediaType.ApplicationOctetStream)
+      .response(asJsonErrorUnit[E])
+      .send(sttpBackend)
 }
 
 object GatewayClient {

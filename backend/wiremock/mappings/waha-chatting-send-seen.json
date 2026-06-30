@@ -9,7 +9,6 @@
     },
     "bodyPatterns": [
       { "matchesJsonPath": "$.session" },
-      { "matchesJsonPath": "$.messageIds" },
       { "matchesJsonPath": "$.chatId" }
     ]
   },

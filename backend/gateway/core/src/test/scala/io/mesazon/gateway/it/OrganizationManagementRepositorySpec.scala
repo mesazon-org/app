@@ -20,7 +20,7 @@ import java.time.temporal.ChronoUnit
 
 class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, DockerComposeBase {
 
-  override def dockerComposeFile: String = "./src/test/resources/repository.yaml"
+  override def dockerComposeFile: String = "./src/test/resources/compose/repository.yaml"
 
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 
@@ -50,6 +50,32 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
   }
 
   "OrganizationManagementRepository" when {
+    "getOrganization" should {
+      "successfully get the organization details by organization ID" in new TestContext {
+        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+
+        postgresClient
+          .executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+          .zioValue
+
+        val organizationDetailsRowGet = organizationManagementRepository
+          .getOrganization(organizationDetailsRow.organizationID)
+          .zioValue
+
+        organizationDetailsRowGet shouldBe Some(organizationDetailsRow)
+      }
+
+      "return None if the organization does not exist" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+
+        val organizationDetailsRowGet = organizationManagementRepository
+          .getOrganization(organizationID)
+          .zioValue
+
+        organizationDetailsRowGet shouldBe None
+      }
+    }
+
     "createOrganization" should {
       "successfully create a new organization with the owner user" in new TestContext {
         val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
@@ -88,6 +114,9 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
         organizationDetailsRowsAll should have size 1
         organizationDetailsRowsAll.head shouldBe organizationDetailsRowInsert
         organizationDetailsRowsAll.head shouldBe organizationDetailsRow.copy(
+          logoOriginalBucketKey = None,
+          logoNormalizedBucketKey = None,
+          logoOriginalFileName = None,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
         )
@@ -184,8 +213,16 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           organizationDetailsRowInsert2,
         )
         organizationDetailsRowsAll should contain theSameElementsAs List(
-          organizationDetailsRow1,
-          organizationDetailsRow2,
+          organizationDetailsRow1.copy(
+            logoOriginalBucketKey = None,
+            logoNormalizedBucketKey = None,
+            logoOriginalFileName = None,
+          ),
+          organizationDetailsRow2.copy(
+            logoOriginalBucketKey = None,
+            logoNormalizedBucketKey = None,
+            logoOriginalFileName = None,
+          ),
         )
 
         val organizationUserRowsAll =
@@ -260,6 +297,176 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUsersTesting).zioValue
 
         organizationUserRowsAll shouldBe empty
+      }
+    }
+
+    "updateOrganizationDetails" should {
+      "successfully update the organization details" in new TestContext {
+        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+
+        postgresClient
+          .executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+          .zioValue
+
+        val nameUpdate                    = arbitrarySample[Option[OrganizationName]]
+        val slugUpdate                    = arbitrarySample[Option[OrganizationSlug]]
+        val emailUpdate                   = arbitrarySample[Option[OrganizationEmail]]
+        val phoneNumberUpdate             = arbitrarySample[Option[OrganizationPhoneNumber]]
+        val organizationStageUpdate       = arbitrarySample[OrganizationStage]
+        val addressLine1Update            = arbitrarySample[Option[OrganizationAddressLine1]]
+        val addressLine2Update            = arbitrarySample[Option[OrganizationAddressLine2]]
+        val cityUpdate                    = arbitrarySample[Option[OrganizationCity]]
+        val postalCodeUpdate              = arbitrarySample[Option[OrganizationPostalCode]]
+        val countryUpdate                 = arbitrarySample[Option[OrganizationCountry]]
+        val logoOriginalBucketKeyUpdate   = arbitrarySample[Option[OrganizationLogoOriginalBucketKey]]
+        val logoNormalizedBucketKeyUpdate = arbitrarySample[Option[OrganizationLogoNormalizedBucketKey]]
+        val logoOriginalFileNameUpdate    = arbitrarySample[Option[OrganizationLogoOriginalFileName]]
+
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once()
+        )
+
+        val organizationDetailsRowUpdated = organizationManagementRepository
+          .updateOrganization(
+            organizationID = organizationDetailsRow.organizationID,
+            organizationStage = organizationStageUpdate,
+            nameUpdate = nameUpdate,
+            slugUpdate = slugUpdate,
+            emailUpdate = emailUpdate,
+            phoneNumberUpdate = phoneNumberUpdate,
+            addressLine1Update = addressLine1Update,
+            addressLine2Update = addressLine2Update,
+            cityUpdate = cityUpdate,
+            postalCodeUpdate = postalCodeUpdate,
+            countryUpdate = countryUpdate,
+            logoOriginalBucketKeyUpdate = logoOriginalBucketKeyUpdate,
+            logoNormalizedBucketKeyUpdate = logoNormalizedBucketKeyUpdate,
+            logoOriginalFileNameUpdate = logoOriginalFileNameUpdate,
+          )
+          .zioValue
+
+        organizationDetailsRowUpdated shouldBe organizationDetailsRow.copy(
+          name = nameUpdate.getOrElse(organizationDetailsRow.name),
+          slug = slugUpdate.getOrElse(organizationDetailsRow.slug),
+          email = emailUpdate.getOrElse(organizationDetailsRow.email),
+          phoneNumber = phoneNumberUpdate.getOrElse(organizationDetailsRow.phoneNumber),
+          organizationStage = organizationStageUpdate,
+          addressLine1 = addressLine1Update.getOrElse(organizationDetailsRow.addressLine1),
+          addressLine2 = addressLine2Update.orElse(organizationDetailsRow.addressLine2),
+          city = cityUpdate.getOrElse(organizationDetailsRow.city),
+          postalCode = postalCodeUpdate.getOrElse(organizationDetailsRow.postalCode),
+          country = countryUpdate.getOrElse(organizationDetailsRow.country),
+          logoOriginalBucketKey = logoOriginalBucketKeyUpdate.orElse(organizationDetailsRow.logoOriginalBucketKey),
+          logoNormalizedBucketKey =
+            logoNormalizedBucketKeyUpdate.orElse(organizationDetailsRow.logoNormalizedBucketKey),
+          logoOriginalFileName = logoOriginalFileNameUpdate.orElse(organizationDetailsRow.logoOriginalFileName),
+          updatedAt = UpdatedAt(instantNow),
+        )
+      }
+
+      "fail to update the organization details with a duplicate slug" in new TestContext {
+        val organizationSlug1       = OrganizationSlug.assume("slug-1")
+        val organizationSlug2       = OrganizationSlug.assume("slug-2")
+        val organizationDetailsRow1 = arbitrarySample[OrganizationDetailsRow]
+          .copy(
+            slug = organizationSlug1
+          )
+        val organizationDetailsRow2 = arbitrarySample[OrganizationDetailsRow]
+          .copy(
+            slug = organizationSlug2
+          )
+
+        postgresClient
+          .executeQuery(organizationDetailsQueries.insert(organizationDetailsRow1))
+          .zioValue
+
+        postgresClient
+          .executeQuery(organizationDetailsQueries.insert(organizationDetailsRow2))
+          .zioValue
+
+        val slugUpdate = Some(organizationDetailsRow2.slug)
+
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once()
+        )
+
+        val serviceError = organizationManagementRepository
+          .updateOrganization(
+            organizationID = organizationDetailsRow1.organizationID,
+            organizationStage = organizationDetailsRow1.organizationStage,
+            slugUpdate = slugUpdate,
+          )
+          .zioError
+
+        serviceError.message shouldBe s"Failed to update organization with ID: [${organizationDetailsRow1.organizationID}]"
+        serviceError.underlying.value shouldBe a[DbException]
+
+        val organizationDetailsRowsAll =
+          postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
+
+        organizationDetailsRowsAll should have size 2
+        organizationDetailsRowsAll should contain theSameElementsAs List(
+          organizationDetailsRow1,
+          organizationDetailsRow2,
+        )
+      }
+
+      "fail to update for non existing organization" in new TestContext {
+        val organizationIDNonExisting = arbitrarySample[OrganizationID]
+
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once()
+        )
+
+        val serviceError = organizationManagementRepository
+          .updateOrganization(
+            organizationID = organizationIDNonExisting,
+            organizationStage = arbitrarySample[OrganizationStage],
+          )
+          .zioError
+
+        serviceError.message shouldBe s"Failed to update organization with ID: [$organizationIDNonExisting]"
+        serviceError.underlying.value shouldBe a[DbException]
+
+        val organizationDetailsRowsAll =
+          postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
+
+        organizationDetailsRowsAll shouldBe empty
+      }
+    }
+
+    "isOrganizationSlugExists" should {
+      "return true if the organization slug exists" in new TestContext {
+        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+
+        postgresClient
+          .executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+          .zioValue
+
+        val slugExists = organizationManagementRepository
+          .isOrganizationSlugExists(organizationDetailsRow.slug)
+          .zioValue
+
+        slugExists shouldBe true
+      }
+
+      "return false if the organization slug does not exist" in new TestContext {
+        val organizationSlug = arbitrarySample[OrganizationSlug]
+
+        val slugExists = organizationManagementRepository
+          .isOrganizationSlugExists(organizationSlug)
+          .zioValue
+
+        slugExists shouldBe false
       }
     }
   }

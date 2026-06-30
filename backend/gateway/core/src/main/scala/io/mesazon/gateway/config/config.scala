@@ -4,6 +4,7 @@ import com.comcast.ip4s.*
 import io.jsonwebtoken.security.Keys
 import io.mesazon.domain.gateway.AppName
 import io.mesazon.waha.config.WahaClientConfig
+import software.amazon.awssdk.regions.Region
 import sttp.model.Uri
 import zio.*
 import zio.config.*
@@ -18,6 +19,8 @@ private[config] given DeriveConfig[Host] = DeriveConfig[String].mapAttempt(strin
 private[config] given DeriveConfig[Port] = DeriveConfig[Int].mapAttempt(int => Port.fromInt(int).get)
 
 private[config] given DeriveConfig[Uri] = DeriveConfig[String].mapAttempt(str => Uri.unsafeParse(str))
+
+private[config] given DeriveConfig[Region] = DeriveConfig[String].mapAttempt(str => Region.of(str))
 
 private[config] given DeriveConfig[SecretKey] =
   DeriveConfig[String].mapAttempt(str => Keys.hmacShaKeyFor(str.getBytes(StandardCharsets.UTF_8)))
