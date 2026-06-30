@@ -2,7 +2,7 @@ package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
-import io.mesazon.gateway.clients.OrganizationS3Client
+import io.mesazon.gateway.clients.OrganizationLogosS3Client
 import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.repository.OrganizationManagementRepository
 import io.mesazon.gateway.tapir.TapirTask
@@ -25,7 +25,7 @@ object FileService {
       organizationManagementRepository: OrganizationManagementRepository,
       fileScanner: FileScanner,
       imageProcessing: ImageProcessing,
-      organizationS3Client: OrganizationS3Client,
+      organizationLogosS3Client: OrganizationLogosS3Client,
   ) extends FileService[ServiceTask] {
 
     override def uploadOrganizationLogo(
@@ -43,8 +43,8 @@ object FileService {
         SupportedMediaTypes.images,
       )
       organizationUploadLogosResult <-
-        organizationS3Client
-          .uploadLogos(
+        organizationLogosS3Client
+          .upload(
             organizationID,
             organizationLogoNormalizedResult.imageOriginalByteStream,
             organizationLogoNormalizedResult.imageNormalizedByteStream,

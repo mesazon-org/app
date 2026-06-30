@@ -18,7 +18,7 @@ services:
       EMAIL_PROVIDER_PORT: 1025
       JWT_SECRET_KEY: "Yk8zYkwwNGtVa0JvbE1NSU5lS2dtODdIMWlITzA4cDlZSkRiaFhBZmE4TT0="
       TWILIO_CLIENT_HOST: wiremock
-      ORGANIZATION_S3_CLIENT_URI: http://s3:9090
+      ORGANIZATION_LOGOS_S3_CLIENT_URI: http://s3:9090
 
   postgres:
     image: postgres:17.5-alpine

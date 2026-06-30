@@ -1,7 +1,7 @@
 package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.clients.OrganizationS3Client
+import io.mesazon.gateway.clients.OrganizationLogosS3Client
 import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.domain.*
@@ -28,7 +28,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
         val organizationLogoOriginalBucketKey   = arbitrarySample[OrganizationLogoOriginalBucketKey]
         val organizationLogoNormalizedBucketKey = arbitrarySample[OrganizationLogoNormalizedBucketKey]
-        val uploadedLogoResult: OrganizationS3Client.UploadedLogoResult =
+        val uploadedLogoResult: OrganizationLogosS3Client.UploadedLogoResult =
           (
             organizationLogoOriginalBucketKey = organizationLogoOriginalBucketKey,
             organizationLogoNormalizedBucketKey = organizationLogoNormalizedBucketKey,
@@ -43,7 +43,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          organizationS3ClientMock.uploadLogos
+          organizationS3ClientMock.upload
             .expects(organizationID, originalByteStream, normalizedByteStream)
             .returningZIO(uploadedLogoResult)
             .once(),
@@ -162,7 +162,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          organizationS3ClientMock.uploadLogos
+          organizationS3ClientMock.upload
             .expects(organizationID, originalByteStream, normalizedByteStream)
             .failingZIO(uploadError)
             .once(),
@@ -194,7 +194,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
         val organizationLogoOriginalBucketKey   = arbitrarySample[OrganizationLogoOriginalBucketKey]
         val organizationLogoNormalizedBucketKey = arbitrarySample[OrganizationLogoNormalizedBucketKey]
-        val uploadedLogoResult: OrganizationS3Client.UploadedLogoResult =
+        val uploadedLogoResult: OrganizationLogosS3Client.UploadedLogoResult =
           (
             organizationLogoOriginalBucketKey = organizationLogoOriginalBucketKey,
             organizationLogoNormalizedBucketKey = organizationLogoNormalizedBucketKey,
@@ -211,7 +211,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          organizationS3ClientMock.uploadLogos
+          organizationS3ClientMock.upload
             .expects(organizationID, originalByteStream, normalizedByteStream)
             .returningZIO(uploadedLogoResult)
             .once(),
@@ -258,7 +258,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
     val fileScannerMock                      = mock[FileScanner]
     val imageProcessingMock                  = mock[ImageProcessing]
-    val organizationS3ClientMock             = mock[OrganizationS3Client]
+    val organizationS3ClientMock             = mock[OrganizationLogosS3Client]
     val organizationManagementRepositoryMock = mock[OrganizationManagementRepository]
 
     def buildFileService: FileService[ServiceTask] = ZIO

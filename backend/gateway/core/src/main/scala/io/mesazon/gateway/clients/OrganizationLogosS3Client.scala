@@ -1,8 +1,8 @@
 package io.mesazon.gateway.clients
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.clients.OrganizationS3Client.UploadedLogoResult
-import io.mesazon.gateway.config.OrganizationS3ClientConfig
+import io.mesazon.gateway.clients.OrganizationLogosS3Client.UploadedLogoResult
+import io.mesazon.gateway.config.OrganizationLogosS3ClientConfig
 import io.mesazon.gateway.utils.*
 import software.amazon.awssdk.auth.credentials.*
 import software.amazon.awssdk.core.async.AsyncRequestBody
@@ -14,34 +14,34 @@ import zio.stream.*
 
 import scala.util.chaining.scalaUtilChainingOps
 
-trait OrganizationS3Client {
-  def uploadLogos(
+trait OrganizationLogosS3Client {
+  def upload(
       organizationID: OrganizationID,
       organizationLogoOriginalByteStream: ImageOriginalByteStream,
       organizationLogoNormalizedByteStream: ImageNormalizedByteStream,
   ): IO[ServiceError, UploadedLogoResult]
 
-  def getLogoOriginalUrl(
+  def getOriginalUrl(
       organizationLogoOriginalBucketKey: OrganizationLogoOriginalBucketKey
   ): IO[ServiceError, OrganizationLogoOriginalUrl]
 
-  def getLogoNormalizedUrl(
+  def getNormalizedUrl(
       organizationLogoNormalizedBucketKey: OrganizationLogoNormalizedBucketKey
   ): IO[ServiceError, OrganizationLogoNormalizedUrl]
 }
 
-object OrganizationS3Client {
+object OrganizationLogosS3Client {
 
   type UploadedLogoResult = (
       organizationLogoOriginalBucketKey: OrganizationLogoOriginalBucketKey,
       organizationLogoNormalizedBucketKey: OrganizationLogoNormalizedBucketKey,
   )
 
-  private final class OrganizationS3ClientImpl(
-      organizationS3ClientConfig: OrganizationS3ClientConfig,
+  private final class OrganizationLogosS3ClientImpl(
+      organizationLogosS3ClientConfig: OrganizationLogosS3ClientConfig,
       s3AsyncClient: S3AsyncClient,
       s3Presigner: S3Presigner,
-  ) extends OrganizationS3Client {
+  ) extends OrganizationLogosS3Client {
 
     private def uploadFile(
         organizationID: OrganizationID,
@@ -108,7 +108,7 @@ object OrganizationS3Client {
             software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
               .builder()
               .getObjectRequest(getObjectRequest)
-              .signatureDuration(organizationS3ClientConfig.organizationLogoUrlExpiresAtOffset)
+              .signatureDuration(organizationLogosS3ClientConfig.urlExpiresAtOffset)
               .build()
           )
           .mapError(e =>
@@ -121,7 +121,7 @@ object OrganizationS3Client {
           )
       } yield url.toString
 
-    override def uploadLogos(
+    override def upload(
         organizationID: OrganizationID,
         organizationLogoOriginalByteStream: ImageOriginalByteStream,
         organizationLogoNormalizedByteStream: ImageNormalizedByteStream,
@@ -129,16 +129,16 @@ object OrganizationS3Client {
       for {
         organizationLogoOriginalBucketKeyRaw <- uploadFile(
           organizationID,
-          organizationS3ClientConfig.organizationLogoBucket,
-          organizationS3ClientConfig.organizationLogoBucketPathPrefix,
-          organizationS3ClientConfig.organizationLogoOriginalFileName,
+          organizationLogosS3ClientConfig.bucket,
+          organizationLogosS3ClientConfig.bucketPathPrefix,
+          organizationLogosS3ClientConfig.originalFileName,
           organizationLogoOriginalByteStream.value,
         )
         organizationLogoNormalizedBucketKeyRaw <- uploadFile(
           organizationID,
-          organizationS3ClientConfig.organizationLogoBucket,
-          organizationS3ClientConfig.organizationLogoBucketPathPrefix,
-          organizationS3ClientConfig.organizationLogoNormalizedFileName,
+          organizationLogosS3ClientConfig.bucket,
+          organizationLogosS3ClientConfig.bucketPathPrefix,
+          organizationLogosS3ClientConfig.normalizedFileName,
           organizationLogoNormalizedByteStream.value,
         )
         organizationLogoOriginalBucketKey <- ZIO
@@ -157,12 +157,12 @@ object OrganizationS3Client {
           )
       } yield (organizationLogoOriginalBucketKey, organizationLogoNormalizedBucketKey)
 
-    override def getLogoOriginalUrl(
+    override def getOriginalUrl(
         organizationLogoOriginalBucketKey: OrganizationLogoOriginalBucketKey
     ): IO[ServiceError, OrganizationLogoOriginalUrl] =
       for {
         organizationLogoOriginalUrlRaw <- getLogoUrl(
-          organizationS3ClientConfig.organizationLogoBucket,
+          organizationLogosS3ClientConfig.bucket,
           organizationLogoOriginalBucketKey.value,
         )
         organizationLogoOriginalUrl <- ZIO
@@ -175,12 +175,12 @@ object OrganizationS3Client {
           )
       } yield organizationLogoOriginalUrl
 
-    override def getLogoNormalizedUrl(
+    override def getNormalizedUrl(
         organizationLogoNormalizedBucketKey: OrganizationLogoNormalizedBucketKey
     ): IO[ServiceError, OrganizationLogoNormalizedUrl] =
       for {
         organizationLogoNormalizedUrlRaw <- getLogoUrl(
-          organizationS3ClientConfig.organizationLogoBucket,
+          organizationLogosS3ClientConfig.bucket,
           organizationLogoNormalizedBucketKey.value,
         )
         organizationLogoNormalizedUrl <- ZIO
@@ -194,10 +194,10 @@ object OrganizationS3Client {
       } yield organizationLogoNormalizedUrl
   }
 
-  private val s3AsyncClientLayer: ZLayer[OrganizationS3ClientConfig, Throwable, S3AsyncClient] =
+  private val s3AsyncClientLayer: ZLayer[OrganizationLogosS3ClientConfig, Throwable, S3AsyncClient] =
     ZLayer.scoped(
       for {
-        organizationS3ClientConfig <- ZIO.service[OrganizationS3ClientConfig]
+        organizationS3ClientConfig <- ZIO.service[OrganizationLogosS3ClientConfig]
         s3AsyncClient              <- ZIO.acquireRelease(
           ZIO.attemptBlocking(
             S3AsyncClient
@@ -209,10 +209,10 @@ object OrganizationS3Client {
                     .create(organizationS3ClientConfig.accessKeyId, organizationS3ClientConfig.secretAccessKey)
                 )
               )
+              .endpointOverride(organizationS3ClientConfig.uri.toJavaUri)
               .pipe { builder =>
                 if (organizationS3ClientConfig.useMock)
                   builder
-                    .endpointOverride(organizationS3ClientConfig.uri.toJavaUri)
                     .serviceConfiguration(
                       S3Configuration.builder().pathStyleAccessEnabled(true).build()
                     )
@@ -229,10 +229,10 @@ object OrganizationS3Client {
       } yield s3AsyncClient
     )
 
-  private val s3PresignerLayer: ZLayer[OrganizationS3ClientConfig, Throwable, S3Presigner] =
+  private val s3PresignerLayer: ZLayer[OrganizationLogosS3ClientConfig, Throwable, S3Presigner] =
     ZLayer.scoped(
       for {
-        organizationS3ClientConfig <- ZIO.service[OrganizationS3ClientConfig]
+        organizationS3ClientConfig <- ZIO.service[OrganizationLogosS3ClientConfig]
         s3Presigner                <- ZIO.acquireRelease(
           ZIO.attemptBlocking(
             S3Presigner
@@ -260,28 +260,28 @@ object OrganizationS3Client {
       } yield s3Presigner
     )
 
-  private def observed(organizationS3Client: OrganizationS3Client): OrganizationS3Client =
-    new OrganizationS3Client {
-      override def uploadLogos(
+  private def observed(organizationLogosS3Client: OrganizationLogosS3Client): OrganizationLogosS3Client =
+    new OrganizationLogosS3Client {
+      override def upload(
           organizationID: OrganizationID,
           organizationLogoOriginalByteStream: ImageOriginalByteStream,
           organizationLogoNormalizedByteStream: ImageNormalizedByteStream,
       ): IO[ServiceError, UploadedLogoResult] =
-        organizationS3Client
-          .uploadLogos(organizationID, organizationLogoOriginalByteStream, organizationLogoNormalizedByteStream)
+        organizationLogosS3Client
+          .upload(organizationID, organizationLogoOriginalByteStream, organizationLogoNormalizedByteStream)
 
-      override def getLogoOriginalUrl(
+      override def getOriginalUrl(
           organizationLogoOriginalBucketKey: OrganizationLogoOriginalBucketKey
       ): IO[ServiceError, OrganizationLogoOriginalUrl] =
-        organizationS3Client.getLogoOriginalUrl(organizationLogoOriginalBucketKey)
+        organizationLogosS3Client.getOriginalUrl(organizationLogoOriginalBucketKey)
 
-      override def getLogoNormalizedUrl(
+      override def getNormalizedUrl(
           organizationLogoNormalizedBucketKey: OrganizationLogoNormalizedBucketKey
       ): IO[ServiceError, OrganizationLogoNormalizedUrl] =
-        organizationS3Client.getLogoNormalizedUrl(organizationLogoNormalizedBucketKey)
+        organizationLogosS3Client.getNormalizedUrl(organizationLogoNormalizedBucketKey)
     }
 
   val live =
-    (s3PresignerLayer ++ s3AsyncClientLayer) >>> ZLayer.derive[OrganizationS3ClientImpl] >>>
+    (s3PresignerLayer ++ s3AsyncClientLayer) >>> ZLayer.derive[OrganizationLogosS3ClientImpl] >>>
       ZLayer.fromFunction(observed)
 }
