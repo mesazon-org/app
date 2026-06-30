@@ -1,8 +1,7 @@
 package io.mesazon.gateway.tapir
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.service.FileService
-import sttp.apispec.openapi.Info
+import io.mesazon.gateway.service.{AuthorizationService, FileService}
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.StatusCode
 import sttp.tapir.CodecFormat
@@ -16,8 +15,11 @@ import zio.interop.catz.*
 
 object TapirEndpoints {
 
+  private val securedEndpoint =
+    endpoint.securityIn(auth.bearer[String]())
+
   private val uploadOrganizationLogoPostEndpoint =
-    endpoint.post
+    securedEndpoint.post
       .in("upload" / "organization" / "logo" / path[OrganizationID]("organizationID"))
       .in(header[OrganizationLogoOriginalFileName]("X-File-Name"))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
@@ -25,6 +27,7 @@ object TapirEndpoints {
       .errorOut(
         tapirServerErrorOut(
           NonEmptyChunk(
+            TapirServerError.UnauthorizedError,
             TapirServerError.BadRequestError,
             TapirServerError.InternalServerError,
           )
@@ -39,11 +42,16 @@ object TapirEndpoints {
 
   def allRoutesAndDocsEndpoints(
       enableDocs: Boolean
-  ): ZIO[FileService[TapirTask], Nothing, TapirEndpoints] =
+  ): ZIO[FileService[TapirTask] & AuthorizationService[TapirTask], Nothing, TapirEndpoints] =
     for {
-      fileService <- ZIO.service[FileService[TapirTask]]
+      fileService          <- ZIO.service[FileService[TapirTask]]
+      authorizationService <- ZIO.service[AuthorizationService[TapirTask]]
       streamEndpoints: List[ZServerEndpoint[Any, ZioStreams]] = List(
-        uploadOrganizationLogoPostEndpoint.zServerLogic(fileService.uploadOrganizationLogo)
+        uploadOrganizationLogoPostEndpoint
+          .zServerSecurityLogic(
+            authorizationService.auth(_, requiresCompletedOnboardStage = true)
+          )
+          .serverLogic(_ => fileService.uploadOrganizationLogo)
       )
       docsEndpointsOpt: Option[List[ZServerEndpoint[Any, ZioStreams]]] = Option.when(enableDocs)(
         SwaggerInterpreter(

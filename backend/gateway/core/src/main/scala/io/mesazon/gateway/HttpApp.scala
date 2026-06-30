@@ -4,7 +4,7 @@ import cats.syntax.all.*
 import fs2.io.net.Network
 import io.mesazon.gateway.config.GatewayServerConfig
 import io.mesazon.gateway.config.GatewayServerConfig.ServerConfig
-import io.mesazon.gateway.service.FileService
+import io.mesazon.gateway.service.{AuthorizationService, FileService}
 import io.mesazon.gateway.tapir.*
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.EntityLimiter
@@ -60,7 +60,9 @@ object HttpApp {
     organizationManagementServiceRoutes <- buildSmithyRoute(organizationManagementService)
   } yield userSignUpRoutes <+> userOnboardRoutes <+> userSignInRoutes <+> userForgotPasswordRoutes <+> userTokenServiceRoutes <+> organizationManagementServiceRoutes
 
-  private def externalTapirAndDocsRoutes(enableDocs: Boolean): ZIO[FileService[TapirTask], Nothing, TapirRoutes] =
+  private def externalTapirAndDocsRoutes(
+      enableDocs: Boolean
+  ): ZIO[FileService[TapirTask] & AuthorizationService[TapirTask], Nothing, TapirRoutes] =
     for {
       endpoints <- TapirEndpoints.allRoutesAndDocsEndpoints(enableDocs)
       streamRoutes: HttpRoutes[Task] =
