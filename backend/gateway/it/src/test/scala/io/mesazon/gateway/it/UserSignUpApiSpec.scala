@@ -242,7 +242,7 @@ class UserSignUpApiSpec
         userOtpRowsAll should have size 0
       }
 
-      "fail with BadRequest when request is invalid" in withContext { context =>
+      "fail with BadRequest ValidationError when request is invalid" in withContext { context =>
         import context.*
 
         val signUpEmailPostRequest = arbitrarySample[smithy.SignUpEmailPostRequest].copy(email = "invalidemail")
@@ -300,7 +300,7 @@ class UserSignUpApiSpec
         userTokenRowsAll.head.tokenType shouldBe TokenType.RefreshToken
       }
 
-      "fail with BadRequest when request is invalid" in withContext { context =>
+      "fail with BadRequest ValidationError when request is invalid" in withContext { context =>
         import context.*
 
         val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest].copy(
@@ -391,7 +391,7 @@ class UserSignUpApiSpec
         userOtpRowsAll should contain theSameElementsAs List(userOtpRow)
       }
 
-      "fail with Unauthorized when user is in wrong onboard stage" in withContext { context =>
+      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =

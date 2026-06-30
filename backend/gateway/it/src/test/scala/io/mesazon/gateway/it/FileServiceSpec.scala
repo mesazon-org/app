@@ -148,7 +148,7 @@ class FileServiceSpec
           Some(s"$expectedBucketKeyPrefix/normalized")
       }
 
-      "fail with 500 when the uploaded file is not a supported image" in withContext { context =>
+      "fail with InternalServerError when the uploaded file is not a supported image" in withContext { context =>
         import context.*
 
         val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
@@ -198,7 +198,7 @@ class FileServiceSpec
           .isLeft shouldBe true
       }
 
-      "fail with 400 when the file name header is missing" in withContext { context =>
+      "fail with BadRequest when the file name header is missing" in withContext { context =>
         import context.*
 
         val organizationID = arbitrarySample[OrganizationID]

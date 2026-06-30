@@ -129,7 +129,7 @@ class UserForgotPasswordApiSpec
 
   "User Forgot Password API" when {
     "POST /forgot/password" should {
-      "successfully forgot password" in withContext { context =>
+      "successfully send forgot password" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
@@ -190,7 +190,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll.head shouldBe userCredentialsRow
       }
 
-      "successfully send forgot password with existing not expired otp and update the expired time" in withContext {
+      "successfully send forgot password with existing not expired OTP and update the expired time" in withContext {
         context =>
           import context.*
 
@@ -281,7 +281,7 @@ class UserForgotPasswordApiSpec
           userCredentialsRowsAll.head shouldBe userCredentialsRow
       }
 
-      "successfully send forgot password with existing non expired otp and maxed attempts" in withContext { context =>
+      "successfully send forgot password with existing non expired OTP and maxed attempts" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
@@ -402,7 +402,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll shouldBe empty
       }
 
-      "fail with BadRequest ValidationError when request is not valid format" in withContext { context =>
+      "fail with BadRequest ValidationError when request is invalid" in withContext { context =>
         import context.*
 
         val forgotPasswordPostResponse =
@@ -432,7 +432,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll should have size 0
       }
 
-      "fail with Unauthorized when user is not allowed onboard stage" in withContext { context =>
+      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStage =
@@ -472,7 +472,7 @@ class UserForgotPasswordApiSpec
     }
 
     "POST /forgot/password/verify-otp" should {
-      "successfully verify otp and generate reset password token" in withContext { context =>
+      "successfully verify OTP and generate reset password token" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
@@ -546,7 +546,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll.head shouldBe userCredentialsRow
       }
 
-      "fail with BadRequest ValidationError when request is not valid format" in withContext { context =>
+      "fail with BadRequest ValidationError when request is invalid" in withContext { context =>
         import context.*
 
         val otpID = arbitrarySample[OtpID]
@@ -587,7 +587,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll should have size 0
       }
 
-      "fail with BadRequest when otp is wrong" in withContext { context =>
+      "fail with BadRequest when OTP is wrong" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
@@ -674,7 +674,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll.head shouldBe userCredentialsRow
       }
 
-      "fail with Unauthorized when otp is expired" in withContext { context =>
+      "fail with Unauthorized when OTP is expired" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
@@ -760,7 +760,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll.head shouldBe userCredentialsRow
       }
 
-      "fail with BadRequest when verify otp attempts has reached the limit" in withContext { context =>
+      "fail with BadRequest when verify OTP attempts has reached the limit" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
@@ -855,7 +855,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll.head shouldBe userCredentialsRow
       }
 
-      "fail with InternalServerError when otp id does not exist" in withContext { context =>
+      "fail with InternalServerError when OTP id does not exist" in withContext { context =>
         import context.*
 
         val otpID = arbitrarySample[OtpID]
@@ -965,7 +965,7 @@ class UserForgotPasswordApiSpec
         )
       }
 
-      "fail with BadRequest ValidationError when request is not valid format" in withContext { context =>
+      "fail with BadRequest ValidationError when request is invalid" in withContext { context =>
         import context.*
 
         val userID           = arbitrarySample[UserID]
@@ -1062,7 +1062,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll.head shouldBe userCredentialsRow
       }
 
-      "fail with Unauthorized when user is not allowed onboard stage" in withContext { context =>
+      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStage =

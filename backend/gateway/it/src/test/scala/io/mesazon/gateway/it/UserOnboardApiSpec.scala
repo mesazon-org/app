@@ -186,7 +186,7 @@ class UserOnboardApiSpec
         userCredentialsRowsAll should have size 0
       }
 
-      "fail with Unauthorized when user is not in correct onboard stage" in withContext { context =>
+      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =
@@ -338,7 +338,7 @@ class UserOnboardApiSpec
         userDetailsRowsAll should have size 0
       }
 
-      "fail with Unauthorized when user is not in correct onboard stage" in withContext { context =>
+      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =
@@ -410,7 +410,7 @@ class UserOnboardApiSpec
     }
 
     "POST /onboard/verify/phone-number" should {
-      "successfully verify phone number for user with valid access token and valid otp" in withContext { context =>
+      "successfully verify phone number for user with valid access token and valid OTP" in withContext { context =>
         import context.*
 
         val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
@@ -470,7 +470,7 @@ class UserOnboardApiSpec
         userOtpRowsAll should have size 0
       }
 
-      "fail with Unauthorized when user is not in correct onboard stage" in withContext { context =>
+      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =
@@ -906,7 +906,7 @@ class UserOnboardApiSpec
         userOtpRowsAll should have size 0
       }
 
-      "fail with Unauthorized when user is not in correct onboard stage" in withContext { context =>
+      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =
