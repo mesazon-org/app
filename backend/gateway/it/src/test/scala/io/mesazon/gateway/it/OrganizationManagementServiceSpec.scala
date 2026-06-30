@@ -157,6 +157,9 @@ class OrganizationManagementServiceSpec
           city = createOrganization.city,
           postalCode = createOrganization.postalCode,
           country = createOrganization.country,
+          logoOriginalBucketKey = None,
+          logoNormalizedBucketKey = None,
+          logoOriginalFileName = None,
           createdAt = organizationDetailsRowsAll.head.createdAt,
           updatedAt = organizationDetailsRowsAll.head.updatedAt,
         )

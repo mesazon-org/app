@@ -10,14 +10,14 @@ services:
       POSTGRES_PASSWORD: postgres
     command: [ "postgres", "-c", "max_connections=300" ]
     volumes:
-      - ../../../../../schemas/local/postgres:/docker-entrypoint-initdb.d
+      - ../../../../../../schemas/local/postgres:/docker-entrypoint-initdb.d
 
   flyway:
     image: flyway/flyway:11.10.5-alpine
     restart: on-failure
     command: -configFiles=/flyway/conf/flyway.config -locations=filesystem:/flyway/sql -schemas=local_schema -connectRetries=60 migrate
     volumes:
-      - ../../../../../schemas/migrations:/flyway/sql
-      - ../../../../../schemas/local/flyway:/flyway/conf
+      - ../../../../../../schemas/migrations:/flyway/sql
+      - ../../../../../../schemas/local/flyway:/flyway/conf
     depends_on:
       - postgres

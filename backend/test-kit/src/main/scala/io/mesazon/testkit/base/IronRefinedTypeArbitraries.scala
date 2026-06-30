@@ -54,11 +54,11 @@ trait IronRefinedTypeArbitraries {
       .map(_.refineUnsafe[NonEmptyTrimmed])
   }
 
-  given arbTokenPredicate: Arbitrary[String :| TokenPredicate] = Arbitrary {
+  given arbNonEmptyTrimmedUnsafe: Arbitrary[String :| NonEmptyTrimmedUnsafe] = Arbitrary {
     Gen
       .nonEmptyStringOf(Gen.alphaNumChar)
       .map(_.trim)
-      .map(_.refineUnsafe[TokenPredicate])
+      .map(_.refineUnsafe[NonEmptyTrimmedUnsafe])
   }
 
   given arbEmailPredicate: Arbitrary[String :| EmailPredicate] = Arbitrary {

@@ -1,6 +1,7 @@
 package io.mesazon.gateway
 
-import io.mesazon.domain.gateway.ServiceError
+import io.mesazon.domain.gateway.{ServiceError, TapirServerError}
+import io.mesazon.gateway.tapir.TapirTask
 import zio.*
 
 object HttpErrorHandler {
@@ -28,22 +29,42 @@ object HttpErrorHandler {
     response.flatMapError {
       case error @ ServiceError.BadRequestError.ValidationError(invalidFields) =>
         logWarning(error)
-          .map(_ => smithy.ValidationError(fields = invalidFields.map(_.fieldName).toList))
+          .as(smithy.ValidationError(fields = invalidFields.map(_.fieldName).toList))
       case error: ServiceError.BadRequestError =>
         logWarning(error)
-          .map(_ => smithy.BadRequest())
+          .as(smithy.BadRequest())
       case error: ServiceError.UnauthorizedError =>
         logError(error)
-          .map(_ => smithy.Unauthorized())
+          .as(smithy.Unauthorized())
       case error: ServiceError.InternalServerError =>
         logWarning(error)
-          .map(_ => smithy.InternalServerError())
+          .as(smithy.InternalServerError())
       case error: ServiceError.ServiceUnavailableError =>
         logWarning(error)
-          .map(_ => smithy.ServiceUnavailable())
+          .as(smithy.ServiceUnavailable())
     }.catchSomeCause { case cause: Cause.Die =>
       ZIO
         .logErrorCause(s"$trace: Unexpected failure", cause)
-        .flatMap(_ => ZIO.fail(smithy.InternalServerError()))
+        *> ZIO.fail(smithy.InternalServerError())
+    }
+
+  def errorResponseHandlerTapir[A](response: IO[ServiceError, A])(using trace: Trace): TapirTask[A] =
+    response.flatMapError {
+      case error: ServiceError.BadRequestError =>
+        logWarning(error)
+          .as(TapirServerError.BadRequestError)
+      case error: ServiceError.UnauthorizedError =>
+        logError(error)
+          .as(TapirServerError.UnauthorizedError)
+      case error: ServiceError.InternalServerError =>
+        logWarning(error)
+          .as(TapirServerError.InternalServerError)
+      case error: ServiceError.ServiceUnavailableError =>
+        logWarning(error)
+          .as(TapirServerError.ServiceUnavailableError)
+    }.catchSomeCause { case cause: Cause.Die =>
+      ZIO
+        .logErrorCause(s"$trace: Unexpected failure", cause)
+        *> ZIO.fail(TapirServerError.InternalServerError)
     }
 }
