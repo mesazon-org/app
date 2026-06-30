@@ -3,6 +3,7 @@ package io.mesazon.gateway.tapir
 import io.github.iltotore.iron.constraint.all.Trimmed
 import io.mesazon.domain.gateway.TapirServerError
 import io.mesazon.gateway.json.{tapirServerErrorSchemas, given}
+import sttp.apispec.openapi.Info
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.StatusCode
 import sttp.monad.MonadError
@@ -79,6 +80,19 @@ private[tapir] def tapirServerErrorOut(
 
   oneOf[TapirServerError](default, variants*)
 }
+
+private[tapir] val apiInfo: Info =
+  Info(
+    title = "Gateway Tapir API",
+    version = "1.0",
+    description = Some(
+      """# Global Requirements
+        |**Required Onboard Stage:** **COMPLETED**
+        |
+        |All endpoints in this service require the user to have finished
+        |the onboarding flow (Phone & Email Verified).""".stripMargin
+    ),
+  )
 
 type TapirTask[A] = IO[TapirServerError, A]
 

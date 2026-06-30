@@ -2,6 +2,7 @@ package io.mesazon.gateway.tapir
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.service.FileService
+import sttp.apispec.openapi.Info
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.StatusCode
 import sttp.tapir.CodecFormat
@@ -52,8 +53,7 @@ object TapirEndpoints {
           )
         ).fromServerEndpoints(
           streamEndpoints,
-          "Gateway Tapir API",
-          "1.0",
+          apiInfo,
         )
       )
     } yield (streamEndpoints, docsEndpointsOpt)
