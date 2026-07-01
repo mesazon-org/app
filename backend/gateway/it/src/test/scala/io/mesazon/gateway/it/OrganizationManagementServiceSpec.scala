@@ -224,6 +224,102 @@ class OrganizationManagementServiceSpec
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
+      "fail with Unauthorized when access token is missing" in withContext { context =>
+        import context.*
+
+        val createOrganization = arbitrarySample[CreateOrganization]
+
+        val createOrganizationPostResponse =
+          gatewayClient
+            .createOrganizationPost[smithy.Unauthorized](
+              createOrganization.name,
+              createOrganization.slug,
+              createOrganization.email,
+              createOrganization.phoneNumber,
+              createOrganization.addressLine1,
+              createOrganization.addressLine2,
+              createOrganization.city,
+              createOrganization.postalCode,
+              createOrganization.country,
+              None,
+            )
+            .zioValue
+
+        createOrganizationPostResponse.code shouldBe StatusCode.Unauthorized
+        createOrganizationPostResponse.body.left.value shouldBe smithy.Unauthorized()
+
+        val organizationDetailsRowsAll =
+          postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
+        organizationDetailsRowsAll should have size 0
+      }
+
+      "fail with Unauthorized when access token is invalid" in withContext { context =>
+        import context.*
+
+        val createOrganization = arbitrarySample[CreateOrganization]
+
+        val createOrganizationPostResponse =
+          gatewayClient
+            .createOrganizationPost[smithy.Unauthorized](
+              createOrganization.name,
+              createOrganization.slug,
+              createOrganization.email,
+              createOrganization.phoneNumber,
+              createOrganization.addressLine1,
+              createOrganization.addressLine2,
+              createOrganization.city,
+              createOrganization.postalCode,
+              createOrganization.country,
+              Some(AccessToken("invalidtoken")),
+            )
+            .zioValue
+
+        createOrganizationPostResponse.code shouldBe StatusCode.Unauthorized
+        createOrganizationPostResponse.body.left.value shouldBe smithy.Unauthorized()
+
+        val organizationDetailsRowsAll =
+          postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
+        organizationDetailsRowsAll should have size 0
+      }
+
+      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
+        import context.*
+
+        val onboardStageInvalid =
+          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStageInvalid)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val createOrganization = arbitrarySample[CreateOrganization]
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val createOrganizationPostResponse =
+          gatewayClient
+            .createOrganizationPost[smithy.Unauthorized](
+              createOrganization.name,
+              createOrganization.slug,
+              createOrganization.email,
+              createOrganization.phoneNumber,
+              createOrganization.addressLine1,
+              createOrganization.addressLine2,
+              createOrganization.city,
+              createOrganization.postalCode,
+              createOrganization.country,
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+        createOrganizationPostResponse.code shouldBe StatusCode.Unauthorized
+        createOrganizationPostResponse.body.left.value shouldBe smithy.Unauthorized()
+
+        val organizationDetailsRowsAll =
+          postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
+        organizationDetailsRowsAll should have size 0
+      }
+
       "fail with InternalServerError when organization slug already exists" in withContext { context =>
         import context.*
 
@@ -266,35 +362,6 @@ class OrganizationManagementServiceSpec
         organizationDetailsRowsAll should have size 1
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
-      }
-
-      "fail with Unauthorized when access token is missing" in withContext { context =>
-        import context.*
-
-        val createOrganization = arbitrarySample[CreateOrganization]
-
-        val createOrganizationPostResponse =
-          gatewayClient
-            .createOrganizationPost[smithy.Unauthorized](
-              createOrganization.name,
-              createOrganization.slug,
-              createOrganization.email,
-              createOrganization.phoneNumber,
-              createOrganization.addressLine1,
-              createOrganization.addressLine2,
-              createOrganization.city,
-              createOrganization.postalCode,
-              createOrganization.country,
-              None,
-            )
-            .zioValue
-
-        createOrganizationPostResponse.code shouldBe StatusCode.Unauthorized
-        createOrganizationPostResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        val organizationDetailsRowsAll =
-          postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
-        organizationDetailsRowsAll should have size 0
       }
     }
   }

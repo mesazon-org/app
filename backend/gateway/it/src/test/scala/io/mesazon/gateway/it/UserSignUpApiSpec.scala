@@ -316,40 +316,6 @@ class UserSignUpApiSpec
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
-      "fail with Unauthorized when OTP is expired" in withContext { context =>
-        import context.*
-
-        val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
-
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
-          onboardStage = onboardStage
-        )
-
-        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-
-        val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          userID = userDetailsRow.userID,
-          otpType = OtpType.EmailVerification,
-          expiresAt = ExpiresAt.assume(instantNow.minusSeconds(10)),
-        )
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
-
-        val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest].copy(
-          otpID = userOtpRow.otpID.value,
-          otp = userOtpRow.otp.value,
-        )
-
-        val signUpVerifyEmailPostResponse =
-          gatewayClient.signUpVerifyEmailPost[smithy.Unauthorized](signUpVerifyEmailPostRequest).zioValue
-
-        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Unauthorized
-        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-      }
-
       "fail with BadRequest when OTP is wrong" in withContext { context =>
         import context.*
 
@@ -389,6 +355,40 @@ class UserSignUpApiSpec
 
         userOtpRowsAll should have size 1
         userOtpRowsAll should contain theSameElementsAs List(userOtpRow)
+      }
+
+      "fail with Unauthorized when OTP is expired" in withContext { context =>
+        import context.*
+
+        val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
+
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+          onboardStage = onboardStage
+        )
+
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+        val userOtpRow = arbitrarySample[UserOtpRow].copy(
+          userID = userDetailsRow.userID,
+          otpType = OtpType.EmailVerification,
+          expiresAt = ExpiresAt.assume(instantNow.minusSeconds(10)),
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+        val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest].copy(
+          otpID = userOtpRow.otpID.value,
+          otp = userOtpRow.otp.value,
+        )
+
+        val signUpVerifyEmailPostResponse =
+          gatewayClient.signUpVerifyEmailPost[smithy.Unauthorized](signUpVerifyEmailPostRequest).zioValue
+
+        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Unauthorized
+        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.Unauthorized()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
       "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>

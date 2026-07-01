@@ -175,64 +175,6 @@ class FileServiceSpec
           Some(s"$expectedBucketKeyPrefix/normalized")
       }
 
-      "fail with InternalServerError when the uploaded file is not a supported image" in withContext { context =>
-        import context.*
-
-        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
-          .copy(
-            logoOriginalBucketKey = None,
-            logoNormalizedBucketKey = None,
-            logoOriginalFileName = None,
-          )
-
-        postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow)).zioValue
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("malformed.png")
-        val organizationID                   = organizationDetailsRow.organizationID
-        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
-
-        val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.InternalServerError](
-            organizationID,
-            Some(organizationLogoOriginalFileName),
-            logoBytes,
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.InternalServerError
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        val organizationDetailsRowUpdated = postgresClient
-          .executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting)
-          .zioValue
-          .head
-
-        organizationDetailsRowUpdated.organizationStage shouldBe organizationDetailsRowUpdated.organizationStage
-        organizationDetailsRowUpdated.logoOriginalFileName shouldBe None
-        organizationDetailsRowUpdated.logoOriginalBucketKey shouldBe None
-        organizationDetailsRowUpdated.logoNormalizedBucketKey shouldBe None
-
-        val expectedBucketKeyPrefix = s"$organizationLogoBucketPathPrefix/${organizationID.value}"
-
-        s3TestClient
-          .getObject(organizationLogoBucket, s"$expectedBucketKeyPrefix/original")
-          .zioEither
-          .isLeft shouldBe true
-
-        s3TestClient
-          .getObject(organizationLogoBucket, s"$expectedBucketKeyPrefix/normalized")
-          .zioEither
-          .isLeft shouldBe true
-      }
-
       "fail with BadRequest when the file name header is missing" in withContext { context =>
         import context.*
 
@@ -320,6 +262,64 @@ class FileServiceSpec
 
         uploadOrganizationLogoResponse.code shouldBe StatusCode.Unauthorized
         uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized(message = "Unauthorized")
+      }
+
+      "fail with InternalServerError when the uploaded file is not a supported image" in withContext { context =>
+        import context.*
+
+        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+          .copy(
+            logoOriginalBucketKey = None,
+            logoNormalizedBucketKey = None,
+            logoOriginalFileName = None,
+          )
+
+        postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow)).zioValue
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("malformed.png")
+        val organizationID                   = organizationDetailsRow.organizationID
+        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+
+        val uploadOrganizationLogoResponse = gatewayClient
+          .uploadOrganizationLogoPost[smithy.InternalServerError](
+            organizationID,
+            Some(organizationLogoOriginalFileName),
+            logoBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.InternalServerError
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.InternalServerError()
+
+        val organizationDetailsRowUpdated = postgresClient
+          .executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting)
+          .zioValue
+          .head
+
+        organizationDetailsRowUpdated.organizationStage shouldBe organizationDetailsRowUpdated.organizationStage
+        organizationDetailsRowUpdated.logoOriginalFileName shouldBe None
+        organizationDetailsRowUpdated.logoOriginalBucketKey shouldBe None
+        organizationDetailsRowUpdated.logoNormalizedBucketKey shouldBe None
+
+        val expectedBucketKeyPrefix = s"$organizationLogoBucketPathPrefix/${organizationID.value}"
+
+        s3TestClient
+          .getObject(organizationLogoBucket, s"$expectedBucketKeyPrefix/original")
+          .zioEither
+          .isLeft shouldBe true
+
+        s3TestClient
+          .getObject(organizationLogoBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioEither
+          .isLeft shouldBe true
       }
     }
   }
