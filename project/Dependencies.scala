@@ -39,7 +39,7 @@ object Dependencies {
   lazy val scalamockV           = "7.5.5"
   lazy val scrimageV            = "4.6.4"
   lazy val tikaV                = "3.3.1"
-  lazy val awssdkV              = "2.45.1"
+  lazy val awssdkV              = "2.46.19"
   lazy val zioS3V               = "0.4.4"
 
   // Http4s
