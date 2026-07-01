@@ -7,7 +7,7 @@ enum TapirServerError(val code: String, val message: String, val schemaName: Str
   case BadRequestError extends TapirServerError("BAD_REQUEST_ERROR", "Bad request", "BadRequestResponseContent")
 
   // 401 Unauthorized
-  case UnauthorizedError extends TapirServerError("UNAUTHORIZED_ERROR", "Unauthorized", "UnauthorizedResponseContent")
+  case UnauthorizedError extends TapirServerError("UNAUTHORIZED_ERROR", "Unauthorized connection.", "UnauthorizedResponseContent")
 
   // 404 Not Found
   case NotFoundError extends TapirServerError("NOT_FOUND_ERROR", "Not found", "NotFoundResponseContent")

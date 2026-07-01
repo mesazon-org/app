@@ -596,7 +596,7 @@ class UserForgotPasswordApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        // Should not delete this action attempt when otp is wrong
+        // Should not delete this action attempt when OTP is wrong
         val userActionAttemptRowForgotPassword = arbitrarySample[UserActionAttemptRow].copy(
           userID = userDetailsRow.userID,
           actionAttemptType = ActionAttemptType.ForgotPassword,
@@ -778,7 +778,7 @@ class UserForgotPasswordApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        // Should not delete this action attempt when otp is wrong
+        // Should not delete this action attempt when OTP is expired
         val userActionAttemptRowForgotPassword = arbitrarySample[UserActionAttemptRow].copy(
           userID = userDetailsRow.userID,
           actionAttemptType = ActionAttemptType.ForgotPassword,
