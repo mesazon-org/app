@@ -6,7 +6,6 @@ import io.mesazon.gateway.config.OpenAIClientConfig
 import sttp.ai.openai.OpenAI
 import sttp.ai.openai.requests.completions.chat.ChatRequestBody.{ChatBody, ChatCompletionModel, ResponseFormat}
 import sttp.ai.openai.requests.completions.chat.message.*
-import sttp.ai.openai.requests.completions.chat.message.Message.SystemMessage
 import sttp.client4.Backend
 import sttp.tapir.Schema
 import sttp.tapir.docs.apispec.schema.TapirSchemaToJsonSchema
@@ -43,7 +42,7 @@ object OpenAIClient {
         .createChatCompletion(
           ChatBody(
             model = ChatCompletionModel.GPT5,
-            messages = SystemMessage(
+            messages = Message.System(
               """You are a whatsapp agent replying back to user with concise messages.
                 | Max message length should be 500 characters.
                 | Do not include any emojis or special characters in the response.
