@@ -35,8 +35,9 @@ object DockerWiremockSettings {
     Docker / version     := dockerTagEnv.getOrElse(version.value),
     dockerExposedPorts   := Seq(8080),
     Docker / mappings ++= {
+      val converter = fileConverter.value
       val directory = baseDirectory.value / "mappings"
-      directory.listFiles().map(f => f -> s"/mappings/${f.getName}").toSeq
+      directory.listFiles().map(f => converter.toVirtualFile(f.toPath) -> s"/mappings/${f.getName}").toSeq
     },
     dockerCommands := Seq(
       Cmd("FROM", baseImage),

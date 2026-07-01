@@ -5,18 +5,18 @@ val enableScalaLint = sys.env.getOrElse("ENABLE_SCALA_LINT_ON_COMPILE", "true").
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-ThisBuild / scalaVersion              := "3.8.4"
-ThisBuild / version                   := "latest"
-ThisBuild / organization              := "io.mesazon"
-ThisBuild / organizationName          := "Mesazon"
-ThisBuild / scalafixOnCompile         := enableScalaLint
-ThisBuild / scalafmtOnCompile         := enableScalaLint
-ThisBuild / semanticdbVersion         := scalafixSemanticdb.revision
-ThisBuild / semanticdbEnabled         := true
-ThisBuild / Test / fork               := true
-ThisBuild / run / fork                := true
-ThisBuild / Test / parallelExecution  := true
-ThisBuild / Test / testForkedParallel := true
+scalaVersion              := "3.8.4"
+version                   := "latest"
+organization              := "io.mesazon"
+organizationName          := "Mesazon"
+scalafixOnCompile         := enableScalaLint
+scalafmtOnCompile         := enableScalaLint
+semanticdbVersion         := scalafixSemanticdb.revision
+semanticdbEnabled         := true
+Test / fork               := true
+run / fork                := true
+Test / parallelExecution  := true
+Test / testForkedParallel := true
 
 lazy val backendDirName = "backend"
 
@@ -120,7 +120,7 @@ lazy val backendWiremock = createBackendModule("wiremock")(None)
   )
 
 // Waha
-lazy val createBackendWahaModule = createBackendModule("waha") _
+lazy val createBackendWahaModule = createBackendModule("waha")
 
 lazy val backendWahaModuleRoot = createBackendWahaModule(None)
   .aggregate(backendWahaModuleCore, backendWahaModuleIt)
@@ -148,16 +148,13 @@ lazy val backendWahaModuleIt = createBackendWahaModule(Some("it"))
   .dependsOn(backendWahaModuleCore % Test)
   .dependsOn(backendWiremock % Test)
   .settings(
-    test := Def
-      .sequential(
-        backendWiremock / Docker / publishLocal,
-        Test / test,
-      )
-      .value
+    Test / test := (Test / test)
+      .dependsOn(backendWiremock / Docker / publishLocal)
+      .evaluated
   )
 
 // Gateway
-lazy val createBackendGatewayModule = createBackendModule("gateway") _
+lazy val createBackendGatewayModule = createBackendModule("gateway")
 
 lazy val backendGatewayRoot = createBackendGatewayModule(None)
   .aggregate(backendGatewayCore, backendGatewayIt)
@@ -224,12 +221,9 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.bouncyCastle,
   )
   .settings(
-    test := Def
-      .sequential(
-        backendWiremock / Docker / publishLocal,
-        Test / test,
-      )
-      .value
+    Test / test := (Test / test)
+      .dependsOn(backendWiremock / Docker / publishLocal)
+      .evaluated
   )
 
 lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
@@ -244,11 +238,10 @@ lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
     Dependencies.circeGeneric      % Test,
   )
   .settings(
-    test := Def
-      .sequential(
+    Test / test := (Test / test)
+      .dependsOn(
         backendWiremock / Docker / publishLocal,
         backendGatewayCore / Docker / publishLocal,
-        Test / test,
       )
-      .value
+      .evaluated
   )
