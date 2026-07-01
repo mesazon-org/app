@@ -1,13 +1,16 @@
 package io.mesazon.gateway.it
 
+import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.it.client.GatewayClient
 import io.mesazon.gateway.it.client.GatewayClient.{GatewayClientConfig, given}
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.repository.queries.*
+import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
+import io.mesazon.generator.IDGenerator
 import io.mesazon.test.postgresql.PostgreSQLTestClient
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.test.s3.S3TestClient
@@ -37,6 +40,8 @@ class FileServiceSpec
       s3TestClient: S3TestClient,
       repositoryConfig: RepositoryConfig,
       organizationDetailsQueries: OrganizationDetailsQueries,
+      userDetailsQueries: UserDetailsQueries,
+      jwtService: JwtService,
   )
 
   def withContext[A](f: Context => A): A = withContainers { container =>
@@ -57,12 +62,26 @@ class FileServiceSpec
       organizationDetailsQueries <- ZIO
         .service[OrganizationDetailsQueries]
         .provide(OrganizationDetailsQueries.live, RepositoryConfig.live, appNameLive)
+      userDetailsQueries <- ZIO
+        .service[UserDetailsQueries]
+        .provide(UserDetailsQueries.live, RepositoryConfig.live, appNameLive)
+      jwtService <- ZIO
+        .service[JwtService]
+        .provide(
+          JwtService.live,
+          JwtConfig.live,
+          IDGenerator.liveUUIDv7,
+          TimeProvider.liveSystemUTC,
+          appNameLive,
+        )
     } yield Context(
       gatewayApiClient,
       postgreSQLClient,
       s3TestClient,
       repositoryConfig,
       organizationDetailsQueries,
+      userDetailsQueries,
+      jwtService,
     )
 
     f(context.zioValue)
@@ -106,6 +125,13 @@ class FileServiceSpec
 
         postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow)).zioValue
 
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
         val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
         val organizationID                   = organizationDetailsRow.organizationID
         val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
@@ -115,6 +141,7 @@ class FileServiceSpec
             organizationID,
             Some(organizationLogoOriginalFileName),
             logoBytes,
+            Some(accessJwt.accessToken),
           )
           .zioValue
 
@@ -160,6 +187,13 @@ class FileServiceSpec
 
         postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow)).zioValue
 
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
         val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("malformed.png")
         val organizationID                   = organizationDetailsRow.organizationID
         val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
@@ -169,6 +203,7 @@ class FileServiceSpec
             organizationID,
             Some(organizationLogoOriginalFileName),
             logoBytes,
+            Some(accessJwt.accessToken),
           )
           .zioValue
 
@@ -201,15 +236,90 @@ class FileServiceSpec
       "fail with BadRequest when the file name header is missing" in withContext { context =>
         import context.*
 
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
         val organizationID = arbitrarySample[OrganizationID]
         val logoBytes      = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.BadRequest](organizationID, None, logoBytes)
+          .uploadOrganizationLogoPost[smithy.BadRequest](organizationID, None, logoBytes, Some(accessJwt.accessToken))
           .zioValue
 
         uploadOrganizationLogoResponse.code shouldBe StatusCode.BadRequest
         uploadOrganizationLogoResponse.body.left.value shouldBe smithy.BadRequest()
+      }
+
+      "fail with Unauthorized when access token is missing" in withContext { context =>
+        import context.*
+
+        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationID                   = arbitrarySample[OrganizationID]
+        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+
+        val uploadOrganizationLogoResponse = gatewayClient
+          .uploadOrganizationLogoPost[smithy.Unauthorized](
+            organizationID,
+            Some(organizationLogoOriginalFileName),
+            logoBytes,
+            None,
+          )
+          .zioValue
+
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.Unauthorized
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized(message = "Unauthorized")
+      }
+
+      "fail with Unauthorized when access token is invalid" in withContext { context =>
+        import context.*
+
+        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationID                   = arbitrarySample[OrganizationID]
+        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+
+        val uploadOrganizationLogoResponse = gatewayClient
+          .uploadOrganizationLogoPost[smithy.Unauthorized](
+            organizationID,
+            Some(organizationLogoOriginalFileName),
+            logoBytes,
+            Some(AccessToken("invalidtoken")),
+          )
+          .zioValue
+
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.Unauthorized
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized(message = "Unauthorized")
+      }
+
+      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
+        import context.*
+
+        val onboardStageInvalid =
+          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationID                   = arbitrarySample[OrganizationID]
+        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+
+        val uploadOrganizationLogoResponse = gatewayClient
+          .uploadOrganizationLogoPost[smithy.Unauthorized](
+            organizationID,
+            Some(organizationLogoOriginalFileName),
+            logoBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.Unauthorized
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized(message = "Unauthorized")
       }
     }
   }
