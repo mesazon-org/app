@@ -3,6 +3,7 @@ package io.mesazon.gateway.tapir
 import io.github.iltotore.iron.constraint.all.Trimmed
 import io.mesazon.domain.gateway.TapirServerError
 import io.mesazon.gateway.json.{tapirServerErrorSchemas, given}
+import sttp.apispec.openapi.Info
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.StatusCode
 import sttp.monad.MonadError
@@ -29,13 +30,18 @@ private[tapir] val TapirDocsPath: List[String] =
 private[tapir] val TapirOpenApiYamlName: String =
   "openapi.yaml"
 
+// Inverse of `statusCodeFor`: pick the error body matching the status tapir chose for a decode failure, so a
+// missing/invalid bearer token (which makes tapir respond `401`) yields an UnauthorizedError body instead of the
+// default BadRequestError. Falls back to BadRequestError for statuses without a dedicated variant (e.g. 415).
+private[tapir] def tapirServerErrorForStatus(status: StatusCode): TapirServerError =
+  TapirServerError.values.find(error => statusCodeFor(error) == status).getOrElse(TapirServerError.BadRequestError)
+
 private[tapir] val staticBodyDecodeFailureHandler: DefaultDecodeFailureHandler[Task] =
-  DefaultDecodeFailureHandler[Task].response { _ =>
-    ValuedEndpointOutput(
-      jsonBody[TapirServerError],
-      TapirServerError.BadRequestError,
-    )
-  }
+  DefaultDecodeFailureHandler[Task].copy(response =
+    (status, headerList, _) =>
+      ValuedEndpointOutput(jsonBody[TapirServerError], tapirServerErrorForStatus(status))
+        .prepend(statusCode.and(headers), (status, headerList))
+  )
 
 private[tapir] val decodeFailureHandler: DecodeFailureHandler[Task] =
   new DecodeFailureHandler[Task] {
@@ -72,13 +78,29 @@ private[tapir] def tapirServerErrorOut(
       )(tapirServerError)
     )
 
+  // `oneOfDefaultVariant` matches every value, so it must come LAST — otherwise it would shadow the exact-match
+  // variants and every error would be rendered as 500.
   val default = oneOfDefaultVariant(
     statusCode(StatusCode.InternalServerError)
       .and(jsonBody[TapirServerError].schema(tapirServerErrorSchemas(TapirServerError.InternalServerError)))
   )
 
-  oneOf[TapirServerError](default, variants*)
+  val allVariants = variants :+ default
+  oneOf[TapirServerError](allVariants.head, allVariants.tail*)
 }
+
+private[tapir] val apiInfo: Info =
+  Info(
+    title = "Gateway Tapir API",
+    version = "1.0",
+    description = Some(
+      """# Global Requirements
+        |**Required Onboard Stage:** **COMPLETED**
+        |
+        |All endpoints in this service require the user to have finished
+        |the onboarding flow (Phone & Email Verified).""".stripMargin
+    ),
+  )
 
 type TapirTask[A] = IO[TapirServerError, A]
 

@@ -49,5 +49,5 @@ structure ServiceUnavailable {
     @required
     code: String = "SERVICE_UNAVAILABLE_ERROR"
     @required
-    message: String = "The server is currently unavailable"
+    message: String = "Service unavailable"
 }

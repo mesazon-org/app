@@ -4,7 +4,7 @@ import cats.syntax.all.*
 import fs2.io.net.Network
 import io.mesazon.gateway.config.GatewayServerConfig
 import io.mesazon.gateway.config.GatewayServerConfig.ServerConfig
-import io.mesazon.gateway.service.FileService
+import io.mesazon.gateway.service.{AuthorizationService, FileService}
 import io.mesazon.gateway.tapir.*
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.EntityLimiter
@@ -18,7 +18,15 @@ import zio.interop.catz.*
 
 object HttpApp {
 
+  type TapirRoutes = (apiRoutes: HttpRoutes[Task], docsRoutesOpt: Option[HttpRoutes[Task]])
+
   given Network[Task] = Network.forAsync[Task]
+
+  // Smithy (JSON) routes keep the conservative 2 MB request-body limit.
+  private val SmithyMaxEntitySize: Long = 2L * 1024 * 1024
+  // Tapir routes carry logo uploads, so they allow up to 20 MB.
+  // Keep in sync with `file-service.max-organization-logo-bytes`.
+  private val TapirMaxEntitySize: Long = 20L * 1024 * 1024
 
   private def buildSmithyRoute[Alg[_[_, _, _, _, _]]](
       impl: FunctorAlgebra[Alg, Task]
@@ -52,7 +60,9 @@ object HttpApp {
     organizationManagementServiceRoutes <- buildSmithyRoute(organizationManagementService)
   } yield userSignUpRoutes <+> userOnboardRoutes <+> userSignInRoutes <+> userForgotPasswordRoutes <+> userTokenServiceRoutes <+> organizationManagementServiceRoutes
 
-  private def externalTapirAndDocsRoutes(enableDocs: Boolean): ZIO[FileService[TapirTask], Nothing, HttpRoutes[Task]] =
+  private def externalTapirAndDocsRoutes(
+      enableDocs: Boolean
+  ): ZIO[FileService[TapirTask] & AuthorizationService[TapirTask], Nothing, TapirRoutes] =
     for {
       endpoints <- TapirEndpoints.allRoutesAndDocsEndpoints(enableDocs)
       streamRoutes: HttpRoutes[Task] =
@@ -64,7 +74,7 @@ object HttpApp {
           .from(_)
           .toRoutes
       )
-    } yield streamRoutes <+> docsRoutes.getOrElse(HttpRoutes.empty)
+    } yield (streamRoutes, docsRoutes)
 
   private val internalSmithyRoutes = for {
     wahaService <- ZIO.service[smithy.WahaService[Task]]
@@ -88,7 +98,7 @@ object HttpApp {
       .default[Task]
       .withHost(config.host)
       .withPort(config.port)
-      .withHttpApp(EntityLimiter.httpRoutes(routes).orNotFound) // Limits the size of the request body to 2MB
+      .withHttpApp(routes.orNotFound)
       .withErrorHandler(error =>
         ZIO.fiberId
           .flatMap(fid =>
@@ -106,13 +116,21 @@ object HttpApp {
       healthSmithyRoutes         <- healthSmithyRoutes
       externalSmithyRoutes       <- externalSmithyRoutes
       externalTapirAndDocsRoutes <- externalTapirAndDocsRoutes(config.enableDocs)
-      externalRoutes = externalSmithyRoutes <+> externalTapirAndDocsRoutes
-      internalSmithyRoutes <- internalSmithyRoutes
-      externalSwaggerRoutes  = Option.when(config.enableDocs)(externalSmithySwaggerRoutes)
-      externalWithDocsRoutes = externalSwaggerRoutes.map(_ <+> externalRoutes).getOrElse(externalRoutes)
+      internalSmithyRoutes       <- internalSmithyRoutes
+
+      externalSwaggerRoutesOpt = Option.when(config.enableDocs)(externalSmithySwaggerRoutes)
+
+      externalTapirApiRoutes  = EntityLimiter.httpRoutes(externalTapirAndDocsRoutes.apiRoutes, TapirMaxEntitySize)
+      externalSmithyApiRoutes = EntityLimiter.httpRoutes(externalSmithyRoutes, SmithyMaxEntitySize)
+
+      externalDocsRoutes = externalSwaggerRoutesOpt.getOrElse(
+        HttpRoutes.empty[Task]
+      ) <+> externalTapirAndDocsRoutes.docsRoutesOpt.getOrElse(HttpRoutes.empty[Task])
+
+      externalRoutes = externalTapirApiRoutes <+> externalSmithyApiRoutes <+> externalDocsRoutes
       servers <-
         server(config.health, healthSmithyRoutes) &>
-          server(config.external, externalWithDocsRoutes) &>
+          server(config.external, externalRoutes) &>
           server(config.internal, internalSmithyRoutes)
     } yield servers).forkScoped
   }

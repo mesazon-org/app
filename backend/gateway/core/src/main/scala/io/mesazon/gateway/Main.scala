@@ -47,7 +47,8 @@ object Main extends ZIOAppDefault {
 
       // Services
       AuthenticationService.live,
-      AuthorizationService.live,
+      AuthorizationService.smithy,
+      AuthorizationService.tapir,
       FileService.live,
       HealthCheckService.live,
       WahaService.live,

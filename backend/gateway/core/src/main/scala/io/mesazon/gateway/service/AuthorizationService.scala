@@ -4,12 +4,14 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
 import io.mesazon.gateway.repository.UserDetailsRepository
 import io.mesazon.gateway.state.*
+import io.mesazon.gateway.tapir.TapirTask
 import org.http4s.*
 import org.http4s.headers.Authorization
 import zio.*
 
 trait AuthorizationService[F[_]] {
   def auth(request: Request[Task], requiresCompletedOnboardStage: Boolean): F[Unit]
+  def auth(accessTokenRaw: String, requiresCompletedOnboardStage: Boolean): F[Unit]
 }
 
 object AuthorizationService {
@@ -25,14 +27,17 @@ object AuthorizationService {
         maybeBearerToken = request.headers
           .get[`Authorization`]
           .collect { case Authorization(Credentials.Token(AuthScheme.Bearer, token)) => token }
-        accessToken <- ZIO
+        accessTokenRaw <- ZIO
           .getOrFailWith(ServiceError.UnauthorizedError.AuthorizationTokenMissing)(maybeBearerToken)
-          .flatMap(accessTokenRaw =>
-            ZIO
-              .fromEither(AccessToken.either(accessTokenRaw))
-              .mapError(error =>
-                ServiceError.InternalServerError.AuthorizationError(s"Failed to apply AccessToken: $error")
-              )
+        _ <- auth(accessTokenRaw, requiresCompletedOnboardStage)
+      } yield ()
+
+    override def auth(accessTokenRaw: String, requiresCompletedOnboardStage: Boolean): ServiceTask[Unit] =
+      for {
+        accessToken <- ZIO
+          .fromEither(AccessToken.either(accessTokenRaw))
+          .mapError(error =>
+            ServiceError.InternalServerError.AuthorizationError(s"Failed to apply AccessToken: $error")
           )
         authedUserAccess <- jwtService.verifyAccessToken(accessToken)
         _                <-
@@ -52,13 +57,30 @@ object AuthorizationService {
           else ZIO.unit
         _ <- authState.set(AuthedUser(authedUserAccess.userID))
       } yield ()
+
   }
 
-  private def observed(service: AuthorizationService[ServiceTask]): AuthorizationService[Task] =
-    (request: Request[Task], requiresCompletedOnboardStage: Boolean) =>
-      HttpErrorHandler.errorResponseHandler(service.auth(request, requiresCompletedOnboardStage))
+  private def observedSmithy(service: AuthorizationService[ServiceTask]): AuthorizationService[Task] =
+    new AuthorizationService[Task] {
+      override def auth(request: Request[Task], requiresCompletedOnboardStage: Boolean): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(service.auth(request, requiresCompletedOnboardStage))
+
+      override def auth(accessTokenRaw: String, requiresCompletedOnboardStage: Boolean): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(service.auth(accessTokenRaw, requiresCompletedOnboardStage))
+    }
+
+  private def observedTapir(service: AuthorizationService[ServiceTask]): AuthorizationService[TapirTask] =
+    new AuthorizationService[TapirTask] {
+      override def auth(request: Request[Task], requiresCompletedOnboardStage: Boolean): TapirTask[Unit] =
+        HttpErrorHandler.errorResponseHandlerTapir(service.auth(request, requiresCompletedOnboardStage))
+
+      override def auth(accessTokenRaw: String, requiresCompletedOnboardStage: Boolean): TapirTask[Unit] =
+        HttpErrorHandler.errorResponseHandlerTapir(service.auth(accessTokenRaw, requiresCompletedOnboardStage))
+    }
 
   val local = ZLayer.derive[AuthorizationServiceImpl].project[AuthorizationService[ServiceTask]](identity)
 
-  val live = local >>> ZLayer.fromFunction(observed)
+  val smithy = local >>> ZLayer.fromFunction(observedSmithy)
+
+  val tapir = local >>> ZLayer.fromFunction(observedTapir)
 }

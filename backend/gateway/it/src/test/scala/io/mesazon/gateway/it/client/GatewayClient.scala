@@ -255,12 +255,18 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       organizationID: OrganizationID,
       organizationLogoOriginalFileNameOpt: Option[OrganizationLogoOriginalFileName],
       logoBytes: Chunk[Byte],
+      accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, Unit]]] =
     basicRequest
       .post(externalUri.addPath("upload", "organization", "logo", organizationID.value.toString))
       .pipe(request =>
         organizationLogoOriginalFileNameOpt.fold(request)(organizationLogoOriginalFileName =>
           request.header("X-File-Name", organizationLogoOriginalFileName.value)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
       .body(logoBytes.toArray)

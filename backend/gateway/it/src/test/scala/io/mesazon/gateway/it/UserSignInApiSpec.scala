@@ -255,7 +255,7 @@ class UserSignInApiSpec
         userTokenRowsAll shouldBe empty
       }
 
-      "fail with BadRequest ValidationError if email is invalid" in withContext { context =>
+      "fail with BadRequest ValidationError when email is invalid" in withContext { context =>
         import context.*
 
         val invalidEmail = Email.assume("invalid-email-format")
@@ -278,7 +278,7 @@ class UserSignInApiSpec
         userTokenRowsAll shouldBe empty
       }
 
-      "fail with Unauthorized when user onboardStage is not allowed" in withContext { context =>
+      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStage =
@@ -314,7 +314,7 @@ class UserSignInApiSpec
         userTokenRowsAll shouldBe empty
       }
 
-      "fail with Unauthorized to sign in user with invalid credentials" in withContext { context =>
+      "fail with Unauthorized when credentials are invalid" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
@@ -362,7 +362,7 @@ class UserSignInApiSpec
         userTokenRowsAll shouldBe empty
       }
 
-      "fail with Unauthorized to sign in user with correct credentials after invalid credentials max attempts has been reached" in withContext {
+      "fail with Unauthorized when credentials are correct but max invalid attempts has been reached" in withContext {
         context =>
           import context.*
 
