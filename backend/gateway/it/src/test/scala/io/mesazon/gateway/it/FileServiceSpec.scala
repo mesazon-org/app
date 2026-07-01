@@ -213,7 +213,7 @@ class FileServiceSpec
           .zioValue
 
         uploadOrganizationLogoResponse.code shouldBe StatusCode.Unauthorized
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized(message = "Unauthorized")
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized()
       }
 
       "fail with Unauthorized when access token is invalid" in withContext { context =>
@@ -233,7 +233,7 @@ class FileServiceSpec
           .zioValue
 
         uploadOrganizationLogoResponse.code shouldBe StatusCode.Unauthorized
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized(message = "Unauthorized")
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized()
       }
 
       "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
@@ -261,7 +261,7 @@ class FileServiceSpec
           .zioValue
 
         uploadOrganizationLogoResponse.code shouldBe StatusCode.Unauthorized
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized(message = "Unauthorized")
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized()
       }
 
       "fail with InternalServerError when the uploaded file is not a supported image" in withContext { context =>
