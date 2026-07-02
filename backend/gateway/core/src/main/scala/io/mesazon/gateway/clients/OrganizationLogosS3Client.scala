@@ -7,10 +7,7 @@ import io.mesazon.gateway.utils.*
 import software.amazon.awssdk.auth.credentials.*
 import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.*
-import software.amazon.awssdk.services.s3.model.{
-  HeadBucketRequest,
-  PutObjectRequest
-}
+import software.amazon.awssdk.services.s3.model.{HeadBucketRequest, PutObjectRequest}
 import software.amazon.awssdk.services.s3.presigner.S3Presigner
 import zio.*
 import zio.stream.*
