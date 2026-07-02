@@ -165,7 +165,7 @@ class UserForgotPasswordApiSpec
 
         forgotPasswordPostResponse.code shouldBe StatusCode.Ok
         forgotPasswordPostResponse.body.value.otpID shouldBe userOtpRowAll.head.otpID.value
-        forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe (userOtpRowAll.head.expiresAt.value.getEpochSecond - instantNow.getEpochSecond) +- 2
+        forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf default value
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
 
