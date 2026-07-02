@@ -1,8 +1,11 @@
 package io.mesazon.gateway.repository.queries
 
+import cats.data.NonEmptyList
+import cats.syntax.all.*
 import doobie.*
 import doobie.implicits.*
 import doobie.postgres.implicits.*
+import doobie.util.fragments.*
 import io.github.gaelrenoux.tranzactio.doobie.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.RepositoryConfig
@@ -15,22 +18,25 @@ final class UserCredentialsQueries(
 
   private val frSchema               = Fragment.const(config.schema)
   private val frUserCredentialsTable = Fragment.const(config.userCredentialsTable)
+  private val frTable                = frSchema ++ fr0"." ++ frUserCredentialsTable
 
-  val userCredentialsQueries =
+  val frUserCredentialsFields =
     fr"""
         |user_id,
         |password_hash,
         |created_at,
         |updated_at
-     """.stripMargin
+         """.stripMargin
 
   def insertUserCredentials(userCredentialsRow: UserCredentialsRow): TranzactIO[Unit] =
     tzio {
-      sql"""
-           |INSERT INTO $frSchema.$frUserCredentialsTable ($userCredentialsQueries)
-           |VALUES ($userCredentialsRow)
-           |""".stripMargin.update.run
-    }.unit
+      val q =
+        fr"INSERT INTO" ++ frTable ++
+          fr"(" ++ frUserCredentialsFields ++ fr")" ++
+          fr"VALUES (" ++ fr"$userCredentialsRow" ++ fr")"
+
+      q.update.run.void
+    }
 
   def updateUserCredentials(
       userID: UserID,
@@ -38,31 +44,37 @@ final class UserCredentialsQueries(
       updatedAt: UpdatedAt,
   ): TranzactIO[Unit] =
     tzio {
-      sql"""
-           |UPDATE $frSchema.$frUserCredentialsTable
-           |SET
-           |  password_hash = $passwordHashUpdate,
-           |  updated_at = $updatedAt
-           |WHERE user_id = $userID
-           |""".stripMargin.update.run
-    }.unit
+      val q =
+        fr"UPDATE" ++ frTable ++
+          set(
+            NonEmptyList.of(
+              fr"password_hash = $passwordHashUpdate",
+              fr"updated_at = $updatedAt",
+            )
+          ) ++
+          whereAnd(fr"user_id = $userID")
+
+      q.update.run.void
+    }
 
   def getUserCredentials(userID: UserID): TranzactIO[Option[UserCredentialsRow]] =
     tzio {
-      sql"""
-           |SELECT $userCredentialsQueries
-           |FROM $frSchema.$frUserCredentialsTable
-           |WHERE user_id = $userID
-           |""".stripMargin.query[UserCredentialsRow].option
+      val q =
+        fr"SELECT" ++ frUserCredentialsFields ++
+          fr"FROM" ++ frTable ++
+          whereAnd(fr"user_id = $userID")
+
+      q.query[UserCredentialsRow].option
     }
 
   // Testing
   def getAllUserCredentialsTesting: TranzactIO[List[UserCredentialsRow]] =
     tzio {
-      sql"""
-           |SELECT $userCredentialsQueries
-           |FROM $frSchema.$frUserCredentialsTable
-           |""".stripMargin.query[UserCredentialsRow].to[List]
+      val q =
+        fr"SELECT" ++ frUserCredentialsFields ++
+          fr"FROM" ++ frTable
+
+      q.query[UserCredentialsRow].to[List]
     }
 }
 

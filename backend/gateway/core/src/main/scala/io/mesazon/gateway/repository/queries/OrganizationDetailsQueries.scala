@@ -48,7 +48,7 @@ final class OrganizationDetailsQueries(
       val q =
         fr"SELECT" ++ frOrganizationDetailsFields ++
           fr"FROM" ++ frTable ++
-          fr"WHERE organization_id = $organizationID"
+          whereAnd(fr"organization_id = $organizationID")
 
       q.query[OrganizationDetailsRow].option
     }
@@ -64,40 +64,40 @@ final class OrganizationDetailsQueries(
 
   def update(
       organizationID: OrganizationID,
-      organizationStage: OrganizationStage,
       updatedAt: UpdatedAt,
-      nameUpdate: Option[OrganizationName],
-      slugUpdate: Option[OrganizationSlug],
-      emailUpdate: Option[OrganizationEmail],
-      phoneNumberUpdate: Option[OrganizationPhoneNumber],
-      addressLine1Update: Option[OrganizationAddressLine1],
-      addressLine2Update: Option[OrganizationAddressLine2],
-      cityUpdate: Option[OrganizationCity],
-      postalCodeUpdate: Option[OrganizationPostalCode],
-      countryUpdate: Option[OrganizationCountry],
-      logoOriginalBucketKeyUpdate: Option[OrganizationLogoOriginalBucketKey] = None,
-      logoNormalizedBucketKeyUpdate: Option[OrganizationLogoNormalizedBucketKey] = None,
-      logoOriginalFileNameUpdate: Option[OrganizationLogoOriginalFileName] = None,
+      organizationStageOptUpdate: Option[OrganizationStage],
+      nameOptUpdate: Option[OrganizationName],
+      slugOptUpdate: Option[OrganizationSlug],
+      emailOptUpdate: Option[OrganizationEmail],
+      phoneNumberOptUpdate: Option[OrganizationPhoneNumber],
+      addressLine1OptUpdate: Option[OrganizationAddressLine1],
+      addressLine2OptUpdate: Option[OrganizationAddressLine2],
+      cityOptUpdate: Option[OrganizationCity],
+      postalCodeOptUpdate: Option[OrganizationPostalCode],
+      countryOptUpdate: Option[OrganizationCountry],
+      logoOriginalBucketKeyOptUpdate: Option[OrganizationLogoOriginalBucketKey] = None,
+      logoNormalizedBucketKeyOptUpdate: Option[OrganizationLogoNormalizedBucketKey] = None,
+      logoOriginalFileNameOptUpdate: Option[OrganizationLogoOriginalFileName] = None,
   ): TranzactIO[OrganizationDetailsRow] = {
     val updates = NonEmptyList.of(
-      fr"organization_stage = $organizationStage",
-      fr"updated_at = $updatedAt",
+      fr"updated_at = $updatedAt"
     ) ++ List(
-      nameUpdate.map(v => fr"name = $v"),
-      slugUpdate.map(v => fr"slug = $v"),
-      emailUpdate.map(v => fr"email = $v"),
-      phoneNumberUpdate.map(v => fr"phone_region = ${v.value.phoneRegion}"),
-      phoneNumberUpdate.map(v => fr"phone_country_code = ${v.value.phoneCountryCode}"),
-      phoneNumberUpdate.map(v => fr"phone_national_number = ${v.value.phoneNationalNumber}"),
-      phoneNumberUpdate.map(v => fr"phone_number_e164 = ${v.value.phoneNumberE164}"),
-      addressLine1Update.map(v => fr"address_line_1 = $v"),
-      addressLine2Update.map(v => fr"address_line_2 = $v"),
-      cityUpdate.map(v => fr"city = $v"),
-      postalCodeUpdate.map(v => fr"postal_code = $v"),
-      countryUpdate.map(v => fr"country = $v"),
-      logoOriginalBucketKeyUpdate.map(v => fr"logo_original_bucket_key = $v"),
-      logoNormalizedBucketKeyUpdate.map(v => fr"logo_normalized_bucket_key = $v"),
-      logoOriginalFileNameUpdate.map(v => fr"logo_original_file_name = $v"),
+      organizationStageOptUpdate.map(v => fr"organization_stage = $v"),
+      nameOptUpdate.map(v => fr"name = $v"),
+      slugOptUpdate.map(v => fr"slug = $v"),
+      emailOptUpdate.map(v => fr"email = $v"),
+      phoneNumberOptUpdate.map(v => fr"phone_region = ${v.value.phoneRegion}"),
+      phoneNumberOptUpdate.map(v => fr"phone_country_code = ${v.value.phoneCountryCode}"),
+      phoneNumberOptUpdate.map(v => fr"phone_national_number = ${v.value.phoneNationalNumber}"),
+      phoneNumberOptUpdate.map(v => fr"phone_number_e164 = ${v.value.phoneNumberE164}"),
+      addressLine1OptUpdate.map(v => fr"address_line_1 = $v"),
+      addressLine2OptUpdate.map(v => fr"address_line_2 = $v"),
+      cityOptUpdate.map(v => fr"city = $v"),
+      postalCodeOptUpdate.map(v => fr"postal_code = $v"),
+      countryOptUpdate.map(v => fr"country = $v"),
+      logoOriginalBucketKeyOptUpdate.map(v => fr"logo_original_bucket_key = $v"),
+      logoNormalizedBucketKeyOptUpdate.map(v => fr"logo_normalized_bucket_key = $v"),
+      logoOriginalFileNameOptUpdate.map(v => fr"logo_original_file_name = $v"),
     ).flatten
 
     tzio {
@@ -114,7 +114,7 @@ final class OrganizationDetailsQueries(
     tzio {
       val q =
         fr"SELECT 1 FROM" ++ frTable ++
-          fr"WHERE slug = $slug"
+          whereAnd(fr"slug = $slug")
 
       q.query[Int].option.map(_.isDefined)
     }

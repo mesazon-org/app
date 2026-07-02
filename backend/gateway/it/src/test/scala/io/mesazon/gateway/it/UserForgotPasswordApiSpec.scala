@@ -161,11 +161,9 @@ class UserForgotPasswordApiSpec
 
         userOtpRowAll should have size 1
 
-        val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-
         forgotPasswordPostResponse.code shouldBe StatusCode.Ok
         forgotPasswordPostResponse.body.value.otpID shouldBe userOtpRowAll.head.otpID.value
-        forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe (userOtpRowAll.head.expiresAt.value.getEpochSecond - instantNow.getEpochSecond) +- 2
+        forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf default value
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
 

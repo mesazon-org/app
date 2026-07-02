@@ -1,8 +1,10 @@
 package io.mesazon.gateway.repository.queries
 
+import cats.syntax.all.*
 import doobie.*
 import doobie.implicits.*
 import doobie.postgres.implicits.*
+import doobie.util.fragments.*
 import io.github.gaelrenoux.tranzactio.doobie.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.RepositoryConfig
@@ -15,57 +17,72 @@ final class UserTokenQueries(
 
   private val frSchema          = Fragment.const(config.schema)
   private val frUserTokensTable = Fragment.const(config.userTokenTable)
+  private val frTable           = frSchema ++ fr0"." ++ frUserTokensTable
 
-  val userTokensFields =
+  val frUserTokensFields =
     fr"""
         |token_id,
         |user_id,
         |token_type,
         |created_at,
         |expires_at
-      """.stripMargin
+         """.stripMargin
 
   def insertUserToken(userTokenRow: UserTokenRow): TranzactIO[Unit] =
     tzio {
-      sql"""
-           |INSERT INTO $frSchema.$frUserTokensTable ($userTokensFields)
-           |VALUES ($userTokenRow)
-           |""".stripMargin.update.run
-    }.unit
+      val q =
+        fr"INSERT INTO" ++ frTable ++
+          fr"(" ++ frUserTokensFields ++ fr")" ++
+          fr"VALUES (" ++ fr"$userTokenRow" ++ fr")"
+
+      q.update.run.void
+    }
 
   def getUserToken(tokenID: TokenID, userID: UserID, tokenType: TokenType): TranzactIO[Option[UserTokenRow]] =
     tzio {
-      sql"""
-           |SELECT $userTokensFields
-           |FROM $frSchema.$frUserTokensTable
-           |WHERE token_id = $tokenID AND user_id = $userID AND token_type = $tokenType
-           |""".stripMargin.query[UserTokenRow].option
+      val q =
+        fr"SELECT" ++ frUserTokensFields ++
+          fr"FROM" ++ frTable ++
+          whereAnd(
+            fr"token_id = $tokenID",
+            fr"user_id = $userID",
+            fr"token_type = $tokenType",
+          )
+
+      q.query[UserTokenRow].option
     }
 
   def deleteUserToken(tokenID: TokenID, userID: UserID, tokenType: TokenType): TranzactIO[Unit] =
     tzio {
-      sql"""
-           |DELETE FROM $frSchema.$frUserTokensTable
-           |WHERE token_id = $tokenID AND user_id = $userID AND token_type = $tokenType
-           |RETURNING 1
-           |""".stripMargin.query[Int].unique.map(_ => ())
+      val q =
+        fr"DELETE FROM" ++ frTable ++
+          whereAnd(
+            fr"token_id = $tokenID",
+            fr"user_id = $userID",
+            fr"token_type = $tokenType",
+          ) ++
+          fr"RETURNING 1"
+
+      q.query[Int].unique.void
     }
 
   def deleteAllUserTokensForUser(userID: UserID): TranzactIO[Unit] =
     tzio {
-      sql"""
-           |DELETE FROM $frSchema.$frUserTokensTable
-           |WHERE user_id = $userID
-           |""".stripMargin.update.run
-    }.unit
+      val q =
+        fr"DELETE FROM" ++ frTable ++
+          whereAnd(fr"user_id = $userID")
+
+      q.update.run.void
+    }
 
   // Testing
   def getAllUserTokensTesting: TranzactIO[List[UserTokenRow]] =
     tzio {
-      sql"""
-           |SELECT $userTokensFields
-           |FROM $frSchema.$frUserTokensTable
-           |""".stripMargin.query[UserTokenRow].to[List]
+      val q =
+        fr"SELECT" ++ frUserTokensFields ++
+          fr"FROM" ++ frTable
+
+      q.query[UserTokenRow].to[List]
     }
 }
 
