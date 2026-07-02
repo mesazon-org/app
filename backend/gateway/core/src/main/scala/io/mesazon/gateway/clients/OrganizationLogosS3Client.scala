@@ -7,7 +7,7 @@ import io.mesazon.gateway.utils.*
 import software.amazon.awssdk.auth.credentials.*
 import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.*
-import software.amazon.awssdk.services.s3.model.PutObjectRequest
+import software.amazon.awssdk.services.s3.model.{HeadBucketRequest, PutObjectRequest}
 import software.amazon.awssdk.services.s3.presigner.S3Presigner
 import zio.*
 import zio.stream.*
@@ -28,6 +28,8 @@ trait OrganizationLogosS3Client {
   def getNormalizedUrl(
       organizationLogoNormalizedBucketKey: OrganizationLogoNormalizedBucketKey
   ): IO[ServiceError, OrganizationLogoNormalizedUrl]
+
+  def readiness: IO[ServiceError.ServiceUnavailableError.S3UnavailableError, Unit]
 }
 
 object OrganizationLogosS3Client {
@@ -192,6 +194,18 @@ object OrganizationLogosS3Client {
             ServiceError.InternalServerError.UnexpectedError(s"Failed to construct OrganizationLogoUrl: [$e]")
           )
       } yield organizationLogoNormalizedUrl
+
+    override def readiness: IO[ServiceError.ServiceUnavailableError.S3UnavailableError, Unit] =
+      ZIO
+        .attempt(
+          HeadBucketRequest
+            .builder()
+            .bucket(organizationLogosS3ClientConfig.bucket)
+            .build()
+        )
+        .flatMap(headBucketRequest => ZIO.fromCompletableFuture(s3AsyncClient.headBucket(headBucketRequest)))
+        .mapError(ServiceError.ServiceUnavailableError.S3UnavailableError(organizationLogosS3ClientConfig.bucket, _))
+        .unit
   }
 
   private val s3AsyncClientLayer: ZLayer[OrganizationLogosS3ClientConfig, Throwable, S3AsyncClient] =
@@ -279,6 +293,9 @@ object OrganizationLogosS3Client {
           organizationLogoNormalizedBucketKey: OrganizationLogoNormalizedBucketKey
       ): IO[ServiceError, OrganizationLogoNormalizedUrl] =
         organizationLogosS3Client.getNormalizedUrl(organizationLogoNormalizedBucketKey)
+
+      override def readiness: IO[ServiceError.ServiceUnavailableError.S3UnavailableError, Unit] =
+        organizationLogosS3Client.readiness
     }
 
   val live =
