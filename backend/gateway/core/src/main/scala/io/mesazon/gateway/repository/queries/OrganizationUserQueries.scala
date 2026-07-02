@@ -1,5 +1,6 @@
 package io.mesazon.gateway.repository.queries
 
+import cats.syntax.all.*
 import doobie.*
 import doobie.implicits.*
 import doobie.postgres.implicits.*
@@ -15,31 +16,35 @@ final class OrganizationUserQueries(
 
   private val frSchema                = Fragment.const(config.schema)
   private val frOrganizationUserTable = Fragment.const(config.organizationUserTable)
+  private val frTable                 = frSchema ++ fr0"." ++ frOrganizationUserTable
 
-  val organizationUserFields =
+  val frOrganizationUserFields =
     fr"""
         |organization_id,
         |user_id,
         |user_role,
         |created_at,
         |updated_at
-          """.stripMargin
+         """.stripMargin
 
   def insert(organizationUserRow: OrganizationUserRow): TranzactIO[Unit] =
     tzio {
-      sql"""
-           |INSERT INTO $frSchema.$frOrganizationUserTable ($organizationUserFields)
-           |VALUES ($organizationUserRow)
-           |""".stripMargin.update.run.map(_ => ())
+      val q =
+        fr"INSERT INTO" ++ frTable ++
+          fr"(" ++ frOrganizationUserFields ++ fr")" ++
+          fr"VALUES (" ++ fr"$organizationUserRow" ++ fr")"
+
+      q.update.run.void
     }
 
   // Testing
   def getAllOrganizationUsersTesting: TranzactIO[List[OrganizationUserRow]] =
     tzio {
-      sql"""
-           |SELECT $organizationUserFields
-           |FROM $frSchema.$frOrganizationUserTable
-           |""".stripMargin.query[OrganizationUserRow].to[List]
+      val q =
+        fr"SELECT" ++ frOrganizationUserFields ++
+          fr"FROM" ++ frTable
+
+      q.query[OrganizationUserRow].to[List]
     }
 }
 

@@ -1,8 +1,10 @@
 package io.mesazon.gateway.repository.queries
 
+import cats.data.NonEmptyList
+import doobie.*
 import doobie.implicits.*
 import doobie.postgres.implicits.*
-import doobie.util.fragment.Fragment
+import doobie.util.fragments.*
 import io.github.gaelrenoux.tranzactio.doobie.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.waha
@@ -14,13 +16,17 @@ final class WahaQueries(
     config: RepositoryConfig
 ) {
 
-  private val frSchema                = Fragment.const(config.schema)
-  private val frWahaUsersTable        = Fragment.const(config.wahaUserTable)
-  private val frWahaUserActivityTable = Fragment.const(config.wahaUserActivityTable)
-  private val frWahaUserMessagesTable = Fragment.const(config.wahaUserMessageTable)
+  private val frSchema                    = Fragment.const(config.schema)
+  private val frWahaUsersTableName        = Fragment.const(config.wahaUserTable)
+  private val frWahaUserActivityTableName = Fragment.const(config.wahaUserActivityTable)
+  private val frWahaUserMessagesTableName = Fragment.const(config.wahaUserMessageTable)
+  private val frWahaUsersTable            = frSchema ++ fr0"." ++ frWahaUsersTableName
+  private val frWahaUserActivityTable     = frSchema ++ fr0"." ++ frWahaUserActivityTableName
+  private val frWahaUserMessagesTable     = frSchema ++ fr0"." ++ frWahaUserMessagesTableName
 
-  private val wahaUserFields =
-    fr"""user_id,
+  private val frWahaUserFields =
+    fr"""
+        |user_id,
         |full_name,
         |waha_user_id,
         |waha_user_account_id,
@@ -28,145 +34,167 @@ final class WahaQueries(
         |phone_number,
         |created_at,
         |updated_at
-      """.stripMargin
+         """.stripMargin
 
-  private val wahaUserActivityFields =
-    fr"""user_id,
+  private val frWahaUserActivityFields =
+    fr"""
+        |user_id,
         |last_message_id,
         |is_waiting_assistant_reply,
         |last_update
-      """.stripMargin
+         """.stripMargin
 
-  private val wahaUserMessagesFields =
-    fr"""user_id,
+  private val frWahaUserMessagesFields =
+    fr"""
+        |user_id,
         |message_id,
         |message,
         |is_assistant,
         |created_at
-      """.stripMargin
+         """.stripMargin
 
   def createOrGetWahaUserRow(row: WahaUserRow): TranzactIO[WahaUserRow] =
     tzio {
-      sql"""
-        |INSERT INTO $frSchema.$frWahaUsersTable (
-        | $wahaUserFields
-        |)
-        |VALUES ($row)
-        |ON CONFLICT (waha_user_id)
-        |DO UPDATE SET full_name = $frWahaUsersTable.full_name
-        |RETURNING $wahaUserFields
-      """.stripMargin.query[WahaUserRow].unique
+      val q =
+        fr"INSERT INTO" ++ frWahaUsersTable ++
+          fr"(" ++ frWahaUserFields ++ fr")" ++
+          fr"VALUES (" ++ fr"$row" ++ fr")" ++
+          fr"ON CONFLICT (waha_user_id) DO UPDATE" ++
+          set(
+            NonEmptyList.of(
+              fr"full_name =" ++ frWahaUsersTableName ++ fr0".full_name"
+            )
+          ) ++
+          fr"RETURNING" ++ frWahaUserFields
+
+      q.query[WahaUserRow].unique
     }
 
   def getWahaUserRow(userID: UserID): TranzactIO[Option[WahaUserRow]] =
     tzio {
-      sql"""
-           |SELECT $wahaUserFields
-           |FROM $frSchema.$frWahaUsersTable
-           |WHERE user_id = $userID
-      """.stripMargin.query[WahaUserRow].option
+      val q =
+        fr"SELECT" ++ frWahaUserFields ++
+          fr"FROM" ++ frWahaUsersTable ++
+          whereAnd(fr"user_id = $userID")
+
+      q.query[WahaUserRow].option
     }
 
   def getWahaUserWithWahaUserId(wahaUserID: waha.UserID): TranzactIO[Option[WahaUserRow]] =
     tzio {
-      sql"""
-           |SELECT $wahaUserFields
-           |FROM $frSchema.$frWahaUsersTable
-           |WHERE waha_user_id = $wahaUserID
-      """.stripMargin.query[WahaUserRow].option
+      val q =
+        fr"SELECT" ++ frWahaUserFields ++
+          fr"FROM" ++ frWahaUsersTable ++
+          whereAnd(fr"waha_user_id = $wahaUserID")
+
+      q.query[WahaUserRow].option
     }
 
   def getAllWahaUsers: TranzactIO[Vector[WahaUserRow]] =
     tzio {
-      sql"""
-        |SELECT $wahaUserFields
-        |FROM $frSchema.$frWahaUsersTable
-      """.stripMargin.query[WahaUserRow].to[Vector]
+      val q =
+        fr"SELECT" ++ frWahaUserFields ++
+          fr"FROM" ++ frWahaUsersTable
+
+      q.query[WahaUserRow].to[Vector]
     }
 
   def upsertWahaUserActivityForceRow(row: WahaUserActivityRow): TranzactIO[Int] =
     tzio {
-      sql"""
-           |INSERT INTO $frSchema.$frWahaUserActivityTable (
-           | $wahaUserActivityFields
-           |)
-           |VALUES ($row)
-           |ON CONFLICT (user_id) DO UPDATE SET
-           |is_waiting_assistant_reply = EXCLUDED.is_waiting_assistant_reply,
-           |last_update = EXCLUDED.last_update,
-           |last_message_id = COALESCE(EXCLUDED.last_message_id, $frWahaUserActivityTable.last_message_id)
-      """.stripMargin.update.run
+      val q =
+        fr"INSERT INTO" ++ frWahaUserActivityTable ++
+          fr"(" ++ frWahaUserActivityFields ++ fr")" ++
+          fr"VALUES (" ++ fr"$row" ++ fr")" ++
+          fr"ON CONFLICT (user_id) DO UPDATE" ++
+          set(
+            NonEmptyList.of(
+              fr"is_waiting_assistant_reply = EXCLUDED.is_waiting_assistant_reply",
+              fr"last_update = EXCLUDED.last_update",
+              fr"last_message_id = COALESCE(EXCLUDED.last_message_id," ++ frWahaUserActivityTableName ++ fr0".last_message_id)",
+            )
+          )
+
+      q.update.run
     }
 
   def upsertWahaUserActivityNonForceRow(row: WahaUserActivityRow): TranzactIO[Int] =
     tzio {
-      sql"""
-        |INSERT INTO $frSchema.$frWahaUserActivityTable (
-        | $wahaUserActivityFields
-        |)
-        |VALUES ($row)
-        |ON CONFLICT (user_id) DO UPDATE SET
-        |is_waiting_assistant_reply = EXCLUDED.is_waiting_assistant_reply,
-        |last_update = EXCLUDED.last_update,
-        |last_message_id = COALESCE(EXCLUDED.last_message_id, $frWahaUserActivityTable.last_message_id)
-        |WHERE $frWahaUserActivityTable.last_message_id = EXCLUDED.last_message_id
-      """.stripMargin.update.run
+      val q =
+        fr"INSERT INTO" ++ frWahaUserActivityTable ++
+          fr"(" ++ frWahaUserActivityFields ++ fr")" ++
+          fr"VALUES (" ++ fr"$row" ++ fr")" ++
+          fr"ON CONFLICT (user_id) DO UPDATE" ++
+          set(
+            NonEmptyList.of(
+              fr"is_waiting_assistant_reply = EXCLUDED.is_waiting_assistant_reply",
+              fr"last_update = EXCLUDED.last_update",
+              fr"last_message_id = COALESCE(EXCLUDED.last_message_id," ++ frWahaUserActivityTableName ++ fr0".last_message_id)",
+            )
+          ) ++
+          fr"WHERE" ++ frWahaUserActivityTableName ++ fr0".last_message_id = EXCLUDED.last_message_id"
+
+      q.update.run
     }
 
   def getWahaUserActivityRow(userID: UserID): TranzactIO[Option[WahaUserActivityRow]] =
     tzio {
-      sql"""
-        |SELECT $wahaUserActivityFields
-        |FROM $frSchema.$frWahaUserActivityTable
-        |WHERE user_id = $userID
-      """.stripMargin.query[WahaUserActivityRow].option
+      val q =
+        fr"SELECT" ++ frWahaUserActivityFields ++
+          fr"FROM" ++ frWahaUserActivityTable ++
+          whereAnd(fr"user_id = $userID")
+
+      q.query[WahaUserActivityRow].option
     }
 
   def getAllWahaUserActivities: TranzactIO[Vector[WahaUserActivityRow]] =
     tzio {
-      sql"""
-        |SELECT $wahaUserActivityFields
-        |FROM $frSchema.$frWahaUserActivityTable
-      """.stripMargin.query[WahaUserActivityRow].to[Vector]
+      val q =
+        fr"SELECT" ++ frWahaUserActivityFields ++
+          fr"FROM" ++ frWahaUserActivityTable
+
+      q.query[WahaUserActivityRow].to[Vector]
     }
 
   def getWahaUserActivitiesRowWaitingForAssistantReply: TranzactIOStream[WahaUserActivityRow] =
     tzioStream {
-      sql"""
-           |SELECT $wahaUserActivityFields
-           |FROM $frSchema.$frWahaUserActivityTable
-           |WHERE is_waiting_assistant_reply = true
-           |ORDER BY last_update ASC
-      """.stripMargin.query[WahaUserActivityRow].stream
+      val q =
+        fr"SELECT" ++ frWahaUserActivityFields ++
+          fr"FROM" ++ frWahaUserActivityTable ++
+          whereAnd(fr"is_waiting_assistant_reply = true") ++
+          orderBy(fr"last_update ASC")
+
+      q.query[WahaUserActivityRow].stream
     }
 
   def insertWahaUserMessageRow(row: WahaUserMessageRow): TranzactIO[Int] =
     tzio {
-      sql"""
-         |INSERT INTO $frSchema.$frWahaUserMessagesTable (
-         | $wahaUserMessagesFields
-         |)
-         |VALUES ($row)
-         |ON CONFLICT DO NOTHING
-      """.stripMargin.update.run
+      val q =
+        fr"INSERT INTO" ++ frWahaUserMessagesTable ++
+          fr"(" ++ frWahaUserMessagesFields ++ fr")" ++
+          fr"VALUES (" ++ fr"$row" ++ fr")" ++
+          fr"ON CONFLICT DO NOTHING"
+
+      q.update.run
     }
 
   def getWahaUserMessages(userID: UserID): TranzactIOStream[WahaUserMessageRow] =
     tzioStream {
-      sql"""
-         |SELECT $wahaUserMessagesFields
-         |FROM $frSchema.$frWahaUserMessagesTable
-         |WHERE user_id = $userID
-         |ORDER BY created_at DESC
-      """.stripMargin.query[WahaUserMessageRow].stream
+      val q =
+        fr"SELECT" ++ frWahaUserMessagesFields ++
+          fr"FROM" ++ frWahaUserMessagesTable ++
+          whereAnd(fr"user_id = $userID") ++
+          orderBy(fr"created_at DESC")
+
+      q.query[WahaUserMessageRow].stream
     }
 
   def getAllWahaUserMessages: TranzactIO[Vector[WahaUserMessageRow]] =
     tzio {
-      sql"""
-        |SELECT $wahaUserMessagesFields
-        |FROM $frSchema.$frWahaUserMessagesTable
-      """.stripMargin.query[WahaUserMessageRow].to[Vector]
+      val q =
+        fr"SELECT" ++ frWahaUserMessagesFields ++
+          fr"FROM" ++ frWahaUserMessagesTable
+
+      q.query[WahaUserMessageRow].to[Vector]
     }
 }
 

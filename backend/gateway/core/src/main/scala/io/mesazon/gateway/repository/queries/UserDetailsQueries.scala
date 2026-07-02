@@ -1,8 +1,11 @@
 package io.mesazon.gateway.repository.queries
 
+import cats.data.NonEmptyList
+import cats.syntax.all.*
 import doobie.*
 import doobie.implicits.*
 import doobie.postgres.implicits.*
+import doobie.util.fragments.*
 import io.github.gaelrenoux.tranzactio.doobie.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.RepositoryConfig
@@ -13,8 +16,9 @@ final class UserDetailsQueries(config: RepositoryConfig) {
 
   private val frSchema           = Fragment.const(config.schema)
   private val frUserDetailsTable = Fragment.const(config.userDetailsTable)
+  private val frTable            = frSchema ++ fr0"." ++ frUserDetailsTable
 
-  val userDetailsFields =
+  val frUserDetailsFields =
     fr"""
         |user_id,
         |email,
@@ -26,15 +30,17 @@ final class UserDetailsQueries(config: RepositoryConfig) {
         |onboard_stage,
         |created_at,
         |updated_at
-        """.stripMargin
+         """.stripMargin
 
   def insertUserDetails(userDetailsRow: UserDetailsRow): TranzactIO[Unit] =
     tzio {
-      sql"""
-           |INSERT INTO $frSchema.$frUserDetailsTable ($userDetailsFields)
-           |VALUES ($userDetailsRow)
-           |""".stripMargin.update.run
-    }.unit
+      val q =
+        fr"INSERT INTO" ++ frTable ++
+          fr"(" ++ frUserDetailsFields ++ fr")" ++
+          fr"VALUES (" ++ fr"$userDetailsRow" ++ fr")"
+
+      q.update.run.void
+    }
 
   def updateUserDetails(
       userID: UserID,
@@ -42,48 +48,57 @@ final class UserDetailsQueries(config: RepositoryConfig) {
       updatedAtUpdate: UpdatedAt,
       fullNameOptUpdate: Option[FullName] = None,
       phoneNumberOptUpdate: Option[PhoneNumber] = None,
-  ): TranzactIO[UserDetailsRow] =
+  ): TranzactIO[UserDetailsRow] = {
+    val updates = NonEmptyList.of(
+      fr"onboard_stage = $onboardStageUpdate",
+      fr"updated_at = $updatedAtUpdate",
+    ) ++ List(
+      fullNameOptUpdate.map(v => fr"full_name = $v"),
+      phoneNumberOptUpdate.map(v => fr"phone_region = ${v.phoneRegion}"),
+      phoneNumberOptUpdate.map(v => fr"phone_country_code = ${v.phoneCountryCode}"),
+      phoneNumberOptUpdate.map(v => fr"phone_national_number = ${v.phoneNationalNumber}"),
+      phoneNumberOptUpdate.map(v => fr"phone_number_e164 = ${v.phoneNumberE164}"),
+    ).flatten
+
     tzio {
-      sql"""
-           |UPDATE $frSchema.$frUserDetailsTable
-           |SET full_name = COALESCE($fullNameOptUpdate, full_name),
-           |    phone_region = COALESCE(${phoneNumberOptUpdate.map(_.phoneRegion)}, phone_region),
-           |    phone_country_code = COALESCE(${phoneNumberOptUpdate.map(_.phoneCountryCode)}, phone_country_code),
-           |    phone_national_number = COALESCE(${phoneNumberOptUpdate.map(
-            _.phoneNationalNumber
-          )}, phone_national_number),
-           |    phone_number_e164 = COALESCE(${phoneNumberOptUpdate.map(_.phoneNumberE164)}, phone_number_e164),
-           |    onboard_stage = $onboardStageUpdate,
-           |    updated_at = $updatedAtUpdate
-           |WHERE user_id = $userID
-           |RETURNING $userDetailsFields
-           |""".stripMargin.query[UserDetailsRow].unique
+      val q =
+        fr"UPDATE" ++ frTable ++
+          set(updates) ++
+          whereAnd(fr"user_id = $userID") ++
+          fr"RETURNING" ++ frUserDetailsFields
+
+      q.query[UserDetailsRow].unique
     }
+  }
 
   def getUserDetails(userID: UserID): TranzactIO[Option[UserDetailsRow]] =
     tzio {
-      sql"""
-           |SELECT $userDetailsFields
-           |FROM $frSchema.$frUserDetailsTable
-           |WHERE user_id = $userID
-           |""".stripMargin.query[UserDetailsRow].option
+      val q =
+        fr"SELECT" ++ frUserDetailsFields ++
+          fr"FROM" ++ frTable ++
+          whereAnd(fr"user_id = $userID")
+
+      q.query[UserDetailsRow].option
     }
 
   def getUserDetailsByEmail(email: Email): TranzactIO[Option[UserDetailsRow]] =
     tzio {
-      sql"""
-           |SELECT $userDetailsFields
-           |FROM $frSchema.$frUserDetailsTable
-           |WHERE email = $email
-           |""".stripMargin.query[UserDetailsRow].option
+      val q =
+        fr"SELECT" ++ frUserDetailsFields ++
+          fr"FROM" ++ frTable ++
+          whereAnd(fr"email = $email")
+
+      q.query[UserDetailsRow].option
     }
 
+  // Testing
   def getAllUserDetailsTesting: TranzactIO[List[UserDetailsRow]] =
     tzio {
-      sql"""
-           |SELECT $userDetailsFields
-           |FROM $frSchema.$frUserDetailsTable
-           |""".stripMargin.query[UserDetailsRow].to[List]
+      val q =
+        fr"SELECT" ++ frUserDetailsFields ++
+          fr"FROM" ++ frTable
+
+      q.query[UserDetailsRow].to[List]
     }
 }
 

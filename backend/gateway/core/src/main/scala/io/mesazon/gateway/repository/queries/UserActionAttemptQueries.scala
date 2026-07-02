@@ -1,8 +1,11 @@
 package io.mesazon.gateway.repository.queries
 
+import cats.data.NonEmptyList
+import cats.syntax.all.*
 import doobie.*
 import doobie.implicits.*
 import doobie.postgres.implicits.*
+import doobie.util.fragments.*
 import io.github.gaelrenoux.tranzactio.doobie.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.RepositoryConfig
@@ -15,8 +18,9 @@ final class UserActionAttemptQueries(
 
   private val frSchema                 = Fragment.const(config.schema)
   private val frUserActionAttemptTable = Fragment.const(config.userActionAttemptTable)
+  private val frTable                  = frSchema ++ fr0"." ++ frUserActionAttemptTable
 
-  val userActionAttemptFields =
+  val frUserActionAttemptFields =
     fr"""
         |action_attempt_id,
         |user_id,
@@ -24,51 +28,67 @@ final class UserActionAttemptQueries(
         |attempts,
         |created_at,
         |updated_at
-     """.stripMargin
+         """.stripMargin
 
   def getAndIncrease(userActionAttemptRow: UserActionAttemptRow): TranzactIO[UserActionAttemptRow] =
     tzio {
+      val select =
+        fr"SELECT" ++ frUserActionAttemptFields ++
+          fr"FROM" ++ frTable ++
+          whereAnd(
+            fr"user_id = ${userActionAttemptRow.userID}",
+            fr"action_attempt_type = ${userActionAttemptRow.actionAttemptType}",
+          )
+
+      val upsert =
+        fr"INSERT INTO" ++ frTable ++ fr"AS t (" ++ frUserActionAttemptFields ++ fr")" ++
+          fr"VALUES (" ++ fr"$userActionAttemptRow" ++ fr")" ++
+          fr"ON CONFLICT (user_id, action_attempt_type) DO UPDATE" ++
+          set(
+            NonEmptyList.of(
+              fr"attempts = t.attempts + 1",
+              fr"updated_at = EXCLUDED.updated_at",
+            )
+          ) ++
+          fr"RETURNING" ++ frUserActionAttemptFields
+
       for {
-        userActionAttemptRowOldOpt <- sql"""
-          SELECT $userActionAttemptFields
-          FROM $frSchema.$frUserActionAttemptTable
-          WHERE user_id = ${userActionAttemptRow.userID} AND action_attempt_type = ${userActionAttemptRow.actionAttemptType}
-        """.query[UserActionAttemptRow].option
-        userActionAttemptRowUpsert <- sql"""
-        INSERT INTO $frSchema.$frUserActionAttemptTable AS t ($userActionAttemptFields)
-        VALUES ($userActionAttemptRow)
-        ON CONFLICT (user_id, action_attempt_type) DO UPDATE
-        SET attempts = t.attempts + 1,
-            updated_at = EXCLUDED.updated_at
-        RETURNING $userActionAttemptFields
-      """.stripMargin.query[UserActionAttemptRow].unique
+        userActionAttemptRowOldOpt <- select.query[UserActionAttemptRow].option
+        userActionAttemptRowUpsert <- upsert.query[UserActionAttemptRow].unique
       } yield userActionAttemptRowOldOpt.getOrElse(userActionAttemptRowUpsert)
     }
 
   def delete(userID: UserID, actionAttemptType: ActionAttemptType): TranzactIO[Unit] =
     tzio {
-      sql"""
-           |DELETE FROM $frSchema.$frUserActionAttemptTable
-           |WHERE user_id = $userID AND action_attempt_type = $actionAttemptType
-           |""".stripMargin.update.run
-    }.unit
+      val q =
+        fr"DELETE FROM" ++ frTable ++
+          whereAnd(
+            fr"user_id = $userID",
+            fr"action_attempt_type = $actionAttemptType",
+          )
+
+      q.update.run.void
+    }
 
   // Testing
   def getAllUserActionAttemptsTesting: TranzactIO[List[UserActionAttemptRow]] =
     tzio {
-      sql"""
-           |SELECT $userActionAttemptFields
-           |FROM $frSchema.$frUserActionAttemptTable
-           |""".stripMargin.query[UserActionAttemptRow].to[List]
+      val q =
+        fr"SELECT" ++ frUserActionAttemptFields ++
+          fr"FROM" ++ frTable
+
+      q.query[UserActionAttemptRow].to[List]
     }
 
   def insertUserActionAttemptTesting(userActionAttemptRow: UserActionAttemptRow): TranzactIO[Unit] =
     tzio {
-      sql"""
-           |INSERT INTO $frSchema.$frUserActionAttemptTable ($userActionAttemptFields)
-           |VALUES ($userActionAttemptRow)
-           |""".stripMargin.update.run
-    }.unit
+      val q =
+        fr"INSERT INTO" ++ frTable ++
+          fr"(" ++ frUserActionAttemptFields ++ fr")" ++
+          fr"VALUES (" ++ fr"$userActionAttemptRow" ++ fr")"
+
+      q.update.run.void
+    }
 }
 
 object UserActionAttemptQueries {

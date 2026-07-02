@@ -312,7 +312,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
         val slugUpdate                    = arbitrarySample[Option[OrganizationSlug]]
         val emailUpdate                   = arbitrarySample[Option[OrganizationEmail]]
         val phoneNumberUpdate             = arbitrarySample[Option[OrganizationPhoneNumber]]
-        val organizationStageUpdate       = arbitrarySample[OrganizationStage]
+        val organizationStageUpdate       = arbitrarySample[Option[OrganizationStage]]
         val addressLine1Update            = arbitrarySample[Option[OrganizationAddressLine1]]
         val addressLine2Update            = arbitrarySample[Option[OrganizationAddressLine2]]
         val cityUpdate                    = arbitrarySample[Option[OrganizationCity]]
@@ -332,7 +332,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
         val organizationDetailsRowUpdated = organizationManagementRepository
           .updateOrganization(
             organizationID = organizationDetailsRow.organizationID,
-            organizationStage = organizationStageUpdate,
+            organizationStageUpdate = organizationStageUpdate,
             nameUpdate = nameUpdate,
             slugUpdate = slugUpdate,
             emailUpdate = emailUpdate,
@@ -353,7 +353,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           slug = slugUpdate.getOrElse(organizationDetailsRow.slug),
           email = emailUpdate.getOrElse(organizationDetailsRow.email),
           phoneNumber = phoneNumberUpdate.getOrElse(organizationDetailsRow.phoneNumber),
-          organizationStage = organizationStageUpdate,
+          organizationStage = organizationStageUpdate.getOrElse(organizationDetailsRow.organizationStage),
           addressLine1 = addressLine1Update.getOrElse(organizationDetailsRow.addressLine1),
           addressLine2 = addressLine2Update.orElse(organizationDetailsRow.addressLine2),
           city = cityUpdate.getOrElse(organizationDetailsRow.city),
@@ -399,7 +399,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
         val serviceError = organizationManagementRepository
           .updateOrganization(
             organizationID = organizationDetailsRow1.organizationID,
-            organizationStage = organizationDetailsRow1.organizationStage,
+            organizationStageUpdate = Some(organizationDetailsRow1.organizationStage),
             slugUpdate = slugUpdate,
           )
           .zioError
@@ -429,8 +429,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
 
         val serviceError = organizationManagementRepository
           .updateOrganization(
-            organizationID = organizationIDNonExisting,
-            organizationStage = arbitrarySample[OrganizationStage],
+            organizationID = organizationIDNonExisting
           )
           .zioError
 

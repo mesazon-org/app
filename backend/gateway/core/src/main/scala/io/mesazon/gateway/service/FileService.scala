@@ -52,7 +52,7 @@ object FileService {
       _ <- organizationManagementRepository
         .updateOrganization(
           organizationID = organizationID,
-          organizationStage = OrganizationStage.LogoProvided,
+          organizationStageUpdate = Some(OrganizationStage.LogoProvided),
           logoOriginalBucketKeyUpdate = Some(organizationUploadLogosResult.organizationLogoOriginalBucketKey),
           logoNormalizedBucketKeyUpdate = Some(organizationUploadLogosResult.organizationLogoNormalizedBucketKey),
           logoOriginalFileNameUpdate = Some(organizationLogoOriginalFileName),

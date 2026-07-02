@@ -48,7 +48,7 @@ final class OrganizationDetailsQueries(
       val q =
         fr"SELECT" ++ frOrganizationDetailsFields ++
           fr"FROM" ++ frTable ++
-          fr"WHERE organization_id = $organizationID"
+          whereAnd(fr"organization_id = $organizationID")
 
       q.query[OrganizationDetailsRow].option
     }
@@ -64,8 +64,8 @@ final class OrganizationDetailsQueries(
 
   def update(
       organizationID: OrganizationID,
-      organizationStage: OrganizationStage,
       updatedAt: UpdatedAt,
+      organizationStageUpdate: Option[OrganizationStage],
       nameUpdate: Option[OrganizationName],
       slugUpdate: Option[OrganizationSlug],
       emailUpdate: Option[OrganizationEmail],
@@ -80,9 +80,9 @@ final class OrganizationDetailsQueries(
       logoOriginalFileNameUpdate: Option[OrganizationLogoOriginalFileName] = None,
   ): TranzactIO[OrganizationDetailsRow] = {
     val updates = NonEmptyList.of(
-      fr"organization_stage = $organizationStage",
-      fr"updated_at = $updatedAt",
+      fr"updated_at = $updatedAt"
     ) ++ List(
+      organizationStageUpdate.map(v => fr"organization_stage = $v"),
       nameUpdate.map(v => fr"name = $v"),
       slugUpdate.map(v => fr"slug = $v"),
       emailUpdate.map(v => fr"email = $v"),
@@ -114,7 +114,7 @@ final class OrganizationDetailsQueries(
     tzio {
       val q =
         fr"SELECT 1 FROM" ++ frTable ++
-          fr"WHERE slug = $slug"
+          whereAnd(fr"slug = $slug")
 
       q.query[Int].option.map(_.isDefined)
     }

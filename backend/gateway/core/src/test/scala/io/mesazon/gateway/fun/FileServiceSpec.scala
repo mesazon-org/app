@@ -50,7 +50,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           organizationManagementRepositoryMock.updateOrganization
             .expects(
               organizationID,
-              OrganizationStage.LogoProvided,
+              Some(OrganizationStage.LogoProvided),
               None,
               None,
               None,
@@ -218,7 +218,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           organizationManagementRepositoryMock.updateOrganization
             .expects(
               organizationID,
-              OrganizationStage.LogoProvided,
+              Some(OrganizationStage.LogoProvided),
               None,
               None,
               None,

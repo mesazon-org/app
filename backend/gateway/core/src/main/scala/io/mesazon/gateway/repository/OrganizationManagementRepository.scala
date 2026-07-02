@@ -30,7 +30,7 @@ trait OrganizationManagementRepository {
 
   def updateOrganization(
       organizationID: OrganizationID,
-      organizationStage: OrganizationStage,
+      organizationStageUpdate: Option[OrganizationStage] = None,
       nameUpdate: Option[OrganizationName] = None,
       slugUpdate: Option[OrganizationSlug] = None,
       emailUpdate: Option[OrganizationEmail] = None,
@@ -137,7 +137,7 @@ object OrganizationManagementRepository {
 
     override def updateOrganization(
         organizationID: OrganizationID,
-        organizationStage: OrganizationStage,
+        organizationStageUpdate: Option[OrganizationStage],
         nameUpdate: Option[OrganizationName],
         slugUpdate: Option[OrganizationSlug],
         emailUpdate: Option[OrganizationEmail],
@@ -156,8 +156,8 @@ object OrganizationManagementRepository {
         .transactionOrWiden(
           organizationDetailsQueries.update(
             organizationID,
-            organizationStage,
             UpdatedAt(instantNow),
+            organizationStageUpdate,
             nameUpdate,
             slugUpdate,
             emailUpdate,
