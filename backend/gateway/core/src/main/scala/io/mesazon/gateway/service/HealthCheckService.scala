@@ -1,19 +1,26 @@
 package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.ServiceError
+import io.mesazon.gateway.clients.OrganizationLogosS3Client
 import io.mesazon.gateway.repository.PingRepository
-import io.mesazon.gateway.{smithy, HttpErrorHandler}
+import io.mesazon.gateway.{HttpErrorHandler, smithy}
 import zio.*
 
 object HealthCheckService {
 
   private final class HealthCheckServiceImpl(
-      repository: PingRepository
+      repository: PingRepository,
+      organizationLogosS3Client: OrganizationLogosS3Client,
   ) extends smithy.HealthCheckService[ServiceTask] {
+
+    val hardDependencies = repository.ping
+
+    val softDependencies =
+      organizationLogosS3Client.readiness.catchAllCause(cause => ZIO.logWarningCause("Soft dependency failed", cause))
+
     override def liveness(): IO[ServiceError, Unit] = ZIO.unit
 
-    override def readiness(): IO[ServiceError, Unit] =
-      repository.ping
+    override def readiness(): IO[ServiceError, Unit] = hardDependencies *> softDependencies
   }
 
   private def observed(

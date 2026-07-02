@@ -103,5 +103,8 @@ object ServiceError {
   object ServiceUnavailableError {
     case class DatabaseUnavailableError(throwable: Throwable)
         extends ServiceUnavailableError("database is currently unavailable", Some(throwable))
+
+    case class S3UnavailableError(bucket: String, throwable: Throwable)
+        extends ServiceUnavailableError(s"S3 bucket connection [$bucket] is not available", Some(throwable))
   }
 }

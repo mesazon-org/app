@@ -206,6 +206,20 @@ class OrganizationLogosS3ClientSpec extends ZWordSpecBase, GatewayArbitraries, D
           logoNormalizedByteStream.runCollect.zioValue
       }
     }
+
+    "readiness" should {
+      "return a successful readiness check" in new TestContext {
+        val readinessResult = ZIO
+          .serviceWithZIO[OrganizationLogosS3Client](_.readiness)
+          .provide(
+            OrganizationLogosS3Client.live,
+            ZLayer.succeed(organizationS3ClientConfig),
+          )
+          .zioEither
+
+        assert(readinessResult.isRight)
+      }
+    }
   }
 
   trait TestContext {
