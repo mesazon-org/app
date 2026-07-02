@@ -33,7 +33,8 @@ object Dependencies {
   lazy val jmailV               = "2.1.0"
   lazy val simplejavamailV      = "8.12.6"
   lazy val jjwtV                = "0.13.0"
-  lazy val springSecurityV      = "7.0.6"
+  lazy val springSecurityV      = "7.1.0"
+  lazy val springCoreV          = "7.0.8"
   lazy val bouncyCastleV        = "1.84"
   lazy val uuidCreatorV         = "6.1.1"
   lazy val scalamockV           = "7.5.5"
@@ -144,6 +145,9 @@ object Dependencies {
 
   // Spring Security Crypto
   lazy val springSecurityCrypto = "org.springframework.security" % "spring-security-crypto" % springSecurityV
+  // Required at runtime by spring-security-crypto 7.1.0's AbstractValidatingPasswordEncoder
+  // (uses org.springframework.util.StringUtils), but not declared as a transitive dependency.
+  lazy val springCore           = "org.springframework"          % "spring-core"            % springCoreV
   lazy val bouncyCastle         = "org.bouncycastle"             % "bcprov-jdk18on"         % bouncyCastleV
 
   // UUID Creator
