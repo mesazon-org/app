@@ -64,8 +64,8 @@ object ReplyingToMessagesCronJobStream {
         assistantResponse <- ZStream.fromZIO(
           openAIClient.sendMessage[AssistantResponse](
             userMessages.map(row =>
-              if (row.isAssistant) Message.AssistantMessage(content = row.message.value)
-              else Message.UserMessage(content = Content.TextContent(row.message.value))
+              if (row.isAssistant) Message.Assistant(content = row.message.value)
+              else Message.User(content = Content.TextContent(row.message.value))
             )
           )
         )
