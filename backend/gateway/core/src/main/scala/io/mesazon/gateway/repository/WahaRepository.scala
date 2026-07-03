@@ -1,6 +1,6 @@
 package io.mesazon.gateway.repository
 
-import doobie.Transactor
+import org.typelevel.doobie.Transactor
 import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
