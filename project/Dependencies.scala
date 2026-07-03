@@ -40,7 +40,7 @@ object Dependencies {
   lazy val scalamockV           = "7.5.5"
   lazy val scrimageV            = "4.6.5"
   lazy val tikaV                = "3.3.1"
-  lazy val awssdkV              = "2.46.19"
+  lazy val awssdkV              = "2.46.21"
   lazy val zioS3V               = "0.4.4"
 
   // Http4s
@@ -147,8 +147,8 @@ object Dependencies {
   lazy val springSecurityCrypto = "org.springframework.security" % "spring-security-crypto" % springSecurityV
   // Required at runtime by spring-security-crypto 7.1.0's AbstractValidatingPasswordEncoder
   // (uses org.springframework.util.StringUtils), but not declared as a transitive dependency.
-  lazy val springCore           = "org.springframework"          % "spring-core"            % springCoreV
-  lazy val bouncyCastle         = "org.bouncycastle"             % "bcprov-jdk18on"         % bouncyCastleV
+  lazy val springCore   = "org.springframework" % "spring-core"    % springCoreV
+  lazy val bouncyCastle = "org.bouncycastle"    % "bcprov-jdk18on" % bouncyCastleV
 
   // UUID Creator
   lazy val uuidCreator = "com.github.f4b6a3" % "uuid-creator" % uuidCreatorV
