@@ -27,6 +27,17 @@ __Recommended Name Convention__
 - ✅ `UserSignUpService`, `UserOtpRepository`, `UserOtpRow`, `UserOtpQueries`, `UserID`, `MaxDimensionPixels`
 - ❌ `userSignUpService`, `userOtpRepository`, `userOtpRow`, `userOtpQueries`, `userID`, `maxDimensionPixels`
 
+#### Iron new type
+
+##### 1. Naming Convention for Iron New Types
+
+- Should use `PascalCase` and be named after the entity they represent, suffixed with `ID`
+- Should be used to represent unique identifiers for entities in the system
+- Should be used to avoid confusion with other types and to provide type safety
+- Should always use {{ Ownner }} {{ Entity }}
+- ✅ `UserID`, `PhoneRegion`, `OrganizationLogoOriginalFileName`, `PhoneNumberE164`, `UpdatedAt`
+- ❌ `userID`, `organizationId`, `contactId`, `id`
+
 #### Repository naming rules
 
 ##### 1. Repository classes
@@ -79,6 +90,16 @@ __Recommended Name Convention__
 - Should not use the entity name in the method name, as the query class is already named after the entity they manage
 - Should use plural form for methods that return multiple entities
 - Should use suffix `byUserID` when multiple methods to get the same entity exist, but with different parameters
-- ✅ `getUserOtpsByUserID`, `insertUserOtp`, `updateUserOtp`, `deleteUserOtp`, `getAllUserOtps`,
-  `isOrganizationSlugExists`, `createOrganization`
+- ✅ `getByUserID`, `insert`, `update`, `delete`, `getAll`,
+  `isOrganizationSlugExists`
+- ❌ `getUserOtpByUserID`, `insertUserOtp`, `updateUserOtp`, `deleteUserOtp`, `getAllUserOtps`, `isOrganizationSlugExists`,
+
+##### 8. Repository query class methods testing
+- Should be named as operations with `get`, `insert`, `create`, `upsert`, `is` , `update`, `delete`, `getAndIncrease` etc.
+- Should not use the entity name in the method name, as the query class is already named after the entity they manage
+- Should use plural form for methods that return multiple entities
+- Should add pre-suffix if returning all entities with `All`
+- SHould add suffix `Testing` to indicate that the method is used for testing purposes
+- Should use suffix `byUserID` when multiple methods to get the same entity exist, but with different parameters
+- ✅ `getAllTesting`, `deleteTesting`, `insertTesting`, `updateTesting`, `getByUserIDTesting`
 - ❌ `getUserOtpByUserID`, `insertUserOtp`, `updateUserOtp`, `deleteUserOtp`, `getAllUserOtps`, `isOrganizationSlugExists`,
