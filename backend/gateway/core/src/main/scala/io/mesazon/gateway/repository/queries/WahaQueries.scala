@@ -1,15 +1,15 @@
 package io.mesazon.gateway.repository.queries
 
 import cats.data.NonEmptyList
-import doobie.*
-import doobie.implicits.*
-import doobie.postgres.implicits.*
-import doobie.util.fragments.*
 import io.github.gaelrenoux.tranzactio.doobie.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.waha
 import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.domain.{WahaUserActivityRow, WahaUserMessageRow, WahaUserRow}
+import org.typelevel.doobie.*
+import org.typelevel.doobie.implicits.*
+import org.typelevel.doobie.postgres.implicits.*
+import org.typelevel.doobie.util.fragments.*
 import zio.*
 
 final class WahaQueries(

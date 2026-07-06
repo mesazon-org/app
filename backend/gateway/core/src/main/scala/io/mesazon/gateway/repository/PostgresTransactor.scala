@@ -1,17 +1,17 @@
 package io.mesazon.gateway.repository
 
 import com.zaxxer.hikari.HikariDataSource
-import doobie.LogHandler
 import io.github.gaelrenoux.tranzactio.doobie.{Database, DbContext}
 import io.mesazon.gateway.config.DatabaseConfig
+import org.typelevel.doobie.LogHandler
 import zio.*
 
 object PostgresTransactor {
 
   private val logHandler: LogHandler[Task] = {
-    case success: doobie.util.log.Success =>
+    case success: org.typelevel.doobie.util.log.Success =>
       ZIO.logDebug(s"Database log handler: $success").unit
-    case execFailure: doobie.util.log.ExecFailure =>
+    case execFailure: org.typelevel.doobie.util.log.ExecFailure =>
       ZIO.fiberId.flatMap(fid =>
         ZIO
           .logErrorCause(
@@ -19,7 +19,7 @@ object PostgresTransactor {
             Cause.die(execFailure.failure, StackTrace.fromJava(fid, execFailure.failure.getStackTrace)),
           )
       )
-    case processingFailure: doobie.util.log.ProcessingFailure =>
+    case processingFailure: org.typelevel.doobie.util.log.ProcessingFailure =>
       ZIO.fiberId.flatMap(fid =>
         ZIO
           .logErrorCause(

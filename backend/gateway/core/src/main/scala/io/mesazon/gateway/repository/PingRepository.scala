@@ -1,10 +1,10 @@
 package io.mesazon.gateway.repository
 
-import doobie.Transactor
-import doobie.implicits.*
 import io.github.gaelrenoux.tranzactio.DatabaseOps
 import io.github.gaelrenoux.tranzactio.doobie.tzio
 import io.mesazon.domain.gateway.ServiceError
+import org.typelevel.doobie.Transactor
+import org.typelevel.doobie.implicits.*
 import zio.*
 
 trait PingRepository {
