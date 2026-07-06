@@ -149,7 +149,9 @@ object UserSignUpService {
                 s"Wrong OTP provided for otpID: [${userOtpRow.otpID}]"
               )
             )
-          else
+          else if (
+            userOtpRow.otp == signUpVerifyEmail.otp || verifyOTPinDev(signUpVerifyEmail.otp, userSignUpConfig.isDev)
+          )
             userDetailsRepository
               .updateUserDetails(
                 userDetailsRow.userID,
@@ -158,6 +160,12 @@ object UserSignUpService {
               userOtpRow.otpID,
               userDetailsRow.userID,
               userOtpRow.otpType,
+            )
+          else
+            ZIO.fail(
+              ServiceError.InternalServerError.UnexpectedError(
+                s"Unexpected error while verifying OTP for otpID: [${userOtpRow.otpID}]"
+              )
             )
         _          <- userTokenRepository.deleteAllUserTokens(userDetailsRow.userID)
         accessJwt  <- jwtService.generateAccessToken(userDetailsRow.userID)

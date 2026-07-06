@@ -166,7 +166,12 @@ object UserForgotPasswordService {
                 s"Expired OTP provided for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
               )
             )
-          else if (userOtpRow.otp != forgotPasswordVerifyOTP.otp)
+          else if (
+            userOtpRow.otp != forgotPasswordVerifyOTP.otp || verifyOTPinDev(
+              userOtpRow.otp,
+              isDev = userForgotPasswordConfig.isDev,
+            )
+          )
             ZIO.fail(
               ServiceError.BadRequestError.OtpVerifyError(
                 s"Wrong OTP provided for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"

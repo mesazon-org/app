@@ -3,6 +3,7 @@ package io.mesazon.gateway.config
 import zio.*
 
 case class UserSignUpConfig(
+    isDev: Boolean,
     otpEmailVerificationExpiresAtOffset: Duration,
     otpEmailVerificationResendCooldown: Duration,
     sendEmailVerificationEmailMaxRetries: Int,

@@ -3,6 +3,7 @@ package io.mesazon.gateway.config
 import zio.*
 
 case class UserForgotPasswordConfig(
+    isDev: Boolean,
     otpExpiresAtOffset: Duration,
     otpResendCooldown: Duration,
     otpResetAttemptsMaxRetries: Int,

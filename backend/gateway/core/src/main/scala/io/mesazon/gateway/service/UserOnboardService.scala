@@ -9,7 +9,7 @@ import io.mesazon.gateway.smithy.OnboardVerifyPhoneNumberGetResponse
 import io.mesazon.gateway.state.*
 import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.service.*
-import io.mesazon.gateway.{smithy, HttpErrorHandler}
+import io.mesazon.gateway.{HttpErrorHandler, smithy}
 import zio.*
 
 object UserOnboardService {
@@ -108,12 +108,14 @@ object UserOnboardService {
                   Some(onboardDetails.fullName),
                   Some(onboardDetails.phoneNumber),
                 )
-              _ <- twilioClient
-                .sendOtpSms(onboardDetails.phoneNumber.phoneNumberE164, userOtpRow.otp)
-                .retry(
-                  Schedule.recurs(userOnboardConfig.sendPhoneVerificationOtpMaxRetries) && Schedule
-                    .exponential(userOnboardConfig.sendPhoneVerificationOtpRetryDelay)
-                )
+              _ <- ZIO.unlessDiscard(userOnboardConfig.isDev)(
+                twilioClient
+                  .sendOtpSms(onboardDetails.phoneNumber.phoneNumberE164, userOtpRow.otp)
+                  .retry(
+                    Schedule.recurs(userOnboardConfig.sendPhoneVerificationOtpMaxRetries) && Schedule
+                      .exponential(userOnboardConfig.sendPhoneVerificationOtpRetryDelay)
+                  )
+              )
             } yield (userOtpRow, userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds)
         }
       } yield smithy.OnboardDetailsPostResponse(
@@ -162,11 +164,23 @@ object UserOnboardService {
               ServiceError.BadRequestError
                 .OtpVerifyError(s"Wrong OTP provided for otpID: [${onboardVerifyPhoneNumber.otpID}]")
             )
-          else
+          else if (
+            userOtpRow.otp == onboardVerifyPhoneNumber.otp || verifyOTPinDev(
+              onboardVerifyPhoneNumber.otp,
+              userOnboardConfig.isDev,
+            )
+          )
             userDetailsRepository.updateUserDetails(
               authedUser.userID,
               OnboardStage.PhoneVerified,
             ) *> userOtpRepository.deleteUserOtp(userOtpRow.otpID, userOtpRow.userID, OtpType.PhoneVerification)
+          else
+            ZIO.fail(
+              ServiceError.InternalServerError
+                .UnexpectedError(
+                  s"Unexpected error during OTP verification for otpID: [${onboardVerifyPhoneNumber.otpID}]"
+                )
+            )
       } yield smithy.OnboardVerifyPhoneNumberPostResponse(
         onboardStage = onboardStageFromDomainToSmithy(OnboardStage.PhoneVerified)
       )
