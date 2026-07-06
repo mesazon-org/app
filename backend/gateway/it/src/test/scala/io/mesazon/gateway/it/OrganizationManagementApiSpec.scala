@@ -19,7 +19,7 @@ import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.model.*
 import zio.*
 
-class OrganizationManagementServiceSpec
+class OrganizationManagementApiSpec
     extends ZWordSpecBase,
       DockerComposeBase,
       SmithyArbitraries,

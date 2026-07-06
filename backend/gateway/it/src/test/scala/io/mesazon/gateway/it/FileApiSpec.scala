@@ -20,7 +20,7 @@ import sttp.model.*
 import zio.*
 import zio.stream.ZStream
 
-class FileServiceSpec
+class FileApiSpec
     extends ZWordSpecBase,
       DockerComposeBase,
       SmithyArbitraries,
