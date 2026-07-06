@@ -1,7 +1,7 @@
 package io.mesazon.gateway.repository.queries
 
-import _root_.doobie.{Get, Meta, Put, Read, Write}
 import io.github.iltotore.iron.RefinedType
+import org.typelevel.doobie.{Get, Meta, Put, Read, Write}
 
 import scala.deriving.Mirror
 import scala.reflect.Enum

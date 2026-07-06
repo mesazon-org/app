@@ -1,11 +1,11 @@
 package io.mesazon.test.postgresql
 
 import com.dimafeng.testcontainers.*
-import doobie.*
-import doobie.implicits.*
 import io.github.gaelrenoux.tranzactio.doobie.{tzio, Database, DbContext, TranzactIO}
 import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
 import org.postgresql.ds.PGSimpleDataSource
+import org.typelevel.doobie.*
+import org.typelevel.doobie.implicits.*
 import zio.*
 
 import PostgreSQLTestClient.PostgreSQLTestClientConfig
@@ -117,9 +117,9 @@ object PostgreSQLTestClient {
   }
 
   private val logHandler: LogHandler[Task] = {
-    case success: doobie.util.log.Success =>
+    case success: org.typelevel.doobie.util.log.Success =>
       ZIO.logDebug(s"Database log handler: $success").unit
-    case execFailure: doobie.util.log.ExecFailure =>
+    case execFailure: org.typelevel.doobie.util.log.ExecFailure =>
       ZIO.fiberId.flatMap(fid =>
         ZIO
           .logErrorCause(
@@ -127,7 +127,7 @@ object PostgreSQLTestClient {
             Cause.die(execFailure.failure, StackTrace.fromJava(fid, execFailure.failure.getStackTrace)),
           )
       )
-    case processingFailure: doobie.util.log.ProcessingFailure =>
+    case processingFailure: org.typelevel.doobie.util.log.ProcessingFailure =>
       ZIO.fiberId.flatMap(fid =>
         ZIO
           .logErrorCause(

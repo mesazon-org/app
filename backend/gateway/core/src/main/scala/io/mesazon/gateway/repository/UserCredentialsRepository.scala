@@ -1,11 +1,11 @@
 package io.mesazon.gateway.repository
 
-import doobie.Transactor
 import io.github.gaelrenoux.tranzactio.DatabaseOps
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.repository.queries.UserCredentialsQueries
+import org.typelevel.doobie.Transactor
 import zio.*
 
 trait UserCredentialsRepository {

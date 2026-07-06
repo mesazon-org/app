@@ -20,7 +20,7 @@ object Dependencies {
   lazy val testcontainersV      = "2.0.5"
   lazy val ironV                = "3.3.1"
   lazy val chimneyV             = "1.10.0"
-  lazy val doobieV              = "1.0.0-RC12"
+  lazy val doobieV              = "1.0.0-RC13"
   lazy val postgresqlV          = "42.7.3"
   lazy val hikariCPV            = "7.1.0"
   lazy val doobieTranzactioV    = "6.0.0"
@@ -98,9 +98,9 @@ object Dependencies {
   lazy val chimney = "io.scalaland" %% "chimney" % chimneyV
 
   // Doobie + Postgresql
-  lazy val doobieCore       = "org.tpolecat"         %% "doobie-core"       % doobieV
-  lazy val doobieHikari     = "org.tpolecat"         %% "doobie-hikari"     % doobieV
-  lazy val doobiePostgres   = "org.tpolecat"         %% "doobie-postgres"   % doobieV
+  lazy val doobieCore       = "org.typelevel"        %% "doobie-core"       % doobieV
+  lazy val doobieHikari     = "org.typelevel"        %% "doobie-hikari"     % doobieV
+  lazy val doobiePostgres   = "org.typelevel"        %% "doobie-postgres"   % doobieV
   lazy val doobieTranzactio = "io.github.gaelrenoux" %% "tranzactio-doobie" % doobieTranzactioV
   lazy val hikariCP         = "com.zaxxer"            % "HikariCP"          % hikariCPV
 

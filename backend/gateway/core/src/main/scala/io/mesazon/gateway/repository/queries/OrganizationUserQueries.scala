@@ -1,13 +1,13 @@
 package io.mesazon.gateway.repository.queries
 
 import cats.syntax.all.*
-import doobie.*
-import doobie.implicits.*
-import doobie.postgres.implicits.*
 import io.github.gaelrenoux.tranzactio.doobie.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.domain.*
+import org.typelevel.doobie.*
+import org.typelevel.doobie.implicits.*
+import org.typelevel.doobie.postgres.implicits.*
 import zio.*
 
 final class OrganizationUserQueries(
