@@ -9,6 +9,11 @@ needs.
 Each entry links to the coding standards for that technology — **follow them when writing code**.
 
 - [scala](docs-claude/scala.md) — programming language
+- [smithy](docs-claude/smithy.md) — API contract definitions (naming conventions, coding standards, custom traits)
+
+## Architecture
+
+- [HTTP middleware](docs-claude/middleware.md) — how authentication and authorization wrap every endpoint (basic/bearer auth, `@completedOnboardStage`, organization role permissions via the `X-Organization-ID` header)
 
 ## Features completed
 
