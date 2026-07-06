@@ -37,6 +37,6 @@ The repository also exposes `isOrganizationSlugExists` for slug-uniqueness check
 
 ## Tests
 
-- Acceptance (see [acceptance-tests.md](../acceptance-tests.md)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/OrganizationManagementServiceSpec.scala` — creation happy path (org + owner rows in DB), duplicate slug failure, plus missing/invalid token, disallowed stage, and validation cases
+- Acceptance (see [acceptance-tests.md](../acceptance-tests.md)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/OrganizationManagementApiSpec.scala` — creation happy path (org + owner rows in DB), duplicate slug failure, plus missing/invalid token, disallowed stage, and validation cases
 - Functional: `fun/OrganizationManagementServiceSpec.scala`
 - Integration: `it/OrganizationManagementRepositorySpec.scala`

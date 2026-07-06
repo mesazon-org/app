@@ -19,7 +19,7 @@ Defined in `backend/gateway/core/src/main/smithy/UserSignupService.smithy`.
 1. Validate email (`SignUpEmailPostRequestServiceValidator`).
 2. Look up user by email, then look up an existing `EmailVerification` OTP:
    - **New user** — insert `UserDetailsRow` at stage `EmailVerification`, generate OTP, upsert it with expiry `now + otpEmailVerificationExpiresAtOffset`, send verification email.
-   - **Existing user still in a sign-up stage** (`OnboardStage.signUpEmailStages` = `EmailVerification`, `EmailVerified`) — resend path: if the current OTP is missing/expired/inside the resend-cooldown window a new OTP is generated and emailed; otherwise the existing OTP is reused and **no email is sent** (resend throttling).
+   - **Existing user still in a sign-up stage** (`OnboardStage.signUpEmailStages` = `EmailVerification`, `EmailVerified`) — resend path: the user's stage is reset to `EmailVerification` (an `EmailVerified` user re-signing up must verify again), then if the current OTP is missing/expired/inside the resend-cooldown window a new OTP is generated and emailed; otherwise the existing OTP is reused and **no email is sent** (resend throttling).
    - **Existing user past sign-up stages** — anti-enumeration: returns a *fake* freshly generated `otpID` with the normal response shape, sends nothing, writes nothing. Callers cannot detect whether an email is registered.
 3. Response: `otpID` + `otpExpiresInSeconds`.
 

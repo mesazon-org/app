@@ -4,7 +4,7 @@ Black-box tests of the **real running gateway**: the app and all its dependencie
 
 ## Harness
 
-- Specs extend `ZWordSpecBase, DockerComposeBase, SmithyArbitraries, RepositoryArbitraries, IronRefinedTypeTransformer` and use the default `compose.yaml`.
+- Specs are named `<Feature>ApiSpec` (e.g. `UserSignInApiSpec`, `FileApiSpec`), extend `ZWordSpecBase, DockerComposeBase, SmithyArbitraries, RepositoryArbitraries, IronRefinedTypeTransformer`, and use the default `compose.yaml`.
 - HTTP calls go through `client/GatewayClient.scala` (sttp + jsoniter codecs for the smithy request/response types). The expected *error* type is passed as a type parameter: `gatewayClient.signInPost[smithy.Unauthorized](...)`.
 - **Arrange and assert directly against Postgres**: each spec builds a per-test `Context` (`withContext`) with `PostgreSQLTestClient` plus the production `*Queries` classes — rows are seeded with `arbitrarySample[XxxRow].copy(...)` and inserted via the real insert queries; side effects are read back with the `getAll*Testing` queries.
 - Emails are asserted through `MailHogClient`; S3 objects through the `s3-test` module.
