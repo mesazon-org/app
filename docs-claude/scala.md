@@ -11,7 +11,7 @@ __Recommended Name Convention__
 - Ownner examples: User, Organization, Contact, Order etc
 - Entity examples: Details, Otp, Name, Email
 - Optional examples: Empty or Opt
-- Behavior examples: Update
+- Behavior examples: Update, Expected, New, Deleted, Existing
 
 ##### General Scala naming rules
 

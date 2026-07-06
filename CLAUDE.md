@@ -12,9 +12,12 @@ Each entry links to the coding standards for that technology — **follow them w
 
 ## Features completed
 
+**Documentation rule (for Claude): every new feature ships with its doc.** When you implement a feature, you must also write `docs-claude/features/<feature-name>.md` and link it in the list below — you are generating context for your own future sessions, so capture what the code alone won't tell you. Follow the structure of the existing docs: scope paragraph (what the feature owns, what it deliberately excludes, links to the owning features at each boundary), endpoints table with auth + required onboard stages, flow, security/abuse defenses and other non-obvious design decisions, key files, config, and tests (acceptance in `backend/gateway/it` — see [acceptance-tests.md](docs-claude/acceptance-tests.md) — plus functional/unit/integration). Update the affected docs when you change an existing feature's behavior.
+
 - [User Onboarding](docs-claude/features/user-onboarding.md)
 - [User Sign in](docs-claude/features/user-signin.md)
 - [User Sign up](docs-claude/features/user-signup.md)
 - [User Forgot Password](docs-claude/features/user-forgot-password.md)
-- [User Token Managment](docs-claude/features/user-token-management.md)
+- [User Token Management](docs-claude/features/user-token-management.md)
 - [Organization Management](docs-claude/features/organization-management.md)
+- [Files Management](docs-claude/features/files-management.md)
