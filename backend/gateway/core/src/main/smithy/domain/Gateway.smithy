@@ -30,10 +30,10 @@ list OrganizationUserRoles {
     member: OrganizationUserRole
 }
 
-/// Restricts every endpoint of the service to users that are assigned to the
-/// organization identified by the required `X-Organization-ID` header with one
-/// of the given roles.
-@trait(selector: "service")
+/// Restricts the operation to users that are assigned to the organization
+/// identified by the required `X-Organization-ID` header with one of the
+/// given roles.
+@trait(selector: "operation")
 structure organizationRolesAllowed {
     @required
     roles: OrganizationUserRoles

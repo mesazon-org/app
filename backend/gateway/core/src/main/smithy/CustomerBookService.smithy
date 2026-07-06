@@ -8,23 +8,24 @@ use alloy#simpleRestJson
 /// # Global Requirements
 /// **Required Onboard Stage:** **COMPLETED**
 ///
-/// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
-///
 /// The customer book lets organization users manage the customers of
-/// their organization in batches: insert new customers, update existing
-/// ones and delete them. All endpoints require a fully onboarded user
-/// that is assigned to the organization given in the `X-Organization-ID`
-/// header as `OWNER` or `ADMIN`.
+/// their organization: fetch a single customer or the whole book, and
+/// insert, update or delete customers in batches. All endpoints require
+/// a fully onboarded user that is assigned to the organization given in
+/// the `X-Organization-ID` header. Viewing the book is allowed to every
+/// organization member; inserting, updating and deleting customers
+/// require the `OWNER` or `ADMIN` role.
 @simpleRestJson
 @completedOnboardStage
-@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])
 @httpBearerAuth
 service CustomerBookService {
     version: "1.0.0",
     operations: [GetCustomerGet, GetCustomersGet, InsertCustomersPost, UpdateCustomersPut, DeleteCustomersPost]
 }
 
+/// **Allowed Organization Roles:** [`OWNER`, `ADMIN`, `USER`]
 @http(method: "GET", uri: "/get/customer/{customerID}", code: 200)
+@organizationRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
 operation GetCustomerGet {
     input := {
         @required
@@ -38,7 +39,9 @@ operation GetCustomerGet {
     errors: [Unauthorized, InternalServerError]
 }
 
+/// **Allowed Organization Roles:** [`OWNER`, `ADMIN`, `USER`]
 @http(method: "GET", uri: "/get/customers", code: 200)
+@organizationRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
 operation GetCustomersGet {
     input := {
         @required
@@ -49,7 +52,9 @@ operation GetCustomersGet {
     errors: [Unauthorized, InternalServerError]
 }
 
-@http(method: "POST", uri: "/insert/customers", code: 200)
+/// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
+@http(method: "POST", uri: "/insert/customers", code: 204)
+@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])
 operation InsertCustomersPost {
     input := {
         @required
@@ -62,7 +67,9 @@ operation InsertCustomersPost {
     errors: [Unauthorized, ValidationError, InternalServerError]
 }
 
-@http(method: "PUT", uri: "/update/customers", code: 200)
+/// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
+@http(method: "PUT", uri: "/update/customers", code: 204)
+@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])
 operation UpdateCustomersPut {
     input := {
         @required
@@ -75,7 +82,9 @@ operation UpdateCustomersPut {
     errors: [Unauthorized, ValidationError, InternalServerError]
 }
 
+/// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
 @http(method: "POST", uri: "/delete/customers", code: 204)
+@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])
 operation DeleteCustomersPost {
     input := {
         @required

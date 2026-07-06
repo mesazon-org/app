@@ -64,7 +64,7 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
 
 - Should always be annotated `@simpleRestJson` (`use alloy#simpleRestJson`)
 - Auth annotation: `@httpBearerAuth` (access-token endpoints), `@httpBasicAuth` (credential endpoints), or none (public endpoints) — never both
-- Add `@completedOnboardStage` when **every** endpoint requires completed onboarding, and `@organizationRolesAllowed(roles: [...])` when the service is organization-scoped (see [Custom traits](#custom-traits))
+- Add `@completedOnboardStage` when **every** endpoint requires completed onboarding
 - Should document global requirements with `///` doc comments above the service (they render in swagger)
 
 ### 3. Operations
@@ -72,7 +72,8 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
 - Body input is always a single wrapper member: `input := { @required @httpPayload request: <Operation>Request }`
 - Identifiers travel in the request body; use `@httpLabel` path parameters for GET/bodyless operations (e.g. `/get/customer/{customerID}`) — except `organizationID`, which is always a header (see below)
 - `code: 200` with an `output`; `code: 204` and no `output` for operations with nothing to return
-- Should document each operation's allowed stages with `/// **Required Onboard Stage:** [...]` (omit when the service is `@completedOnboardStage`)
+- Organization-scoped operations each carry `@organizationRolesAllowed(roles: [...])` declaring which roles may call them — reads are typically open to every member, writes to `OWNER`/`ADMIN` only (see [Custom traits](#custom-traits))
+- Should document each operation's allowed stages with `/// **Required Onboard Stage:** [...]` (omit when the service is `@completedOnboardStage`) and its allowed roles with `/// **Allowed Organization Roles:** [...]`
 - `errors` lists only shapes from `domain/HttpErrors.smithy`: `[Unauthorized, ValidationError, InternalServerError]` as a base, plus `BadRequest` where the flow can reject a well-formed request (e.g. wrong OTP)
 
 ### 4. Organization scoping — the `X-Organization-ID` header
@@ -102,8 +103,8 @@ All custom traits live in `domain/Gateway.smithy` and are enforced by [the HTTP 
 
 ### `@organizationRolesAllowed(roles: [...])`
 
-- Service-level trait carrying the list of `OrganizationUserRole`s (`OWNER`, `ADMIN`, `USER` — mirrors the Scala domain enum `UserRole`) allowed to call the endpoints
+- **Operation-level** trait carrying the list of `OrganizationUserRole`s (`OWNER`, `ADMIN`, `USER` — mirrors the Scala domain enum `UserRole`) allowed to call that operation, so permissions can differ per endpoint within one service
 - The caller must be **assigned to the organization** identified by the `X-Organization-ID` header **with one of the declared roles**; anyone else gets `Unauthorized`
 - Enum values must be quoted in the trait node value: `@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])`
-- Always used together with the `X-Organization-ID` header input members (section above) — the trait declares *who* may call, the header declares *which organization* the request is scoped to
-- Used by: `CustomerBookService` (`OWNER`, `ADMIN`)
+- Always used together with the `X-Organization-ID` header input member (section above) — the trait declares *who* may call, the header declares *which organization* the request is scoped to
+- Used by: `CustomerBookService` — reads (`GetCustomerGet`, `GetCustomersGet`) allow `OWNER`/`ADMIN`/`USER`, writes (insert/update/delete) allow `OWNER`/`ADMIN` only

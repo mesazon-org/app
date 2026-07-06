@@ -47,11 +47,11 @@ Runs for `@httpBearerAuth` services and for Tapir endpoints:
 
 ## Organization permissions — `@organizationRolesAllowed` + `X-Organization-ID` *(designed, enforcement pending)*
 
-The newest rule, introduced with the customer book. The smithy service declares which organization roles may call it, e.g. `@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])`, and every operation carries the organization scope in the **required `X-Organization-ID` header** (never in the body or URI — a fixed header is readable by the middleware without parsing bodies, and it works identically for GETs, JSON posts and streaming uploads).
+The newest rule, introduced with the customer book. Each smithy **operation** declares which organization roles may call it, e.g. `@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])` — operation-level so permissions can differ per endpoint within one service (customer book: reads allow `OWNER`/`ADMIN`/`USER`, writes only `OWNER`/`ADMIN`). Every org-scoped operation carries the organization in the **required `X-Organization-ID` header** (never in the body or URI — a fixed header is readable by the middleware without parsing bodies, and it works identically for GETs, JSON posts and streaming uploads).
 
 Planned enforcement, mirroring the `completedOnboardStage` mechanism:
 
-1. `ServerMiddleware` reads the `OrganizationRolesAllowed` hint from the service hints.
+1. `ServerMiddleware` reads the `OrganizationRolesAllowed` hint from the **endpoint hints** (`prepareWithHints` already receives them per endpoint).
 2. When present, it reads the `X-Organization-ID` header from the raw request (missing/malformed → `Unauthorized`).
 3. `AuthorizationService` (new check, after token verification) loads the caller's membership — `OrganizationUserRow` by (`organizationID`, `userID`) — and requires `userRole` to be one of the declared roles; not a member or wrong role → `Unauthorized`.
 4. Tapir endpoints pass the allowed roles explicitly to `authorizationService.auth(...)`.
