@@ -55,7 +55,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardPasswordPostRequest = arbitrarySample[smithy.OnboardPasswordPostRequest]
           .copy(password = password.value)
@@ -104,7 +104,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardPasswordPostRequest = arbitrarySample[smithy.OnboardPasswordPostRequest]
           .copy(password = password.value)
@@ -134,7 +134,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardPasswordPostRequest = arbitrarySample[smithy.OnboardPasswordPostRequest]
 
@@ -156,7 +156,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           (() => authStateMock.get).expects().returningZIO(authedUser).once()
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardPasswordPostRequest = arbitrarySample[smithy.OnboardPasswordPostRequest]
           .copy(password = "short")
@@ -188,7 +188,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardPasswordPostRequest = arbitrarySample[smithy.OnboardPasswordPostRequest]
 
@@ -265,7 +265,74 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
+
+        val onboardDetailsPostResponse =
+          userOnboardService.onboardDetailsPost(onboardDetailsPostRequest).zioValue
+
+        onboardDetailsPostResponse shouldBe smithy.OnboardDetailsPostResponse(
+          smithy.OnboardStage.PHONE_VERIFICATION,
+          userOtpRow.otpID.value,
+          userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds,
+        )
+      }
+
+      "successfully onboard details without sending the OTP SMS when isDev is true" in new TestContext {
+        val authedUser   = arbitrarySample[AuthedUser]
+        val onboardStage = Random.shuffle(OnboardStage.onboardDetailsStages).zioValue.head
+
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
+          .copy(
+            userID = authedUser.userID,
+            otpType = OtpType.PhoneVerification,
+            expiresAt =
+              ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds)),
+          )
+
+        val fullName    = arbitrarySample[FullName]
+        val phoneNumber = arbitrarySample[PhoneNumber]
+
+        val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
+          .copy(
+            fullName = fullName.value,
+            phoneNumber = smithy.PhoneNumberRequest(
+              phoneNumber.phoneNationalNumber.value,
+              phoneNumber.phoneCountryCode.value,
+            ),
+          )
+
+        // No twilioClientMock expectation: in dev mode the OTP SMS must not be sent
+        inSequence(
+          (() => authStateMock.get).expects().returningZIO(authedUser).once(),
+          userDetailsRepositoryMock.getUserDetails
+            .expects(authedUser.userID)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          userOtpRepositoryMock.getUserOtpByUserID
+            .expects(authedUser.userID, OtpType.PhoneVerification)
+            .returningZIO(None)
+            .once(),
+          (() => otpGeneratorMock.generateOtp).expects().returningZIO(userOtpRow.otp).once(),
+          userOtpRepositoryMock.upsertUserOtp
+            .expects(authedUser.userID, OtpType.PhoneVerification, userOtpRow.otp, userOtpRow.expiresAt)
+            .returningZIO(userOtpRow)
+            .once(),
+          userDetailsRepositoryMock.updateUserDetails
+            .expects(
+              authedUser.userID,
+              OnboardStage.PhoneVerification,
+              Some(fullName),
+              Some(phoneNumber),
+            )
+            .returningZIO(userDetailsRow)
+            .once(),
+        )
+
+        val userOnboardService = buildUserOnboardServiceLive(isDev = true)
 
         val onboardDetailsPostResponse =
           userOnboardService.onboardDetailsPost(onboardDetailsPostRequest).zioValue
@@ -307,7 +374,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
 
@@ -380,7 +447,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
           .copy(
@@ -412,7 +479,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
 
@@ -434,7 +501,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           (() => authStateMock.get).expects().returningZIO(authedUser).once()
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
           .copy(fullName = "")
@@ -468,7 +535,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
 
@@ -540,7 +607,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
           .copy(
@@ -600,11 +667,63 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardVerifyPhoneNumberPostRequest = smithy.OnboardVerifyPhoneNumberPostRequest(
           userOtpRow.otpID.value,
           userOtpRow.otp.value,
+        )
+
+        val onboardVerifyPhoneNumberResponse =
+          userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequest).zioValue
+
+        onboardVerifyPhoneNumberResponse shouldBe smithy.OnboardVerifyPhoneNumberPostResponse(
+          smithy.OnboardStage.PHONE_VERIFIED
+        )
+      }
+
+      "successfully onboard verify phone number with dev OTP not matching the stored OTP when isDev is true" in new TestContext {
+        val authedUser     = arbitrarySample[AuthedUser]
+        val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
+
+        val expiresAtBuffer = Random.nextIntBetween(1, 1000).zioValue
+        val userOtpRow      = arbitrarySample[UserOtpRow]
+          .copy(
+            userID = authedUser.userID,
+            otpType = OtpType.PhoneVerification,
+            expiresAt = ExpiresAt(
+              instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds + expiresAtBuffer)
+            ),
+          )
+
+        inSequence(
+          (() => authStateMock.get).expects().returningZIO(authedUser).once(),
+          userDetailsRepositoryMock.getUserDetails
+            .expects(authedUser.userID)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userOtpRepositoryMock.getUserOtp
+            .expects(userOtpRow.otpID, authedUser.userID, OtpType.PhoneVerification)
+            .returningZIO(Some(userOtpRow))
+            .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          userDetailsRepositoryMock.updateUserDetails
+            .expects(authedUser.userID, OnboardStage.PhoneVerified, None, None)
+            .returningZIO(userDetailsRow)
+            .once(),
+          userOtpRepositoryMock.deleteUserOtp
+            .expects(userOtpRow.otpID, authedUser.userID, OtpType.PhoneVerification)
+            .returningZIOUnit
+            .once(),
+        )
+
+        val userOnboardService = buildUserOnboardServiceLive(isDev = true)
+
+        val onboardVerifyPhoneNumberPostRequest = smithy.OnboardVerifyPhoneNumberPostRequest(
+          userOtpRow.otpID.value,
+          DevOtp,
         )
 
         val onboardVerifyPhoneNumberResponse =
@@ -622,7 +741,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           (() => authStateMock.get).expects().returningZIO(authedUser).once()
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardVerifyPhoneNumberPostRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest]
           .copy(otp = "invalid")
@@ -655,7 +774,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardVerifyPhoneNumberPostRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest]
 
@@ -702,7 +821,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardVerifyPhoneNumberPostRequest = smithy.OnboardVerifyPhoneNumberPostRequest(
           userOtpRow.otpID.value,
@@ -740,7 +859,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardVerifyPhoneNumberPostRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest]
           .copy(otpID = otpID.value)
@@ -785,7 +904,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardVerifyPhoneNumberPostRequest = smithy.OnboardVerifyPhoneNumberPostRequest(
           userOtpRow.otpID.value,
@@ -814,7 +933,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardVerifyPhoneNumberPostRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest]
 
@@ -859,7 +978,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val onboardVerifyPhoneNumberGetResponse =
           userOnboardService.onboardVerifyPhoneNumberGet().zioValue
@@ -888,7 +1007,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberGet().zioError
@@ -932,7 +1051,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberGet().zioError
@@ -960,7 +1079,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             .once(),
         )
 
-        val userOnboardService = buildUserOnboardServiceLive
+        val userOnboardService = buildUserOnboardServiceLive()
 
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberGet().zioError
@@ -980,7 +1099,8 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
     val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
 
-    val userOnboardConfig = UserOnboardConfig(
+    lazy val userOnboardConfig = UserOnboardConfig(
+      isDev = false,
       otpPhoneVerificationExpiresAtOffset = 10.seconds,
       otpPhoneVerificationResendCooldown = 2.seconds,
       sendWelcomeEmailMaxRetries = 3,
@@ -999,7 +1119,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
     val userCredentialsRepositoryMock = mock[UserCredentialsRepository]
     val emailClientMock               = mock[EmailClient]
 
-    def buildUserOnboardServiceLive: smithy.UserOnboardService[ServiceTask] =
+    def buildUserOnboardServiceLive(isDev: Boolean = false): smithy.UserOnboardService[ServiceTask] =
       ZIO
         .service[smithy.UserOnboardService[ServiceTask]]
         .provide(
@@ -1014,7 +1134,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           OnboardPasswordPostRequestServiceValidator.live,
           OnboardDetailsPostRequestServiceValidator.live,
           OnboardVerifyPhoneNumberPostRequestServiceValidator.live,
-          ZLayer.succeed(userOnboardConfig),
+          ZLayer.succeed(userOnboardConfig.copy(isDev = isDev)),
           ZLayer.succeed(otpGeneratorMock),
           ZLayer.succeed(timeProviderMock),
           ZLayer.succeed(twilioClientMock),

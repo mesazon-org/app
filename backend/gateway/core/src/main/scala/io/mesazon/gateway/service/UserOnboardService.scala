@@ -9,7 +9,7 @@ import io.mesazon.gateway.smithy.OnboardVerifyPhoneNumberGetResponse
 import io.mesazon.gateway.state.*
 import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.service.*
-import io.mesazon.gateway.{HttpErrorHandler, smithy}
+import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import zio.*
 
 object UserOnboardService {
@@ -159,13 +159,8 @@ object UserOnboardService {
               ServiceError.UnauthorizedError
                 .OtpExpiredError(s"Expired OTP provided for otpID: [${onboardVerifyPhoneNumber.otpID}]")
             )
-          else if (userOtpRow.otp != onboardVerifyPhoneNumber.otp)
-            ZIO.fail(
-              ServiceError.BadRequestError
-                .OtpVerifyError(s"Wrong OTP provided for otpID: [${onboardVerifyPhoneNumber.otpID}]")
-            )
           else if (
-            userOtpRow.otp == onboardVerifyPhoneNumber.otp || verifyOTPinDev(
+            userOtpRow.otp == onboardVerifyPhoneNumber.otp || verifyOtpInDev(
               onboardVerifyPhoneNumber.otp,
               userOnboardConfig.isDev,
             )
@@ -176,10 +171,8 @@ object UserOnboardService {
             ) *> userOtpRepository.deleteUserOtp(userOtpRow.otpID, userOtpRow.userID, OtpType.PhoneVerification)
           else
             ZIO.fail(
-              ServiceError.InternalServerError
-                .UnexpectedError(
-                  s"Unexpected error during OTP verification for otpID: [${onboardVerifyPhoneNumber.otpID}]"
-                )
+              ServiceError.BadRequestError
+                .OtpVerifyError(s"Wrong OTP provided for otpID: [${onboardVerifyPhoneNumber.otpID}]")
             )
       } yield smithy.OnboardVerifyPhoneNumberPostResponse(
         onboardStage = onboardStageFromDomainToSmithy(OnboardStage.PhoneVerified)

@@ -32,6 +32,8 @@ Stores `fullName` + `phoneNumber` on user details, moves stage to `PhoneVerifica
 ### POST /onboard/verify/phone-number
 Loads the OTP by (`otpID`, `userID`, type `PhoneVerification`). Expired → OTP deleted + `UnauthorizedError.OtpExpiredError`. Wrong OTP → `BadRequestError.OtpVerifyError`. Correct → stage `PhoneVerified` and the OTP is deleted. `PhoneVerified` is the only member of `OnboardStage.completedStages` — it unlocks endpoints marked `@completedOnboardStage` (e.g. organization management).
 
+**Dev mode**: when `user-onboard.is-dev` is true (`IS_DEV` env var), `/onboard/details` skips the Twilio SMS entirely, and `/onboard/verify/phone-number` also accepts the fixed OTP `123QWE` (`DevOtp` / `verifyOtpInDev` in `service/service.scala`). Must stay off in production.
+
 ### GET /onboard/verify/phone-number
 Returns the pending OTP's `otpID` and remaining seconds so the client can restore the verify screen. If the OTP is inside the resend-cooldown window of its expiry it is deleted and the call fails with `OtpExpiredError` (client should re-trigger `/onboard/details`).
 

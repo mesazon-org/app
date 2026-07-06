@@ -35,4 +35,6 @@ def verifyOnboardStage(
       )
     )
 
-def verifyOTPinDev( otp: Otp, isDev: Boolean): Boolean = isDev && otp.value == "123QWE"
+val DevOtp = "123QWE"
+
+def verifyOtpInDev(otp: Otp, isDev: Boolean): Boolean = isDev && otp.value == DevOtp
