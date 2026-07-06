@@ -19,3 +19,22 @@ structure PhoneNumberRequest {
 
 @trait(selector: "service")
 structure completedOnboardStage {}
+
+enum OrganizationUserRole {
+    OWNER
+    ADMIN
+    USER
+}
+
+list OrganizationUserRoles {
+    member: OrganizationUserRole
+}
+
+/// Restricts every endpoint of the service to users that are assigned to the
+/// organization identified by the required `X-Organization-ID` header with one
+/// of the given roles.
+@trait(selector: "service")
+structure organizationRolesAllowed {
+    @required
+    roles: OrganizationUserRoles
+}
