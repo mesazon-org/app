@@ -143,13 +143,9 @@ object UserSignUpService {
                 s"Expired OTP provided for otpID: [${userOtpRow.otpID}]"
               )
             )
-          else if (userOtpRow.otp != signUpVerifyEmail.otp)
-            ZIO.fail(
-              ServiceError.BadRequestError.OtpVerifyError(
-                s"Wrong OTP provided for otpID: [${userOtpRow.otpID}]"
-              )
-            )
-          else
+          else if (
+            userOtpRow.otp == signUpVerifyEmail.otp || verifyOtpInDev(signUpVerifyEmail.otp, userSignUpConfig.isDev)
+          )
             userDetailsRepository
               .updateUserDetails(
                 userDetailsRow.userID,
@@ -158,6 +154,12 @@ object UserSignUpService {
               userOtpRow.otpID,
               userDetailsRow.userID,
               userOtpRow.otpType,
+            )
+          else
+            ZIO.fail(
+              ServiceError.BadRequestError.OtpVerifyError(
+                s"Wrong OTP provided for otpID: [${userOtpRow.otpID}]"
+              )
             )
         _          <- userTokenRepository.deleteAllUserTokens(userDetailsRow.userID)
         accessJwt  <- jwtService.generateAccessToken(userDetailsRow.userID)

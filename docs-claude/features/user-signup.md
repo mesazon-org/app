@@ -27,6 +27,7 @@ Defined in `backend/gateway/core/src/main/smithy/UserSignupService.smithy`.
 1. Validate, load OTP by `otpID` (type `EmailVerification`), load user details.
 2. Stage must be in `OnboardStage.signUpVerifyEmailStages` (= `EmailVerification`), else `UnauthorizedError.FailedOnboardStage`.
 3. OTP expired → delete OTP row and fail `UnauthorizedError.OtpExpiredError`. Wrong OTP → `BadRequestError.OtpVerifyError`. Correct → stage set to `EmailVerified`, OTP deleted.
+   - **Dev mode**: when `user-sign-up.is-dev` is true (`IS_DEV` env var), the fixed OTP `123QWE` (`DevOtp` / `verifyOtpInDev` in `service/service.scala`) is also accepted. Must stay off in production.
 4. All existing user tokens are deleted, then a fresh access JWT + refresh JWT are issued and the refresh token is persisted (`user_token` table). Response returns both tokens, expiry, and the new `onboardStage`.
 
 Email sends are retried with `Schedule.recurs(maxRetries) && Schedule.exponential(delay)`; on this flow a final failure fails the request.

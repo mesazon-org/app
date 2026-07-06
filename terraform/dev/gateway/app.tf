@@ -44,6 +44,8 @@ module "gateway_core_app" {
   app_size     = "apps-s-1vcpu-1gb-fixed"
 
   env_vars = {
+    IS_DEV = "true"
+
     SERVER_ENABLE_DOCS = "true"
 
     ORGANIZATION_LOGOS_S3_CLIENT_USE_MOCK                 = "false"

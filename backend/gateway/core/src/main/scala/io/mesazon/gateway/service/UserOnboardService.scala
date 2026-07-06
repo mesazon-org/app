@@ -108,12 +108,14 @@ object UserOnboardService {
                   Some(onboardDetails.fullName),
                   Some(onboardDetails.phoneNumber),
                 )
-              _ <- twilioClient
-                .sendOtpSms(onboardDetails.phoneNumber.phoneNumberE164, userOtpRow.otp)
-                .retry(
-                  Schedule.recurs(userOnboardConfig.sendPhoneVerificationOtpMaxRetries) && Schedule
-                    .exponential(userOnboardConfig.sendPhoneVerificationOtpRetryDelay)
-                )
+              _ <- ZIO.unlessDiscard(userOnboardConfig.isDev)(
+                twilioClient
+                  .sendOtpSms(onboardDetails.phoneNumber.phoneNumberE164, userOtpRow.otp)
+                  .retry(
+                    Schedule.recurs(userOnboardConfig.sendPhoneVerificationOtpMaxRetries) && Schedule
+                      .exponential(userOnboardConfig.sendPhoneVerificationOtpRetryDelay)
+                  )
+              )
             } yield (userOtpRow, userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds)
         }
       } yield smithy.OnboardDetailsPostResponse(
@@ -157,16 +159,21 @@ object UserOnboardService {
               ServiceError.UnauthorizedError
                 .OtpExpiredError(s"Expired OTP provided for otpID: [${onboardVerifyPhoneNumber.otpID}]")
             )
-          else if (userOtpRow.otp != onboardVerifyPhoneNumber.otp)
-            ZIO.fail(
-              ServiceError.BadRequestError
-                .OtpVerifyError(s"Wrong OTP provided for otpID: [${onboardVerifyPhoneNumber.otpID}]")
+          else if (
+            userOtpRow.otp == onboardVerifyPhoneNumber.otp || verifyOtpInDev(
+              onboardVerifyPhoneNumber.otp,
+              userOnboardConfig.isDev,
             )
-          else
+          )
             userDetailsRepository.updateUserDetails(
               authedUser.userID,
               OnboardStage.PhoneVerified,
             ) *> userOtpRepository.deleteUserOtp(userOtpRow.otpID, userOtpRow.userID, OtpType.PhoneVerification)
+          else
+            ZIO.fail(
+              ServiceError.BadRequestError
+                .OtpVerifyError(s"Wrong OTP provided for otpID: [${onboardVerifyPhoneNumber.otpID}]")
+            )
       } yield smithy.OnboardVerifyPhoneNumberPostResponse(
         onboardStage = onboardStageFromDomainToSmithy(OnboardStage.PhoneVerified)
       )

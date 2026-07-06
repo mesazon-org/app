@@ -166,13 +166,12 @@ object UserForgotPasswordService {
                 s"Expired OTP provided for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
               )
             )
-          else if (userOtpRow.otp != forgotPasswordVerifyOTP.otp)
-            ZIO.fail(
-              ServiceError.BadRequestError.OtpVerifyError(
-                s"Wrong OTP provided for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
-              )
+          else if (
+            userOtpRow.otp == forgotPasswordVerifyOTP.otp || verifyOtpInDev(
+              forgotPasswordVerifyOTP.otp,
+              isDev = userForgotPasswordConfig.isDev,
             )
-          else
+          )
             userOtpRepository.deleteUserOtp(
               otpID = forgotPasswordVerifyOTP.otpID,
               userID = userOtpRow.userID,
@@ -183,6 +182,12 @@ object UserForgotPasswordService {
             ) *> userActionAttemptRepository.deleteUserActionAttempt(
               userID = userOtpRow.userID,
               actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
+            )
+          else
+            ZIO.fail(
+              ServiceError.BadRequestError.OtpVerifyError(
+                s"Wrong OTP provided for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
+              )
             )
         resetPasswordJwt <- jwtService.generateResetPasswordToken(userDetailsRow.userID)
         _                <- userTokenRepository
