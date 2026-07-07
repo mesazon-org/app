@@ -10,6 +10,9 @@ enum TapirServerError(val code: String, val message: String, val schemaName: Str
   case UnauthorizedError
       extends TapirServerError("UNAUTHORIZED_ERROR", "Unauthorized connection.", "UnauthorizedResponseContent")
 
+  // 403 Forbidden
+  case ForbiddenError extends TapirServerError("FORBIDDEN_ERROR", "Forbidden", "ForbiddenResponseContent")
+
   // 404 Not Found
   case NotFoundError extends TapirServerError("NOT_FOUND_ERROR", "Not found", "NotFoundResponseContent")
 

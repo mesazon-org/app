@@ -6,7 +6,7 @@ How every gateway endpoint gets its auth. The rule of thumb: **handlers never ch
 
 `middleware/ServerMiddleware.scala` implements smithy4s's `ServerEndpointMiddleware.Simple[Task]`. `HttpApp.buildSmithyRoute` attaches it to **every smithy route**. For each endpoint smithy4s calls `prepareWithHints(serviceHints, endpointHints)` — the traits on the smithy service/operation arrive as *hints*, and the middleware returns a wrapper that runs before the endpoint's `HttpApp`.
 
-Tapir endpoints (streaming uploads) are **not** covered by this middleware: they wire the same checks explicitly via `zServerSecurityLogic(authorizationService.auth(...))` in `tapir/TapirEndpoints.scala`. When a rule is added to the middleware, the Tapir security logic must be extended by hand to match.
+Tapir endpoints (streaming uploads) are **not** covered by this middleware: they wire the same checks explicitly via `zServerSecurityLogic(authorizationService.auth(...))` in `tapir/TapirEndpoints.scala` — the bearer token and the `X-Organization-ID` header are both `securityIn`s, and each endpoint passes its allowed roles. **When a rule is added to the middleware, the Tapir security logic must be extended by hand to match — smithy and Tapir must always behave identically** (same header, same 401/403 semantics).
 
 ## Dispatch table
 
@@ -39,30 +39,28 @@ Runs for `@httpBearerAuth` services and for Tapir endpoints:
 1. Extract the `Bearer` token → `UnauthorizedError.AuthorizationTokenMissing` if absent.
 2. `JwtService.verifyAccessToken` — signature, expiry, issuer (access tokens are stateless; see [user-token-management](features/user-token-management.md)).
 3. If the service carries `@completedOnboardStage` (passed as `requiresCompletedOnboardStage = true`): load user details and require the stage to be in `OnboardStage.completedStages` (= `PhoneVerified`), else `UnauthorizedError.FailedOnboardStage`.
-4. `AuthState.set(AuthedUser(userID))`.
+4. If the operation carries `@organizationRolesAllowed` (passed as `organizationRolesAllowedOpt = Some(roles)`): run the organization role check (next section).
+5. `AuthState.set(AuthedUser(userID))`.
 
 ## `AuthState` — how handlers learn who is calling
 
 `state/AuthState.scala` wraps a `FiberRef[Option[AuthedUser]]` — request-scoped state. The middleware `set`s it after successful auth; service implementations call `authState.get` as their first step. `get` on an unauthenticated fiber is a defect (`orDie`) — it can only happen if a handler is reachable without the middleware, which is a wiring bug.
 
-## Organization permissions — `@organizationRolesAllowed` + `X-Organization-ID` *(designed, enforcement pending)*
+## Organization permissions — `@organizationRolesAllowed` + `X-Organization-ID`
 
-The newest rule, introduced with the customer book. Each smithy **operation** declares which organization roles may call it, e.g. `@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])` — operation-level so permissions can differ per endpoint within one service (customer book: reads allow `OWNER`/`ADMIN`/`USER`, writes only `OWNER`/`ADMIN`). Every org-scoped operation carries the organization in the **required `X-Organization-ID` header** (never in the body or URI — a fixed header is readable by the middleware without parsing bodies, and it works identically for GETs, JSON posts and streaming uploads).
+Each smithy **operation** declares which organization roles may call it, e.g. `@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])` — operation-level so permissions can differ per endpoint within one service (customer book: reads allow `OWNER`/`ADMIN`/`USER`, writes only `OWNER`/`ADMIN`). Every org-scoped operation carries the organization in the **required `X-Organization-ID` header** (never in the body or URI — a fixed header is readable by the middleware without parsing bodies, and it works identically for GETs, JSON posts and streaming uploads).
 
-Planned enforcement, mirroring the `completedOnboardStage` mechanism:
+Enforcement, mirroring the `completedOnboardStage` mechanism:
 
-1. `ServerMiddleware` reads the `OrganizationRolesAllowed` hint from the **endpoint hints** (`prepareWithHints` already receives them per endpoint).
-2. When present, it reads the `X-Organization-ID` header from the raw request (missing/malformed → `Unauthorized`).
-3. `AuthorizationService` (new check, after token verification) loads the caller's membership — `OrganizationUserRow` by (`organizationID`, `userID`) — and requires `userRole` to be one of the declared roles; not a member or wrong role → `Unauthorized`.
-4. Tapir endpoints pass the allowed roles explicitly to `authorizationService.auth(...)`.
+1. `ServerMiddleware` reads the `OrganizationRolesAllowed` hint from the **endpoint hints**, maps the smithy roles to domain `UserRole`s (`organizationUserRoleFromSmithyToDomain` in `service/service.scala`), and passes them as `organizationRolesAllowedOpt` to `AuthorizationService.auth` together with the raw `X-Organization-ID` header value.
+2. `AuthorizationService.verifyOrganizationRole` (after token + onboard-stage verification): missing header → `AuthorizationOrganizationIDHeaderMissing`; malformed UUID → `AuthorizationOrganizationIDHeaderInvalid` — both `401 Unauthorized`.
+3. It loads the caller's membership — `OrganizationManagementRepository.getOrganizationUser(organizationID, userID)` — and requires `userRole` to be one of the declared roles; not a member or wrong role → `ForbiddenError.FailedOrganizationRole` → **`403 Forbidden`** (authenticated but not allowed — distinct from 401).
+4. Operations without the trait skip the check entirely (`organizationRolesAllowedOpt = None`).
 
-**Not yet implemented** — current gaps this design closes:
+Covered by `unit/service/AuthorizationServiceSpec` (allowed role, missing header, invalid header, not a member, disallowed role) and by the `FileApiSpec` acceptance cases (missing header → 401, non-member → 403, disallowed role → 403).
 
-- `CustomerBookService` handlers are stubs; no membership/role check exists yet.
-- `FileService` (logo upload) checks the bearer token + completed onboarding but **not** that the caller belongs to the target organization — any onboarded user can currently upload a logo for any `organizationID`. It also still takes `organizationID` as a path parameter (`/upload/organization/logo/{organizationID}`), predating the header standard.
-- Requires a new repository/query method to fetch a single membership row (e.g. `getOrganizationUser(organizationID, userID)` on `OrganizationManagementRepository`).
+The Tapir logo upload follows the same standard: `organizationID` moved from the path to the `X-Organization-ID` header (`POST /upload/organization/logo`), the security logic requires `OWNER`/`ADMIN`, and the parsed `OrganizationID` is handed to `FileService` as the security principal.
 
 ## Known gaps
 
-- The middleware itself has no direct tests (`// TODO: Test this middleware`, issue #25); it is exercised indirectly by every acceptance spec's error matrix (see [acceptance-tests.md](acceptance-tests.md)).
-- The FileService organization check above.
+- The middleware itself has no direct tests (`// TODO: Test this middleware`, issue #25); it is exercised indirectly by every acceptance spec's error matrix (see [acceptance-tests.md](acceptance-tests.md)). The organization role logic itself is unit-tested in `AuthorizationServiceSpec`.

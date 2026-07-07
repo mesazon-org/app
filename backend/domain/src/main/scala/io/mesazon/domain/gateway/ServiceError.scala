@@ -20,6 +20,12 @@ object ServiceError {
       override val underlying: Option[Throwable] = None,
   ) extends ServiceError("UnauthorizedError", message, underlying)
 
+  // 403
+  sealed abstract class ForbiddenError(
+      override val message: String,
+      override val underlying: Option[Throwable] = None,
+  ) extends ServiceError("ForbiddenError", message, underlying)
+
   // 500
   sealed abstract class InternalServerError(
       override val message: String,
@@ -64,20 +70,34 @@ object ServiceError {
 
     case class OtpExpiredError(error: String) extends UnauthorizedError(error)
 
-    case class FailedOnboardStage(
-        onboardStageUser: OnboardStage,
-        onboardStagesAllowed: List[OnboardStage],
-    ) extends UnauthorizedError(
-          s"Failed onboard stage user [$onboardStageUser], allowed: [$onboardStagesAllowed]",
-          None,
-        )
-
     case class AuthenticationTooManySignInAttempts(
         userID: UserID,
         actionAttemptType: ActionAttemptType,
         blockDurationSeconds: Long,
     ) extends UnauthorizedError(
           s"too many requests for user [$userID] and action attempt type [$actionAttemptType], block for [$blockDurationSeconds] seconds"
+        )
+
+    case class AuthHeaderMissingError(headerName: String)
+        extends UnauthorizedError(s"Authorization header [$headerName] is missing")
+  }
+
+  object ForbiddenError {
+
+    case class FailedOrganizationRole(
+        organizationID: OrganizationID,
+        userID: UserID,
+        organizationRolesAllowed: List[UserRole],
+    ) extends ForbiddenError(
+          s"User [$userID] is not assigned to organization [$organizationID] with one of the allowed roles: [$organizationRolesAllowed]"
+        )
+
+    case class FailedOnboardStage(
+        onboardStageUser: OnboardStage,
+        onboardStagesAllowed: List[OnboardStage],
+    ) extends UnauthorizedError(
+          s"Failed onboard stage user [$onboardStageUser], allowed: [$onboardStagesAllowed]",
+          None,
         )
   }
 

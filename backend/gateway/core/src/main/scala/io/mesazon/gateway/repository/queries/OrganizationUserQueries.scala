@@ -8,6 +8,7 @@ import io.mesazon.gateway.repository.domain.*
 import org.typelevel.doobie.*
 import org.typelevel.doobie.implicits.*
 import org.typelevel.doobie.postgres.implicits.*
+import org.typelevel.doobie.util.fragments.*
 import zio.*
 
 final class OrganizationUserQueries(
@@ -26,6 +27,19 @@ final class OrganizationUserQueries(
         |created_at,
         |updated_at
          """.stripMargin
+
+  def get(organizationID: OrganizationID, userID: UserID): TranzactIO[Option[OrganizationUserRow]] =
+    tzio {
+      val q =
+        fr"SELECT" ++ frOrganizationUserFields ++
+          fr"FROM" ++ frTable ++
+          whereAnd(
+            fr"organization_id = $organizationID",
+            fr"user_id = $userID",
+          )
+
+      q.query[OrganizationUserRow].option
+    }
 
   def insert(organizationUserRow: OrganizationUserRow): TranzactIO[Unit] =
     tzio {

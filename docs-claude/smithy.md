@@ -74,7 +74,7 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
 - `code: 200` with an `output`; `code: 204` and no `output` for operations with nothing to return
 - Organization-scoped operations each carry `@organizationRolesAllowed(roles: [...])` declaring which roles may call them — reads are typically open to every member, writes to `OWNER`/`ADMIN` only (see [Custom traits](#custom-traits))
 - Should document each operation's allowed stages with `/// **Required Onboard Stage:** [...]` (omit when the service is `@completedOnboardStage`) and its allowed roles with `/// **Allowed Organization Roles:** [...]`
-- `errors` lists only shapes from `domain/HttpErrors.smithy`: `[Unauthorized, ValidationError, InternalServerError]` as a base, plus `BadRequest` where the flow can reject a well-formed request (e.g. wrong OTP)
+- `errors` lists only shapes from `domain/HttpErrors.smithy`: `[Unauthorized, ValidationError, InternalServerError]` as a base, plus `BadRequest` where the flow can reject a well-formed request (e.g. wrong OTP), plus `Forbidden` on every operation carrying `@organizationRolesAllowed` (role failures are `403`, not `401`)
 
 ### 4. Organization scoping — the `X-Organization-ID` header
 
@@ -87,9 +87,9 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
   ```
 
 - Rationale: the middleware can read a fixed header without parsing the body (impossible for GETs and streaming uploads), and URIs stay untouched by the scoping standard
-- This rule applies to Tapir endpoints too
+- **Tapir endpoints must behave identically to smithy** — the header is declared as a `securityIn` (`header[Option[String]](AuthorizationService.OrganizationIDHeader.toString)`) and passed to `AuthorizationService.auth` together with the endpoint's allowed roles, so missing header/membership/role failures produce the same 401/403 responses on both transports (see `TapirEndpoints.scala` and [middleware.md](middleware.md))
 - ✅ `@httpHeader("X-Organization-ID") organizationID: UUID` on every org-scoped operation input
-- ❌ `organizationID` as a request-body field or path parameter (`/insert/customers/{organizationID}`)
+- ❌ `organizationID` as a request-body field or path parameter (`/insert/customers/{organizationID}`), a Tapir endpoint doing its own org check differently from the smithy middleware
 
 ## Custom traits
 
@@ -104,7 +104,7 @@ All custom traits live in `domain/Gateway.smithy` and are enforced by [the HTTP 
 ### `@organizationRolesAllowed(roles: [...])`
 
 - **Operation-level** trait carrying the list of `OrganizationUserRole`s (`OWNER`, `ADMIN`, `USER` — mirrors the Scala domain enum `UserRole`) allowed to call that operation, so permissions can differ per endpoint within one service
-- The caller must be **assigned to the organization** identified by the `X-Organization-ID` header **with one of the declared roles**; anyone else gets `Unauthorized`
+- The caller must be **assigned to the organization** identified by the `X-Organization-ID` header **with one of the declared roles**; a missing/malformed header is `401 Unauthorized`, while not being a member or having a disallowed role is `403 Forbidden`
 - Enum values must be quoted in the trait node value: `@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])`
 - Always used together with the `X-Organization-ID` header input member (section above) — the trait declares *who* may call, the header declares *which organization* the request is scoped to
 - Used by: `CustomerBookService` — reads (`GetCustomerGet`, `GetCustomersGet`) allow `OWNER`/`ADMIN`/`USER`, writes (insert/update/delete) allow `OWNER`/`ADMIN` only

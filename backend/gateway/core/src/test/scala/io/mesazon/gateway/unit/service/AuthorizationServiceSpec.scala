@@ -1,8 +1,8 @@
 package io.mesazon.gateway.unit.service
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.repository.UserDetailsRepository
-import io.mesazon.gateway.repository.domain.UserDetailsRow
+import io.mesazon.gateway.repository.domain.{OrganizationUserRow, UserDetailsRow}
+import io.mesazon.gateway.repository.{OrganizationManagementRepository, UserDetailsRepository}
 import io.mesazon.gateway.service.JwtService.AuthedUserAccess
 import io.mesazon.gateway.service.{AuthorizationService, JwtService, ServiceTask}
 import io.mesazon.gateway.state.AuthState
@@ -10,6 +10,7 @@ import io.mesazon.gateway.utils.{RepositoryArbitraries, TokenArbitraries}
 import io.mesazon.testkit.base.{GatewayArbitraries, ZWordSpecBase}
 import org.http4s.*
 import org.http4s.headers.Authorization
+import org.typelevel.ci.CIString
 import zio.*
 
 class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, GatewayArbitraries, TokenArbitraries {
@@ -37,7 +38,10 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.value)))
 
-        authorizationService.auth(request, requiresCompletedOnboardStage = false).zioEither.isRight shouldBe true
+        authorizationService
+          .auth(request, requiresCompletedOnboardStage = false, organizationRolesAllowedOpt = None)
+          .zioEither
+          .isRight shouldBe true
       }
 
       "return a successful response for required completed stage" in new TestContext {
@@ -69,7 +73,10 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
           .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.value)))
 
-        authorizationService.auth(request, requiresCompletedOnboardStage = true).zioEither.isRight shouldBe true
+        authorizationService
+          .auth(request, requiresCompletedOnboardStage = true, organizationRolesAllowedOpt = None)
+          .zioEither
+          .isRight shouldBe true
       }
 
       "fail with FailedOnboardStage when user has not completed required onboard stage" in new TestContext {
@@ -101,7 +108,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.value)))
 
         val serviceError = authorizationService
-          .auth(request, requiresCompletedOnboardStage = true)
+          .auth(request, requiresCompletedOnboardStage = true, organizationRolesAllowedOpt = None)
           .zioError
 
         serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
@@ -138,7 +145,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.value)))
 
         val serviceError = authorizationService
-          .auth(request, requiresCompletedOnboardStage = true)
+          .auth(request, requiresCompletedOnboardStage = true, organizationRolesAllowedOpt = None)
           .zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
@@ -149,6 +156,208 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         )
       }
 
+      "return a successful response when user has an allowed organization role" in new TestContext {
+        val authedUser  = arbitrarySample[AuthedUser]
+        val accessToken = arbitrarySample[AccessToken]
+
+        val authedUserAccess = arbitrarySample[AuthedUserAccess].copy(
+          userID = authedUser.userID
+        )
+
+        val organizationRolesAllowed = List(UserRole.Owner, UserRole.Admin)
+        val organizationUserRow      = arbitrarySample[OrganizationUserRow].copy(
+          userID = authedUser.userID,
+          userRole = Random.shuffle(organizationRolesAllowed).zioValue.head,
+        )
+
+        inSequence(
+          jwtServiceMock.verifyAccessToken
+            .expects(accessToken)
+            .returningZIO(authedUserAccess)
+            .once(),
+          organizationManagementRepositoryMock.getOrganizationUser
+            .expects(organizationUserRow.organizationID, authedUser.userID)
+            .returningZIO(Some(organizationUserRow))
+            .once(),
+          authStateMock.set.expects(authedUser).returnsZIOUnit.once(),
+        )
+
+        val authorizationService = buildAuthorizationService
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.value)),
+            Header.Raw(CIString("X-Organization-ID"), organizationUserRow.organizationID.value.toString),
+          )
+
+        authorizationService
+          .auth(
+            request,
+            requiresCompletedOnboardStage = false,
+            organizationRolesAllowedOpt = Some(organizationRolesAllowed),
+          )
+          .zioEither
+          .isRight shouldBe true
+      }
+
+      "fail with AuthorizationOrganizationIDHeaderMissing when organization roles are required but header is missing" in new TestContext {
+        val authedUser  = arbitrarySample[AuthedUser]
+        val accessToken = arbitrarySample[AccessToken]
+
+        val authedUserAccess = arbitrarySample[AuthedUserAccess].copy(
+          userID = authedUser.userID
+        )
+
+        inSequence(
+          jwtServiceMock.verifyAccessToken
+            .expects(accessToken)
+            .returningZIO(authedUserAccess)
+            .once()
+        )
+
+        val authorizationService = buildAuthorizationService
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.value)))
+
+        val serviceError = authorizationService
+          .auth(
+            request,
+            requiresCompletedOnboardStage = false,
+            organizationRolesAllowedOpt = Some(List(UserRole.Owner, UserRole.Admin)),
+          )
+          .zioError
+
+        serviceError shouldBe ServiceError.UnauthorizedError.AuthorizationOrganizationIDHeaderMissing
+      }
+
+      "fail with AuthorizationOrganizationIDHeaderInvalid when the header is not a valid UUID" in new TestContext {
+        val authedUser  = arbitrarySample[AuthedUser]
+        val accessToken = arbitrarySample[AccessToken]
+
+        val authedUserAccess = arbitrarySample[AuthedUserAccess].copy(
+          userID = authedUser.userID
+        )
+
+        inSequence(
+          jwtServiceMock.verifyAccessToken
+            .expects(accessToken)
+            .returningZIO(authedUserAccess)
+            .once()
+        )
+
+        val authorizationService = buildAuthorizationService
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.value)),
+            Header.Raw(CIString("X-Organization-ID"), "not-a-uuid"),
+          )
+
+        val serviceError = authorizationService
+          .auth(
+            request,
+            requiresCompletedOnboardStage = false,
+            organizationRolesAllowedOpt = Some(List(UserRole.Owner, UserRole.Admin)),
+          )
+          .zioError
+
+        serviceError shouldBe a[ServiceError.UnauthorizedError.AuthorizationOrganizationIDHeaderInvalid]
+      }
+
+      "fail with FailedOrganizationRole when user is not assigned to the organization" in new TestContext {
+        val authedUser     = arbitrarySample[AuthedUser]
+        val accessToken    = arbitrarySample[AccessToken]
+        val organizationID = arbitrarySample[OrganizationID]
+
+        val authedUserAccess = arbitrarySample[AuthedUserAccess].copy(
+          userID = authedUser.userID
+        )
+
+        val organizationRolesAllowed = List(UserRole.Owner, UserRole.Admin)
+
+        inSequence(
+          jwtServiceMock.verifyAccessToken
+            .expects(accessToken)
+            .returningZIO(authedUserAccess)
+            .once(),
+          organizationManagementRepositoryMock.getOrganizationUser
+            .expects(organizationID, authedUser.userID)
+            .returningZIO(None)
+            .once(),
+        )
+
+        val authorizationService = buildAuthorizationService
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.value)),
+            Header.Raw(CIString("X-Organization-ID"), organizationID.value.toString),
+          )
+
+        val serviceError = authorizationService
+          .auth(
+            request,
+            requiresCompletedOnboardStage = false,
+            organizationRolesAllowedOpt = Some(organizationRolesAllowed),
+          )
+          .zioError
+
+        serviceError shouldBe ServiceError.ForbiddenError.FailedOrganizationRole(
+          organizationID,
+          authedUser.userID,
+          organizationRolesAllowed,
+        )
+      }
+
+      "fail with FailedOrganizationRole when user is assigned to the organization with a disallowed role" in new TestContext {
+        val authedUser  = arbitrarySample[AuthedUser]
+        val accessToken = arbitrarySample[AccessToken]
+
+        val authedUserAccess = arbitrarySample[AuthedUserAccess].copy(
+          userID = authedUser.userID
+        )
+
+        val organizationRolesAllowed = List(UserRole.Owner, UserRole.Admin)
+        val organizationUserRow      = arbitrarySample[OrganizationUserRow].copy(
+          userID = authedUser.userID,
+          userRole = UserRole.User,
+        )
+
+        inSequence(
+          jwtServiceMock.verifyAccessToken
+            .expects(accessToken)
+            .returningZIO(authedUserAccess)
+            .once(),
+          organizationManagementRepositoryMock.getOrganizationUser
+            .expects(organizationUserRow.organizationID, authedUser.userID)
+            .returningZIO(Some(organizationUserRow))
+            .once(),
+        )
+
+        val authorizationService = buildAuthorizationService
+
+        val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
+          .withHeaders(
+            Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.value)),
+            Header.Raw(CIString("X-Organization-ID"), organizationUserRow.organizationID.value.toString),
+          )
+
+        val serviceError = authorizationService
+          .auth(
+            request,
+            requiresCompletedOnboardStage = false,
+            organizationRolesAllowedOpt = Some(organizationRolesAllowed),
+          )
+          .zioError
+
+        serviceError shouldBe ServiceError.ForbiddenError.FailedOrganizationRole(
+          organizationUserRow.organizationID,
+          authedUser.userID,
+          organizationRolesAllowed,
+        )
+      }
+
       "fail with AuthorizationTokenMissing when token is missing for non required completed stage" in new TestContext {
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
         //          .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token))) //  Missing Authorization header
@@ -156,7 +365,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         val authorizationService = buildAuthorizationService
 
         val serviceError = authorizationService
-          .auth(request, requiresCompletedOnboardStage = false)
+          .auth(request, requiresCompletedOnboardStage = false, organizationRolesAllowedOpt = None)
           .zioError
 
         serviceError shouldBe a[ServiceError.UnauthorizedError.AuthorizationTokenMissing.type]
@@ -168,9 +377,10 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
   }
 
   trait TestContext {
-    val authStateMock             = mock[AuthState]
-    val jwtServiceMock            = mock[JwtService]
-    val userDetailsRepositoryMock = mock[UserDetailsRepository]
+    val authStateMock                        = mock[AuthState]
+    val jwtServiceMock                       = mock[JwtService]
+    val userDetailsRepositoryMock            = mock[UserDetailsRepository]
+    val organizationManagementRepositoryMock = mock[OrganizationManagementRepository]
 
     def buildAuthorizationService: AuthorizationService[ServiceTask] = ZIO
       .service[AuthorizationService[ServiceTask]]
@@ -179,6 +389,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         ZLayer.succeed(authStateMock),
         ZLayer.succeed(jwtServiceMock),
         ZLayer.succeed(userDetailsRepositoryMock),
+        ZLayer.succeed(organizationManagementRepositoryMock),
       )
       .zioValue
   }

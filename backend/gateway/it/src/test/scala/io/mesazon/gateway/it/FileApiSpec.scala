@@ -40,6 +40,7 @@ class FileApiSpec
       s3TestClient: S3TestClient,
       repositoryConfig: RepositoryConfig,
       organizationDetailsQueries: OrganizationDetailsQueries,
+      organizationUserQueries: OrganizationUserQueries,
       userDetailsQueries: UserDetailsQueries,
       jwtService: JwtService,
   )
@@ -62,6 +63,9 @@ class FileApiSpec
       organizationDetailsQueries <- ZIO
         .service[OrganizationDetailsQueries]
         .provide(OrganizationDetailsQueries.live, RepositoryConfig.live, appNameLive)
+      organizationUserQueries <- ZIO
+        .service[OrganizationUserQueries]
+        .provide(OrganizationUserQueries.live, RepositoryConfig.live, appNameLive)
       userDetailsQueries <- ZIO
         .service[UserDetailsQueries]
         .provide(UserDetailsQueries.live, RepositoryConfig.live, appNameLive)
@@ -80,6 +84,7 @@ class FileApiSpec
       s3TestClient,
       repositoryConfig,
       organizationDetailsQueries,
+      organizationUserQueries,
       userDetailsQueries,
       jwtService,
     )
@@ -112,7 +117,7 @@ class FileApiSpec
   }
 
   "File Service API" when {
-    "/upload/organization/logo/{organizationID}" should {
+    "/upload/organization/logo" should {
       "upload the logo and store the original and normalized objects in S3" in withContext { context =>
         import context.*
 
@@ -130,6 +135,14 @@ class FileApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
+        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+          organizationID = organizationDetailsRow.organizationID,
+          userID = userDetailsRow.userID,
+          userRole = Random.shuffle(List(UserRole.Owner, UserRole.Admin)).zioValue.head,
+        )
+
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
@@ -138,7 +151,7 @@ class FileApiSpec
 
         val uploadOrganizationLogoResponse = gatewayClient
           .uploadOrganizationLogoPost[smithy.InternalServerError](
-            organizationID,
+            Some(organizationID),
             Some(organizationLogoOriginalFileName),
             logoBytes,
             Some(accessJwt.accessToken),
@@ -183,17 +196,115 @@ class FileApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
+        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+          userID = userDetailsRow.userID,
+          userRole = Random.shuffle(List(UserRole.Owner, UserRole.Admin)).zioValue.head,
+        )
+
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val organizationID = arbitrarySample[OrganizationID]
-        val logoBytes      = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
+        val logoBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.BadRequest](organizationID, None, logoBytes, Some(accessJwt.accessToken))
+          .uploadOrganizationLogoPost[smithy.BadRequest](
+            Some(organizationUserRow.organizationID),
+            None,
+            logoBytes,
+            Some(accessJwt.accessToken),
+          )
           .zioValue
 
         uploadOrganizationLogoResponse.code shouldBe StatusCode.BadRequest
         uploadOrganizationLogoResponse.body.left.value shouldBe smithy.BadRequest()
+      }
+
+      "fail with Unauthorized when the organization id header is missing" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
+        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+
+        val uploadOrganizationLogoResponse = gatewayClient
+          .uploadOrganizationLogoPost[smithy.Unauthorized](
+            None,
+            Some(organizationLogoOriginalFileName),
+            logoBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.Unauthorized
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized()
+      }
+
+      "fail with Forbidden when the user is not assigned to the organization" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationID                   = arbitrarySample[OrganizationID]
+        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+
+        val uploadOrganizationLogoResponse = gatewayClient
+          .uploadOrganizationLogoPost[smithy.Forbidden](
+            Some(organizationID),
+            Some(organizationLogoOriginalFileName),
+            logoBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.Forbidden
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Forbidden()
+      }
+
+      "fail with Forbidden when the user is assigned to the organization with a disallowed role" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = UserRole.User,
+          )
+
+          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+          val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
+          val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+
+          val uploadOrganizationLogoResponse = gatewayClient
+            .uploadOrganizationLogoPost[smithy.Forbidden](
+              Some(organizationUserRow.organizationID),
+              Some(organizationLogoOriginalFileName),
+              logoBytes,
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+          uploadOrganizationLogoResponse.code shouldBe StatusCode.Forbidden
+          uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Forbidden()
       }
 
       "fail with Unauthorized when access token is missing" in withContext { context =>
@@ -205,7 +316,7 @@ class FileApiSpec
 
         val uploadOrganizationLogoResponse = gatewayClient
           .uploadOrganizationLogoPost[smithy.Unauthorized](
-            organizationID,
+            Some(organizationID),
             Some(organizationLogoOriginalFileName),
             logoBytes,
             None,
@@ -225,7 +336,7 @@ class FileApiSpec
 
         val uploadOrganizationLogoResponse = gatewayClient
           .uploadOrganizationLogoPost[smithy.Unauthorized](
-            organizationID,
+            Some(organizationID),
             Some(organizationLogoOriginalFileName),
             logoBytes,
             Some(AccessToken("invalidtoken")),
@@ -253,7 +364,7 @@ class FileApiSpec
 
         val uploadOrganizationLogoResponse = gatewayClient
           .uploadOrganizationLogoPost[smithy.Unauthorized](
-            organizationID,
+            Some(organizationID),
             Some(organizationLogoOriginalFileName),
             logoBytes,
             Some(accessJwt.accessToken),
@@ -289,7 +400,7 @@ class FileApiSpec
 
         val uploadOrganizationLogoResponse = gatewayClient
           .uploadOrganizationLogoPost[smithy.InternalServerError](
-            organizationID,
+            Some(organizationID),
             Some(organizationLogoOriginalFileName),
             logoBytes,
             Some(accessJwt.accessToken),

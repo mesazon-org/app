@@ -29,6 +29,8 @@ These cases are deliberately duplicated per endpoint; the middleware is shared, 
 | Invalid/garbage token | `401` `smithy.Unauthorized()` | all bearer endpoints |
 | Valid token but token row not in DB | `401 Unauthorized` | refresh/reset token endpoints |
 | User in a disallowed `OnboardStage` | `401 Unauthorized` | all stage-gated endpoints |
+| Missing or malformed `X-Organization-ID` header | `401 Unauthorized` | all `@organizationRolesAllowed` endpoints |
+| Not an organization member, or member with a disallowed role | `403 Forbidden` | all `@organizationRolesAllowed` endpoints |
 | Wrong OTP | `400 BadRequest` | OTP-verify endpoints |
 | Expired OTP | `401 Unauthorized` (+ OTP row deleted) | OTP-verify endpoints |
 | Referenced entity missing (OTP ID/user/token not found) | `500 InternalServerError` | lookup-by-id endpoints |

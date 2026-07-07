@@ -34,6 +34,15 @@ structure Unauthorized {
     message: String = "Unauthorized connection."
 }
 
+@error("client")
+@httpError(403)
+structure Forbidden {
+    @required
+    code: String = "FORBIDDEN_ERROR"
+    @required
+    message: String = "Forbidden"
+}
+
 @error("server")
 @httpError(500)
 structure InternalServerError {
