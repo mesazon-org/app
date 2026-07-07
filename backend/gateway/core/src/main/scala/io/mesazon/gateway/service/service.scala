@@ -23,6 +23,7 @@ def onboardStageFromSmithyToDomain(stage: smithy.OnboardStage): io.mesazon.domai
 }
 
 def verifyOnboardStage(
+    userID: UserID,
     onboardStageUser: OnboardStage,
     onboardStagesAllowed: List[OnboardStage],
 ): IO[ServiceError.ForbiddenError.FailedOnboardStage, Unit] =
@@ -30,6 +31,7 @@ def verifyOnboardStage(
   else
     ZIO.fail(
       ServiceError.ForbiddenError.FailedOnboardStage(
+        userID = userID,
         onboardStageUser = onboardStageUser,
         onboardStagesAllowed = onboardStagesAllowed,
       )

@@ -221,8 +221,8 @@ class FileApiSpec
       }
 
       // The organization id header is a typed tapir security input, so a missing header is rejected
-      // as a decode failure (400) before the security logic runs — unlike the smithy transport, where
-      // the middleware answers 401 (AuthHeaderMissingError).
+      // as a decode failure (400) before the security logic runs — consistent with the smithy transport,
+      // where the middleware answers 400 (AuthHeaderMissingError).
       "fail with BadRequest when the organization id header is missing" in withContext { context =>
         import context.*
 
@@ -310,7 +310,7 @@ class FileApiSpec
           uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Forbidden()
       }
 
-      "fail with Unauthorized when access token is missing" in withContext { context =>
+      "fail with BadRequest when access token is missing" in withContext { context =>
         import context.*
 
         val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
@@ -318,7 +318,7 @@ class FileApiSpec
         val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.Unauthorized](
+          .uploadOrganizationLogoPost[smithy.BadRequest](
             Some(organizationID),
             Some(organizationLogoOriginalFileName),
             logoBytes,
@@ -326,8 +326,8 @@ class FileApiSpec
           )
           .zioValue
 
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.Unauthorized
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized()
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.BadRequest
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.BadRequest()
       }
 
       "fail with Unauthorized when access token is invalid" in withContext { context =>

@@ -219,7 +219,7 @@ class UserOnboardApiSpec
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
-      "fail with Unauthorized when access token is missing" in withContext { context =>
+      "fail with BadRequest when access token is missing" in withContext { context =>
         import context.*
 
         val onboardPasswordPostRequest = arbitrarySample[smithy.OnboardPasswordPostRequest].copy(
@@ -227,11 +227,11 @@ class UserOnboardApiSpec
         )
 
         val onboardPasswordPostResponse = gatewayClient
-          .onboardPasswordPost[smithy.Unauthorized](onboardPasswordPostRequest, None)
+          .onboardPasswordPost[smithy.BadRequest](onboardPasswordPostRequest, None)
           .zioValue
 
-        onboardPasswordPostResponse.code shouldBe StatusCode.Unauthorized
-        onboardPasswordPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        onboardPasswordPostResponse.code shouldBe StatusCode.BadRequest
+        onboardPasswordPostResponse.body.left.value shouldBe smithy.BadRequest()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -378,17 +378,17 @@ class UserOnboardApiSpec
         userDetailsRowsAll.head.phoneNumber shouldBe None
       }
 
-      "fail with Unauthorized when access token is missing" in withContext { context =>
+      "fail with BadRequest when access token is missing" in withContext { context =>
         import context.*
 
         val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
 
         val onboardDetailsPostResponse = gatewayClient
-          .onboardDetailsPost[smithy.Unauthorized](onboardDetailsPostRequest, None)
+          .onboardDetailsPost[smithy.BadRequest](onboardDetailsPostRequest, None)
           .zioValue
 
-        onboardDetailsPostResponse.code shouldBe StatusCode.Unauthorized
-        onboardDetailsPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        onboardDetailsPostResponse.code shouldBe StatusCode.BadRequest
+        onboardDetailsPostResponse.body.left.value shouldBe smithy.BadRequest()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -585,17 +585,17 @@ class UserOnboardApiSpec
         userOtpRowsAll.head shouldBe userOtpRow
       }
 
-      "fail with Unauthorized when access token is missing" in withContext { context =>
+      "fail with BadRequest when access token is missing" in withContext { context =>
         import context.*
 
         val onboardVerifyPhoneNumberPostRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest]
 
         val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumberPost[smithy.Unauthorized](onboardVerifyPhoneNumberPostRequest, None)
+          .onboardVerifyPhoneNumberPost[smithy.BadRequest](onboardVerifyPhoneNumberPostRequest, None)
           .zioValue
 
-        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
-        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Unauthorized()
+        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.BadRequest
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.BadRequest()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -820,15 +820,15 @@ class UserOnboardApiSpec
         userOtpRowsAll should have size 0
       }
 
-      "fail with Unauthorized when access token is missing" in withContext { context =>
+      "fail with BadRequest when access token is missing" in withContext { context =>
         import context.*
 
         val onboardVerifyPhoneNumberGetResponse = gatewayClient
-          .onboardVerifyPhoneNumberGet[smithy.Unauthorized](None)
+          .onboardVerifyPhoneNumberGet[smithy.BadRequest](None)
           .zioValue
 
-        onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.Unauthorized
-        onboardVerifyPhoneNumberGetResponse.body.left.value shouldBe smithy.Unauthorized()
+        onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.BadRequest
+        onboardVerifyPhoneNumberGetResponse.body.left.value shouldBe smithy.BadRequest()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 

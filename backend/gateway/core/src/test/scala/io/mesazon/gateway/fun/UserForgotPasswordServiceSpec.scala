@@ -439,6 +439,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         serviceError
           .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
+            userID = userDetailsRow.userID,
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
           )
@@ -715,6 +716,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         serviceError
           .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
+            userID = userDetailsRow.userID,
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
           )
@@ -1135,6 +1137,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         serviceError
           .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
+            userID = userDetailsRow.userID,
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
           )

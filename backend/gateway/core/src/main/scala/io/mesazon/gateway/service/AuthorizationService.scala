@@ -47,7 +47,9 @@ object AuthorizationService {
           .get[`Authorization`]
           .collect { case Authorization(Credentials.Token(AuthScheme.Bearer, token)) => token }
         accessTokenRaw <- ZIO
-          .getOrFailWith(ServiceError.UnauthorizedError.AuthorizationTokenMissing)(maybeBearerToken)
+          .getOrFailWith(ServiceError.BadRequestError.AuthHeaderMissingError(Authorization.name.toString))(
+            maybeBearerToken
+          )
         accessToken <- ZIO
           .fromEither(AccessToken.either(accessTokenRaw))
           .mapError(error =>
@@ -82,6 +84,7 @@ object AuthorizationService {
                     .UnexpectedError(s"User details not found for user ID: ${authedUserAccess.userID}")
                 )
               _ <- verifyOnboardStage(
+                authedUserAccess.userID,
                 userDetails.onboardStage,
                 OnboardStage.completedStages,
               )
@@ -100,7 +103,7 @@ object AuthorizationService {
     ): ServiceTask[Unit] =
       for {
         organizationID <- ZIO.getOrFailWith(
-          ServiceError.UnauthorizedError.AuthHeaderMissingError(OrganizationIDHeader.toString)
+          ServiceError.BadRequestError.AuthHeaderMissingError(OrganizationIDHeader.toString)
         )(organizationIDOpt)
         organizationUserRow <- organizationManagementRepository
           .getOrganizationUser(organizationID, userID)

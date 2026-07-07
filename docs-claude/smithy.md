@@ -88,7 +88,7 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
   ```
 
 - Rationale: the middleware can read a fixed header without parsing the body (impossible for GETs and streaming uploads), and URIs stay untouched by the scoping standard
-- **Tapir endpoints follow the same standard** — the header is declared as a typed `securityIn` (`header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString)`) and passed to `AuthorizationService.auth` together with the endpoint's allowed roles, so membership/role failures produce the same `403 Forbidden` on both transports; note that a missing/malformed header is a tapir decode failure (`400`) there, while smithy routes answer through the middleware (see `TapirEndpoints.scala` and [middleware.md](middleware.md))
+- **Tapir endpoints follow the same standard** — the header is declared as a typed `securityIn` (`header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString)`) and passed to `AuthorizationService.auth` together with the endpoint's allowed roles; missing required headers (`Authorization`, `X-Organization-ID`) are a generic `400 BadRequest` and membership/role failures a `403 Forbidden` on **both** transports (see `TapirEndpoints.scala` and [middleware.md](middleware.md))
 - ✅ `@httpHeader("X-Organization-ID") organizationID: UUID` on every org-scoped operation input
 - ❌ `organizationID` as a request-body field or path parameter (`/insert/customers/{organizationID}`), a Tapir endpoint doing its own org check differently from the smithy middleware
 

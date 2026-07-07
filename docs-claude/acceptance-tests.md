@@ -25,11 +25,11 @@ These cases are deliberately duplicated per endpoint; the middleware is shared, 
 | Case | Expected | Applies to |
 |---|---|---|
 | Invalid request body / field | `400` `smithy.ValidationError(fields = List(...))` | all endpoints with input |
-| Missing credentials/token (`addBasicAuth = false` / no bearer header) | `400 BadRequest` (basic auth) / `401 Unauthorized` (bearer) | all authed endpoints |
+| Missing credentials/token (`addBasicAuth = false` / no bearer header) | `400 BadRequest` | all authed endpoints |
 | Invalid/garbage token | `401` `smithy.Unauthorized()` | all bearer endpoints |
 | Valid token but token row not in DB | `401 Unauthorized` | refresh/reset token endpoints |
 | User in a disallowed `OnboardStage` | `403 Forbidden` | all stage-gated endpoints |
-| Missing `X-Organization-ID` header | `401 Unauthorized` (smithy) / `400 BadRequest` (Tapir decode failure) | all `@organizationRolesAllowed` endpoints |
+| Missing `X-Organization-ID` header | `400 BadRequest` | all `@organizationRolesAllowed` endpoints |
 | Not an organization member, or member with a disallowed role | `403 Forbidden` | all `@organizationRolesAllowed` endpoints |
 | Wrong OTP | `400 BadRequest` | OTP-verify endpoints |
 | Expired OTP | `401 Unauthorized` (+ OTP row deleted) | OTP-verify endpoints |

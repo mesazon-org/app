@@ -144,6 +144,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         serviceError
           .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
+            userID = userDetailsRow.userID,
             onboardStageUser = userDetailsRow.onboardStage,
             onboardStagesAllowed = OnboardStage.onboardPasswordStages,
           )
@@ -489,6 +490,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         serviceError
           .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
+            userID = userDetailsRow.userID,
             onboardStageUser = userDetailsRow.onboardStage,
             onboardStagesAllowed = OnboardStage.onboardDetailsStages,
           )
@@ -785,6 +787,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         serviceError
           .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
+            userID = userDetailsRow.userID,
             onboardStageUser = userDetailsRow.onboardStage,
             onboardStagesAllowed = OnboardStage.onboardVerifyPhoneNumberStages,
           )
@@ -1088,6 +1091,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         serviceError
           .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
+            userID = userDetailsRow.userID,
             onboardStageUser = userDetailsRow.onboardStage,
             onboardStagesAllowed = OnboardStage.onboardVerifyPhoneNumberStages,
           )

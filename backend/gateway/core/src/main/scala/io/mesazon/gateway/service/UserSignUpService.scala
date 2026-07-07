@@ -127,6 +127,7 @@ object UserSignUpService {
             )
           )
         _ <- verifyOnboardStage(
+          userID = userDetailsRow.userID,
           onboardStageUser = userDetailsRow.onboardStage,
           onboardStagesAllowed = OnboardStage.signUpVerifyEmailStages,
         )

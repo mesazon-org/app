@@ -271,6 +271,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         serviceError
           .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe
           ServiceError.ForbiddenError.FailedOnboardStage(
+            userID = userDetailsRow.userID,
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.signInAllowedStages,
           )

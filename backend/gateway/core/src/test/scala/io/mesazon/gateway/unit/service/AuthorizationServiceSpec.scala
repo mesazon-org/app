@@ -115,6 +115,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         serviceError.asInstanceOf[
           ServiceError.ForbiddenError.FailedOnboardStage
         ] shouldBe ServiceError.ForbiddenError.FailedOnboardStage(
+          userID = userDetailsRow.userID,
           onboardStageUser = userDetailsRow.onboardStage,
           onboardStagesAllowed = OnboardStage.completedStages,
         )
@@ -228,7 +229,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           )
           .zioError
 
-        serviceError shouldBe ServiceError.UnauthorizedError.AuthHeaderMissingError(
+        serviceError shouldBe ServiceError.BadRequestError.AuthHeaderMissingError(
           AuthorizationService.OrganizationIDHeader.toString
         )
       }
@@ -348,7 +349,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         )
       }
 
-      "fail with AuthorizationTokenMissing when token is missing for non required completed stage" in new TestContext {
+      "fail with AuthHeaderMissingError when the authorization header is missing for non required completed stage" in new TestContext {
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
         //          .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token))) //  Missing Authorization header
 
@@ -358,10 +359,9 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .auth(request, requiresCompletedOnboardStage = false, organizationRolesAllowedOpt = None)
           .zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.AuthorizationTokenMissing.type]
-        serviceError.asInstanceOf[
-          ServiceError.UnauthorizedError.AuthorizationTokenMissing.type
-        ] shouldBe ServiceError.UnauthorizedError.AuthorizationTokenMissing
+        serviceError shouldBe ServiceError.BadRequestError.AuthHeaderMissingError(
+          Authorization.name.toString
+        )
       }
     }
   }

@@ -45,6 +45,7 @@ object UserOnboardService {
             )
           )
         _ <- verifyOnboardStage(
+          userID = authedUser.userID,
           onboardStageUser = userDetails.onboardStage,
           onboardStagesAllowed = List(OnboardStage.EmailVerified),
         )
@@ -80,6 +81,7 @@ object UserOnboardService {
             )
           )
         _ <- verifyOnboardStage(
+          userID = userDetails.userID,
           onboardStageUser = userDetails.onboardStage,
           onboardStagesAllowed = OnboardStage.onboardDetailsStages,
         )
@@ -139,6 +141,7 @@ object UserOnboardService {
             )
           )
         _ <- verifyOnboardStage(
+          userID = userDetails.userID,
           onboardStageUser = userDetails.onboardStage,
           onboardStagesAllowed = OnboardStage.onboardVerifyPhoneNumberStages,
         )
@@ -190,6 +193,7 @@ object UserOnboardService {
             )
           )
         _ <- verifyOnboardStage(
+          userID = userDetails.userID,
           onboardStageUser = userDetails.onboardStage,
           onboardStagesAllowed = OnboardStage.onboardVerifyPhoneNumberStages,
         )

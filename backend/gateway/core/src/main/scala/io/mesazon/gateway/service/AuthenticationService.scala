@@ -48,6 +48,7 @@ object AuthenticationService {
             ServiceError.UnauthorizedError.AuthenticationEmailNotFound
           )
         _ <- verifyOnboardStage(
+          userID = userDetails.userID,
           onboardStageUser = userDetails.onboardStage,
           onboardStagesAllowed = OnboardStage.signInAllowedStages,
         )

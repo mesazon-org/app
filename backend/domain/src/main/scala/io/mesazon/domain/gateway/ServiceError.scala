@@ -49,6 +49,9 @@ object ServiceError {
     case object AuthenticationCredentialsMissing
         extends BadRequestError("authentication credentials are missing from request")
 
+    case class AuthHeaderMissingError(headerName: String)
+        extends BadRequestError(s"Authorization header [$headerName] is missing")
+
     case class ValidationError(invalidFields: Seq[InvalidFieldError])
         extends BadRequestError(s"request validation error ${invalidFields.mkString("[", ",", "]")}")
 
@@ -56,8 +59,6 @@ object ServiceError {
   }
 
   object UnauthorizedError {
-    case object AuthorizationTokenMissing extends UnauthorizedError("token is missing from request")
-
     case class TokenFailedAuthorization(error: String, throwable: Option[Throwable] = None)
         extends UnauthorizedError(error, throwable)
 
@@ -77,9 +78,6 @@ object ServiceError {
     ) extends UnauthorizedError(
           s"too many requests for user [$userID] and action attempt type [$actionAttemptType], block for [$blockDurationSeconds] seconds"
         )
-
-    case class AuthHeaderMissingError(headerName: String)
-        extends UnauthorizedError(s"Authorization header [$headerName] is missing")
   }
 
   object ForbiddenError {
@@ -93,10 +91,11 @@ object ServiceError {
         )
 
     case class FailedOnboardStage(
+        userID: UserID,
         onboardStageUser: OnboardStage,
         onboardStagesAllowed: List[OnboardStage],
     ) extends ForbiddenError(
-          s"Failed onboard stage user [$onboardStageUser], allowed: [$onboardStagesAllowed]",
+          s"Failed onboard stage user id: [$userID] with onboard stage: [$onboardStageUser], allowed: [$onboardStagesAllowed]",
           None,
         )
   }

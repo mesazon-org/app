@@ -41,7 +41,11 @@ object UserForgotPasswordService {
       otpID          <- userDetailsOpt match {
         case Some(userDetails) =>
           for {
-            _             <- verifyOnboardStage(userDetails.onboardStage, OnboardStage.forgotPasswordAllowedStages)
+            _ <- verifyOnboardStage(
+              userDetails.userID,
+              userDetails.onboardStage,
+              OnboardStage.forgotPasswordAllowedStages,
+            )
             userOtpRowOpt <- userOtpRepository.getUserOtpByUserID(
               userDetails.userID,
               OtpType.ForgotPassword,
@@ -139,6 +143,7 @@ object UserForgotPasswordService {
             )
           )
         _ <- verifyOnboardStage(
+          userID = userDetailsRow.userID,
           onboardStageUser = userDetailsRow.onboardStage,
           onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
         )
@@ -216,6 +221,7 @@ object UserForgotPasswordService {
             )
           )
         _ <- verifyOnboardStage(
+          userID = userDetailsRow.userID,
           onboardStageUser = userDetailsRow.onboardStage,
           onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
         )

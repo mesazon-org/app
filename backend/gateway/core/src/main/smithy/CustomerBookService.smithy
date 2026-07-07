@@ -36,7 +36,7 @@ operation GetCustomerGet {
         customerID: UUID
     }
     output: GetCustomerGetResponse
-    errors: [Unauthorized, Forbidden, InternalServerError]
+    errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`, `USER`]
@@ -49,7 +49,7 @@ operation GetCustomersGet {
         organizationID: UUID
     }
     output: GetCustomersGetResponse
-    errors: [Unauthorized, Forbidden, InternalServerError]
+    errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
@@ -64,7 +64,7 @@ operation InsertCustomersPost {
         @httpPayload
         request: InsertCustomersPostRequest
     }
-    errors: [Unauthorized, Forbidden, ValidationError, InternalServerError]
+    errors: [BadRequest, Unauthorized, Forbidden, ValidationError, InternalServerError]
 }
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
@@ -79,7 +79,7 @@ operation UpdateCustomersPut {
         @httpPayload
         request: UpdateCustomersPutRequest
     }
-    errors: [Unauthorized, Forbidden, ValidationError, InternalServerError]
+    errors: [BadRequest, Unauthorized, Forbidden, ValidationError, InternalServerError]
 }
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
@@ -94,5 +94,5 @@ operation DeleteCustomersPost {
         @httpPayload
         request: DeleteCustomersPostRequest
     }
-    errors: [Unauthorized, Forbidden, ValidationError, InternalServerError]
+    errors: [BadRequest, Unauthorized, Forbidden, ValidationError, InternalServerError]
 }
