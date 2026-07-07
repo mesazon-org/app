@@ -282,7 +282,7 @@ class OrganizationManagementApiSpec
         organizationDetailsRowsAll should have size 0
       }
 
-      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =
@@ -298,7 +298,7 @@ class OrganizationManagementApiSpec
 
         val createOrganizationPostResponse =
           gatewayClient
-            .createOrganizationPost[smithy.Unauthorized](
+            .createOrganizationPost[smithy.Forbidden](
               createOrganization.name,
               createOrganization.slug,
               createOrganization.email,
@@ -312,8 +312,8 @@ class OrganizationManagementApiSpec
             )
             .zioValue
 
-        createOrganizationPostResponse.code shouldBe StatusCode.Unauthorized
-        createOrganizationPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        createOrganizationPostResponse.code shouldBe StatusCode.Forbidden
+        createOrganizationPostResponse.body.left.value shouldBe smithy.Forbidden()
 
         val organizationDetailsRowsAll =
           postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue

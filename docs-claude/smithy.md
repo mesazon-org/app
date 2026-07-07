@@ -74,7 +74,8 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
 - `code: 200` with an `output`; `code: 204` and no `output` for operations with nothing to return
 - Organization-scoped operations each carry `@organizationRolesAllowed(roles: [...])` declaring which roles may call them — reads are typically open to every member, writes to `OWNER`/`ADMIN` only (see [Custom traits](#custom-traits))
 - Should document each operation's allowed stages with `/// **Required Onboard Stage:** [...]` (omit when the service is `@completedOnboardStage`) and its allowed roles with `/// **Allowed Organization Roles:** [...]`
-- `errors` lists only shapes from `domain/HttpErrors.smithy`: `[Unauthorized, ValidationError, InternalServerError]` as a base, plus `BadRequest` where the flow can reject a well-formed request (e.g. wrong OTP), plus `Forbidden` on every operation carrying `@organizationRolesAllowed` (role failures are `403`, not `401`)
+- `errors` lists only shapes from `domain/HttpErrors.smithy`: `[Unauthorized, ValidationError, InternalServerError]` as a base, plus `BadRequest` where the flow can reject a well-formed request (e.g. wrong OTP), plus `Forbidden` on every operation that can fail a role or onboard-stage check (`@organizationRolesAllowed`, `@completedOnboardStage`, or an in-handler `verifyOnboardStage`) — role and stage failures are `403`, not `401`
+- **Keep `errors` lists in sync with the code**: whenever a `ServiceError` is added, re-homed under a different HTTP status, or a flow gains a new failure mode, update the `errors` list of **every affected operation** in the same change — the smithy contract is what clients and swagger see, and it silently lies if only the Scala side moves (this happened when `FailedOnboardStage` became `403 Forbidden`)
 
 ### 4. Organization scoping — the `X-Organization-ID` header
 
@@ -87,7 +88,7 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
   ```
 
 - Rationale: the middleware can read a fixed header without parsing the body (impossible for GETs and streaming uploads), and URIs stay untouched by the scoping standard
-- **Tapir endpoints must behave identically to smithy** — the header is declared as a `securityIn` (`header[Option[String]](AuthorizationService.OrganizationIDHeader.toString)`) and passed to `AuthorizationService.auth` together with the endpoint's allowed roles, so missing header/membership/role failures produce the same 401/403 responses on both transports (see `TapirEndpoints.scala` and [middleware.md](middleware.md))
+- **Tapir endpoints follow the same standard** — the header is declared as a typed `securityIn` (`header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString)`) and passed to `AuthorizationService.auth` together with the endpoint's allowed roles, so membership/role failures produce the same `403 Forbidden` on both transports; note that a missing/malformed header is a tapir decode failure (`400`) there, while smithy routes answer through the middleware (see `TapirEndpoints.scala` and [middleware.md](middleware.md))
 - ✅ `@httpHeader("X-Organization-ID") organizationID: UUID` on every org-scoped operation input
 - ❌ `organizationID` as a request-body field or path parameter (`/insert/customers/{organizationID}`), a Tapir endpoint doing its own org check differently from the smithy middleware
 

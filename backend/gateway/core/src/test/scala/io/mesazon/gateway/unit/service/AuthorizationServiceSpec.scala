@@ -111,10 +111,10 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .auth(request, requiresCompletedOnboardStage = true, organizationRolesAllowedOpt = None)
           .zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
         serviceError.asInstanceOf[
-          ServiceError.UnauthorizedError.FailedOnboardStage
-        ] shouldBe ServiceError.UnauthorizedError.FailedOnboardStage(
+          ServiceError.ForbiddenError.FailedOnboardStage
+        ] shouldBe ServiceError.ForbiddenError.FailedOnboardStage(
           onboardStageUser = userDetailsRow.onboardStage,
           onboardStagesAllowed = OnboardStage.completedStages,
         )
@@ -200,7 +200,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .isRight shouldBe true
       }
 
-      "fail with AuthorizationOrganizationIDHeaderMissing when organization roles are required but header is missing" in new TestContext {
+      "fail with AuthHeaderMissingError when organization roles are required but header is missing" in new TestContext {
         val authedUser  = arbitrarySample[AuthedUser]
         val accessToken = arbitrarySample[AccessToken]
 
@@ -228,23 +228,13 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           )
           .zioError
 
-        serviceError shouldBe ServiceError.UnauthorizedError.AuthorizationOrganizationIDHeaderMissing
+        serviceError shouldBe ServiceError.UnauthorizedError.AuthHeaderMissingError(
+          AuthorizationService.OrganizationIDHeader.toString
+        )
       }
 
-      "fail with AuthorizationOrganizationIDHeaderInvalid when the header is not a valid UUID" in new TestContext {
-        val authedUser  = arbitrarySample[AuthedUser]
+      "fail with AuthorizationError when the header is not a valid UUID" in new TestContext {
         val accessToken = arbitrarySample[AccessToken]
-
-        val authedUserAccess = arbitrarySample[AuthedUserAccess].copy(
-          userID = authedUser.userID
-        )
-
-        inSequence(
-          jwtServiceMock.verifyAccessToken
-            .expects(accessToken)
-            .returningZIO(authedUserAccess)
-            .once()
-        )
 
         val authorizationService = buildAuthorizationService
 
@@ -262,7 +252,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           )
           .zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.AuthorizationOrganizationIDHeaderInvalid]
+        serviceError shouldBe a[ServiceError.InternalServerError.AuthorizationError]
       }
 
       "fail with FailedOrganizationRole when user is not assigned to the organization" in new TestContext {

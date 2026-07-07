@@ -430,7 +430,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll should have size 0
       }
 
-      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStage =
@@ -441,10 +441,10 @@ class UserForgotPasswordApiSpec
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
         val forgotPasswordPostResponse =
-          gatewayClient.forgotPasswordPost[smithy.Unauthorized](userDetailsRow.email).zioValue
+          gatewayClient.forgotPasswordPost[smithy.Forbidden](userDetailsRow.email).zioValue
 
-        forgotPasswordPostResponse.code shouldBe StatusCode.Unauthorized
-        forgotPasswordPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        forgotPasswordPostResponse.code shouldBe StatusCode.Forbidden
+        forgotPasswordPostResponse.body.left.value shouldBe smithy.Forbidden()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -1005,7 +1005,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll should have size 0
       }
 
-      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStage =
@@ -1025,14 +1025,14 @@ class UserForgotPasswordApiSpec
 
         val forgotPasswordResetPostResponse =
           gatewayClient
-            .forgotPasswordResetPost[smithy.Unauthorized](
+            .forgotPasswordResetPost[smithy.Forbidden](
               resetPasswordToken = resetPasswordJwt.resetPasswordToken,
               password = passwordNew,
             )
             .zioValue
 
-        forgotPasswordResetPostResponse.code shouldBe StatusCode.Unauthorized
-        forgotPasswordResetPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        forgotPasswordResetPostResponse.code shouldBe StatusCode.Forbidden
+        forgotPasswordResetPostResponse.body.left.value shouldBe smithy.Forbidden()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 

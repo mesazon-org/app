@@ -435,9 +435,9 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
 
         val serviceError = userForgotPasswordService.forgotPasswordPost(forgotPasswordPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
+          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
@@ -711,9 +711,9 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val serviceError =
           userForgotPasswordService.forgotPasswordVerifyOTPPost(forgotPasswordVerifyOTPPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
+          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
@@ -1131,9 +1131,9 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val serviceError =
           userForgotPasswordService.forgotPasswordResetPost(forgotPasswordResetPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
+          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,

@@ -220,7 +220,10 @@ class FileApiSpec
         uploadOrganizationLogoResponse.body.left.value shouldBe smithy.BadRequest()
       }
 
-      "fail with Unauthorized when the organization id header is missing" in withContext { context =>
+      // The organization id header is a typed tapir security input, so a missing header is rejected
+      // as a decode failure (400) before the security logic runs — unlike the smithy transport, where
+      // the middleware answers 401 (AuthHeaderMissingError).
+      "fail with BadRequest when the organization id header is missing" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
@@ -234,7 +237,7 @@ class FileApiSpec
         val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.Unauthorized](
+          .uploadOrganizationLogoPost[smithy.BadRequest](
             None,
             Some(organizationLogoOriginalFileName),
             logoBytes,
@@ -242,8 +245,8 @@ class FileApiSpec
           )
           .zioValue
 
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.Unauthorized
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized()
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.BadRequest
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.BadRequest()
       }
 
       "fail with Forbidden when the user is not assigned to the organization" in withContext { context =>
@@ -347,7 +350,7 @@ class FileApiSpec
         uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized()
       }
 
-      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =
@@ -363,7 +366,7 @@ class FileApiSpec
         val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.Unauthorized](
+          .uploadOrganizationLogoPost[smithy.Forbidden](
             Some(organizationID),
             Some(organizationLogoOriginalFileName),
             logoBytes,
@@ -371,8 +374,8 @@ class FileApiSpec
           )
           .zioValue
 
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.Unauthorized
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized()
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.Forbidden
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Forbidden()
       }
 
       "fail with InternalServerError when the uploaded file is not a supported image" in withContext { context =>

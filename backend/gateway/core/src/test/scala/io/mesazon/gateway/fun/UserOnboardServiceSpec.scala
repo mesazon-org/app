@@ -140,9 +140,9 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val serviceError = userOnboardService.onboardPasswordPost(onboardPasswordPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
+          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
             onboardStageUser = userDetailsRow.onboardStage,
             onboardStagesAllowed = OnboardStage.onboardPasswordStages,
@@ -485,9 +485,9 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val serviceError = userOnboardService.onboardDetailsPost(onboardDetailsPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
+          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
             onboardStageUser = userDetailsRow.onboardStage,
             onboardStagesAllowed = OnboardStage.onboardDetailsStages,
@@ -781,9 +781,9 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
+          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
             onboardStageUser = userDetailsRow.onboardStage,
             onboardStagesAllowed = OnboardStage.onboardVerifyPhoneNumberStages,
@@ -1084,9 +1084,9 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberGet().zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
+          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
             onboardStageUser = userDetailsRow.onboardStage,
             onboardStagesAllowed = OnboardStage.onboardVerifyPhoneNumberStages,

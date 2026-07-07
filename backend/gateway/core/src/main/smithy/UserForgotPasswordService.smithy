@@ -20,7 +20,7 @@ operation ForgotPasswordPost {
         request: ForgotPasswordPostRequest
     }
     output: ForgotPasswordPostResponse
-    errors: [ValidationError, Unauthorized, InternalServerError]
+    errors: [ValidationError, Unauthorized, Forbidden, InternalServerError]
 }
 
 /// **Required Onboard Stage:** [`PASSWORD_PROVIDED`, `PHONE_VERIFICATION`, `PHONE_VERIFIED`]
@@ -32,7 +32,7 @@ operation ForgotPasswordVerifyOTPPost {
         request: ForgotPasswordVerifyOTPPostRequest
     }
     output: ForgotPasswordVerifyOTPPostResponse
-    errors: [ValidationError, BadRequest, Unauthorized, InternalServerError]
+    errors: [ValidationError, BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
 /// **Required Onboard Stage:** [`PASSWORD_PROVIDED`, `PHONE_VERIFICATION`, `PHONE_VERIFIED`]
@@ -43,5 +43,5 @@ operation ForgotPasswordResetPost {
         @httpPayload
         request: ForgotPasswordResetPostRequest
     }
-    errors: [ValidationError, Unauthorized, InternalServerError]
+    errors: [ValidationError, Unauthorized, Forbidden, InternalServerError]
 }

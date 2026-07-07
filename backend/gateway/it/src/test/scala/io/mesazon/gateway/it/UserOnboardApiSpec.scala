@@ -186,7 +186,7 @@ class UserOnboardApiSpec
         userCredentialsRowsAll should have size 0
       }
 
-      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =
@@ -207,14 +207,14 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardPasswordPostResponse = gatewayClient
-          .onboardPasswordPost[smithy.Unauthorized](
+          .onboardPasswordPost[smithy.Forbidden](
             onboardPasswordPostRequest,
             Some(AccessToken.assume(accessToken.value)),
           )
           .zioValue
 
-        onboardPasswordPostResponse.code shouldBe StatusCode.Unauthorized
-        onboardPasswordPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        onboardPasswordPostResponse.code shouldBe StatusCode.Forbidden
+        onboardPasswordPostResponse.body.left.value shouldBe smithy.Forbidden()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -338,7 +338,7 @@ class UserOnboardApiSpec
         userDetailsRowsAll should have size 0
       }
 
-      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =
@@ -357,14 +357,14 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardDetailsPostResponse = gatewayClient
-          .onboardDetailsPost[smithy.Unauthorized](
+          .onboardDetailsPost[smithy.Forbidden](
             onboardDetailsPostRequest,
             Some(accessToken),
           )
           .zioValue
 
-        onboardDetailsPostResponse.code shouldBe StatusCode.Unauthorized
-        onboardDetailsPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        onboardDetailsPostResponse.code shouldBe StatusCode.Forbidden
+        onboardDetailsPostResponse.body.left.value shouldBe smithy.Forbidden()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -528,7 +528,7 @@ class UserOnboardApiSpec
         userOtpRowsAll.head shouldBe userOtpRow
       }
 
-      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =
@@ -561,14 +561,14 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumberPost[smithy.Unauthorized](
+          .onboardVerifyPhoneNumberPost[smithy.Forbidden](
             onboardVerifyPhoneNumberPostRequest,
             Some(accessToken),
           )
           .zioValue
 
-        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
-        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Unauthorized()
+        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Forbidden
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Forbidden()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -866,7 +866,7 @@ class UserOnboardApiSpec
         userOtpRowsAll should have size 0
       }
 
-      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =
@@ -883,13 +883,13 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardVerifyPhoneNumberGetResponse = gatewayClient
-          .onboardVerifyPhoneNumberGet[smithy.Unauthorized](
+          .onboardVerifyPhoneNumberGet[smithy.Forbidden](
             Some(accessToken)
           )
           .zioValue
 
-        onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.Unauthorized
-        onboardVerifyPhoneNumberGetResponse.body.left.value shouldBe smithy.Unauthorized()
+        onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.Forbidden
+        onboardVerifyPhoneNumberGetResponse.body.left.value shouldBe smithy.Forbidden()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 

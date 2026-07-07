@@ -278,7 +278,7 @@ class UserSignInApiSpec
         userTokenRowsAll shouldBe empty
       }
 
-      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStage =
@@ -299,10 +299,10 @@ class UserSignInApiSpec
 
         postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
 
-        val signInPostResponse = gatewayClient.signInPost[smithy.Unauthorized](userDetailsRow.email, password).zioValue
+        val signInPostResponse = gatewayClient.signInPost[smithy.Forbidden](userDetailsRow.email, password).zioValue
 
-        signInPostResponse.code shouldBe StatusCode.Unauthorized
-        signInPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        signInPostResponse.code shouldBe StatusCode.Forbidden
+        signInPostResponse.body.left.value shouldBe smithy.Forbidden()
 
         val userActionAttemptRowsAll =
           postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue

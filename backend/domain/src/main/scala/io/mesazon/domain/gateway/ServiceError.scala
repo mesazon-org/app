@@ -95,7 +95,7 @@ object ServiceError {
     case class FailedOnboardStage(
         onboardStageUser: OnboardStage,
         onboardStagesAllowed: List[OnboardStage],
-    ) extends UnauthorizedError(
+    ) extends ForbiddenError(
           s"Failed onboard stage user [$onboardStageUser], allowed: [$onboardStagesAllowed]",
           None,
         )

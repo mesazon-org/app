@@ -668,9 +668,9 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
 
         val serviceError = userSignUpService.signUpVerifyEmailPost(signUpVerifyEmailPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
+          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
           .FailedOnboardStage(
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.signUpVerifyEmailStages,

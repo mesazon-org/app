@@ -267,10 +267,10 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val serviceError = authenticationService.auth(request).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe
-          ServiceError.UnauthorizedError.FailedOnboardStage(
+          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe
+          ServiceError.ForbiddenError.FailedOnboardStage(
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.signInAllowedStages,
           )
