@@ -166,7 +166,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         )
 
         val organizationUserRolesAllowed = OrganizationUserRole.adminRoles
-        val organizationUserRow      = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow          = arbitrarySample[OrganizationUserRow].copy(
           userID = authedUser.userID,
           userRole = Random.shuffle(organizationUserRolesAllowed).zioValue.head,
         )
@@ -310,7 +310,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         )
 
         val organizationUserRolesAllowed = OrganizationUserRole.adminRoles
-        val organizationUserRow      = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow          = arbitrarySample[OrganizationUserRow].copy(
           userID = authedUser.userID,
           userRole = OrganizationUserRole.User,
         )

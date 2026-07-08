@@ -2,7 +2,6 @@ package io.mesazon.gateway.middleware
 
 import io.mesazon.gateway.service.{organizationUserRoleFromSmithyToDomain, AuthenticationService, AuthorizationService}
 import io.mesazon.gateway.smithy as gatewaySmithy
-import io.mesazon.gateway.smithy.{CompletedOnboardStage, OrganizationRolesAllowed}
 import org.http4s.HttpApp
 import smithy4s.Hints
 import smithy4s.http4s.ServerEndpointMiddleware
@@ -33,14 +32,14 @@ object ServerMiddleware {
           case (None, Some(_)) =>
             endpointHints.get[smithy.api.Auth] match {
               case None =>
-                val organizationRolesAllowedOpt = endpointHints
-                  .get[OrganizationRolesAllowed]
+                val organizationUserRolesAllowedOpt = endpointHints
+                  .get[gatewaySmithy.OrganizationUserRolesAllowed]
                   .map(_.roles.map(organizationUserRoleFromSmithyToDomain))
                 HttpApp[Task](request =>
                   authorizationService.auth(
                     request,
-                    serviceHints.get[CompletedOnboardStage].isDefined,
-                    organizationRolesAllowedOpt,
+                    serviceHints.get[gatewaySmithy.CompletedOnboardStage].isDefined,
+                    organizationUserRolesAllowedOpt,
                   ) *> inputApp(request)
                 )
               case _ =>

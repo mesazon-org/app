@@ -104,7 +104,7 @@ All custom traits live in `domain/Gateway.smithy` and are enforced by [the HTTP 
 
 ### `@organizationRolesAllowed(roles: [...])`
 
-- **Operation-level** trait carrying the list of `OrganizationUserRole`s (`OWNER`, `ADMIN`, `USER` — mirrors the Scala domain enum `UserRole`) allowed to call that operation, so permissions can differ per endpoint within one service
+- **Operation-level** trait carrying the list of `OrganizationUserRole`s (`OWNER`, `ADMIN`, `USER` — mirrors the Scala domain enum `OrganizationUserRole`) allowed to call that operation, so permissions can differ per endpoint within one service
 - The caller must be **assigned to the organization** identified by the `X-Organization-ID` header **with one of the declared roles**; a missing header is `400 BadRequest`, a member with a disallowed role is `403 Forbidden`, and a caller with no membership row at all is a `500 InternalServerError` (treated like any missing referenced entity)
 - Enum values must be quoted in the trait node value: `@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])`
 - Always used together with the `X-Organization-ID` header input member (section above) — the trait declares *who* may call, the header declares *which organization* the request is scoped to

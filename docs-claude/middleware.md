@@ -54,7 +54,7 @@ Each smithy **operation** declares which organization roles may call it, e.g. `@
 
 Enforcement, mirroring the `completedOnboardStage` mechanism:
 
-1. `ServerMiddleware` reads the `OrganizationRolesAllowed` hint from the **endpoint hints**, maps the smithy roles to domain `UserRole`s (`organizationUserRoleFromSmithyToDomain` in `service/service.scala`), and passes them as `organizationRolesAllowedOpt` to `AuthorizationService.auth`.
+1. `ServerMiddleware` reads the `OrganizationRolesAllowed` hint from the **endpoint hints**, maps the smithy roles to domain `OrganizationUserRole`s (`organizationUserRoleFromSmithyToDomain` in `service/service.scala`), and passes them as `organizationRolesAllowedOpt` to `AuthorizationService.auth`.
 2. The request overload parses the `Authorization` bearer into a typed `AccessToken` and the `X-Organization-ID` header into a typed `Option[OrganizationID]` before delegating to the token overload; a malformed header UUID fails as `InternalServerError.UnexpectedError` (`500`).
 3. `AuthorizationService.verifyOrganizationRole` (after token + onboard-stage verification): header absent when roles are required → `BadRequestError.HeaderMissingError` (`400`).
 4. It loads the caller's membership — `OrganizationManagementRepository.getOrganizationUser(organizationID, userID)`. No membership row → `InternalServerError.UnexpectedError` (`500`, the missing-referenced-entity convention). A member whose `userRole` is not in the declared roles → `ForbiddenError.InvalidOrganizationRole` (carrying the caller's actual role) → **`403 Forbidden`** (authenticated but not allowed — distinct from 401).

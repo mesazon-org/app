@@ -83,10 +83,10 @@ object ServiceError {
   object ForbiddenError {
 
     case class InvalidOrganizationRole(
-                                        organizationID: OrganizationID,
-                                        userID: UserID,
-                                        organizationUserRole: OrganizationUserRole,
-                                        organizationRolesAllowed: List[OrganizationUserRole],
+        organizationID: OrganizationID,
+        userID: UserID,
+        organizationUserRole: OrganizationUserRole,
+        organizationRolesAllowed: List[OrganizationUserRole],
     ) extends ForbiddenError(
           s"Invalid organization role for organization id: [$organizationID] and user id: [$userID], user role: [$organizationUserRole], allowed roles: [$organizationRolesAllowed]",
           None,

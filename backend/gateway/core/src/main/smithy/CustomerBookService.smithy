@@ -25,7 +25,7 @@ service CustomerBookService {
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`, `USER`]
 @http(method: "GET", uri: "/get/customer/{customerID}", code: 200)
-@organizationRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
 operation GetCustomerGet {
     input := {
         @required
@@ -41,7 +41,7 @@ operation GetCustomerGet {
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`, `USER`]
 @http(method: "GET", uri: "/get/customers", code: 200)
-@organizationRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
 operation GetCustomersGet {
     input := {
         @required
@@ -54,7 +54,7 @@ operation GetCustomersGet {
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
 @http(method: "POST", uri: "/insert/customers", code: 204)
-@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
 operation InsertCustomersPost {
     input := {
         @required
@@ -69,7 +69,7 @@ operation InsertCustomersPost {
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
 @http(method: "PUT", uri: "/update/customers", code: 204)
-@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
 operation UpdateCustomersPut {
     input := {
         @required
@@ -84,7 +84,7 @@ operation UpdateCustomersPut {
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
 @http(method: "POST", uri: "/delete/customers", code: 204)
-@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
 operation DeleteCustomersPost {
     input := {
         @required

@@ -1,6 +1,6 @@
 # Organization Management
 
-Owns the organization domain: the organization entity (details, address, slug, stage), the organization↔user membership with roles (`OrganizationUserRow`, creator becomes `UserRole.Owner`), and the creation flow. It is the first feature gated on **completed onboarding**: the smithy service carries `@completedOnboardStage`, so `AuthorizationService` requires the user's stage to be in `OnboardStage.completedStages` (= `PhoneVerified`) on top of a valid access token.
+Owns the organization domain: the organization entity (details, address, slug, stage), the organization↔user membership with roles (`OrganizationUserRow`, creator becomes `OrganizationUserRole.Owner`), and the creation flow. It is the first feature gated on **completed onboarding**: the smithy service carries `@completedOnboardStage`, so `AuthorizationService` requires the user's stage to be in `OnboardStage.completedStages` (= `PhoneVerified`) on top of a valid access token.
 
 **Scope**: organization rows, membership/roles, creation endpoint, slug uniqueness. The logo upload pipeline that advances the organization to `LogoProvided` lives in [Files Management](files-management.md) — this feature only owns the row it updates.
 
@@ -22,7 +22,7 @@ Smithy spec: `backend/gateway/core/src/main/smithy/OrganizationManagementService
 1. Read `AuthedUser` from `AuthState`; validate the request (`CreateOrganizationPostRequestServiceValidator` — name, slug, email, phone number, address fields; each is an iron-refined domain type like `OrganizationSlug`).
 2. `OrganizationManagementRepository.createOrganization` inserts **in one transaction**:
    - `OrganizationDetailsRow` (generated `OrganizationID`, stage `DetailsProvided`, logo fields `None`), and
-   - `OrganizationUserRow` linking the creator with `UserRole.Owner`.
+   - `OrganizationUserRow` linking the creator with `OrganizationUserRole.Owner`.
 3. Send an "organization created" email — best-effort: retried, final failure only logged, never fails the request.
 4. Response: the new `organizationID`.
 
