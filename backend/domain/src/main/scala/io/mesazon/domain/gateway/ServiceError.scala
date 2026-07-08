@@ -114,9 +114,6 @@ object ServiceError {
     case class AuthenticationError(error: String, throwable: Option[Throwable] = None)
         extends InternalServerError(error, throwable)
 
-    case class AuthorizationError(error: String, throwable: Option[Throwable] = None)
-        extends InternalServerError(error, throwable)
-
     case class UnexpectedError(error: String, throwable: Option[Throwable] = None)
         extends InternalServerError(error, throwable)
   }

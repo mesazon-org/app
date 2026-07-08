@@ -3,7 +3,7 @@ package io.mesazon.gateway.service
 import cats.syntax.all.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
-import io.mesazon.gateway.repository.{OrganizationManagementRepository, UserDetailsRepository}
+import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.state.*
 import io.mesazon.gateway.tapir.TapirTask
 import org.http4s.*
@@ -53,14 +53,14 @@ object AuthorizationService {
         accessToken <- ZIO
           .fromEither(AccessToken.either(accessTokenRaw))
           .mapError(error =>
-            ServiceError.InternalServerError.AuthorizationError(s"Failed to apply AccessToken: $error")
+            ServiceError.InternalServerError.UnexpectedError(s"Failed to apply AccessToken [$accessTokenRaw]: $error")
           )
         organizationIDOptRaw = request.headers.get(OrganizationIDHeader).map(_.head.value)
         organizationIDOpt <- ZIO
           .fromEither(organizationIDOptRaw.traverse(OrganizationID.eitherFromString))
           .mapError(error =>
-            ServiceError.InternalServerError.AuthorizationError(
-              s"Failed to apply OrganizationID from header: $error"
+            ServiceError.InternalServerError.UnexpectedError(
+              s"Failed to apply OrganizationID from header [$organizationIDOptRaw]: $error"
             )
           )
         _ <- auth(accessToken, requiresCompletedOnboardStage, organizationIDOpt, organizationRolesAllowedOpt)

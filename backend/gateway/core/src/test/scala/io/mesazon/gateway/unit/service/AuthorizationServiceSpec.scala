@@ -234,7 +234,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         )
       }
 
-      "fail with AuthorizationError when the header is not a valid UUID" in new TestContext {
+      "fail with UnexpectedError when the organization header is not a valid" in new TestContext {
         val accessToken = arbitrarySample[AccessToken]
 
         val authorizationService = buildAuthorizationService
@@ -253,7 +253,9 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           )
           .zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.AuthorizationError]
+        serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
+          "Failed to apply OrganizationID from header [Some(not-a-uuid)]: Invalid UUID format error: [Invalid UUID string: not-a-uuid]"
+        )
       }
 
       "fail with UnexpectedError when user is not assigned to the organization" in new TestContext {
