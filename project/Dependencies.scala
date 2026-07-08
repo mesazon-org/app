@@ -2,7 +2,7 @@ import sbt.*
 
 object Dependencies {
 
-  lazy val http4sV              = "0.23.34"
+  lazy val http4sV              = "0.23.36"
   lazy val smithy4sV            = "0.19.8"
   lazy val zioV                 = "2.1.26"
   lazy val zioConfigV           = "4.0.7"
@@ -18,7 +18,7 @@ object Dependencies {
   lazy val scalacheckV          = "1.19.0"
   lazy val testcontainersScalaV = "0.44.1"
   lazy val testcontainersV      = "2.0.5"
-  lazy val ironV                = "3.3.1"
+  lazy val ironV                = "3.3.2"
   lazy val chimneyV             = "1.10.0"
   lazy val doobieV              = "1.0.0-RC13"
   lazy val postgresqlV          = "42.7.3"
@@ -40,7 +40,7 @@ object Dependencies {
   lazy val scalamockV           = "7.5.5"
   lazy val scrimageV            = "4.6.5"
   lazy val tikaV                = "3.3.1"
-  lazy val awssdkV              = "2.46.21"
+  lazy val awssdkV              = "2.47.0"
   lazy val zioS3V               = "0.4.4"
 
   // Http4s
