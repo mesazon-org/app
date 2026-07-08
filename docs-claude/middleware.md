@@ -41,24 +41,24 @@ Runs for `@httpBearerAuth` services and for Tapir endpoints:
 1. Extract the `Bearer` token → `UnauthorizedError.AuthHeaderMissingError("Authorization")` (`401`) if absent — **a missing `Authorization` bearer is `401 Unauthorized`**, on both transports (tapir's default for a missing `auth` security input); `401` also covers credentials that are present but fail verification.
 2. `JwtService.verifyAccessToken` — signature, expiry, issuer (access tokens are stateless; see [user-token-management](features/user-token-management.md)).
 3. If the service carries `@completedOnboardStage` (passed as `requiresCompletedOnboardStage = true`): load user details and require the stage to be in `OnboardStage.completedStages` (= `PhoneVerified`), else `ForbiddenError.InvalidOnboardStage` → `403 Forbidden` (this applies to every `verifyOnboardStage` call, including the in-handler stage checks of sign-up/onboard/forgot-password and the sign-in stage check in `AuthenticationService`).
-4. If the operation carries `@organizationRolesAllowed` (passed as `organizationRolesAllowedOpt = Some(roles)`): run the organization role check (next section).
+4. If the operation carries `@organizationUserRolesAllowed` (passed as `organizationUserRolesAllowedOpt = Some(roles)`): run the organization role check (next section).
 5. `AuthState.set(AuthedUser(userID))`.
 
 ## `AuthState` — how handlers learn who is calling
 
 `state/AuthState.scala` wraps a `FiberRef[Option[AuthedUser]]` — request-scoped state. The middleware `set`s it after successful auth; service implementations call `authState.get` as their first step. `get` on an unauthenticated fiber is a defect (`orDie`) — it can only happen if a handler is reachable without the middleware, which is a wiring bug.
 
-## Organization permissions — `@organizationRolesAllowed` + `X-Organization-ID`
+## Organization permissions — `@organizationUserRolesAllowed` + `X-Organization-ID`
 
-Each smithy **operation** declares which organization roles may call it, e.g. `@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])` — operation-level so permissions can differ per endpoint within one service (customer book: reads allow `OWNER`/`ADMIN`/`USER`, writes only `OWNER`/`ADMIN`). Every org-scoped operation carries the organization in the **required `X-Organization-ID` header** (never in the body or URI — a fixed header is readable by the middleware without parsing bodies, and it works identically for GETs, JSON posts and streaming uploads).
+Each smithy **operation** declares which organization roles may call it, e.g. `@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])` — operation-level so permissions can differ per endpoint within one service (customer book: reads allow `OWNER`/`ADMIN`/`USER`, writes only `OWNER`/`ADMIN`). Every org-scoped operation carries the organization in the **required `X-Organization-ID` header** (never in the body or URI — a fixed header is readable by the middleware without parsing bodies, and it works identically for GETs, JSON posts and streaming uploads).
 
 Enforcement, mirroring the `completedOnboardStage` mechanism:
 
-1. `ServerMiddleware` reads the `OrganizationRolesAllowed` hint from the **endpoint hints**, maps the smithy roles to domain `OrganizationUserRole`s (`organizationUserRoleFromSmithyToDomain` in `service/service.scala`), and passes them as `organizationRolesAllowedOpt` to `AuthorizationService.auth`.
+1. `ServerMiddleware` reads the `OrganizationUserRolesAllowed` hint from the **endpoint hints**, maps the smithy roles to domain `OrganizationUserRole`s (`organizationUserRoleFromSmithyToDomain` in `service/service.scala`), and passes them as `organizationUserRolesAllowedOpt` to `AuthorizationService.auth`.
 2. The request overload parses the `Authorization` bearer into a typed `AccessToken` and the `X-Organization-ID` header into a typed `Option[OrganizationID]` before delegating to the token overload; a malformed header UUID fails as `InternalServerError.UnexpectedError` (`500`).
 3. `AuthorizationService.verifyOrganizationRole` (after token + onboard-stage verification): header absent when roles are required → `BadRequestError.HeaderMissingError` (`400`).
 4. It loads the caller's membership — `OrganizationManagementRepository.getOrganizationUser(organizationID, userID)`. No membership row → `InternalServerError.UnexpectedError` (`500`, the missing-referenced-entity convention). A member whose `userRole` is not in the declared roles → `ForbiddenError.InvalidOrganizationRole` (carrying the caller's actual role) → **`403 Forbidden`** (authenticated but not allowed — distinct from 401).
-5. Operations without the trait skip the check entirely (`organizationRolesAllowedOpt = None`).
+5. Operations without the trait skip the check entirely (`organizationUserRolesAllowedOpt = None`).
 
 Covered by `unit/service/AuthorizationServiceSpec` (allowed role, missing header, invalid header, not a member, disallowed role) and by the `FileApiSpec` acceptance cases (missing org header → 400, missing token → 401, non-member → 500, disallowed role → 403).
 

@@ -72,9 +72,9 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
 - Body input is always a single wrapper member: `input := { @required @httpPayload request: <Operation>Request }`
 - Identifiers travel in the request body; use `@httpLabel` path parameters for GET/bodyless operations (e.g. `/get/customer/{customerID}`) — except `organizationID`, which is always a header (see below)
 - `code: 200` with an `output`; `code: 204` and no `output` for operations with nothing to return
-- Organization-scoped operations each carry `@organizationRolesAllowed(roles: [...])` declaring which roles may call them — reads are typically open to every member, writes to `OWNER`/`ADMIN` only (see [Custom traits](#custom-traits))
+- Organization-scoped operations each carry `@organizationUserRolesAllowed(roles: [...])` declaring which roles may call them — reads are typically open to every member, writes to `OWNER`/`ADMIN` only (see [Custom traits](#custom-traits))
 - Should document each operation's allowed stages with `/// **Required Onboard Stage:** [...]` (omit when the service is `@completedOnboardStage`) and its allowed roles with `/// **Allowed Organization Roles:** [...]`
-- `errors` lists only shapes from `domain/HttpErrors.smithy`: `[Unauthorized, ValidationError, InternalServerError]` as a base, plus `BadRequest` where the flow can reject a well-formed request (e.g. wrong OTP), plus `Forbidden` on every operation that can fail a role or onboard-stage check (`@organizationRolesAllowed`, `@completedOnboardStage`, or an in-handler `verifyOnboardStage`) — role and stage failures are `403`, not `401`
+- `errors` lists only shapes from `domain/HttpErrors.smithy`: `[Unauthorized, ValidationError, InternalServerError]` as a base, plus `BadRequest` where the flow can reject a well-formed request (e.g. wrong OTP), plus `Forbidden` on every operation that can fail a role or onboard-stage check (`@organizationUserRolesAllowed`, `@completedOnboardStage`, or an in-handler `verifyOnboardStage`) — role and stage failures are `403`, not `401`
 - **Keep `errors` lists in sync with the code**: whenever a `ServiceError` is added, re-homed under a different HTTP status, or a flow gains a new failure mode, update the `errors` list of **every affected operation** in the same change — the smithy contract is what clients and swagger see, and it silently lies if only the Scala side moves (this happened when `InvalidOnboardStage` became `403 Forbidden`)
 
 ### 4. Organization scoping — the `X-Organization-ID` header
@@ -102,10 +102,10 @@ All custom traits live in `domain/Gateway.smithy` and are enforced by [the HTTP 
 - Declares that every endpoint requires the caller to have **completed onboarding** (`OnboardStage.completedStages` = `PhoneVerified`), on top of a valid bearer token
 - Used by: `OrganizationManagementService`, `CustomerBookService`
 
-### `@organizationRolesAllowed(roles: [...])`
+### `@organizationUserRolesAllowed(roles: [...])`
 
 - **Operation-level** trait carrying the list of `OrganizationUserRole`s (`OWNER`, `ADMIN`, `USER` — mirrors the Scala domain enum `OrganizationUserRole`) allowed to call that operation, so permissions can differ per endpoint within one service
 - The caller must be **assigned to the organization** identified by the `X-Organization-ID` header **with one of the declared roles**; a missing header is `400 BadRequest`, a member with a disallowed role is `403 Forbidden`, and a caller with no membership row at all is a `500 InternalServerError` (treated like any missing referenced entity)
-- Enum values must be quoted in the trait node value: `@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])`
+- Enum values must be quoted in the trait node value: `@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])`
 - Always used together with the `X-Organization-ID` header input member (section above) — the trait declares *who* may call, the header declares *which organization* the request is scoped to
 - Used by: `CustomerBookService` — reads (`GetCustomerGet`, `GetCustomersGet`) allow `OWNER`/`ADMIN`/`USER`, writes (insert/update/delete) allow `OWNER`/`ADMIN` only
