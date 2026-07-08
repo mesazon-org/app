@@ -36,6 +36,7 @@ object TapirEndpoints {
           )
         )
       )
+      .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
 
   val serverOptions: Http4sServerOptions[Task] =
     Http4sServerOptions

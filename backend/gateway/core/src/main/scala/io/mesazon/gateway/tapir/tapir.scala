@@ -1,7 +1,7 @@
 package io.mesazon.gateway.tapir
 
 import io.github.iltotore.iron.constraint.all.Trimmed
-import io.mesazon.domain.gateway.TapirServerError
+import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.json.{tapirServerErrorSchemas, given}
 import sttp.apispec.openapi.Info
 import sttp.capabilities.zio.ZioStreams
@@ -10,7 +10,7 @@ import sttp.monad.MonadError
 import sttp.tapir.codec.iron.ValidatorForPredicate
 import sttp.tapir.json.jsoniter.*
 import sttp.tapir.server.interceptor.DecodeFailureContext
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.decodefailure.*
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.ztapir.*
 import sttp.tapir.{EndpointOutput, ValidationError, Validator}
@@ -91,14 +91,15 @@ private[tapir] val apiInfo: Info =
   Info(
     title = "Gateway Tapir API",
     version = "1.0",
-    description = Some(
-      """# Global Requirements
-        |**Required Onboard Stage:** **COMPLETED**
-        |
-        |All endpoints in this service require the user to have finished
-        |the onboarding flow (Phone & Email Verified).""".stripMargin
-    ),
+    description = Some("**Required Onboard Stage:** COMPLETED"),
   )
+
+/** Swagger marker documenting the organization roles an endpoint requires, mirroring the smithy
+  * `/// **Required Organization User Roles:** [...]` doc comment. Derives the role names from the same
+  * `OrganizationUserRole` list the endpoint's security logic enforces, so the docs cannot drift.
+  */
+private[tapir] def requiredOrganizationRolesDescription(roles: List[OrganizationUserRole]): String =
+  roles.map(role => s"`${role.toString.toUpperCase}`").mkString("**Required Organization User Roles:** [", ", ", "]")
 
 type TapirTask[A] = IO[TapirServerError, A]
 

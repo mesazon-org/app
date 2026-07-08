@@ -88,6 +88,7 @@ object HttpApp {
     smithy.UserForgotPasswordService,
     smithy.UserTokenService,
     smithy.OrganizationManagementService,
+    smithy.CustomerBookService,
   )
 
   private def server(

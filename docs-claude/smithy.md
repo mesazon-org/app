@@ -65,15 +65,19 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
 - Should always be annotated `@simpleRestJson` (`use alloy#simpleRestJson`)
 - Auth annotation: `@httpBearerAuth` (access-token endpoints), `@httpBasicAuth` (credential endpoints), or none (public endpoints) — never both
 - Add `@completedOnboardStage` when **every** endpoint requires completed onboarding
-- Should document global requirements with `///` doc comments above the service (they render in swagger)
+- Service-level `///` docs render as the OpenAPI `info.description` in swagger. When `@completedOnboardStage`, the **only** service doc needed is the onboarding marker `/// **Required Onboard Stage:** COMPLETED` — no other descriptive prose (§3 defines the marker wording)
 
 ### 3. Operations
 
 - Body input is always a single wrapper member: `input := { @required @httpPayload request: <Operation>Request }`
 - Identifiers travel in the request body; use `@httpLabel` path parameters for GET/bodyless operations (e.g. `/get/customer/{customerID}`) — except `organizationID`, which is always a header (see below)
 - `code: 200` with an `output`; `code: 204` and no `output` for operations with nothing to return
+- **`@http` placement**: the `@http` trait sits **immediately above the `operation` line**; any other operation traits (e.g. `@organizationUserRolesAllowed`) go above `@http`, so the method + URI always stay paired with the operation they describe
 - Organization-scoped operations each carry `@organizationUserRolesAllowed(roles: [...])` declaring which roles may call them — reads are typically open to every member, writes to `OWNER`/`ADMIN` only (see [Custom traits](#custom-traits))
-- Should document each operation's allowed stages with `/// **Required Onboard Stage:** [...]` (omit when the service is `@completedOnboardStage`) and its allowed roles with `/// **Allowed Organization Roles:** [...]`
+- **Swagger documentation markers** — document an operation's gates with two parallel bold-label `///` markers (they render into the operation `description`); keep the wording identical across the smithy and Tapir swaggers:
+  - `/// **Required Onboard Stage:** [...]` — a bracketed list of `OnboardStage` enum values in backticks (e.g. `[`EMAIL_VERIFIED`]`); **omit per operation when the service is `@completedOnboardStage`**, which instead carries the single service-level `/// **Required Onboard Stage:** COMPLETED`
+  - `/// **Required Organization User Roles:** [...]` — a bracketed list of role enum values in backticks (e.g. `[`OWNER`, `ADMIN`]`) on every `@organizationUserRolesAllowed` operation
+  - Tapir mirrors both verbatim: the stage marker lives in the Tapir `apiInfo.description` (global — every Tapir endpoint requires completed onboarding), and the roles marker is built by the shared `requiredOrganizationRolesDescription(roles)` helper (in `tapir/tapir.scala`) and passed to each endpoint's `.description(...)`
 - `errors` lists only shapes from `domain/HttpErrors.smithy`: `[Unauthorized, ValidationError, InternalServerError]` as a base, plus `BadRequest` where the flow can reject a well-formed request (e.g. wrong OTP), plus `Forbidden` on every operation that can fail a role or onboard-stage check (`@organizationUserRolesAllowed`, `@completedOnboardStage`, or an in-handler `verifyOnboardStage`) — role and stage failures are `403`, not `401`
 - **Keep `errors` lists in sync with the code**: whenever a `ServiceError` is added, re-homed under a different HTTP status, or a flow gains a new failure mode, update the `errors` list of **every affected operation** in the same change — the smithy contract is what clients and swagger see, and it silently lies if only the Scala side moves (this happened when `InvalidOnboardStage` became `403 Forbidden`)
 
@@ -88,7 +92,8 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
   ```
 
 - Rationale: the middleware can read a fixed header without parsing the body (impossible for GETs and streaming uploads), and URIs stay untouched by the scoping standard
-- **Tapir endpoints follow the same standard** — the header is declared as a typed `securityIn` (`header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString)`) and passed to `AuthorizationService.auth` together with the endpoint's allowed roles; missing required headers (`Authorization`, `X-Organization-ID`) are a generic `400 BadRequest` and disallowed-role failures a `403 Forbidden` on **both** transports (see `TapirEndpoints.scala` and [middleware.md](middleware.md))
+- **Make the role requirement obvious in swagger** — neither the `@organizationUserRolesAllowed` trait nor the middleware role check appears in the generated OpenAPI, so a reader of the swagger learns *which role is required* only from doc comments. Document it at both levels: the operation carries `/// **Required Organization User Roles:** [...]` (becomes the operation `description`) and the `X-Organization-ID` member carries a `///` doc (becomes the parameter `description`, as shown above)
+- **Tapir endpoints follow the same standard** — the header is declared as a typed `securityIn` (`header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString)`) and passed to `AuthorizationService.auth` together with the endpoint's allowed roles; missing required headers (`Authorization`, `X-Organization-ID`) are a generic `400 BadRequest` and disallowed-role failures a `403 Forbidden` on **both** transports (see `TapirEndpoints.scala` and [middleware.md](middleware.md)). Because the Tapir role check runs inside `zServerSecurityLogic` (invisible to OpenAPI), give the endpoint a `.description(requiredOrganizationRolesDescription(...))` passing the same `OrganizationUserRole` list the security logic enforces (e.g. `OrganizationUserRole.adminRoles`) — the shared helper renders the identical `**Required Organization User Roles:** [...]` marker used on the smithy operations, so the Tapir swagger states the required roles too and cannot drift from the enforced list
 - ✅ `@httpHeader("X-Organization-ID") organizationID: UUID` on every org-scoped operation input
 - ❌ `organizationID` as a request-body field or path parameter (`/insert/customers/{organizationID}`), a Tapir endpoint doing its own org check differently from the smithy middleware
 
