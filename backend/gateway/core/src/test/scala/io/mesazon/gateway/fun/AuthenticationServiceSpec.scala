@@ -200,18 +200,14 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         assert(authenticationResponse.isRight)
       }
 
-      "fail with AuthenticationCredentialsMissing to authenticate user with missing basic credentials" in new TestContext {
+      "fail with AuthHeaderMissingError to authenticate user with missing basic credentials" in new TestContext {
         val authenticationService = buildAuthenticationService
 
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
 
         val serviceError = authenticationService.auth(request).zioError
 
-        serviceError shouldBe a[ServiceError.BadRequestError.AuthenticationCredentialsMissing.type]
-        serviceError
-          .asInstanceOf[
-            ServiceError.BadRequestError.AuthenticationCredentialsMissing.type
-          ] shouldBe ServiceError.BadRequestError.AuthenticationCredentialsMissing
+        serviceError shouldBe ServiceError.UnauthorizedError.AuthHeaderMissingError("Authorization: Basic")
       }
 
       "fail with ValidationError to authenticate user with invalid basic credentials" in new TestContext {

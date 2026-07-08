@@ -201,7 +201,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .isRight shouldBe true
       }
 
-      "fail with AuthHeaderMissingError when organization roles are required but header is missing" in new TestContext {
+      "fail with HeaderMissingError when organization roles are required but header is missing" in new TestContext {
         val authedUser  = arbitrarySample[AuthedUser]
         val accessToken = arbitrarySample[AccessToken]
 
@@ -229,7 +229,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           )
           .zioError
 
-        serviceError shouldBe ServiceError.BadRequestError.AuthHeaderMissingError(
+        serviceError shouldBe ServiceError.BadRequestError.HeaderMissingError(
           AuthorizationService.OrganizationIDHeader.toString
         )
       }
@@ -360,8 +360,8 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .auth(request, requiresCompletedOnboardStage = false, organizationRolesAllowedOpt = None)
           .zioError
 
-        serviceError shouldBe ServiceError.BadRequestError.AuthHeaderMissingError(
-          Authorization.name.toString
+        serviceError shouldBe ServiceError.UnauthorizedError.AuthHeaderMissingError(
+          s"${Authorization.name}: ${AuthScheme.Bearer}"
         )
       }
     }

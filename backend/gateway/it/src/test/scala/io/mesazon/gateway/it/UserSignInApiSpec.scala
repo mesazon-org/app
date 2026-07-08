@@ -233,17 +233,17 @@ class UserSignInApiSpec
         userTokenRowsAll.head.tokenType shouldBe TokenType.RefreshToken
       }
 
-      "fail with BadRequest when basic credentials is missing" in withContext { context =>
+      "fail with Unauthorized when basic credentials is missing" in withContext { context =>
         import context.*
 
         val email    = arbitrarySample[Email]
         val password = arbitrarySample[Password]
 
         val signInPostResponse =
-          gatewayClient.signInPost[smithy.BadRequest](email, password, addBasicAuth = false).zioValue
+          gatewayClient.signInPost[smithy.Unauthorized](email, password, addBasicAuth = false).zioValue
 
-        signInPostResponse.code shouldBe StatusCode.BadRequest
-        signInPostResponse.body.left.value shouldBe smithy.BadRequest()
+        signInPostResponse.code shouldBe StatusCode.Unauthorized
+        signInPostResponse.body.left.value shouldBe smithy.Unauthorized()
 
         val userActionAttemptRowsAll =
           postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue

@@ -8,7 +8,7 @@ How every gateway endpoint gets its auth. The rule of thumb: **handlers never ch
 
 Tapir endpoints (streaming uploads) are **not** covered by this middleware: they wire the same checks explicitly via `zServerSecurityLogic(authorizationService.auth(...))` in `tapir/TapirEndpoints.scala` — the bearer token (`auth.bearer[AccessToken]`) and the `X-Organization-ID` header (`header[OrganizationID]`) are typed `securityIn`s, and each endpoint passes its allowed roles; the decoded `OrganizationID` becomes the security principal handed to the handler. **When a rule is added to the middleware, the Tapir security logic must be extended by hand to match.**
 
-Cross-transport consistency: a **missing required header (`Authorization`, `X-Organization-ID`) is a generic `400 BadRequest` everywhere** — the smithy middleware fails with `BadRequestError.AuthHeaderMissingError`, and tapir's decode-failure handler (`tapir/tapir.scala`) downgrades its default `401` for missing auth inputs to `400` to match. Disallowed-role failures are `403 Forbidden` and missing membership rows `500` on both. One remaining difference: a *malformed* `X-Organization-ID` UUID is a tapir decode failure (`400`) but an `InternalServerError.UnexpectedError` (`500`) on smithy routes.
+Cross-transport consistency, per header: a **missing `Authorization` bearer is `401 Unauthorized` everywhere** (smithy `UnauthorizedError.AuthHeaderMissingError`; tapir's default for a missing `auth` security input), while a **missing `X-Organization-ID` header is `400 BadRequest` everywhere** (smithy `BadRequestError.HeaderMissingError`; tapir's default for a missing plain header). The tapir decode-failure handler keeps tapir's chosen status as-is — no adjustment needed. Disallowed-role failures are `403 Forbidden` and missing membership rows `500` on both. One remaining difference: a *malformed* `X-Organization-ID` UUID is a tapir decode failure (`400`) but an `InternalServerError.UnexpectedError` (`500`) on smithy routes.
 
 ## Dispatch table
 
@@ -27,7 +27,7 @@ Endpoint-level `@auth([])` overrides are unsupported and also produce `InternalS
 
 Runs for `@httpBasicAuth` services (currently only `UserSignInService`). Full flow, in order:
 
-1. Extract `Authorization: Basic` credentials → `BadRequestError.AuthenticationCredentialsMissing` if absent; validate the email/password format.
+1. Extract `Authorization: Basic` credentials → `UnauthorizedError.AuthHeaderMissingError` (`401`) if absent; validate the email/password format.
 2. Look up the user by email → `Unauthorized` if unknown.
 3. Onboard stage must be in `OnboardStage.signInAllowedStages`.
 4. Brute-force guard via `UserActionAttemptRepository` (`ActionAttemptType.SignIn`): over `signInAttemptsMax` within `signInAttemptsBlockDuration` → `AuthenticationTooManySignInAttempts`.
@@ -38,7 +38,7 @@ Runs for `@httpBasicAuth` services (currently only `UserSignInService`). Full fl
 
 Runs for `@httpBearerAuth` services and for Tapir endpoints:
 
-1. Extract the `Bearer` token → `BadRequestError.AuthHeaderMissingError("Authorization")` (`400`) if absent — **missing headers are always a generic `400 BadRequest`**, on both transports; `401` is reserved for credentials that are present but fail verification.
+1. Extract the `Bearer` token → `UnauthorizedError.AuthHeaderMissingError("Authorization")` (`401`) if absent — **a missing `Authorization` bearer is `401 Unauthorized`**, on both transports (tapir's default for a missing `auth` security input); `401` also covers credentials that are present but fail verification.
 2. `JwtService.verifyAccessToken` — signature, expiry, issuer (access tokens are stateless; see [user-token-management](features/user-token-management.md)).
 3. If the service carries `@completedOnboardStage` (passed as `requiresCompletedOnboardStage = true`): load user details and require the stage to be in `OnboardStage.completedStages` (= `PhoneVerified`), else `ForbiddenError.InvalidOnboardStage` → `403 Forbidden` (this applies to every `verifyOnboardStage` call, including the in-handler stage checks of sign-up/onboard/forgot-password and the sign-in stage check in `AuthenticationService`).
 4. If the operation carries `@organizationRolesAllowed` (passed as `organizationRolesAllowedOpt = Some(roles)`): run the organization role check (next section).
@@ -56,11 +56,11 @@ Enforcement, mirroring the `completedOnboardStage` mechanism:
 
 1. `ServerMiddleware` reads the `OrganizationRolesAllowed` hint from the **endpoint hints**, maps the smithy roles to domain `UserRole`s (`organizationUserRoleFromSmithyToDomain` in `service/service.scala`), and passes them as `organizationRolesAllowedOpt` to `AuthorizationService.auth`.
 2. The request overload parses the `Authorization` bearer into a typed `AccessToken` and the `X-Organization-ID` header into a typed `Option[OrganizationID]` before delegating to the token overload; a malformed header UUID fails as `InternalServerError.UnexpectedError` (`500`).
-3. `AuthorizationService.verifyOrganizationRole` (after token + onboard-stage verification): header absent when roles are required → `BadRequestError.AuthHeaderMissingError` (`400`).
+3. `AuthorizationService.verifyOrganizationRole` (after token + onboard-stage verification): header absent when roles are required → `BadRequestError.HeaderMissingError` (`400`).
 4. It loads the caller's membership — `OrganizationManagementRepository.getOrganizationUser(organizationID, userID)`. No membership row → `InternalServerError.UnexpectedError` (`500`, the missing-referenced-entity convention). A member whose `userRole` is not in the declared roles → `ForbiddenError.InvalidOrganizationRole` (carrying the caller's actual role) → **`403 Forbidden`** (authenticated but not allowed — distinct from 401).
 5. Operations without the trait skip the check entirely (`organizationRolesAllowedOpt = None`).
 
-Covered by `unit/service/AuthorizationServiceSpec` (allowed role, missing header, invalid header, not a member, disallowed role) and by the `FileApiSpec` acceptance cases (missing header → 400, non-member → 500, disallowed role → 403).
+Covered by `unit/service/AuthorizationServiceSpec` (allowed role, missing header, invalid header, not a member, disallowed role) and by the `FileApiSpec` acceptance cases (missing org header → 400, missing token → 401, non-member → 500, disallowed role → 403).
 
 The Tapir logo upload follows the same standard: `organizationID` moved from the path to the `X-Organization-ID` header (`POST /upload/organization/logo`), the security logic requires `OWNER`/`ADMIN`, and the parsed `OrganizationID` is handed to `FileService` as the security principal.
 

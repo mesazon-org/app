@@ -47,7 +47,9 @@ object AuthorizationService {
           .get[`Authorization`]
           .collect { case Authorization(Credentials.Token(AuthScheme.Bearer, token)) => token }
         accessTokenRaw <- ZIO
-          .getOrFailWith(ServiceError.BadRequestError.AuthHeaderMissingError(Authorization.name.toString))(
+          .getOrFailWith(
+            ServiceError.UnauthorizedError.AuthHeaderMissingError(s"${Authorization.name}: ${AuthScheme.Bearer}")
+          )(
             maybeBearerToken
           )
         accessToken <- ZIO
@@ -103,7 +105,7 @@ object AuthorizationService {
     ): ServiceTask[Unit] =
       for {
         organizationID <- ZIO.getOrFailWith(
-          ServiceError.BadRequestError.AuthHeaderMissingError(OrganizationIDHeader.toString)
+          ServiceError.BadRequestError.HeaderMissingError(OrganizationIDHeader.toString)
         )(organizationIDOpt)
         organizationUserRow <- organizationManagementRepository
           .getOrganizationUser(organizationID, userID)

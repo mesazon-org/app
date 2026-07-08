@@ -5,7 +5,7 @@ import io.mesazon.domain.gateway.TapirServerError
 import io.mesazon.gateway.json.{tapirServerErrorSchemas, given}
 import sttp.apispec.openapi.Info
 import sttp.capabilities.zio.ZioStreams
-import sttp.model.{HeaderNames, StatusCode}
+import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.tapir.codec.iron.ValidatorForPredicate
 import sttp.tapir.json.jsoniter.*
@@ -30,24 +30,15 @@ private[tapir] val TapirDocsPath: List[String] =
 private[tapir] val TapirOpenApiYamlName: String =
   "openapi.yaml"
 
-// Inverse of `statusCodeFor`: pick the error body matching the status tapir chose for a decode failure.
-// Falls back to BadRequestError for statuses without a dedicated variant (e.g. 415).
 private[tapir] def tapirServerErrorForStatus(status: StatusCode): TapirServerError =
   TapirServerError.values.find(error => statusCodeFor(error) == status).getOrElse(TapirServerError.BadRequestError)
 
-// Tapir answers `401` for a missing/undecodable auth security input; the smithy middleware treats a missing
-// auth header as a generic `400 BadRequest` (`AuthHeaderMissingError`), so downgrade to keep the transports
-// consistent — real authorization failures (bad JWT, wrong role) come from `AuthorizationService`, not from here.
 private[tapir] val staticBodyDecodeFailureHandler: DefaultDecodeFailureHandler[Task] =
-  DefaultDecodeFailureHandler[Task].copy(response = (status, headerList, _) => {
-    val statusAdjusted  = if (status == StatusCode.Unauthorized) StatusCode.BadRequest else status
-    val headersAdjusted =
-      if (status == StatusCode.Unauthorized)
-        headerList.filterNot(_.name.equalsIgnoreCase(HeaderNames.WwwAuthenticate))
-      else headerList
-    ValuedEndpointOutput(jsonBody[TapirServerError], tapirServerErrorForStatus(statusAdjusted))
-      .prepend(statusCode.and(headers), (statusAdjusted, headersAdjusted))
-  })
+  DefaultDecodeFailureHandler[Task].copy(response =
+    (status, headerList, _) =>
+      ValuedEndpointOutput(jsonBody[TapirServerError], tapirServerErrorForStatus(status))
+        .prepend(statusCode.and(headers), (status, headerList))
+  )
 
 private[tapir] val decodeFailureHandler: DecodeFailureHandler[Task] =
   new DecodeFailureHandler[Task] {

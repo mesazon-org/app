@@ -46,11 +46,8 @@ object ServiceError {
         InvalidFieldError(fieldName, errorMessage, Seq(invalidValue))
     }
 
-    case object AuthenticationCredentialsMissing
-        extends BadRequestError("authentication credentials are missing from request")
-
-    case class AuthHeaderMissingError(headerName: String)
-        extends BadRequestError(s"Authorization header [$headerName] is missing")
+    case class HeaderMissingError(headerName: String)
+        extends BadRequestError(s"Required header [$headerName] is missing")
 
     case class ValidationError(invalidFields: Seq[InvalidFieldError])
         extends BadRequestError(s"request validation error ${invalidFields.mkString("[", ",", "]")}")
@@ -59,6 +56,9 @@ object ServiceError {
   }
 
   object UnauthorizedError {
+    case class AuthHeaderMissingError(headerName: String)
+        extends UnauthorizedError(s"Authorization header [$headerName] is missing")
+
     case class TokenFailedAuthorization(error: String, throwable: Option[Throwable] = None)
         extends UnauthorizedError(error, throwable)
 

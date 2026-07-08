@@ -17,7 +17,7 @@ Defined in `backend/gateway/core/src/main/smithy/UserSignInService.smithy`. No r
 ### 1. Middleware authentication (`AuthenticationService.auth`)
 Wired by `ServerMiddleware` for any smithy service annotated `@httpBasicAuth`:
 
-1. Extract Basic credentials from the `Authorization` header → `BadRequestError.AuthenticationCredentialsMissing` if absent; validate format (`BasicCredentialsRequestServiceValidator`).
+1. Extract Basic credentials from the `Authorization` header → `UnauthorizedError.AuthHeaderMissingError` (`401`) if absent; validate format (`BasicCredentialsRequestServiceValidator`).
 2. Look up user by email → `UnauthorizedError.AuthenticationEmailNotFound` if unknown.
 3. Stage must be in `OnboardStage.signInAllowedStages` — a user can sign in as soon as they have a password, even before phone verification (so they can resume onboarding).
 4. **Brute-force protection**: `UserActionAttemptRepository.getAndIncreaseUserActionAttempt(userID, ActionAttemptType.SignIn)`. If attempts exceed `AuthenticationConfig.signInAttemptsMax` and the last attempt is within `signInAttemptsBlockDuration`, fail `UnauthorizedError.AuthenticationTooManySignInAttempts`. Attempt counter is deleted on successful password verification (block auto-expires after the duration).

@@ -38,7 +38,9 @@ object AuthenticationService {
           .collect { case Authorization(Http4sBasicCredentials(email, password)) =>
             BasicCredentialsRequest(email, password)
           }
-        basicCredentialsRequest <- ZIO.getOrFailWith(ServiceError.BadRequestError.AuthenticationCredentialsMissing)(
+        basicCredentialsRequest <- ZIO.getOrFailWith(
+          ServiceError.UnauthorizedError.AuthHeaderMissingError(s"${Authorization.name}: ${AuthScheme.Basic}")
+        )(
           basicCredentialsRequestOpt
         )
         basicCredentials <- basicCredentialsRequestServiceValidator.validate(basicCredentialsRequest)

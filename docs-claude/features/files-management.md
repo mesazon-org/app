@@ -46,6 +46,6 @@ Everything runs inside one `ZIO.scoped` block; every intermediate file is a `Tem
 
 ## Tests
 
-- Acceptance (see [acceptance-tests.md](../acceptance-tests.md)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/FileApiSpec.scala` — upload happy path asserting both objects land in S3, missing `X-File-Name` header, missing token (400), invalid token (401), disallowed stage (403), missing `X-Organization-ID` header (400), non-member (500), disallowed role (403), and unsupported file type
+- Acceptance (see [acceptance-tests.md](../acceptance-tests.md)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/FileApiSpec.scala` — upload happy path asserting both objects land in S3, missing `X-File-Name` header, missing token (401), invalid token (401), disallowed stage (403), missing `X-Organization-ID` header (400), non-member (500), disallowed role (403), and unsupported file type
 - Functional: `fun/FileServiceSpec.scala`
 - Integration (S3 via docker compose, `s3-test` module): `it/OrganizationLogosS3ClientSpec.scala`
