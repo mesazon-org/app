@@ -220,9 +220,6 @@ class FileApiSpec
         uploadOrganizationLogoResponse.body.left.value shouldBe smithy.BadRequest()
       }
 
-      // The organization id header is a typed tapir plain security header, so a missing header is rejected
-      // as a decode failure (400) before the security logic runs — consistent with the smithy transport,
-      // where the middleware answers 400 (HeaderMissingError).
       "fail with BadRequest when the organization id header is missing" in withContext { context =>
         import context.*
 
@@ -247,67 +244,6 @@ class FileApiSpec
 
         uploadOrganizationLogoResponse.code shouldBe StatusCode.BadRequest
         uploadOrganizationLogoResponse.body.left.value shouldBe smithy.BadRequest()
-      }
-
-      "fail with InternalServerError when the user is not assigned to the organization" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
-        val organizationID                   = arbitrarySample[OrganizationID]
-        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
-
-        val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.InternalServerError](
-            Some(organizationID),
-            Some(organizationLogoOriginalFileName),
-            logoBytes,
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.InternalServerError
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.InternalServerError()
-      }
-
-      "fail with Forbidden when the user is assigned to the organization with a disallowed role" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
-            userID = userDetailsRow.userID,
-            userRole = UserRole.User,
-          )
-
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-          val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
-          val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
-
-          val uploadOrganizationLogoResponse = gatewayClient
-            .uploadOrganizationLogoPost[smithy.Forbidden](
-              Some(organizationUserRow.organizationID),
-              Some(organizationLogoOriginalFileName),
-              logoBytes,
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-          uploadOrganizationLogoResponse.code shouldBe StatusCode.Forbidden
-          uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Forbidden()
       }
 
       "fail with Unauthorized when access token is missing" in withContext { context =>
@@ -350,6 +286,40 @@ class FileApiSpec
         uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized()
       }
 
+      "fail with Forbidden when the user is assigned to the organization with a disallowed role" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = UserRole.User,
+          )
+
+          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+          val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
+          val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+
+          val uploadOrganizationLogoResponse = gatewayClient
+            .uploadOrganizationLogoPost[smithy.Forbidden](
+              Some(organizationUserRow.organizationID),
+              Some(organizationLogoOriginalFileName),
+              logoBytes,
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+          uploadOrganizationLogoResponse.code shouldBe StatusCode.Forbidden
+          uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Forbidden()
+      }
+
       "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
@@ -376,6 +346,33 @@ class FileApiSpec
 
         uploadOrganizationLogoResponse.code shouldBe StatusCode.Forbidden
         uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Forbidden()
+      }
+
+      "fail with InternalServerError when the user is not assigned to the organization" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationID                   = arbitrarySample[OrganizationID]
+        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+
+        val uploadOrganizationLogoResponse = gatewayClient
+          .uploadOrganizationLogoPost[smithy.InternalServerError](
+            Some(organizationID),
+            Some(organizationLogoOriginalFileName),
+            logoBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.InternalServerError
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.InternalServerError()
       }
 
       "fail with InternalServerError when the uploaded file is not a supported image" in withContext { context =>

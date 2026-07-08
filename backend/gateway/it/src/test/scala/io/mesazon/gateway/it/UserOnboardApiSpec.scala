@@ -186,6 +186,40 @@ class UserOnboardApiSpec
         userCredentialsRowsAll should have size 0
       }
 
+      "fail with Unauthorized when access token is missing" in withContext { context =>
+        import context.*
+
+        val onboardPasswordPostRequest = arbitrarySample[smithy.OnboardPasswordPostRequest].copy(
+          password = "ValidPassword123!"
+        )
+
+        val onboardPasswordPostResponse = gatewayClient
+          .onboardPasswordPost[smithy.Unauthorized](onboardPasswordPostRequest, None)
+          .zioValue
+
+        onboardPasswordPostResponse.code shouldBe StatusCode.Unauthorized
+        onboardPasswordPostResponse.body.left.value shouldBe smithy.Unauthorized()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
+      }
+
+      "fail with Unauthorized when access token is invalid" in withContext { context =>
+        import context.*
+
+        val onboardPasswordPostRequest = arbitrarySample[smithy.OnboardPasswordPostRequest].copy(
+          password = "ValidPassword123!"
+        )
+
+        val onboardPasswordPostResponse = gatewayClient
+          .onboardPasswordPost[smithy.Unauthorized](onboardPasswordPostRequest, Some(AccessToken("invalidtoken")))
+          .zioValue
+
+        onboardPasswordPostResponse.code shouldBe StatusCode.Unauthorized
+        onboardPasswordPostResponse.body.left.value shouldBe smithy.Unauthorized()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
+      }
+
       "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
@@ -215,40 +249,6 @@ class UserOnboardApiSpec
 
         onboardPasswordPostResponse.code shouldBe StatusCode.Forbidden
         onboardPasswordPostResponse.body.left.value shouldBe smithy.Forbidden()
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-      }
-
-      "fail with BadRequest when access token is missing" in withContext { context =>
-        import context.*
-
-        val onboardPasswordPostRequest = arbitrarySample[smithy.OnboardPasswordPostRequest].copy(
-          password = "ValidPassword123!"
-        )
-
-        val onboardPasswordPostResponse = gatewayClient
-          .onboardPasswordPost[smithy.BadRequest](onboardPasswordPostRequest, None)
-          .zioValue
-
-        onboardPasswordPostResponse.code shouldBe StatusCode.BadRequest
-        onboardPasswordPostResponse.body.left.value shouldBe smithy.BadRequest()
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-      }
-
-      "fail with Unauthorized when access token is invalid" in withContext { context =>
-        import context.*
-
-        val onboardPasswordPostRequest = arbitrarySample[smithy.OnboardPasswordPostRequest].copy(
-          password = "ValidPassword123!"
-        )
-
-        val onboardPasswordPostResponse = gatewayClient
-          .onboardPasswordPost[smithy.Unauthorized](onboardPasswordPostRequest, Some(AccessToken("invalidtoken")))
-          .zioValue
-
-        onboardPasswordPostResponse.code shouldBe StatusCode.Unauthorized
-        onboardPasswordPostResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -338,6 +338,36 @@ class UserOnboardApiSpec
         userDetailsRowsAll should have size 0
       }
 
+      "fail with Unauthorized when access token is missing" in withContext { context =>
+        import context.*
+
+        val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
+
+        val onboardDetailsPostResponse = gatewayClient
+          .onboardDetailsPost[smithy.Unauthorized](onboardDetailsPostRequest, None)
+          .zioValue
+
+        onboardDetailsPostResponse.code shouldBe StatusCode.Unauthorized
+        onboardDetailsPostResponse.body.left.value shouldBe smithy.Unauthorized()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
+      }
+
+      "fail with Unauthorized when access token is invalid" in withContext { context =>
+        import context.*
+
+        val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
+
+        val onboardDetailsPostResponse = gatewayClient
+          .onboardDetailsPost[smithy.Unauthorized](onboardDetailsPostRequest, Some(AccessToken("invalidtoken")))
+          .zioValue
+
+        onboardDetailsPostResponse.code shouldBe StatusCode.Unauthorized
+        onboardDetailsPostResponse.body.left.value shouldBe smithy.Unauthorized()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
+      }
+
       "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
@@ -376,36 +406,6 @@ class UserOnboardApiSpec
         userDetailsRowsAll.head.userID shouldBe userDetailsRow.userID
         userDetailsRowsAll.head.fullName shouldBe None
         userDetailsRowsAll.head.phoneNumber shouldBe None
-      }
-
-      "fail with BadRequest when access token is missing" in withContext { context =>
-        import context.*
-
-        val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
-
-        val onboardDetailsPostResponse = gatewayClient
-          .onboardDetailsPost[smithy.BadRequest](onboardDetailsPostRequest, None)
-          .zioValue
-
-        onboardDetailsPostResponse.code shouldBe StatusCode.BadRequest
-        onboardDetailsPostResponse.body.left.value shouldBe smithy.BadRequest()
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-      }
-
-      "fail with Unauthorized when access token is invalid" in withContext { context =>
-        import context.*
-
-        val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
-
-        val onboardDetailsPostResponse = gatewayClient
-          .onboardDetailsPost[smithy.Unauthorized](onboardDetailsPostRequest, Some(AccessToken("invalidtoken")))
-          .zioValue
-
-        onboardDetailsPostResponse.code shouldBe StatusCode.Unauthorized
-        onboardDetailsPostResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
       }
     }
 
@@ -528,74 +528,17 @@ class UserOnboardApiSpec
         userOtpRowsAll.head shouldBe userOtpRow
       }
 
-      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
-        import context.*
-
-        val onboardStageInvalid =
-          Random.shuffle(OnboardStage.values.toList diff OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
-
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
-          onboardStage = onboardStageInvalid,
-          fullName = Some(arbitrarySample[FullName]),
-          phoneNumber = Some(arbitrarySample[PhoneNumber]),
-        )
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-
-        val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          expiresAt = ExpiresAt(instantNow.plusSeconds(10)),
-          userID = userDetailsRow.userID,
-          otpType = OtpType.PhoneVerification,
-        )
-
-        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
-
-        val onboardVerifyPhoneNumberPostRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest]
-          .copy(
-            otpID = userOtpRow.otpID.value,
-            otp = userOtpRow.otp.value,
-          )
-
-        val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
-
-        val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumberPost[smithy.Forbidden](
-            onboardVerifyPhoneNumberPostRequest,
-            Some(accessToken),
-          )
-          .zioValue
-
-        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Forbidden
-        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Forbidden()
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-
-        val userDetailsRowsAll =
-          postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
-
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
-
-        val userOtpRowsAll =
-          postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowsAll should have size 1
-        userOtpRowsAll.head shouldBe userOtpRow
-      }
-
-      "fail with BadRequest when access token is missing" in withContext { context =>
+      "fail with Unauthorized when access token is missing" in withContext { context =>
         import context.*
 
         val onboardVerifyPhoneNumberPostRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest]
 
         val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumberPost[smithy.BadRequest](onboardVerifyPhoneNumberPostRequest, None)
+          .onboardVerifyPhoneNumberPost[smithy.Unauthorized](onboardVerifyPhoneNumberPostRequest, None)
           .zioValue
 
-        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.BadRequest
-        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.BadRequest()
+        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
@@ -673,6 +616,63 @@ class UserOnboardApiSpec
           postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll should have size 0
+      }
+
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
+        import context.*
+
+        val onboardStageInvalid =
+          Random.shuffle(OnboardStage.values.toList diff OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+          onboardStage = onboardStageInvalid,
+          fullName = Some(arbitrarySample[FullName]),
+          phoneNumber = Some(arbitrarySample[PhoneNumber]),
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+        val userOtpRow = arbitrarySample[UserOtpRow].copy(
+          expiresAt = ExpiresAt(instantNow.plusSeconds(10)),
+          userID = userDetailsRow.userID,
+          otpType = OtpType.PhoneVerification,
+        )
+
+        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+        val onboardVerifyPhoneNumberPostRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest]
+          .copy(
+            otpID = userOtpRow.otpID.value,
+            otp = userOtpRow.otp.value,
+          )
+
+        val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
+
+        val onboardVerifyPhoneNumberResponse = gatewayClient
+          .onboardVerifyPhoneNumberPost[smithy.Forbidden](
+            onboardVerifyPhoneNumberPostRequest,
+            Some(accessToken),
+          )
+          .zioValue
+
+        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Forbidden
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Forbidden()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
+
+        val userDetailsRowsAll =
+          postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+
+        userDetailsRowsAll should have size 1
+        userDetailsRowsAll.head shouldBe userDetailsRow
+
+        val userOtpRowsAll =
+          postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+        userOtpRowsAll should have size 1
+        userOtpRowsAll.head shouldBe userOtpRow
       }
 
       "fail with InternalServerError when OTP is missing" in withContext { context =>
@@ -820,15 +820,15 @@ class UserOnboardApiSpec
         userOtpRowsAll should have size 0
       }
 
-      "fail with BadRequest when access token is missing" in withContext { context =>
+      "fail with Unauthorized when access token is missing" in withContext { context =>
         import context.*
 
         val onboardVerifyPhoneNumberGetResponse = gatewayClient
-          .onboardVerifyPhoneNumberGet[smithy.BadRequest](None)
+          .onboardVerifyPhoneNumberGet[smithy.Unauthorized](None)
           .zioValue
 
-        onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.BadRequest
-        onboardVerifyPhoneNumberGetResponse.body.left.value shouldBe smithy.BadRequest()
+        onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.Unauthorized
+        onboardVerifyPhoneNumberGetResponse.body.left.value shouldBe smithy.Unauthorized()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 

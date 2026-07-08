@@ -10,6 +10,7 @@ Black-box tests of the **real running gateway**: the app and all its dependencie
 - Emails are asserted through `MailHogClient`; S3 objects through the `s3-test` module.
 - `beforeAll` waits for gateway readiness with `eventually`; `beforeEach` truncates **all** tables (`repositoryConfig.allTableNames`) — tests are independent and order-insensitive.
 - Structure: `"<Feature> API" when { "<METHOD> /path" should { "..." in withContext { ... } } }`.
+- **Order tests by ascending response status code.** Within each `should` block, place the happy path (`200`) first, then the failure cases in increasing status-code order (`400` → `401` → `403` → `500` …); keep any sensible sub-order among cases that share a status. Execution stays order-insensitive (`beforeEach` truncates everything) — this is purely a source-ordering convention that makes coverage gaps obvious at a glance. When you add or change a test, re-check that the block is still in incremental status order.
 
 ## What a feature's acceptance spec must cover
 
@@ -25,7 +26,7 @@ These cases are deliberately duplicated per endpoint; the middleware is shared, 
 | Case | Expected | Applies to |
 |---|---|---|
 | Invalid request body / field | `400` `smithy.ValidationError(fields = List(...))` | all endpoints with input |
-| Missing credentials/token (`addBasicAuth = false` / no bearer header) | `400 BadRequest` | all authed endpoints |
+| Missing credentials/token (`addBasicAuth = false` / no bearer header) | `401 Unauthorized` | all authed endpoints |
 | Invalid/garbage token | `401` `smithy.Unauthorized()` | all bearer endpoints |
 | Valid token but token row not in DB | `401 Unauthorized` | refresh/reset token endpoints |
 | User in a disallowed `OnboardStage` | `403 Forbidden` | all stage-gated endpoints |

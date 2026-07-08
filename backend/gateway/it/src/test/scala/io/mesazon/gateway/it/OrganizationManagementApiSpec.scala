@@ -224,14 +224,14 @@ class OrganizationManagementApiSpec
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
-      "fail with BadRequest when access token is missing" in withContext { context =>
+      "fail with Unauthorized when access token is missing" in withContext { context =>
         import context.*
 
         val createOrganization = arbitrarySample[CreateOrganization]
 
         val createOrganizationPostResponse =
           gatewayClient
-            .createOrganizationPost[smithy.BadRequest](
+            .createOrganizationPost[smithy.Unauthorized](
               createOrganization.name,
               createOrganization.slug,
               createOrganization.email,
@@ -245,8 +245,8 @@ class OrganizationManagementApiSpec
             )
             .zioValue
 
-        createOrganizationPostResponse.code shouldBe StatusCode.BadRequest
-        createOrganizationPostResponse.body.left.value shouldBe smithy.BadRequest()
+        createOrganizationPostResponse.code shouldBe StatusCode.Unauthorized
+        createOrganizationPostResponse.body.left.value shouldBe smithy.Unauthorized()
 
         val organizationDetailsRowsAll =
           postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
