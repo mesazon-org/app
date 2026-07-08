@@ -178,7 +178,7 @@ class OrganizationManagementApiSpec
         organizationUserRowsAll.head shouldBe OrganizationUserRow(
           organizationDetailsRowsAll.head.organizationID,
           userDetailsRow.userID,
-          UserRole.Owner,
+          OrganizationUserRole.Owner,
           organizationUserRowsAll.head.createdAt,
           organizationUserRowsAll.head.updatedAt,
         )

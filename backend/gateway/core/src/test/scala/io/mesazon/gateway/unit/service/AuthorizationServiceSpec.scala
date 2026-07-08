@@ -39,7 +39,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.value)))
 
         authorizationService
-          .auth(request, requiresCompletedOnboardStage = false, organizationRolesAllowedOpt = None)
+          .auth(request, requiresCompletedOnboardStage = false, organizationUserRolesAllowedOpt = None)
           .zioEither
           .isRight shouldBe true
       }
@@ -74,7 +74,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.value)))
 
         authorizationService
-          .auth(request, requiresCompletedOnboardStage = true, organizationRolesAllowedOpt = None)
+          .auth(request, requiresCompletedOnboardStage = true, organizationUserRolesAllowedOpt = None)
           .zioEither
           .isRight shouldBe true
       }
@@ -108,7 +108,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.value)))
 
         val serviceError = authorizationService
-          .auth(request, requiresCompletedOnboardStage = true, organizationRolesAllowedOpt = None)
+          .auth(request, requiresCompletedOnboardStage = true, organizationUserRolesAllowedOpt = None)
           .zioError
 
         serviceError shouldBe a[ServiceError.ForbiddenError.InvalidOnboardStage]
@@ -146,7 +146,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, accessToken.value)))
 
         val serviceError = authorizationService
-          .auth(request, requiresCompletedOnboardStage = true, organizationRolesAllowedOpt = None)
+          .auth(request, requiresCompletedOnboardStage = true, organizationUserRolesAllowedOpt = None)
           .zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
@@ -165,10 +165,10 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           userID = authedUser.userID
         )
 
-        val organizationRolesAllowed = List(UserRole.Owner, UserRole.Admin)
+        val organizationUserRolesAllowed = OrganizationUserRole.adminRoles
         val organizationUserRow      = arbitrarySample[OrganizationUserRow].copy(
           userID = authedUser.userID,
-          userRole = Random.shuffle(organizationRolesAllowed).zioValue.head,
+          userRole = Random.shuffle(organizationUserRolesAllowed).zioValue.head,
         )
 
         inSequence(
@@ -195,7 +195,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .auth(
             request,
             requiresCompletedOnboardStage = false,
-            organizationRolesAllowedOpt = Some(organizationRolesAllowed),
+            organizationUserRolesAllowedOpt = Some(organizationUserRolesAllowed),
           )
           .zioEither
           .isRight shouldBe true
@@ -225,7 +225,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .auth(
             request,
             requiresCompletedOnboardStage = false,
-            organizationRolesAllowedOpt = Some(List(UserRole.Owner, UserRole.Admin)),
+            organizationUserRolesAllowedOpt = Some(OrganizationUserRole.adminRoles),
           )
           .zioError
 
@@ -249,7 +249,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .auth(
             request,
             requiresCompletedOnboardStage = false,
-            organizationRolesAllowedOpt = Some(List(UserRole.Owner, UserRole.Admin)),
+            organizationUserRolesAllowedOpt = Some(OrganizationUserRole.adminRoles),
           )
           .zioError
 
@@ -267,7 +267,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           userID = authedUser.userID
         )
 
-        val organizationRolesAllowed = List(UserRole.Owner, UserRole.Admin)
+        val organizationUserRolesAllowed = OrganizationUserRole.adminRoles
 
         inSequence(
           jwtServiceMock.verifyAccessToken
@@ -292,7 +292,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .auth(
             request,
             requiresCompletedOnboardStage = false,
-            organizationRolesAllowedOpt = Some(organizationRolesAllowed),
+            organizationUserRolesAllowedOpt = Some(organizationUserRolesAllowed),
           )
           .zioError
 
@@ -309,10 +309,10 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           userID = authedUser.userID
         )
 
-        val organizationRolesAllowed = List(UserRole.Owner, UserRole.Admin)
+        val organizationUserRolesAllowed = OrganizationUserRole.adminRoles
         val organizationUserRow      = arbitrarySample[OrganizationUserRow].copy(
           userID = authedUser.userID,
-          userRole = UserRole.User,
+          userRole = OrganizationUserRole.User,
         )
 
         inSequence(
@@ -338,7 +338,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .auth(
             request,
             requiresCompletedOnboardStage = false,
-            organizationRolesAllowedOpt = Some(organizationRolesAllowed),
+            organizationUserRolesAllowedOpt = Some(organizationUserRolesAllowed),
           )
           .zioError
 
@@ -346,7 +346,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           organizationUserRow.organizationID,
           authedUser.userID,
           organizationUserRow.userRole,
-          organizationRolesAllowed,
+          organizationUserRolesAllowed,
         )
       }
 
@@ -357,7 +357,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         val authorizationService = buildAuthorizationService
 
         val serviceError = authorizationService
-          .auth(request, requiresCompletedOnboardStage = false, organizationRolesAllowedOpt = None)
+          .auth(request, requiresCompletedOnboardStage = false, organizationUserRolesAllowedOpt = None)
           .zioError
 
         serviceError shouldBe ServiceError.UnauthorizedError.AuthHeaderMissingError(

@@ -33,7 +33,7 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
 
   given Arbitrary[OrganizationStage] = Arbitrary(Gen.oneOf(OrganizationStage.values.toIndexedSeq))
 
-  given Arbitrary[UserRole] = Arbitrary(Gen.oneOf(UserRole.values.toIndexedSeq))
+  given Arbitrary[OrganizationUserRole] = Arbitrary(Gen.oneOf(OrganizationUserRole.values.toIndexedSeq))
 
   given Arbitrary[OtpType] = Arbitrary(Gen.oneOf(OtpType.values.toIndexedSeq))
 

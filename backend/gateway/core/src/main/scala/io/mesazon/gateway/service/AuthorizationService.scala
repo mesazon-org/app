@@ -13,16 +13,16 @@ import zio.*
 
 trait AuthorizationService[F[_]] {
   def auth(
-      request: Request[Task],
-      requiresCompletedOnboardStage: Boolean,
-      organizationRolesAllowedOpt: Option[List[UserRole]],
+            request: Request[Task],
+            requiresCompletedOnboardStage: Boolean,
+            organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
   ): F[Unit]
 
   def auth(
-      accessToken: AccessToken,
-      requiresCompletedOnboardStage: Boolean,
-      organizationIDOpt: Option[OrganizationID],
-      organizationRolesAllowedOpt: Option[List[UserRole]],
+            accessToken: AccessToken,
+            requiresCompletedOnboardStage: Boolean,
+            organizationIDOpt: Option[OrganizationID],
+            organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
   ): F[Unit]
 }
 
@@ -38,9 +38,9 @@ object AuthorizationService {
   ) extends AuthorizationService[ServiceTask] {
 
     override def auth(
-        request: Request[Task],
-        requiresCompletedOnboardStage: Boolean,
-        organizationRolesAllowedOpt: Option[List[UserRole]],
+                       request: Request[Task],
+                       requiresCompletedOnboardStage: Boolean,
+                       organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
     ): ServiceTask[Unit] =
       for {
         maybeBearerToken = request.headers
@@ -65,14 +65,14 @@ object AuthorizationService {
               s"Failed to apply OrganizationID from header [$organizationIDOptRaw]: $error"
             )
           )
-        _ <- auth(accessToken, requiresCompletedOnboardStage, organizationIDOpt, organizationRolesAllowedOpt)
+        _ <- auth(accessToken, requiresCompletedOnboardStage, organizationIDOpt, organizationUserRolesAllowedOpt)
       } yield ()
 
     override def auth(
-        accessToken: AccessToken,
-        requiresCompletedOnboardStage: Boolean,
-        organizationIDOpt: Option[OrganizationID],
-        organizationRolesAllowedOpt: Option[List[UserRole]],
+                       accessToken: AccessToken,
+                       requiresCompletedOnboardStage: Boolean,
+                       organizationIDOpt: Option[OrganizationID],
+                       organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
     ): ServiceTask[Unit] =
       for {
         authedUserAccess <- jwtService.verifyAccessToken(accessToken)
@@ -92,16 +92,16 @@ object AuthorizationService {
               )
             } yield ()
           else ZIO.unit
-        _ <- ZIO.foreachDiscard(organizationRolesAllowedOpt)(
+        _ <- ZIO.foreachDiscard(organizationUserRolesAllowedOpt)(
           verifyOrganizationRole(authedUserAccess.userID, organizationIDOpt, _)
         )
         _ <- authState.set(AuthedUser(authedUserAccess.userID))
       } yield ()
 
     private def verifyOrganizationRole(
-        userID: UserID,
-        organizationIDOpt: Option[OrganizationID],
-        organizationRolesAllowed: List[UserRole],
+                                        userID: UserID,
+                                        organizationIDOpt: Option[OrganizationID],
+                                        organizationRolesAllowed: List[OrganizationUserRole],
     ): ServiceTask[Unit] =
       for {
         organizationID <- ZIO.getOrFailWith(
@@ -126,44 +126,44 @@ object AuthorizationService {
   private def observedSmithy(service: AuthorizationService[ServiceTask]): AuthorizationService[Task] =
     new AuthorizationService[Task] {
       override def auth(
-          request: Request[Task],
-          requiresCompletedOnboardStage: Boolean,
-          organizationRolesAllowedOpt: Option[List[UserRole]],
+                         request: Request[Task],
+                         requiresCompletedOnboardStage: Boolean,
+                         organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
       ): Task[Unit] =
         HttpErrorHandler.errorResponseHandler(
-          service.auth(request, requiresCompletedOnboardStage, organizationRolesAllowedOpt)
+          service.auth(request, requiresCompletedOnboardStage, organizationUserRolesAllowedOpt)
         )
 
       override def auth(
-          accessToken: AccessToken,
-          requiresCompletedOnboardStage: Boolean,
-          organizationIDOpt: Option[OrganizationID],
-          organizationRolesAllowedOpt: Option[List[UserRole]],
+                         accessToken: AccessToken,
+                         requiresCompletedOnboardStage: Boolean,
+                         organizationIDOpt: Option[OrganizationID],
+                         organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
       ): Task[Unit] =
         HttpErrorHandler.errorResponseHandler(
-          service.auth(accessToken, requiresCompletedOnboardStage, organizationIDOpt, organizationRolesAllowedOpt)
+          service.auth(accessToken, requiresCompletedOnboardStage, organizationIDOpt, organizationUserRolesAllowedOpt)
         )
     }
 
   private def observedTapir(service: AuthorizationService[ServiceTask]): AuthorizationService[TapirTask] =
     new AuthorizationService[TapirTask] {
       override def auth(
-          request: Request[Task],
-          requiresCompletedOnboardStage: Boolean,
-          organizationRolesAllowedOpt: Option[List[UserRole]],
+                         request: Request[Task],
+                         requiresCompletedOnboardStage: Boolean,
+                         organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
       ): TapirTask[Unit] =
         HttpErrorHandler.errorResponseHandlerTapir(
-          service.auth(request, requiresCompletedOnboardStage, organizationRolesAllowedOpt)
+          service.auth(request, requiresCompletedOnboardStage, organizationUserRolesAllowedOpt)
         )
 
       override def auth(
-          accessToken: AccessToken,
-          requiresCompletedOnboardStage: Boolean,
-          organizationIDOpt: Option[OrganizationID],
-          organizationRolesAllowedOpt: Option[List[UserRole]],
+                         accessToken: AccessToken,
+                         requiresCompletedOnboardStage: Boolean,
+                         organizationIDOpt: Option[OrganizationID],
+                         organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
       ): TapirTask[Unit] =
         HttpErrorHandler.errorResponseHandlerTapir(
-          service.auth(accessToken, requiresCompletedOnboardStage, organizationIDOpt, organizationRolesAllowedOpt)
+          service.auth(accessToken, requiresCompletedOnboardStage, organizationIDOpt, organizationUserRolesAllowedOpt)
         )
     }
 

@@ -125,7 +125,7 @@ object OrganizationManagementRepository {
             organizationUserRow = OrganizationUserRow(
               organizationID,
               userID,
-              UserRole.Owner,
+              OrganizationUserRole.Owner,
               CreatedAt(instantNow),
               UpdatedAt(instantNow),
             )

@@ -138,7 +138,7 @@ class FileApiSpec
         val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
           organizationID = organizationDetailsRow.organizationID,
           userID = userDetailsRow.userID,
-          userRole = Random.shuffle(List(UserRole.Owner, UserRole.Admin)).zioValue.head,
+          userRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head,
         )
 
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
@@ -198,7 +198,7 @@ class FileApiSpec
 
         val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
-          userRole = Random.shuffle(List(UserRole.Owner, UserRole.Admin)).zioValue.head,
+          userRole = Random.shuffle(List(OrganizationUserRole.Owner, OrganizationUserRole.Admin)).zioValue.head,
         )
 
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
@@ -297,7 +297,7 @@ class FileApiSpec
 
           val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
             userID = userDetailsRow.userID,
-            userRole = UserRole.User,
+            userRole = OrganizationUserRole.User,
           )
 
           postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue

@@ -37,10 +37,10 @@ def verifyOnboardStage(
       )
     )
 
-def organizationUserRoleFromSmithyToDomain(role: smithy.OrganizationUserRole): UserRole = role match {
-  case smithy.OrganizationUserRole.OWNER => UserRole.Owner
-  case smithy.OrganizationUserRole.ADMIN => UserRole.Admin
-  case smithy.OrganizationUserRole.USER  => UserRole.User
+def organizationUserRoleFromSmithyToDomain(role: smithy.OrganizationUserRole): OrganizationUserRole = role match {
+  case smithy.OrganizationUserRole.OWNER => OrganizationUserRole.Owner
+  case smithy.OrganizationUserRole.ADMIN => OrganizationUserRole.Admin
+  case smithy.OrganizationUserRole.USER  => OrganizationUserRole.User
 }
 
 val DevOtp = "123QWE"

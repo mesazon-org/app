@@ -128,7 +128,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
         organizationUserRowsAll.head shouldBe OrganizationUserRow(
           organizationID = organizationDetailsRow.organizationID,
           userID = userID,
-          userRole = UserRole.Owner,
+          userRole = OrganizationUserRole.Owner,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
         )
@@ -233,14 +233,14 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           OrganizationUserRow(
             organizationID = organizationDetailsRow1.organizationID,
             userID = userID,
-            userRole = UserRole.Owner,
+            userRole = OrganizationUserRole.Owner,
             createdAt = CreatedAt(instantNow1),
             updatedAt = UpdatedAt(instantNow1),
           ),
           OrganizationUserRow(
             organizationID = organizationDetailsRow2.organizationID,
             userID = userID,
-            userRole = UserRole.Owner,
+            userRole = OrganizationUserRole.Owner,
             createdAt = CreatedAt(instantNow2),
             updatedAt = UpdatedAt(instantNow2),
           ),
