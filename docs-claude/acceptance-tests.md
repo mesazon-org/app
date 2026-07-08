@@ -10,7 +10,17 @@ Black-box tests of the **real running gateway**: the app and all its dependencie
 - Emails are asserted through `MailHogClient`; S3 objects through the `s3-test` module.
 - `beforeAll` waits for gateway readiness with `eventually`; `beforeEach` truncates **all** tables (`repositoryConfig.allTableNames`) — tests are independent and order-insensitive.
 - Structure: `"<Feature> API" when { "<METHOD> /path" should { "..." in withContext { ... } } }`.
-- **Order tests by ascending response status code.** Within each `should` block, place the happy path (`200`) first, then the failure cases in increasing status-code order (`400` → `401` → `403` → `500` …); keep any sensible sub-order among cases that share a status. Execution stays order-insensitive (`beforeEach` truncates everything) — this is purely a source-ordering convention that makes coverage gaps obvious at a glance. When you add or change a test, re-check that the block is still in incremental status order.
+- **Order tests within a `should` block by the response's HTTP status code, ascending — sort by status code, not by the order you happened to write them.** The smithy error *name* fixes its code, so map name → code first, then sort by the code:
+
+  | Smithy error (the `[smithy.Xxx]` type param) | Status code |
+  |---|---|
+  | *(happy path — no error type)* | `200`/`204` |
+  | `ValidationError`, `BadRequest` | `400` |
+  | `Unauthorized` | `401` |
+  | `Forbidden` | `403` |
+  | `InternalServerError` | `500` |
+
+  So a full block reads: happy path first, then `400` → `401` → `403` → `500`. **`Forbidden` (403) always comes *before* `InternalServerError` (500)** — do not append a new test to the bottom of the block; insert it at the position its status code demands. When several cases share a code (e.g. multiple `400`s), keep a sensible sub-order among them. This is a source-ordering convention only — execution is order-insensitive (`beforeEach` truncates every table) — but a correctly sorted block makes a missing error case obvious at a glance, so re-check the whole block every time you add or move a test.
 
 ## What a feature's acceptance spec must cover
 

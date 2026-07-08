@@ -15,8 +15,6 @@ import zio.interop.catz.*
 
 object TapirEndpoints {
 
-  private val UploadOrganizationLogoRolesAllowed = List(OrganizationUserRole.Owner, OrganizationUserRole.Admin)
-
   private val securedEndpoint =
     endpoint
       .securityIn(auth.bearer[AccessToken]())
@@ -58,7 +56,7 @@ object TapirEndpoints {
               accessToken = accessToken,
               requiresCompletedOnboardStage = true,
               organizationIDOpt = Some(organizationID),
-              organizationUserRolesAllowedOpt = Some(UploadOrganizationLogoRolesAllowed),
+              organizationUserRolesAllowedOpt = Some(OrganizationUserRole.adminRoles),
             )
             .as(organizationID)
         }

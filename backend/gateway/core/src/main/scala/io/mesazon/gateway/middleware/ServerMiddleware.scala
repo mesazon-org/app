@@ -1,6 +1,6 @@
 package io.mesazon.gateway.middleware
 
-import io.mesazon.gateway.service.{organizationUserRoleFromSmithyToDomain, AuthenticationService, AuthorizationService}
+import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy as gatewaySmithy
 import org.http4s.HttpApp
 import smithy4s.Hints

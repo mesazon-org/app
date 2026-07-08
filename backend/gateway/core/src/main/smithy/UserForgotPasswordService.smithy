@@ -20,7 +20,7 @@ operation ForgotPasswordPost {
         request: ForgotPasswordPostRequest
     }
     output: ForgotPasswordPostResponse
-    errors: [ValidationError, Unauthorized, Forbidden, InternalServerError]
+    errors: [ValidationError, Forbidden, InternalServerError]
 }
 
 /// **Required Onboard Stage:** [`PASSWORD_PROVIDED`, `PHONE_VERIFICATION`, `PHONE_VERIFIED`]

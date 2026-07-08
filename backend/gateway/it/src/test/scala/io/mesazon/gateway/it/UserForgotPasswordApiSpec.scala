@@ -853,6 +853,64 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll.head shouldBe userCredentialsRow
       }
 
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
+        import context.*
+
+        val onboardStage =
+          Random.shuffle(OnboardStage.values.toList.diff(OnboardStage.forgotPasswordAllowedStages)).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val userOtpRow = arbitrarySample[UserOtpRow].copy(
+          userID = userDetailsRow.userID,
+          otpType = OtpType.ForgotPassword,
+          expiresAt = ExpiresAt(Instant.now.plusSeconds(100).truncatedTo(ChronoUnit.MILLIS)),
+        )
+
+        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+        val forgotPasswordVerifyOTPPostResponse =
+          gatewayClient
+            .forgotPasswordVerifyOTPPost[smithy.Forbidden](
+              userOtpRow.otpID,
+              userOtpRow.otp,
+            )
+            .zioValue
+
+        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.Forbidden
+        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.Forbidden()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
+
+        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+
+        userDetailsRowsAll should have size 1
+        userDetailsRowsAll.head shouldBe userDetailsRow
+
+        // Stage check fails before the OTP is consumed, so it must survive untouched
+        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+        userOtpRowsAll should have size 1
+        userOtpRowsAll.head shouldBe userOtpRow
+
+        // Stage check fails before the verify-attempt counter is incremented
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll should have size 0
+
+        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+
+        userTokenRowsAll should have size 0
+
+        val userCredentialsRowsAll =
+          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
+
+        userCredentialsRowsAll should have size 0
+      }
+
       "fail with InternalServerError when OTP id does not exist" in withContext { context =>
         import context.*
 

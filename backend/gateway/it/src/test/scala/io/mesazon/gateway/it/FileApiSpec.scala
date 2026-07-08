@@ -135,10 +135,11 @@ class FileApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
           organizationID = organizationDetailsRow.organizationID,
           userID = userDetailsRow.userID,
-          userRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head,
+          userRole = organizationUserRoleAllowed,
         )
 
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
@@ -196,9 +197,10 @@ class FileApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
-          userRole = Random.shuffle(List(OrganizationUserRole.Owner, OrganizationUserRole.Admin)).zioValue.head,
+          userRole = organizationUserRoleAllowed,
         )
 
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
@@ -295,9 +297,16 @@ class FileApiSpec
 
           postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
+          val organizationUserRoleDisallowed = Random
+            .shuffle(
+              OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles
+            )
+            .zioValue
+            .head
+
           val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
             userID = userDetailsRow.userID,
-            userRole = OrganizationUserRole.User,
+            userRole = organizationUserRoleDisallowed,
           )
 
           postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
