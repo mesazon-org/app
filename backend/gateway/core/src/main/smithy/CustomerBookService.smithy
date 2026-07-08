@@ -25,7 +25,7 @@ service CustomerBookService {
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`, `USER`]
 @http(method: "GET", uri: "/get/customer/{customerID}", code: 200)
-@organizationRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
 operation GetCustomerGet {
     input := {
         @required
@@ -36,12 +36,12 @@ operation GetCustomerGet {
         customerID: UUID
     }
     output: GetCustomerGetResponse
-    errors: [Unauthorized, InternalServerError]
+    errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`, `USER`]
 @http(method: "GET", uri: "/get/customers", code: 200)
-@organizationRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
 operation GetCustomersGet {
     input := {
         @required
@@ -49,12 +49,12 @@ operation GetCustomersGet {
         organizationID: UUID
     }
     output: GetCustomersGetResponse
-    errors: [Unauthorized, InternalServerError]
+    errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
 @http(method: "POST", uri: "/insert/customers", code: 204)
-@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
 operation InsertCustomersPost {
     input := {
         @required
@@ -64,12 +64,12 @@ operation InsertCustomersPost {
         @httpPayload
         request: InsertCustomersPostRequest
     }
-    errors: [Unauthorized, ValidationError, InternalServerError]
+    errors: [BadRequest, Unauthorized, Forbidden, ValidationError, InternalServerError]
 }
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
 @http(method: "PUT", uri: "/update/customers", code: 204)
-@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
 operation UpdateCustomersPut {
     input := {
         @required
@@ -79,12 +79,12 @@ operation UpdateCustomersPut {
         @httpPayload
         request: UpdateCustomersPutRequest
     }
-    errors: [Unauthorized, ValidationError, InternalServerError]
+    errors: [BadRequest, Unauthorized, Forbidden, ValidationError, InternalServerError]
 }
 
 /// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
 @http(method: "POST", uri: "/delete/customers", code: 204)
-@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
 operation DeleteCustomersPost {
     input := {
         @required
@@ -94,5 +94,5 @@ operation DeleteCustomersPost {
         @httpPayload
         request: DeleteCustomersPostRequest
     }
-    errors: [Unauthorized, ValidationError, InternalServerError]
+    errors: [BadRequest, Unauthorized, Forbidden, ValidationError, InternalServerError]
 }

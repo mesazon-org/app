@@ -200,18 +200,14 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
         assert(authenticationResponse.isRight)
       }
 
-      "fail with AuthenticationCredentialsMissing to authenticate user with missing basic credentials" in new TestContext {
+      "fail with AuthHeaderMissingError to authenticate user with missing basic credentials" in new TestContext {
         val authenticationService = buildAuthenticationService
 
         val request = Request[Task](Method.POST, Uri.unsafeFromString("localhost"))
 
         val serviceError = authenticationService.auth(request).zioError
 
-        serviceError shouldBe a[ServiceError.BadRequestError.AuthenticationCredentialsMissing.type]
-        serviceError
-          .asInstanceOf[
-            ServiceError.BadRequestError.AuthenticationCredentialsMissing.type
-          ] shouldBe ServiceError.BadRequestError.AuthenticationCredentialsMissing
+        serviceError shouldBe ServiceError.UnauthorizedError.AuthHeaderMissingError("Authorization: Basic")
       }
 
       "fail with ValidationError to authenticate user with invalid basic credentials" in new TestContext {
@@ -241,7 +237,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           )
       }
 
-      "fail with FailedOnboardStage to authenticate user with no allowed sing in onboardStage" in new TestContext {
+      "fail with InvalidOnboardStage to authenticate user with no allowed sing in onboardStage" in new TestContext {
         val onboardStage =
           Random.shuffle(OnboardStage.values.toList.diff(OnboardStage.signInAllowedStages)).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -267,10 +263,11 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val serviceError = authenticationService.auth(request).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.InvalidOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe
-          ServiceError.UnauthorizedError.FailedOnboardStage(
+          .asInstanceOf[ServiceError.ForbiddenError.InvalidOnboardStage] shouldBe
+          ServiceError.ForbiddenError.InvalidOnboardStage(
+            userID = userDetailsRow.userID,
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.signInAllowedStages,
           )

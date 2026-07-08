@@ -6,7 +6,9 @@ How every gateway endpoint gets its auth. The rule of thumb: **handlers never ch
 
 `middleware/ServerMiddleware.scala` implements smithy4s's `ServerEndpointMiddleware.Simple[Task]`. `HttpApp.buildSmithyRoute` attaches it to **every smithy route**. For each endpoint smithy4s calls `prepareWithHints(serviceHints, endpointHints)` — the traits on the smithy service/operation arrive as *hints*, and the middleware returns a wrapper that runs before the endpoint's `HttpApp`.
 
-Tapir endpoints (streaming uploads) are **not** covered by this middleware: they wire the same checks explicitly via `zServerSecurityLogic(authorizationService.auth(...))` in `tapir/TapirEndpoints.scala`. When a rule is added to the middleware, the Tapir security logic must be extended by hand to match.
+Tapir endpoints (streaming uploads) are **not** covered by this middleware: they wire the same checks explicitly via `zServerSecurityLogic(authorizationService.auth(...))` in `tapir/TapirEndpoints.scala` — the bearer token (`auth.bearer[AccessToken]`) and the `X-Organization-ID` header (`header[OrganizationID]`) are typed `securityIn`s, and each endpoint passes its allowed roles; the decoded `OrganizationID` becomes the security principal handed to the handler. **When a rule is added to the middleware, the Tapir security logic must be extended by hand to match.**
+
+Cross-transport consistency, per header: a **missing `Authorization` bearer is `401 Unauthorized` everywhere** (smithy `UnauthorizedError.AuthHeaderMissingError`; tapir's default for a missing `auth` security input), while a **missing `X-Organization-ID` header is `400 BadRequest` everywhere** (smithy `BadRequestError.HeaderMissingError`; tapir's default for a missing plain header). The tapir decode-failure handler keeps tapir's chosen status as-is — no adjustment needed. Disallowed-role failures are `403 Forbidden` and missing membership rows `500` on both. One remaining difference: a *malformed* `X-Organization-ID` UUID is a tapir decode failure (`400`) but an `InternalServerError.UnexpectedError` (`500`) on smithy routes.
 
 ## Dispatch table
 
@@ -25,7 +27,7 @@ Endpoint-level `@auth([])` overrides are unsupported and also produce `InternalS
 
 Runs for `@httpBasicAuth` services (currently only `UserSignInService`). Full flow, in order:
 
-1. Extract `Authorization: Basic` credentials → `BadRequestError.AuthenticationCredentialsMissing` if absent; validate the email/password format.
+1. Extract `Authorization: Basic` credentials → `UnauthorizedError.AuthHeaderMissingError` (`401`) if absent; validate the email/password format.
 2. Look up the user by email → `Unauthorized` if unknown.
 3. Onboard stage must be in `OnboardStage.signInAllowedStages`.
 4. Brute-force guard via `UserActionAttemptRepository` (`ActionAttemptType.SignIn`): over `signInAttemptsMax` within `signInAttemptsBlockDuration` → `AuthenticationTooManySignInAttempts`.
@@ -36,33 +38,32 @@ Runs for `@httpBasicAuth` services (currently only `UserSignInService`). Full fl
 
 Runs for `@httpBearerAuth` services and for Tapir endpoints:
 
-1. Extract the `Bearer` token → `UnauthorizedError.AuthorizationTokenMissing` if absent.
+1. Extract the `Bearer` token → `UnauthorizedError.AuthHeaderMissingError("Authorization")` (`401`) if absent — **a missing `Authorization` bearer is `401 Unauthorized`**, on both transports (tapir's default for a missing `auth` security input); `401` also covers credentials that are present but fail verification.
 2. `JwtService.verifyAccessToken` — signature, expiry, issuer (access tokens are stateless; see [user-token-management](features/user-token-management.md)).
-3. If the service carries `@completedOnboardStage` (passed as `requiresCompletedOnboardStage = true`): load user details and require the stage to be in `OnboardStage.completedStages` (= `PhoneVerified`), else `UnauthorizedError.FailedOnboardStage`.
-4. `AuthState.set(AuthedUser(userID))`.
+3. If the service carries `@completedOnboardStage` (passed as `requiresCompletedOnboardStage = true`): load user details and require the stage to be in `OnboardStage.completedStages` (= `PhoneVerified`), else `ForbiddenError.InvalidOnboardStage` → `403 Forbidden` (this applies to every `verifyOnboardStage` call, including the in-handler stage checks of sign-up/onboard/forgot-password and the sign-in stage check in `AuthenticationService`).
+4. If the operation carries `@organizationUserRolesAllowed` (passed as `organizationUserRolesAllowedOpt = Some(roles)`): run the organization role check (next section).
+5. `AuthState.set(AuthedUser(userID))`.
 
 ## `AuthState` — how handlers learn who is calling
 
 `state/AuthState.scala` wraps a `FiberRef[Option[AuthedUser]]` — request-scoped state. The middleware `set`s it after successful auth; service implementations call `authState.get` as their first step. `get` on an unauthenticated fiber is a defect (`orDie`) — it can only happen if a handler is reachable without the middleware, which is a wiring bug.
 
-## Organization permissions — `@organizationRolesAllowed` + `X-Organization-ID` *(designed, enforcement pending)*
+## Organization permissions — `@organizationUserRolesAllowed` + `X-Organization-ID`
 
-The newest rule, introduced with the customer book. Each smithy **operation** declares which organization roles may call it, e.g. `@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])` — operation-level so permissions can differ per endpoint within one service (customer book: reads allow `OWNER`/`ADMIN`/`USER`, writes only `OWNER`/`ADMIN`). Every org-scoped operation carries the organization in the **required `X-Organization-ID` header** (never in the body or URI — a fixed header is readable by the middleware without parsing bodies, and it works identically for GETs, JSON posts and streaming uploads).
+Each smithy **operation** declares which organization roles may call it, e.g. `@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])` — operation-level so permissions can differ per endpoint within one service (customer book: reads allow `OWNER`/`ADMIN`/`USER`, writes only `OWNER`/`ADMIN`). Every org-scoped operation carries the organization in the **required `X-Organization-ID` header** (never in the body or URI — a fixed header is readable by the middleware without parsing bodies, and it works identically for GETs, JSON posts and streaming uploads).
 
-Planned enforcement, mirroring the `completedOnboardStage` mechanism:
+Enforcement, mirroring the `completedOnboardStage` mechanism:
 
-1. `ServerMiddleware` reads the `OrganizationRolesAllowed` hint from the **endpoint hints** (`prepareWithHints` already receives them per endpoint).
-2. When present, it reads the `X-Organization-ID` header from the raw request (missing/malformed → `Unauthorized`).
-3. `AuthorizationService` (new check, after token verification) loads the caller's membership — `OrganizationUserRow` by (`organizationID`, `userID`) — and requires `userRole` to be one of the declared roles; not a member or wrong role → `Unauthorized`.
-4. Tapir endpoints pass the allowed roles explicitly to `authorizationService.auth(...)`.
+1. `ServerMiddleware` reads the `OrganizationUserRolesAllowed` hint from the **endpoint hints**, maps the smithy roles to domain `OrganizationUserRole`s (`organizationUserRoleFromSmithyToDomain` in `service/service.scala`), and passes them as `organizationUserRolesAllowedOpt` to `AuthorizationService.auth`.
+2. The request overload parses the `Authorization` bearer into a typed `AccessToken` and the `X-Organization-ID` header into a typed `Option[OrganizationID]` before delegating to the token overload; a malformed header UUID fails as `InternalServerError.UnexpectedError` (`500`).
+3. `AuthorizationService.verifyOrganizationRole` (after token + onboard-stage verification): header absent when roles are required → `BadRequestError.HeaderMissingError` (`400`).
+4. It loads the caller's membership — `OrganizationManagementRepository.getOrganizationUser(organizationID, userID)`. No membership row → `InternalServerError.UnexpectedError` (`500`, the missing-referenced-entity convention). A member whose `userRole` is not in the declared roles → `ForbiddenError.InvalidOrganizationRole` (carrying the caller's actual role) → **`403 Forbidden`** (authenticated but not allowed — distinct from 401).
+5. Operations without the trait skip the check entirely (`organizationUserRolesAllowedOpt = None`).
 
-**Not yet implemented** — current gaps this design closes:
+Covered by `unit/service/AuthorizationServiceSpec` (allowed role, missing header, invalid header, not a member, disallowed role) and by the `FileApiSpec` acceptance cases (missing org header → 400, missing token → 401, non-member → 500, disallowed role → 403).
 
-- `CustomerBookService` handlers are stubs; no membership/role check exists yet.
-- `FileService` (logo upload) checks the bearer token + completed onboarding but **not** that the caller belongs to the target organization — any onboarded user can currently upload a logo for any `organizationID`. It also still takes `organizationID` as a path parameter (`/upload/organization/logo/{organizationID}`), predating the header standard.
-- Requires a new repository/query method to fetch a single membership row (e.g. `getOrganizationUser(organizationID, userID)` on `OrganizationManagementRepository`).
+The Tapir logo upload follows the same standard: `organizationID` moved from the path to the `X-Organization-ID` header (`POST /upload/organization/logo`), the security logic requires `OWNER`/`ADMIN`, and the parsed `OrganizationID` is handed to `FileService` as the security principal.
 
 ## Known gaps
 
-- The middleware itself has no direct tests (`// TODO: Test this middleware`, issue #25); it is exercised indirectly by every acceptance spec's error matrix (see [acceptance-tests.md](acceptance-tests.md)).
-- The FileService organization check above.
+- The middleware itself has no direct tests (`// TODO: Test this middleware`, issue #25); it is exercised indirectly by every acceptance spec's error matrix (see [acceptance-tests.md](acceptance-tests.md)). The organization role logic itself is unit-tested in `AuthorizationServiceSpec`.

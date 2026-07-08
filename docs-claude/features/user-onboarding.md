@@ -2,7 +2,7 @@
 
 Guides a user from a verified email to a fully onboarded account: set a password → provide full name + phone number → verify the phone via SMS OTP. Completing it (`PhoneVerified`) is what unlocks the business features gated with `@completedOnboardStage` (currently organization management and file uploads).
 
-**Scope**: the three onboarding steps *after* email verification, plus ownership of the `OnboardStage` state machine itself — the stage enum and every per-flow allowed-stage list live here even though other features consume them. Account/email creation is [User Sign up](user-signup.md); using the password to authenticate later is [User Sign in](user-signin.md). Every flow in the codebase checks the user's current `OnboardStage` against an allowed list (`verifyOnboardStage` in `service/service.scala`) and fails with `UnauthorizedError.FailedOnboardStage` otherwise, which makes the stage lists below load-bearing for all features.
+**Scope**: the three onboarding steps *after* email verification, plus ownership of the `OnboardStage` state machine itself — the stage enum and every per-flow allowed-stage list live here even though other features consume them. Account/email creation is [User Sign up](user-signup.md); using the password to authenticate later is [User Sign in](user-signin.md). Every flow in the codebase checks the user's current `OnboardStage` against an allowed list (`verifyOnboardStage` in `service/service.scala`) and fails with `ForbiddenError.InvalidOnboardStage` (`403 Forbidden`) otherwise, which makes the stage lists below load-bearing for all features.
 
 ## Stage machine
 

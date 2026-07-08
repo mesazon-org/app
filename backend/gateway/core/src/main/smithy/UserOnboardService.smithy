@@ -20,7 +20,7 @@ operation OnboardPasswordPost {
         request: OnboardPasswordPostRequest
     }
     output: OnboardPasswordPostResponse
-    errors: [Unauthorized, ValidationError, InternalServerError]
+    errors: [Unauthorized, Forbidden, ValidationError, InternalServerError]
 }
 
 /// **Required Onboard Stage:** [`PASSWORD_PROVIDED`, `PHONE_VERIFICATION`]
@@ -32,7 +32,7 @@ operation OnboardDetailsPost {
         request: OnboardDetailsPostRequest
     }
     output: OnboardDetailsPostResponse
-    errors: [Unauthorized, ValidationError, InternalServerError]
+    errors: [Unauthorized, Forbidden, ValidationError, InternalServerError]
 }
 
 /// **Required Onboard Stage:** [`PHONE_VERIFICATION`]
@@ -44,12 +44,12 @@ operation OnboardVerifyPhoneNumberPost {
         request: OnboardVerifyPhoneNumberPostRequest
     }
     output: OnboardVerifyPhoneNumberPostResponse
-    errors: [ValidationError, BadRequest, Unauthorized, InternalServerError]
+    errors: [ValidationError, BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
 /// **Required Onboard Stage:** [`PHONE_VERIFICATION`]
 @http(method: "GET", uri: "/onboard/verify/phone-number", code: 200)
 operation OnboardVerifyPhoneNumberGet {
     output: OnboardVerifyPhoneNumberGetResponse
-    errors: [Unauthorized, InternalServerError]
+    errors: [Unauthorized, Forbidden, InternalServerError]
 }

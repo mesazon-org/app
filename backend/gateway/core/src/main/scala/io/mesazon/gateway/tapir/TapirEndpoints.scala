@@ -1,7 +1,7 @@
 package io.mesazon.gateway.tapir
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.service.{AuthorizationService, FileService}
+import io.mesazon.gateway.service.*
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.StatusCode
 import sttp.tapir.CodecFormat
@@ -16,11 +16,13 @@ import zio.interop.catz.*
 object TapirEndpoints {
 
   private val securedEndpoint =
-    endpoint.securityIn(auth.bearer[String]())
+    endpoint
+      .securityIn(auth.bearer[AccessToken]())
+      .securityIn(header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString))
 
   private val uploadOrganizationLogoPostEndpoint =
     securedEndpoint.post
-      .in("upload" / "organization" / "logo" / path[OrganizationID]("organizationID"))
+      .in("upload" / "organization" / "logo")
       .in(header[OrganizationLogoOriginalFileName]("X-File-Name"))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
       .out(statusCode(StatusCode.Ok))
@@ -28,6 +30,7 @@ object TapirEndpoints {
         tapirServerErrorOut(
           NonEmptyChunk(
             TapirServerError.UnauthorizedError,
+            TapirServerError.ForbiddenError,
             TapirServerError.BadRequestError,
             TapirServerError.InternalServerError,
           )
@@ -47,11 +50,19 @@ object TapirEndpoints {
       fileService          <- ZIO.service[FileService[TapirTask]]
       authorizationService <- ZIO.service[AuthorizationService[TapirTask]]
       streamEndpoints: List[ZServerEndpoint[Any, ZioStreams]] = List(
-        uploadOrganizationLogoPostEndpoint
-          .zServerSecurityLogic(
-            authorizationService.auth(_, requiresCompletedOnboardStage = true)
-          )
-          .serverLogic(_ => fileService.uploadOrganizationLogo)
+        uploadOrganizationLogoPostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
+          authorizationService
+            .auth(
+              accessToken = accessToken,
+              requiresCompletedOnboardStage = true,
+              organizationIDOpt = Some(organizationID),
+              organizationUserRolesAllowedOpt = Some(OrganizationUserRole.adminRoles),
+            )
+            .as(organizationID)
+        }
+          .serverLogic(organizationID => { case (organizationLogoOriginalFileName, organizationLogoFile) =>
+            fileService.uploadOrganizationLogo(organizationID, organizationLogoOriginalFileName, organizationLogoFile)
+          })
       )
       docsEndpointsOpt: Option[List[ZServerEndpoint[Any, ZioStreams]]] = Option.when(enableDocs)(
         SwaggerInterpreter(

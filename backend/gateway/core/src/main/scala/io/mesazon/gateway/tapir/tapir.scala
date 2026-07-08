@@ -30,9 +30,6 @@ private[tapir] val TapirDocsPath: List[String] =
 private[tapir] val TapirOpenApiYamlName: String =
   "openapi.yaml"
 
-// Inverse of `statusCodeFor`: pick the error body matching the status tapir chose for a decode failure, so a
-// missing/invalid bearer token (which makes tapir respond `401`) yields an UnauthorizedError body instead of the
-// default BadRequestError. Falls back to BadRequestError for statuses without a dedicated variant (e.g. 415).
 private[tapir] def tapirServerErrorForStatus(status: StatusCode): TapirServerError =
   TapirServerError.values.find(error => statusCodeFor(error) == status).getOrElse(TapirServerError.BadRequestError)
 
@@ -62,6 +59,7 @@ private[tapir] def statusCodeFor(tapirServerError: TapirServerError): StatusCode
   tapirServerError match {
     case TapirServerError.BadRequestError         => StatusCode.BadRequest
     case TapirServerError.UnauthorizedError       => StatusCode.Unauthorized
+    case TapirServerError.ForbiddenError          => StatusCode.Forbidden
     case TapirServerError.NotFoundError           => StatusCode.NotFound
     case TapirServerError.InternalServerError     => StatusCode.InternalServerError
     case TapirServerError.ServiceUnavailableError => StatusCode.ServiceUnavailable

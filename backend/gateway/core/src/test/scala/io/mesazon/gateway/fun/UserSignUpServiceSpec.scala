@@ -644,7 +644,7 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           )
       }
 
-      "fail with FailedOnboardStage when verify email is send for user with no email verification stage" in new TestContext {
+      "fail with InvalidOnboardStage when verify email is send for user with no email verification stage" in new TestContext {
         val onboardStage =
           Random.shuffle(OnboardStage.values.toList diff OnboardStage.signUpVerifyEmailStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -668,10 +668,11 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
 
         val serviceError = userSignUpService.signUpVerifyEmailPost(signUpVerifyEmailPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.InvalidOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.FailedOnboardStage] shouldBe ServiceError.UnauthorizedError
-          .FailedOnboardStage(
+          .asInstanceOf[ServiceError.ForbiddenError.InvalidOnboardStage] shouldBe ServiceError.ForbiddenError
+          .InvalidOnboardStage(
+            userID = userDetailsRow.userID,
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.signUpVerifyEmailStages,
           )

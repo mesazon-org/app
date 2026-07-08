@@ -10,6 +10,17 @@ Black-box tests of the **real running gateway**: the app and all its dependencie
 - Emails are asserted through `MailHogClient`; S3 objects through the `s3-test` module.
 - `beforeAll` waits for gateway readiness with `eventually`; `beforeEach` truncates **all** tables (`repositoryConfig.allTableNames`) — tests are independent and order-insensitive.
 - Structure: `"<Feature> API" when { "<METHOD> /path" should { "..." in withContext { ... } } }`.
+- **Order tests within a `should` block by the response's HTTP status code, ascending — sort by status code, not by the order you happened to write them.** The smithy error *name* fixes its code, so map name → code first, then sort by the code:
+
+  | Smithy error (the `[smithy.Xxx]` type param) | Status code |
+  |---|---|
+  | *(happy path — no error type)* | `200`/`204` |
+  | `ValidationError`, `BadRequest` | `400` |
+  | `Unauthorized` | `401` |
+  | `Forbidden` | `403` |
+  | `InternalServerError` | `500` |
+
+  So a full block reads: happy path first, then `400` → `401` → `403` → `500`. **`Forbidden` (403) always comes *before* `InternalServerError` (500)** — do not append a new test to the bottom of the block; insert it at the position its status code demands. When several cases share a code (e.g. multiple `400`s), keep a sensible sub-order among them. This is a source-ordering convention only — execution is order-insensitive (`beforeEach` truncates every table) — but a correctly sorted block makes a missing error case obvious at a glance, so re-check the whole block every time you add or move a test.
 
 ## What a feature's acceptance spec must cover
 
@@ -25,10 +36,13 @@ These cases are deliberately duplicated per endpoint; the middleware is shared, 
 | Case | Expected | Applies to |
 |---|---|---|
 | Invalid request body / field | `400` `smithy.ValidationError(fields = List(...))` | all endpoints with input |
-| Missing credentials/token (`addBasicAuth = false` / no bearer header) | `400 BadRequest` (basic auth) / `401 Unauthorized` (bearer) | all authed endpoints |
+| Missing credentials/token (`addBasicAuth = false` / no bearer header) | `401 Unauthorized` | all authed endpoints |
 | Invalid/garbage token | `401` `smithy.Unauthorized()` | all bearer endpoints |
 | Valid token but token row not in DB | `401 Unauthorized` | refresh/reset token endpoints |
-| User in a disallowed `OnboardStage` | `401 Unauthorized` | all stage-gated endpoints |
+| User in a disallowed `OnboardStage` | `403 Forbidden` | all stage-gated endpoints |
+| Missing `X-Organization-ID` header | `400 BadRequest` | all `@organizationUserRolesAllowed` endpoints |
+| Organization member with a disallowed role | `403 Forbidden` | all `@organizationUserRolesAllowed` endpoints |
+| Not an organization member (no membership row) | `500 InternalServerError` | all `@organizationUserRolesAllowed` endpoints |
 | Wrong OTP | `400 BadRequest` | OTP-verify endpoints |
 | Expired OTP | `401 Unauthorized` (+ OTP row deleted) | OTP-verify endpoints |
 | Referenced entity missing (OTP ID/user/token not found) | `500 InternalServerError` | lookup-by-id endpoints |

@@ -19,6 +19,8 @@ Each entry links to the coding standards for that technology — **follow them w
 
 **Documentation rule (for Claude): every new feature ships with its doc.** When you implement a feature, also write `docs-claude/features/<feature-name>.md` and link it in the list below — you are generating context for your own future sessions, so capture what the code alone won't tell you. When you change an existing feature's behavior, update its doc.
 
+**Rename rule (for Claude): docs reference code by name.** Whenever you rename an identifier that could be named in prose (service errors, types, endpoints, config keys, files), grep `docs-claude/` (and this `CLAUDE.md`) for the old name and update every match in the same change — the same way you would for the code and tests.
+
 Follow the structure of the existing docs:
 
 - scope paragraph: what the feature owns, what it deliberately excludes, links to the owning features at each boundary

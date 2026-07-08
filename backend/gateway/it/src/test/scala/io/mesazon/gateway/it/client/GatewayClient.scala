@@ -252,13 +252,18 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .send(sttpBackend)
 
   def uploadOrganizationLogoPost[E: JsonValueCodec](
-      organizationID: OrganizationID,
+      organizationIDOpt: Option[OrganizationID],
       organizationLogoOriginalFileNameOpt: Option[OrganizationLogoOriginalFileName],
       logoBytes: Chunk[Byte],
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, Unit]]] =
     basicRequest
-      .post(externalUri.addPath("upload", "organization", "logo", organizationID.value.toString))
+      .post(externalUri.addPath("upload", "organization", "logo"))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header("X-Organization-ID", organizationID.value.toString)
+        )
+      )
       .pipe(request =>
         organizationLogoOriginalFileNameOpt.fold(request)(organizationLogoOriginalFileName =>
           request.header("X-File-Name", organizationLogoOriginalFileName.value)
@@ -280,6 +285,7 @@ object GatewayClient {
   given JsonValueCodec[smithy.ValidationError]     = JsonCodecMaker.make[smithy.ValidationError]
   given JsonValueCodec[smithy.BadRequest]          = JsonCodecMaker.make[smithy.BadRequest]
   given JsonValueCodec[smithy.Unauthorized]        = JsonCodecMaker.make[smithy.Unauthorized]
+  given JsonValueCodec[smithy.Forbidden]           = JsonCodecMaker.make[smithy.Forbidden]
   given JsonValueCodec[smithy.InternalServerError] = JsonCodecMaker.make[smithy.InternalServerError]
 
   // Remove stupid warning that can't execute bin/sh in distroless images

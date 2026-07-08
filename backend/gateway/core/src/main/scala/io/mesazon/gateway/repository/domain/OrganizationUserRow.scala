@@ -5,7 +5,7 @@ import io.mesazon.domain.gateway.*
 case class OrganizationUserRow(
     organizationID: OrganizationID,
     userID: UserID,
-    userRole: UserRole,
+    userRole: OrganizationUserRole,
     createdAt: CreatedAt,
     updatedAt: UpdatedAt,
 )

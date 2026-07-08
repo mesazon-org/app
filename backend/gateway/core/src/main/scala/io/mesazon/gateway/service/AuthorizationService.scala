@@ -1,44 +1,80 @@
 package io.mesazon.gateway.service
 
+import cats.syntax.all.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
-import io.mesazon.gateway.repository.UserDetailsRepository
+import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.state.*
 import io.mesazon.gateway.tapir.TapirTask
 import org.http4s.*
 import org.http4s.headers.Authorization
+import org.typelevel.ci.CIString
 import zio.*
 
 trait AuthorizationService[F[_]] {
-  def auth(request: Request[Task], requiresCompletedOnboardStage: Boolean): F[Unit]
-  def auth(accessTokenRaw: String, requiresCompletedOnboardStage: Boolean): F[Unit]
+  def auth(
+      request: Request[Task],
+      requiresCompletedOnboardStage: Boolean,
+      organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
+  ): F[Unit]
+
+  def auth(
+      accessToken: AccessToken,
+      requiresCompletedOnboardStage: Boolean,
+      organizationIDOpt: Option[OrganizationID],
+      organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
+  ): F[Unit]
 }
 
 object AuthorizationService {
+
+  val OrganizationIDHeader = CIString("X-Organization-ID")
 
   private final class AuthorizationServiceImpl(
       authState: AuthState,
       jwtService: JwtService,
       userDetailsRepository: UserDetailsRepository,
+      organizationManagementRepository: OrganizationManagementRepository,
   ) extends AuthorizationService[ServiceTask] {
 
-    override def auth(request: Request[Task], requiresCompletedOnboardStage: Boolean): ServiceTask[Unit] =
+    override def auth(
+        request: Request[Task],
+        requiresCompletedOnboardStage: Boolean,
+        organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
+    ): ServiceTask[Unit] =
       for {
         maybeBearerToken = request.headers
           .get[`Authorization`]
           .collect { case Authorization(Credentials.Token(AuthScheme.Bearer, token)) => token }
         accessTokenRaw <- ZIO
-          .getOrFailWith(ServiceError.UnauthorizedError.AuthorizationTokenMissing)(maybeBearerToken)
-        _ <- auth(accessTokenRaw, requiresCompletedOnboardStage)
-      } yield ()
-
-    override def auth(accessTokenRaw: String, requiresCompletedOnboardStage: Boolean): ServiceTask[Unit] =
-      for {
+          .getOrFailWith(
+            ServiceError.UnauthorizedError.AuthHeaderMissingError(s"${Authorization.name}: ${AuthScheme.Bearer}")
+          )(
+            maybeBearerToken
+          )
         accessToken <- ZIO
           .fromEither(AccessToken.either(accessTokenRaw))
           .mapError(error =>
-            ServiceError.InternalServerError.AuthorizationError(s"Failed to apply AccessToken: $error")
+            ServiceError.InternalServerError.UnexpectedError(s"Failed to apply AccessToken [$accessTokenRaw]: $error")
           )
+        organizationIDOptRaw = request.headers.get(OrganizationIDHeader).map(_.head.value)
+        organizationIDOpt <- ZIO
+          .fromEither(organizationIDOptRaw.traverse(OrganizationID.eitherFromString))
+          .mapError(error =>
+            ServiceError.InternalServerError.UnexpectedError(
+              s"Failed to apply OrganizationID from header [$organizationIDOptRaw]: $error"
+            )
+          )
+        _ <- auth(accessToken, requiresCompletedOnboardStage, organizationIDOpt, organizationUserRolesAllowedOpt)
+      } yield ()
+
+    override def auth(
+        accessToken: AccessToken,
+        requiresCompletedOnboardStage: Boolean,
+        organizationIDOpt: Option[OrganizationID],
+        organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
+    ): ServiceTask[Unit] =
+      for {
         authedUserAccess <- jwtService.verifyAccessToken(accessToken)
         _                <-
           if (requiresCompletedOnboardStage)
@@ -50,32 +86,85 @@ object AuthorizationService {
                     .UnexpectedError(s"User details not found for user ID: ${authedUserAccess.userID}")
                 )
               _ <- verifyOnboardStage(
+                authedUserAccess.userID,
                 userDetails.onboardStage,
                 OnboardStage.completedStages,
               )
             } yield ()
           else ZIO.unit
+        _ <- ZIO.foreachDiscard(organizationUserRolesAllowedOpt)(
+          verifyOrganizationRole(authedUserAccess.userID, organizationIDOpt, _)
+        )
         _ <- authState.set(AuthedUser(authedUserAccess.userID))
       } yield ()
 
+    private def verifyOrganizationRole(
+        userID: UserID,
+        organizationIDOpt: Option[OrganizationID],
+        organizationRolesAllowed: List[OrganizationUserRole],
+    ): ServiceTask[Unit] =
+      for {
+        organizationID <- ZIO.getOrFailWith(
+          ServiceError.BadRequestError.HeaderMissingError(OrganizationIDHeader.toString)
+        )(organizationIDOpt)
+        organizationUserRow <- organizationManagementRepository
+          .getOrganizationUser(organizationID, userID)
+          .someOrFail(
+            ServiceError.InternalServerError.UnexpectedError(
+              s"Organization user not found for organization ID: [$organizationID] and user ID: [$userID]"
+            )
+          )
+        _ <- ZIO.unlessDiscard(organizationRolesAllowed.contains(organizationUserRow.userRole))(
+          ZIO.fail(
+            ServiceError.ForbiddenError
+              .InvalidOrganizationRole(organizationID, userID, organizationUserRow.userRole, organizationRolesAllowed)
+          )
+        )
+      } yield ()
   }
 
   private def observedSmithy(service: AuthorizationService[ServiceTask]): AuthorizationService[Task] =
     new AuthorizationService[Task] {
-      override def auth(request: Request[Task], requiresCompletedOnboardStage: Boolean): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(service.auth(request, requiresCompletedOnboardStage))
+      override def auth(
+          request: Request[Task],
+          requiresCompletedOnboardStage: Boolean,
+          organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(
+          service.auth(request, requiresCompletedOnboardStage, organizationUserRolesAllowedOpt)
+        )
 
-      override def auth(accessTokenRaw: String, requiresCompletedOnboardStage: Boolean): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(service.auth(accessTokenRaw, requiresCompletedOnboardStage))
+      override def auth(
+          accessToken: AccessToken,
+          requiresCompletedOnboardStage: Boolean,
+          organizationIDOpt: Option[OrganizationID],
+          organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(
+          service.auth(accessToken, requiresCompletedOnboardStage, organizationIDOpt, organizationUserRolesAllowedOpt)
+        )
     }
 
   private def observedTapir(service: AuthorizationService[ServiceTask]): AuthorizationService[TapirTask] =
     new AuthorizationService[TapirTask] {
-      override def auth(request: Request[Task], requiresCompletedOnboardStage: Boolean): TapirTask[Unit] =
-        HttpErrorHandler.errorResponseHandlerTapir(service.auth(request, requiresCompletedOnboardStage))
+      override def auth(
+          request: Request[Task],
+          requiresCompletedOnboardStage: Boolean,
+          organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
+      ): TapirTask[Unit] =
+        HttpErrorHandler.errorResponseHandlerTapir(
+          service.auth(request, requiresCompletedOnboardStage, organizationUserRolesAllowedOpt)
+        )
 
-      override def auth(accessTokenRaw: String, requiresCompletedOnboardStage: Boolean): TapirTask[Unit] =
-        HttpErrorHandler.errorResponseHandlerTapir(service.auth(accessTokenRaw, requiresCompletedOnboardStage))
+      override def auth(
+          accessToken: AccessToken,
+          requiresCompletedOnboardStage: Boolean,
+          organizationIDOpt: Option[OrganizationID],
+          organizationUserRolesAllowedOpt: Option[List[OrganizationUserRole]],
+      ): TapirTask[Unit] =
+        HttpErrorHandler.errorResponseHandlerTapir(
+          service.auth(accessToken, requiresCompletedOnboardStage, organizationIDOpt, organizationUserRolesAllowedOpt)
+        )
     }
 
   val local = ZLayer.derive[AuthorizationServiceImpl].project[AuthorizationService[ServiceTask]](identity)

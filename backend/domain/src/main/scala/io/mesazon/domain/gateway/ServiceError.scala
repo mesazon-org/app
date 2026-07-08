@@ -20,6 +20,12 @@ object ServiceError {
       override val underlying: Option[Throwable] = None,
   ) extends ServiceError("UnauthorizedError", message, underlying)
 
+  // 403
+  sealed abstract class ForbiddenError(
+      override val message: String,
+      override val underlying: Option[Throwable] = None,
+  ) extends ServiceError("ForbiddenError", message, underlying)
+
   // 500
   sealed abstract class InternalServerError(
       override val message: String,
@@ -40,8 +46,8 @@ object ServiceError {
         InvalidFieldError(fieldName, errorMessage, Seq(invalidValue))
     }
 
-    case object AuthenticationCredentialsMissing
-        extends BadRequestError("authentication credentials are missing from request")
+    case class HeaderMissingError(headerName: String)
+        extends BadRequestError(s"Required header [$headerName] is missing")
 
     case class ValidationError(invalidFields: Seq[InvalidFieldError])
         extends BadRequestError(s"request validation error ${invalidFields.mkString("[", ",", "]")}")
@@ -50,7 +56,8 @@ object ServiceError {
   }
 
   object UnauthorizedError {
-    case object AuthorizationTokenMissing extends UnauthorizedError("token is missing from request")
+    case class AuthHeaderMissingError(headerName: String)
+        extends UnauthorizedError(s"Authorization header [$headerName] is missing")
 
     case class TokenFailedAuthorization(error: String, throwable: Option[Throwable] = None)
         extends UnauthorizedError(error, throwable)
@@ -64,20 +71,34 @@ object ServiceError {
 
     case class OtpExpiredError(error: String) extends UnauthorizedError(error)
 
-    case class FailedOnboardStage(
-        onboardStageUser: OnboardStage,
-        onboardStagesAllowed: List[OnboardStage],
-    ) extends UnauthorizedError(
-          s"Failed onboard stage user [$onboardStageUser], allowed: [$onboardStagesAllowed]",
-          None,
-        )
-
     case class AuthenticationTooManySignInAttempts(
         userID: UserID,
         actionAttemptType: ActionAttemptType,
         blockDurationSeconds: Long,
     ) extends UnauthorizedError(
           s"too many requests for user [$userID] and action attempt type [$actionAttemptType], block for [$blockDurationSeconds] seconds"
+        )
+  }
+
+  object ForbiddenError {
+
+    case class InvalidOrganizationRole(
+        organizationID: OrganizationID,
+        userID: UserID,
+        organizationUserRole: OrganizationUserRole,
+        organizationRolesAllowed: List[OrganizationUserRole],
+    ) extends ForbiddenError(
+          s"Invalid organization role for organization id: [$organizationID] and user id: [$userID], user role: [$organizationUserRole], allowed roles: [$organizationRolesAllowed]",
+          None,
+        )
+
+    case class InvalidOnboardStage(
+        userID: UserID,
+        onboardStageUser: OnboardStage,
+        onboardStagesAllowed: List[OnboardStage],
+    ) extends ForbiddenError(
+          s"Invalid onboard stage user id: [$userID] with onboard stage: [$onboardStageUser], allowed: [$onboardStagesAllowed]",
+          None,
         )
   }
 
@@ -91,9 +112,6 @@ object ServiceError {
         extends InternalServerError(error, throwable)
 
     case class AuthenticationError(error: String, throwable: Option[Throwable] = None)
-        extends InternalServerError(error, throwable)
-
-    case class AuthorizationError(error: String, throwable: Option[Throwable] = None)
         extends InternalServerError(error, throwable)
 
     case class UnexpectedError(error: String, throwable: Option[Throwable] = None)

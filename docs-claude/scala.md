@@ -11,7 +11,7 @@
 - Owner examples: `User`, `Organization`, `Contact`, `Order`
 - Entity examples: `Details`, `Otp`, `Name`, `Email`
 - Optional examples: empty or `Opt`
-- Behavior examples: `Update`, `Expected`, `New`, `Deleted`, `Existing`
+- Behavior examples: `Update`, `Expected`, `New`, `Deleted`, `Existing`, `Raw`
 
 #### General Scala naming rules
 

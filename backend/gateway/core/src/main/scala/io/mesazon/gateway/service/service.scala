@@ -23,17 +23,25 @@ def onboardStageFromSmithyToDomain(stage: smithy.OnboardStage): io.mesazon.domai
 }
 
 def verifyOnboardStage(
+    userID: UserID,
     onboardStageUser: OnboardStage,
     onboardStagesAllowed: List[OnboardStage],
-): IO[ServiceError.UnauthorizedError.FailedOnboardStage, Unit] =
+): IO[ServiceError.ForbiddenError.InvalidOnboardStage, Unit] =
   if (onboardStagesAllowed.contains(onboardStageUser)) ZIO.unit
   else
     ZIO.fail(
-      ServiceError.UnauthorizedError.FailedOnboardStage(
+      ServiceError.ForbiddenError.InvalidOnboardStage(
+        userID = userID,
         onboardStageUser = onboardStageUser,
         onboardStagesAllowed = onboardStagesAllowed,
       )
     )
+
+def organizationUserRoleFromSmithyToDomain(role: smithy.OrganizationUserRole): OrganizationUserRole = role match {
+  case smithy.OrganizationUserRole.OWNER => OrganizationUserRole.Owner
+  case smithy.OrganizationUserRole.ADMIN => OrganizationUserRole.Admin
+  case smithy.OrganizationUserRole.USER  => OrganizationUserRole.User
+}
 
 val DevOtp = "123QWE"
 

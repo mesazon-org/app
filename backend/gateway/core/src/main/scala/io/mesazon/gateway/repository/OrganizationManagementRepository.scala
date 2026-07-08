@@ -48,6 +48,11 @@ trait OrganizationManagementRepository {
   def isOrganizationSlugExists(
       slug: OrganizationSlug
   ): IO[ServiceError, Boolean]
+
+  def getOrganizationUser(
+      organizationID: OrganizationID,
+      userID: UserID,
+  ): IO[ServiceError, Option[OrganizationUserRow]]
 }
 
 object OrganizationManagementRepository {
@@ -120,7 +125,7 @@ object OrganizationManagementRepository {
             organizationUserRow = OrganizationUserRow(
               organizationID,
               userID,
-              UserRole.Owner,
+              OrganizationUserRole.Owner,
               CreatedAt(instantNow),
               UpdatedAt(instantNow),
             )
@@ -188,6 +193,21 @@ object OrganizationManagementRepository {
         .mapError(e =>
           ServiceError.InternalServerError.RepositoryError(
             s"Failed to check slug uniqueness for slug: [$slug]",
+            e,
+          )
+        )
+
+    override def getOrganizationUser(
+        organizationID: OrganizationID,
+        userID: UserID,
+    ): IO[ServiceError, Option[OrganizationUserRow]] =
+      database
+        .transactionOrWiden(
+          organizationUserQueries.get(organizationID, userID)
+        )
+        .mapError(e =>
+          ServiceError.InternalServerError.RepositoryError(
+            s"Failed to get organization user: [$organizationID], [$userID]",
             e,
           )
         )

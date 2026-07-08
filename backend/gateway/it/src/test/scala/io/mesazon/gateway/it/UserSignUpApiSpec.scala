@@ -391,7 +391,7 @@ class UserSignUpApiSpec
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
-      "fail with Unauthorized when user is not in an allowed onboard stage" in withContext { context =>
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
         val onboardStageInvalid =
@@ -418,10 +418,10 @@ class UserSignUpApiSpec
         )
 
         val signUpVerifyEmailPostResponse =
-          gatewayClient.signUpVerifyEmailPost[smithy.Unauthorized](signUpVerifyEmailPostRequest).zioValue
+          gatewayClient.signUpVerifyEmailPost[smithy.Forbidden](signUpVerifyEmailPostRequest).zioValue
 
-        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Unauthorized
-        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Forbidden
+        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.Forbidden()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }

@@ -34,7 +34,7 @@ list OrganizationUserRoles {
 /// identified by the required `X-Organization-ID` header with one of the
 /// given roles.
 @trait(selector: "operation")
-structure organizationRolesAllowed {
+structure organizationUserRolesAllowed {
     @required
     roles: OrganizationUserRoles
 }
