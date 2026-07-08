@@ -249,7 +249,7 @@ class FileApiSpec
         uploadOrganizationLogoResponse.body.left.value shouldBe smithy.BadRequest()
       }
 
-      "fail with Forbidden when the user is not assigned to the organization" in withContext { context =>
+      "fail with InternalServerError when the user is not assigned to the organization" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
@@ -264,7 +264,7 @@ class FileApiSpec
         val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.Forbidden](
+          .uploadOrganizationLogoPost[smithy.InternalServerError](
             Some(organizationID),
             Some(organizationLogoOriginalFileName),
             logoBytes,
@@ -272,8 +272,8 @@ class FileApiSpec
           )
           .zioValue
 
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.Forbidden
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Forbidden()
+        uploadOrganizationLogoResponse.code shouldBe StatusCode.InternalServerError
+        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.InternalServerError()
       }
 
       "fail with Forbidden when the user is assigned to the organization with a disallowed role" in withContext {

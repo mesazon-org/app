@@ -108,11 +108,14 @@ object AuthorizationService {
         organizationUserRow <- organizationManagementRepository
           .getOrganizationUser(organizationID, userID)
           .someOrFail(
-            ServiceError.ForbiddenError.FailedOrganizationRole(organizationID, userID, organizationRolesAllowed)
+            ServiceError.InternalServerError.UnexpectedError(
+              s"Organization user not found for organization ID: [$organizationID] and user ID: [$userID]"
+            )
           )
         _ <- ZIO.unlessDiscard(organizationRolesAllowed.contains(organizationUserRow.userRole))(
           ZIO.fail(
-            ServiceError.ForbiddenError.FailedOrganizationRole(organizationID, userID, organizationRolesAllowed)
+            ServiceError.ForbiddenError
+              .FailedOrganizationRole(organizationID, userID, organizationUserRow.userRole, organizationRolesAllowed)
           )
         )
       } yield ()

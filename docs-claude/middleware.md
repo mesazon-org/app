@@ -8,7 +8,7 @@ How every gateway endpoint gets its auth. The rule of thumb: **handlers never ch
 
 Tapir endpoints (streaming uploads) are **not** covered by this middleware: they wire the same checks explicitly via `zServerSecurityLogic(authorizationService.auth(...))` in `tapir/TapirEndpoints.scala` — the bearer token (`auth.bearer[AccessToken]`) and the `X-Organization-ID` header (`header[OrganizationID]`) are typed `securityIn`s, and each endpoint passes its allowed roles; the decoded `OrganizationID` becomes the security principal handed to the handler. **When a rule is added to the middleware, the Tapir security logic must be extended by hand to match.**
 
-Cross-transport consistency: a **missing required header (`Authorization`, `X-Organization-ID`) is a generic `400 BadRequest` everywhere** — the smithy middleware fails with `BadRequestError.AuthHeaderMissingError`, and tapir's decode-failure handler (`tapir/tapir.scala`) downgrades its default `401` for missing auth inputs to `400` to match. Membership/role failures are `403 Forbidden` on both. One remaining difference: a *malformed* `X-Organization-ID` UUID is a tapir decode failure (`400`) but an `InternalServerError.AuthorizationError` (`500`) on smithy routes.
+Cross-transport consistency: a **missing required header (`Authorization`, `X-Organization-ID`) is a generic `400 BadRequest` everywhere** — the smithy middleware fails with `BadRequestError.AuthHeaderMissingError`, and tapir's decode-failure handler (`tapir/tapir.scala`) downgrades its default `401` for missing auth inputs to `400` to match. Disallowed-role failures are `403 Forbidden` and missing membership rows `500` on both. One remaining difference: a *malformed* `X-Organization-ID` UUID is a tapir decode failure (`400`) but an `InternalServerError.AuthorizationError` (`500`) on smithy routes.
 
 ## Dispatch table
 
@@ -57,10 +57,10 @@ Enforcement, mirroring the `completedOnboardStage` mechanism:
 1. `ServerMiddleware` reads the `OrganizationRolesAllowed` hint from the **endpoint hints**, maps the smithy roles to domain `UserRole`s (`organizationUserRoleFromSmithyToDomain` in `service/service.scala`), and passes them as `organizationRolesAllowedOpt` to `AuthorizationService.auth`.
 2. The request overload parses the `Authorization` bearer into a typed `AccessToken` and the `X-Organization-ID` header into a typed `Option[OrganizationID]` before delegating to the token overload; a malformed header UUID fails as `InternalServerError.AuthorizationError` (`500`).
 3. `AuthorizationService.verifyOrganizationRole` (after token + onboard-stage verification): header absent when roles are required → `BadRequestError.AuthHeaderMissingError` (`400`).
-4. It loads the caller's membership — `OrganizationManagementRepository.getOrganizationUser(organizationID, userID)` — and requires `userRole` to be one of the declared roles; not a member or wrong role → `ForbiddenError.FailedOrganizationRole` → **`403 Forbidden`** (authenticated but not allowed — distinct from 401).
+4. It loads the caller's membership — `OrganizationManagementRepository.getOrganizationUser(organizationID, userID)`. No membership row → `InternalServerError.UnexpectedError` (`500`, the missing-referenced-entity convention). A member whose `userRole` is not in the declared roles → `ForbiddenError.FailedOrganizationRole` (carrying the caller's actual role) → **`403 Forbidden`** (authenticated but not allowed — distinct from 401).
 5. Operations without the trait skip the check entirely (`organizationRolesAllowedOpt = None`).
 
-Covered by `unit/service/AuthorizationServiceSpec` (allowed role, missing header, invalid header, not a member, disallowed role) and by the `FileApiSpec` acceptance cases (missing header → 400, non-member → 403, disallowed role → 403).
+Covered by `unit/service/AuthorizationServiceSpec` (allowed role, missing header, invalid header, not a member, disallowed role) and by the `FileApiSpec` acceptance cases (missing header → 400, non-member → 500, disallowed role → 403).
 
 The Tapir logo upload follows the same standard: `organizationID` moved from the path to the `X-Organization-ID` header (`POST /upload/organization/logo`), the security logic requires `OWNER`/`ADMIN`, and the parsed `OrganizationID` is handed to `FileService` as the security principal.
 

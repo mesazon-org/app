@@ -88,7 +88,7 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
   ```
 
 - Rationale: the middleware can read a fixed header without parsing the body (impossible for GETs and streaming uploads), and URIs stay untouched by the scoping standard
-- **Tapir endpoints follow the same standard** — the header is declared as a typed `securityIn` (`header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString)`) and passed to `AuthorizationService.auth` together with the endpoint's allowed roles; missing required headers (`Authorization`, `X-Organization-ID`) are a generic `400 BadRequest` and membership/role failures a `403 Forbidden` on **both** transports (see `TapirEndpoints.scala` and [middleware.md](middleware.md))
+- **Tapir endpoints follow the same standard** — the header is declared as a typed `securityIn` (`header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString)`) and passed to `AuthorizationService.auth` together with the endpoint's allowed roles; missing required headers (`Authorization`, `X-Organization-ID`) are a generic `400 BadRequest` and disallowed-role failures a `403 Forbidden` on **both** transports (see `TapirEndpoints.scala` and [middleware.md](middleware.md))
 - ✅ `@httpHeader("X-Organization-ID") organizationID: UUID` on every org-scoped operation input
 - ❌ `organizationID` as a request-body field or path parameter (`/insert/customers/{organizationID}`), a Tapir endpoint doing its own org check differently from the smithy middleware
 
@@ -105,7 +105,7 @@ All custom traits live in `domain/Gateway.smithy` and are enforced by [the HTTP 
 ### `@organizationRolesAllowed(roles: [...])`
 
 - **Operation-level** trait carrying the list of `OrganizationUserRole`s (`OWNER`, `ADMIN`, `USER` — mirrors the Scala domain enum `UserRole`) allowed to call that operation, so permissions can differ per endpoint within one service
-- The caller must be **assigned to the organization** identified by the `X-Organization-ID` header **with one of the declared roles**; a missing/malformed header is `401 Unauthorized`, while not being a member or having a disallowed role is `403 Forbidden`
+- The caller must be **assigned to the organization** identified by the `X-Organization-ID` header **with one of the declared roles**; a missing header is `400 BadRequest`, a member with a disallowed role is `403 Forbidden`, and a caller with no membership row at all is a `500 InternalServerError` (treated like any missing referenced entity)
 - Enum values must be quoted in the trait node value: `@organizationRolesAllowed(roles: ["OWNER", "ADMIN"])`
 - Always used together with the `X-Organization-ID` header input member (section above) — the trait declares *who* may call, the header declares *which organization* the request is scoped to
 - Used by: `CustomerBookService` — reads (`GetCustomerGet`, `GetCustomersGet`) allow `OWNER`/`ADMIN`/`USER`, writes (insert/update/delete) allow `OWNER`/`ADMIN` only

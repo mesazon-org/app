@@ -256,7 +256,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         serviceError shouldBe a[ServiceError.InternalServerError.AuthorizationError]
       }
 
-      "fail with FailedOrganizationRole when user is not assigned to the organization" in new TestContext {
+      "fail with UnexpectedError when user is not assigned to the organization" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val accessToken    = arbitrarySample[AccessToken]
         val organizationID = arbitrarySample[OrganizationID]
@@ -294,10 +294,8 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           )
           .zioError
 
-        serviceError shouldBe ServiceError.ForbiddenError.FailedOrganizationRole(
-          organizationID,
-          authedUser.userID,
-          organizationRolesAllowed,
+        serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
+          s"Organization user not found for organization ID: [$organizationID] and user ID: [${authedUser.userID}]"
         )
       }
 
@@ -345,6 +343,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         serviceError shouldBe ServiceError.ForbiddenError.FailedOrganizationRole(
           organizationUserRow.organizationID,
           authedUser.userID,
+          organizationUserRow.userRole,
           organizationRolesAllowed,
         )
       }

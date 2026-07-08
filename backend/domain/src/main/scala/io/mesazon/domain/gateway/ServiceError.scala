@@ -85,9 +85,11 @@ object ServiceError {
     case class FailedOrganizationRole(
         organizationID: OrganizationID,
         userID: UserID,
+        organizationUserRole: UserRole,
         organizationRolesAllowed: List[UserRole],
     ) extends ForbiddenError(
-          s"User [$userID] is not assigned to organization [$organizationID] with one of the allowed roles: [$organizationRolesAllowed]"
+          s"Failed organization role for organization id: [$organizationID] and user id: [$userID], user role: [$organizationUserRole], allowed roles: [$organizationRolesAllowed]",
+          None,
         )
 
     case class FailedOnboardStage(
