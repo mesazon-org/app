@@ -416,7 +416,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
       }
 
-      "fail with FailedOnboardStage when user is not in allowed onboard stage" in new TestContext {
+      "fail with InvalidOnboardStage when user is not in allowed onboard stage" in new TestContext {
         val onboardStage =
           Random.shuffle(OnboardStage.values.diff(OnboardStage.forgotPasswordAllowedStages).toList).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -435,10 +435,10 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
 
         val serviceError = userForgotPasswordService.forgotPasswordPost(forgotPasswordPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.InvalidOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
-          .FailedOnboardStage(
+          .asInstanceOf[ServiceError.ForbiddenError.InvalidOnboardStage] shouldBe ServiceError.ForbiddenError
+          .InvalidOnboardStage(
             userID = userDetailsRow.userID,
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
@@ -682,7 +682,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           )
       }
 
-      "fail with FailedOnboardStage when user is not in allowed onboard stage" in new TestContext {
+      "fail with InvalidOnboardStage when user is not in allowed onboard stage" in new TestContext {
         val onboardStage =
           Random.shuffle(OnboardStage.values.diff(OnboardStage.forgotPasswordAllowedStages).toList).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -712,10 +712,10 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val serviceError =
           userForgotPasswordService.forgotPasswordVerifyOTPPost(forgotPasswordVerifyOTPPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.InvalidOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
-          .FailedOnboardStage(
+          .asInstanceOf[ServiceError.ForbiddenError.InvalidOnboardStage] shouldBe ServiceError.ForbiddenError
+          .InvalidOnboardStage(
             userID = userDetailsRow.userID,
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,
@@ -1103,7 +1103,7 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
           .UnexpectedError(s"No user details found for userID: [${authedUserResetPassword.userID.value}]")
       }
 
-      "fail with FailedOnboardStage when user is not in allowed onboard stage" in new TestContext {
+      "fail with InvalidOnboardStage when user is not in allowed onboard stage" in new TestContext {
         val onboardStage =
           Random.shuffle(OnboardStage.values.diff(OnboardStage.forgotPasswordAllowedStages).toList).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -1133,10 +1133,10 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
         val serviceError =
           userForgotPasswordService.forgotPasswordResetPost(forgotPasswordResetPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.InvalidOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
-          .FailedOnboardStage(
+          .asInstanceOf[ServiceError.ForbiddenError.InvalidOnboardStage] shouldBe ServiceError.ForbiddenError
+          .InvalidOnboardStage(
             userID = userDetailsRow.userID,
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.forgotPasswordAllowedStages,

@@ -82,22 +82,22 @@ object ServiceError {
 
   object ForbiddenError {
 
-    case class FailedOrganizationRole(
+    case class InvalidOrganizationRole(
         organizationID: OrganizationID,
         userID: UserID,
         organizationUserRole: UserRole,
         organizationRolesAllowed: List[UserRole],
     ) extends ForbiddenError(
-          s"Failed organization role for organization id: [$organizationID] and user id: [$userID], user role: [$organizationUserRole], allowed roles: [$organizationRolesAllowed]",
+          s"Invalid organization role for organization id: [$organizationID] and user id: [$userID], user role: [$organizationUserRole], allowed roles: [$organizationRolesAllowed]",
           None,
         )
 
-    case class FailedOnboardStage(
+    case class InvalidOnboardStage(
         userID: UserID,
         onboardStageUser: OnboardStage,
         onboardStagesAllowed: List[OnboardStage],
     ) extends ForbiddenError(
-          s"Failed onboard stage user id: [$userID] with onboard stage: [$onboardStageUser], allowed: [$onboardStagesAllowed]",
+          s"Invalid onboard stage user id: [$userID] with onboard stage: [$onboardStageUser], allowed: [$onboardStagesAllowed]",
           None,
         )
   }

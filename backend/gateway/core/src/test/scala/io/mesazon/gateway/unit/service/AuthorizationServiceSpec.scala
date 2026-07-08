@@ -79,7 +79,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .isRight shouldBe true
       }
 
-      "fail with FailedOnboardStage when user has not completed required onboard stage" in new TestContext {
+      "fail with InvalidOnboardStage when user has not completed required onboard stage" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -111,10 +111,10 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           .auth(request, requiresCompletedOnboardStage = true, organizationRolesAllowedOpt = None)
           .zioError
 
-        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.InvalidOnboardStage]
         serviceError.asInstanceOf[
-          ServiceError.ForbiddenError.FailedOnboardStage
-        ] shouldBe ServiceError.ForbiddenError.FailedOnboardStage(
+          ServiceError.ForbiddenError.InvalidOnboardStage
+        ] shouldBe ServiceError.ForbiddenError.InvalidOnboardStage(
           userID = userDetailsRow.userID,
           onboardStageUser = userDetailsRow.onboardStage,
           onboardStagesAllowed = OnboardStage.completedStages,
@@ -299,7 +299,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
         )
       }
 
-      "fail with FailedOrganizationRole when user is assigned to the organization with a disallowed role" in new TestContext {
+      "fail with InvalidOrganizationRole when user is assigned to the organization with a disallowed role" in new TestContext {
         val authedUser  = arbitrarySample[AuthedUser]
         val accessToken = arbitrarySample[AccessToken]
 
@@ -340,7 +340,7 @@ class AuthorizationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Gat
           )
           .zioError
 
-        serviceError shouldBe ServiceError.ForbiddenError.FailedOrganizationRole(
+        serviceError shouldBe ServiceError.ForbiddenError.InvalidOrganizationRole(
           organizationUserRow.organizationID,
           authedUser.userID,
           organizationUserRow.userRole,

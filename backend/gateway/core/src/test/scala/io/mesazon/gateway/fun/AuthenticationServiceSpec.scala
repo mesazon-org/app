@@ -241,7 +241,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
           )
       }
 
-      "fail with FailedOnboardStage to authenticate user with no allowed sing in onboardStage" in new TestContext {
+      "fail with InvalidOnboardStage to authenticate user with no allowed sing in onboardStage" in new TestContext {
         val onboardStage =
           Random.shuffle(OnboardStage.values.toList.diff(OnboardStage.signInAllowedStages)).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -267,10 +267,10 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
 
         val serviceError = authenticationService.auth(request).zioError
 
-        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.InvalidOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe
-          ServiceError.ForbiddenError.FailedOnboardStage(
+          .asInstanceOf[ServiceError.ForbiddenError.InvalidOnboardStage] shouldBe
+          ServiceError.ForbiddenError.InvalidOnboardStage(
             userID = userDetailsRow.userID,
             onboardStageUser = onboardStage,
             onboardStagesAllowed = OnboardStage.signInAllowedStages,

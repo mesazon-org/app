@@ -115,7 +115,7 @@ object AuthorizationService {
         _ <- ZIO.unlessDiscard(organizationRolesAllowed.contains(organizationUserRow.userRole))(
           ZIO.fail(
             ServiceError.ForbiddenError
-              .FailedOrganizationRole(organizationID, userID, organizationUserRow.userRole, organizationRolesAllowed)
+              .InvalidOrganizationRole(organizationID, userID, organizationUserRow.userRole, organizationRolesAllowed)
           )
         )
       } yield ()

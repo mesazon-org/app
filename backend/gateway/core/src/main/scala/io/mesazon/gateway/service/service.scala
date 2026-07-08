@@ -26,11 +26,11 @@ def verifyOnboardStage(
     userID: UserID,
     onboardStageUser: OnboardStage,
     onboardStagesAllowed: List[OnboardStage],
-): IO[ServiceError.ForbiddenError.FailedOnboardStage, Unit] =
+): IO[ServiceError.ForbiddenError.InvalidOnboardStage, Unit] =
   if (onboardStagesAllowed.contains(onboardStageUser)) ZIO.unit
   else
     ZIO.fail(
-      ServiceError.ForbiddenError.FailedOnboardStage(
+      ServiceError.ForbiddenError.InvalidOnboardStage(
         userID = userID,
         onboardStageUser = onboardStageUser,
         onboardStagesAllowed = onboardStagesAllowed,

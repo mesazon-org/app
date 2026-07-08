@@ -117,7 +117,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         sendWelcomeEmailCounter.get.zioValue shouldBe userOnboardConfig.sendWelcomeEmailMaxRetries + 1
       }
 
-      "fail with FailedOnboardStage when onboard password for user not in email verified stage" in new TestContext {
+      "fail with InvalidOnboardStage when onboard password for user not in email verified stage" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(
@@ -140,10 +140,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val serviceError = userOnboardService.onboardPasswordPost(onboardPasswordPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.InvalidOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
-          .FailedOnboardStage(
+          .asInstanceOf[ServiceError.ForbiddenError.InvalidOnboardStage] shouldBe ServiceError.ForbiddenError
+          .InvalidOnboardStage(
             userID = userDetailsRow.userID,
             onboardStageUser = userDetailsRow.onboardStage,
             onboardStagesAllowed = OnboardStage.onboardPasswordStages,
@@ -465,7 +465,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         onboardDetailsPostResponse.onboardStage.name shouldBe "PHONE_VERIFICATION"
       }
 
-      "fail with FailedOnboardStage when onboardStage is not valid" in new TestContext {
+      "fail with InvalidOnboardStage when onboardStage is not valid" in new TestContext {
         val authedUser   = arbitrarySample[AuthedUser]
         val onboardStage =
           Random.shuffle(OnboardStage.values.diff(OnboardStage.onboardDetailsStages).toList).zioValue.head
@@ -486,10 +486,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
 
         val serviceError = userOnboardService.onboardDetailsPost(onboardDetailsPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.InvalidOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
-          .FailedOnboardStage(
+          .asInstanceOf[ServiceError.ForbiddenError.InvalidOnboardStage] shouldBe ServiceError.ForbiddenError
+          .InvalidOnboardStage(
             userID = userDetailsRow.userID,
             onboardStageUser = userDetailsRow.onboardStage,
             onboardStagesAllowed = OnboardStage.onboardDetailsStages,
@@ -761,7 +761,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           )
       }
 
-      "fail with FailedOnboardStage when onboard stage is not valid" in new TestContext {
+      "fail with InvalidOnboardStage when onboard stage is not valid" in new TestContext {
         val authedUser   = arbitrarySample[AuthedUser]
         val onboardStage =
           Random.shuffle(OnboardStage.values.diff(OnboardStage.onboardVerifyPhoneNumberStages).toList).zioValue.head
@@ -783,10 +783,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.InvalidOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
-          .FailedOnboardStage(
+          .asInstanceOf[ServiceError.ForbiddenError.InvalidOnboardStage] shouldBe ServiceError.ForbiddenError
+          .InvalidOnboardStage(
             userID = userDetailsRow.userID,
             onboardStageUser = userDetailsRow.onboardStage,
             onboardStagesAllowed = OnboardStage.onboardVerifyPhoneNumberStages,
@@ -1067,7 +1067,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
           )
       }
 
-      "fail with FailedOnboardStage when onboard stage is not valid" in new TestContext {
+      "fail with InvalidOnboardStage when onboard stage is not valid" in new TestContext {
         val authedUser   = arbitrarySample[AuthedUser]
         val onboardStage =
           Random.shuffle(OnboardStage.values.diff(OnboardStage.onboardVerifyPhoneNumberStages).toList).zioValue.head
@@ -1087,10 +1087,10 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberGet().zioError
 
-        serviceError shouldBe a[ServiceError.ForbiddenError.FailedOnboardStage]
+        serviceError shouldBe a[ServiceError.ForbiddenError.InvalidOnboardStage]
         serviceError
-          .asInstanceOf[ServiceError.ForbiddenError.FailedOnboardStage] shouldBe ServiceError.ForbiddenError
-          .FailedOnboardStage(
+          .asInstanceOf[ServiceError.ForbiddenError.InvalidOnboardStage] shouldBe ServiceError.ForbiddenError
+          .InvalidOnboardStage(
             userID = userDetailsRow.userID,
             onboardStageUser = userDetailsRow.onboardStage,
             onboardStagesAllowed = OnboardStage.onboardVerifyPhoneNumberStages,
