@@ -64,9 +64,9 @@ object HttpApp {
       enableDocs: Boolean
   ): ZIO[FileService[TapirTask] & AuthorizationService[TapirTask], Nothing, TapirRoutes] =
     for {
-      endpoints <- TapirEndpoints.allRoutesAndDocsEndpoints(enableDocs)
+      endpoints <- FileServiceEndpoints.allRoutesAndDocsEndpoints(enableDocs)
       streamRoutes: HttpRoutes[Task] =
-        ZHttp4sServerInterpreter(TapirEndpoints.serverOptions)
+        ZHttp4sServerInterpreter(tapirServerOptions)
           .from(endpoints.stream)
           .toRoutes
       docsRoutes: Option[HttpRoutes[Task]] = endpoints.docsOpt.map(
@@ -88,6 +88,8 @@ object HttpApp {
     smithy.UserForgotPasswordService,
     smithy.UserTokenService,
     smithy.OrganizationManagementService,
+    smithy.CustomerBookService,
+    FileServiceEndpoints.smithy4sDocsID,
   )
 
   private def server(
@@ -113,9 +115,9 @@ object HttpApp {
   val serverLayer = ZLayer.scoped {
     (for {
       config                     <- ZIO.service[GatewayServerConfig]
+      externalTapirAndDocsRoutes <- externalTapirAndDocsRoutes(config.enableDocs)
       healthSmithyRoutes         <- healthSmithyRoutes
       externalSmithyRoutes       <- externalSmithyRoutes
-      externalTapirAndDocsRoutes <- externalTapirAndDocsRoutes(config.enableDocs)
       internalSmithyRoutes       <- internalSmithyRoutes
 
       externalSwaggerRoutesOpt = Option.when(config.enableDocs)(externalSmithySwaggerRoutes)
@@ -123,9 +125,10 @@ object HttpApp {
       externalTapirApiRoutes  = EntityLimiter.httpRoutes(externalTapirAndDocsRoutes.apiRoutes, TapirMaxEntitySize)
       externalSmithyApiRoutes = EntityLimiter.httpRoutes(externalSmithyRoutes, SmithyMaxEntitySize)
 
-      externalDocsRoutes = externalSwaggerRoutesOpt.getOrElse(
+      // IMPORTANT: Ordering matters all docs routes must come before the Smithy docs route
+      externalDocsRoutes = externalTapirAndDocsRoutes.docsRoutesOpt.getOrElse(
         HttpRoutes.empty[Task]
-      ) <+> externalTapirAndDocsRoutes.docsRoutesOpt.getOrElse(HttpRoutes.empty[Task])
+      ) <+> externalSwaggerRoutesOpt.getOrElse(HttpRoutes.empty[Task])
 
       externalRoutes = externalTapirApiRoutes <+> externalSmithyApiRoutes <+> externalDocsRoutes
       servers <-

@@ -6,7 +6,7 @@ The file-handling subsystem of the gateway: accepting file uploads as **byte str
 
 ## Why Tapir (and not smithy)
 
-File uploads are the reason Tapir routes exist alongside smithy: smithy4s (JSON) routes keep a conservative 2 MB `EntityLimiter`, while Tapir routes stream binary bodies and allow 20 MB (`HttpApp.scala` — keep `TapirMaxEntitySize` in sync with `file-service.max-organization-logo-bytes`). Tapir endpoints get their own Swagger docs (`SwaggerInterpreter`, served when `enableDocs` is on), separate from the smithy swagger.
+File uploads are the reason Tapir routes exist alongside smithy: smithy4s (JSON) routes keep a conservative 2 MB `EntityLimiter`, while Tapir routes stream binary bodies and allow 20 MB (`HttpApp.scala` — keep `TapirMaxEntitySize` in sync with `file-service.max-organization-logo-bytes`). The Tapir-backed `FileService` is listed in the **shared smithy Swagger UI** — `HttpApp.externalSmithySwaggerRoutes` passes `FileServiceEndpoints.smithy4sDocsID` to `docs[Task](...)`. Because smithy4s generates no OpenAPI spec for a Tapir service, the spec is produced by Tapir's `OpenAPIDocsInterpreter` and served from a plain Tapir endpoint at `GET /docs/specs/io.mesazon.gateway.smithy.FileService.json` (both only when `enableDocs` is on). That Tapir docs route must be mounted **before** the smithy swagger routes (see `HttpApp.externalDocsRoutes`) so it wins the path match — otherwise smithy4s handles that path and `500`s trying to load a non-existent classpath spec.
 
 ## Endpoints (Tapir, bearer auth + completed onboarding)
 
@@ -14,7 +14,7 @@ File uploads are the reason Tapir routes exist alongside smithy: smithy4s (JSON)
 |---|---|---|
 | POST | `/upload/organization/logo` | Upload an organization logo (binary body; organization in the `X-Organization-ID` header, original file name in the `X-File-Name` header) |
 
-Defined in `tapir/TapirEndpoints.scala`. Security logic (`AuthorizationService.auth`): valid access JWT, `OnboardStage.completedStages` (= `PhoneVerified`), **and** the caller must be assigned to the organization from the `X-Organization-ID` header as `OWNER` or `ADMIN` (disallowed role → `403 Forbidden`, no membership row → `500`) — same standard as the smithy services, see [middleware.md](../middleware.md).
+Defined in `tapir/FileServiceEndpoints.scala`. Security logic (`AuthorizationService.auth`): valid access JWT, `OnboardStage.completedStages` (= `PhoneVerified`), **and** the caller must be assigned to the organization from the `X-Organization-ID` header as `OWNER` or `ADMIN` (disallowed role → `403 Forbidden`, no membership row → `500`) — same standard as the smithy services, see [middleware.md](../middleware.md).
 
 ## The streaming pipeline (`FileService.uploadOrganizationLogo`)
 
@@ -39,7 +39,7 @@ Everything runs inside one `ZIO.scoped` block; every intermediate file is a `Tem
 
 - Orchestration: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/FileService.scala`
 - Pipeline utils: `utils/FileScanner.scala`, `utils/ImageProcessing.scala`, `utils/TempFile.scala`
-- Transport: `tapir/TapirEndpoints.scala`, `tapir/tapir.scala` (error mapping, `TapirTask`); wiring + entity limits: `HttpApp.scala`
+- Transport: `tapir/FileServiceEndpoints.scala`, `tapir/tapir.scala` (error mapping, `TapirTask`); wiring + entity limits: `HttpApp.scala`
 - S3: `clients/OrganizationLogosS3Client.scala` (+ `OrganizationLogosS3ClientConfig`)
 - Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/SupportedMediaTypes.scala`
 - Config: `FileServiceConfig` (`file-service.max-organization-logo-bytes`)

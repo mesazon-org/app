@@ -1,24 +1,23 @@
 package io.mesazon.gateway.tapir
 
+import io.circe.syntax.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.service.*
-import sttp.capabilities.zio.ZioStreams
+import sttp.apispec.openapi.Info
+import sttp.apispec.openapi.circe.*
+import sttp.capabilities.zio.*
 import sttp.model.StatusCode
 import sttp.tapir.CodecFormat
 import sttp.tapir.codec.iron.given
-import sttp.tapir.server.http4s.Http4sServerOptions
-import sttp.tapir.swagger.SwaggerUIOptions
-import sttp.tapir.swagger.bundle.SwaggerInterpreter
+import sttp.tapir.docs.openapi.*
 import sttp.tapir.ztapir.*
 import zio.*
-import zio.interop.catz.*
 
-object TapirEndpoints {
+object FileServiceEndpoints {
 
-  private val securedEndpoint =
-    endpoint
-      .securityIn(auth.bearer[AccessToken]())
-      .securityIn(header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString))
+  lazy val smithy4sDocsID = new smithy4s.HasId {
+    override def id: smithy4s.ShapeId = smithy4s.ShapeId("io.mesazon.gateway.smithy", "FileService")
+  }
 
   private val uploadOrganizationLogoPostEndpoint =
     securedEndpoint.post
@@ -36,12 +35,12 @@ object TapirEndpoints {
           )
         )
       )
+      .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
 
-  val serverOptions: Http4sServerOptions[Task] =
-    Http4sServerOptions
-      .customiseInterceptors[Task]
-      .decodeFailureHandler(decodeFailureHandler)
-      .options
+  private val docsEndpoint =
+    endpoint.get
+      .in("docs" / "specs" / s"${smithy4sDocsID.id.namespace}.${smithy4sDocsID.id.name}.json")
+      .out(jsonBodyStringRaw)
 
   def allRoutesAndDocsEndpoints(
       enableDocs: Boolean
@@ -64,16 +63,22 @@ object TapirEndpoints {
             fileService.uploadOrganizationLogo(organizationID, organizationLogoOriginalFileName, organizationLogoFile)
           })
       )
-      docsEndpointsOpt: Option[List[ZServerEndpoint[Any, ZioStreams]]] = Option.when(enableDocs)(
-        SwaggerInterpreter(
-          swaggerUIOptions = SwaggerUIOptions.default.copy(
-            pathPrefix = TapirDocsPath,
-            yamlName = TapirOpenApiYamlName,
+      openApiDocsOpt = Option.when(enableDocs)(
+        OpenAPIDocsInterpreter()
+          .toOpenAPI(
+            List(uploadOrganizationLogoPostEndpoint),
+            Info(
+              title = "FileService",
+              version = "1.0",
+              description = Some("**Required Onboard Stage:** COMPLETED"),
+            ),
           )
-        ).fromServerEndpoints(
-          streamEndpoints,
-          apiInfo,
-        )
+          .asJson
+          .deepDropNullValues
+          .spaces2
       )
-    } yield (streamEndpoints, docsEndpointsOpt)
+      docsEndpointOpt: Option[ZServerEndpoint[Any, Any]] = openApiDocsOpt.map(openApiDocs =>
+        docsEndpoint.zServerLogic(_ => ZIO.succeed(openApiDocs))
+      )
+    } yield (streamEndpoints, docsEndpointOpt)
 }
