@@ -19,8 +19,6 @@ service CustomerBookService {
 @http(method: "GET", uri: "/get/customer/{customerID}", code: 200)
 operation GetCustomerGet {
     input := {
-        /// ID of the organization the request is scoped to. The caller must be a member of this
-        /// organization with one of the roles listed in **Required Organization User Roles** above.
         @required
         @httpHeader("X-Organization-ID")
         organizationID: UUID

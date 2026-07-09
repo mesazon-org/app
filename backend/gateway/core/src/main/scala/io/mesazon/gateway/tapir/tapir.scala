@@ -1,20 +1,39 @@
 package io.mesazon.gateway.tapir
 
+import com.github.plokhotnyuk.jsoniter_scala.core.*
+import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import io.github.iltotore.iron.constraint.all.Trimmed
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.json.{tapirServerErrorSchemas, given}
+import io.mesazon.gateway.service.AuthorizationService
 import sttp.apispec.openapi.Info
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.tapir.codec.iron.ValidatorForPredicate
-import sttp.tapir.json.jsoniter.*
+import sttp.tapir.codec.iron.given
+import sttp.tapir.json.jsoniter.jsonBody
+import sttp.tapir.server.http4s.Http4sServerOptions
 import sttp.tapir.server.interceptor.DecodeFailureContext
 import sttp.tapir.server.interceptor.decodefailure.*
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.ztapir.*
 import sttp.tapir.{EndpointOutput, ValidationError, Validator}
 import zio.*
+import zio.interop.catz.*
+
+type TapirTask[A] = IO[TapirServerError, A]
+
+type TapirEndpoints =
+  (stream: List[ZServerEndpoint[Any, ZioStreams]], docsOpt: Option[ZServerEndpoint[Any, Any]])
+
+val tapirServerOptions: Http4sServerOptions[Task] =
+  Http4sServerOptions
+    .customiseInterceptors[Task]
+    .decodeFailureHandler(decodeFailureHandler)
+    .options
+
+private[tapir] given JsonValueCodec[String] = JsonCodecMaker.make[String]
 
 private[tapir] given ValidatorForPredicate[String, Trimmed] = new ValidatorForPredicate[String, Trimmed] {
   override def validator: Validator[String] =
@@ -23,12 +42,6 @@ private[tapir] given ValidatorForPredicate[String, Trimmed] = new ValidatorForPr
   override def makeErrors(value: String, errorMessage: String): List[ValidationError[?]] =
     validator.apply(value).map(_.copy(customMessage = Some(errorMessage)))
 }
-
-private[tapir] val TapirDocsPath: List[String] =
-  List("tapir-docs")
-
-private[tapir] val TapirOpenApiYamlName: String =
-  "openapi.yaml"
 
 private[tapir] def tapirServerErrorForStatus(status: StatusCode): TapirServerError =
   TapirServerError.values.find(error => statusCodeFor(error) == status).getOrElse(TapirServerError.BadRequestError)
@@ -101,7 +114,7 @@ private[tapir] val apiInfo: Info =
 private[tapir] def requiredOrganizationRolesDescription(roles: List[OrganizationUserRole]): String =
   roles.map(role => s"`${role.toString.toUpperCase}`").mkString("**Required Organization User Roles:** [", ", ", "]")
 
-type TapirTask[A] = IO[TapirServerError, A]
-
-type TapirEndpoints =
-  (stream: List[ZServerEndpoint[Any, ZioStreams]], docsOpt: Option[List[ZServerEndpoint[Any, ZioStreams]]])
+private[tapir] val securedEndpoint =
+  endpoint
+    .securityIn(auth.bearer[AccessToken]())
+    .securityIn(header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString))
