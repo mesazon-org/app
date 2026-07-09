@@ -3,9 +3,11 @@ package io.mesazon.gateway.clients
 import html.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.EmailConfig
+import jakarta.mail.Message.RecipientType
 import org.simplejavamail.api.mailer.config.TransportStrategy
 import org.simplejavamail.email.EmailBuilder
 import org.simplejavamail.mailer.MailerBuilder
+import org.simplejavamail.recipient.RecipientBuilder
 import zio.*
 
 import scala.util.chaining.scalaUtilChainingOps
@@ -58,7 +60,7 @@ object EmailClient {
             EmailBuilder
               .startingBlank()
               .from(emailConfig.senderEmail)
-              .to(email.value)
+              .withRecipients(null, false, RecipientType.TO, email.value)
               .withSubject("Mesazon email verification")
               .withHTMLText(
                 EmailVerificationHTML
@@ -82,7 +84,7 @@ object EmailClient {
             EmailBuilder
               .startingBlank()
               .from(emailConfig.senderEmail)
-              .to(email.value)
+              .withRecipients(null, false, RecipientType.TO, email.value)
               .withSubject("Welcome to Mesazon!")
               .withHTMLText(
                 WelcomeHTML
@@ -102,7 +104,7 @@ object EmailClient {
             EmailBuilder
               .startingBlank()
               .from(emailConfig.senderEmail)
-              .to(email.value)
+              .withRecipients(null, false, RecipientType.TO, email.value)
               .withSubject("Mesazon password reset")
               .withHTMLText(
                 ForgotPasswordHTML
@@ -124,7 +126,7 @@ object EmailClient {
             EmailBuilder
               .startingBlank()
               .from(emailConfig.senderEmail)
-              .to(email.value)
+              .withRecipients(null, false, RecipientType.TO, email.value)
               .withSubject("Mesazon password change confirmation")
               .withHTMLText(
                 PasswordChangeConfirmationHTML
@@ -149,7 +151,12 @@ object EmailClient {
             EmailBuilder
               .startingBlank()
               .from(emailConfig.senderEmail)
-              .to(email.value)
+              .withRecipients(
+                new RecipientBuilder()
+                  .withAddress(email.value)
+                  .withType(RecipientType.TO)
+                  .build()
+              )
               .withSubject("Your organization has been created!")
               .withHTMLText(
                 OrganizationCreatedHTML
