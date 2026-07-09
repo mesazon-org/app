@@ -6,7 +6,6 @@ import io.github.iltotore.iron.constraint.all.Trimmed
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.json.{tapirServerErrorSchemas, given}
 import io.mesazon.gateway.service.AuthorizationService
-import sttp.apispec.openapi.Info
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.StatusCode
 import sttp.monad.MonadError
@@ -18,9 +17,11 @@ import sttp.tapir.server.interceptor.DecodeFailureContext
 import sttp.tapir.server.interceptor.decodefailure.*
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.ztapir.*
-import sttp.tapir.{EndpointOutput, ValidationError, Validator}
+import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointOutput, ValidationError, Validator}
 import zio.*
 import zio.interop.catz.*
+
+import java.nio.charset.StandardCharsets
 
 type TapirTask[A] = IO[TapirServerError, A]
 
@@ -100,12 +101,10 @@ private[tapir] def tapirServerErrorOut(
   oneOf[TapirServerError](allVariants.head, allVariants.tail*)
 }
 
-private[tapir] val apiInfo: Info =
-  Info(
-    title = "Gateway Tapir API",
-    version = "1.0",
-    description = Some("**Required Onboard Stage:** COMPLETED"),
-  )
+// The OpenAPI document is already-serialized JSON. `jsonBody[String]` would re-encode it as a JSON string literal
+// (quoted and escaped), which Swagger UI can't parse. Serve the raw string with an `application/json` content type.
+private[tapir] val jsonBodyStringRaw: EndpointIO.Body[String, String] =
+  stringBodyAnyFormat(Codec.string.format(CodecFormat.Json()), StandardCharsets.UTF_8)
 
 /** Swagger marker documenting the organization roles an endpoint requires, mirroring the smithy
   * `/// **Required Organization User Roles:** [...]` doc comment. Derives the role names from the same
