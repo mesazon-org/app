@@ -27,7 +27,7 @@ object Dependencies {
   lazy val libphonenumberV      = "9.0.34"
   lazy val circeV               = "0.14.16"
   lazy val sttpV                = "4.0.26"
-  lazy val tapirV               = "1.13.25"
+  lazy val tapirV               = "1.13.26"
   lazy val jsoniterV            = "2.38.17"
   lazy val sttpAIV              = "0.5.1"
   lazy val jmailV               = "2.1.0"
@@ -40,7 +40,7 @@ object Dependencies {
   lazy val scalamockV           = "7.5.5"
   lazy val scrimageV            = "4.6.5"
   lazy val tikaV                = "3.3.1"
-  lazy val awssdkV              = "2.47.0"
+  lazy val awssdkV              = "2.47.3"
   lazy val zioS3V               = "0.4.4"
 
   // Http4s
