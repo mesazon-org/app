@@ -4,7 +4,6 @@ namespace io.mesazon.gateway.smithy
 
 use alloy#simpleRestJson
 
-/// **Required Onboard Stage:** [`PASSWORD_PROVIDED`, `PHONE_VERIFICATION`, `PHONE_VERIFIED`]
 @simpleRestJson
 service UserForgotPasswordService {
     version: "1.0.0",

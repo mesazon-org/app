@@ -4,11 +4,7 @@ namespace io.mesazon.gateway.smithy
 
 use alloy#simpleRestJson
 
-/// # Global Requirements
-/// **Required Onboard Stage:** **COMPLETED**
-///
-/// All endpoints in this service require the user to have finished
-/// the onboarding flow (Phone & Email Verified).
+/// **Required Onboard Stage:** COMPLETED
 @simpleRestJson
 @completedOnboardStage
 @httpBearerAuth

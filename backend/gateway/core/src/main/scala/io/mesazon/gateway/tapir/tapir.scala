@@ -1,20 +1,29 @@
 package io.mesazon.gateway.tapir
 
+import com.github.plokhotnyuk.jsoniter_scala.core.*
+import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import io.github.iltotore.iron.constraint.all.Trimmed
-import io.mesazon.domain.gateway.TapirServerError
+import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.json.{tapirServerErrorSchemas, given}
-import sttp.apispec.openapi.Info
+import io.mesazon.gateway.service.AuthorizationService
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.tapir.codec.iron.ValidatorForPredicate
-import sttp.tapir.json.jsoniter.*
+import sttp.tapir.codec.iron.given
+import sttp.tapir.json.jsoniter.jsonBody
+import sttp.tapir.server.http4s.Http4sServerOptions
 import sttp.tapir.server.interceptor.DecodeFailureContext
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.decodefailure.*
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.ztapir.*
-import sttp.tapir.{EndpointOutput, ValidationError, Validator}
+import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointOutput, ValidationError, Validator}
 import zio.*
+import zio.interop.catz.*
+
+import java.nio.charset.StandardCharsets
+
+private[tapir] given JsonValueCodec[String] = JsonCodecMaker.make[String]
 
 private[tapir] given ValidatorForPredicate[String, Trimmed] = new ValidatorForPredicate[String, Trimmed] {
   override def validator: Validator[String] =
@@ -24,23 +33,17 @@ private[tapir] given ValidatorForPredicate[String, Trimmed] = new ValidatorForPr
     validator.apply(value).map(_.copy(customMessage = Some(errorMessage)))
 }
 
-private[tapir] val TapirDocsPath: List[String] =
-  List("tapir-docs")
-
-private[tapir] val TapirOpenApiYamlName: String =
-  "openapi.yaml"
-
 private[tapir] def tapirServerErrorForStatus(status: StatusCode): TapirServerError =
   TapirServerError.values.find(error => statusCodeFor(error) == status).getOrElse(TapirServerError.BadRequestError)
 
-private[tapir] val staticBodyDecodeFailureHandler: DefaultDecodeFailureHandler[Task] =
+private[tapir] lazy val staticBodyDecodeFailureHandler: DefaultDecodeFailureHandler[Task] =
   DefaultDecodeFailureHandler[Task].copy(response =
     (status, headerList, _) =>
       ValuedEndpointOutput(jsonBody[TapirServerError], tapirServerErrorForStatus(status))
         .prepend(statusCode.and(headers), (status, headerList))
   )
 
-private[tapir] val decodeFailureHandler: DecodeFailureHandler[Task] =
+private[tapir] lazy val decodeFailureHandler: DecodeFailureHandler[Task] =
   new DecodeFailureHandler[Task] {
     override def apply(ctx: DecodeFailureContext)(implicit
         monad: MonadError[Task]
@@ -87,20 +90,30 @@ private[tapir] def tapirServerErrorOut(
   oneOf[TapirServerError](allVariants.head, allVariants.tail*)
 }
 
-private[tapir] val apiInfo: Info =
-  Info(
-    title = "Gateway Tapir API",
-    version = "1.0",
-    description = Some(
-      """# Global Requirements
-        |**Required Onboard Stage:** **COMPLETED**
-        |
-        |All endpoints in this service require the user to have finished
-        |the onboarding flow (Phone & Email Verified).""".stripMargin
-    ),
-  )
+// The OpenAPI document is already-serialized JSON. `jsonBody[String]` would re-encode it as a JSON string literal
+// (quoted and escaped), which Swagger UI can't parse. Serve the raw string with an `application/json` content type.
+private[tapir] lazy val jsonBodyStringRaw: EndpointIO.Body[String, String] =
+  stringBodyAnyFormat(Codec.string.format(CodecFormat.Json()), StandardCharsets.UTF_8)
+
+/** Swagger marker documenting the organization roles an endpoint requires, mirroring the smithy
+  * `/// **Required Organization User Roles:** [...]` doc comment. Derives the role names from the same
+  * `OrganizationUserRole` list the endpoint's security logic enforces, so the docs cannot drift.
+  */
+private[tapir] def requiredOrganizationRolesDescription(roles: List[OrganizationUserRole]): String =
+  roles.map(role => s"`${role.toString.toUpperCase}`").mkString("**Required Organization User Roles:** [", ", ", "]")
+
+private[tapir] lazy val securedEndpoint =
+  endpoint
+    .securityIn(auth.bearer[AccessToken]())
+    .securityIn(header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString))
 
 type TapirTask[A] = IO[TapirServerError, A]
 
 type TapirEndpoints =
-  (stream: List[ZServerEndpoint[Any, ZioStreams]], docsOpt: Option[List[ZServerEndpoint[Any, ZioStreams]]])
+  (stream: List[ZServerEndpoint[Any, ZioStreams]], docsOpt: Option[ZServerEndpoint[Any, Any]])
+
+lazy val tapirServerOptions: Http4sServerOptions[Task] =
+  Http4sServerOptions
+    .customiseInterceptors[Task]
+    .decodeFailureHandler(decodeFailureHandler)
+    .options

@@ -10,7 +10,7 @@ service UserSignUpService {
     operations: [SignUpEmailPost, SignUpVerifyEmailPost]
 }
 
-/// **Required Onboard Stage:** [``, `EMAIL_VERIFICATION`, `EMAIL_VERIFIED`]
+/// **Required Onboard Stage:** [`N/A`, `EMAIL_VERIFICATION`, `EMAIL_VERIFIED`]
 @http(method: "POST", uri: "/signup/email", code: 200)
 operation SignUpEmailPost {
     input := {

@@ -5,16 +5,7 @@ namespace io.mesazon.gateway.smithy
 use alloy#UUID
 use alloy#simpleRestJson
 
-/// # Global Requirements
-/// **Required Onboard Stage:** **COMPLETED**
-///
-/// The customer book lets organization users manage the customers of
-/// their organization: fetch a single customer or the whole book, and
-/// insert, update or delete customers in batches. All endpoints require
-/// a fully onboarded user that is assigned to the organization given in
-/// the `X-Organization-ID` header. Viewing the book is allowed to every
-/// organization member; inserting, updating and deleting customers
-/// require the `OWNER` or `ADMIN` role.
+/// **Required Onboard Stage:** COMPLETED
 @simpleRestJson
 @completedOnboardStage
 @httpBearerAuth
@@ -23,9 +14,9 @@ service CustomerBookService {
     operations: [GetCustomerGet, GetCustomersGet, InsertCustomersPost, UpdateCustomersPut, DeleteCustomersPost]
 }
 
-/// **Allowed Organization Roles:** [`OWNER`, `ADMIN`, `USER`]
-@http(method: "GET", uri: "/get/customer/{customerID}", code: 200)
+/// **Required Organization User Roles:** [`OWNER`, `ADMIN`, `USER`]
 @organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
+@http(method: "GET", uri: "/get/customer/{customerID}", code: 200)
 operation GetCustomerGet {
     input := {
         @required
@@ -39,9 +30,9 @@ operation GetCustomerGet {
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
-/// **Allowed Organization Roles:** [`OWNER`, `ADMIN`, `USER`]
-@http(method: "GET", uri: "/get/customers", code: 200)
+/// **Required Organization User Roles:** [`OWNER`, `ADMIN`, `USER`]
 @organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
+@http(method: "GET", uri: "/get/customers", code: 200)
 operation GetCustomersGet {
     input := {
         @required
@@ -52,9 +43,9 @@ operation GetCustomersGet {
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
-/// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
-@http(method: "POST", uri: "/insert/customers", code: 204)
+/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
 @organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+@http(method: "POST", uri: "/insert/customers", code: 204)
 operation InsertCustomersPost {
     input := {
         @required
@@ -67,9 +58,9 @@ operation InsertCustomersPost {
     errors: [BadRequest, Unauthorized, Forbidden, ValidationError, InternalServerError]
 }
 
-/// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
-@http(method: "PUT", uri: "/update/customers", code: 204)
+/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
 @organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+@http(method: "PUT", uri: "/update/customers", code: 204)
 operation UpdateCustomersPut {
     input := {
         @required
@@ -82,9 +73,9 @@ operation UpdateCustomersPut {
     errors: [BadRequest, Unauthorized, Forbidden, ValidationError, InternalServerError]
 }
 
-/// **Allowed Organization Roles:** [`OWNER`, `ADMIN`]
-@http(method: "POST", uri: "/delete/customers", code: 204)
+/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
 @organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+@http(method: "POST", uri: "/delete/customers", code: 204)
 operation DeleteCustomersPost {
     input := {
         @required
