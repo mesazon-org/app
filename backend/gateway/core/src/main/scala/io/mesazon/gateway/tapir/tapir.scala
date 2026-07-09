@@ -58,7 +58,6 @@ private[tapir] lazy val decodeFailureHandler: DecodeFailureHandler[Task] =
       }
   }
 
-
 private[tapir] def statusCodeFor(tapirServerError: TapirServerError): StatusCode =
   tapirServerError match {
     case TapirServerError.BadRequestError         => StatusCode.BadRequest
@@ -107,7 +106,6 @@ private[tapir] lazy val securedEndpoint =
   endpoint
     .securityIn(auth.bearer[AccessToken]())
     .securityIn(header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString))
-
 
 type TapirTask[A] = IO[TapirServerError, A]
 
