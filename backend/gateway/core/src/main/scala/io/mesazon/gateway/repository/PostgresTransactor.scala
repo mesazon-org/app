@@ -32,15 +32,17 @@ object PostgresTransactor {
   private val datasourceLive = ZLayer.scoped {
     for {
       config     <- ZIO.service[DatabaseConfig]
-      datasource <- ZIO.acquireRelease(ZIO.attempt {
-        val hikariDataSource = new HikariDataSource()
-        hikariDataSource.setDriverClassName(config.driver)
-        hikariDataSource.setJdbcUrl(config.url)
-        hikariDataSource.setUsername(config.username)
-        hikariDataSource.setPassword(config.password)
-        hikariDataSource.setMaximumPoolSize(config.threadPoolSize)
-        hikariDataSource
-      })(ds => ZIO.attemptBlocking(ds.close()).orDie <* ZIO.logError("HikariDataSource closed"))
+      datasource <- ZIO.acquireRelease(
+        ZIO.attempt {
+          val hikariDataSource = new HikariDataSource()
+          hikariDataSource.setDriverClassName(config.driver)
+          hikariDataSource.setJdbcUrl(config.url)
+          hikariDataSource.setUsername(config.username)
+          hikariDataSource.setPassword(config.password)
+          hikariDataSource.setMaximumPoolSize(config.threadPoolSize)
+          hikariDataSource
+        }
+      )(ds => ZIO.attemptBlocking(ds.close()).orDie <* ZIO.logError("HikariDataSource closed"))
     } yield datasource
   }
 
