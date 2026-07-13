@@ -4,6 +4,9 @@ namespace io.mesazon.gateway.smithy
 
 use alloy#UUID
 
+@unwrapped
+string CounterpartyID
+
 structure GetCustomer {
     @required
     customerID: UUID
@@ -15,6 +18,7 @@ structure GetCustomer {
 structure InsertCustomer {
     @required
     fullName: String
+    counterpartyID: UUID
     email: String
     phoneNumber: PhoneNumberRequest
     addressLine1: String
@@ -27,6 +31,7 @@ structure InsertCustomer {
 structure UpdateCustomer {
     @required
     customerID: UUID
+    counterpartyID: UUID
     fullName: String
     email: String
     phoneNumber: PhoneNumberRequest
@@ -39,6 +44,11 @@ structure UpdateCustomer {
 
 list GetCustomers {
     member: GetCustomer
+}
+
+map GetCustomersMap {
+    key: CounterpartyID
+    value: GetCustomers
 }
 
 list InsertCustomers {
@@ -69,7 +79,7 @@ structure GetCustomerGetResponse {
 
 structure GetCustomersGetResponse {
     @required
-    customers: GetCustomers
+    customers: GetCustomersMap
 }
 
 structure InsertCustomersPostRequest {

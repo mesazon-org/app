@@ -60,7 +60,6 @@ create table user_token
 
 create index idx_user_token_user_id on user_token using hash (user_id);
 
-
 create table organization_details
 (
     organization_id            uuid        not null,
@@ -95,6 +94,55 @@ create table organization_user
     updated_at      timestamptz not null,
     primary key (organization_id, user_id)
 );
+
+create table counterparty_details
+(
+    counterparty_id       uuid        not null,
+    organization_id       uuid        not null,
+    counterparty_type     text        not null,
+    name                  text,
+    email                 text,
+    phone_region          text,
+    phone_country_code    text,
+    phone_national_number text,
+    phone_number_e164     text,
+    address_line_1        text,
+    address_line_2        text,
+    city                  text,
+    postal_code           text,
+    country               text,
+    status                text        not null,
+    created_at            timestamptz not null,
+    updated_at            timestamptz not null,
+    primary key (organization_id, counterparty_id)
+);
+
+create table customer_details
+(
+    customer_id           uuid        not null,
+    counterparty_id       uuid        not null,
+    organization_id       uuid        not null,
+    full_name             text        not null,
+    email                 text,
+    phone_region          text,
+    phone_country_code    text,
+    phone_national_number text,
+    phone_number_e164     text,
+    address_line_1        text,
+    address_line_2        text,
+    city                  text,
+    postal_code           text,
+    country               text,
+    status                text        not null,
+    created_at            timestamptz not null,
+    updated_at            timestamptz not null,
+    primary key (customer_id, counterparty_id, organization_id),
+    foreign key (organization_id, counterparty_id)
+        references counterparty_details (organization_id, counterparty_id)
+);
+
+create index idx_customer_details_counterparty
+    on customer_details (organization_id, counterparty_id);
 
 create table waha_user
 (
