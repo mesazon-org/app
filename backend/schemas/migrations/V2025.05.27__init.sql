@@ -60,7 +60,6 @@ create table user_token
 
 create index idx_user_token_user_id on user_token using hash (user_id);
 
-
 create table organization_details
 (
     organization_id            uuid        not null,
@@ -95,6 +94,84 @@ create table organization_user
     updated_at      timestamptz not null,
     primary key (organization_id, user_id)
 );
+
+create table customer
+(
+    organization_id uuid        not null,
+    customer_id     uuid        not null,
+    customer_type   text        not null,
+    status          text        not null,
+    created_at      timestamptz not null,
+    updated_at      timestamptz not null,
+    primary key (organization_id, customer_id)
+);
+
+create table customer_business_details
+(
+    organization_id       uuid        not null,
+    customer_id           uuid        not null,
+    business_name         text        not null,
+    email                 text,
+    phone_region          text,
+    phone_country_code    text,
+    phone_national_number text,
+    phone_number_e164     text,
+    tax_id                text,
+    address_line_1        text,
+    address_line_2        text,
+    city                  text,
+    postal_code           text,
+    country               text,
+    created_at            timestamptz not null,
+    updated_at            timestamptz not null,
+    primary key (organization_id, customer_id),
+    unique (organization_id, business_name),
+    foreign key (organization_id, customer_id)
+        references customer (organization_id, customer_id)
+);
+
+create table customer_individual_details
+(
+    organization_id       uuid        not null,
+    customer_id           uuid        not null,
+    full_name             text        not null,
+    email                 text,
+    phone_region          text,
+    phone_country_code    text,
+    phone_national_number text,
+    phone_number_e164     text,
+    address_line_1        text,
+    address_line_2        text,
+    city                  text,
+    postal_code           text,
+    country               text,
+    created_at            timestamptz not null,
+    updated_at            timestamptz not null,
+    primary key (organization_id, customer_id),
+    unique (organization_id, full_name),
+    foreign key (organization_id, customer_id)
+        references customer (organization_id, customer_id)
+);
+
+create table customer_business_contact
+(
+    organization_id              uuid        not null,
+    customer_id                  uuid        not null,
+    customer_business_contact_id uuid        not null,
+    full_name                    text        not null,
+    role                         text,
+    email                        text,
+    phone_region                 text,
+    phone_country_code           text,
+    phone_national_number        text,
+    phone_number_e164            text,
+    created_at                   timestamptz not null,
+    updated_at                   timestamptz not null,
+    primary key (organization_id, customer_id, customer_business_contact_id),
+    foreign key (organization_id, customer_id)
+        references customer_business_details (organization_id, customer_id)
+);
+
 
 create table waha_user
 (

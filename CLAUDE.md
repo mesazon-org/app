@@ -11,6 +11,7 @@ Each entry links to the coding standards for that technology — **follow them w
 - [scala](docs-claude/scala.md) — programming language
 - [sbt](docs-claude/sbt.md) — build definition (sbt 2.x rules, module structure/naming, dependency management, CI wiring)
 - [smithy](docs-claude/smithy.md) — API contract definitions (naming conventions, coding standards, custom traits)
+- [postgres](docs-claude/postgres.md) — PostgreSQL schema & persistence (Flyway migrations, table/column naming, the Row→Queries→Repository stack)
 
 ## Architecture
 
@@ -37,3 +38,4 @@ Follow the structure of the existing docs:
 - [User Token Management](docs-claude/features/user-token-management.md)
 - [Organization Management](docs-claude/features/organization-management.md)
 - [Files Management](docs-claude/features/files-management.md)
+- [Customer Book](docs-claude/features/customer-book.md)
