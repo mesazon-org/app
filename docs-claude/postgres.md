@@ -69,37 +69,37 @@ The names on both sides must match exactly (a `Queries` class references columns
 - Uniqueness via `unique (...)`: single (`unique (email)`, `unique (slug)`) or composite (`unique (user_id, action_attempt_type)`).
 - Foreign keys reference the parent explicitly: `foreign key (user_id) references waha_user (user_id)`.
 - Indexes: `create index idx_{{ table }}_{{ purpose }} on {{ table }} [using hash] (...)`. Name starts with `idx_` + table name. Use `using hash` for single-column equality lookups (`idx_user_token_user_id ... using hash (user_id)`); a plain b-tree (with column order / `DESC`) for range/ordering (`idx_waha_user_message_order on waha_user_message (user_id, created_at desc)`).
-- ✅ `idx_organization_user_user_id`, `foreign key (customer_id) references customer_details (customer_id)`
+- ✅ `idx_organization_user_user_id`, `foreign key (organization_id, customer_id) references customer (organization_id, customer_id)`
 - ❌ `organization_user_idx`, an FK with no index on the join column when you query by it
 
 ## Soft-delete & archival
 
 Some entities own **immutable historical children** — most importantly *orders*, which are financial/audit records. Deleting a parent must never destroy that history. The rule:
 
-- **Entities that can accumulate orders (or similar historical records) are soft-deleted, never hard-deleted.** They carry a `status text not null` lifecycle column mapped to an enum (`ACTIVE` | `ARCHIVED`) — set by the repository on insert (`ACTIVE`), no DB `default`, following the enum-as-text convention. "Deleting" flips `status` to `ARCHIVED`; the row stays, so every child FK keeps resolving and the archive is reversible. Reads filter `status = 'ACTIVE'` by default. Applied to `customer_details` and `counterparty_details`.
+- **Entities that can accumulate orders (or similar historical records) are soft-deleted, never hard-deleted.** They carry a `status text not null` lifecycle column mapped to an enum (`ACTIVE` | `ARCHIVED`) — set by the repository on insert (`ACTIVE`), no DB `default`, following the enum-as-text convention. "Deleting" flips `status` to `ARCHIVED`; the row stays, so every child FK keeps resolving and the archive is reversible. Reads filter `status = 'ACTIVE'` by default. Applied to the `customer` parent (its `INDIVIDUAL`/`BUSINESS` detail rows inherit the status). Pure child rows that carry no orders — e.g. `customer_business_contact` — are hard-deleted instead.
 - **Historical records are append-only and immutable.** An order is never `DELETE`d; a cancellation/refund is a `status` transition on the order (`CANCELLED`, `REFUNDED`), not a row removal.
 - **Snapshot the referenced entity onto the historical record.** An order stores the buyer's details as its own `buyer_*` columns captured at order time, *in addition to* the FK — because the parent's live details (name, address) can change or be archived afterwards, and a historical order must reflect what it was **when it happened**. See `customer_order` (`buyer_name`, `buyer_email`, `buyer_address_line_1`, …).
 - **FKs from history to parents use `on delete restrict`, never `cascade`.** With soft-delete the parent is never hard-deleted so the restrict never fires — it's a belt-and-suspenders guard that turns an accidental hard `DELETE` into a DB error instead of lost history.
 - **Erasure (GDPR "right to be forgotten") anonymizes, it does not delete.** To honour erasure of a person's data, blank the identifying `buyer_*` snapshot fields on the order (name/email/phone), keep the amounts/dates and the row. Financial-retention obligations generally outrank erasure, and anonymizing satisfies both.
-- ✅ `status = 'ARCHIVED'` on `counterparty_details`; `customer_order` keeps `buyer_*` snapshot + `on delete restrict` FKs
-- ❌ `DELETE FROM counterparty_details ...` where orders exist, `on delete cascade` into orders, an order that only FKs the parent with no snapshot
+- ✅ `status = 'ARCHIVED'` on `customer`; `customer_order` keeps `buyer_*` snapshot + `on delete restrict` FKs
+- ❌ `DELETE FROM customer ...` where orders exist, `on delete cascade` into orders, an order that only FKs the parent with no snapshot
 
-## Counterparty type — individual vs business
+## Customer type — individual vs business
 
-Orders always target a `counterparty_id`, and **every customer holds exactly one** — `customer_details.counterparty_id` is a `not null` FK into `counterparty_details`, so a person always has an order target. A standalone person gets an auto-created personal counterparty; to tell those apart from real shared business accounts, `counterparty_details` carries a `counterparty_type text not null` discriminator (enum-as-text, same convention as `status`):
+Orders always target a `customer_id`. A **customer** (`customer`) is the single order target and carries a `customer_type text not null` discriminator (enum-as-text, same convention as `status`) that decides which 1:1 detail table holds the rest of its data:
 
-- `INDIVIDUAL` — the counterparty wraps exactly one customer (the "single-entity" case: the client never created a separate business to assign the customer to). Its human identity lives on the linked `customer_details.full_name`, so `counterparty_details.name` is **null**.
-- `BUSINESS` — a named B2B account the client created explicitly; **one-or-more** `customer_details` rows point their `counterparty_id` at it, and `name` is populated.
+- `INDIVIDUAL` — a standalone person; details live in `customer_individual_details` (`full_name`, contact, address).
+- `BUSINESS` — a named B2B account; details live in `customer_business_details` (`business_name`, `tax_id`, contact, address), and it may own any number of `customer_business_contact` rows.
 
-The customer↔counterparty link is **one-to-many, enforced structurally**: `customer_details.counterparty_id not null` guarantees every customer has *exactly one* counterparty (a join table with a `unique` constraint would still allow *zero*). Reassigning a customer is a single `UPDATE customer_details SET counterparty_id`; the grouped "counterparty → its customers" view is a `GROUP BY counterparty_id` on one table. See [Customer Book](features/customer-book.md) for the full lifecycle.
+Each detail/child table is keyed on `(organization_id, customer_id)` and FKs the parent on that composite, so a detail or contact row can only ever attach to a customer in the same tenant. A **business contact** is a person *inside* a company (`customer_business_contact_id`, `full_name`, `role`) — **not** a customer: it has no `customer_id` of its own, is never an order target, and carries no `status`. See [Customer Book](features/customer-book.md) for the full lifecycle.
 
 Consequences:
 
-- **Never store "is this customer a single entity?" on `customer_details`.** It's derivable — a customer is a single entity iff the counterparty it links to is `INDIVIDUAL` — and duplicating it would be a second source of truth to keep in sync.
-- **Name-nullability is an invariant of the type**, enforced at the application layer (not a DB `check`, consistent with the rest of this schema staying permissive at the DB): `BUSINESS` ⇒ `name` present, `INDIVIDUAL` ⇒ `name` null.
-- **Moving a customer off an `INDIVIDUAL` orphans it — archive it, don't delete.** Since an `INDIVIDUAL` has exactly one customer, repointing that customer leaves it unreferenced; flip its `status` to `ARCHIVED` in the same transaction so its historical orders keep resolving. Moving between `BUSINESS` accounts never archives the old one (other customers may remain).
-- ✅ `counterparty_type text not null` on `counterparty_details`, `counterparty_id not null` FK on `customer_details`, `name` null for `INDIVIDUAL`
-- ❌ an `is_individual boolean` (forces a migration + backfill to add a third kind), a redundant single-entity flag on `customer_details`, a many-to-many join table for a link that is one-to-many
+- **`customer_type` is the single source of truth for the kind** — which detail table applies is derived from it, never duplicated as a boolean flag.
+- **Type↔detail-table correspondence is an invariant of the type**, enforced at the application layer (not a DB `check`, consistent with the rest of this schema staying permissive at the DB): `BUSINESS` ⇒ a `customer_business_details` row, `INDIVIDUAL` ⇒ a `customer_individual_details` row.
+- **Contacts belong to their business and share its fate** — archiving a business leaves its contacts in place; removing a contact is a plain row delete (it carries no orders).
+- ✅ `customer_type text not null` on `customer`, detail/child tables FK `(organization_id, customer_id)`, contacts as child rows of a `BUSINESS`
+- ❌ an `is_individual boolean` (forces a migration + backfill to add a third kind), modelling business contacts as `customer` rows, a shared detail table for both types
 
 ## Persistence code — the three layers
 

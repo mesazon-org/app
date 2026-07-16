@@ -50,7 +50,7 @@ Runs for `@httpBearerAuth` services and for Tapir endpoints:
 
 ## Organization permissions — `@organizationUserRolesAllowed` + `X-Organization-ID`
 
-Each smithy **operation** declares which organization roles may call it, e.g. `@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])` — operation-level so permissions can differ per endpoint within one service (customer book: reads allow `OWNER`/`ADMIN`/`USER`, writes only `OWNER`/`ADMIN`). Every org-scoped operation carries the organization in the **required `X-Organization-ID` header** (never in the body or URI — a fixed header is readable by the middleware without parsing bodies, and it works identically for GETs, JSON posts and streaming uploads).
+Each smithy **operation** declares which organization roles may call it, e.g. `@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])` — operation-level so permissions can differ per endpoint within one service (customer book: reads allow `OWNER`/`ADMIN`/`USER`, writes only `OWNER`/`ADMIN`). Every org-scoped operation carries the organization in the **required `X-Organization-ID` header** — declared once via the `OrganizationScopedInput` mixin (mixed into each operation input), never in the body or URI (a fixed header is readable by the middleware without parsing bodies, and it works identically for GETs, JSON posts and streaming uploads). `AuthorizationService.auth` reads the header straight off the raw request, independent of the decoded input.
 
 Enforcement, mirroring the `completedOnboardStage` mechanism:
 

@@ -95,33 +95,44 @@ create table organization_user
     primary key (organization_id, user_id)
 );
 
-create table counterparty_details
+create table customer
 (
-    counterparty_id       uuid        not null,
+    organization_id uuid        not null,
+    customer_id     uuid        not null,
+    customer_type   text        not null,
+    status          text        not null,
+    created_at      timestamptz not null,
+    updated_at      timestamptz not null,
+    primary key (organization_id, customer_id)
+);
+
+create table customer_business_details
+(
     organization_id       uuid        not null,
-    counterparty_type     text        not null,
-    name                  text,
+    customer_id           uuid        not null,
+    business_name         text        not null,
     email                 text,
     phone_region          text,
     phone_country_code    text,
     phone_national_number text,
     phone_number_e164     text,
+    tax_id                text,
     address_line_1        text,
     address_line_2        text,
     city                  text,
     postal_code           text,
     country               text,
-    status                text        not null,
     created_at            timestamptz not null,
     updated_at            timestamptz not null,
-    primary key (organization_id, counterparty_id)
+    primary key (organization_id, customer_id),
+    foreign key (organization_id, customer_id)
+        references customer (organization_id, customer_id)
 );
 
-create table customer_details
+create table customer_individual_details
 (
-    customer_id           uuid        not null,
-    counterparty_id       uuid        not null,
     organization_id       uuid        not null,
+    customer_id           uuid        not null,
     full_name             text        not null,
     email                 text,
     phone_region          text,
@@ -133,16 +144,32 @@ create table customer_details
     city                  text,
     postal_code           text,
     country               text,
-    status                text        not null,
     created_at            timestamptz not null,
     updated_at            timestamptz not null,
-    primary key (customer_id, counterparty_id, organization_id),
-    foreign key (organization_id, counterparty_id)
-        references counterparty_details (organization_id, counterparty_id)
+    primary key (organization_id, customer_id),
+    foreign key (organization_id, customer_id)
+        references customer (organization_id, customer_id)
 );
 
-create index idx_customer_details_counterparty
-    on customer_details (organization_id, counterparty_id);
+create table customer_business_contact
+(
+    organization_id              uuid        not null,
+    customer_id                  uuid        not null,
+    customer_business_contact_id uuid        not null,
+    full_name                    text        not null,
+    role                         text,
+    email                        text,
+    phone_region                 text,
+    phone_country_code           text,
+    phone_national_number        text,
+    phone_number_e164            text,
+    created_at                   timestamptz not null,
+    updated_at                   timestamptz not null,
+    primary key (organization_id, customer_id, customer_business_contact_id),
+    foreign key (organization_id, customer_id)
+        references customer (organization_id, customer_id)
+);
+
 
 create table waha_user
 (

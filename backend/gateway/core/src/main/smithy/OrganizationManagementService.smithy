@@ -21,5 +21,5 @@ operation CreateOrganizationPost {
         request: CreateOrganizationPostRequest
     }
     output: CreateOrganizationPostResponse
-    errors: [Unauthorized, Forbidden, ValidationError, InternalServerError]
+    errors: [ValidationError, Unauthorized, Forbidden, InternalServerError]
 }
