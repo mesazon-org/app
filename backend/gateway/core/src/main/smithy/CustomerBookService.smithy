@@ -55,7 +55,7 @@ operation InsertCustomerIndividualsPost {
         @httpPayload
         request: InsertCustomerIndividualsPostRequest
     }
-    errors: [BadRequest, Unauthorized, Forbidden, Conflict, InternalServerError]
+    errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
@@ -70,6 +70,7 @@ operation InsertCustomerBusinessPost {
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
+/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
 @organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
 @http(method: "POST", uri: "/insert/customer-businesses", code: 204)
 operation InsertCustomerBusinessesPost {
@@ -78,7 +79,7 @@ operation InsertCustomerBusinessesPost {
         @httpPayload
         request: InsertCustomerBusinessesPostRequest
     }
-    errors: [BadRequest, Unauthorized, Forbidden, Conflict, InternalServerError]
+    errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
@@ -90,7 +91,7 @@ operation InsertCustomersPost {
         @httpPayload
         request: InsertCustomersPostRequest
     }
-    errors: [BadRequest, Unauthorized, Forbidden, Conflict, InternalServerError]
+    errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
@@ -126,7 +127,7 @@ operation AddCustomerBusinessContactsPut {
         @httpPayload
         request: AddCustomerBusinessContactsPutRequest
     }
-    errors: [BadRequest, Unauthorized, Forbidden, Conflict, InternalServerError]
+    errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
@@ -138,7 +139,7 @@ operation RemoveCustomerBusinessContactsPut {
         @httpPayload
         request: RemoveCustomerBusinessContactsPutRequest
     }
-    errors: [BadRequest, Unauthorized, Forbidden, Conflict, InternalServerError]
+    errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`OWNER`, `ADMIN`]

@@ -125,6 +125,7 @@ create table customer_business_details
     created_at            timestamptz not null,
     updated_at            timestamptz not null,
     primary key (organization_id, customer_id),
+    unique (organization_id, business_name),
     foreign key (organization_id, customer_id)
         references customer (organization_id, customer_id)
 );
@@ -147,6 +148,7 @@ create table customer_individual_details
     created_at            timestamptz not null,
     updated_at            timestamptz not null,
     primary key (organization_id, customer_id),
+    unique (organization_id, full_name),
     foreign key (organization_id, customer_id)
         references customer (organization_id, customer_id)
 );
@@ -167,7 +169,7 @@ create table customer_business_contact
     updated_at                   timestamptz not null,
     primary key (organization_id, customer_id, customer_business_contact_id),
     foreign key (organization_id, customer_id)
-        references customer (organization_id, customer_id)
+        references customer_business_details (organization_id, customer_id)
 );
 
 

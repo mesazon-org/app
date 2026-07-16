@@ -35,11 +35,11 @@ A customer is one of two kinds, discriminated by `customer_type` (see [postgres.
 - **`INDIVIDUAL`** — a standalone person. Its identity/contact live in `customer_individual_details`.
 - **`BUSINESS`** — a named company account. Its details live in `customer_business_details`, and it may own any number of `customer_business_contact` people.
 
-Which detail table holds a customer's row is determined by `customer_type` (an app-level invariant, not a DB `check`).
+Which detail table holds a customer's row is determined by `customer_type` and kept consistent **at the application layer** (not a DB `check` or FK trick, consistent with this schema staying permissive at the DB): the service inserts `customer` + the matching detail table in one transaction and never the other, and an integration test asserts no `customer_id` is ever present in both detail tables. See [postgres.md § Customer type](../postgres.md#customer-type--individual-vs-business).
 
 ### Why contacts are not customers
 
-A **business contact** is a point of contact inside a company (a buyer, an accountant), not a party orders are billed to. Modelling them as child rows of the business — rather than as `customer` rows — keeps the order target unambiguous (always a `customer_id`) and means a contact carries no `status` and no lifecycle of its own: it lives and dies with its business. This replaced an earlier `counterparty`/`counterparty_customer` design where business members were themselves customers pointed at a shared counterparty.
+A **business contact** is a point of contact inside a company (a buyer, an accountant), not a party orders are billed to. Modelling them as child rows of the business — rather than as `customer` rows — keeps the order target unambiguous (always a `customer_id`) and means a contact carries no `status` and no lifecycle of its own: it lives and dies with its business. `customer_business_contact` FKs `customer_business_details` (not `customer`), so a contact can only ever hang off a customer that has a business-details row — i.e. a `BUSINESS`. An `INDIVIDUAL` can never acquire contacts; the DB rejects it. This replaced an earlier `counterparty`/`counterparty_customer` design where business members were themselves customers pointed at a shared counterparty.
 
 ## Endpoints
 
@@ -105,7 +105,8 @@ Edit a person's contact details or a company's details in place. These touch onl
 
 - **Org isolation via composite keys.** Every table is PK'd/keyed on `(organization_id, ...)` and each detail/child table FKs the parent on the composite `(organization_id, customer_id)` — Postgres matches an FK by column set, so a detail or contact row can only ever attach to a customer **in the same tenant**. A caller cannot reference another org's customer.
 - **Never hard-delete a customer.** `customer` rows are archived, not deleted; orders (future) FK the customer with `on delete restrict` as a belt-and-suspenders guard. Contacts, which carry no orders, are hard-deleted.
-- **`customer_type` drives which detail table applies** (`BUSINESS` ⇒ `customer_business_details`, `INDIVIDUAL` ⇒ `customer_individual_details`) — an app-level invariant, not a DB `check`, consistent with this schema staying permissive at the DB and enforcing shape in the service.
+- **`customer_type` drives which detail table applies, enforced in the service.** The DB stays permissive for the individual-vs-business split (a plain `(organization_id, customer_id)` FK from each detail table to `customer`). The service guarantees a customer is never both kinds by writing `customer` + the matching detail table in one transaction and never the other; an integration test backstops this by asserting no `customer_id` appears in both `customer_individual_details` and `customer_business_details`. The discriminated-composite-FK alternative was considered and rejected to keep the DB permissive. (The related "contacts only under a business" rule *is* DB-enforced — `customer_business_contact` FKs `customer_business_details`.)
+- **Names are unique per organization.** `customer_business_details.business_name` and `customer_individual_details.full_name` each carry `unique (organization_id, <name>)`, so a tenant can't hold two businesses (or two individuals) with the same name; a duplicate insert surfaces as `Conflict` (409). Uniqueness is scoped to the tenant — the same name may exist in different organizations.
 
 ## Key files
 
@@ -128,3 +129,5 @@ Schema and the full smithy contract are in place (13 operations; `smithy4sCodege
 ## Tests
 
 None yet. When implemented, follow the pattern of [Organization Management](organization-management.md): acceptance in `backend/gateway/it` (see [acceptance-tests.md](../acceptance-tests.md)) covering create-individual, create-business (with inline contacts), the combined insert, edits, and add/remove contacts; plus functional (`fun/CustomerBookServiceSpec`) and repository integration specs.
+
+**Type-exclusivity integration test (required).** Because the individual/business split is enforced only in the service, add a repository integration test that guards the invariant directly against Postgres: after exercising the insert paths, assert that no `customer_id` exists in both `customer_individual_details` and `customer_business_details`. This is the safety net that replaces a DB-level constraint — without it, a future code path could silently create a customer that is both kinds. (The "contacts only under a business" and per-tenant unique-name rules are already DB-enforced, so they need only ordinary happy-path/duplicate-conflict coverage, not a dedicated invariant sweep.)

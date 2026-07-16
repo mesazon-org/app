@@ -37,6 +37,9 @@ list OrganizationUserRoles {
     member: OrganizationUserRole
 }
 
+/// Restricts the operation to users that are assigned to the organization
+/// identified by the required `X-Organization-ID` header with one of the
+/// given roles.
 @trait(selector: "operation")
 structure organizationUserRolesAllowed {
     @required

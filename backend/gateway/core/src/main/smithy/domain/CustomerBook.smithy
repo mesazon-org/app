@@ -21,6 +21,7 @@ list InsertCustomerIndividuals {
 }
 
 structure InsertCustomerIndividualsPostRequest {
+    @required
     customerIndividuals: InsertCustomerIndividuals
 }
 
@@ -55,12 +56,14 @@ list InsertCustomerBusinesses {
 }
 
 structure InsertCustomerBusinessesPostRequest {
+    @required
     customerBusinesses: InsertCustomerBusinesses
 }
 
-
 structure InsertCustomersPostRequest {
+    @required
     customerBusinesses: InsertCustomerBusinesses
+    @required
     customerIndividuals: InsertCustomerIndividuals
 }
 
@@ -104,7 +107,9 @@ list AddCustomerBusinessContacts {
 }
 
 structure AddCustomerBusinessContactsPutRequest {
+    @required
     customerID: UUID
+    @required
     customerBusinessContacts: AddCustomerBusinessContacts
 }
 
@@ -118,7 +123,9 @@ list RemoveCustomerBusinessContacts {
 }
 
 structure RemoveCustomerBusinessContactsPutRequest {
+    @required
     customerID: UUID
+    @required
     customerBusinessContacts: RemoveCustomerBusinessContacts
 }
 
@@ -151,12 +158,17 @@ structure GetCustomerBusinessGetResponse {
     country: String
 }
 
-structure GetCustomers {
+structure GetCustomer {
     @required
     customerID: UUID
     @required
     displayName: String
+    @required
     customerType: CustomerType
+}
+
+list GetCustomers {
+    member: GetCustomer
 }
 
 structure GetCustomersGetResponse {
