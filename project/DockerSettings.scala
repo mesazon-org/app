@@ -12,25 +12,11 @@ object DockerSettings {
   private lazy val daemonUser = "nonroot"
   private lazy val baseImage  = s"gcr.io/distroless/java21-debian12:$daemonUser"
 
-  private lazy val appDir       = "/app"
   private lazy val workDir      = "/opt/docker"
   private lazy val pasteJarsDir = "jars/"
+  // Native-packager docker stage layers: 2/ holds dependency jars, 4/ holds the app jars
   private lazy val copyJarsDir1 = "2/opt/docker/lib/"
   private lazy val copyJarsDir2 = "4/opt/docker/lib/"
-
-// Commented out code is not used but reference
-//  private def getAllSubDirs(dir: File): Seq[File] = {
-//    val subDirs = dir.listFiles().filter(_.isDirectory).toSeq
-//
-//    subDirs ++ subDirs.flatMap(getAllSubDirs)
-//  }
-//
-//  private def getRelativePath(parentFile: File, subFile: File): String = {
-//    val parent   = Paths.get(parentFile.getPath)
-//    val sub      = Paths.get(subFile.getPath)
-//    val relative = parent.relativize(sub)
-//    relative.toString
-//  }
 
   val compileScope: Seq[Def.Setting[?]] = Def.settings(
     dockerAliases := dockerAliases.value.flatMap { alias =>
