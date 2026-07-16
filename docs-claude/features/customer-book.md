@@ -43,7 +43,7 @@ A **business contact** is a point of contact inside a company (a buyer, an accou
 
 ## Endpoints
 
-One service — `CustomerBookService`, `@completedOnboardStage` (Bearer + completed onboarding). Every operation requires the `X-Organization-ID` header, declared once via the `OrganizationScopedInput` mixin (see [smithy.md §4](../smithy.md#4-organization-scoping--the-x-organization-id-header)). Operation names split by *what* they act on — `CustomerIndividual` (a standalone person) or `CustomerBusiness` (a company) — rather than one polymorphic insert, so each carries its own validator and swagger entry and its side effects are legible from the name. Inserts come in a **singular** and a **batch** (plural) form, plus a **combined** `InsertCustomersPost` that takes both individuals and businesses in one payload. All operations here (reads and writes) allow `OWNER`/`ADMIN` only. URIs follow the action-first style of [Organization Management](organization-management.md) (no feature prefix — that's reserved for multi-step flows like `/onboard`, `/signup`). Write operations can return `Conflict` (409) — e.g. a duplicate customer.
+One service — `CustomerBookService`, `@completedOnboardStage` (Bearer + completed onboarding). Every operation requires the `X-Organization-ID` header, declared once via the `OrganizationScopedInput` mixin (see [smithy.md §4](../smithy.md#4-organization-scoping--the-x-organization-id-header)). Operation names split by *what* they act on — `CustomerIndividual` (a standalone person) or `CustomerBusiness` (a company) — rather than one polymorphic insert, so each carries its own validator and swagger entry and its side effects are legible from the name. Inserts come in a **singular** and a **batch** (plural) form, plus a **combined** `InsertCustomersPost` that takes both individuals and businesses in one payload. Roles follow the project-wide policy (see [smithy.md § Role policy](../smithy.md#organizationuserrolesallowedroles-)): the three **GET** reads allow `OWNER`/`ADMIN`/`USER`; every write (insert/update/add/remove) allows `OWNER`/`ADMIN` only — a `USER` can view the customer book but not modify it. URIs follow the action-first style of [Organization Management](organization-management.md) (no feature prefix — that's reserved for multi-step flows like `/onboard`, `/signup`). Write operations can return `Conflict` (409) — e.g. a duplicate customer.
 
 **Reads**
 
@@ -121,7 +121,7 @@ Edit a person's contact details or a company's details in place. These touch onl
 
 ## Implementation status
 
-Schema and the full smithy contract are in place (13 operations; `smithy4sCodegen` succeeds; `gateway-core/Compile/compile` is green with a stubbed service). The rest is **not built yet**:
+Schema and the full smithy contract are in place (12 operations; `smithy4sCodegen` succeeds; `gateway-core/Compile/compile` is green with a stubbed service). The rest is **not built yet**:
 
 - The `CustomerBookService.scala` handlers are stubs (each fails with `UnexpectedError`) — the `observed` error-handler wrapper and layer wiring are in place.
 - The `Row → Queries → Repository` + `RepositoryConfig` + `application.conf` stack for `customer`, `customer_individual_details`, `customer_business_details`, and `customer_business_contact` is unwritten (see the [Adding a table checklist](../postgres.md#adding-a-table--checklist)).
