@@ -116,7 +116,7 @@ lazy val backendWiremock = createBackendModule("wiremock")(None)
   )
 
 // Waha
-lazy val createBackendWahaModule = createBackendModule("waha") _
+lazy val createBackendWahaModule = createBackendModule("waha")(_)
 
 lazy val backendWahaModuleRoot = createBackendWahaModule(None)
   .aggregate(backendWahaModuleCore, backendWahaModuleIt)
@@ -146,7 +146,7 @@ lazy val backendWahaModuleIt = createBackendWahaModule(Some("it"))
   .settings(Settings.testAfterDockerPublish(backendWiremock / Docker / publishLocal))
 
 // Gateway
-lazy val createBackendGatewayModule = createBackendModule("gateway") _
+lazy val createBackendGatewayModule = createBackendModule("gateway")
 
 lazy val backendGatewayRoot = createBackendGatewayModule(None)
   .aggregate(backendGatewayCore, backendGatewayIt)

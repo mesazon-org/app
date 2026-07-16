@@ -7,24 +7,27 @@ object Settings {
 
   /** Publish the given docker images before the module's tests run.
     *
-    * sbt 2.x's `test` is an incremental input task; `testQuick`/`testOnly`/`testFull` are the actual executors (`test`
-    * delegates to `testQuick`). We wrap the executors so the images are published regardless of which entrypoint is
-    * used, while `test` inherits the behavior through its delegation — overriding it too would publish twice.
+    * Every test entrypoint (`test`, `testQuick`, `testOnly`, `testFull`) is wrapped so the images are published
+    * regardless of which one is invoked. sbt evaluates each task at most once per command, so the shared publish tasks
+    * run once even though several keys depend on them (and even though `test` also delegates to `testQuick`) — no
+    * double publishing.
     *
-    * Each executor is redefined as its own previous (default) value with the publishes added via `dependsOn`, so the
-    * images are guaranteed to be published before the tests execute (the publishes run in parallel with each other,
-    * which is fine as they are independent). This is the canonical "augment a task's dependencies" form that sbt
-    * resolves against the key's previous value rather than as a cycle.
+    * Each key is redefined as its own previous (default) value with the publishes added via `dependsOn`, so the images
+    * are guaranteed to be published before the tests execute (the publishes run in parallel with each other, which is
+    * fine as they are independent). This is the canonical "augment a task's dependencies" form that sbt resolves
+    * against the key's previous value rather than as a cycle; for input tasks it goes through `InputTask.mapTask`, so
+    * the completion parser (e.g. `testOnly <TAB>` test-name completion) is preserved.
     */
   def testAfterDockerPublish(dockerPublish: TaskKey[Unit]*): Seq[Def.Setting[?]] = {
     def wrapInput(key: InputKey[TestResult]): Def.Setting[?] =
       key := (Test / key).dependsOn(dockerPublish*).evaluated
 
     Seq(
-      wrapInput(Test / testQuick),
-      wrapInput(Test / testOnly),
+      wrapInput(test),
+      wrapInput(testQuick),
+      wrapInput(testOnly),
       // `testFull` is a plain task; sbt's default opts it out of caching, so mirror that here
-      Test / testFull := Def.uncached((Test / testFull).dependsOn(dockerPublish*).value),
+      testFull := Def.uncached((Test / testFull).dependsOn(dockerPublish*).value),
     )
   }
 
