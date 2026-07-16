@@ -25,7 +25,7 @@ The build runs on **sbt 2.0.2** (Scala 3 metabuild — everything under `project
 - **All tasks are cached by default**; side-effecting custom tasks must be wrapped in `Def.uncached(...)`.
 - **Unified target**: outputs live in `target/out/jvm/scala-<ver>/<module>/`, not `<module>/target/`.
 - Settings intentionally *not* set because they are sbt 2 defaults: auto-reload on build change, `Test / parallelExecution`, `Test / testForkedParallel`.
-- `usePipelining := true` speeds up multi-module compile; it is safe only while no module defines macros — if a module ever defines a macro, revisit.
+- `usePipelining := true` enables **compilation pipelining** to speed up multi-module builds. Normally a downstream module can't start compiling until every upstream module it depends on has finished producing `.class`/`.tasty` files. With pipelining, the Scala compiler emits an **early output** — a lightweight JAR of just the type signatures (TASTy/pickles), produced partway through compilation, before full codegen/optimization — and sbt lets downstream modules start typechecking against that early output while the upstream module is still finishing its own bytecode. Because our module graph is deep and mostly sequential (`domain → generator → waha-core → gateway-core → gateway-it`), this overlaps work that used to run strictly one-after-another and measurably cuts total compile time. The trade-off/caveat: it's only sound when upstream signatures don't require running upstream code to compute — i.e. **no macros**. A macro must execute the upstream class at the downstream module's compile time, which the not-yet-finished early output can't provide, so pipelining a macro-defining module produces wrong/failed builds. No module here defines a macro today, so it's safe; if one ever does, either disable pipelining for that module (`<module> / exportPipelining := false`) or turn it off globally. (Chimney/iron/jsoniter/smithy4s are compile-time via inline/derivation and codegen, not sbt-visible macro *definitions* in our modules, so they're unaffected.)
 - Plugins must have sbt 2 (`_sbt2_3`) artifacts. sbt-twirl must stay on the 2.1.x line (2.0.x has no sbt 2 build) — currently the `2.1.0-M9` **milestone**, the only sbt 2 twirl release so far; bump to the stable 2.1.0 once it ships. smithy4s plugin version must equal `smithy4sV` in `Dependencies.scala`.
 - CI multi-command invocations must be a single quoted string: `sbt "a; b"` (old `sbt a b` form fails).
 - **Shell tab-completion of test names needs an explicit scope.** sbt 2 disables scoped-task delegation in the shell (sbt/sbt#8539), so a bare `testOnly <TAB>` no longer delegates to `Test / testOnly` and shows nothing. Use the fully-scoped key — `gateway-it / Test / testOnly <TAB>` — or `project gateway-it` then `Test / testOnly <TAB>` (test sources must be compiled first, since the names come from discovered test classes). This is unrelated to `testAfterDockerPublish`: sbt's `dependsOn` on an input task goes through `InputTask.mapTask`, which preserves the completion parser.
@@ -43,9 +43,28 @@ The build runs on **sbt 2.0.2** (Scala 3 metabuild — everything under `project
 - Dependency style: `.dependsOn(x)` for module wiring (one per line), `% Test` for test-only wiring, `.withDependencies(Dependencies.foo, ...)` for libraries. Version vals in `Dependencies.scala` are named `<lib>V` and grouped by ecosystem with a comment header.
 - Test forking is on (`Test / fork := true`); forked suites run in parallel.
 
+## Command aliases (`project/Aliases.scala`)
+
+All aliases are registered on the root project via `Aliases.all`. They compose small steps so CI and local dev run the exact same commands.
+
+| Alias | Expands to | Purpose |
+|---|---|---|
+| `checkFmt` | `scalafmtCheckAll; scalafmtSbtCheck` | fail if any `.scala` **or** `.sbt`/`project` file is misformatted (read-only) |
+| `runFmt` | `scalafmtAll; scalafmtSbt` | apply formatting to everything incl. build files |
+| `checkFix` | `scalafixAll --check` | fail if scalafix rules (unused imports, `OrganizeImports`, `DisableSyntax`, …) would change anything |
+| `runFix` | `scalafixAll` | apply scalafix rewrites |
+| `checkLint` | `checkFix; checkFmt` | the read-only lint gate used by CI (scalafix first, then scalafmt) |
+| `runLint` | `runFix; runFmt` | fix everything locally before committing |
+| `gateway-build` | `clean; project backend; checkLint; testFull` | full gateway CI build |
+| `waha-build` | `clean; project waha; checkLint; testFull` | full waha CI build |
+
+The `<service>-build` aliases are the CI entrypoints and follow a fixed shape: **`clean`** (fresh compile) → **`project <aggregate>`** (scope to the service's aggregate module) → **`checkLint`** (fail the build on any format/scalafix violation) → **`testFull`**.
+
+`testFull` (not `test`) is deliberate for CI: `test`/`testQuick` are incremental and skip suites whose results are cached, and that cache lives outside `target/` so `clean` doesn't reset it — a warm/restored cache could make CI go green without running the suites. `testFull` ignores the cache and runs **every** suite every time. It's also wrapped by `Settings.testAfterDockerPublish`, so the wiremock/gateway-core images are still published before the acceptance tests run.
+
 ## CI
 
-`.github/workflows/job-scala-build.yml` runs `sbt <module>-build` (alias) on JDK 21 with `setup-java` sbt caching (covers coursier) and uploads the docker image built by `Docker / publishLocal` (tag from `DOCKER_IMAGE_TAG` env, repo from `DOCKER_REPOSITORY`). Lint-on-compile is env-gated via `ENABLE_SCALA_LINT_ON_COMPILE` (off in CI compile; `checkLint` runs explicitly in the alias). New services need: a `pipeline-<name>-ci.yml`, a `<name>-build` alias in `Aliases.scala`, and path filters mirroring `pipeline-waha-ci.yml`.
+`.github/workflows/job-scala-build.yml` runs `sbt <module>-build` (the alias above) on JDK 21 with `setup-java` sbt caching (covers coursier) and uploads the docker image built by `Docker / publishLocal` (tag from `DOCKER_IMAGE_TAG` env, repo from `DOCKER_REPOSITORY`). Lint-on-compile is env-gated via `ENABLE_SCALA_LINT_ON_COMPILE` (off in CI compile; `checkLint` runs explicitly in the alias). New services need: a `pipeline-<name>-ci.yml`, a `<name>-build` alias in `Aliases.scala`, and path filters mirroring `pipeline-waha-ci.yml`.
 
 ## Common commands
 

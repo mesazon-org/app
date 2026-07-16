@@ -116,7 +116,7 @@ lazy val backendWiremock = createBackendModule("wiremock")(None)
   )
 
 // Waha
-lazy val createBackendWahaModule = createBackendModule("waha")(_)
+lazy val createBackendWahaModule = createBackendModule("waha")
 
 lazy val backendWahaModuleRoot = createBackendWahaModule(None)
   .aggregate(backendWahaModuleCore, backendWahaModuleIt)
