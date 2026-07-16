@@ -43,6 +43,15 @@ structure Forbidden {
     message: String = "Forbidden"
 }
 
+@error("client")
+@httpError(409)
+structure Conflict {
+    @required
+    code: String = "CONFLICT_ERROR"
+    @required
+    message: String = "Conflict error"
+}
+
 @error("server")
 @httpError(500)
 structure InternalServerError {

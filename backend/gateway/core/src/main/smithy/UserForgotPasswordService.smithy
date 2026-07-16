@@ -31,7 +31,7 @@ operation ForgotPasswordVerifyOTPPost {
         request: ForgotPasswordVerifyOTPPostRequest
     }
     output: ForgotPasswordVerifyOTPPostResponse
-    errors: [ValidationError, BadRequest, Unauthorized, Forbidden, InternalServerError]
+    errors: [BadRequest, ValidationError, Unauthorized, Forbidden, InternalServerError]
 }
 
 /// **Required Onboard Stage:** [`PASSWORD_PROVIDED`, `PHONE_VERIFICATION`, `PHONE_VERIFIED`]

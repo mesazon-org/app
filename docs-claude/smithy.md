@@ -21,7 +21,7 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
 ### 3. Request/response structures
 
 - Should be named `<Operation>Request` / `<Operation>Response` and live in the feature's `domain/<Feature>.smithy`
-- ✅ `InsertCustomersPostRequest`, `GetCustomerGetResponse`
+- ✅ `InsertCustomersPostRequest`, `GetCustomerIndividualGetResponse`
 - ❌ `CustomerInsertBody`, `GetCustomerResponse` (not matching the operation name)
 
 ### 4. Item structures and lists
@@ -70,7 +70,7 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
 ### 3. Operations
 
 - Body input is always a single wrapper member: `input := { @required @httpPayload request: <Operation>Request }`
-- Identifiers travel in the request body; use `@httpLabel` path parameters for GET/bodyless operations (e.g. `/get/customer/{customerID}`) — except `organizationID`, which is always a header (see below)
+- Identifiers travel in the request body; use `@httpLabel` path parameters for GET/bodyless operations (e.g. `/get/individual/{customerID}`) — except `organizationID`, which is always a header (see below)
 - `code: 200` with an `output`; `code: 204` and no `output` for operations with nothing to return
 - **`@http` placement**: the `@http` trait sits **immediately above the `operation` line**; any other operation traits (e.g. `@organizationUserRolesAllowed`) go above `@http`, so the method + URI always stay paired with the operation they describe
 - Organization-scoped operations each carry `@organizationUserRolesAllowed(roles: [...])` declaring which roles may call them — reads are typically open to every member, writes to `OWNER`/`ADMIN` only (see [Custom traits](#custom-traits))
@@ -78,24 +78,40 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
   - `/// **Required Onboard Stage:** [...]` — a bracketed list of `OnboardStage` enum values in backticks (e.g. `[`EMAIL_VERIFIED`]`), written **per operation**; use `` `N/A` `` for the pre-onboarding "no stage yet" state (e.g. the first sign-up call). Document stages per operation only — don't add a redundant service-level stage doc. The single exception is a `@completedOnboardStage` service, which drops the per-operation markers and carries one service-level `/// **Required Onboard Stage:** COMPLETED` instead
   - `/// **Required Organization User Roles:** [...]` — a bracketed list of role enum values in backticks (e.g. `[`OWNER`, `ADMIN`]`) on every `@organizationUserRolesAllowed` operation
   - Tapir mirrors both verbatim: the stage marker lives in the Tapir OpenAPI `Info.description` built in `FileServiceEndpoints.allRoutesAndDocsEndpoints` (global — every Tapir endpoint requires completed onboarding), and the roles marker is built by the shared `requiredOrganizationRolesDescription(roles)` helper (in `tapir/tapir.scala`) and passed to each endpoint's `.description(...)`
-- `errors` lists only shapes from `domain/HttpErrors.smithy`: `[Unauthorized, ValidationError, InternalServerError]` as a base, plus `BadRequest` where the flow can reject a well-formed request (e.g. wrong OTP), plus `Forbidden` on every operation that can fail a role or onboard-stage check (`@organizationUserRolesAllowed`, `@completedOnboardStage`, or an in-handler `verifyOnboardStage`) — role and stage failures are `403`, not `401`
+- `errors` lists only shapes from `domain/HttpErrors.smithy`: `[ValidationError, Unauthorized, InternalServerError]` as a base, plus `BadRequest` where the flow can reject a well-formed request (e.g. wrong OTP), plus `Forbidden` on every operation that can fail a role or onboard-stage check (`@organizationUserRolesAllowed`, `@completedOnboardStage`, or an in-handler `verifyOnboardStage`) — role and stage failures are `403`, not `401` — plus `Conflict` (409) where a write can collide with existing state (e.g. a duplicate customer)
+- **Always order the `errors` list by HTTP status code, lowest first**; break ties (same code) alphabetically by shape name. The canonical order for the current `HttpErrors.smithy` shapes is: `BadRequest` (400), `ValidationError` (400), `Unauthorized` (401), `Forbidden` (403), `Conflict` (409), `InternalServerError` (500), `ServiceUnavailable` (503) — list whichever subset an operation declares in that relative order (e.g. `[BadRequest, ValidationError, Unauthorized, Forbidden, InternalServerError]`). Apply the same sort when adding a new error shape.
 - **Keep `errors` lists in sync with the code**: whenever a `ServiceError` is added, re-homed under a different HTTP status, or a flow gains a new failure mode, update the `errors` list of **every affected operation** in the same change — the smithy contract is what clients and swagger see, and it silently lies if only the Scala side moves (this happened when `InvalidOnboardStage` became `403 Forbidden`)
 
 ### 4. Organization scoping — the `X-Organization-ID` header
 
-- **`organizationID` never goes in the body or the URI**: organization-scoped endpoints carry it in the required `X-Organization-ID` header, declared as an input member on **every** operation of the service:
+- **`organizationID` never goes in the body or the URI**: organization-scoped endpoints carry it in the required `X-Organization-ID` header. Declare it **once** via the `OrganizationScopedInput` mixin (in `domain/Gateway.smithy`) and mix it into every org-scoped operation input, rather than repeating the header member per operation:
 
   ```smithy
-  @required
-  @httpHeader("X-Organization-ID")
-  organizationID: UUID
+  // domain/Gateway.smithy — declared once
+  @mixin
+  structure OrganizationScopedInput {
+      @required
+      @httpHeader("X-Organization-ID")
+      organizationID: UUID
+  }
+
+  // each org-scoped operation mixes it in
+  operation GetCustomerBusinessGet {
+      input := with [OrganizationScopedInput] {
+          @required
+          @httpLabel
+          businessID: UUID
+      }
+      // ...
+  }
   ```
 
+  Mixins flatten at model-build time, so smithy4s still generates `organizationID` as the operation's first method parameter **and** OpenAPI still renders `X-Organization-ID` as a required header parameter on every operation — the header is defined once but documented per operation. It stays an input member on purpose (not a service-level trait): it is a tenant **scope selector**, most truthfully documented as a header *parameter*, and the middleware reads the header off the raw request itself regardless (see [middleware.md](middleware.md)).
 - Rationale: the middleware can read a fixed header without parsing the body (impossible for GETs and streaming uploads), and URIs stay untouched by the scoping standard
 - **Make the role requirement obvious in swagger** — neither the `@organizationUserRolesAllowed` trait nor the middleware role check appears in the generated OpenAPI, so a reader of the swagger learns *which role is required* only from the operation's `/// **Required Organization User Roles:** [...]` doc comment (which becomes the operation `description`)
 - **Tapir endpoints follow the same standard** — the header is declared as a typed `securityIn` (`header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString)`) and passed to `AuthorizationService.auth` together with the endpoint's allowed roles; missing required headers (`Authorization`, `X-Organization-ID`) are a generic `400 BadRequest` and disallowed-role failures a `403 Forbidden` on **both** transports (see `FileServiceEndpoints.scala` and [middleware.md](middleware.md)). Because the Tapir role check runs inside `zServerSecurityLogic` (invisible to OpenAPI), give the endpoint a `.description(requiredOrganizationRolesDescription(...))` passing the same `OrganizationUserRole` list the security logic enforces (e.g. `OrganizationUserRole.adminRoles`) — the shared helper renders the identical `**Required Organization User Roles:** [...]` marker used on the smithy operations, so the Tapir swagger states the required roles too and cannot drift from the enforced list
-- ✅ `@httpHeader("X-Organization-ID") organizationID: UUID` on every org-scoped operation input
-- ❌ `organizationID` as a request-body field or path parameter (`/insert/customers/{organizationID}`), a Tapir endpoint doing its own org check differently from the smithy middleware
+- ✅ `input := with [OrganizationScopedInput] { ... }` on every org-scoped operation
+- ❌ redeclaring `@httpHeader("X-Organization-ID") organizationID: UUID` inline per operation instead of mixing in `OrganizationScopedInput`, `organizationID` as a request-body field or path parameter (`/insert/customers/{organizationID}`), a Tapir endpoint doing its own org check differently from the smithy middleware
 
 ## Custom traits
 
@@ -112,5 +128,5 @@ All custom traits live in `domain/Gateway.smithy` and are enforced by [the HTTP 
 - **Operation-level** trait carrying the list of `OrganizationUserRole`s (`OWNER`, `ADMIN`, `USER` — mirrors the Scala domain enum `OrganizationUserRole`) allowed to call that operation, so permissions can differ per endpoint within one service
 - The caller must be **assigned to the organization** identified by the `X-Organization-ID` header **with one of the declared roles**; a missing header is `400 BadRequest`, a member with a disallowed role is `403 Forbidden`, and a caller with no membership row at all is a `500 InternalServerError` (treated like any missing referenced entity)
 - Enum values must be quoted in the trait node value: `@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])`
-- Always used together with the `X-Organization-ID` header input member (section above) — the trait declares *who* may call, the header declares *which organization* the request is scoped to
-- Used by: `CustomerBookService` — reads (`GetCustomerGet`, `GetCustomersGet`) allow `OWNER`/`ADMIN`/`USER`, writes (insert/update/delete) allow `OWNER`/`ADMIN` only
+- Always used together with the `OrganizationScopedInput` mixin (section above) — the mixin declares *which organization* the request is scoped to (the header), this trait declares *who* may call
+- Used by: `CustomerBookService` — reads (`GetCustomerIndividualGet`, `GetCustomerIndividualsGet`, `GetCustomerBusinessGet`, `GetCustomerBusinessesGet`) allow `OWNER`/`ADMIN`/`USER`, writes (insert/update/delete customer-individuals, customer-businesses & customer-business-contacts) allow `OWNER`/`ADMIN` only
