@@ -6,16 +6,16 @@ The build runs on **sbt 2.0.2** (Scala 3 metabuild — everything under `project
 
 | File | Owns |
 |---|---|
-| `build.sbt` | Common (bare) settings, module graph, `testAfterDockerPublish` helper |
+| `build.sbt` | Common (bare) settings, module graph |
 | `project/build.properties` | sbt version |
 | `project/plugins.sbt` | Plugins (all must publish `_sbt2_3` artifacts) |
 | `project/Dependencies.scala` | Every library version (`lazy val fooV`) and `ModuleID` — **all dependency changes happen here, never inline in build.sbt** |
-| `project/Settings.scala` | `Settings.ScalaCompiler`: tpolecat scalac options (`-no-indent`, `-old-syntax`, `-experimental`, `--preview`, `-Wunused:all`) + test-only warning suppressions |
+| `project/Settings.scala` | `Settings.ScalaCompiler` (tpolecat scalac options `-no-indent`, `-old-syntax`, `-experimental`, `--preview`, `-Wunused:all` + test-only warning suppressions) and `Settings.testAfterDockerPublish` (publish docker images before tests) |
 | `project/Projects.scala` | `ProjectOps.withDependencies(deps*)` extension used instead of raw `libraryDependencies ++=` |
 | `project/Aliases.scala` | Command aliases: `checkLint`/`runLint` (fix+fmt), `gateway-build`, `waha-build` (CI entrypoints: `clean; project <x>; checkLint; test`) |
 | `project/DockerSettings.scala` | `DockerSettings.compileScope`: distroless java21 image for gateway-core (native-packager stage layers `2/` = dependency jars, `4/` = app jars) |
 | `project/DockerWiremockSettings.scala` | Wiremock image with `backend/wiremock/mappings/` baked in |
-| `.sbtopts` | sbt server JVM memory/GC only |
+| `.sbtopts` | sbt server JVM memory/GC + `-Dsbt.color=always` (sbt 2's thin client otherwise drops colour in some terminals) |
 
 ## sbt 2 specifics baked into this build (do not regress)
 
@@ -26,8 +26,12 @@ The build runs on **sbt 2.0.2** (Scala 3 metabuild — everything under `project
 - **Unified target**: outputs live in `target/out/jvm/scala-<ver>/<module>/`, not `<module>/target/`.
 - Settings intentionally *not* set because they are sbt 2 defaults: auto-reload on build change, `Test / parallelExecution`, `Test / testForkedParallel`.
 - `usePipelining := true` speeds up multi-module compile; it is safe only while no module defines macros — if a module ever defines a macro, revisit.
-- Plugins must have sbt 2 (`_sbt2_3`) artifacts. sbt-twirl must stay on the 2.1.x line (2.0.x has no sbt 2 build). smithy4s plugin version must equal `smithy4sV` in `Dependencies.scala`.
+- Plugins must have sbt 2 (`_sbt2_3`) artifacts. sbt-twirl must stay on the 2.1.x line (2.0.x has no sbt 2 build) — currently the `2.1.0-M9` **milestone**, the only sbt 2 twirl release so far; bump to the stable 2.1.0 once it ships. smithy4s plugin version must equal `smithy4sV` in `Dependencies.scala`.
 - CI multi-command invocations must be a single quoted string: `sbt "a; b"` (old `sbt a b` form fails).
+
+## Known harmless noise
+
+- Forked test JVMs print `NoClassDefFoundError: org/testcontainers/utility/PathUtils` from a shutdown thread *after* the suite finishes. It is benign (tests still pass, exit code 0) and **not** a dependency conflict — only one testcontainers jar (`2.0.5`) is on the classpath and it contains `PathUtils`. Cause: testcontainers' `MountableFile.deleteOnExit` shutdown hook lazily loads a class through sbt's `ForkMain` `URLClassLoader`, which is already closed by JVM-exit time. There is no clean build-side fix (`classLoaderLayeringStrategy` only affects in-process, non-forked runs; disabling fork breaks the testcontainers/SLF4J setup). Don't chase it — wait for an upstream testcontainers fix.
 
 ## Module structure & naming conventions
 
