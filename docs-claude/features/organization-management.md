@@ -16,6 +16,12 @@ Owns the organization domain: the organization entity (details, address, slug, s
 
 Smithy spec: `backend/gateway/core/src/main/smithy/OrganizationManagementService.smithy` (+ `domain/OrganizationManagement.smithy`).
 
+`CreateOrganizationPost` carries no `@organizationUserRolesAllowed` because the caller has no membership yet — the flow *creates* the membership, making them `OWNER`.
+
+## Role policy (for future org-scoped endpoints)
+
+Any org-scoped endpoint added here follows the project-wide [standard role policy](../smithy.md#organizationuserrolesallowedroles-): reads (`GET`) allow `OWNER`/`ADMIN`/`USER`, mutations allow `OWNER`/`ADMIN`. The one carve-out this feature owns: **deleting an organization is `OWNER` only** (`@organizationUserRolesAllowed(roles: ["OWNER"])`) — an `ADMIN` may run every other action but cannot delete the org itself.
+
 ## Flow
 
 ### POST /create/organization (`OrganizationManagementService.createOrganizationPost`)

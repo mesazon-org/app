@@ -142,8 +142,8 @@ operation RemoveCustomerBusinessContactsPut {
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`OWNER`, `ADMIN`, `USER`]
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
 @http(method: "GET", uri: "/get/customer-individual/{customerID}", code: 200)
 operation GetCustomerIndividualGet {
     input := with [OrganizationScopedInput] {
@@ -155,8 +155,8 @@ operation GetCustomerIndividualGet {
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`OWNER`, `ADMIN`, `USER`]
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
 @http(method: "GET", uri: "/get/customer-business/{customerID}", code: 200)
 operation GetCustomerBusinessGet {
     input := with [OrganizationScopedInput] {
@@ -168,8 +168,8 @@ operation GetCustomerBusinessGet {
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`OWNER`, `ADMIN`, `USER`]
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
 @http(method: "GET", uri: "/get/customers", code: 200)
 operation GetCustomersGet {
     input := with [OrganizationScopedInput] {}

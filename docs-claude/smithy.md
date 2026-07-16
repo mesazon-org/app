@@ -73,7 +73,7 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
 - Identifiers travel in the request body; use `@httpLabel` path parameters for GET/bodyless operations (e.g. `/get/individual/{customerID}`) — except `organizationID`, which is always a header (see below)
 - `code: 200` with an `output`; `code: 204` and no `output` for operations with nothing to return
 - **`@http` placement**: the `@http` trait sits **immediately above the `operation` line**; any other operation traits (e.g. `@organizationUserRolesAllowed`) go above `@http`, so the method + URI always stay paired with the operation they describe
-- Organization-scoped operations each carry `@organizationUserRolesAllowed(roles: [...])` declaring which roles may call them — reads are typically open to every member, writes to `OWNER`/`ADMIN` only (see [Custom traits](#custom-traits))
+- Organization-scoped operations each carry `@organizationUserRolesAllowed(roles: [...])` declaring which roles may call them, following the **standard role policy**: reads (`GET`) allow `OWNER`/`ADMIN`/`USER`, mutations allow `OWNER`/`ADMIN`, and organization deletion allows `OWNER` only (see [Custom traits → standard role policy](#organizationuserrolesallowedroles-))
 - **Swagger documentation markers** — document an operation's gates with two parallel bold-label `///` markers (they render into the operation `description`); keep the wording identical across the smithy and Tapir swaggers:
   - `/// **Required Onboard Stage:** [...]` — a bracketed list of `OnboardStage` enum values in backticks (e.g. `[`EMAIL_VERIFIED`]`), written **per operation**; use `` `N/A` `` for the pre-onboarding "no stage yet" state (e.g. the first sign-up call). Document stages per operation only — don't add a redundant service-level stage doc. The single exception is a `@completedOnboardStage` service, which drops the per-operation markers and carries one service-level `/// **Required Onboard Stage:** COMPLETED` instead
   - `/// **Required Organization User Roles:** [...]` — a bracketed list of role enum values in backticks (e.g. `[`OWNER`, `ADMIN`]`) on every `@organizationUserRolesAllowed` operation
@@ -129,4 +129,15 @@ All custom traits live in `domain/Gateway.smithy` and are enforced by [the HTTP 
 - The caller must be **assigned to the organization** identified by the `X-Organization-ID` header **with one of the declared roles**; a missing header is `400 BadRequest`, a member with a disallowed role is `403 Forbidden`, and a caller with no membership row at all is a `500 InternalServerError` (treated like any missing referenced entity)
 - Enum values must be quoted in the trait node value: `@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])`
 - Always used together with the `OrganizationScopedInput` mixin (section above) — the mixin declares *which organization* the request is scoped to (the header), this trait declares *who* may call
-- Used by: `CustomerBookService` — reads (`GetCustomerIndividualGet`, `GetCustomerIndividualsGet`, `GetCustomerBusinessGet`, `GetCustomerBusinessesGet`) allow `OWNER`/`ADMIN`/`USER`, writes (insert/update/delete customer-individuals, customer-businesses & customer-business-contacts) allow `OWNER`/`ADMIN` only
+
+**Standard role policy (apply to every org-scoped operation unless a feature has a documented reason to differ):**
+
+| Operation kind | Allowed roles | Rationale |
+|---|---|---|
+| **Reads** — any `GET` that views data | `OWNER`, `ADMIN`, `USER` | A `USER` may **always** view org data. Every `GET` includes `USER`. |
+| **Writes/actions** — `POST`/`PUT`/`DELETE` that mutate data | `OWNER`, `ADMIN` | A `USER` can look but not touch — no create/update/delete. |
+| **Deleting the organization** | `OWNER` only | The most destructive action; an `ADMIN` cannot delete the org, only its `OWNER` can. |
+
+So the rule of thumb is: `USER` on reads, drop to `OWNER`/`ADMIN` on any mutation, and narrow further to `OWNER` alone for org deletion. When you add a `GET`, it gets `["OWNER", "ADMIN", "USER"]`; when you add a mutation, `["OWNER", "ADMIN"]` (or `["OWNER"]` for org-delete). Keep the `/// **Required Organization User Roles:** [...]` marker in sync with the trait.
+
+- Used by: `CustomerBookService` — reads (`GetCustomerIndividualGet`, `GetCustomerBusinessGet`, `GetCustomersGet`) allow `OWNER`/`ADMIN`/`USER`; every write (`InsertCustomer*`, `UpdateCustomer*`, `AddCustomerBusinessContactsPut`, `RemoveCustomerBusinessContactsPut`) allows `OWNER`/`ADMIN` only
