@@ -35,8 +35,12 @@ object DockerWiremockSettings {
     Docker / version     := dockerTagEnv.getOrElse(version.value),
     dockerExposedPorts   := Seq(8080),
     Docker / mappings ++= {
+      // sbt 2.x mappings hold HashedVirtualFileRef instead of File; convert via fileConverter
+      val converter = fileConverter.value
       val directory = baseDirectory.value / "mappings"
-      directory.listFiles().map(f => f -> s"/mappings/${f.getName}").toSeq
+      directory.listFiles().toSeq.map { f =>
+        (converter.toVirtualFile(f.toPath): xsbti.HashedVirtualFileRef) -> s"/mappings/${f.getName}"
+      }
     },
     dockerCommands := Seq(
       Cmd("FROM", baseImage),

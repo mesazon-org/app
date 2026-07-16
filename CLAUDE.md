@@ -9,6 +9,7 @@ needs.
 Each entry links to the coding standards for that technology — **follow them when writing code**.
 
 - [scala](docs-claude/scala.md) — programming language
+- [sbt](docs-claude/sbt.md) — build definition (sbt 2.x rules, module structure/naming, dependency management, CI wiring)
 - [smithy](docs-claude/smithy.md) — API contract definitions (naming conventions, coding standards, custom traits)
 
 ## Architecture

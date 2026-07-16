@@ -3,20 +3,16 @@ import smithy4s.codegen.Smithy4sCodegenPlugin
 
 val enableScalaLint = sys.env.getOrElse("ENABLE_SCALA_LINT_ON_COMPILE", "true").toBoolean
 
-Global / onChangedBuildSource := ReloadOnSourceChanges
-
-ThisBuild / scalaVersion              := "3.8.4"
-ThisBuild / version                   := "latest"
-ThisBuild / organization              := "io.mesazon"
-ThisBuild / organizationName          := "Mesazon"
-ThisBuild / scalafixOnCompile         := enableScalaLint
-ThisBuild / scalafmtOnCompile         := enableScalaLint
-ThisBuild / semanticdbVersion         := scalafixSemanticdb.revision
-ThisBuild / semanticdbEnabled         := true
-ThisBuild / Test / fork               := true
-ThisBuild / run / fork                := true
-ThisBuild / Test / parallelExecution  := true
-ThisBuild / Test / testForkedParallel := true
+scalaVersion      := "3.8.4"
+version           := "latest"
+organization      := "io.mesazon"
+organizationName  := "Mesazon"
+scalafixOnCompile := enableScalaLint
+scalafmtOnCompile := enableScalaLint
+semanticdbEnabled := true
+Test / fork       := true
+run / fork        := true
+usePipelining     := true
 
 lazy val backendDirName = "backend"
 
@@ -147,14 +143,7 @@ lazy val backendWahaModuleIt = createBackendWahaModule(Some("it"))
   .dependsOn(backendTestKitModule)
   .dependsOn(backendWahaModuleCore % Test)
   .dependsOn(backendWiremock % Test)
-  .settings(
-    test := Def
-      .sequential(
-        backendWiremock / Docker / publishLocal,
-        Test / test,
-      )
-      .value
-  )
+  .settings(Settings.testAfterDockerPublish(backendWiremock / Docker / publishLocal))
 
 // Gateway
 lazy val createBackendGatewayModule = createBackendModule("gateway") _
@@ -224,14 +213,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.springCore,
     Dependencies.bouncyCastle,
   )
-  .settings(
-    test := Def
-      .sequential(
-        backendWiremock / Docker / publishLocal,
-        Test / test,
-      )
-      .value
-  )
+  .settings(Settings.testAfterDockerPublish(backendWiremock / Docker / publishLocal))
 
 lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
   .dependsOn(backendGatewayCore % "test->test")
@@ -245,11 +227,8 @@ lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
     Dependencies.circeGeneric      % Test,
   )
   .settings(
-    test := Def
-      .sequential(
-        backendWiremock / Docker / publishLocal,
-        backendGatewayCore / Docker / publishLocal,
-        Test / test,
-      )
-      .value
+    Settings.testAfterDockerPublish(
+      backendWiremock / Docker / publishLocal,
+      backendGatewayCore / Docker / publishLocal,
+    )
   )
