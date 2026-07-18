@@ -11,7 +11,7 @@ structure CustomerEmailRequest {
     isDefault: Boolean
 }
 
-list Emails {
+list CustomerEmailRequests {
     member: CustomerEmailRequest
 }
 
@@ -22,7 +22,7 @@ structure CustomerPhoneNumberRequest {
     isDefault: Boolean
 }
 
-list PhoneNumberRequests {
+list CustomerPhoneNumberRequests {
     member: CustomerPhoneNumberRequest
 }
 
@@ -30,9 +30,9 @@ structure InsertCustomerIndividualPostRequest {
     @required
     fullName: String
     @required
-    emails: Emails
+    emails: CustomerEmailRequests
     @required
-    phoneNumbers: PhoneNumberRequests
+    phoneNumbers: CustomerPhoneNumberRequests
     addressLine1: String
     addressLine2: String
     city: String
@@ -65,10 +65,10 @@ structure InsertCustomerBusinessPostRequest {
     @required
     businessName: String
     @required
-    emails: Emails
+    emails: CustomerEmailRequests
     taxID: String
     @required
-    phoneNumbers: PhoneNumberRequests
+    phoneNumbers: CustomerPhoneNumberRequests
     addressLine1: String
     addressLine2: String
     city: String
@@ -98,9 +98,9 @@ structure UpdateCustomerIndividualPutRequest {
     customerID: UUID
     fullName: String
     @required
-    emails: Emails
+    emails: CustomerEmailRequests
     @required
-    phoneNumbers: PhoneNumberRequests
+    phoneNumbers: CustomerPhoneNumberRequests
     addressLine1: String
     addressLine2: String
     city: String
@@ -113,10 +113,10 @@ structure UpdateCustomerBusinessPutRequest {
     customerID: UUID
     businessName: String
     @required
-    emails: Emails
+    emails: CustomerEmailRequests
     taxID: String
     @required
-    phoneNumbers: PhoneNumberRequests
+    phoneNumbers: CustomerPhoneNumberRequests
     addressLine1: String
     addressLine2: String
     city: String
@@ -165,9 +165,9 @@ structure GetCustomerIndividualGetResponse {
     @required
     fullName: String
     @required
-    emails: Emails
+    emails: CustomerEmailRequests
     @required
-    phoneNumbers: PhoneNumberRequests
+    phoneNumbers: CustomerPhoneNumberRequests
     addressLine1: String
     addressLine2: String
     city: String
@@ -181,10 +181,10 @@ structure GetCustomerBusinessGetResponse {
     @required
     businessName: String
     @required
-    emails: Emails
+    emails: CustomerEmailRequests
     taxID: String
     @required
-    phoneNumbers: PhoneNumberRequests
+    phoneNumbers: CustomerPhoneNumberRequests
     addressLine1: String
     addressLine2: String
     city: String
