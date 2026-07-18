@@ -2,6 +2,12 @@
 
 ## Coding Standards
 
+### Comments
+
+- Don't add comments that restate what the code already says. Well-named identifiers and types are the primary documentation — a comment that paraphrases the next line is noise.
+- Only add a comment when the code does something **non-obvious**: a surprising decision, a workaround, an invariant the compiler can't express, or context a reader can't recover from the code alone. The test is "would a competent reader be confused or surprised without this?" — if not, leave it out.
+- This applies to section-header/banner comments too (e.g. `// -- Helpers --`); prefer structuring the code well over labelling it.
+
 ### Naming rules
 
 **Recommended name convention**
@@ -39,6 +45,13 @@
 - Names are fully spelled out — no abbreviations, except for well-known acronyms and `Impl` for implementation classes
 - ✅ `userDetailsRepository`, `UserOtpRepositoryImpl`
 - ❌ `userDetailsRepo`, `udr`
+
+##### 5. optionals
+
+- An `Option`-typed value, parameter or field is always suffixed with `Opt`, so the type is legible from the name
+- `Opt` is the **last** suffix — any other modifier (e.g. `Raw`) comes before it: an optional raw email is `emailRawOpt`, not `emailOptRaw`
+- ✅ `emailRawOpt: Option[String]`, `userDetailsRowOpt`, `phoneNumberRawOpt`
+- ❌ `emailRaw: Option[String]`, `emailOptRaw`, `maybeEmail`, `optionalEmail`
 
 #### Iron new types
 
@@ -117,3 +130,11 @@
 - ✅ `getAllTesting`, `deleteTesting`, `insertTesting`, `updateTesting`, `getByUserIDTesting`
 - ❌ `getAllUserOtpsTesting`, `insertUserActionAttemptTesting`, `getAllUserOtps`
 
+
+### Testing
+
+- **Keep every test isolated.** A test builds the data it needs and asserts against it — it does not depend on values, builders, or state shared with other tests. Prefer generating inputs per test with `arbitrarySample[X]` (feature arbitraries live in their own traits — see [adding-a-feature.md](adding-a-feature.md)) and `.copy(...)` only the fields the test is about.
+- **Share only when really needed.** Extracting a common value or helper is the exception, justified when the alternative is genuinely worse — e.g. constructing the system under test (a layer/service), or a long error-message literal repeated verbatim across many assertions. Default to inline; reach for a shared binding only when inlining hurts more than it helps.
+- **Don't share test *data* fixtures.** A pile of shared "valid X" / "expected Y" vals coupling many tests together is what this rule exists to prevent — each test samples its own.
+- ✅ `val individual = arbitrarySample[InsertCustomerIndividual]` in each test; `arbitrarySample[smithy.XRequest].copy(fullName = "")` for the one bad field
+- ❌ a class-level `validRequest` / `expectedResult` reused across tests; a helper that builds the "standard" entity for everyone

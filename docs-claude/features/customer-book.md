@@ -22,9 +22,14 @@ customer (organization_id, customer_id)  PK
     │                        │                          │
 customer_individual_details  customer_business_details  customer_business_contact
   full_name                    business_name              (org_id, customer_id,
-  email, phone, address        tax_id                      customer_business_contact_id) PK
-                               email, phone, address       full_name, role, email, phone
+  emails[], phones[] (jsonb)   tax_id                      customer_business_contact_id) PK
+  address                      emails[], phones[] (jsonb)  full_name, role, email, phone
+                               address
 ```
+
+**Individual and business details hold *lists* of emails and phone numbers** (`emails` / `phone_numbers` `jsonb` columns), not a single one — a customer can have many, and each entry carries an `isDefault` flag marking the primary one. A **non-empty** email or phone list must mark **exactly one** entry as default (zero or several is a `ValidationError`); an empty list is allowed. A **business contact** still carries a single `email`/`phone` (the columns on `customer_business_contact` are unchanged). The domain models mirror this: `InsertCustomerIndividual`/`InsertCustomerBusiness` (and their update variants) carry `emails: List[CustomerEmailEntry]` and `phoneNumbers: List[CustomerPhoneNumberEntry]`, where each entry is `(CustomerEmail|CustomerPhoneNumber, isDefault: Boolean)`; the contact models keep `email: Option[...]`/`phoneNumber: Option[...]`.
+
+**List validation accumulates, tagged by index.** When validating a list — the emails/phones of one customer, the contacts of a business, or a whole batch of customers to insert/update — the validator validates **every** item and accumulates all failures (it does *not* fail fast). Each `InvalidFieldError` carries the `index` of the offending item in its list. For a **batch of customers** each failed customer's errors are wrapped into a single error on the batch field (`customerIndividuals`/`customerBusinesses`): its message lists the customer's invalid fields (with their own inner email/phone indexes intact) and its `index` points at the customer in the batch — so an email index is never mistaken for a customer index.
 
 Each detail/child table FKs the parent on the composite `(organization_id, customer_id)`, so a detail row can only ever attach to a customer **in the same tenant**. `status` lives on the parent `customer` only — the detail rows inherit it.
 
