@@ -3,9 +3,19 @@ package io.mesazon.gateway.validation.service
 import cats.Show
 import cats.data.*
 import cats.syntax.all.*
+import io.mesazon.domain.gateway.ServiceError
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import zio.*
 
 import scala.util.chaining.scalaUtilChainingOps
+
+private[validation] def toValidatedRequestIO[B](
+    validatedFields: UIO[ValidatedNec[InvalidFieldError, B]]
+): IO[ServiceError.BadRequestError.ValidationError, B] =
+  validatedFields
+    .flatMap(validated => ZIO.fromEither(validated.toEither))
+    .mapError(_.toNonEmptyList.toList)
+    .mapError(ServiceError.BadRequestError.ValidationError.apply)
 
 private[validation] def validateRequiredField[A: Show, T](
     fieldName: String,

@@ -1,0 +1,243 @@
+package io.mesazon.gateway.unit.validation.service
+
+import io.mesazon.domain.gateway.*
+import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.gateway.config.PhoneNumberValidatorConfig
+import io.mesazon.gateway.smithy
+import io.mesazon.gateway.utils.*
+import io.mesazon.gateway.validation.domain.*
+import io.mesazon.gateway.validation.service.*
+import io.mesazon.testkit.base.*
+import io.scalaland.chimney.dsl.*
+import zio.*
+
+class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithyArbitraries {
+
+  private val nonEmptyTrimmedError =
+    "Should not have leading or trailing whitespaces & Should have a minimum length of 1 & Should have a maximum length of 255"
+
+  private val validator: CustomerBookRequestValidator = ZIO
+    .service[CustomerBookRequestValidator]
+    .provide(
+      CustomerBookRequestValidator.live,
+      EmailValidator.live,
+      PhoneNumberDomainValidator.live,
+      PhoneNumberUtil.live,
+      ZLayer.succeed(PhoneNumberValidatorConfig(supportedPhoneRegions = Set("CY", "GB"))),
+    )
+    .zioValue
+
+  "CustomerBookRequestValidator" should {
+
+    "validatedInsertCustomerIndividualPostRequest" should {
+      "successfully validate a valid individual" in {
+        val individual = arbitrarySample[InsertCustomerIndividual]
+
+        validator
+          .validatedInsertCustomerIndividualPostRequest(
+            individual.transformInto[smithy.InsertCustomerIndividualPostRequest]
+          )
+          .zioValue shouldBe individual
+      }
+
+      "accumulate every field error" in {
+        val request = arbitrarySample[smithy.InsertCustomerIndividualPostRequest]
+          .copy(fullName = "", email = Some("invalid-email"))
+
+        validator.validatedInsertCustomerIndividualPostRequest(request).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            invalidFields = List(
+              InvalidFieldError("fullName", nonEmptyTrimmedError, List("")),
+              InvalidFieldError("email", "Invalid email format: [invalid-email], error: [null]", List("invalid-email")),
+            )
+          )
+      }
+    }
+
+    "validatedInsertCustomerIndividualsPostRequest" should {
+      "successfully validate a batch of individuals" in {
+        val individuals = arbitrarySample[InsertCustomerIndividuals]
+
+        validator
+          .validatedInsertCustomerIndividualsPostRequest(
+            individuals.transformInto[smithy.InsertCustomerIndividualsPostRequest]
+          )
+          .zioValue shouldBe individuals
+      }
+
+      "fail fast on the first invalid individual in the batch" in {
+        val request = arbitrarySample[smithy.InsertCustomerIndividualsPostRequest].copy(
+          customerIndividuals = List(
+            arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(fullName = ""),
+            arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(email = Some("invalid-email")),
+          )
+        )
+
+        validator.validatedInsertCustomerIndividualsPostRequest(request).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            invalidFields = List(
+              InvalidFieldError("fullName", nonEmptyTrimmedError, List(""))
+            )
+          )
+      }
+    }
+
+    "validatedInsertCustomerBusinessPostRequest" should {
+      "successfully validate a valid business" in {
+        val business = arbitrarySample[InsertCustomerBusiness]
+
+        validator
+          .validatedInsertCustomerBusinessPostRequest(business.transformInto[smithy.InsertCustomerBusinessPostRequest])
+          .zioValue shouldBe business
+      }
+
+      "accumulate business and nested contact errors" in {
+        val request = arbitrarySample[smithy.InsertCustomerBusinessPostRequest].copy(
+          businessName = "",
+          email = Some("invalid-email"),
+          customerBusinessContacts =
+            Some(List(arbitrarySample[smithy.AddCustomerBusinessContact].transformInto[smithy.InsertCustomerBusinessContact].copy(fullName = ""))),
+        )
+
+        validator.validatedInsertCustomerBusinessPostRequest(request).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            invalidFields = List(
+              InvalidFieldError("businessName", nonEmptyTrimmedError, List("")),
+              InvalidFieldError("email", "Invalid email format: [invalid-email], error: [null]", List("invalid-email")),
+              InvalidFieldError("fullName", nonEmptyTrimmedError, List("")),
+            )
+          )
+      }
+    }
+
+    "validatedInsertCustomerBusinessesPostRequest" should {
+      "successfully validate a batch of businesses" in {
+        val businesses = arbitrarySample[InsertCustomerBusinesses]
+
+        validator
+          .validatedInsertCustomerBusinessesPostRequest(
+            businesses.transformInto[smithy.InsertCustomerBusinessesPostRequest]
+          )
+          .zioValue shouldBe businesses
+      }
+
+      "accumulate field errors across the batch" in {
+        val request = arbitrarySample[smithy.InsertCustomerBusinessesPostRequest].copy(
+          customerBusinesses = List(
+            arbitrarySample[smithy.InsertCustomerBusinessPostRequest]
+              .copy(businessName = "", email = Some("invalid-email"), customerBusinessContacts = None)
+          )
+        )
+
+        validator.validatedInsertCustomerBusinessesPostRequest(request).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            invalidFields = List(
+              InvalidFieldError("businessName", nonEmptyTrimmedError, List("")),
+              InvalidFieldError("email", "Invalid email format: [invalid-email], error: [null]", List("invalid-email")),
+            )
+          )
+      }
+    }
+
+    "validatedInsertCustomersPostRequest" should {
+      "successfully validate businesses and individuals together" in {
+        val customers = arbitrarySample[InsertCustomers]
+
+        validator
+          .validatedInsertCustomersPostRequest(customers.transformInto[smithy.InsertCustomersPostRequest])
+          .zioValue shouldBe customers
+      }
+
+      "fail fast on the businesses before the individuals" in {
+        val request = arbitrarySample[smithy.InsertCustomersPostRequest].copy(
+          customerBusinesses = List(
+            arbitrarySample[smithy.InsertCustomerBusinessPostRequest]
+              .copy(businessName = "", customerBusinessContacts = None)
+          ),
+          customerIndividuals = List(arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(fullName = "")),
+        )
+
+        validator.validatedInsertCustomersPostRequest(request).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            invalidFields = List(
+              InvalidFieldError("businessName", nonEmptyTrimmedError, List(""))
+            )
+          )
+      }
+    }
+
+    "validatedUpdateCustomerIndividualPutRequest" should {
+      "successfully validate an individual update" in {
+        val update = arbitrarySample[UpdateCustomerIndividual]
+
+        validator
+          .validatedUpdateCustomerIndividualPutRequest(update.transformInto[smithy.UpdateCustomerIndividualPutRequest])
+          .zioValue shouldBe update
+      }
+
+      "accumulate every field error" in {
+        val request = arbitrarySample[smithy.UpdateCustomerIndividualPutRequest]
+          .copy(fullName = Some(""), email = Some("invalid-email"))
+
+        validator.validatedUpdateCustomerIndividualPutRequest(request).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            invalidFields = List(
+              InvalidFieldError("fullName", nonEmptyTrimmedError, List("")),
+              InvalidFieldError("email", "Invalid email format: [invalid-email], error: [null]", List("invalid-email")),
+            )
+          )
+      }
+    }
+
+    "validatedUpdateCustomerBusinessPutRequest" should {
+      "successfully validate a business update" in {
+        val update = arbitrarySample[UpdateCustomerBusiness]
+
+        validator
+          .validatedUpdateCustomerBusinessPutRequest(update.transformInto[smithy.UpdateCustomerBusinessPutRequest])
+          .zioValue shouldBe update
+      }
+
+      "accumulate every field error" in {
+        val request = arbitrarySample[smithy.UpdateCustomerBusinessPutRequest]
+          .copy(businessName = Some(""), email = Some("invalid-email"))
+
+        validator.validatedUpdateCustomerBusinessPutRequest(request).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            invalidFields = List(
+              InvalidFieldError("businessName", nonEmptyTrimmedError, List("")),
+              InvalidFieldError("email", "Invalid email format: [invalid-email], error: [null]", List("invalid-email")),
+            )
+          )
+      }
+    }
+
+    "validatedAddCustomerBusinessContactsPutRequest" should {
+      "successfully validate contacts to add" in {
+        val contacts = arbitrarySample[AddCustomerBusinessContacts]
+
+        validator
+          .validatedAddCustomerBusinessContactsPutRequest(
+            contacts.transformInto[smithy.AddCustomerBusinessContactsPutRequest]
+          )
+          .zioValue shouldBe contacts
+      }
+
+      "fail fast on the first invalid contact" in {
+        val request = arbitrarySample[smithy.AddCustomerBusinessContactsPutRequest].copy(
+          customerBusinessContacts = List(
+            arbitrarySample[smithy.AddCustomerBusinessContact].copy(fullName = ""),
+            arbitrarySample[smithy.AddCustomerBusinessContact].copy(email = Some("invalid-email")),
+          )
+        )
+
+        validator.validatedAddCustomerBusinessContactsPutRequest(request).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            invalidFields = List(
+              InvalidFieldError("fullName", nonEmptyTrimmedError, List(""))
+            )
+          )
+      }
+    }
+  }
+}

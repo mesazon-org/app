@@ -16,6 +16,8 @@ Each entry links to the coding standards for that technology — **follow them w
 ## Architecture
 
 - [HTTP middleware](docs-claude/middleware.md) — how authentication and authorization wrap every endpoint (basic/bearer auth, `@completedOnboardStage`, organization role permissions via the `X-Organization-ID` header)
+- [Request validation](docs-claude/validators.md) — how a raw smithy request is validated into a refined domain model (feature request validators, shared helpers, error accumulation, tests)
+- [Adding a feature](docs-claude/adding-a-feature.md) — the per-feature file layout (domain models, validator, arbitrary traits, specs) and the order of work
 
 ## Features completed
 
