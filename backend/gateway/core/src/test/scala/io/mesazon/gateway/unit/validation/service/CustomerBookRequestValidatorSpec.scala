@@ -96,25 +96,29 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .zioValue shouldBe individuals
       }
 
-      "accumulate errors tagged with the index of each invalid individual" in {
+      "wrap each invalid individual's errors under the batch field, tagged with the individual's index" in {
         val request = arbitrarySample[smithy.InsertCustomerIndividualsPostRequest].copy(
           customerIndividuals = List(
             arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(fullName = ""),
             arbitrarySample[smithy.InsertCustomerIndividualPostRequest]
-              .copy(emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = false))),
+              .copy(emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = true))),
           )
         )
+
+        val fullNameError = InvalidFieldError("fullName", nonEmptyTrimmedError, List(""))
+        val emailError    =
+          InvalidFieldError("email", "Invalid email format: [invalid-email], error: [null]", List("invalid-email"))
 
         validator.validatedInsertCustomerIndividualsPostRequest(request).zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
             invalidFields = List(
-              InvalidFieldError("fullName", nonEmptyTrimmedError, List(""), index = 0),
               InvalidFieldError(
-                "email",
-                "Invalid email format: [invalid-email], error: [null]",
-                List("invalid-email"),
-                index = 1,
+                "customerIndividuals",
+                s"Failed with invalid fields [$fullNameError]",
+                List(),
+                index = 0,
               ),
+              InvalidFieldError("customerIndividuals", s"Failed with invalid fields [$emailError]", List(), index = 1),
             )
           )
       }
@@ -164,23 +168,31 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .zioValue shouldBe businesses
       }
 
-      "accumulate field errors across the batch" in {
+      "wrap each invalid business's errors under the batch field, tagged with the business's index" in {
         val request = arbitrarySample[smithy.InsertCustomerBusinessesPostRequest].copy(
           customerBusinesses = List(
             arbitrarySample[smithy.InsertCustomerBusinessPostRequest]
               .copy(
                 businessName = "",
-                emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = false)),
+                emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = true)),
                 customerBusinessContacts = None,
               )
           )
         )
 
+        val businessNameError = InvalidFieldError("businessName", nonEmptyTrimmedError, List(""))
+        val emailError        =
+          InvalidFieldError("email", "Invalid email format: [invalid-email], error: [null]", List("invalid-email"))
+
         validator.validatedInsertCustomerBusinessesPostRequest(request).zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
             invalidFields = List(
-              InvalidFieldError("businessName", nonEmptyTrimmedError, List("")),
-              InvalidFieldError("email", "Invalid email format: [invalid-email], error: [null]", List("invalid-email")),
+              InvalidFieldError(
+                "customerBusinesses",
+                s"Failed with invalid fields [$businessNameError, $emailError]",
+                List(),
+                index = 0,
+              )
             )
           )
       }
@@ -204,11 +216,14 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           customerIndividuals = List(arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(fullName = "")),
         )
 
+        val businessNameError = InvalidFieldError("businessName", nonEmptyTrimmedError, List(""))
+        val fullNameError     = InvalidFieldError("fullName", nonEmptyTrimmedError, List(""))
+
         validator.validatedInsertCustomersPostRequest(request).zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
             invalidFields = List(
-              InvalidFieldError("businessName", nonEmptyTrimmedError, List("")),
-              InvalidFieldError("fullName", nonEmptyTrimmedError, List("")),
+              InvalidFieldError("customerBusinesses", s"Failed with invalid fields [$businessNameError]", List()),
+              InvalidFieldError("customerIndividuals", s"Failed with invalid fields [$fullNameError]", List()),
             )
           )
       }

@@ -156,7 +156,7 @@ final class CustomerBookRequestValidator(
   private def validateInsertCustomerIndividuals(
       requests: List[smithy.InsertCustomerIndividualPostRequest]
   ): UIO[ValidatedNec[InvalidFieldError, List[InsertCustomerIndividual]]] =
-    validateAll(requests)(validateInsertCustomerIndividual)
+    validateAllNested("customerIndividuals", requests)(validateInsertCustomerIndividual)
 
   private def validateInsertCustomerBusinessContact(
       contact: smithy.InsertCustomerBusinessContact
@@ -214,7 +214,7 @@ final class CustomerBookRequestValidator(
   private def validateInsertCustomerBusinesses(
       requests: List[smithy.InsertCustomerBusinessPostRequest]
   ): UIO[ValidatedNec[InvalidFieldError, List[InsertCustomerBusiness]]] =
-    validateAll(requests)(validateInsertCustomerBusiness)
+    validateAllNested("customerBusinesses", requests)(validateInsertCustomerBusiness)
 }
 
 object CustomerBookRequestValidator {

@@ -26,6 +26,32 @@ private[validation] def validateAll[A, B](
     }
     .map(_.sequence)
 
+/** Like [[validateAll]] but for lists of composite items whose own validation may already carry indexed errors (e.g. a
+  * batch of customers each holding email/phone lists). Re-indexing the inner errors with the outer position would be
+  * misleading, so instead each failed item collapses into a single error on the list's `fieldName`: the message carries
+  * the item's invalid fields (inner indexes intact) and `index` points at the failed item in this list.
+  */
+private[validation] def validateAllNested[A, B](
+    fieldName: String,
+    items: List[A],
+)(validate: A => UIO[ValidatedNec[InvalidFieldError, B]]): UIO[ValidatedNec[InvalidFieldError, List[B]]] =
+  ZIO
+    .foreach(items.zipWithIndex) { case (item, index) =>
+      validate(item).map(
+        _.leftMap(invalidFields =>
+          NonEmptyChain(
+            InvalidFieldError(
+              fieldName,
+              s"Failed with invalid fields ${invalidFields.toNonEmptyList.toList.mkString("[", ", ", "]")}",
+              Seq.empty,
+              index = index,
+            )
+          )
+        )
+      )
+    }
+    .map(_.sequence)
+
 private[validation] def validateSingleDefault[A](
     fieldName: String,
     items: List[A],

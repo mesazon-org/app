@@ -17,7 +17,8 @@ Reuse these — do not reinvent them per feature:
   - `validateRequiredField(fieldName, value, constructor)` — validate one required field, `constructor` is the newtype's `.either` (`A => Either[String, T]`). Returns `ValidatedNec[InvalidFieldError, T]`.
   - `validateOptionalField(fieldName, value: Option[A], constructor)` — same for an optional field, returns `ValidatedNec[..., Option[T]]`.
   - `toValidatedRequestIO(validatedFields: UIO[ValidatedNec[InvalidFieldError, B]]): IO[ValidationError, B]` — collapses the accumulated `ValidatedNec` into the endpoint's `IO`, mapping the error chain to a single `ServiceError.BadRequestError.ValidationError`.
-  - `validateAll(items)(validate)` — validate every item of a list, accumulating all failures and stamping each failed item's errors with its `index` in the list (`InvalidFieldError.index`), so the caller learns exactly which items failed. For nested lists (a batch of customers each holding email lists) the outer index wins.
+  - `validateAll(items)(validate)` — validate every item of a *flat* list, accumulating all failures and stamping each failed item's errors with its `index` in the list (`InvalidFieldError.index`), so the caller learns exactly which items failed.
+  - `validateAllNested(fieldName, items)(validate)` — for lists of composite items whose own errors already carry indexes (a batch of customers each holding email lists). Re-indexing would be misleading, so each failed item collapses into one error on `fieldName` whose message lists the item's invalid fields (inner indexes intact) and whose `index` points at the item in this list.
   - `validateSingleDefault(fieldName, items)(isDefault)` — for lists of "defaultable" entries (e.g. emails/phones with an `isDefault` flag): a non-empty list must mark **exactly one** entry as default; chain it after the per-entry validation with `.andThen`.
 - **Domain validators** (`validation/domain/`) for fields whose validation is effectful or non-trivial — `EmailValidator` (JMail; generic, takes the target newtype's `.either` and returns that newtype), `PhoneNumberDomainValidator` (libphonenumber). Inject these into the feature validator; wrap their output into the feature's newtype (`CustomerPhoneNumber(phoneNumber)`).
 - `ServiceValidator[A, B]` / `DomainValidator[A, B]` — the older per-request validator traits (`CreateOrganizationPostRequestServiceValidator`, the onboarding validators). Still valid, but new features use the single **feature request validator** below.
@@ -37,7 +38,7 @@ final class CustomerBookRequestValidator(
   ): IO[ServiceError.BadRequestError.ValidationError, InsertCustomerIndividual] =
     toValidatedRequestIO(validateInsertCustomerIndividual(request))
 
-  // batch reuses the item validator; validateAll accumulates + tags each failure with its index
+  // batch reuses the item validator; validateAllNested wraps each failed customer's errors under the batch field
   def validatedInsertCustomerIndividualsPostRequest(
       request: smithy.InsertCustomerIndividualsPostRequest
   ): IO[ServiceError.BadRequestError.ValidationError, InsertCustomerIndividuals] =
@@ -73,7 +74,7 @@ final class CustomerBookRequestValidator(
   private def validateInsertCustomerIndividuals(
       requests: List[smithy.InsertCustomerIndividualPostRequest]
   ): UIO[ValidatedNec[InvalidFieldError, List[InsertCustomerIndividual]]] =
-    validateAll(requests)(validateInsertCustomerIndividual)
+    validateAllNested("customerIndividuals", requests)(validateInsertCustomerIndividual)
 }
 
 object CustomerBookRequestValidator {
