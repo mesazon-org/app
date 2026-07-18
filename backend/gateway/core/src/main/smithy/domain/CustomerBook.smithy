@@ -4,11 +4,35 @@ namespace io.mesazon.gateway.smithy
 
 use alloy#UUID
 
+structure CustomerEmailRequest {
+    @required
+    email: String
+    @required
+    isDefault: Boolean
+}
+
+list Emails {
+    member: CustomerEmailRequest
+}
+
+structure CustomerPhoneNumberRequest {
+    @required
+    phoneNumber: PhoneNumberRequest
+    @required
+    isDefault: Boolean
+}
+
+list PhoneNumberRequests {
+    member: CustomerPhoneNumberRequest
+}
+
 structure InsertCustomerIndividualPostRequest {
     @required
     fullName: String
-    email: String
-    phoneNumber: PhoneNumberRequest
+    @required
+    emails: Emails
+    @required
+    phoneNumbers: PhoneNumberRequests
     addressLine1: String
     addressLine2: String
     city: String
@@ -40,9 +64,11 @@ list InsertCustomerBusinessContacts {
 structure InsertCustomerBusinessPostRequest {
     @required
     businessName: String
-    email: String
+    @required
+    emails: Emails
     taxID: String
-    phoneNumber: PhoneNumberRequest
+    @required
+    phoneNumbers: PhoneNumberRequests
     addressLine1: String
     addressLine2: String
     city: String
@@ -71,8 +97,10 @@ structure UpdateCustomerIndividualPutRequest {
     @required
     customerID: UUID
     fullName: String
-    email: String
-    phoneNumber: PhoneNumberRequest
+    @required
+    emails: Emails
+    @required
+    phoneNumbers: PhoneNumberRequests
     addressLine1: String
     addressLine2: String
     city: String
@@ -84,9 +112,11 @@ structure UpdateCustomerBusinessPutRequest {
     @required
     customerID: UUID
     businessName: String
-    email: String
+    @required
+    emails: Emails
     taxID: String
-    phoneNumber: PhoneNumberRequest
+    @required
+    phoneNumbers: PhoneNumberRequests
     addressLine1: String
     addressLine2: String
     city: String
@@ -134,8 +164,10 @@ structure GetCustomerIndividualGetResponse {
     customerID: UUID
     @required
     fullName: String
-    email: String
-    phoneNumber: PhoneNumberRequest
+    @required
+    emails: Emails
+    @required
+    phoneNumbers: PhoneNumberRequests
     addressLine1: String
     addressLine2: String
     city: String
@@ -148,9 +180,11 @@ structure GetCustomerBusinessGetResponse {
     customerID: UUID
     @required
     businessName: String
-    email: String
+    @required
+    emails: Emails
     taxID: String
-    phoneNumber: PhoneNumberRequest
+    @required
+    phoneNumbers: PhoneNumberRequests
     addressLine1: String
     addressLine2: String
     city: String

@@ -5,6 +5,28 @@ import org.scalacheck.*
 
 trait CustomerBookDomainArbitraries extends GatewayArbitraries {
 
+  given arbCustomerEmailEntry: Arbitrary[CustomerEmailEntry] = Arbitrary(Gen.resultOf(CustomerEmailEntry.apply))
+
+  given arbCustomerPhoneNumberEntry: Arbitrary[CustomerPhoneNumberEntry] = Arbitrary(
+    Gen.resultOf(CustomerPhoneNumberEntry.apply)
+  )
+
+  // Mark exactly one entry (the first) default in each non-empty list so generated lists satisfy the validator.
+  given arbCustomerEmailEntries: Arbitrary[List[CustomerEmailEntry]] = Arbitrary(
+    Gen
+      .listOf(Arbitrary.arbitrary[CustomerEmailEntry])
+      .map(markFirstAsDefault(_)((entry, isDefault) => entry.copy(isDefault = isDefault)))
+  )
+
+  given arbCustomerPhoneNumberEntries: Arbitrary[List[CustomerPhoneNumberEntry]] = Arbitrary(
+    Gen
+      .listOf(Arbitrary.arbitrary[CustomerPhoneNumberEntry])
+      .map(markFirstAsDefault(_)((entry, isDefault) => entry.copy(isDefault = isDefault)))
+  )
+
+  private def markFirstAsDefault[A](entries: List[A])(setDefault: (A, Boolean) => A): List[A] =
+    entries.zipWithIndex.map { case (entry, index) => setDefault(entry, index == 0) }
+
   given arbInsertCustomerIndividual: Arbitrary[InsertCustomerIndividual] = Arbitrary(
     Gen.resultOf(InsertCustomerIndividual.apply)
   )

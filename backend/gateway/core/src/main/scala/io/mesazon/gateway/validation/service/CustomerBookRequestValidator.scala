@@ -44,7 +44,7 @@ final class CustomerBookRequestValidator(
       validateInsertCustomerBusinesses(request.customerBusinesses)
         .zip(validateInsertCustomerIndividuals(request.customerIndividuals))
         .map((businessesValidated, individualsValidated) =>
-          (businessesValidated.toEither, individualsValidated.toEither).mapN(InsertCustomers.apply).toValidated
+          (businessesValidated, individualsValidated).mapN(InsertCustomers.apply)
         )
     )
 
@@ -52,14 +52,14 @@ final class CustomerBookRequestValidator(
       request: smithy.UpdateCustomerIndividualPutRequest
   ): IO[ServiceError.BadRequestError.ValidationError, UpdateCustomerIndividual] =
     toValidatedRequestIO(
-      validateOptionalCustomerEmail(request.email)
-        .zip(validateOptionalCustomerPhoneNumber(request.phoneNumber))
-        .map((emailValidated, phoneNumberValidated) =>
+      validateCustomerEmails(request.emails)
+        .zip(validateCustomerPhoneNumbers(request.phoneNumbers))
+        .map((emailsValidated, phoneNumbersValidated) =>
           (
             CustomerID(request.customerID).validNec,
             validateOptionalField("fullName", request.fullName, CustomerFullName.either),
-            emailValidated,
-            phoneNumberValidated,
+            emailsValidated,
+            phoneNumbersValidated,
             validateOptionalField("addressLine1", request.addressLine1, CustomerAddressLine1.either),
             validateOptionalField("addressLine2", request.addressLine2, CustomerAddressLine2.either),
             validateOptionalField("city", request.city, CustomerCity.either),
@@ -73,15 +73,15 @@ final class CustomerBookRequestValidator(
       request: smithy.UpdateCustomerBusinessPutRequest
   ): IO[ServiceError.BadRequestError.ValidationError, UpdateCustomerBusiness] =
     toValidatedRequestIO(
-      validateOptionalCustomerEmail(request.email)
-        .zip(validateOptionalCustomerPhoneNumber(request.phoneNumber))
-        .map((emailValidated, phoneNumberValidated) =>
+      validateCustomerEmails(request.emails)
+        .zip(validateCustomerPhoneNumbers(request.phoneNumbers))
+        .map((emailsValidated, phoneNumbersValidated) =>
           (
             CustomerID(request.customerID).validNec,
             validateOptionalField("businessName", request.businessName, CustomerBusinessName.either),
-            emailValidated,
+            emailsValidated,
             validateOptionalField("taxID", request.taxID, CustomerTaxID.either),
-            phoneNumberValidated,
+            phoneNumbersValidated,
             validateOptionalField("addressLine1", request.addressLine1, CustomerAddressLine1.either),
             validateOptionalField("addressLine2", request.addressLine2, CustomerAddressLine2.either),
             validateOptionalField("city", request.city, CustomerCity.either),
@@ -95,19 +95,29 @@ final class CustomerBookRequestValidator(
       request: smithy.AddCustomerBusinessContactsPutRequest
   ): IO[ServiceError.BadRequestError.ValidationError, AddCustomerBusinessContacts] =
     toValidatedRequestIO(
-      validateAllFailFast(request.customerBusinessContacts)(validateAddCustomerBusinessContact)
+      validateAll(request.customerBusinessContacts)(validateAddCustomerBusinessContact)
         .map(contactsValidated =>
           (CustomerID(request.customerID).validNec, contactsValidated).mapN(AddCustomerBusinessContacts.apply)
         )
     )
 
-  /** Validates every item and fails fast: on the first invalid item the whole list is that item's error, so the caller
-    * gets a single `ValidationError` for the first offender rather than errors accumulated across the list.
-    */
-  private def validateAllFailFast[A, B](
-      items: List[A]
-  )(validate: A => UIO[ValidatedNec[InvalidFieldError, B]]): UIO[ValidatedNec[InvalidFieldError, List[B]]] =
-    ZIO.foreach(items)(validate).map(_.traverse(_.toEither).toValidated)
+  private def validateCustomerEmails(
+      emails: List[smithy.CustomerEmailRequest]
+  ): UIO[ValidatedNec[InvalidFieldError, List[CustomerEmailEntry]]] =
+    validateAll(emails)(email =>
+      emailValidator
+        .validate(email.email, CustomerEmail.either)
+        .map(_.map(validated => CustomerEmailEntry(validated, email.isDefault)))
+    ).map(_.andThen(entries => validateSingleDefault("emails", entries)(_.isDefault)))
+
+  private def validateCustomerPhoneNumbers(
+      phoneNumbers: List[smithy.CustomerPhoneNumberRequest]
+  ): UIO[ValidatedNec[InvalidFieldError, List[CustomerPhoneNumberEntry]]] =
+    validateAll(phoneNumbers)(phoneNumber =>
+      phoneNumberDomainValidator
+        .validate(phoneNumber.phoneNumber.phoneCountryCode, phoneNumber.phoneNumber.phoneNationalNumber)
+        .map(_.map(validated => CustomerPhoneNumberEntry(CustomerPhoneNumber(validated), phoneNumber.isDefault)))
+    ).map(_.andThen(entries => validateSingleDefault("phoneNumbers", entries)(_.isDefault)))
 
   private def validateOptionalCustomerEmail(
       emailRawOpt: Option[String]
@@ -118,7 +128,7 @@ final class CustomerBookRequestValidator(
       phoneNumberRawOpt: Option[smithy.PhoneNumberRequest]
   ): UIO[ValidatedNec[InvalidFieldError, Option[CustomerPhoneNumber]]] =
     phoneNumberRawOpt match {
-      case None => ZIO.succeed(none[CustomerPhoneNumber].validNec)
+      case None              => ZIO.succeed(none[CustomerPhoneNumber].validNec)
       case Some(phoneNumber) =>
         phoneNumberDomainValidator
           .validate(phoneNumber.phoneCountryCode, phoneNumber.phoneNationalNumber)
@@ -128,13 +138,13 @@ final class CustomerBookRequestValidator(
   private def validateInsertCustomerIndividual(
       request: smithy.InsertCustomerIndividualPostRequest
   ): UIO[ValidatedNec[InvalidFieldError, InsertCustomerIndividual]] =
-    validateOptionalCustomerEmail(request.email)
-      .zip(validateOptionalCustomerPhoneNumber(request.phoneNumber))
-      .map((emailValidated, phoneNumberValidated) =>
+    validateCustomerEmails(request.emails)
+      .zip(validateCustomerPhoneNumbers(request.phoneNumbers))
+      .map((emailsValidated, phoneNumbersValidated) =>
         (
           validateRequiredField("fullName", request.fullName, CustomerFullName.either),
-          emailValidated,
-          phoneNumberValidated,
+          emailsValidated,
+          phoneNumbersValidated,
           validateOptionalField("addressLine1", request.addressLine1, CustomerAddressLine1.either),
           validateOptionalField("addressLine2", request.addressLine2, CustomerAddressLine2.either),
           validateOptionalField("city", request.city, CustomerCity.either),
@@ -146,7 +156,7 @@ final class CustomerBookRequestValidator(
   private def validateInsertCustomerIndividuals(
       requests: List[smithy.InsertCustomerIndividualPostRequest]
   ): UIO[ValidatedNec[InvalidFieldError, List[InsertCustomerIndividual]]] =
-    validateAllFailFast(requests)(validateInsertCustomerIndividual)
+    validateAll(requests)(validateInsertCustomerIndividual)
 
   private def validateInsertCustomerBusinessContact(
       contact: smithy.InsertCustomerBusinessContact
@@ -179,17 +189,19 @@ final class CustomerBookRequestValidator(
   private def validateInsertCustomerBusiness(
       request: smithy.InsertCustomerBusinessPostRequest
   ): UIO[ValidatedNec[InvalidFieldError, InsertCustomerBusiness]] =
-    validateOptionalCustomerEmail(request.email)
-      .zip(validateOptionalCustomerPhoneNumber(request.phoneNumber))
+    validateCustomerEmails(request.emails)
+      .zip(validateCustomerPhoneNumbers(request.phoneNumbers))
       .zip(
-        validateAllFailFast(request.customerBusinessContacts.getOrElse(List.empty))(validateInsertCustomerBusinessContact)
+        validateAll(request.customerBusinessContacts.getOrElse(List.empty))(
+          validateInsertCustomerBusinessContact
+        )
       )
-      .map((emailValidated, phoneNumberValidated, contactsValidated) =>
+      .map((emailsValidated, phoneNumbersValidated, contactsValidated) =>
         (
           validateRequiredField("businessName", request.businessName, CustomerBusinessName.either),
-          emailValidated,
+          emailsValidated,
           validateOptionalField("taxID", request.taxID, CustomerTaxID.either),
-          phoneNumberValidated,
+          phoneNumbersValidated,
           validateOptionalField("addressLine1", request.addressLine1, CustomerAddressLine1.either),
           validateOptionalField("addressLine2", request.addressLine2, CustomerAddressLine2.either),
           validateOptionalField("city", request.city, CustomerCity.either),
@@ -202,7 +214,7 @@ final class CustomerBookRequestValidator(
   private def validateInsertCustomerBusinesses(
       requests: List[smithy.InsertCustomerBusinessPostRequest]
   ): UIO[ValidatedNec[InvalidFieldError, List[InsertCustomerBusiness]]] =
-    validateAllFailFast(requests)(validateInsertCustomerBusiness)
+    validateAll(requests)(validateInsertCustomerBusiness)
 }
 
 object CustomerBookRequestValidator {

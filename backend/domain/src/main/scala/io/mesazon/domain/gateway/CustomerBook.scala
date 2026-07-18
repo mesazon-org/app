@@ -3,7 +3,7 @@ package io.mesazon.domain.gateway
 import io.github.iltotore.iron.*
 import io.mesazon.domain.*
 
-// -- Newtypes ---------------------------------------------------------------
+// Newtypes
 
 object CustomerID extends RefinedTypeUUID
 type CustomerID = CustomerID.T
@@ -44,12 +44,24 @@ type CustomerPostalCode = CustomerPostalCode.T
 object CustomerCountry extends RefinedType[String, NonEmptyTrimmed]
 type CustomerCountry = CustomerCountry.T
 
-// -- Individuals ------------------------------------------------------------
+// Contact points (each carries an isDefault flag)
+
+case class CustomerEmailEntry(
+    email: CustomerEmail,
+    isDefault: Boolean,
+)
+
+case class CustomerPhoneNumberEntry(
+    phoneNumber: CustomerPhoneNumber,
+    isDefault: Boolean,
+)
+
+// Individuals
 
 case class InsertCustomerIndividual(
     fullName: CustomerFullName,
-    email: Option[CustomerEmail],
-    phoneNumber: Option[CustomerPhoneNumber],
+    emails: List[CustomerEmailEntry],
+    phoneNumbers: List[CustomerPhoneNumberEntry],
     addressLine1: Option[CustomerAddressLine1],
     addressLine2: Option[CustomerAddressLine2],
     city: Option[CustomerCity],
@@ -64,8 +76,8 @@ case class InsertCustomerIndividuals(
 case class UpdateCustomerIndividual(
     customerID: CustomerID,
     fullName: Option[CustomerFullName],
-    email: Option[CustomerEmail],
-    phoneNumber: Option[CustomerPhoneNumber],
+    emails: List[CustomerEmailEntry],
+    phoneNumbers: List[CustomerPhoneNumberEntry],
     addressLine1: Option[CustomerAddressLine1],
     addressLine2: Option[CustomerAddressLine2],
     city: Option[CustomerCity],
@@ -73,7 +85,7 @@ case class UpdateCustomerIndividual(
     country: Option[CustomerCountry],
 )
 
-// -- Business contacts ------------------------------------------------------
+// Business contacts
 
 case class InsertCustomerBusinessContact(
     fullName: CustomerFullName,
@@ -99,13 +111,13 @@ case class RemoveCustomerBusinessContacts(
     customerBusinessContactIDs: List[CustomerBusinessContactID],
 )
 
-// -- Businesses -------------------------------------------------------------
+// Businesses
 
 case class InsertCustomerBusiness(
     businessName: CustomerBusinessName,
-    email: Option[CustomerEmail],
+    emails: List[CustomerEmailEntry],
     taxID: Option[CustomerTaxID],
-    phoneNumber: Option[CustomerPhoneNumber],
+    phoneNumbers: List[CustomerPhoneNumberEntry],
     addressLine1: Option[CustomerAddressLine1],
     addressLine2: Option[CustomerAddressLine2],
     city: Option[CustomerCity],
@@ -121,9 +133,9 @@ case class InsertCustomerBusinesses(
 case class UpdateCustomerBusiness(
     customerID: CustomerID,
     businessName: Option[CustomerBusinessName],
-    email: Option[CustomerEmail],
+    emails: List[CustomerEmailEntry],
     taxID: Option[CustomerTaxID],
-    phoneNumber: Option[CustomerPhoneNumber],
+    phoneNumbers: List[CustomerPhoneNumberEntry],
     addressLine1: Option[CustomerAddressLine1],
     addressLine2: Option[CustomerAddressLine2],
     city: Option[CustomerCity],
@@ -131,7 +143,7 @@ case class UpdateCustomerBusiness(
     country: Option[CustomerCountry],
 )
 
-// -- Combined ---------------------------------------------------------------
+// Combined
 
 case class InsertCustomers(
     customerBusinesses: List[InsertCustomerBusiness],

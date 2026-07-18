@@ -15,6 +15,15 @@ trait CustomerBookSmithyArbitraries extends CustomerBookDomainArbitraries, IronR
       phoneCountryCode = customerPhoneNumber.value.phoneCountryCode.value,
     )
 
+  given Transformer[CustomerEmailEntry, smithy.CustomerEmailRequest] = entry =>
+    smithy.CustomerEmailRequest(email = entry.email.value, isDefault = entry.isDefault)
+
+  given Transformer[CustomerPhoneNumberEntry, smithy.CustomerPhoneNumberRequest] = entry =>
+    smithy.CustomerPhoneNumberRequest(
+      phoneNumber = entry.phoneNumber.transformInto[smithy.PhoneNumberRequest],
+      isDefault = entry.isDefault,
+    )
+
   given Transformer[InsertCustomerBusiness, smithy.InsertCustomerBusinessPostRequest] = business =>
     business
       .into[smithy.InsertCustomerBusinessPostRequest]

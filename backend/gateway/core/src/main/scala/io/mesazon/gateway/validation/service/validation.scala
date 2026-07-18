@@ -17,6 +17,23 @@ private[validation] def toValidatedRequestIO[B](
     .mapError(_.toNonEmptyList.toList)
     .mapError(ServiceError.BadRequestError.ValidationError.apply)
 
+private[validation] def validateAll[A, B](
+    items: List[A]
+)(validate: A => UIO[ValidatedNec[InvalidFieldError, B]]): UIO[ValidatedNec[InvalidFieldError, List[B]]] =
+  ZIO
+    .foreach(items.zipWithIndex) { case (item, index) =>
+      validate(item).map(_.leftMap(_.map(_.copy(index = index))))
+    }
+    .map(_.sequence)
+
+private[validation] def validateSingleDefault[A](
+    fieldName: String,
+    items: List[A],
+)(isDefault: A => Boolean): ValidatedNec[InvalidFieldError, List[A]] =
+  if (items.nonEmpty && items.count(isDefault) != 1)
+    InvalidFieldError(fieldName, "Exactly one entry must be marked as default", Seq.empty).invalidNec
+  else items.validNec
+
 private[validation] def validateRequiredField[A: Show, T](
     fieldName: String,
     value: A,

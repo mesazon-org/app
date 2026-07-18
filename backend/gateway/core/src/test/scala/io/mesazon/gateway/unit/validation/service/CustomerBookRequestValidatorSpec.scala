@@ -42,13 +42,44 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
       "accumulate every field error" in {
         val request = arbitrarySample[smithy.InsertCustomerIndividualPostRequest]
-          .copy(fullName = "", email = Some("invalid-email"))
+          .copy(fullName = "", emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = false)))
 
         validator.validatedInsertCustomerIndividualPostRequest(request).zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
             invalidFields = List(
               InvalidFieldError("fullName", nonEmptyTrimmedError, List("")),
               InvalidFieldError("email", "Invalid email format: [invalid-email], error: [null]", List("invalid-email")),
+            )
+          )
+      }
+
+      "reject when more than one email is marked default" in {
+        val request = arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(
+          emails = List(
+            smithy.CustomerEmailRequest(email = "a@example.com", isDefault = true),
+            smithy.CustomerEmailRequest(email = "b@example.com", isDefault = true),
+          ),
+          phoneNumbers = Nil,
+        )
+
+        validator.validatedInsertCustomerIndividualPostRequest(request).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            invalidFields = List(
+              InvalidFieldError("emails", "Exactly one entry must be marked as default", List())
+            )
+          )
+      }
+
+      "reject when no email is marked default" in {
+        val request = arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(
+          emails = List(smithy.CustomerEmailRequest(email = "a@example.com", isDefault = false)),
+          phoneNumbers = Nil,
+        )
+
+        validator.validatedInsertCustomerIndividualPostRequest(request).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            invalidFields = List(
+              InvalidFieldError("emails", "Exactly one entry must be marked as default", List())
             )
           )
       }
@@ -65,18 +96,25 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .zioValue shouldBe individuals
       }
 
-      "fail fast on the first invalid individual in the batch" in {
+      "accumulate errors tagged with the index of each invalid individual" in {
         val request = arbitrarySample[smithy.InsertCustomerIndividualsPostRequest].copy(
           customerIndividuals = List(
             arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(fullName = ""),
-            arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(email = Some("invalid-email")),
+            arbitrarySample[smithy.InsertCustomerIndividualPostRequest]
+              .copy(emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = false))),
           )
         )
 
         validator.validatedInsertCustomerIndividualsPostRequest(request).zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
             invalidFields = List(
-              InvalidFieldError("fullName", nonEmptyTrimmedError, List(""))
+              InvalidFieldError("fullName", nonEmptyTrimmedError, List(""), index = 0),
+              InvalidFieldError(
+                "email",
+                "Invalid email format: [invalid-email], error: [null]",
+                List("invalid-email"),
+                index = 1,
+              ),
             )
           )
       }
@@ -94,9 +132,14 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
       "accumulate business and nested contact errors" in {
         val request = arbitrarySample[smithy.InsertCustomerBusinessPostRequest].copy(
           businessName = "",
-          email = Some("invalid-email"),
-          customerBusinessContacts =
-            Some(List(arbitrarySample[smithy.AddCustomerBusinessContact].transformInto[smithy.InsertCustomerBusinessContact].copy(fullName = ""))),
+          emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = false)),
+          customerBusinessContacts = Some(
+            List(
+              arbitrarySample[smithy.AddCustomerBusinessContact]
+                .transformInto[smithy.InsertCustomerBusinessContact]
+                .copy(fullName = "")
+            )
+          ),
         )
 
         validator.validatedInsertCustomerBusinessPostRequest(request).zioError shouldBe
@@ -125,7 +168,11 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
         val request = arbitrarySample[smithy.InsertCustomerBusinessesPostRequest].copy(
           customerBusinesses = List(
             arbitrarySample[smithy.InsertCustomerBusinessPostRequest]
-              .copy(businessName = "", email = Some("invalid-email"), customerBusinessContacts = None)
+              .copy(
+                businessName = "",
+                emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = false)),
+                customerBusinessContacts = None,
+              )
           )
         )
 
@@ -148,7 +195,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .zioValue shouldBe customers
       }
 
-      "fail fast on the businesses before the individuals" in {
+      "accumulate errors across businesses and individuals" in {
         val request = arbitrarySample[smithy.InsertCustomersPostRequest].copy(
           customerBusinesses = List(
             arbitrarySample[smithy.InsertCustomerBusinessPostRequest]
@@ -160,7 +207,8 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
         validator.validatedInsertCustomersPostRequest(request).zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
             invalidFields = List(
-              InvalidFieldError("businessName", nonEmptyTrimmedError, List(""))
+              InvalidFieldError("businessName", nonEmptyTrimmedError, List("")),
+              InvalidFieldError("fullName", nonEmptyTrimmedError, List("")),
             )
           )
       }
@@ -177,7 +225,10 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
       "accumulate every field error" in {
         val request = arbitrarySample[smithy.UpdateCustomerIndividualPutRequest]
-          .copy(fullName = Some(""), email = Some("invalid-email"))
+          .copy(
+            fullName = Some(""),
+            emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = false)),
+          )
 
         validator.validatedUpdateCustomerIndividualPutRequest(request).zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
@@ -200,7 +251,10 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
       "accumulate every field error" in {
         val request = arbitrarySample[smithy.UpdateCustomerBusinessPutRequest]
-          .copy(businessName = Some(""), email = Some("invalid-email"))
+          .copy(
+            businessName = Some(""),
+            emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = false)),
+          )
 
         validator.validatedUpdateCustomerBusinessPutRequest(request).zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
@@ -223,7 +277,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .zioValue shouldBe contacts
       }
 
-      "fail fast on the first invalid contact" in {
+      "accumulate errors tagged with the index of each invalid contact" in {
         val request = arbitrarySample[smithy.AddCustomerBusinessContactsPutRequest].copy(
           customerBusinessContacts = List(
             arbitrarySample[smithy.AddCustomerBusinessContact].copy(fullName = ""),
@@ -234,7 +288,13 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
         validator.validatedAddCustomerBusinessContactsPutRequest(request).zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
             invalidFields = List(
-              InvalidFieldError("fullName", nonEmptyTrimmedError, List(""))
+              InvalidFieldError("fullName", nonEmptyTrimmedError, List(""), index = 0),
+              InvalidFieldError(
+                "email",
+                "Invalid email format: [invalid-email], error: [null]",
+                List("invalid-email"),
+                index = 1,
+              ),
             )
           )
       }
