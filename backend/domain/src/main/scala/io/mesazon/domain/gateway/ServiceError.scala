@@ -39,7 +39,12 @@ object ServiceError {
   ) extends ServiceError("Unavailable", message, underlying)
 
   object BadRequestError {
-    case class InvalidFieldError(fieldName: String, errorMessage: String, invalidValues: Seq[String])
+    case class InvalidFieldError(
+        fieldName: String,
+        errorMessage: String,
+        invalidValues: Seq[String],
+        index: Int = 0,
+    )
 
     object InvalidFieldError {
       def apply(fieldName: String, errorMessage: String, invalidValue: String): InvalidFieldError =
