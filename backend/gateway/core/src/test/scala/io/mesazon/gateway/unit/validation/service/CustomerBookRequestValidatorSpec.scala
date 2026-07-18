@@ -122,6 +122,49 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
             )
           )
       }
+
+      "report only the failing individuals of a mixed batch, keeping the inner email indexes in the message" in {
+        val invalidEmailsIndividual = arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(
+          emails = List(
+            smithy.CustomerEmailRequest(email = "bad-1", isDefault = false),
+            smithy.CustomerEmailRequest(email = "ok@example.com", isDefault = true),
+            smithy.CustomerEmailRequest(email = "bad-2", isDefault = false),
+          )
+        )
+
+        val request = arbitrarySample[smithy.InsertCustomerIndividualsPostRequest].copy(
+          customerIndividuals = List(
+            arbitrarySample[InsertCustomerIndividual].transformInto[smithy.InsertCustomerIndividualPostRequest],
+            invalidEmailsIndividual,
+            arbitrarySample[InsertCustomerIndividual].transformInto[smithy.InsertCustomerIndividualPostRequest],
+            arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(fullName = ""),
+          )
+        )
+
+        val firstEmailError =
+          InvalidFieldError("email", "Invalid email format: [bad-1], error: [null]", List("bad-1"), index = 0)
+        val thirdEmailError =
+          InvalidFieldError("email", "Invalid email format: [bad-2], error: [null]", List("bad-2"), index = 2)
+        val fullNameError = InvalidFieldError("fullName", nonEmptyTrimmedError, List(""))
+
+        validator.validatedInsertCustomerIndividualsPostRequest(request).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            invalidFields = List(
+              InvalidFieldError(
+                "customerIndividuals",
+                s"Failed with invalid fields [$firstEmailError, $thirdEmailError]",
+                List(),
+                index = 1,
+              ),
+              InvalidFieldError(
+                "customerIndividuals",
+                s"Failed with invalid fields [$fullNameError]",
+                List(),
+                index = 3,
+              ),
+            )
+          )
+      }
     }
 
     "validatedInsertCustomerBusinessPostRequest" should {
