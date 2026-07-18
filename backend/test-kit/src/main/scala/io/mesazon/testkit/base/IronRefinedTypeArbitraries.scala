@@ -61,6 +61,15 @@ trait IronRefinedTypeArbitraries {
       .map(_.refineUnsafe[NonEmptyTrimmedUnsafe])
   }
 
+  given arbSlugPredicate: Arbitrary[String :| SlugPredicate] = Arbitrary {
+    val segment = Gen.choose(1, 10).flatMap(Gen.listOfN(_, Gen.alphaNumChar)).map(_.mkString.toLowerCase)
+    Gen
+      .choose(1, 5)
+      .flatMap(Gen.listOfN(_, segment))
+      .map(_.mkString("-"))
+      .map(_.refineUnsafe[SlugPredicate])
+  }
+
   given arbEmailPredicate: Arbitrary[String :| EmailPredicate] = Arbitrary {
     Gen
       .choose(3, 20)

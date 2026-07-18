@@ -13,6 +13,7 @@ type NonEmpty                 = MinLength[1] & MaxLength[1000]
 
 type PasswordPredicate =
   Match["^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%#*^,?)(&._-])[A-Za-z\\d@$!%#*^,?)(&._-]{8,72}$"]
+type SlugPredicate        = Match["^[a-z0-9]+(?:-[a-z0-9]+)*$"] & MaxLength[63]
 type EmailPredicate       = Match["^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"] & MaxLength[255]
 type OtpPredicate         = Match["^[A-Z0-9]{6}$"]
 type WahaIDPredicate      = NonEmptyTrimmedLowerCase & EndWith["@c.us"]
