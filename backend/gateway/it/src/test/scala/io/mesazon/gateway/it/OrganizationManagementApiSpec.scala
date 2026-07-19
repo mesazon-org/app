@@ -138,6 +138,8 @@ class OrganizationManagementApiSpec
               createOrganization.city,
               createOrganization.postalCode,
               createOrganization.country,
+              createOrganization.companyRegistrationNumber,
+              createOrganization.taxID,
               Some(accessJwt.accessToken),
             )
             .zioValue
@@ -157,6 +159,8 @@ class OrganizationManagementApiSpec
           city = createOrganization.city,
           postalCode = createOrganization.postalCode,
           country = createOrganization.country,
+          companyRegistrationNumber = createOrganization.companyRegistrationNumber,
+          taxID = createOrganization.taxID,
           logoOriginalBucketKey = None,
           logoNormalizedBucketKey = None,
           logoOriginalFileName = None,
@@ -210,6 +214,8 @@ class OrganizationManagementApiSpec
               createOrganization.city,
               createOrganization.postalCode,
               createOrganization.country,
+              createOrganization.companyRegistrationNumber,
+              createOrganization.taxID,
               Some(accessJwt.accessToken),
             )
             .zioValue
@@ -241,6 +247,8 @@ class OrganizationManagementApiSpec
               createOrganization.city,
               createOrganization.postalCode,
               createOrganization.country,
+              createOrganization.companyRegistrationNumber,
+              createOrganization.taxID,
               None,
             )
             .zioValue
@@ -270,6 +278,8 @@ class OrganizationManagementApiSpec
               createOrganization.city,
               createOrganization.postalCode,
               createOrganization.country,
+              createOrganization.companyRegistrationNumber,
+              createOrganization.taxID,
               Some(AccessToken("invalidtoken")),
             )
             .zioValue
@@ -308,6 +318,8 @@ class OrganizationManagementApiSpec
               createOrganization.city,
               createOrganization.postalCode,
               createOrganization.country,
+              createOrganization.companyRegistrationNumber,
+              createOrganization.taxID,
               Some(accessJwt.accessToken),
             )
             .zioValue
@@ -350,6 +362,8 @@ class OrganizationManagementApiSpec
               createOrganization.city,
               createOrganization.postalCode,
               createOrganization.country,
+              createOrganization.companyRegistrationNumber,
+              createOrganization.taxID,
               Some(accessJwt.accessToken),
             )
             .zioValue

@@ -10,4 +10,6 @@ case class CreateOrganization(
     city: OrganizationCity,
     postalCode: OrganizationPostalCode,
     country: OrganizationCountry,
+    companyRegistrationNumber: Option[OrganizationCompanyRegistrationNumber],
+    taxID: Option[OrganizationTaxID],
 )

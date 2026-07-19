@@ -26,6 +26,8 @@ trait OrganizationManagementRepository {
       city: OrganizationCity,
       postalCode: OrganizationPostalCode,
       country: OrganizationCountry,
+      companyRegistrationNumber: Option[OrganizationCompanyRegistrationNumber],
+      taxID: Option[OrganizationTaxID],
   ): IO[ServiceError, OrganizationDetailsRow]
 
   def updateOrganization(
@@ -40,6 +42,8 @@ trait OrganizationManagementRepository {
       cityOptUpdate: Option[OrganizationCity] = None,
       postalCodeOptUpdate: Option[OrganizationPostalCode] = None,
       countryOptUpdate: Option[OrganizationCountry] = None,
+      companyRegistrationNumberOptUpdate: Option[OrganizationCompanyRegistrationNumber] = None,
+      taxIDOptUpdate: Option[OrganizationTaxID] = None,
       logoOriginalBucketKeyOptUpdate: Option[OrganizationLogoOriginalBucketKey] = None,
       logoNormalizedBucketKeyOptUpdate: Option[OrganizationLogoNormalizedBucketKey] = None,
       logoOriginalFileNameOptUpdate: Option[OrganizationLogoOriginalFileName] = None,
@@ -89,6 +93,8 @@ object OrganizationManagementRepository {
         city: OrganizationCity,
         postalCode: OrganizationPostalCode,
         country: OrganizationCountry,
+        companyRegistrationNumber: Option[OrganizationCompanyRegistrationNumber],
+        taxID: Option[OrganizationTaxID],
     ): IO[ServiceError, OrganizationDetailsRow] = for {
       instantNow     <- timeProvider.instantNow
       organizationID <- idGenerator.generateID
@@ -112,6 +118,8 @@ object OrganizationManagementRepository {
         city,
         postalCode,
         country,
+        companyRegistrationNumber,
+        taxID,
         None,
         None,
         None,
@@ -152,6 +160,8 @@ object OrganizationManagementRepository {
         cityOptUpdate: Option[OrganizationCity],
         postalCodeOptUpdate: Option[OrganizationPostalCode],
         countryOptUpdate: Option[OrganizationCountry],
+        companyRegistrationNumberOptUpdate: Option[OrganizationCompanyRegistrationNumber] = None,
+        taxIDOptUpdate: Option[OrganizationTaxID] = None,
         logoOriginalBucketKeyOptUpdate: Option[OrganizationLogoOriginalBucketKey] = None,
         logoNormalizedBucketKeyOptUpdate: Option[OrganizationLogoNormalizedBucketKey] = None,
         logoOriginalFileNameOptUpdate: Option[OrganizationLogoOriginalFileName] = None,
@@ -172,6 +182,8 @@ object OrganizationManagementRepository {
             cityOptUpdate,
             postalCodeOptUpdate,
             countryOptUpdate,
+            companyRegistrationNumberOptUpdate,
+            taxIDOptUpdate,
             logoOriginalBucketKeyOptUpdate,
             logoNormalizedBucketKeyOptUpdate,
             logoOriginalFileNameOptUpdate,

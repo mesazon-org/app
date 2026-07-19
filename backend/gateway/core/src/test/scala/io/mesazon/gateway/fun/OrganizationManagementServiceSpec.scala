@@ -48,6 +48,8 @@ class OrganizationManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries
               organizationDetailsRow.city,
               organizationDetailsRow.postalCode,
               organizationDetailsRow.country,
+              organizationDetailsRow.companyRegistrationNumber,
+              organizationDetailsRow.taxID,
             )
             .returningZIO(organizationDetailsRow)
             .once(),
@@ -70,6 +72,8 @@ class OrganizationManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries
           city = organizationDetailsRow.city.value,
           postalCode = organizationDetailsRow.postalCode.value,
           country = organizationDetailsRow.country.value,
+          companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber.map(_.value),
+          taxID = organizationDetailsRow.taxID.map(_.value),
         )
 
         val organizationManagementService = buildOrganizationManagementService
@@ -111,6 +115,8 @@ class OrganizationManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries
               organizationDetailsRow.city,
               organizationDetailsRow.postalCode,
               organizationDetailsRow.country,
+              organizationDetailsRow.companyRegistrationNumber,
+              organizationDetailsRow.taxID,
             )
             .returningZIO(organizationDetailsRow)
             .once(),
@@ -137,6 +143,8 @@ class OrganizationManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries
           city = organizationDetailsRow.city.value,
           postalCode = organizationDetailsRow.postalCode.value,
           country = organizationDetailsRow.country.value,
+          companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber.map(_.value),
+          taxID = organizationDetailsRow.taxID.map(_.value),
         )
 
         val organizationManagementService = buildOrganizationManagementService

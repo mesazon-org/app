@@ -47,6 +47,8 @@ object OrganizationManagementService {
           createOrganization.city,
           createOrganization.postalCode,
           createOrganization.country,
+          createOrganization.companyRegistrationNumber,
+          createOrganization.taxID,
         )
       _ <- emailClient
         .sendOrganizationCreatedEmail(

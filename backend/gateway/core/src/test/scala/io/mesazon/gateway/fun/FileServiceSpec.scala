@@ -60,6 +60,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
               None,
               None,
               None,
+              None,
+              None,
               Some(organizationLogoOriginalBucketKey),
               Some(organizationLogoNormalizedBucketKey),
               Some(organizationLogoOriginalFileName),
@@ -219,6 +221,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(
               organizationID,
               Some(OrganizationStage.LogoProvided),
+              None,
+              None,
               None,
               None,
               None,

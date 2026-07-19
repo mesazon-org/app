@@ -221,6 +221,8 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       city: OrganizationCity,
       postalCode: OrganizationPostalCode,
       country: OrganizationCountry,
+      companyRegistrationNumberOpt: Option[OrganizationCompanyRegistrationNumber],
+      taxIDOpt: Option[OrganizationTaxID],
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, smithy.CreateOrganizationPostResponse]]] =
     basicRequest
@@ -240,6 +242,8 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
             city = city.value,
             postalCode = postalCode.value,
             country = country.value,
+            companyRegistrationNumber = companyRegistrationNumberOpt.map(_.value),
+            taxID = taxIDOpt.map(_.value),
           )
         )
       )
