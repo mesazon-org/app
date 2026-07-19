@@ -4,23 +4,42 @@ namespace io.mesazon.gateway.smithy
 
 use alloy#UUID
 
+structure OrganizationEmailRequest {
+    @required
+    email: String
+    @required
+    isDefault: Boolean
+}
+
+list OrganizationEmailRequests {
+    member: OrganizationEmailRequest
+}
+
+structure OrganizationPhoneNumberRequest {
+    @required
+    phoneNumber: PhoneNumberRequest
+    @required
+    isDefault: Boolean
+}
+
+list OrganizationPhoneNumberRequests {
+    member: OrganizationPhoneNumberRequest
+}
+
 structure CreateOrganizationPostRequest {
     @required
     name: String
     @required
     slug: String
+    tagline: String
     @required
-    email: String
+    emails: OrganizationEmailRequests
     @required
-    phoneNumber: PhoneNumberRequest
-    @required
+    phoneNumbers: OrganizationPhoneNumberRequests
     addressLine1: String
     addressLine2: String
-    @required
     city: String
-    @required
     postalCode: String
-    @required
     country: String
     companyRegistrationNumber: String
     taxID: String

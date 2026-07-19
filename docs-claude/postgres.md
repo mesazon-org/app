@@ -136,6 +136,8 @@ For an entity `Foo` backed by table `foo_bar`, the code is three files, all unde
 
 Given instances derive Doobie `Read`/`Write`/`Get`/`Put`/`Meta` for **all** Iron refined types (via `RefinedType.Mirror`) and Scala `enum`s (`Get/Put.deriveEnumString` → the case name as `text`). A new refined type or enum needs no per-type codec — but a refined type over a non-standard base still needs a `Meta` for that base.
 
+`jsonb` columns map to Scala `List[...]` fields via `jsonbMeta` (also in `queries.scala`): a jsoniter `JsonValueCodec` plus a `Meta` built on `PGobject`, one **explicitly named** given pair per list type (anonymous givens of the same shape collide and shadow each other). Example: `organizationEmailEntriesMeta: Meta[List[OrganizationEmailEntry]]`.
+
 ## Configuration — table names are config, not constants
 
 Table names are **never** string literals in queries; they flow through config so every environment/test can point at the same schema:

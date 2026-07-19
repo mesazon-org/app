@@ -9,7 +9,7 @@ import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.state.AuthState
 import io.mesazon.gateway.utils.*
-import io.mesazon.gateway.validation.domain.{EmailDomainValidator, PhoneNumberDomainValidator}
+import io.mesazon.gateway.validation.domain.{EmailValidator, PhoneNumberDomainValidator}
 import io.mesazon.gateway.validation.service.*
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
@@ -40,8 +40,9 @@ class OrganizationManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries
               authedUser.userID,
               organizationDetailsRow.name,
               organizationDetailsRow.slug,
-              organizationDetailsRow.email,
-              organizationDetailsRow.phoneNumber,
+              organizationDetailsRow.tagline,
+              organizationDetailsRow.emails,
+              organizationDetailsRow.phoneNumbers,
               organizationDetailsRow.organizationStage,
               organizationDetailsRow.addressLine1,
               organizationDetailsRow.addressLine2,
@@ -62,16 +63,24 @@ class OrganizationManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries
         val createOrganizationPostRequest = smithy.CreateOrganizationPostRequest(
           name = organizationDetailsRow.name.value,
           slug = organizationDetailsRow.slug.value,
-          email = organizationDetailsRow.email.value,
-          phoneNumber = smithy.PhoneNumberRequest(
-            phoneNationalNumber = organizationDetailsRow.phoneNumber.value.phoneNationalNumber.value,
-            phoneCountryCode = organizationDetailsRow.phoneNumber.value.phoneCountryCode.value,
+          tagline = organizationDetailsRow.tagline.map(_.value),
+          emails = organizationDetailsRow.emails.map(entry =>
+            smithy.OrganizationEmailRequest(entry.email.value, entry.isDefault)
           ),
-          addressLine1 = organizationDetailsRow.addressLine1.value,
+          phoneNumbers = organizationDetailsRow.phoneNumbers.map(entry =>
+            smithy.OrganizationPhoneNumberRequest(
+              smithy.PhoneNumberRequest(
+                phoneNationalNumber = entry.phoneNumber.value.phoneNationalNumber.value,
+                phoneCountryCode = entry.phoneNumber.value.phoneCountryCode.value,
+              ),
+              entry.isDefault,
+            )
+          ),
+          addressLine1 = organizationDetailsRow.addressLine1.map(_.value),
           addressLine2 = organizationDetailsRow.addressLine2.map(_.value),
-          city = organizationDetailsRow.city.value,
-          postalCode = organizationDetailsRow.postalCode.value,
-          country = organizationDetailsRow.country.value,
+          city = organizationDetailsRow.city.map(_.value),
+          postalCode = organizationDetailsRow.postalCode.map(_.value),
+          country = organizationDetailsRow.country.map(_.value),
           companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber.map(_.value),
           taxID = organizationDetailsRow.taxID.map(_.value),
         )
@@ -107,8 +116,9 @@ class OrganizationManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries
               authedUser.userID,
               organizationDetailsRow.name,
               organizationDetailsRow.slug,
-              organizationDetailsRow.email,
-              organizationDetailsRow.phoneNumber,
+              organizationDetailsRow.tagline,
+              organizationDetailsRow.emails,
+              organizationDetailsRow.phoneNumbers,
               organizationDetailsRow.organizationStage,
               organizationDetailsRow.addressLine1,
               organizationDetailsRow.addressLine2,
@@ -133,16 +143,24 @@ class OrganizationManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries
         val createOrganizationPostRequest = smithy.CreateOrganizationPostRequest(
           name = organizationDetailsRow.name.value,
           slug = organizationDetailsRow.slug.value,
-          email = organizationDetailsRow.email.value,
-          phoneNumber = smithy.PhoneNumberRequest(
-            phoneNationalNumber = organizationDetailsRow.phoneNumber.value.phoneNationalNumber.value,
-            phoneCountryCode = organizationDetailsRow.phoneNumber.value.phoneCountryCode.value,
+          tagline = organizationDetailsRow.tagline.map(_.value),
+          emails = organizationDetailsRow.emails.map(entry =>
+            smithy.OrganizationEmailRequest(entry.email.value, entry.isDefault)
           ),
-          addressLine1 = organizationDetailsRow.addressLine1.value,
+          phoneNumbers = organizationDetailsRow.phoneNumbers.map(entry =>
+            smithy.OrganizationPhoneNumberRequest(
+              smithy.PhoneNumberRequest(
+                phoneNationalNumber = entry.phoneNumber.value.phoneNationalNumber.value,
+                phoneCountryCode = entry.phoneNumber.value.phoneCountryCode.value,
+              ),
+              entry.isDefault,
+            )
+          ),
+          addressLine1 = organizationDetailsRow.addressLine1.map(_.value),
           addressLine2 = organizationDetailsRow.addressLine2.map(_.value),
-          city = organizationDetailsRow.city.value,
-          postalCode = organizationDetailsRow.postalCode.value,
-          country = organizationDetailsRow.country.value,
+          city = organizationDetailsRow.city.map(_.value),
+          postalCode = organizationDetailsRow.postalCode.map(_.value),
+          country = organizationDetailsRow.country.map(_.value),
           companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber.map(_.value),
           taxID = organizationDetailsRow.taxID.map(_.value),
         )
@@ -207,7 +225,7 @@ class OrganizationManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries
           OrganizationManagementService.local,
           PhoneNumberUtil.live,
           CreateOrganizationPostRequestServiceValidator.live,
-          EmailDomainValidator.live,
+          EmailValidator.live,
           ZLayer.succeed(organizationManagementConfig),
           ZLayer.succeed(phoneNumberValidatorConfig),
           PhoneNumberDomainValidator.live,

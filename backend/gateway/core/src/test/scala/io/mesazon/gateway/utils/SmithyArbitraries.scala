@@ -4,6 +4,7 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.domain.waha
 import io.mesazon.gateway.smithy
 import io.mesazon.testkit.base.*
+import io.scalaland.chimney.Transformer
 import io.scalaland.chimney.dsl.*
 import org.scalacheck.*
 
@@ -72,14 +73,24 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
     Arbitrary.arbitrary[TokenRefresh].map(_.transformInto[smithy.TokenRefreshPostRequest])
   )
 
+  given Transformer[OrganizationPhoneNumber, smithy.PhoneNumberRequest] = organizationPhoneNumber =>
+    smithy.PhoneNumberRequest(
+      phoneNationalNumber = organizationPhoneNumber.value.phoneNationalNumber.value,
+      phoneCountryCode = organizationPhoneNumber.value.phoneCountryCode.value,
+    )
+
+  given Transformer[OrganizationEmailEntry, smithy.OrganizationEmailRequest] = entry =>
+    smithy.OrganizationEmailRequest(email = entry.email.value, isDefault = entry.isDefault)
+
+  given Transformer[OrganizationPhoneNumberEntry, smithy.OrganizationPhoneNumberRequest] = entry =>
+    smithy.OrganizationPhoneNumberRequest(
+      phoneNumber = entry.phoneNumber.transformInto[smithy.PhoneNumberRequest],
+      isDefault = entry.isDefault,
+    )
+
   given Arbitrary[smithy.CreateOrganizationPostRequest] = Arbitrary {
     Arbitrary
       .arbitrary[CreateOrganization]
-      .map(
-        _.into[smithy.CreateOrganizationPostRequest]
-          .withFieldComputed(_.phoneNumber.phoneCountryCode, _.phoneNumber.value.phoneCountryCode.value)
-          .withFieldComputed(_.phoneNumber.phoneNationalNumber, _.phoneNumber.value.phoneNationalNumber.value)
-          .transform
-      )
+      .map(_.transformInto[smithy.CreateOrganizationPostRequest])
   }
 }

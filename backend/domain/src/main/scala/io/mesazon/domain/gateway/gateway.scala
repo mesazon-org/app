@@ -96,6 +96,9 @@ type OrganizationName = OrganizationName.T
 object OrganizationSlug extends RefinedType[String, SlugPredicate]
 type OrganizationSlug = OrganizationSlug.T
 
+object OrganizationTagline extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationTagline = OrganizationTagline.T
+
 object OrganizationEmail extends RefinedType[String, EmailPredicate]
 type OrganizationEmail = OrganizationEmail.T
 

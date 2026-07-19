@@ -24,15 +24,6 @@ trait CustomerBookDomainArbitraries extends GatewayArbitraries {
     )(_.copy(isDefault = true))
   )
 
-  private def genEntriesWithSingleDefault[A](genEntry: Gen[A])(setDefault: A => A): Gen[List[A]] =
-    Gen.listOf(genEntry).flatMap {
-      case Nil     => Gen.const(Nil)
-      case entries =>
-        Gen
-          .choose(0, entries.length - 1)
-          .map(defaultIndex => entries.updated(defaultIndex, setDefault(entries(defaultIndex))))
-    }
-
   given arbInsertCustomerIndividual: Arbitrary[InsertCustomerIndividual] = Arbitrary(
     Gen.resultOf(InsertCustomerIndividual.apply)
   )
