@@ -51,7 +51,7 @@ module "gateway_core_app" {
     ORGANIZATION_LOGOS_S3_CLIENT_USE_MOCK                 = "false"
     ORGANIZATION_LOGOS_S3_CLIENT_URI                      = "https://${data.digitalocean_spaces_bucket.organization_logos_bucket.endpoint}"
     ORGANIZATION_LOGOS_S3_CLIENT_REGION                   = data.digitalocean_spaces_bucket.organization_logos_bucket.region
-    ORGANIZATION_LOGOS_S3_CLIENT_ORGANIZATION_LOGO_BUCKET = data.digitalocean_spaces_bucket.organization_logos_bucket.name
+    ORGANIZATION_LOGOS_S3_CLIENT_BUCKET = data.digitalocean_spaces_bucket.organization_logos_bucket.name
 
     JAVA_OPTS = "-XX:InitialRAMPercentage=65.0 -XX:MaxRAMPercentage=65.0 -XX:MaxMetaspaceSize=256m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -XX:+UseContainerSupport"
 
