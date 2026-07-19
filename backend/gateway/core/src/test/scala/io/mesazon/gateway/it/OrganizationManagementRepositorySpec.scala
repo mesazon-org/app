@@ -105,6 +105,8 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             city = organizationDetailsRow.city,
             postalCode = organizationDetailsRow.postalCode,
             country = organizationDetailsRow.country,
+            companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber,
+            taxID = organizationDetailsRow.taxID,
           )
           .zioValue
 
@@ -185,6 +187,8 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             city = organizationDetailsRow1.city,
             postalCode = organizationDetailsRow1.postalCode,
             country = organizationDetailsRow1.country,
+            companyRegistrationNumber = organizationDetailsRow1.companyRegistrationNumber,
+            taxID = organizationDetailsRow1.taxID,
           )
           .zioValue
 
@@ -201,6 +205,8 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             city = organizationDetailsRow2.city,
             postalCode = organizationDetailsRow2.postalCode,
             country = organizationDetailsRow2.country,
+            companyRegistrationNumber = organizationDetailsRow2.companyRegistrationNumber,
+            taxID = organizationDetailsRow2.taxID,
           )
           .zioValue
 
@@ -281,6 +287,8 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             city = organizationDetailsRow.city,
             postalCode = organizationDetailsRow.postalCode,
             country = organizationDetailsRow.country,
+            companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber,
+            taxID = organizationDetailsRow.taxID,
           )
           .zioError
 
@@ -308,19 +316,21 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           .executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
           .zioValue
 
-        val nameOptUpdate                    = arbitrarySample[Option[OrganizationName]]
-        val slugOptUpdate                    = arbitrarySample[Option[OrganizationSlug]]
-        val emailOptUpdate                   = arbitrarySample[Option[OrganizationEmail]]
-        val phoneNumberOptUpdate             = arbitrarySample[Option[OrganizationPhoneNumber]]
-        val organizationStageOptUpdate       = arbitrarySample[Option[OrganizationStage]]
-        val addressLine1OptUpdate            = arbitrarySample[Option[OrganizationAddressLine1]]
-        val addressLine2OptUpdate            = arbitrarySample[Option[OrganizationAddressLine2]]
-        val cityOptUpdate                    = arbitrarySample[Option[OrganizationCity]]
-        val postalCodeOptUpdate              = arbitrarySample[Option[OrganizationPostalCode]]
-        val countryOptUpdate                 = arbitrarySample[Option[OrganizationCountry]]
-        val logoOriginalBucketKeyOptUpdate   = arbitrarySample[Option[OrganizationLogoOriginalBucketKey]]
-        val logoNormalizedBucketKeyOptUpdate = arbitrarySample[Option[OrganizationLogoNormalizedBucketKey]]
-        val logoOriginalFileNameOptUpdate    = arbitrarySample[Option[OrganizationLogoOriginalFileName]]
+        val nameOptUpdate                      = arbitrarySample[Option[OrganizationName]]
+        val slugOptUpdate                      = arbitrarySample[Option[OrganizationSlug]]
+        val emailOptUpdate                     = arbitrarySample[Option[OrganizationEmail]]
+        val phoneNumberOptUpdate               = arbitrarySample[Option[OrganizationPhoneNumber]]
+        val organizationStageOptUpdate         = arbitrarySample[Option[OrganizationStage]]
+        val addressLine1OptUpdate              = arbitrarySample[Option[OrganizationAddressLine1]]
+        val addressLine2OptUpdate              = arbitrarySample[Option[OrganizationAddressLine2]]
+        val cityOptUpdate                      = arbitrarySample[Option[OrganizationCity]]
+        val postalCodeOptUpdate                = arbitrarySample[Option[OrganizationPostalCode]]
+        val countryOptUpdate                   = arbitrarySample[Option[OrganizationCountry]]
+        val companyRegistrationNumberOptUpdate = arbitrarySample[Option[OrganizationCompanyRegistrationNumber]]
+        val taxIDOptUpdate                     = arbitrarySample[Option[OrganizationTaxID]]
+        val logoOriginalBucketKeyOptUpdate     = arbitrarySample[Option[OrganizationLogoOriginalBucketKey]]
+        val logoNormalizedBucketKeyOptUpdate   = arbitrarySample[Option[OrganizationLogoNormalizedBucketKey]]
+        val logoOriginalFileNameOptUpdate      = arbitrarySample[Option[OrganizationLogoOriginalFileName]]
 
         inSequence(
           (() => timeProviderMock.instantNow)
@@ -342,6 +352,8 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             cityOptUpdate = cityOptUpdate,
             postalCodeOptUpdate = postalCodeOptUpdate,
             countryOptUpdate = countryOptUpdate,
+            companyRegistrationNumberOptUpdate = companyRegistrationNumberOptUpdate,
+            taxIDOptUpdate = taxIDOptUpdate,
             logoOriginalBucketKeyOptUpdate = logoOriginalBucketKeyOptUpdate,
             logoNormalizedBucketKeyOptUpdate = logoNormalizedBucketKeyOptUpdate,
             logoOriginalFileNameOptUpdate = logoOriginalFileNameOptUpdate,
@@ -359,6 +371,9 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           city = cityOptUpdate.getOrElse(organizationDetailsRow.city),
           postalCode = postalCodeOptUpdate.getOrElse(organizationDetailsRow.postalCode),
           country = countryOptUpdate.getOrElse(organizationDetailsRow.country),
+          companyRegistrationNumber =
+            companyRegistrationNumberOptUpdate.orElse(organizationDetailsRow.companyRegistrationNumber),
+          taxID = taxIDOptUpdate.orElse(organizationDetailsRow.taxID),
           logoOriginalBucketKey = logoOriginalBucketKeyOptUpdate.orElse(organizationDetailsRow.logoOriginalBucketKey),
           logoNormalizedBucketKey =
             logoNormalizedBucketKeyOptUpdate.orElse(organizationDetailsRow.logoNormalizedBucketKey),

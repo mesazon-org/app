@@ -116,3 +116,9 @@ type OrganizationPostalCode = OrganizationPostalCode.T
 
 object OrganizationCountry extends RefinedType[String, NonEmptyTrimmed]
 type OrganizationCountry = OrganizationCountry.T
+
+object OrganizationCompanyRegistrationNumber extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationCompanyRegistrationNumber = OrganizationCompanyRegistrationNumber.T
+
+object OrganizationTaxID extends RefinedType[String, NonEmptyTrimmed]
+type OrganizationTaxID = OrganizationTaxID.T

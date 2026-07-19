@@ -22,6 +22,8 @@ structure CreateOrganizationPostRequest {
     postalCode: String
     @required
     country: String
+    companyRegistrationNumber: String
+    taxID: String
 }
 
 structure CreateOrganizationPostResponse {

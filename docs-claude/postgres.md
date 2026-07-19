@@ -161,3 +161,14 @@ So adding a table touches, at minimum: the migration, `RepositoryConfig`, both `
 5. `repository/queries/<Entity>Queries.scala` — fields fragment + methods + `live`.
 6. `repository/<Feature>Repository.scala` — trait/impl + error mapping + `live`; wire the `live` layers into the app's layer graph.
 7. Any new DB role/grant → `local/postgres/init.sql` (+ deployed-env provisioning).
+
+## Adding a column to an existing table — checklist
+
+Same layering as adding a table, but the trap is different: **optional parameters with `= None` defaults make missed call sites compile silently**, so nothing forces you through the layers — walk them deliberately.
+
+1. Migration: add the column (append to `init` only pre-release; dated `V...__*.sql` once shipped).
+2. `<Entity>Row.scala`: add the field **at the column's position** (row field order = column order in the fields fragment).
+3. `<Entity>Queries.scala`: add the column to the fields fragment **and**, if the table has an `update`, a `<field>OptUpdate` parameter + `SET` fragment.
+4. Repository trait/impl: thread the field through `create...` and `update...` signatures.
+5. Service / validator / smithy / domain model, if the column is client-facing.
+6. **Tests — don't rely on defaults compiling.** Update the repository integration spec's *update* test to pass an `arbitrarySample[Option[...]]` for the new `<field>OptUpdate` and assert it (`.orElse` for nullable columns, `.getOrElse` for non-null). If you skip this, the new `SET` fragment is dead code as far as the suite is concerned — this was missed for `company_registration_number`/`tax_id` and only caught in review. Mock-based `expects(...)` call sites (scalamock) *will* fail to compile — fix those by adding the new argument, not by widening matchers.

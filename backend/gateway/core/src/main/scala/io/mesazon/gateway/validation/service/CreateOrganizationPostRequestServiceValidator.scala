@@ -41,6 +41,12 @@ final class CreateOrganizationPostRequestServiceValidator(
           validateRequiredField("city", createOrganizationPostRequest.city, OrganizationCity.either),
           validateRequiredField("postalCode", createOrganizationPostRequest.postalCode, OrganizationPostalCode.either),
           validateRequiredField("country", createOrganizationPostRequest.country, OrganizationCountry.either),
+          validateOptionalField(
+            "companyRegistrationNumber",
+            createOrganizationPostRequest.companyRegistrationNumber,
+            OrganizationCompanyRegistrationNumber.either,
+          ),
+          validateOptionalField("taxID", createOrganizationPostRequest.taxID, OrganizationTaxID.either),
         ).mapN(CreateOrganization.apply)
       )
   }
