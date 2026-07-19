@@ -1,7 +1,7 @@
 addSbtPlugin("org.scalameta"                % "sbt-scalafmt"         % "2.6.2")
 addSbtPlugin("ch.epfl.scala"                % "sbt-scalafix"         % "0.14.7")
 addSbtPlugin("org.typelevel"                % "sbt-tpolecat"         % "0.5.7")
-addSbtPlugin("com.disneystreaming.smithy4s" % "smithy4s-sbt-codegen" % "0.19.10")
+addSbtPlugin("com.disneystreaming.smithy4s" % "smithy4s-sbt-codegen" % "0.19.11")
 addSbtPlugin("com.github.sbt"               % "sbt-native-packager"  % "1.11.7")
 // 2.1.0-M9 is the first sbt-twirl line published for sbt 2.x (_sbt2_3)
 addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "2.1.0-M9")
