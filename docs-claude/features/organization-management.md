@@ -25,7 +25,7 @@ Any org-scoped endpoint added here follows the project-wide [standard role polic
 ## Flow
 
 ### POST /create/organization (`OrganizationManagementService.createOrganizationPost`)
-1. Read `AuthedUser` from `AuthState`; validate the request (`CreateOrganizationPostRequestServiceValidator` — name, slug, email, phone number, address fields, plus optional `companyRegistrationNumber` and `taxID` (VAT); each is an iron-refined domain type like `OrganizationSlug`).
+1. Read `AuthedUser` from `AuthState`; validate the request (`CreateOrganizationPostRequestServiceValidator` — name, slug, email, phone number, address fields, plus optional `companyRegistrationNumber` and `taxID` (VAT); each is an iron-refined domain type like `OrganizationSlug`, which uses `SlugPredicate` — a URL-friendly slug of lowercase letters, digits and single hyphens (`^[a-z0-9]+(?:-[a-z0-9]+)*$`, trimmed, non-empty, max 63), intended to key a future per-organization store website. The 63-char cap and the character set are the safe intersection of a valid URL path segment and a DNS label, so the slug can serve as either a path or a subdomain).
 2. `OrganizationManagementRepository.createOrganization` inserts **in one transaction**:
    - `OrganizationDetailsRow` (generated `OrganizationID`, stage `DetailsProvided`, logo fields `None`), and
    - `OrganizationUserRow` linking the creator with `OrganizationUserRole.Owner`.

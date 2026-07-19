@@ -93,7 +93,7 @@ type OrganizationLogoNormalizedBucketKey = OrganizationLogoNormalizedBucketKey.T
 object OrganizationName extends RefinedType[String, NonEmptyTrimmed]
 type OrganizationName = OrganizationName.T
 
-object OrganizationSlug extends RefinedType[String, NonEmptyTrimmedLowerCase]
+object OrganizationSlug extends RefinedType[String, SlugPredicate]
 type OrganizationSlug = OrganizationSlug.T
 
 object OrganizationEmail extends RefinedType[String, EmailPredicate]
