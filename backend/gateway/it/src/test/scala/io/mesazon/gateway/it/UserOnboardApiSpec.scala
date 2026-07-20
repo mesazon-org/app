@@ -10,7 +10,7 @@ import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.service.JwtService
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.MailHogClient.MailHogClientConfig
-import io.mesazon.gateway.utils.{MailHogClient, RepositoryArbitraries, SmithyArbitraries}
+import io.mesazon.gateway.utils.{MailHogClient, RepositoryArbitraries, SmithyArbitraries, UserOnboardSmithyArbitraries}
 import io.mesazon.generator.IDGenerator
 import io.mesazon.test.postgresql.PostgreSQLTestClient
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
@@ -26,6 +26,7 @@ class UserOnboardApiSpec
     extends ZWordSpecBase,
       DockerComposeBase,
       SmithyArbitraries,
+      UserOnboardSmithyArbitraries,
       RepositoryArbitraries,
       IronRefinedTypeTransformer {
 

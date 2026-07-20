@@ -46,25 +46,6 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
     } yield request
   }
 
-  given Arbitrary[smithy.OnboardPasswordPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[OnboardPassword].map(_.transformInto[smithy.OnboardPasswordPostRequest])
-  )
-
-  given Arbitrary[smithy.OnboardDetailsPostRequest] = Arbitrary(
-    Arbitrary
-      .arbitrary[OnboardDetails]
-      .map(
-        _.into[smithy.OnboardDetailsPostRequest]
-          .withFieldComputed(_.phoneNumber.phoneCountryCode, _.phoneNumber.phoneCountryCode.value)
-          .withFieldComputed(_.phoneNumber.phoneNationalNumber, _.phoneNumber.phoneNationalNumber.value)
-          .transform
-      )
-  )
-
-  given Arbitrary[smithy.OnboardVerifyPhoneNumberPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[OnboardVerifyPhoneNumber].map(_.transformInto[smithy.OnboardVerifyPhoneNumberPostRequest])
-  )
-
   given Arbitrary[smithy.ForgotPasswordResetPostRequest] = Arbitrary(
     Arbitrary.arbitrary[ForgotPasswordReset].map(_.transformInto[smithy.ForgotPasswordResetPostRequest])
   )

@@ -135,6 +135,14 @@
 - ✅ `getAllTesting`, `deleteTesting`, `insertTesting`, `updateTesting`, `getByUserIDTesting`
 - ❌ `getAllUserOtpsTesting`, `insertUserActionAttemptTesting`, `getAllUserOtps`
 
+##### 9. Values holding repository return values
+
+- A repository returns `Row` models, so a val bound to a repository result is named after the row it holds — the entity name suffixed with `Row` (or `Rows` for a list). This holds in both service code and tests.
+- When a result is `Option[…Row]` keep it optional-named with `RowOpt`; a value unwrapped from the option (e.g. via `.someOrFail`) is a plain `…Row`.
+- When the same row appears twice in one scope (e.g. the fetched row and the updated row), qualify the second (`userDetailsRowUpdated`), never drop the `Row`.
+- ✅ `userDetailsRow <- userDetailsRepository.getUserDetails(userID).someOrFail(...)`, `userOtpRowOpt <- userOtpRepository.getUserOtpByUserID(...)`, `userDetailsRowUpdated <- userDetailsRepository.updateUserDetails(...)`
+- ❌ `userDetails <- userDetailsRepository.getUserDetails(...)`, `userOtp <- ...`
+
 
 ### Testing
 

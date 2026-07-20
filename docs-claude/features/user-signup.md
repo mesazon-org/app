@@ -37,7 +37,7 @@ Email sends are retried with `Schedule.recurs(maxRetries) && Schedule.exponentia
 - Service: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/UserSignUpService.scala`
 - Validators: `validation/service/SignUpEmailPostRequestServiceValidator.scala`, `SignUpVerifyEmailPostRequestServiceValidator.scala`
 - Repositories: `UserDetailsRepository`, `UserOtpRepository`, `UserTokenRepository`
-- Stage lists: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OnboardStage.scala`
+- Stage lists: `backend/domain/src/main/scala/io/mesazon/domain/gateway/UserOnboard.scala`
 - Config: `UserSignUpConfig` (`otpEmailVerificationExpiresAtOffset`, `otpEmailVerificationResendCooldown`, `sendEmailVerificationEmailMaxRetries`, `sendEmailVerificationEmailRetryDelay`)
 
 ## Tests
