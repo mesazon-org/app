@@ -138,7 +138,7 @@ sequenceDiagram
     participant DB as Postgres
 
     Client->>SVC: POST /insert/customer-individual|business {details, emails[], phoneNumbers[]}
-    SVC->>V: validate (each entry valid, exactly one default; errors tagged by index)
+    SVC->>V: validate — each entry valid, exactly one default, errors tagged by index
     V-->>SVC: domain request (or 400 ValidationError)
     SVC->>Repo: insertCustomer
     rect rgb(238,238,238)

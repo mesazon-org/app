@@ -68,7 +68,7 @@ sequenceDiagram
 
 The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
 
-- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OrganizationManagement.scala` (all `Organization*` newtypes, `OrganizationStage`/`OrganizationUserRole` enums, contact-point entries, `CreateOrganizationPostRequest`)
+- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OrganizationManagement.scala` (contact-point entries, `CreateOrganizationPostRequest`); `Organization*` newtypes live in the shared `Newtypes.scala`, and the `OrganizationStage`/`OrganizationUserRole` enums each have their own file (`OrganizationStage.scala`, `OrganizationUserRole.scala`) — see [adding-a-feature.md § Where newtypes and enums live](../adding-a-feature.md#where-newtypes-and-enums-live)
 - Validator: `validation/service/OrganizationManagementRequestValidator.scala`
 - Arbitraries: `testkit/base/OrganizationManagementDomainArbitraries.scala`, `gateway/utils/OrganizationManagementSmithyArbitraries.scala`
 - Service: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/OrganizationManagementService.scala`
