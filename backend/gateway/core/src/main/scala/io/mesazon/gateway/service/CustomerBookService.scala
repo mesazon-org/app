@@ -13,56 +13,56 @@ object CustomerBookService {
     /** HTTP POST /insert/customer-individual */
     override def insertCustomerIndividualPost(
         organizationID: UUID,
-        request: smithy.InsertCustomerIndividualPostRequest,
+        insertCustomerIndividualPostRequestSmithy: smithy.InsertCustomerIndividualPostRequest,
     ): ServiceTask[Unit] =
       ZIO.fail(ServiceError.InternalServerError.UnexpectedError("insertCustomerIndividualPost is not implemented yet"))
 
     /** HTTP POST /insert/customer-individuals */
     override def insertCustomerIndividualsPost(
         organizationID: UUID,
-        request: smithy.InsertCustomerIndividualsPostRequest,
+        insertCustomerIndividualsPostRequestSmithy: smithy.InsertCustomerIndividualsPostRequest,
     ): ServiceTask[Unit] =
       ZIO.fail(ServiceError.InternalServerError.UnexpectedError("insertCustomerIndividualsPost is not implemented yet"))
 
     /** HTTP POST /insert/customer-business */
     override def insertCustomerBusinessPost(
         organizationID: UUID,
-        request: smithy.InsertCustomerBusinessPostRequest,
+        insertCustomerBusinessPostRequestSmithy: smithy.InsertCustomerBusinessPostRequest,
     ): ServiceTask[Unit] =
       ZIO.fail(ServiceError.InternalServerError.UnexpectedError("insertCustomerBusinessPost is not implemented yet"))
 
     /** HTTP POST /insert/customer-businesses */
     override def insertCustomerBusinessesPost(
         organizationID: UUID,
-        request: smithy.InsertCustomerBusinessesPostRequest,
+        insertCustomerBusinessesPostRequestSmithy: smithy.InsertCustomerBusinessesPostRequest,
     ): ServiceTask[Unit] =
       ZIO.fail(ServiceError.InternalServerError.UnexpectedError("insertCustomerBusinessesPost is not implemented yet"))
 
     /** HTTP POST /insert/customers */
     override def insertCustomersPost(
         organizationID: UUID,
-        request: smithy.InsertCustomersPostRequest,
+        insertCustomersPostRequestSmithy: smithy.InsertCustomersPostRequest,
     ): ServiceTask[Unit] =
       ZIO.fail(ServiceError.InternalServerError.UnexpectedError("insertCustomersPost is not implemented yet"))
 
     /** HTTP PUT /update/customer-individual */
     override def updateCustomerIndividualPut(
         organizationID: UUID,
-        request: smithy.UpdateCustomerIndividualPutRequest,
+        updateCustomerIndividualPutRequestSmithy: smithy.UpdateCustomerIndividualPutRequest,
     ): ServiceTask[Unit] =
       ZIO.fail(ServiceError.InternalServerError.UnexpectedError("updateCustomerIndividualPut is not implemented yet"))
 
     /** HTTP PUT /update/customer-business */
     override def updateCustomerBusinessPut(
         organizationID: UUID,
-        request: smithy.UpdateCustomerBusinessPutRequest,
+        updateCustomerBusinessPutRequestSmithy: smithy.UpdateCustomerBusinessPutRequest,
     ): ServiceTask[Unit] =
       ZIO.fail(ServiceError.InternalServerError.UnexpectedError("updateCustomerBusinessPut is not implemented yet"))
 
     /** HTTP PUT /add/customer-business-contacts */
     override def addCustomerBusinessContactsPut(
         organizationID: UUID,
-        request: smithy.AddCustomerBusinessContactsPutRequest,
+        addCustomerBusinessContactsPutRequestSmithy: smithy.AddCustomerBusinessContactsPutRequest,
     ): ServiceTask[Unit] =
       ZIO.fail(
         ServiceError.InternalServerError.UnexpectedError("addCustomerBusinessContactsPut is not implemented yet")
@@ -71,7 +71,7 @@ object CustomerBookService {
     /** HTTP PUT /remove/customer-business-contacts */
     override def removeCustomerBusinessContactsPut(
         organizationID: UUID,
-        request: smithy.RemoveCustomerBusinessContactsPutRequest,
+        removeCustomerBusinessContactsPutRequestSmithy: smithy.RemoveCustomerBusinessContactsPutRequest,
     ): ServiceTask[Unit] =
       ZIO.fail(
         ServiceError.InternalServerError.UnexpectedError("removeCustomerBusinessContactsPut is not implemented yet")
@@ -106,65 +106,83 @@ object CustomerBookService {
       /** HTTP POST /insert/customer-individual */
       override def insertCustomerIndividualPost(
           organizationID: UUID,
-          request: smithy.InsertCustomerIndividualPostRequest,
+          insertCustomerIndividualPostRequestSmithy: smithy.InsertCustomerIndividualPostRequest,
       ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(service.insertCustomerIndividualPost(organizationID, request))
+        HttpErrorHandler.errorResponseHandler(
+          service.insertCustomerIndividualPost(organizationID, insertCustomerIndividualPostRequestSmithy)
+        )
 
       /** HTTP POST /insert/customer-individuals */
       override def insertCustomerIndividualsPost(
           organizationID: UUID,
-          request: smithy.InsertCustomerIndividualsPostRequest,
+          insertCustomerIndividualsPostRequestSmithy: smithy.InsertCustomerIndividualsPostRequest,
       ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(service.insertCustomerIndividualsPost(organizationID, request))
+        HttpErrorHandler.errorResponseHandler(
+          service.insertCustomerIndividualsPost(organizationID, insertCustomerIndividualsPostRequestSmithy)
+        )
 
       /** HTTP POST /insert/customer-business */
       override def insertCustomerBusinessPost(
           organizationID: UUID,
-          request: smithy.InsertCustomerBusinessPostRequest,
+          insertCustomerBusinessPostRequestSmithy: smithy.InsertCustomerBusinessPostRequest,
       ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(service.insertCustomerBusinessPost(organizationID, request))
+        HttpErrorHandler.errorResponseHandler(
+          service.insertCustomerBusinessPost(organizationID, insertCustomerBusinessPostRequestSmithy)
+        )
 
       /** HTTP POST /insert/customer-businesses */
       override def insertCustomerBusinessesPost(
           organizationID: UUID,
-          request: smithy.InsertCustomerBusinessesPostRequest,
+          insertCustomerBusinessesPostRequestSmithy: smithy.InsertCustomerBusinessesPostRequest,
       ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(service.insertCustomerBusinessesPost(organizationID, request))
+        HttpErrorHandler.errorResponseHandler(
+          service.insertCustomerBusinessesPost(organizationID, insertCustomerBusinessesPostRequestSmithy)
+        )
 
       /** HTTP POST /insert/customers */
       override def insertCustomersPost(
           organizationID: UUID,
-          request: smithy.InsertCustomersPostRequest,
+          insertCustomersPostRequestSmithy: smithy.InsertCustomersPostRequest,
       ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(service.insertCustomersPost(organizationID, request))
+        HttpErrorHandler.errorResponseHandler(
+          service.insertCustomersPost(organizationID, insertCustomersPostRequestSmithy)
+        )
 
       /** HTTP PUT /update/customer-individual */
       override def updateCustomerIndividualPut(
           organizationID: UUID,
-          request: smithy.UpdateCustomerIndividualPutRequest,
+          updateCustomerIndividualPutRequestSmithy: smithy.UpdateCustomerIndividualPutRequest,
       ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(service.updateCustomerIndividualPut(organizationID, request))
+        HttpErrorHandler.errorResponseHandler(
+          service.updateCustomerIndividualPut(organizationID, updateCustomerIndividualPutRequestSmithy)
+        )
 
       /** HTTP PUT /update/customer-business */
       override def updateCustomerBusinessPut(
           organizationID: UUID,
-          request: smithy.UpdateCustomerBusinessPutRequest,
+          updateCustomerBusinessPutRequestSmithy: smithy.UpdateCustomerBusinessPutRequest,
       ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(service.updateCustomerBusinessPut(organizationID, request))
+        HttpErrorHandler.errorResponseHandler(
+          service.updateCustomerBusinessPut(organizationID, updateCustomerBusinessPutRequestSmithy)
+        )
 
       /** HTTP PUT /add/customer-business-contacts */
       override def addCustomerBusinessContactsPut(
           organizationID: UUID,
-          request: smithy.AddCustomerBusinessContactsPutRequest,
+          addCustomerBusinessContactsPutRequestSmithy: smithy.AddCustomerBusinessContactsPutRequest,
       ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(service.addCustomerBusinessContactsPut(organizationID, request))
+        HttpErrorHandler.errorResponseHandler(
+          service.addCustomerBusinessContactsPut(organizationID, addCustomerBusinessContactsPutRequestSmithy)
+        )
 
       /** HTTP PUT /remove/customer-business-contacts */
       override def removeCustomerBusinessContactsPut(
           organizationID: UUID,
-          request: smithy.RemoveCustomerBusinessContactsPutRequest,
+          removeCustomerBusinessContactsPutRequestSmithy: smithy.RemoveCustomerBusinessContactsPutRequest,
       ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(service.removeCustomerBusinessContactsPut(organizationID, request))
+        HttpErrorHandler.errorResponseHandler(
+          service.removeCustomerBusinessContactsPut(organizationID, removeCustomerBusinessContactsPutRequestSmithy)
+        )
 
       /** HTTP GET /get/customer-individual/{customerID} */
       override def getCustomerIndividualGet(

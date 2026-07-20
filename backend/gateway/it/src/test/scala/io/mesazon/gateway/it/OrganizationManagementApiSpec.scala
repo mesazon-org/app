@@ -22,9 +22,8 @@ import zio.*
 class OrganizationManagementApiSpec
     extends ZWordSpecBase,
       DockerComposeBase,
-      SmithyArbitraries,
-      RepositoryArbitraries,
-      IronRefinedTypeTransformer {
+      OrganizationManagementSmithyArbitraries,
+      RepositoryArbitraries {
 
   override def exposedServices =
     GatewayClient.ExposedServices ++ PostgreSQLTestClient.ExposedServices ++ MailHogClient.ExposedServices
@@ -122,24 +121,25 @@ class OrganizationManagementApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        val createOrganization = arbitrarySample[CreateOrganization]
+        val createOrganizationPostRequest = arbitrarySample[CreateOrganizationPostRequest]
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val createOrganizationPostResponse =
           gatewayClient
             .createOrganizationPost[smithy.InternalServerError](
-              createOrganization.name,
-              createOrganization.slug,
-              createOrganization.email,
-              createOrganization.phoneNumber,
-              createOrganization.addressLine1,
-              createOrganization.addressLine2,
-              createOrganization.city,
-              createOrganization.postalCode,
-              createOrganization.country,
-              createOrganization.companyRegistrationNumber,
-              createOrganization.taxID,
+              createOrganizationPostRequest.name,
+              createOrganizationPostRequest.slug,
+              createOrganizationPostRequest.tagline,
+              createOrganizationPostRequest.emails,
+              createOrganizationPostRequest.phoneNumbers,
+              createOrganizationPostRequest.addressLine1,
+              createOrganizationPostRequest.addressLine2,
+              createOrganizationPostRequest.city,
+              createOrganizationPostRequest.postalCode,
+              createOrganizationPostRequest.country,
+              createOrganizationPostRequest.companyRegistrationNumber,
+              createOrganizationPostRequest.taxID,
               Some(accessJwt.accessToken),
             )
             .zioValue
@@ -149,18 +149,19 @@ class OrganizationManagementApiSpec
         organizationDetailsRowsAll should have size 1
         organizationDetailsRowsAll.head shouldBe OrganizationDetailsRow(
           organizationID = organizationDetailsRowsAll.head.organizationID,
-          name = createOrganization.name,
-          slug = createOrganization.slug,
-          email = createOrganization.email,
-          phoneNumber = createOrganization.phoneNumber,
+          name = createOrganizationPostRequest.name,
+          slug = createOrganizationPostRequest.slug,
+          tagline = createOrganizationPostRequest.tagline,
+          emails = createOrganizationPostRequest.emails,
+          phoneNumbers = createOrganizationPostRequest.phoneNumbers,
           organizationStage = OrganizationStage.DetailsProvided,
-          addressLine1 = createOrganization.addressLine1,
-          addressLine2 = createOrganization.addressLine2,
-          city = createOrganization.city,
-          postalCode = createOrganization.postalCode,
-          country = createOrganization.country,
-          companyRegistrationNumber = createOrganization.companyRegistrationNumber,
-          taxID = createOrganization.taxID,
+          addressLine1 = createOrganizationPostRequest.addressLine1,
+          addressLine2 = createOrganizationPostRequest.addressLine2,
+          city = createOrganizationPostRequest.city,
+          postalCode = createOrganizationPostRequest.postalCode,
+          country = createOrganizationPostRequest.country,
+          companyRegistrationNumber = createOrganizationPostRequest.companyRegistrationNumber,
+          taxID = createOrganizationPostRequest.taxID,
           logoOriginalBucketKey = None,
           logoNormalizedBucketKey = None,
           logoOriginalFileName = None,
@@ -197,7 +198,7 @@ class OrganizationManagementApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        val createOrganization = arbitrarySample[CreateOrganization]
+        val createOrganizationPostRequest = arbitrarySample[CreateOrganizationPostRequest]
           .copy(name = OrganizationName.assume(""))
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
@@ -205,17 +206,18 @@ class OrganizationManagementApiSpec
         val createOrganizationPostResponse =
           gatewayClient
             .createOrganizationPost[smithy.ValidationError](
-              createOrganization.name,
-              createOrganization.slug,
-              createOrganization.email,
-              createOrganization.phoneNumber,
-              createOrganization.addressLine1,
-              createOrganization.addressLine2,
-              createOrganization.city,
-              createOrganization.postalCode,
-              createOrganization.country,
-              createOrganization.companyRegistrationNumber,
-              createOrganization.taxID,
+              createOrganizationPostRequest.name,
+              createOrganizationPostRequest.slug,
+              createOrganizationPostRequest.tagline,
+              createOrganizationPostRequest.emails,
+              createOrganizationPostRequest.phoneNumbers,
+              createOrganizationPostRequest.addressLine1,
+              createOrganizationPostRequest.addressLine2,
+              createOrganizationPostRequest.city,
+              createOrganizationPostRequest.postalCode,
+              createOrganizationPostRequest.country,
+              createOrganizationPostRequest.companyRegistrationNumber,
+              createOrganizationPostRequest.taxID,
               Some(accessJwt.accessToken),
             )
             .zioValue
@@ -233,22 +235,23 @@ class OrganizationManagementApiSpec
       "fail with Unauthorized when access token is missing" in withContext { context =>
         import context.*
 
-        val createOrganization = arbitrarySample[CreateOrganization]
+        val createOrganizationPostRequest = arbitrarySample[CreateOrganizationPostRequest]
 
         val createOrganizationPostResponse =
           gatewayClient
             .createOrganizationPost[smithy.Unauthorized](
-              createOrganization.name,
-              createOrganization.slug,
-              createOrganization.email,
-              createOrganization.phoneNumber,
-              createOrganization.addressLine1,
-              createOrganization.addressLine2,
-              createOrganization.city,
-              createOrganization.postalCode,
-              createOrganization.country,
-              createOrganization.companyRegistrationNumber,
-              createOrganization.taxID,
+              createOrganizationPostRequest.name,
+              createOrganizationPostRequest.slug,
+              createOrganizationPostRequest.tagline,
+              createOrganizationPostRequest.emails,
+              createOrganizationPostRequest.phoneNumbers,
+              createOrganizationPostRequest.addressLine1,
+              createOrganizationPostRequest.addressLine2,
+              createOrganizationPostRequest.city,
+              createOrganizationPostRequest.postalCode,
+              createOrganizationPostRequest.country,
+              createOrganizationPostRequest.companyRegistrationNumber,
+              createOrganizationPostRequest.taxID,
               None,
             )
             .zioValue
@@ -264,22 +267,23 @@ class OrganizationManagementApiSpec
       "fail with Unauthorized when access token is invalid" in withContext { context =>
         import context.*
 
-        val createOrganization = arbitrarySample[CreateOrganization]
+        val createOrganizationPostRequest = arbitrarySample[CreateOrganizationPostRequest]
 
         val createOrganizationPostResponse =
           gatewayClient
             .createOrganizationPost[smithy.Unauthorized](
-              createOrganization.name,
-              createOrganization.slug,
-              createOrganization.email,
-              createOrganization.phoneNumber,
-              createOrganization.addressLine1,
-              createOrganization.addressLine2,
-              createOrganization.city,
-              createOrganization.postalCode,
-              createOrganization.country,
-              createOrganization.companyRegistrationNumber,
-              createOrganization.taxID,
+              createOrganizationPostRequest.name,
+              createOrganizationPostRequest.slug,
+              createOrganizationPostRequest.tagline,
+              createOrganizationPostRequest.emails,
+              createOrganizationPostRequest.phoneNumbers,
+              createOrganizationPostRequest.addressLine1,
+              createOrganizationPostRequest.addressLine2,
+              createOrganizationPostRequest.city,
+              createOrganizationPostRequest.postalCode,
+              createOrganizationPostRequest.country,
+              createOrganizationPostRequest.companyRegistrationNumber,
+              createOrganizationPostRequest.taxID,
               Some(AccessToken("invalidtoken")),
             )
             .zioValue
@@ -302,24 +306,25 @@ class OrganizationManagementApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        val createOrganization = arbitrarySample[CreateOrganization]
+        val createOrganizationPostRequest = arbitrarySample[CreateOrganizationPostRequest]
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val createOrganizationPostResponse =
           gatewayClient
             .createOrganizationPost[smithy.Forbidden](
-              createOrganization.name,
-              createOrganization.slug,
-              createOrganization.email,
-              createOrganization.phoneNumber,
-              createOrganization.addressLine1,
-              createOrganization.addressLine2,
-              createOrganization.city,
-              createOrganization.postalCode,
-              createOrganization.country,
-              createOrganization.companyRegistrationNumber,
-              createOrganization.taxID,
+              createOrganizationPostRequest.name,
+              createOrganizationPostRequest.slug,
+              createOrganizationPostRequest.tagline,
+              createOrganizationPostRequest.emails,
+              createOrganizationPostRequest.phoneNumbers,
+              createOrganizationPostRequest.addressLine1,
+              createOrganizationPostRequest.addressLine2,
+              createOrganizationPostRequest.city,
+              createOrganizationPostRequest.postalCode,
+              createOrganizationPostRequest.country,
+              createOrganizationPostRequest.companyRegistrationNumber,
+              createOrganizationPostRequest.taxID,
               Some(accessJwt.accessToken),
             )
             .zioValue
@@ -341,10 +346,10 @@ class OrganizationManagementApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        val createOrganization = arbitrarySample[CreateOrganization]
+        val createOrganizationPostRequest = arbitrarySample[CreateOrganizationPostRequest]
 
         val existingOrganizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
-          .copy(slug = createOrganization.slug)
+          .copy(slug = createOrganizationPostRequest.slug)
 
         postgresClient.executeQuery(organizationDetailsQueries.insert(existingOrganizationDetailsRow)).zioValue
 
@@ -353,17 +358,18 @@ class OrganizationManagementApiSpec
         val createOrganizationPostResponse =
           gatewayClient
             .createOrganizationPost[smithy.InternalServerError](
-              createOrganization.name,
-              createOrganization.slug,
-              createOrganization.email,
-              createOrganization.phoneNumber,
-              createOrganization.addressLine1,
-              createOrganization.addressLine2,
-              createOrganization.city,
-              createOrganization.postalCode,
-              createOrganization.country,
-              createOrganization.companyRegistrationNumber,
-              createOrganization.taxID,
+              createOrganizationPostRequest.name,
+              createOrganizationPostRequest.slug,
+              createOrganizationPostRequest.tagline,
+              createOrganizationPostRequest.emails,
+              createOrganizationPostRequest.phoneNumbers,
+              createOrganizationPostRequest.addressLine1,
+              createOrganizationPostRequest.addressLine2,
+              createOrganizationPostRequest.city,
+              createOrganizationPostRequest.postalCode,
+              createOrganizationPostRequest.country,
+              createOrganizationPostRequest.companyRegistrationNumber,
+              createOrganizationPostRequest.taxID,
               Some(accessJwt.accessToken),
             )
             .zioValue

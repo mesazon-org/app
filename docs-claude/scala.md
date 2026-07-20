@@ -17,7 +17,12 @@
 - Owner examples: `User`, `Organization`, `Contact`, `Order`
 - Entity examples: `Details`, `Otp`, `Name`, `Email`
 - Optional examples: empty or `Opt`
-- Behavior examples: `Update`, `Expected`, `New`, `Deleted`, `Existing`, `Raw`
+- Behavior examples: `Update`, `Expected`, `New`, `Deleted`, `Existing`, `Raw`, `Validated`
+
+**Smithy-generated types** are always referenced qualified — `smithy.CreateOrganizationPostRequest`, never a direct member import — because domain request models share the exact smithy names. See [smithy.md § Request/response structures](smithy.md#3-requestresponse-structures) for the rule. When a scope holds values of both shapes, the val named after the type is the **domain** one and the smithy one takes a `Smithy` suffix (`createOrganizationPostRequest` vs `createOrganizationPostRequestSmithy`) — the same disambiguation the arbitraries use. This applies everywhere the two coexist:
+
+- **Service handler** (implementing the generated smithy trait): name the smithy request parameter after the full request type + `Smithy` (`createOrganizationPostRequestSmithy: smithy.CreateOrganizationPostRequest`), and the validator's output — the domain model — after the domain type (`createOrganizationPostRequest`). Do this for the whole feature's handlers, both the impl and the `observed` wrapper.
+- **Tests**: a val holding a domain sample is named after its type (`insertCustomerIndividualPostRequest`), a val holding a smithy sample takes the `Smithy` suffix (`insertCustomerIndividualPostRequestSmithy`).
 
 #### General Scala naming rules
 
@@ -136,5 +141,5 @@
 - **Keep every test isolated.** A test builds the data it needs and asserts against it — it does not depend on values, builders, or state shared with other tests. Prefer generating inputs per test with `arbitrarySample[X]` (feature arbitraries live in their own traits — see [adding-a-feature.md](adding-a-feature.md)) and `.copy(...)` only the fields the test is about.
 - **Share only when really needed.** Extracting a common value or helper is the exception, justified when the alternative is genuinely worse — e.g. constructing the system under test (a layer/service), or a long error-message literal repeated verbatim across many assertions. Default to inline; reach for a shared binding only when inlining hurts more than it helps.
 - **Don't share test *data* fixtures.** A pile of shared "valid X" / "expected Y" vals coupling many tests together is what this rule exists to prevent — each test samples its own.
-- ✅ `val individual = arbitrarySample[InsertCustomerIndividual]` in each test; `arbitrarySample[smithy.XRequest].copy(fullName = "")` for the one bad field
+- ✅ `val individual = arbitrarySample[InsertCustomerIndividualPostRequest]` in each test; `arbitrarySample[smithy.XRequest].copy(fullName = "")` for the one bad field
 - ❌ a class-level `validRequest` / `expectedResult` reused across tests; a helper that builds the "standard" entity for everyone

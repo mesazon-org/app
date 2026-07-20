@@ -111,6 +111,7 @@ object Main extends ZIOAppDefault {
 
       // Domain validators
       EmailDomainValidator.live,
+      EmailValidator.live,
       PhoneNumberDomainValidator.live,
       WahaPhoneNumberDomainValidator.live,
 
@@ -126,7 +127,7 @@ object Main extends ZIOAppDefault {
       ForgotPasswordVerifyOTPPostRequestServiceValidator.live,
       ForgotPasswordResetPostRequestServiceValidator.live,
       TokenRefreshPostRequestServiceValidator.live,
-      CreateOrganizationPostRequestServiceValidator.live,
+      OrganizationManagementRequestValidator.live,
 
       // Clients
       SttpBackend.live,

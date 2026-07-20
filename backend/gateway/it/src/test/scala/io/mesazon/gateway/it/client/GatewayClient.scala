@@ -7,7 +7,6 @@ import fs2.io.net.Network
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.smithy
-import io.mesazon.gateway.smithy.PhoneNumberRequest
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.client4.jsoniter.*
@@ -214,13 +213,14 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   def createOrganizationPost[E: JsonValueCodec](
       name: OrganizationName,
       slug: OrganizationSlug,
-      email: OrganizationEmail,
-      phoneNumber: OrganizationPhoneNumber,
-      addressLine1: OrganizationAddressLine1,
+      tagline: Option[OrganizationTagline],
+      emails: List[OrganizationEmailEntryRequest],
+      phoneNumbers: List[OrganizationPhoneNumberEntryRequest],
+      addressLine1: Option[OrganizationAddressLine1],
       addressLine2: Option[OrganizationAddressLine2],
-      city: OrganizationCity,
-      postalCode: OrganizationPostalCode,
-      country: OrganizationCountry,
+      city: Option[OrganizationCity],
+      postalCode: Option[OrganizationPostalCode],
+      country: Option[OrganizationCountry],
       companyRegistrationNumberOpt: Option[OrganizationCompanyRegistrationNumber],
       taxIDOpt: Option[OrganizationTaxID],
       accessTokenOpt: Option[AccessToken],
@@ -232,16 +232,22 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
           smithy.CreateOrganizationPostRequest(
             name = name.value,
             slug = slug.value,
-            email = email.value,
-            phoneNumber = smithy.PhoneNumberRequest(
-              phoneNumber.value.phoneNationalNumber.value,
-              phoneNumber.value.phoneCountryCode.value,
+            tagline = tagline.map(_.value),
+            emails = emails.map(entry => smithy.OrganizationEmailEntryRequest(entry.email.value, entry.isDefault)),
+            phoneNumbers = phoneNumbers.map(entry =>
+              smithy.OrganizationPhoneNumberEntryRequest(
+                smithy.PhoneNumberRequest(
+                  entry.phoneNumber.value.phoneNationalNumber.value,
+                  entry.phoneNumber.value.phoneCountryCode.value,
+                ),
+                entry.isDefault,
+              )
             ),
-            addressLine1 = addressLine1.value,
+            addressLine1 = addressLine1.map(_.value),
             addressLine2 = addressLine2.map(_.value),
-            city = city.value,
-            postalCode = postalCode.value,
-            country = country.value,
+            city = city.map(_.value),
+            postalCode = postalCode.map(_.value),
+            country = country.map(_.value),
             companyRegistrationNumber = companyRegistrationNumberOpt.map(_.value),
             taxID = taxIDOpt.map(_.value),
           )

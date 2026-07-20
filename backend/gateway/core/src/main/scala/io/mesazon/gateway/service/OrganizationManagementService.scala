@@ -5,7 +5,7 @@ import io.mesazon.gateway.clients.EmailClient
 import io.mesazon.gateway.config.OrganizationManagementConfig
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.state.AuthState
-import io.mesazon.gateway.validation.service.CreateOrganizationPostRequestServiceValidator
+import io.mesazon.gateway.validation.service.OrganizationManagementRequestValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import zio.*
 
@@ -17,7 +17,7 @@ object OrganizationManagementService {
       organizationManagementRepository: OrganizationManagementRepository,
       userDetailsRepository: UserDetailsRepository,
       emailClient: EmailClient,
-      createOrganizationPostRequestServiceValidator: CreateOrganizationPostRequestServiceValidator,
+      organizationManagementRequestValidator: OrganizationManagementRequestValidator,
   ) extends smithy.OrganizationManagementService[ServiceTask] {
 
     /** **Required Onboard Stage:** **COMPLETED**
@@ -25,11 +25,13 @@ object OrganizationManagementService {
       * HTTP POST /create/organization
       */
     override def createOrganizationPost(
-        request: smithy.CreateOrganizationPostRequest
+        createOrganizationPostRequestSmithy: smithy.CreateOrganizationPostRequest
     ): ServiceTask[smithy.CreateOrganizationPostResponse] = for {
-      authedUser         <- authState.get
-      createOrganization <- createOrganizationPostRequestServiceValidator.validate(request)
-      userDetailsRow     <- userDetailsRepository
+      authedUser                    <- authState.get
+      createOrganizationPostRequest <- organizationManagementRequestValidator.validatedCreateOrganizationPostRequest(
+        createOrganizationPostRequestSmithy
+      )
+      userDetailsRow <- userDetailsRepository
         .getUserDetails(authedUser.userID)
         .someOrFail(
           ServiceError.InternalServerError.UnexpectedError(s"User details not found for userID: [${authedUser.userID}]")
@@ -37,18 +39,19 @@ object OrganizationManagementService {
       organizationDetailsRow <- organizationManagementRepository
         .createOrganization(
           authedUser.userID,
-          createOrganization.name,
-          createOrganization.slug,
-          createOrganization.email,
-          createOrganization.phoneNumber,
+          createOrganizationPostRequest.name,
+          createOrganizationPostRequest.slug,
+          createOrganizationPostRequest.tagline,
+          createOrganizationPostRequest.emails,
+          createOrganizationPostRequest.phoneNumbers,
           OrganizationStage.DetailsProvided,
-          createOrganization.addressLine1,
-          createOrganization.addressLine2,
-          createOrganization.city,
-          createOrganization.postalCode,
-          createOrganization.country,
-          createOrganization.companyRegistrationNumber,
-          createOrganization.taxID,
+          createOrganizationPostRequest.addressLine1,
+          createOrganizationPostRequest.addressLine2,
+          createOrganizationPostRequest.city,
+          createOrganizationPostRequest.postalCode,
+          createOrganizationPostRequest.country,
+          createOrganizationPostRequest.companyRegistrationNumber,
+          createOrganizationPostRequest.taxID,
         )
       _ <- emailClient
         .sendOrganizationCreatedEmail(
@@ -78,10 +81,10 @@ object OrganizationManagementService {
         * HTTP POST /create/organization
         */
       override def createOrganizationPost(
-          request: smithy.CreateOrganizationPostRequest
+          createOrganizationPostRequestSmithy: smithy.CreateOrganizationPostRequest
       ): Task[smithy.CreateOrganizationPostResponse] =
         HttpErrorHandler
-          .errorResponseHandler(service.createOrganizationPost(request))
+          .errorResponseHandler(service.createOrganizationPost(createOrganizationPostRequestSmithy))
     }
 
   val local = ZLayer
