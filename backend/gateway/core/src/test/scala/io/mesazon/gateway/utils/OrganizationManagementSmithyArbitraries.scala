@@ -7,7 +7,9 @@ import io.scalaland.chimney.Transformer
 import io.scalaland.chimney.dsl.*
 import org.scalacheck.*
 
-trait OrganizationManagementSmithyArbitraries extends OrganizationManagementDomainArbitraries, IronRefinedTypeTransformer {
+trait OrganizationManagementSmithyArbitraries
+    extends OrganizationManagementDomainArbitraries,
+      IronRefinedTypeTransformer {
 
   given Transformer[OrganizationPhoneNumber, smithy.PhoneNumberRequest] = organizationPhoneNumber =>
     smithy.PhoneNumberRequest(
