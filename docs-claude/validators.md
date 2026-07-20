@@ -2,7 +2,7 @@
 
 Every write endpoint validates its raw smithy request into a **refined domain model** — a case class whose fields are newtypes with iron refined types (see [scala.md § Iron new types](scala.md#iron-new-types)). Validation is the single boundary where untrusted `String`/`UUID`/`Option` input from the wire becomes a value the service layer can trust; past that boundary the types make illegal states unrepresentable.
 
-The service handler receives the generated `smithy.<Operation>Request` (parameter `request`), calls the feature's validator and binds the domain model as **`requestValidated`** (`requestValidated <- validator.validated<Request>(request)`), and only then does its work. A validation failure is a `400` `ValidationError` that lists **every** invalid field at once (errors accumulate, never fail-fast).
+The service handler receives the generated `smithy.<Operation>Request` — named after the full request type + `Smithy` (`createOrganizationPostRequestSmithy`) — calls the feature's validator, and binds the domain model under the plain domain-type name (`createOrganizationPostRequest <- validator.validatedCreateOrganizationPostRequest(createOrganizationPostRequestSmithy)`), then does its work. See [scala.md § Naming rules](scala.md#naming-rules) for the `Smithy`-suffix disambiguation. A validation failure is a `400` `ValidationError` that lists **every** invalid field at once (errors accumulate, never fail-fast).
 
 ## The two layers
 

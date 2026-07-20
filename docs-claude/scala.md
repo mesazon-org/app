@@ -19,7 +19,10 @@
 - Optional examples: empty or `Opt`
 - Behavior examples: `Update`, `Expected`, `New`, `Deleted`, `Existing`, `Raw`, `Validated`
 
-**Smithy-generated types** are always referenced qualified — `smithy.CreateOrganizationPostRequest`, never a direct member import — because domain request models share the exact smithy names. See [smithy.md § Request/response structures](smithy.md#3-requestresponse-structures) for the rule. When a scope holds values of both shapes, the val named after the type is the **domain** one and the smithy one takes a `Smithy` suffix (`createOrganizationPostRequest` vs `createOrganizationPostRequestSmithy`) — the same disambiguation the arbitraries use. In a service handler the pair is `request` (smithy parameter) and `requestValidated` (validator output, see [validators.md](validators.md)).
+**Smithy-generated types** are always referenced qualified — `smithy.CreateOrganizationPostRequest`, never a direct member import — because domain request models share the exact smithy names. See [smithy.md § Request/response structures](smithy.md#3-requestresponse-structures) for the rule. When a scope holds values of both shapes, the val named after the type is the **domain** one and the smithy one takes a `Smithy` suffix (`createOrganizationPostRequest` vs `createOrganizationPostRequestSmithy`) — the same disambiguation the arbitraries use. This applies everywhere the two coexist:
+
+- **Service handler** (implementing the generated smithy trait): name the smithy request parameter after the full request type + `Smithy` (`createOrganizationPostRequestSmithy: smithy.CreateOrganizationPostRequest`), and the validator's output — the domain model — after the domain type (`createOrganizationPostRequest`). Do this for the whole feature's handlers, both the impl and the `observed` wrapper.
+- **Tests**: a val holding a domain sample is named after its type (`insertCustomerIndividualPostRequest`), a val holding a smithy sample takes the `Smithy` suffix (`insertCustomerIndividualPostRequestSmithy`).
 
 #### General Scala naming rules
 

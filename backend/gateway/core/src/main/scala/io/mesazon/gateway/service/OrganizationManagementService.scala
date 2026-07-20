@@ -25,11 +25,13 @@ object OrganizationManagementService {
       * HTTP POST /create/organization
       */
     override def createOrganizationPost(
-        request: smithy.CreateOrganizationPostRequest
+        createOrganizationPostRequestSmithy: smithy.CreateOrganizationPostRequest
     ): ServiceTask[smithy.CreateOrganizationPostResponse] = for {
-      authedUser       <- authState.get
-      requestValidated <- organizationManagementRequestValidator.validatedCreateOrganizationPostRequest(request)
-      userDetailsRow   <- userDetailsRepository
+      authedUser                    <- authState.get
+      createOrganizationPostRequest <- organizationManagementRequestValidator.validatedCreateOrganizationPostRequest(
+        createOrganizationPostRequestSmithy
+      )
+      userDetailsRow <- userDetailsRepository
         .getUserDetails(authedUser.userID)
         .someOrFail(
           ServiceError.InternalServerError.UnexpectedError(s"User details not found for userID: [${authedUser.userID}]")
@@ -37,19 +39,19 @@ object OrganizationManagementService {
       organizationDetailsRow <- organizationManagementRepository
         .createOrganization(
           authedUser.userID,
-          requestValidated.name,
-          requestValidated.slug,
-          requestValidated.tagline,
-          requestValidated.emails,
-          requestValidated.phoneNumbers,
+          createOrganizationPostRequest.name,
+          createOrganizationPostRequest.slug,
+          createOrganizationPostRequest.tagline,
+          createOrganizationPostRequest.emails,
+          createOrganizationPostRequest.phoneNumbers,
           OrganizationStage.DetailsProvided,
-          requestValidated.addressLine1,
-          requestValidated.addressLine2,
-          requestValidated.city,
-          requestValidated.postalCode,
-          requestValidated.country,
-          requestValidated.companyRegistrationNumber,
-          requestValidated.taxID,
+          createOrganizationPostRequest.addressLine1,
+          createOrganizationPostRequest.addressLine2,
+          createOrganizationPostRequest.city,
+          createOrganizationPostRequest.postalCode,
+          createOrganizationPostRequest.country,
+          createOrganizationPostRequest.companyRegistrationNumber,
+          createOrganizationPostRequest.taxID,
         )
       _ <- emailClient
         .sendOrganizationCreatedEmail(
@@ -79,10 +81,10 @@ object OrganizationManagementService {
         * HTTP POST /create/organization
         */
       override def createOrganizationPost(
-          request: smithy.CreateOrganizationPostRequest
+          createOrganizationPostRequestSmithy: smithy.CreateOrganizationPostRequest
       ): Task[smithy.CreateOrganizationPostResponse] =
         HttpErrorHandler
-          .errorResponseHandler(service.createOrganizationPost(request))
+          .errorResponseHandler(service.createOrganizationPost(createOrganizationPostRequestSmithy))
     }
 
   val local = ZLayer

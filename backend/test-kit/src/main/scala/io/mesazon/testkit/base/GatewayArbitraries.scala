@@ -63,6 +63,7 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
 
   given Arbitrary[OnboardDetails] = Arbitrary(Gen.resultOf(OnboardDetails.apply))
 
+  // A non-empty list must mark exactly one entry as default, so generate non-default entries and promote one at random.
   protected def genEntriesWithSingleDefault[A](genEntry: Gen[A])(setDefault: A => A): Gen[List[A]] =
     Gen.listOf(genEntry).flatMap {
       case Nil     => Gen.const(Nil)
