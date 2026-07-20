@@ -27,9 +27,9 @@ object OrganizationManagementService {
     override def createOrganizationPost(
         request: smithy.CreateOrganizationPostRequest
     ): ServiceTask[smithy.CreateOrganizationPostResponse] = for {
-      authedUser         <- authState.get
-      createOrganization <- organizationManagementRequestValidator.validatedCreateOrganizationPostRequest(request)
-      userDetailsRow     <- userDetailsRepository
+      authedUser       <- authState.get
+      requestValidated <- organizationManagementRequestValidator.validatedCreateOrganizationPostRequest(request)
+      userDetailsRow   <- userDetailsRepository
         .getUserDetails(authedUser.userID)
         .someOrFail(
           ServiceError.InternalServerError.UnexpectedError(s"User details not found for userID: [${authedUser.userID}]")
@@ -37,19 +37,19 @@ object OrganizationManagementService {
       organizationDetailsRow <- organizationManagementRepository
         .createOrganization(
           authedUser.userID,
-          createOrganization.name,
-          createOrganization.slug,
-          createOrganization.tagline,
-          createOrganization.emails,
-          createOrganization.phoneNumbers,
+          requestValidated.name,
+          requestValidated.slug,
+          requestValidated.tagline,
+          requestValidated.emails,
+          requestValidated.phoneNumbers,
           OrganizationStage.DetailsProvided,
-          createOrganization.addressLine1,
-          createOrganization.addressLine2,
-          createOrganization.city,
-          createOrganization.postalCode,
-          createOrganization.country,
-          createOrganization.companyRegistrationNumber,
-          createOrganization.taxID,
+          requestValidated.addressLine1,
+          requestValidated.addressLine2,
+          requestValidated.city,
+          requestValidated.postalCode,
+          requestValidated.country,
+          requestValidated.companyRegistrationNumber,
+          requestValidated.taxID,
         )
       _ <- emailClient
         .sendOrganizationCreatedEmail(

@@ -38,7 +38,7 @@ The repository also exposes `isOrganizationSlugExists` for slug-uniqueness check
 
 The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
 
-- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OrganizationManagement.scala` (all `Organization*` newtypes, `OrganizationStage`/`OrganizationUserRole` enums, contact-point entries, `CreateOrganization`)
+- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OrganizationManagement.scala` (all `Organization*` newtypes, `OrganizationStage`/`OrganizationUserRole` enums, contact-point entries, `CreateOrganizationPostRequest`)
 - Validator: `validation/service/OrganizationManagementRequestValidator.scala`
 - Arbitraries: `testkit/base/OrganizationManagementDomainArbitraries.scala`, `gateway/utils/OrganizationManagementSmithyArbitraries.scala`
 - Service: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/OrganizationManagementService.scala`

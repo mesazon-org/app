@@ -63,15 +63,15 @@ class OrganizationManagementServiceSpec
             .once(),
         )
 
-        val createOrganizationPostRequest = smithy.CreateOrganizationPostRequest(
+        val createOrganizationPostRequestSmithy = smithy.CreateOrganizationPostRequest(
           name = organizationDetailsRow.name.value,
           slug = organizationDetailsRow.slug.value,
           tagline = organizationDetailsRow.tagline.map(_.value),
           emails = organizationDetailsRow.emails.map(entry =>
-            smithy.OrganizationEmailRequest(entry.email.value, entry.isDefault)
+            smithy.OrganizationEmailEntryRequest(entry.email.value, entry.isDefault)
           ),
           phoneNumbers = organizationDetailsRow.phoneNumbers.map(entry =>
-            smithy.OrganizationPhoneNumberRequest(
+            smithy.OrganizationPhoneNumberEntryRequest(
               smithy.PhoneNumberRequest(
                 phoneNationalNumber = entry.phoneNumber.value.phoneNationalNumber.value,
                 phoneCountryCode = entry.phoneNumber.value.phoneCountryCode.value,
@@ -91,7 +91,7 @@ class OrganizationManagementServiceSpec
         val organizationManagementService = buildOrganizationManagementService
 
         val createOrganizationPostResponse =
-          organizationManagementService.createOrganizationPost(createOrganizationPostRequest).zioValue
+          organizationManagementService.createOrganizationPost(createOrganizationPostRequestSmithy).zioValue
 
         createOrganizationPostResponse shouldBe smithy.CreateOrganizationPostResponse(
           organizationDetailsRow.organizationID.value
@@ -143,15 +143,15 @@ class OrganizationManagementServiceSpec
             .once(),
         )
 
-        val createOrganizationPostRequest = smithy.CreateOrganizationPostRequest(
+        val createOrganizationPostRequestSmithy = smithy.CreateOrganizationPostRequest(
           name = organizationDetailsRow.name.value,
           slug = organizationDetailsRow.slug.value,
           tagline = organizationDetailsRow.tagline.map(_.value),
           emails = organizationDetailsRow.emails.map(entry =>
-            smithy.OrganizationEmailRequest(entry.email.value, entry.isDefault)
+            smithy.OrganizationEmailEntryRequest(entry.email.value, entry.isDefault)
           ),
           phoneNumbers = organizationDetailsRow.phoneNumbers.map(entry =>
-            smithy.OrganizationPhoneNumberRequest(
+            smithy.OrganizationPhoneNumberEntryRequest(
               smithy.PhoneNumberRequest(
                 phoneNationalNumber = entry.phoneNumber.value.phoneNationalNumber.value,
                 phoneCountryCode = entry.phoneNumber.value.phoneCountryCode.value,
@@ -171,7 +171,7 @@ class OrganizationManagementServiceSpec
         val organizationManagementService = buildOrganizationManagementService
 
         val createOrganizationPostResponse =
-          organizationManagementService.createOrganizationPost(createOrganizationPostRequest).zioValue
+          organizationManagementService.createOrganizationPost(createOrganizationPostRequestSmithy).zioValue
 
         createOrganizationPostResponse shouldBe smithy.CreateOrganizationPostResponse(
           organizationDetailsRow.organizationID.value
@@ -191,11 +191,12 @@ class OrganizationManagementServiceSpec
             .once(),
         )
 
-        val createOrganizationPostRequest = arbitrarySample[smithy.CreateOrganizationPostRequest]
+        val createOrganizationPostRequestSmithy = arbitrarySample[smithy.CreateOrganizationPostRequest]
 
         val organizationManagementService = buildOrganizationManagementService
 
-        val serviceError = organizationManagementService.createOrganizationPost(createOrganizationPostRequest).zioError
+        val serviceError =
+          organizationManagementService.createOrganizationPost(createOrganizationPostRequestSmithy).zioError
 
         serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
           s"User details not found for userID: [${authedUser.userID}]"

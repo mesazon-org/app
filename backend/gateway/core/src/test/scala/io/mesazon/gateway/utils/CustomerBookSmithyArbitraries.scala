@@ -15,16 +15,16 @@ trait CustomerBookSmithyArbitraries extends CustomerBookDomainArbitraries, IronR
       phoneCountryCode = customerPhoneNumber.value.phoneCountryCode.value,
     )
 
-  given Transformer[CustomerEmailEntry, smithy.CustomerEmailRequest] = entry =>
-    smithy.CustomerEmailRequest(email = entry.email.value, isDefault = entry.isDefault)
+  given Transformer[CustomerEmailEntryRequest, smithy.CustomerEmailEntryRequest] = entry =>
+    smithy.CustomerEmailEntryRequest(email = entry.email.value, isDefault = entry.isDefault)
 
-  given Transformer[CustomerPhoneNumberEntry, smithy.CustomerPhoneNumberRequest] = entry =>
-    smithy.CustomerPhoneNumberRequest(
+  given Transformer[CustomerPhoneNumberEntryRequest, smithy.CustomerPhoneNumberEntryRequest] = entry =>
+    smithy.CustomerPhoneNumberEntryRequest(
       phoneNumber = entry.phoneNumber.transformInto[smithy.PhoneNumberRequest],
       isDefault = entry.isDefault,
     )
 
-  given Transformer[InsertCustomerBusiness, smithy.InsertCustomerBusinessPostRequest] = business =>
+  given Transformer[InsertCustomerBusinessPostRequest, smithy.InsertCustomerBusinessPostRequest] = business =>
     business
       .into[smithy.InsertCustomerBusinessPostRequest]
       .withFieldComputed(
@@ -33,39 +33,53 @@ trait CustomerBookSmithyArbitraries extends CustomerBookDomainArbitraries, IronR
       )
       .transform
 
-  given arbInsertCustomerIndividualPostRequest: Arbitrary[smithy.InsertCustomerIndividualPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[InsertCustomerIndividual].map(_.transformInto[smithy.InsertCustomerIndividualPostRequest])
+  given arbInsertCustomerIndividualPostRequestSmithy: Arbitrary[smithy.InsertCustomerIndividualPostRequest] = Arbitrary(
+    Arbitrary
+      .arbitrary[InsertCustomerIndividualPostRequest]
+      .map(_.transformInto[smithy.InsertCustomerIndividualPostRequest])
   )
 
-  given arbInsertCustomerIndividualsPostRequest: Arbitrary[smithy.InsertCustomerIndividualsPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[InsertCustomerIndividuals].map(_.transformInto[smithy.InsertCustomerIndividualsPostRequest])
+  given arbInsertCustomerIndividualsPostRequestSmithy: Arbitrary[smithy.InsertCustomerIndividualsPostRequest] =
+    Arbitrary(
+      Arbitrary
+        .arbitrary[InsertCustomerIndividualsPostRequest]
+        .map(_.transformInto[smithy.InsertCustomerIndividualsPostRequest])
+    )
+
+  given arbInsertCustomerBusinessPostRequestSmithy: Arbitrary[smithy.InsertCustomerBusinessPostRequest] = Arbitrary(
+    Arbitrary
+      .arbitrary[InsertCustomerBusinessPostRequest]
+      .map(_.transformInto[smithy.InsertCustomerBusinessPostRequest])
   )
 
-  given arbInsertCustomerBusinessPostRequest: Arbitrary[smithy.InsertCustomerBusinessPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[InsertCustomerBusiness].map(_.transformInto[smithy.InsertCustomerBusinessPostRequest])
+  given arbInsertCustomerBusinessesPostRequestSmithy: Arbitrary[smithy.InsertCustomerBusinessesPostRequest] = Arbitrary(
+    Arbitrary
+      .arbitrary[InsertCustomerBusinessesPostRequest]
+      .map(_.transformInto[smithy.InsertCustomerBusinessesPostRequest])
   )
 
-  given arbInsertCustomerBusinessesPostRequest: Arbitrary[smithy.InsertCustomerBusinessesPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[InsertCustomerBusinesses].map(_.transformInto[smithy.InsertCustomerBusinessesPostRequest])
+  given arbInsertCustomersPostRequestSmithy: Arbitrary[smithy.InsertCustomersPostRequest] = Arbitrary(
+    Arbitrary.arbitrary[InsertCustomersPostRequest].map(_.transformInto[smithy.InsertCustomersPostRequest])
   )
 
-  given arbInsertCustomersPostRequest: Arbitrary[smithy.InsertCustomersPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[InsertCustomers].map(_.transformInto[smithy.InsertCustomersPostRequest])
+  given arbUpdateCustomerIndividualPutRequestSmithy: Arbitrary[smithy.UpdateCustomerIndividualPutRequest] = Arbitrary(
+    Arbitrary
+      .arbitrary[UpdateCustomerIndividualPutRequest]
+      .map(_.transformInto[smithy.UpdateCustomerIndividualPutRequest])
   )
 
-  given arbUpdateCustomerIndividualPutRequest: Arbitrary[smithy.UpdateCustomerIndividualPutRequest] = Arbitrary(
-    Arbitrary.arbitrary[UpdateCustomerIndividual].map(_.transformInto[smithy.UpdateCustomerIndividualPutRequest])
-  )
-
-  given arbUpdateCustomerBusinessPutRequest: Arbitrary[smithy.UpdateCustomerBusinessPutRequest] = Arbitrary(
-    Arbitrary.arbitrary[UpdateCustomerBusiness].map(_.transformInto[smithy.UpdateCustomerBusinessPutRequest])
+  given arbUpdateCustomerBusinessPutRequestSmithy: Arbitrary[smithy.UpdateCustomerBusinessPutRequest] = Arbitrary(
+    Arbitrary.arbitrary[UpdateCustomerBusinessPutRequest].map(_.transformInto[smithy.UpdateCustomerBusinessPutRequest])
   )
 
   given arbAddCustomerBusinessContactSmithy: Arbitrary[smithy.AddCustomerBusinessContact] = Arbitrary(
     Arbitrary.arbitrary[AddCustomerBusinessContact].map(_.transformInto[smithy.AddCustomerBusinessContact])
   )
 
-  given arbAddCustomerBusinessContactsPutRequest: Arbitrary[smithy.AddCustomerBusinessContactsPutRequest] = Arbitrary(
-    Arbitrary.arbitrary[AddCustomerBusinessContacts].map(_.transformInto[smithy.AddCustomerBusinessContactsPutRequest])
-  )
+  given arbAddCustomerBusinessContactsPutRequestSmithy: Arbitrary[smithy.AddCustomerBusinessContactsPutRequest] =
+    Arbitrary(
+      Arbitrary
+        .arbitrary[AddCustomerBusinessContactsPutRequest]
+        .map(_.transformInto[smithy.AddCustomerBusinessContactsPutRequest])
+    )
 }

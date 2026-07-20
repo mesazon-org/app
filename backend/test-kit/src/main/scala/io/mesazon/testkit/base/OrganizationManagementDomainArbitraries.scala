@@ -11,26 +11,28 @@ trait OrganizationManagementDomainArbitraries extends GatewayArbitraries {
     Gen.oneOf(OrganizationUserRole.values.toIndexedSeq)
   )
 
-  given arbOrganizationEmailEntry: Arbitrary[OrganizationEmailEntry] = Arbitrary(
-    Gen.resultOf(OrganizationEmailEntry.apply)
+  given arbOrganizationEmailEntryRequest: Arbitrary[OrganizationEmailEntryRequest] = Arbitrary(
+    Gen.resultOf(OrganizationEmailEntryRequest.apply)
   )
 
-  given arbOrganizationPhoneNumberEntry: Arbitrary[OrganizationPhoneNumberEntry] = Arbitrary(
-    Gen.resultOf(OrganizationPhoneNumberEntry.apply)
+  given arbOrganizationPhoneNumberEntryRequest: Arbitrary[OrganizationPhoneNumberEntryRequest] = Arbitrary(
+    Gen.resultOf(OrganizationPhoneNumberEntryRequest.apply)
   )
 
   // A non-empty list must mark exactly one entry as default, so generate non-default entries and promote one at random.
-  given arbOrganizationEmailEntries: Arbitrary[List[OrganizationEmailEntry]] = Arbitrary(
+  given arbOrganizationEmailEntryRequests: Arbitrary[List[OrganizationEmailEntryRequest]] = Arbitrary(
     genEntriesWithSingleDefault(
-      Arbitrary.arbitrary[OrganizationEmailEntry].map(_.copy(isDefault = false))
+      Arbitrary.arbitrary[OrganizationEmailEntryRequest].map(_.copy(isDefault = false))
     )(_.copy(isDefault = true))
   )
 
-  given arbOrganizationPhoneNumberEntries: Arbitrary[List[OrganizationPhoneNumberEntry]] = Arbitrary(
+  given arbOrganizationPhoneNumberEntryRequests: Arbitrary[List[OrganizationPhoneNumberEntryRequest]] = Arbitrary(
     genEntriesWithSingleDefault(
-      Arbitrary.arbitrary[OrganizationPhoneNumberEntry].map(_.copy(isDefault = false))
+      Arbitrary.arbitrary[OrganizationPhoneNumberEntryRequest].map(_.copy(isDefault = false))
     )(_.copy(isDefault = true))
   )
 
-  given arbCreateOrganization: Arbitrary[CreateOrganization] = Arbitrary(Gen.resultOf(CreateOrganization.apply))
+  given arbCreateOrganizationPostRequest: Arbitrary[CreateOrganizationPostRequest] = Arbitrary(
+    Gen.resultOf(CreateOrganizationPostRequest.apply)
+  )
 }

@@ -5,7 +5,6 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.{EmailClient, TwilioClient}
 import io.mesazon.gateway.config.UserOnboardConfig
 import io.mesazon.gateway.repository.*
-import io.mesazon.gateway.smithy.OnboardVerifyPhoneNumberGetResponse
 import io.mesazon.gateway.state.*
 import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.service.*
@@ -182,7 +181,7 @@ object UserOnboardService {
       )
 
     /** HTTP GET /onboard/verify/phone-number */
-    override def onboardVerifyPhoneNumberGet(): ServiceTask[OnboardVerifyPhoneNumberGetResponse] =
+    override def onboardVerifyPhoneNumberGet(): ServiceTask[smithy.OnboardVerifyPhoneNumberGetResponse] =
       for {
         authedUser  <- authState.get
         userDetails <- userDetailsRepository
@@ -217,7 +216,7 @@ object UserOnboardService {
               ServiceError.UnauthorizedError.OtpExpiredError(s"OTP expired for otpID: [${userOtpRow.otpID}]")
             )
           else ZIO.unit
-      } yield OnboardVerifyPhoneNumberGetResponse(
+      } yield smithy.OnboardVerifyPhoneNumberGetResponse(
         otpID = userOtpRow.otpID.value,
         otpExpiresInSeconds = userOtpRow.expiresAt.value.getEpochSecond - instantNow.getEpochSecond,
       )
@@ -249,7 +248,7 @@ object UserOnboardService {
         )
 
       /** HTTP GET /onboard/verify/phone-number */
-      override def onboardVerifyPhoneNumberGet(): Task[OnboardVerifyPhoneNumberGetResponse] =
+      override def onboardVerifyPhoneNumberGet(): Task[smithy.OnboardVerifyPhoneNumberGetResponse] =
         HttpErrorHandler.errorResponseHandler(
           userOnboardService.onboardVerifyPhoneNumberGet()
         )

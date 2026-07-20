@@ -2,11 +2,11 @@
 
 Every write endpoint validates its raw smithy request into a **refined domain model** — a case class whose fields are newtypes with iron refined types (see [scala.md § Iron new types](scala.md#iron-new-types)). Validation is the single boundary where untrusted `String`/`UUID`/`Option` input from the wire becomes a value the service layer can trust; past that boundary the types make illegal states unrepresentable.
 
-The service handler receives the generated `smithy.<Operation>Request`, calls the feature's validator to get the domain model, and only then does its work. A validation failure is a `400` `ValidationError` that lists **every** invalid field at once (errors accumulate, never fail-fast).
+The service handler receives the generated `smithy.<Operation>Request` (parameter `request`), calls the feature's validator and binds the domain model as **`requestValidated`** (`requestValidated <- validator.validated<Request>(request)`), and only then does its work. A validation failure is a `400` `ValidationError` that lists **every** invalid field at once (errors accumulate, never fail-fast).
 
 ## The two layers
 
-- **Domain model** — `backend/domain/src/main/scala/io/mesazon/domain/gateway/<Feature>.scala`. Plain case classes of newtypes (plus `Option`/`List` of them). No smithy, no ZIO — just the shape the service wants. One case class per request payload, named after the item it carries (`InsertCustomerIndividual`, `UpdateCustomerBusiness`, …). See [smithy.md § Item structures](smithy.md#4-item-structures-and-lists) — the domain models mirror the smithy item structures one-for-one.
+- **Domain model** — `backend/domain/src/main/scala/io/mesazon/domain/gateway/<Feature>.scala`. Plain case classes of newtypes (plus `Option`/`List` of them). No smithy, no ZIO — just the shape the service wants. One case class per request payload, named **exactly** after the smithy request structure it validates from (`InsertCustomerIndividualPostRequest`, `UpdateCustomerBusinessPutRequest`, …) — see [smithy.md § Request/response structures](smithy.md#3-requestresponse-structures): smithy names are the gold standard, and the bare name vs `smithy.`-qualified name is what tells the domain model from the wire shape.
 - **Request validator** — `backend/gateway/core/src/main/scala/io/mesazon/gateway/validation/service/<Feature>RequestValidator.scala`. One class per feature, with one public function per smithy request that can fail. It turns `smithy.<Operation>Request` into the domain model.
 
 ## Building blocks (shared, in `validation/`)
@@ -35,30 +35,30 @@ final class CustomerBookRequestValidator(
 
   def validatedInsertCustomerIndividualPostRequest(
       request: smithy.InsertCustomerIndividualPostRequest
-  ): IO[ServiceError.BadRequestError.ValidationError, InsertCustomerIndividual] =
+  ): IO[ServiceError.BadRequestError.ValidationError, InsertCustomerIndividualPostRequest] =
     toValidatedRequestIO(validateInsertCustomerIndividual(request))
 
   // batch reuses the item validator; validateAllNested wraps each failed customer's errors under the batch field
   def validatedInsertCustomerIndividualsPostRequest(
       request: smithy.InsertCustomerIndividualsPostRequest
-  ): IO[ServiceError.BadRequestError.ValidationError, InsertCustomerIndividuals] =
+  ): IO[ServiceError.BadRequestError.ValidationError, InsertCustomerIndividualsPostRequest] =
     toValidatedRequestIO(
-      validateInsertCustomerIndividuals(request.customerIndividuals).map(_.map(InsertCustomerIndividuals.apply))
+      validateInsertCustomerIndividuals(request.customerIndividuals).map(_.map(InsertCustomerIndividualsPostRequest.apply))
     )
 
   // list field with a per-entry isDefault flag: validate entries, then require exactly one default
   private def validateCustomerEmails(
-      emails: List[smithy.CustomerEmailRequest]
-  ): UIO[ValidatedNec[InvalidFieldError, List[CustomerEmailEntry]]] =
+      emails: List[smithy.CustomerEmailEntryRequest]
+  ): UIO[ValidatedNec[InvalidFieldError, List[CustomerEmailEntryRequest]]] =
     validateAll(emails)(email =>
       emailValidator
         .validate(email.email, CustomerEmail.either)
-        .map(_.map(validated => CustomerEmailEntry(validated, email.isDefault)))
+        .map(_.map(validated => CustomerEmailEntryRequest(validated, email.isDefault)))
     ).map(_.andThen(entries => validateSingleDefault("emails", entries)(_.isDefault)))
 
   private def validateInsertCustomerIndividual(
       request: smithy.InsertCustomerIndividualPostRequest
-  ): UIO[ValidatedNec[InvalidFieldError, InsertCustomerIndividual]] =
+  ): UIO[ValidatedNec[InvalidFieldError, InsertCustomerIndividualPostRequest]] =
     validateCustomerEmails(request.emails)
       .zip(validateCustomerPhoneNumbers(request.phoneNumbers))
       .map((emailsValidated, phoneNumbersValidated) =>
@@ -68,12 +68,12 @@ final class CustomerBookRequestValidator(
           phoneNumbersValidated,
           validateOptionalField("addressLine1", request.addressLine1, CustomerAddressLine1.either),
           // … one entry per field, in field order …
-        ).mapN(InsertCustomerIndividual.apply)
+        ).mapN(InsertCustomerIndividualPostRequest.apply)
       )
 
   private def validateInsertCustomerIndividuals(
       requests: List[smithy.InsertCustomerIndividualPostRequest]
-  ): UIO[ValidatedNec[InvalidFieldError, List[InsertCustomerIndividual]]] =
+  ): UIO[ValidatedNec[InvalidFieldError, List[InsertCustomerIndividualPostRequest]]] =
     validateAllNested("customerIndividuals", requests)(validateInsertCustomerIndividual)
 }
 
@@ -87,7 +87,7 @@ object CustomerBookRequestValidator {
 1. **One function per fallible request, named `validated<SmithyRequestName>`.** Returns `IO[ServiceError.BadRequestError.ValidationError, B]`.
 2. **No validator for a request that cannot fail.** If a request carries only inputs that are already the right type at the wire boundary (e.g. a payload of only `alloy#UUID` ids, which smithy has already parsed), there is nothing to validate — do **not** write a `validated…` function for it. The service handler translates those directly into their newtypes (`CustomerID(request.customerID)`, `CustomerBusinessContactID(...)`). Example: `RemoveCustomerBusinessContactsPutRequest` has no validator.
 3. **Accumulate, never fail-fast.** Compose fields with `ValidatedNec` + `mapN`; compose lists with the shared `validateAll`, which also tags each failed item's errors with its list `index`. A caller sees *all* the bad fields in one `ValidationError`, in field order.
-4. **Share the item validator across singular/batch/combined.** The batch (`…s`) and combined (`InsertCustomers`) forms call the same private per-item validator; don't duplicate the field list. Keep the pervasive field helpers (`validateOptionalCustomerEmail`, `validateOptionalCustomerPhoneNumber`) private and shared too.
+4. **Share the item validator across singular/batch/combined.** The batch (`…s`) and combined (`InsertCustomersPostRequest`) forms call the same private per-item validator; don't duplicate the field list. Keep the pervasive field helpers (`validateOptionalCustomerEmail`, `validateOptionalCustomerPhoneNumber`) private and shared too.
 5. **Effectful fields go through a domain validator**, then get wrapped into the feature newtype. Pure fields use `validate{Required,Optional}Field` with the newtype's `.either`.
 6. **`fieldName` matches the smithy member name** (`"fullName"`, `"addressLine1"`) — it is what the client sees in the `InvalidFieldError`.
 7. Provide a `val live = ZLayer.derive[…]` and wire it where the service layer is assembled.
@@ -98,7 +98,7 @@ object CustomerBookRequestValidator {
 
 - **success = round-trip.** Sample the *domain* model, transform it into the smithy request (chimney), validate, and assert the result equals the original domain model:
   ```scala
-  val individual = arbitrarySample[InsertCustomerIndividual]
+  val individual = arbitrarySample[InsertCustomerIndividualPostRequest]
   validator
     .validatedInsertCustomerIndividualPostRequest(individual.transformInto[smithy.InsertCustomerIndividualPostRequest])
     .zioValue shouldBe individual

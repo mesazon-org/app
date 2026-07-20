@@ -24,6 +24,10 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
 - ✅ `InsertCustomersPostRequest`, `GetCustomerIndividualGetResponse`
 - ❌ `CustomerInsertBody`, `GetCustomerResponse` (not matching the operation name)
 
+**Smithy names are the gold standard.** The domain case class a request validates into is named **exactly** after its smithy request structure — smithy `CreateOrganizationPostRequest` validates into domain `case class CreateOrganizationPostRequest`; smithy `InsertCustomerIndividualPostRequest` into domain `InsertCustomerIndividualPostRequest`. The two are distinguished purely by qualification (next rule), never by inventing a second name for the same shape. Renaming one side renames the other (and, per the [Rename rule](../CLAUDE.md), the docs).
+
+**Smithy types are always referenced qualified.** Scala code imports the *package* — `import io.mesazon.gateway.smithy` (or with the feature's imports, `io.mesazon.gateway.{smithy, ...}`) — and writes `smithy.CreateOrganizationPostRequest`. Never import a smithy member directly (`import io.mesazon.gateway.smithy.SomeShape` ❌): with domain and smithy shapes sharing names, the `smithy.` prefix is what tells the wire shape from the domain model at every use site.
+
 ### 4. Item structures and lists
 
 - Every operation owns its models — never share a common entity structure between operations, even when the fields overlap
@@ -31,6 +35,9 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
 - Batch payloads are named list shapes of a reusable item structure; lists are named as the item's plural without a `List` suffix (like `InvalidFields`)
 - ✅ `list InsertCustomers { member: InsertCustomer }`, `list GetCustomers { member: GetCustomer }`, `customerIDs: CustomerIDs`
 - ❌ `InsertCustomerList`, a shared `Customer`/`CustomerDetails` used by several operations, inlining the item fields into the request structure
+- Contact-point entry structures (an email/phone plus its `isDefault` flag) are named `<Owner><Kind>EntryRequest`, list `<Owner><Kind>EntryRequests` — and per §3 the domain entry class carries the same name
+- ✅ `CustomerEmailEntryRequest` / `CustomerEmailEntryRequests`, `OrganizationPhoneNumberEntryRequest`
+- ❌ `CustomerEmailRequest` (reads as a whole request, not a list entry), `CustomerEmail` (collides with the newtype)
 
 ### 5. Members
 

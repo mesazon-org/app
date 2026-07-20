@@ -15,12 +15,12 @@ final class OrganizationManagementRequestValidator(
 
   def validatedCreateOrganizationPostRequest(
       request: smithy.CreateOrganizationPostRequest
-  ): IO[ServiceError.BadRequestError.ValidationError, CreateOrganization] =
+  ): IO[ServiceError.BadRequestError.ValidationError, CreateOrganizationPostRequest] =
     toValidatedRequestIO(validateCreateOrganization(request))
 
   private def validateCreateOrganization(
       request: smithy.CreateOrganizationPostRequest
-  ): UIO[ValidatedNec[InvalidFieldError, CreateOrganization]] =
+  ): UIO[ValidatedNec[InvalidFieldError, CreateOrganizationPostRequest]] =
     validateOrganizationEmails(request.emails)
       .zip(validateOrganizationPhoneNumbers(request.phoneNumbers))
       .map((emailsValidated, phoneNumbersValidated) =>
@@ -41,26 +41,28 @@ final class OrganizationManagementRequestValidator(
             OrganizationCompanyRegistrationNumber.either,
           ),
           validateOptionalField("taxID", request.taxID, OrganizationTaxID.either),
-        ).mapN(CreateOrganization.apply)
+        ).mapN(CreateOrganizationPostRequest.apply)
       )
 
   private def validateOrganizationEmails(
-      emails: List[smithy.OrganizationEmailRequest]
-  ): UIO[ValidatedNec[InvalidFieldError, List[OrganizationEmailEntry]]] =
+      emails: List[smithy.OrganizationEmailEntryRequest]
+  ): UIO[ValidatedNec[InvalidFieldError, List[OrganizationEmailEntryRequest]]] =
     validateAll(emails)(email =>
       emailValidator
         .validate(email.email, OrganizationEmail.either)
-        .map(_.map(validated => OrganizationEmailEntry(validated, email.isDefault)))
+        .map(_.map(validated => OrganizationEmailEntryRequest(validated, email.isDefault)))
     ).map(_.andThen(entries => validateSingleDefault("emails", entries)(_.isDefault)))
 
   private def validateOrganizationPhoneNumbers(
-      phoneNumbers: List[smithy.OrganizationPhoneNumberRequest]
-  ): UIO[ValidatedNec[InvalidFieldError, List[OrganizationPhoneNumberEntry]]] =
+      phoneNumbers: List[smithy.OrganizationPhoneNumberEntryRequest]
+  ): UIO[ValidatedNec[InvalidFieldError, List[OrganizationPhoneNumberEntryRequest]]] =
     validateAll(phoneNumbers)(phoneNumber =>
       phoneNumberDomainValidator
         .validate(phoneNumber.phoneNumber.phoneCountryCode, phoneNumber.phoneNumber.phoneNationalNumber)
         .map(
-          _.map(validated => OrganizationPhoneNumberEntry(OrganizationPhoneNumber(validated), phoneNumber.isDefault))
+          _.map(validated =>
+            OrganizationPhoneNumberEntryRequest(OrganizationPhoneNumber(validated), phoneNumber.isDefault)
+          )
         )
     ).map(_.andThen(entries => validateSingleDefault("phoneNumbers", entries)(_.isDefault)))
 }

@@ -5,35 +5,37 @@ import org.scalacheck.*
 
 trait CustomerBookDomainArbitraries extends GatewayArbitraries {
 
-  given arbCustomerEmailEntry: Arbitrary[CustomerEmailEntry] = Arbitrary(Gen.resultOf(CustomerEmailEntry.apply))
+  given arbCustomerEmailEntryRequest: Arbitrary[CustomerEmailEntryRequest] = Arbitrary(
+    Gen.resultOf(CustomerEmailEntryRequest.apply)
+  )
 
-  given arbCustomerPhoneNumberEntry: Arbitrary[CustomerPhoneNumberEntry] = Arbitrary(
-    Gen.resultOf(CustomerPhoneNumberEntry.apply)
+  given arbCustomerPhoneNumberEntryRequest: Arbitrary[CustomerPhoneNumberEntryRequest] = Arbitrary(
+    Gen.resultOf(CustomerPhoneNumberEntryRequest.apply)
   )
 
   // A non-empty list must mark exactly one entry as default, so generate non-default entries and promote one at random.
-  given arbCustomerEmailEntries: Arbitrary[List[CustomerEmailEntry]] = Arbitrary(
+  given arbCustomerEmailEntryRequests: Arbitrary[List[CustomerEmailEntryRequest]] = Arbitrary(
     genEntriesWithSingleDefault(
-      Arbitrary.arbitrary[CustomerEmailEntry].map(_.copy(isDefault = false))
+      Arbitrary.arbitrary[CustomerEmailEntryRequest].map(_.copy(isDefault = false))
     )(_.copy(isDefault = true))
   )
 
-  given arbCustomerPhoneNumberEntries: Arbitrary[List[CustomerPhoneNumberEntry]] = Arbitrary(
+  given arbCustomerPhoneNumberEntryRequests: Arbitrary[List[CustomerPhoneNumberEntryRequest]] = Arbitrary(
     genEntriesWithSingleDefault(
-      Arbitrary.arbitrary[CustomerPhoneNumberEntry].map(_.copy(isDefault = false))
+      Arbitrary.arbitrary[CustomerPhoneNumberEntryRequest].map(_.copy(isDefault = false))
     )(_.copy(isDefault = true))
   )
 
-  given arbInsertCustomerIndividual: Arbitrary[InsertCustomerIndividual] = Arbitrary(
-    Gen.resultOf(InsertCustomerIndividual.apply)
+  given arbInsertCustomerIndividualPostRequest: Arbitrary[InsertCustomerIndividualPostRequest] = Arbitrary(
+    Gen.resultOf(InsertCustomerIndividualPostRequest.apply)
   )
 
-  given arbInsertCustomerIndividuals: Arbitrary[InsertCustomerIndividuals] = Arbitrary(
-    Gen.resultOf(InsertCustomerIndividuals.apply)
+  given arbInsertCustomerIndividualsPostRequest: Arbitrary[InsertCustomerIndividualsPostRequest] = Arbitrary(
+    Gen.resultOf(InsertCustomerIndividualsPostRequest.apply)
   )
 
-  given arbUpdateCustomerIndividual: Arbitrary[UpdateCustomerIndividual] = Arbitrary(
-    Gen.resultOf(UpdateCustomerIndividual.apply)
+  given arbUpdateCustomerIndividualPutRequest: Arbitrary[UpdateCustomerIndividualPutRequest] = Arbitrary(
+    Gen.resultOf(UpdateCustomerIndividualPutRequest.apply)
   )
 
   given arbInsertCustomerBusinessContact: Arbitrary[InsertCustomerBusinessContact] = Arbitrary(
@@ -44,21 +46,23 @@ trait CustomerBookDomainArbitraries extends GatewayArbitraries {
     Gen.resultOf(AddCustomerBusinessContact.apply)
   )
 
-  given arbAddCustomerBusinessContacts: Arbitrary[AddCustomerBusinessContacts] = Arbitrary(
-    Gen.resultOf(AddCustomerBusinessContacts.apply)
+  given arbAddCustomerBusinessContactsPutRequest: Arbitrary[AddCustomerBusinessContactsPutRequest] = Arbitrary(
+    Gen.resultOf(AddCustomerBusinessContactsPutRequest.apply)
   )
 
-  given arbInsertCustomerBusiness: Arbitrary[InsertCustomerBusiness] = Arbitrary(
-    Gen.resultOf(InsertCustomerBusiness.apply)
+  given arbInsertCustomerBusinessPostRequest: Arbitrary[InsertCustomerBusinessPostRequest] = Arbitrary(
+    Gen.resultOf(InsertCustomerBusinessPostRequest.apply)
   )
 
-  given arbInsertCustomerBusinesses: Arbitrary[InsertCustomerBusinesses] = Arbitrary(
-    Gen.resultOf(InsertCustomerBusinesses.apply)
+  given arbInsertCustomerBusinessesPostRequest: Arbitrary[InsertCustomerBusinessesPostRequest] = Arbitrary(
+    Gen.resultOf(InsertCustomerBusinessesPostRequest.apply)
   )
 
-  given arbUpdateCustomerBusiness: Arbitrary[UpdateCustomerBusiness] = Arbitrary(
-    Gen.resultOf(UpdateCustomerBusiness.apply)
+  given arbUpdateCustomerBusinessPutRequest: Arbitrary[UpdateCustomerBusinessPutRequest] = Arbitrary(
+    Gen.resultOf(UpdateCustomerBusinessPutRequest.apply)
   )
 
-  given arbInsertCustomers: Arbitrary[InsertCustomers] = Arbitrary(Gen.resultOf(InsertCustomers.apply))
+  given arbInsertCustomersPostRequest: Arbitrary[InsertCustomersPostRequest] = Arbitrary(
+    Gen.resultOf(InsertCustomersPostRequest.apply)
+  )
 }

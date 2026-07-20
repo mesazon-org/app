@@ -51,9 +51,10 @@ private def jsonbMeta[A](using JsonValueCodec[A]): Meta[A] =
       pgObject
     }
 
-private given organizationEmailEntriesCodec: JsonValueCodec[List[OrganizationEmailEntry]] = JsonCodecMaker.make
-private given organizationPhoneNumberEntriesCodec: JsonValueCodec[List[OrganizationPhoneNumberEntry]] =
+private given organizationEmailEntryRequestsCodec: JsonValueCodec[List[OrganizationEmailEntryRequest]] =
+  JsonCodecMaker.make
+private given organizationPhoneNumberEntryRequestsCodec: JsonValueCodec[List[OrganizationPhoneNumberEntryRequest]] =
   JsonCodecMaker.make
 
-given organizationEmailEntriesMeta: Meta[List[OrganizationEmailEntry]]             = jsonbMeta
-given organizationPhoneNumberEntriesMeta: Meta[List[OrganizationPhoneNumberEntry]] = jsonbMeta
+given organizationEmailEntryRequestsMeta: Meta[List[OrganizationEmailEntryRequest]]             = jsonbMeta
+given organizationPhoneNumberEntryRequestsMeta: Meta[List[OrganizationPhoneNumberEntryRequest]] = jsonbMeta

@@ -17,16 +17,16 @@ trait OrganizationManagementSmithyArbitraries
       phoneCountryCode = organizationPhoneNumber.value.phoneCountryCode.value,
     )
 
-  given Transformer[OrganizationEmailEntry, smithy.OrganizationEmailRequest] = entry =>
-    smithy.OrganizationEmailRequest(email = entry.email.value, isDefault = entry.isDefault)
+  given Transformer[OrganizationEmailEntryRequest, smithy.OrganizationEmailEntryRequest] = entry =>
+    smithy.OrganizationEmailEntryRequest(email = entry.email.value, isDefault = entry.isDefault)
 
-  given Transformer[OrganizationPhoneNumberEntry, smithy.OrganizationPhoneNumberRequest] = entry =>
-    smithy.OrganizationPhoneNumberRequest(
+  given Transformer[OrganizationPhoneNumberEntryRequest, smithy.OrganizationPhoneNumberEntryRequest] = entry =>
+    smithy.OrganizationPhoneNumberEntryRequest(
       phoneNumber = entry.phoneNumber.transformInto[smithy.PhoneNumberRequest],
       isDefault = entry.isDefault,
     )
 
-  given arbCreateOrganizationPostRequest: Arbitrary[smithy.CreateOrganizationPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[CreateOrganization].map(_.transformInto[smithy.CreateOrganizationPostRequest])
+  given arbCreateOrganizationPostRequestSmithy: Arbitrary[smithy.CreateOrganizationPostRequest] = Arbitrary(
+    Arbitrary.arbitrary[CreateOrganizationPostRequest].map(_.transformInto[smithy.CreateOrganizationPostRequest])
   )
 }

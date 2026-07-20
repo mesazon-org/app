@@ -81,24 +81,24 @@ object OrganizationUserRole {
 
 // Contact points (each carries an isDefault flag)
 
-case class OrganizationEmailEntry(
+case class OrganizationEmailEntryRequest(
     email: OrganizationEmail,
     isDefault: Boolean,
 )
 
-case class OrganizationPhoneNumberEntry(
+case class OrganizationPhoneNumberEntryRequest(
     phoneNumber: OrganizationPhoneNumber,
     isDefault: Boolean,
 )
 
 // Requests
 
-case class CreateOrganization(
+case class CreateOrganizationPostRequest(
     name: OrganizationName,
     slug: OrganizationSlug,
     tagline: Option[OrganizationTagline],
-    emails: List[OrganizationEmailEntry],
-    phoneNumbers: List[OrganizationPhoneNumberEntry],
+    emails: List[OrganizationEmailEntryRequest],
+    phoneNumbers: List[OrganizationPhoneNumberEntryRequest],
     addressLine1: Option[OrganizationAddressLine1],
     addressLine2: Option[OrganizationAddressLine2],
     city: Option[OrganizationCity],

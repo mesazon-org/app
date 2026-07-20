@@ -7,7 +7,6 @@ import fs2.io.net.Network
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.smithy
-import io.mesazon.gateway.smithy.PhoneNumberRequest
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.client4.jsoniter.*
@@ -215,8 +214,8 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       name: OrganizationName,
       slug: OrganizationSlug,
       tagline: Option[OrganizationTagline],
-      emails: List[OrganizationEmailEntry],
-      phoneNumbers: List[OrganizationPhoneNumberEntry],
+      emails: List[OrganizationEmailEntryRequest],
+      phoneNumbers: List[OrganizationPhoneNumberEntryRequest],
       addressLine1: Option[OrganizationAddressLine1],
       addressLine2: Option[OrganizationAddressLine2],
       city: Option[OrganizationCity],
@@ -234,9 +233,9 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
             name = name.value,
             slug = slug.value,
             tagline = tagline.map(_.value),
-            emails = emails.map(entry => smithy.OrganizationEmailRequest(entry.email.value, entry.isDefault)),
+            emails = emails.map(entry => smithy.OrganizationEmailEntryRequest(entry.email.value, entry.isDefault)),
             phoneNumbers = phoneNumbers.map(entry =>
-              smithy.OrganizationPhoneNumberRequest(
+              smithy.OrganizationPhoneNumberEntryRequest(
                 smithy.PhoneNumberRequest(
                   entry.phoneNumber.value.phoneNationalNumber.value,
                   entry.phoneNumber.value.phoneCountryCode.value,

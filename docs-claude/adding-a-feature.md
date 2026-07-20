@@ -27,8 +27,8 @@ Do **not** add feature arbitraries to the shared `GatewayArbitraries` / `SmithyA
 
   ```scala
   trait CustomerBookDomainArbitraries extends GatewayArbitraries {
-    given arbInsertCustomerIndividual: Arbitrary[InsertCustomerIndividual] =
-      Arbitrary(Gen.resultOf(InsertCustomerIndividual.apply))
+    given arbInsertCustomerIndividualPostRequest: Arbitrary[InsertCustomerIndividualPostRequest] =
+      Arbitrary(Gen.resultOf(InsertCustomerIndividualPostRequest.apply))
     // …
   }
   ```
@@ -40,8 +40,8 @@ Do **not** add feature arbitraries to the shared `GatewayArbitraries` / `SmithyA
     given Transformer[CustomerPhoneNumber, smithy.PhoneNumberRequest] = cpn =>
       smithy.PhoneNumberRequest(cpn.value.phoneNationalNumber.value, cpn.value.phoneCountryCode.value)
 
-    given arbInsertCustomerIndividualPostRequest: Arbitrary[smithy.InsertCustomerIndividualPostRequest] =
-      Arbitrary(Arbitrary.arbitrary[InsertCustomerIndividual].map(_.transformInto[smithy.InsertCustomerIndividualPostRequest]))
+    given arbInsertCustomerIndividualPostRequestSmithy: Arbitrary[smithy.InsertCustomerIndividualPostRequest] =
+      Arbitrary(Arbitrary.arbitrary[InsertCustomerIndividualPostRequest].map(_.transformInto[smithy.InsertCustomerIndividualPostRequest]))
     // …
   }
   ```
@@ -50,13 +50,15 @@ Deriving the smithy arbitrary **from** the domain arbitrary is what makes the va
 
 ### Always name the givens explicitly
 
-Write `given arbInsertCustomerIndividual: Arbitrary[…]`, never an anonymous `given Arbitrary[…]`. Anonymous givens get a **synthesized name from the type**, and a singular/plural pair (`Arbitrary[AddCustomerBusinessContact]` vs `Arbitrary[AddCustomerBusinessContacts]`) synthesizes colliding names — the plural silently shadows the singular, which then fails to resolve with a misleading "no given instance … missing RefinedType.Mirror" error that survives a clean rebuild. Explicit names avoid it.
+Write `given arb<ExactTypeName>: Arbitrary[…]`, never an anonymous `given Arbitrary[…]`. Anonymous givens get a **synthesized name from the type**, and a singular/plural pair (an `X` and an `Xs` wrapper, or an `X` and a `List[X]`) synthesizes colliding names — the plural silently shadows the singular, which then fails to resolve with a misleading "no given instance … missing RefinedType.Mirror" error that survives a clean rebuild. Explicit names avoid it.
+
+The name is `arb` + the exact type name (`arbInsertCustomerIndividualPostRequest`, `arbCustomerEmailEntryRequests` for the `List` variant). Since domain classes are named after the smithy requests, the smithy trait — which extends the domain trait — appends `Smithy` to avoid clashing with the inherited given: domain `arbInsertCustomerIndividualPostRequest: Arbitrary[InsertCustomerIndividualPostRequest]`, smithy `arbInsertCustomerIndividualPostRequestSmithy: Arbitrary[smithy.InsertCustomerIndividualPostRequest]`.
 
 ## Consolidating an existing feature into this layout
 
 Older features left their pieces scattered (newtypes in `gateway.scala`, per-request `ServiceValidator` classes, arbitraries in the shared traits). Consolidating a feature `<Feature>` means moving every piece into the per-feature files above **without changing behavior**. Done for: `CustomerBook` (built this way), `OrganizationManagement`. The steps, in order:
 
-1. **Domain** — create `domain/gateway/<Feature>.scala` holding, in this order: the feature's newtypes (cut from `gateway.scala`), its enums (delete their one-enum files), its entry/value case classes, its request case classes (delete their files). Everything stays in package `io.mesazon.domain.gateway`, so **no call site changes** — this step is pure file moves.
+1. **Domain** — create `domain/gateway/<Feature>.scala` holding, in this order: the feature's newtypes (cut from `gateway.scala`), its enums (delete their one-enum files), its entry/value case classes, its request case classes (delete their files). Everything stays in package `io.mesazon.domain.gateway`, so **no call site changes** — this step is pure file moves. While here, align the request case-class names with the [smithy gold standard](smithy.md#3-requestresponse-structures) if they drifted (rename the domain class to the smithy request name, never the reverse).
 2. **Validator** — replace the per-request `<Request>ServiceValidator` classes with one `validation/service/<Feature>RequestValidator.scala`: a plain class (not a `ServiceValidator`) with one public `validated<Request>PostRequest(request): IO[ValidationError, <Domain>]` per fallible request, each delegating to a private `UIO[ValidatedNec[InvalidFieldError, <Domain>]]` via `toValidatedRequestIO`. Callers change from `validator.validate(r)` to `validator.validated<Request>PostRequest(r)`; update the service, `Main`'s layer list, and any spec `provide`.
 3. **Domain arbitraries** — create `<Feature>DomainArbitraries` in test-kit and move every feature `Arbitrary` (enums included) out of `GatewayArbitraries` into it, naming each given (`arb<Type>`). Generic helpers shared across features (e.g. `genEntriesWithSingleDefault`) stay `protected` in `GatewayArbitraries`.
 4. **Smithy arbitraries** — create `<Feature>SmithyArbitraries` in gateway-core test utils and move the feature's `Transformer`s and smithy-request arbitraries out of the shared `SmithyArbitraries`.

@@ -29,17 +29,19 @@ class OrganizationManagementRequestValidatorSpec extends ZWordSpecBase, Organiza
 
   "OrganizationManagementRequestValidator" should {
     "successfully validate a valid request" in {
-      val createOrganization = arbitrarySample[CreateOrganization]
+      val createOrganizationPostRequest = arbitrarySample[CreateOrganizationPostRequest]
 
       validator
-        .validatedCreateOrganizationPostRequest(createOrganization.transformInto[smithy.CreateOrganizationPostRequest])
-        .zioValue shouldBe createOrganization
+        .validatedCreateOrganizationPostRequest(
+          createOrganizationPostRequest.transformInto[smithy.CreateOrganizationPostRequest]
+        )
+        .zioValue shouldBe createOrganizationPostRequest
     }
 
     "accumulate every field error" in {
       val request = arbitrarySample[smithy.CreateOrganizationPostRequest].copy(
         name = "",
-        emails = List(smithy.OrganizationEmailRequest(email = "invalid-email", isDefault = true)),
+        emails = List(smithy.OrganizationEmailEntryRequest(email = "invalid-email", isDefault = true)),
       )
 
       validator.validatedCreateOrganizationPostRequest(request).zioError shouldBe
@@ -54,8 +56,8 @@ class OrganizationManagementRequestValidatorSpec extends ZWordSpecBase, Organiza
     "reject when more than one email is marked default" in {
       val request = arbitrarySample[smithy.CreateOrganizationPostRequest].copy(
         emails = List(
-          smithy.OrganizationEmailRequest(email = "a@example.com", isDefault = true),
-          smithy.OrganizationEmailRequest(email = "b@example.com", isDefault = true),
+          smithy.OrganizationEmailEntryRequest(email = "a@example.com", isDefault = true),
+          smithy.OrganizationEmailEntryRequest(email = "b@example.com", isDefault = true),
         ),
         phoneNumbers = Nil,
       )
@@ -72,7 +74,7 @@ class OrganizationManagementRequestValidatorSpec extends ZWordSpecBase, Organiza
       val request = arbitrarySample[smithy.CreateOrganizationPostRequest].copy(
         emails = Nil,
         phoneNumbers = List(
-          smithy.OrganizationPhoneNumberRequest(
+          smithy.OrganizationPhoneNumberEntryRequest(
             phoneNumber = smithy.PhoneNumberRequest(phoneNationalNumber = "99135215", phoneCountryCode = "+357"),
             isDefault = false,
           )

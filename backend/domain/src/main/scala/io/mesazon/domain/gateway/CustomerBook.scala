@@ -46,22 +46,22 @@ type CustomerCountry = CustomerCountry.T
 
 // Contact points (each carries an isDefault flag)
 
-case class CustomerEmailEntry(
+case class CustomerEmailEntryRequest(
     email: CustomerEmail,
     isDefault: Boolean,
 )
 
-case class CustomerPhoneNumberEntry(
+case class CustomerPhoneNumberEntryRequest(
     phoneNumber: CustomerPhoneNumber,
     isDefault: Boolean,
 )
 
 // Individuals
 
-case class InsertCustomerIndividual(
+case class InsertCustomerIndividualPostRequest(
     fullName: CustomerFullName,
-    emails: List[CustomerEmailEntry],
-    phoneNumbers: List[CustomerPhoneNumberEntry],
+    emails: List[CustomerEmailEntryRequest],
+    phoneNumbers: List[CustomerPhoneNumberEntryRequest],
     addressLine1: Option[CustomerAddressLine1],
     addressLine2: Option[CustomerAddressLine2],
     city: Option[CustomerCity],
@@ -69,15 +69,15 @@ case class InsertCustomerIndividual(
     country: Option[CustomerCountry],
 )
 
-case class InsertCustomerIndividuals(
-    customerIndividuals: List[InsertCustomerIndividual]
+case class InsertCustomerIndividualsPostRequest(
+    customerIndividuals: List[InsertCustomerIndividualPostRequest]
 )
 
-case class UpdateCustomerIndividual(
+case class UpdateCustomerIndividualPutRequest(
     customerID: CustomerID,
     fullName: Option[CustomerFullName],
-    emails: List[CustomerEmailEntry],
-    phoneNumbers: List[CustomerPhoneNumberEntry],
+    emails: List[CustomerEmailEntryRequest],
+    phoneNumbers: List[CustomerPhoneNumberEntryRequest],
     addressLine1: Option[CustomerAddressLine1],
     addressLine2: Option[CustomerAddressLine2],
     city: Option[CustomerCity],
@@ -101,23 +101,23 @@ case class AddCustomerBusinessContact(
     phoneNumber: Option[CustomerPhoneNumber],
 )
 
-case class AddCustomerBusinessContacts(
+case class AddCustomerBusinessContactsPutRequest(
     customerID: CustomerID,
     customerBusinessContacts: List[AddCustomerBusinessContact],
 )
 
-case class RemoveCustomerBusinessContacts(
+case class RemoveCustomerBusinessContactsPutRequest(
     customerID: CustomerID,
     customerBusinessContactIDs: List[CustomerBusinessContactID],
 )
 
 // Businesses
 
-case class InsertCustomerBusiness(
+case class InsertCustomerBusinessPostRequest(
     businessName: CustomerBusinessName,
-    emails: List[CustomerEmailEntry],
+    emails: List[CustomerEmailEntryRequest],
     taxID: Option[CustomerTaxID],
-    phoneNumbers: List[CustomerPhoneNumberEntry],
+    phoneNumbers: List[CustomerPhoneNumberEntryRequest],
     addressLine1: Option[CustomerAddressLine1],
     addressLine2: Option[CustomerAddressLine2],
     city: Option[CustomerCity],
@@ -126,16 +126,16 @@ case class InsertCustomerBusiness(
     customerBusinessContacts: List[InsertCustomerBusinessContact],
 )
 
-case class InsertCustomerBusinesses(
-    customerBusinesses: List[InsertCustomerBusiness]
+case class InsertCustomerBusinessesPostRequest(
+    customerBusinesses: List[InsertCustomerBusinessPostRequest]
 )
 
-case class UpdateCustomerBusiness(
+case class UpdateCustomerBusinessPutRequest(
     customerID: CustomerID,
     businessName: Option[CustomerBusinessName],
-    emails: List[CustomerEmailEntry],
+    emails: List[CustomerEmailEntryRequest],
     taxID: Option[CustomerTaxID],
-    phoneNumbers: List[CustomerPhoneNumberEntry],
+    phoneNumbers: List[CustomerPhoneNumberEntryRequest],
     addressLine1: Option[CustomerAddressLine1],
     addressLine2: Option[CustomerAddressLine2],
     city: Option[CustomerCity],
@@ -145,7 +145,7 @@ case class UpdateCustomerBusiness(
 
 // Combined
 
-case class InsertCustomers(
-    customerBusinesses: List[InsertCustomerBusiness],
-    customerIndividuals: List[InsertCustomerIndividual],
+case class InsertCustomersPostRequest(
+    customerBusinesses: List[InsertCustomerBusinessPostRequest],
+    customerIndividuals: List[InsertCustomerIndividualPostRequest],
 )

@@ -31,7 +31,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
     "validatedInsertCustomerIndividualPostRequest" should {
       "successfully validate a valid individual" in {
-        val individual = arbitrarySample[InsertCustomerIndividual]
+        val individual = arbitrarySample[InsertCustomerIndividualPostRequest]
 
         validator
           .validatedInsertCustomerIndividualPostRequest(
@@ -42,7 +42,10 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
       "accumulate every field error" in {
         val request = arbitrarySample[smithy.InsertCustomerIndividualPostRequest]
-          .copy(fullName = "", emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = false)))
+          .copy(
+            fullName = "",
+            emails = List(smithy.CustomerEmailEntryRequest(email = "invalid-email", isDefault = false)),
+          )
 
         validator.validatedInsertCustomerIndividualPostRequest(request).zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
@@ -56,8 +59,8 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
       "reject when more than one email is marked default" in {
         val request = arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(
           emails = List(
-            smithy.CustomerEmailRequest(email = "a@example.com", isDefault = true),
-            smithy.CustomerEmailRequest(email = "b@example.com", isDefault = true),
+            smithy.CustomerEmailEntryRequest(email = "a@example.com", isDefault = true),
+            smithy.CustomerEmailEntryRequest(email = "b@example.com", isDefault = true),
           ),
           phoneNumbers = Nil,
         )
@@ -72,7 +75,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
       "reject when no email is marked default" in {
         val request = arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(
-          emails = List(smithy.CustomerEmailRequest(email = "a@example.com", isDefault = false)),
+          emails = List(smithy.CustomerEmailEntryRequest(email = "a@example.com", isDefault = false)),
           phoneNumbers = Nil,
         )
 
@@ -87,7 +90,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
     "validatedInsertCustomerIndividualsPostRequest" should {
       "successfully validate a batch of individuals" in {
-        val individuals = arbitrarySample[InsertCustomerIndividuals]
+        val individuals = arbitrarySample[InsertCustomerIndividualsPostRequest]
 
         validator
           .validatedInsertCustomerIndividualsPostRequest(
@@ -101,7 +104,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           customerIndividuals = List(
             arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(fullName = ""),
             arbitrarySample[smithy.InsertCustomerIndividualPostRequest]
-              .copy(emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = true))),
+              .copy(emails = List(smithy.CustomerEmailEntryRequest(email = "invalid-email", isDefault = true))),
           )
         )
 
@@ -126,17 +129,19 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
       "report only the failing individuals of a mixed batch, keeping the inner email indexes in the message" in {
         val invalidEmailsIndividual = arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(
           emails = List(
-            smithy.CustomerEmailRequest(email = "bad-1", isDefault = false),
-            smithy.CustomerEmailRequest(email = "ok@example.com", isDefault = true),
-            smithy.CustomerEmailRequest(email = "bad-2", isDefault = false),
+            smithy.CustomerEmailEntryRequest(email = "bad-1", isDefault = false),
+            smithy.CustomerEmailEntryRequest(email = "ok@example.com", isDefault = true),
+            smithy.CustomerEmailEntryRequest(email = "bad-2", isDefault = false),
           )
         )
 
         val request = arbitrarySample[smithy.InsertCustomerIndividualsPostRequest].copy(
           customerIndividuals = List(
-            arbitrarySample[InsertCustomerIndividual].transformInto[smithy.InsertCustomerIndividualPostRequest],
+            arbitrarySample[InsertCustomerIndividualPostRequest]
+              .transformInto[smithy.InsertCustomerIndividualPostRequest],
             invalidEmailsIndividual,
-            arbitrarySample[InsertCustomerIndividual].transformInto[smithy.InsertCustomerIndividualPostRequest],
+            arbitrarySample[InsertCustomerIndividualPostRequest]
+              .transformInto[smithy.InsertCustomerIndividualPostRequest],
             arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(fullName = ""),
           )
         )
@@ -169,7 +174,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
     "validatedInsertCustomerBusinessPostRequest" should {
       "successfully validate a valid business" in {
-        val business = arbitrarySample[InsertCustomerBusiness]
+        val business = arbitrarySample[InsertCustomerBusinessPostRequest]
 
         validator
           .validatedInsertCustomerBusinessPostRequest(business.transformInto[smithy.InsertCustomerBusinessPostRequest])
@@ -179,7 +184,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
       "accumulate business and nested contact errors" in {
         val request = arbitrarySample[smithy.InsertCustomerBusinessPostRequest].copy(
           businessName = "",
-          emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = false)),
+          emails = List(smithy.CustomerEmailEntryRequest(email = "invalid-email", isDefault = false)),
           customerBusinessContacts = Some(
             List(
               arbitrarySample[smithy.AddCustomerBusinessContact]
@@ -202,7 +207,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
     "validatedInsertCustomerBusinessesPostRequest" should {
       "successfully validate a batch of businesses" in {
-        val businesses = arbitrarySample[InsertCustomerBusinesses]
+        val businesses = arbitrarySample[InsertCustomerBusinessesPostRequest]
 
         validator
           .validatedInsertCustomerBusinessesPostRequest(
@@ -217,7 +222,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
             arbitrarySample[smithy.InsertCustomerBusinessPostRequest]
               .copy(
                 businessName = "",
-                emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = true)),
+                emails = List(smithy.CustomerEmailEntryRequest(email = "invalid-email", isDefault = true)),
                 customerBusinessContacts = None,
               )
           )
@@ -243,7 +248,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
     "validatedInsertCustomersPostRequest" should {
       "successfully validate businesses and individuals together" in {
-        val customers = arbitrarySample[InsertCustomers]
+        val customers = arbitrarySample[InsertCustomersPostRequest]
 
         validator
           .validatedInsertCustomersPostRequest(customers.transformInto[smithy.InsertCustomersPostRequest])
@@ -274,7 +279,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
     "validatedUpdateCustomerIndividualPutRequest" should {
       "successfully validate an individual update" in {
-        val update = arbitrarySample[UpdateCustomerIndividual]
+        val update = arbitrarySample[UpdateCustomerIndividualPutRequest]
 
         validator
           .validatedUpdateCustomerIndividualPutRequest(update.transformInto[smithy.UpdateCustomerIndividualPutRequest])
@@ -285,7 +290,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
         val request = arbitrarySample[smithy.UpdateCustomerIndividualPutRequest]
           .copy(
             fullName = Some(""),
-            emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = false)),
+            emails = List(smithy.CustomerEmailEntryRequest(email = "invalid-email", isDefault = false)),
           )
 
         validator.validatedUpdateCustomerIndividualPutRequest(request).zioError shouldBe
@@ -300,7 +305,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
     "validatedUpdateCustomerBusinessPutRequest" should {
       "successfully validate a business update" in {
-        val update = arbitrarySample[UpdateCustomerBusiness]
+        val update = arbitrarySample[UpdateCustomerBusinessPutRequest]
 
         validator
           .validatedUpdateCustomerBusinessPutRequest(update.transformInto[smithy.UpdateCustomerBusinessPutRequest])
@@ -311,7 +316,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
         val request = arbitrarySample[smithy.UpdateCustomerBusinessPutRequest]
           .copy(
             businessName = Some(""),
-            emails = List(smithy.CustomerEmailRequest(email = "invalid-email", isDefault = false)),
+            emails = List(smithy.CustomerEmailEntryRequest(email = "invalid-email", isDefault = false)),
           )
 
         validator.validatedUpdateCustomerBusinessPutRequest(request).zioError shouldBe
@@ -326,7 +331,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
     "validatedAddCustomerBusinessContactsPutRequest" should {
       "successfully validate contacts to add" in {
-        val contacts = arbitrarySample[AddCustomerBusinessContacts]
+        val contacts = arbitrarySample[AddCustomerBusinessContactsPutRequest]
 
         validator
           .validatedAddCustomerBusinessContactsPutRequest(
