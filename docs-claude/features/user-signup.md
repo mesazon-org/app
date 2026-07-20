@@ -32,6 +32,76 @@ Defined in `backend/gateway/core/src/main/smithy/UserSignupService.smithy`.
 
 Email sends are retried with `Schedule.recurs(maxRetries) && Schedule.exponential(delay)`; on this flow a final failure fails the request.
 
+## Sequence diagrams
+
+### POST /signup/email
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as UserSignUpService
+    participant V as UserSignUpRequestValidator
+    participant UD as UserDetailsRepository
+    participant OTP as UserOtpRepository
+    participant Email as EmailClient
+
+    Client->>SVC: POST /signup/email {email}
+    SVC->>V: validatedSignUpEmailPostRequest
+    V-->>SVC: SignUpEmailPostRequest (or 400 ValidationError)
+    SVC->>UD: getUserDetailsByEmail
+
+    alt New email (no user)
+        SVC->>UD: insertUserDetails (EmailVerification)
+        SVC->>OTP: upsertUserOtp (new OTP)
+        SVC->>Email: sendEmailVerificationEmail
+    else Existing user still in a sign-up stage
+        SVC->>UD: updateUserDetails (reset to EmailVerification)
+        alt OTP missing / expired / outside resend cooldown
+            SVC->>OTP: upsertUserOtp (new OTP)
+            SVC->>Email: sendEmailVerificationEmail
+        else OTP still fresh (within cooldown)
+            Note over SVC: reuse existing OTP, no email (throttle)
+        end
+    else Existing user past sign-up stages
+        Note over SVC: anti-enumeration — fake otpID,<br/>nothing stored or sent
+    end
+
+    SVC-->>Client: otpID + otpExpiresInSeconds
+```
+
+### POST /signup/verify/email
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as UserSignUpService
+    participant V as UserSignUpRequestValidator
+    participant OTP as UserOtpRepository
+    participant UD as UserDetailsRepository
+    participant JWT as JwtService
+    participant UT as UserTokenRepository
+
+    Client->>SVC: POST /signup/verify/email {otpID, otp}
+    SVC->>V: validatedSignUpVerifyEmailPostRequest
+    SVC->>OTP: getUserOtpByOtpID (EmailVerification)
+    SVC->>UD: getUserDetails
+    SVC->>SVC: verifyOnboardStage (EmailVerification)
+
+    alt OTP expired
+        SVC->>OTP: deleteUserOtp
+        SVC-->>Client: 401 OtpExpiredError
+    else Wrong OTP
+        SVC-->>Client: 400 OtpVerifyError
+    else Correct OTP
+        SVC->>UD: updateUserDetails (EmailVerified)
+        SVC->>OTP: deleteUserOtp
+        SVC->>UT: deleteAllUserTokens
+        SVC->>JWT: generateAccessToken + generateRefreshToken
+        SVC->>UT: upsertUserToken (RefreshToken)
+        SVC-->>Client: accessToken + refreshToken + onboardStage
+    end
+```
+
 ## Key files
 
 The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
@@ -41,7 +111,7 @@ The feature follows the consolidated per-feature layout of [adding-a-feature.md]
 - Arbitraries: `testkit/base/UserSignUpDomainArbitraries.scala`, `gateway/utils/UserSignUpSmithyArbitraries.scala`
 - Service: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/UserSignUpService.scala`
 - Repositories: `UserDetailsRepository`, `UserOtpRepository`, `UserTokenRepository`
-- Stage lists: `backend/domain/src/main/scala/io/mesazon/domain/gateway/UserOnboard.scala`
+- Stage lists: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OnboardStage.scala`
 - Config: `UserSignUpConfig` (`otpEmailVerificationExpiresAtOffset`, `otpEmailVerificationResendCooldown`, `sendEmailVerificationEmailMaxRetries`, `sendEmailVerificationEmailRetryDelay`)
 
 ## Tests

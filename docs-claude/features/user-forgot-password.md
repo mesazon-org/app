@@ -35,6 +35,109 @@ Defined in `backend/gateway/core/src/main/smithy/UserForgotPasswordService.smith
 
 Note: existing refresh tokens are **not** deleted on reset; sign-in deletes all tokens on next login.
 
+## Sequence diagrams
+
+### POST /forgot/password  (request a recovery OTP)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as UserForgotPasswordService
+    participant V as UserForgotPasswordRequestValidator
+    participant UD as UserDetailsRepository
+    participant OTP as UserOtpRepository
+    participant AA as UserActionAttemptRepository
+    participant Email as EmailClient
+
+    Client->>SVC: POST /forgot/password {email}
+    SVC->>V: validatedForgotPasswordPostRequest
+    SVC->>UD: getUserDetailsByEmail
+    alt Unknown email
+        Note over SVC: anti-enumeration — fake otpID, nothing stored/sent
+    else Known user (stage checked)
+        SVC->>OTP: getUserOtpByUserID (ForgotPassword)
+        alt Fresh OTP (within cooldown)
+            SVC->>AA: getAndIncreaseUserActionAttempt (ForgotPassword)
+            alt Over otpResetAttemptsMaxRetries
+                Note over SVC: return existing otpID, no email (abuse guard)
+            else Under limit
+                SVC->>OTP: updateUserOtp (extend expiry)
+            end
+        else No / stale OTP
+            SVC->>OTP: upsertUserOtp (new OTP)
+            SVC->>AA: deleteUserActionAttempt (ForgotPasswordVerifyOTP)
+            SVC->>Email: sendForgotPasswordEmail
+        end
+    end
+    SVC-->>Client: otpID + otpExpiresInSeconds
+```
+
+### POST /forgot/password/verify-otp  (OTP → reset token)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as UserForgotPasswordService
+    participant V as UserForgotPasswordRequestValidator
+    participant OTP as UserOtpRepository
+    participant UD as UserDetailsRepository
+    participant AA as UserActionAttemptRepository
+    participant JWT as JwtService
+    participant UT as UserTokenRepository
+
+    Client->>SVC: POST /forgot/password/verify-otp {otpID, otp}
+    SVC->>V: validatedForgotPasswordVerifyOTPPostRequest
+    SVC->>OTP: getUserOtpByOtpID (ForgotPassword)
+    SVC->>UD: getUserDetails
+    SVC->>SVC: verifyOnboardStage (forgotPasswordAllowedStages)
+    SVC->>AA: getAndIncreaseUserActionAttempt (ForgotPasswordVerifyOTP)
+    alt Over otpVerifyAttemptsMaxRetries
+        SVC-->>Client: 400 OtpVerifyError (guessing guard)
+    else OTP expired
+        SVC->>OTP: deleteUserOtp
+        SVC-->>Client: 401 OtpExpiredError
+    else Wrong OTP
+        SVC-->>Client: 400 OtpVerifyError
+    else Correct OTP (or dev OTP)
+        SVC->>OTP: deleteUserOtp
+        SVC->>AA: deleteUserActionAttempt (both counters)
+        SVC->>JWT: generateResetPasswordToken
+        SVC->>UT: upsertUserToken (ResetPasswordToken)
+        SVC-->>Client: resetPasswordToken + expiry
+    end
+```
+
+### POST /forgot/password/reset  (reset token → new password, 204)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as UserForgotPasswordService
+    participant V as UserForgotPasswordRequestValidator
+    participant JWT as JwtService
+    participant UD as UserDetailsRepository
+    participant UT as UserTokenRepository
+    participant PW as PasswordService
+    participant UC as UserCredentialsRepository
+    participant Email as EmailClient
+
+    Client->>SVC: POST /forgot/password/reset {resetPasswordToken, password}
+    SVC->>V: validatedForgotPasswordResetPostRequest
+    SVC->>JWT: verifyResetPasswordToken (signature + audience)
+    SVC->>UD: getUserDetails
+    SVC->>SVC: verifyOnboardStage (forgotPasswordAllowedStages)
+    SVC->>UT: getUserToken (ResetPasswordToken must exist — revocable)
+    alt Token row missing
+        SVC-->>Client: 500 UnexpectedError (revoked / already used)
+    else Valid
+        SVC->>PW: hashPassword (Argon2)
+        SVC->>UC: updateUserCredentials
+        SVC->>UT: deleteUserToken (single use)
+        SVC->>Email: sendPasswordChangeConfirmationEmail (best-effort)
+        SVC-->>Client: 204 No Content
+    end
+```
+
 ## Key files
 
 The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.

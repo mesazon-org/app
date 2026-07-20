@@ -9,7 +9,7 @@ This is the checklist for the files a new feature `<Feature>` creates. Not every
 | Concern | File | Notes |
 |---|---|---|
 | **API contract** | `backend/gateway/core/src/main/smithy/<Feature>Service.smithy` + `smithy/domain/<Feature>.smithy` | Operations + request/response shapes. See [smithy.md](smithy.md). |
-| **Domain models** | `backend/domain/src/main/scala/io/mesazon/domain/gateway/<Feature>.scala` | Newtypes + the refined case classes each request validates into. See [scala.md § Iron new types](scala.md#iron-new-types). |
+| **Domain models** | `backend/domain/src/main/scala/io/mesazon/domain/gateway/<Feature>.scala` | The entry/value case classes and the refined case classes each request validates into — **not** newtypes (all newtypes live in the single shared `Newtypes.scala`, see below) and **not** enums or other models broader than one request (each gets its own file, e.g. `OnboardStage.scala`). See [scala.md § Iron new types](scala.md#iron-new-types). |
 | **Request validator** | `backend/gateway/core/src/main/scala/io/mesazon/gateway/validation/service/<Feature>RequestValidator.scala` | One class, one `validated<Request>` per fallible request. See [validators.md](validators.md). |
 | **Service** | `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/<Feature>Service.scala` | Implements the generated trait; calls the validator, then does the work. |
 | **Persistence** | `Row → Queries → Repository` (+ `RepositoryConfig`, `application.conf`) | See the [Adding a table checklist](postgres.md#adding-a-table--checklist). |
@@ -18,6 +18,14 @@ This is the checklist for the files a new feature `<Feature>` creates. Not every
 | **Validator spec** | `backend/gateway/core/src/test/scala/io/mesazon/gateway/unit/validation/service/<Feature>RequestValidatorSpec.scala` | Two tests per validator function. See [validators.md § Tests](validators.md#tests). |
 | **Service / repository / acceptance specs** | `fun/`, `it/`, `backend/gateway/it` | See [acceptance-tests.md](acceptance-tests.md). |
 | **Feature doc** | `docs-claude/features/<feature-name>.md` | Required — see the documentation rule in [CLAUDE.md](../CLAUDE.md). |
+
+## Where newtypes and enums live
+
+Not everything domain-shaped goes in `<Feature>.scala` — only what is genuinely scoped to *this feature's requests*:
+
+- **Newtypes** (`object X extends RefinedType[...]`) all live in the single shared `backend/domain/src/main/scala/io/mesazon/domain/gateway/Newtypes.scala`, regardless of which feature "owns" them. The package is flat (`io.mesazon.domain.gateway`) and every file in it is wildcard-imported everywhere via `io.mesazon.domain.gateway.*`, so splitting newtypes per feature bought no isolation — it just made a type harder to find. Add new ones to `Newtypes.scala`, grouped under a `// <Feature Name>` comment for the feature that introduced them.
+- **Enums and other models used beyond a single request** (e.g. `OnboardStage`, `OrganizationStage`, `OrganizationUserRole` — state machines or roles that other features also read) get their **own file**, named after the enum (`OnboardStage.scala`), not folded into `<Feature>.scala`. If the enum gains real behavior later, its own file is where that belongs too.
+- **`<Feature>.scala` holds only**: entry/value case classes embedded in a request (e.g. `CustomerEmailEntryRequest`) and the request case classes themselves (`InsertCustomerIndividualPostRequest`). If a feature has no enum and nothing shared, this is all `<Feature>.scala` contains.
 
 ## Arbitraries: one trait per feature, two layers
 
@@ -56,9 +64,9 @@ The name is `arb` + the exact type name (`arbInsertCustomerIndividualPostRequest
 
 ## Consolidating an existing feature into this layout
 
-Older features left their pieces scattered (newtypes in `gateway.scala`, per-request `ServiceValidator` classes, arbitraries in the shared traits). Consolidating a feature `<Feature>` means moving every piece into the per-feature files above **without changing behavior**. Done for: `CustomerBook` (built this way), `OrganizationManagement`, `UserOnboard`, `UserSignUp`, `UserSignIn`, `UserForgotPassword`, `UserToken`. The steps, in order:
+Older features left their pieces scattered (per-request `ServiceValidator` classes, arbitraries in the shared traits, request models split across one-file-per-class). Consolidating a feature `<Feature>` means moving its request-shaped pieces into the per-feature files above **without changing behavior**. Done for: `CustomerBook` (built this way), `OrganizationManagement`, `UserOnboard`, `UserSignUp`, `UserSignIn`, `UserForgotPassword`, `UserToken`. The steps, in order:
 
-1. **Domain** — create `domain/gateway/<Feature>.scala` holding, in this order: the feature's newtypes (cut from `gateway.scala`), its enums (delete their one-enum files), its entry/value case classes, its request case classes (delete their files). Everything stays in package `io.mesazon.domain.gateway`, so **no call site changes** — this step is pure file moves. While here, align the request case-class names with the [smithy gold standard](smithy.md#3-requestresponse-structures) if they drifted (rename the domain class to the smithy request name, never the reverse).
+1. **Domain** — create `domain/gateway/<Feature>.scala` holding, in this order: the feature's entry/value case classes, then its request case classes (delete their old one-file-per-class files). Per [Where newtypes and enums live](#where-newtypes-and-enums-live), the feature's newtypes go into (or already live in) the shared `Newtypes.scala`, and any enum broader than one request keeps or gets its own file — neither belongs in `<Feature>.scala`. Everything stays in package `io.mesazon.domain.gateway`, so **no call site changes** — this step is pure file moves. While here, align the request case-class names with the [smithy gold standard](smithy.md#3-requestresponse-structures) if they drifted (rename the domain class to the smithy request name, never the reverse).
 2. **Validator** — replace the per-request `<Request>ServiceValidator` classes with one `validation/service/<Feature>RequestValidator.scala`: a plain class (not a `ServiceValidator`) with one public `validated<Request>PostRequest(request): IO[ValidationError, <Domain>]` per fallible request, each delegating to a private `UIO[ValidatedNec[InvalidFieldError, <Domain>]]` via `toValidatedRequestIO`. Callers change from `validator.validate(r)` to `validator.validated<Request>PostRequest(r)`; update the service, `Main`'s layer list, and any spec `provide`.
 3. **Domain arbitraries** — create `<Feature>DomainArbitraries` in test-kit and move every feature `Arbitrary` (enums included) out of `GatewayArbitraries` into it, naming each given (`arb<Type>`). Generic helpers shared across features (e.g. `genEntriesWithSingleDefault`) stay `protected` in `GatewayArbitraries`.
 4. **Smithy arbitraries** — create `<Feature>SmithyArbitraries` in gateway-core test utils and move the feature's `Transformer`s and smithy-request arbitraries out of the shared `SmithyArbitraries`.
@@ -70,7 +78,7 @@ Older features left their pieces scattered (newtypes in `gateway.scala`, per-req
 ## Order of work
 
 1. **Smithy** contract (`smithy4sCodegen` must be green).
-2. **Domain models** — the refined case classes.
+2. **Domain models** — any new newtypes into `Newtypes.scala`, any new shared enum into its own file, then the feature's entry/request case classes into `<Feature>.scala`.
 3. **Domain arbitraries**, then **smithy arbitraries** (derived from them).
 4. **Validator** + its spec (round-trip success + accumulated-error failure per function).
 5. **Service** + persistence + their specs.

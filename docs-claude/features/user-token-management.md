@@ -39,6 +39,57 @@ Defined in `backend/gateway/core/src/main/smithy/UserTokenService.smithy`.
 
 `AuthorizationService` (wired by `ServerMiddleware` for `@httpBearerAuth` smithy services, and by Tapir endpoints via `AuthorizationService.tapir`) extracts the `Bearer` token, verifies it, optionally enforces `OnboardStage.completedStages` when the service is annotated `@completedOnboardStage`, and sets `AuthedUser` in `AuthState`.
 
+## Sequence diagrams
+
+### POST /token/refresh  (rotate refresh token)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as UserTokenService
+    participant V as UserTokenRequestValidator
+    participant JWT as JwtService
+    participant UT as UserTokenRepository
+
+    Client->>SVC: POST /token/refresh {refreshToken}
+    SVC->>V: validatedTokenRefreshPostRequest
+    SVC->>JWT: verifyRefreshToken (signature, expiry, auth:refresh)
+    JWT-->>SVC: (tokenID, userID)
+    SVC->>UT: getUserToken (RefreshToken)
+    alt Token row absent (revoked / rotated away)
+        SVC-->>Client: 401 TokenFailedAuthorization
+    else Token row present
+        SVC->>JWT: generateAccessToken + generateRefreshToken
+        SVC->>UT: upsertUserToken (new row, tokenIDOptOld = old — atomic rotation)
+        SVC-->>Client: new accessToken + refreshToken + expiry
+    end
+```
+
+### Bearer authorization on every protected endpoint
+
+How a `Bearer` access token gates the other smithy/Tapir services (the middleware step drawn out once):
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant MW as ServerMiddleware
+    participant AUTH as AuthorizationService
+    participant JWT as JwtService
+    participant Handler as Protected handler
+
+    Client->>MW: request (Authorization: Bearer access)
+    MW->>AUTH: auth(request)
+    AUTH->>JWT: verifyAccessToken (signature, expiry)
+    alt Invalid / expired
+        AUTH-->>Client: 401 FailedToVerifyJwt
+    else @completedOnboardStage and stage not completed
+        AUTH-->>Client: 403 Forbidden
+    else Authorized
+        AUTH->>Handler: AuthedUser(userID) in AuthState
+        Handler-->>Client: response
+    end
+```
+
 ## Key files
 
 The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
