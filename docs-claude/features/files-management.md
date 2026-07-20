@@ -35,6 +35,41 @@ Everything runs inside one `ZIO.scoped` block; every intermediate file is a `Tem
 
 `SupportedMediaTypes` (domain enum, `ext` + `mime`): `PNG`, `JPEG`, `WEBP`; `SupportedMediaTypes.images` is the allow-list passed through the pipeline. Add new types there.
 
+## Sequence diagram
+
+### POST /upload/organization/logo  (Tapir streaming, Bearer + completed onboarding + OWNER/ADMIN)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant AUTH as AuthorizationService
+    participant SVC as FileService
+    participant Scan as FileScanner
+    participant Img as ImageProcessing
+    participant S3 as OrganizationLogosS3Client
+    participant Repo as OrganizationManagementRepository
+
+    Client->>AUTH: POST /upload/organization/logo (Bearer, X-Organization-ID, X-File-Name, binary stream)
+    AUTH->>AUTH: verify JWT + completedStages + org role (OWNER/ADMIN)
+    alt Not authorized
+        AUTH-->>Client: 401 / 403
+    else Authorized
+        AUTH->>SVC: uploadOrganizationLogo (scoped)
+        SVC->>Scan: scan stream (cap maxFileBytes+1)
+        alt Over size limit or MIME not in allow-list (Tika sniff)
+            Scan-->>Client: 400 (rejected, rest of stream never read)
+        else Valid file
+            SVC->>Img: normalize (re-detect format, bound 640x640, lossless WebP)
+            Img-->>SVC: original + normalized streams
+            SVC->>S3: upload both variants → bucket keys
+            SVC->>Repo: updateOrganization (bucket keys, stage → LogoProvided)
+            SVC-->>Client: 200 (logo stored)
+        end
+    end
+```
+
+All intermediate files are `TempFile.createScoped` inside one `ZIO.scoped` block — auto-deleted on scope close, even on failure.
+
 ## Key files
 
 - Orchestration: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/FileService.scala`

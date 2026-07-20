@@ -113,6 +113,80 @@ Edit a person's contact details or a company's details in place. These touch onl
 - **`customer_type` drives which detail table applies, enforced in the service.** The DB stays permissive for the individual-vs-business split (a plain `(organization_id, customer_id)` FK from each detail table to `customer`). The service guarantees a customer is never both kinds by writing `customer` + the matching detail table in one transaction and never the other; an integration test backstops this by asserting no `customer_id` appears in both `customer_individual_details` and `customer_business_details`. The discriminated-composite-FK alternative was considered and rejected to keep the DB permissive. (The related "contacts only under a business" rule *is* DB-enforced — `customer_business_contact` FKs `customer_business_details`.)
 - **Names are unique per organization.** `customer_business_details.business_name` and `customer_individual_details.full_name` each carry `unique (organization_id, <name>)`, so a tenant can't hold two businesses (or two individuals) with the same name; a duplicate insert surfaces as `Conflict` (409). Uniqueness is scoped to the tenant — the same name may exist in different organizations.
 
+## Sequence diagrams (target design)
+
+The service handlers are still stubs (see [Implementation status](#implementation-status)); these describe the intended flow. Every operation is Bearer + completed-onboarding authenticated, scoped by the `X-Organization-ID` header, and role-checked (writes: `OWNER`/`ADMIN`; reads: `OWNER`/`ADMIN`/`USER`) — the auth/role step is drawn once here and omitted from the per-operation diagrams.
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant AUTH as AuthorizationService
+    participant SVC as CustomerBookService
+    Client->>AUTH: request (Bearer, X-Organization-ID)
+    AUTH->>AUTH: verify JWT + completedStages + org role
+    AUTH->>SVC: AuthedUser + organizationID
+```
+
+### Create an individual / business (`InsertCustomerIndividualPost`, `InsertCustomerBusinessPost`, batches, combined)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as CustomerBookService
+    participant V as CustomerBookRequestValidator
+    participant Repo as CustomerBookRepository
+    participant DB as Postgres
+
+    Client->>SVC: POST /insert/customer-individual|business {details, emails[], phoneNumbers[]}
+    SVC->>V: validate (each entry valid, exactly one default; errors tagged by index)
+    V-->>SVC: domain request (or 400 ValidationError)
+    SVC->>Repo: insertCustomer
+    rect rgb(238,238,238)
+        Repo->>DB: INSERT customer (type INDIVIDUAL|BUSINESS, ACTIVE)
+        Repo->>DB: INSERT customer_individual_details | customer_business_details
+        opt Business with inline contacts
+            Repo->>DB: INSERT customer_business_contact (per contact)
+        end
+    end
+    Note over Repo,DB: one transaction — duplicate name → Conflict (409)
+    SVC-->>Client: created
+```
+
+### Add / remove business contacts (`AddCustomerBusinessContactsPut`, `RemoveCustomerBusinessContactsPut`)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as CustomerBookService
+    participant Repo as CustomerBookRepository
+    participant DB as Postgres
+
+    Client->>SVC: PUT /add|remove/customer-business-contacts {customerID, contacts | contactIDs}
+    alt Add
+        SVC->>Repo: addContacts
+        Repo->>DB: INSERT customer_business_contact (per contact)
+    else Remove
+        SVC->>Repo: removeContacts
+        Repo->>DB: DELETE customer_business_contact by id (hard delete — no status)
+    end
+    SVC-->>Client: ok
+```
+
+### Reads (`GetCustomerIndividualGet`, `GetCustomerBusinessGet`, `GetCustomersGet`)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as CustomerBookService
+    participant Repo as CustomerBookRepository
+    participant DB as Postgres
+
+    Client->>SVC: GET /get/customer-individual|business/{customerID}  ·  GET /get/customers
+    SVC->>Repo: getCustomer(s) scoped by organizationID
+    Repo->>DB: SELECT customer (+ detail rows)
+    SVC-->>Client: full details  ·  list of {customerID, displayName, customerType}
+```
+
 ## Key files
 
 - Smithy: `smithy/CustomerBookService.smithy`, `smithy/domain/CustomerBook.smithy`

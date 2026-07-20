@@ -34,6 +34,36 @@ Any org-scoped endpoint added here follows the project-wide [standard role polic
 
 The repository also exposes `isOrganizationSlugExists` for slug-uniqueness checks, and `updateOrganization` (used by [Files Management](files-management.md) for logo bucket keys and stage updates).
 
+## Sequence diagram
+
+### POST /create/organization  (Bearer + completed onboarding → OWNER membership)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant MW as AuthorizationService (middleware)
+    participant SVC as OrganizationManagementService
+    participant V as OrganizationManagementRequestValidator
+    participant Repo as OrganizationManagementRepository
+    participant DB as Postgres
+    participant Email as EmailClient
+
+    Client->>MW: POST /create/organization {name, slug, emails, phoneNumbers, ...} (Bearer)
+    MW->>MW: verify access JWT + completedStages (PhoneVerified)
+    MW->>SVC: AuthedUser(userID) in AuthState
+    SVC->>V: validatedCreateOrganizationPostRequest
+    Note over V: name, slug, tagline, emails/phones<br/>(each valid, exactly one default), address, taxID
+    V-->>SVC: CreateOrganizationPostRequest (or 400 ValidationError)
+    SVC->>Repo: createOrganization
+    rect rgb(238,238,238)
+        Repo->>DB: INSERT organization_details (DetailsProvided)
+        Repo->>DB: INSERT organization_user (creator = OWNER)
+    end
+    Note over Repo,DB: one transaction — duplicate slug → Conflict
+    SVC->>Email: sendOrganizationCreatedEmail (best-effort)
+    SVC-->>Client: organizationID
+```
+
 ## Key files
 
 The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.

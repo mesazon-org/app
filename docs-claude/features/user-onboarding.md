@@ -37,6 +37,107 @@ Loads the OTP by (`otpID`, `userID`, type `PhoneVerification`). Expired → OTP 
 ### GET /onboard/verify/phone-number
 Returns the pending OTP's `otpID` and remaining seconds so the client can restore the verify screen. If the OTP is inside the resend-cooldown window of its expiry it is deleted and the call fails with `OtpExpiredError` (client should re-trigger `/onboard/details`).
 
+## Sequence diagrams
+
+All four endpoints are Bearer-authenticated: `ServerMiddleware` → `AuthorizationService` verifies the access JWT and puts `AuthedUser` in `AuthState` before the handler runs (omitted below for clarity).
+
+### POST /onboard/password  (stage → PasswordProvided)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as UserOnboardService
+    participant V as UserOnboardRequestValidator
+    participant PW as PasswordService
+    participant UC as UserCredentialsRepository
+    participant UD as UserDetailsRepository
+    participant Email as EmailClient
+
+    Client->>SVC: POST /onboard/password {password} (Bearer)
+    SVC->>V: validatedOnboardPasswordPostRequest
+    SVC->>UD: getUserDetails
+    SVC->>SVC: verifyOnboardStage (EmailVerified)
+    SVC->>PW: hashPassword (Argon2)
+    SVC->>UC: insertUserCredentials
+    SVC->>UD: updateUserDetails (PasswordProvided)
+    SVC->>Email: sendWelcomeEmail (best-effort, failure only logged)
+    SVC-->>Client: onboardStage = PasswordProvided
+```
+
+### POST /onboard/details  (stage → PhoneVerification, sends SMS OTP)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as UserOnboardService
+    participant V as UserOnboardRequestValidator
+    participant UD as UserDetailsRepository
+    participant OTP as UserOtpRepository
+    participant Twilio as TwilioClient
+
+    Client->>SVC: POST /onboard/details {fullName, phoneNumber} (Bearer)
+    SVC->>V: validatedOnboardDetailsPostRequest
+    SVC->>UD: getUserDetails
+    SVC->>SVC: verifyOnboardStage (PasswordProvided | PhoneVerification)
+    SVC->>OTP: getUserOtpByUserID (PhoneVerification)
+    alt Existing OTP still outside resend cooldown
+        Note over SVC: reuse OTP, no SMS — return remaining validity
+    else No / stale OTP
+        SVC->>OTP: upsertUserOtp (new OTP)
+        SVC->>UD: updateUserDetails (fullName, phoneNumber, PhoneVerification)
+        SVC->>Twilio: sendOtpSms (skipped in dev mode)
+    end
+    SVC-->>Client: otpID + otpExpiresInSeconds
+```
+
+### POST /onboard/verify/phone-number  (stage → PhoneVerified, completes onboarding)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as UserOnboardService
+    participant V as UserOnboardRequestValidator
+    participant UD as UserDetailsRepository
+    participant OTP as UserOtpRepository
+
+    Client->>SVC: POST /onboard/verify/phone-number {otpID, otp} (Bearer)
+    SVC->>V: validatedOnboardVerifyPhoneNumberPostRequest
+    SVC->>UD: getUserDetails
+    SVC->>SVC: verifyOnboardStage (PhoneVerification)
+    SVC->>OTP: getUserOtp (otpID, PhoneVerification)
+    alt OTP expired
+        SVC->>OTP: deleteUserOtp
+        SVC-->>Client: 401 OtpExpiredError
+    else Wrong OTP
+        SVC-->>Client: 400 OtpVerifyError
+    else Correct OTP (or dev OTP)
+        SVC->>UD: updateUserDetails (PhoneVerified)
+        SVC->>OTP: deleteUserOtp
+        SVC-->>Client: onboardStage = PhoneVerified
+    end
+```
+
+### GET /onboard/verify/phone-number  (restore verify screen)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as UserOnboardService
+    participant UD as UserDetailsRepository
+    participant OTP as UserOtpRepository
+
+    Client->>SVC: GET /onboard/verify/phone-number (Bearer)
+    SVC->>UD: getUserDetails
+    SVC->>SVC: verifyOnboardStage (PhoneVerification)
+    SVC->>OTP: getUserOtpByUserID (PhoneVerification)
+    alt OTP inside resend-cooldown window of expiry
+        SVC->>OTP: deleteUserOtp
+        SVC-->>Client: 401 OtpExpiredError (re-trigger /onboard/details)
+    else OTP still valid
+        SVC-->>Client: otpID + otpExpiresInSeconds
+    end
+```
+
 ## Key files
 
 The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.

@@ -30,6 +30,52 @@ Wired by `ServerMiddleware` for any smithy service annotated `@httpBasicAuth`:
 3. Generate access JWT + refresh JWT (`JwtService`), persist the refresh token (`user_token` table, type `RefreshToken`).
 4. Respond with `accessToken`, `refreshToken`, `accessTokenExpiresInSeconds`, and the current `onboardStage` (client uses it to resume onboarding if incomplete).
 
+## Sequence diagram
+
+### POST /signin  (Basic auth → session tokens)
+
+Two phases: credential verification in middleware (`AuthenticationService.auth`), then token issuing in the handler (`UserSignInService.signInPost`).
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant MW as AuthenticationService (middleware)
+    participant V as UserSignInRequestValidator
+    participant UD as UserDetailsRepository
+    participant AA as UserActionAttemptRepository
+    participant PW as PasswordService
+    participant SVC as UserSignInService (handler)
+    participant JWT as JwtService
+    participant UT as UserTokenRepository
+
+    Client->>MW: POST /signin (Authorization: Basic email:password)
+    alt No Basic header
+        MW-->>Client: 401 AuthHeaderMissingError
+    end
+    MW->>V: validatedBasicCredentialsRequest
+    MW->>UD: getUserDetailsByEmail
+    alt Email unknown
+        MW-->>Client: 401 AuthenticationEmailNotFound
+    end
+    MW->>MW: verifyOnboardStage (signInAllowedStages)
+    MW->>AA: getAndIncreaseUserActionAttempt (SignIn)
+    alt Over max attempts within block window
+        MW-->>Client: 401 AuthenticationTooManySignInAttempts
+    end
+    MW->>PW: verifyPassword (Argon2)
+    alt Password mismatch
+        MW-->>Client: 401 AuthenticationInvalidCredentials
+    else Password verified
+        MW->>AA: deleteUserActionAttempt (SignIn)
+        MW->>SVC: AuthedUser(userID) in AuthState
+        SVC->>UD: getUserDetails
+        SVC->>UT: deleteAllUserTokens (single active session)
+        SVC->>JWT: generateAccessToken + generateRefreshToken
+        SVC->>UT: upsertUserToken (RefreshToken)
+        SVC-->>Client: accessToken + refreshToken + onboardStage
+    end
+```
+
 ## Key files
 
 The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md), with one deviation: `SignInPost` has **no request body** (credentials travel in the Basic-auth header), so there is no smithy request shape and therefore no smithy-arbitraries trait — just the domain model, the validator, and a domain-arbitraries trait.
