@@ -35,17 +35,6 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
     } yield request
   }
 
-  given Arbitrary[smithy.SignUpEmailPostRequest] = Arbitrary {
-    Arbitrary.arbitrary[SignUpEmail].map(_.transformInto[smithy.SignUpEmailPostRequest])
-  }
-
-  given Arbitrary[smithy.SignUpVerifyEmailPostRequest] = Arbitrary {
-    for {
-      verifyEmail <- Arbitrary.arbitrary[SignUpVerifyEmail]
-      request = smithy.SignUpVerifyEmailPostRequest(otpID = verifyEmail.otpID.value, otp = verifyEmail.otp.value)
-    } yield request
-  }
-
   given Arbitrary[smithy.ForgotPasswordResetPostRequest] = Arbitrary(
     Arbitrary.arbitrary[ForgotPasswordReset].map(_.transformInto[smithy.ForgotPasswordResetPostRequest])
   )

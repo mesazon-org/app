@@ -6,7 +6,7 @@ import io.mesazon.gateway.HttpErrorHandler
 import io.mesazon.gateway.config.AuthenticationConfig
 import io.mesazon.gateway.repository.{UserActionAttemptRepository, UserCredentialsRepository, UserDetailsRepository}
 import io.mesazon.gateway.state.AuthState
-import io.mesazon.gateway.validation.service.BasicCredentialsRequestServiceValidator
+import io.mesazon.gateway.validation.service.UserSignInRequestValidator
 import org.http4s.headers.Authorization
 import org.http4s.{BasicCredentials as Http4sBasicCredentials, *}
 import zio.*
@@ -26,7 +26,7 @@ object AuthenticationService {
       userActionAttemptRepository: UserActionAttemptRepository,
       passwordService: PasswordService,
       authState: AuthState,
-      basicCredentialsRequestServiceValidator: BasicCredentialsRequestServiceValidator,
+      userSignInRequestValidator: UserSignInRequestValidator,
       timeProvider: TimeProvider,
   ) extends AuthenticationService[ServiceTask] {
 
@@ -43,20 +43,20 @@ object AuthenticationService {
         )(
           basicCredentialsRequestOpt
         )
-        basicCredentials <- basicCredentialsRequestServiceValidator.validate(basicCredentialsRequest)
-        userDetails      <- userDetailsRepository
+        basicCredentials <- userSignInRequestValidator.validatedBasicCredentialsRequest(basicCredentialsRequest)
+        userDetailsRow   <- userDetailsRepository
           .getUserDetailsByEmail(basicCredentials.email)
           .someOrFail(
             ServiceError.UnauthorizedError.AuthenticationEmailNotFound
           )
         _ <- verifyOnboardStage(
-          userID = userDetails.userID,
-          onboardStageUser = userDetails.onboardStage,
+          userID = userDetailsRow.userID,
+          onboardStageUser = userDetailsRow.onboardStage,
           onboardStagesAllowed = OnboardStage.signInAllowedStages,
         )
         userActionAttemptRow <- userActionAttemptRepository
           .getAndIncreaseUserActionAttempt(
-            userDetails.userID,
+            userDetailsRow.userID,
             ActionAttemptType.SignIn,
           )
         instantNow <- timeProvider.instantNow
@@ -69,25 +69,25 @@ object AuthenticationService {
           )
             ZIO.fail(
               ServiceError.UnauthorizedError.AuthenticationTooManySignInAttempts(
-                userDetails.userID,
+                userDetailsRow.userID,
                 ActionAttemptType.SignIn,
                 authenticationConfig.signInAttemptsBlockDuration.toSeconds,
               )
             )
           else ZIO.unit
-        userCredentials <- userCredentialsRepository
-          .getUserCredentials(userDetails.userID)
+        userCredentialsRow <- userCredentialsRepository
+          .getUserCredentials(userDetailsRow.userID)
           .someOrFail(
             ServiceError.InternalServerError.AuthenticationError(
-              s"User credentials not found for userID: [${userDetails.userID}], could only occur if user details exist but credentials do not"
+              s"User credentials not found for userID: [${userDetailsRow.userID}], could only occur if user details exist but credentials do not"
             )
           )
-        isPasswordVerified <- passwordService.verifyPassword(basicCredentials.password, userCredentials.passwordHash)
+        isPasswordVerified <- passwordService.verifyPassword(basicCredentials.password, userCredentialsRow.passwordHash)
         _                  <-
           if (isPasswordVerified)
-            userActionAttemptRepository.deleteUserActionAttempt(userDetails.userID, ActionAttemptType.SignIn)
+            userActionAttemptRepository.deleteUserActionAttempt(userDetailsRow.userID, ActionAttemptType.SignIn)
           else ZIO.fail(ServiceError.UnauthorizedError.AuthenticationInvalidCredentials)
-        _ <- authState.set(AuthedUser(userDetails.userID))
+        _ <- authState.set(AuthedUser(userDetailsRow.userID))
       } yield ()
   }
 

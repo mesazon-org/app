@@ -226,26 +226,26 @@ object UserOnboardService {
   private def observed(userOnboardService: smithy.UserOnboardService[ServiceTask]): smithy.UserOnboardService[Task] =
     new smithy.UserOnboardService[Task] {
       override def onboardPasswordPost(
-          request: smithy.OnboardPasswordPostRequest
+          onboardPasswordPostRequestSmithy: smithy.OnboardPasswordPostRequest
       ): Task[smithy.OnboardPasswordPostResponse] =
         HttpErrorHandler.errorResponseHandler(
-          userOnboardService.onboardPasswordPost(request)
+          userOnboardService.onboardPasswordPost(onboardPasswordPostRequestSmithy)
         )
 
       /** HTTP POST /onboard/details */
       override def onboardDetailsPost(
-          request: smithy.OnboardDetailsPostRequest
+          onboardDetailsPostRequestSmithy: smithy.OnboardDetailsPostRequest
       ): Task[smithy.OnboardDetailsPostResponse] =
         HttpErrorHandler.errorResponseHandler(
-          userOnboardService.onboardDetailsPost(request)
+          userOnboardService.onboardDetailsPost(onboardDetailsPostRequestSmithy)
         )
 
       /** HTTP POST /onboard/verify/phone-number */
       override def onboardVerifyPhoneNumberPost(
-          request: smithy.OnboardVerifyPhoneNumberPostRequest
+          onboardVerifyPhoneNumberPostRequestSmithy: smithy.OnboardVerifyPhoneNumberPostRequest
       ): Task[smithy.OnboardVerifyPhoneNumberPostResponse] =
         HttpErrorHandler.errorResponseHandler(
-          userOnboardService.onboardVerifyPhoneNumberPost(request)
+          userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequestSmithy)
         )
 
       /** HTTP GET /onboard/verify/phone-number */

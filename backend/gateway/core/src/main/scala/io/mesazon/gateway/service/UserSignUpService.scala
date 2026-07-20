@@ -23,16 +23,19 @@ object UserSignUpService {
       emailClient: EmailClient,
       otpGenerator: OtpGenerator,
       idGenerator: IDGenerator,
-      signUpEmailPostRequestServiceValidator: SignUpEmailPostRequestServiceValidator,
-      signUpVerifyEmailPostRequestServiceValidator: SignUpVerifyEmailPostRequestServiceValidator,
+      userSignUpRequestValidator: UserSignUpRequestValidator,
   ) extends smithy.UserSignUpService[ServiceTask] {
 
     /** HTTP POST /signup/email */
-    override def signUpEmailPost(request: smithy.SignUpEmailPostRequest): ServiceTask[smithy.SignUpEmailPostResponse] =
+    override def signUpEmailPost(
+        signUpEmailPostRequestSmithy: smithy.SignUpEmailPostRequest
+    ): ServiceTask[smithy.SignUpEmailPostResponse] =
       for {
-        _                 <- ZIO.logDebug(s"Signing up user with email: $request")
-        signUpEmail       <- signUpEmailPostRequestServiceValidator.validate(request)
-        userDetailsRowOpt <- userDetailsRepository.getUserDetailsByEmail(signUpEmail.email)
+        _                      <- ZIO.logDebug(s"Signing up user with email: $signUpEmailPostRequestSmithy")
+        signUpEmailPostRequest <- userSignUpRequestValidator.validatedSignUpEmailPostRequest(
+          signUpEmailPostRequestSmithy
+        )
+        userDetailsRowOpt <- userDetailsRepository.getUserDetailsByEmail(signUpEmailPostRequest.email)
         userOtpRowOpt     <- ZIO
           .foreach(userDetailsRowOpt)(userDetailsRow =>
             userOtpRepository.getUserOtpByUserID(
@@ -80,7 +83,7 @@ object UserSignUpService {
           case None =>
             for {
               userDetailsRowNew <- userDetailsRepository
-                .insertUserDetails(signUpEmail.email, OnboardStage.EmailVerification)
+                .insertUserDetails(signUpEmailPostRequest.email, OnboardStage.EmailVerification)
               expiresAtNew <- timeProvider.instantNow
                 .map(_.plusSeconds(userSignUpConfig.otpEmailVerificationExpiresAtOffset.toSeconds))
                 .map(ExpiresAt.assume)
@@ -107,16 +110,18 @@ object UserSignUpService {
 
     /** HTTP POST /signup/verify/email */
     override def signUpVerifyEmailPost(
-        request: smithy.SignUpVerifyEmailPostRequest
+        signUpVerifyEmailPostRequestSmithy: smithy.SignUpVerifyEmailPostRequest
     ): ServiceTask[smithy.SignUpVerifyEmailPostResponse] =
       for {
-        _                 <- ZIO.logDebug(s"Verify email: [${request.otpID}]")
-        signUpVerifyEmail <- signUpVerifyEmailPostRequestServiceValidator.validate(request)
-        userOtpRow        <- userOtpRepository
-          .getUserOtpByOtpID(signUpVerifyEmail.otpID, OtpType.EmailVerification)
+        _                            <- ZIO.logDebug(s"Verify email: [${signUpVerifyEmailPostRequestSmithy.otpID}]")
+        signUpVerifyEmailPostRequest <- userSignUpRequestValidator.validatedSignUpVerifyEmailPostRequest(
+          signUpVerifyEmailPostRequestSmithy
+        )
+        userOtpRow <- userOtpRepository
+          .getUserOtpByOtpID(signUpVerifyEmailPostRequest.otpID, OtpType.EmailVerification)
           .someOrFail(
             ServiceError.InternalServerError.UnexpectedError(
-              s"No otp found for otpID: [${signUpVerifyEmail.otpID}] and otpType: [${OtpType.EmailVerification}]"
+              s"No otp found for otpID: [${signUpVerifyEmailPostRequest.otpID}] and otpType: [${OtpType.EmailVerification}]"
             )
           )
         userDetailsRow <- userDetailsRepository
@@ -145,7 +150,10 @@ object UserSignUpService {
               )
             )
           else if (
-            userOtpRow.otp == signUpVerifyEmail.otp || verifyOtpInDev(signUpVerifyEmail.otp, userSignUpConfig.isDev)
+            userOtpRow.otp == signUpVerifyEmailPostRequest.otp || verifyOtpInDev(
+              signUpVerifyEmailPostRequest.otp,
+              userSignUpConfig.isDev,
+            )
           )
             userDetailsRepository
               .updateUserDetails(
@@ -185,16 +193,18 @@ object UserSignUpService {
     new smithy.UserSignUpService[Task] {
 
       /** HTTP POST /signup/email */
-      override def signUpEmailPost(request: smithy.SignUpEmailPostRequest): Task[smithy.SignUpEmailPostResponse] =
+      override def signUpEmailPost(
+          signUpEmailPostRequestSmithy: smithy.SignUpEmailPostRequest
+      ): Task[smithy.SignUpEmailPostResponse] =
         HttpErrorHandler
-          .errorResponseHandler(service.signUpEmailPost(request))
+          .errorResponseHandler(service.signUpEmailPost(signUpEmailPostRequestSmithy))
 
       /** HTTP POST /signup/verify/email */
       override def signUpVerifyEmailPost(
-          request: smithy.SignUpVerifyEmailPostRequest
+          signUpVerifyEmailPostRequestSmithy: smithy.SignUpVerifyEmailPostRequest
       ): Task[smithy.SignUpVerifyEmailPostResponse] =
         HttpErrorHandler
-          .errorResponseHandler(service.signUpVerifyEmailPost(request))
+          .errorResponseHandler(service.signUpVerifyEmailPost(signUpVerifyEmailPostRequestSmithy))
     }
 
   val local = ZLayer.derive[UserSignUpServiceImpl].project[smithy.UserSignUpService[ServiceTask]](identity)

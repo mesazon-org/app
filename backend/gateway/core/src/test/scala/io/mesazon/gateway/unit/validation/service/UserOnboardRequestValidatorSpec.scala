@@ -99,7 +99,9 @@ class UserOnboardRequestValidatorSpec extends ZWordSpecBase, UserOnboardSmithyAr
       val onboardVerifyPhoneNumberPostRequestSmithy =
         arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest].copy(otp = "invalid-otp")
 
-      validator.validatedOnboardVerifyPhoneNumberPostRequest(onboardVerifyPhoneNumberPostRequestSmithy).zioError shouldBe
+      validator
+        .validatedOnboardVerifyPhoneNumberPostRequest(onboardVerifyPhoneNumberPostRequestSmithy)
+        .zioError shouldBe
         ServiceError.BadRequestError.ValidationError(
           invalidFields = List(
             InvalidFieldError("otp", "Should match ^[A-Z0-9]{6}$", List("invalid-otp"))

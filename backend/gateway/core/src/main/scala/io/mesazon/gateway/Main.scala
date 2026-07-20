@@ -116,9 +116,8 @@ object Main extends ZIOAppDefault {
       WahaPhoneNumberDomainValidator.live,
 
       // Service validators
-      SignUpEmailPostRequestServiceValidator.live,
-      BasicCredentialsRequestServiceValidator.live,
-      SignUpVerifyEmailPostRequestServiceValidator.live,
+      UserSignUpRequestValidator.live,
+      UserSignInRequestValidator.live,
       UserOnboardRequestValidator.live,
       WahaServiceValidator.live,
       ForgotPasswordPostRequestServiceValidator.live,

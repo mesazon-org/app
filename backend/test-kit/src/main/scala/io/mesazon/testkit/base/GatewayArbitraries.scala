@@ -55,10 +55,6 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
     )
   )
 
-  given Arbitrary[SignUpEmail] = Arbitrary(Gen.resultOf(SignUpEmail.apply))
-
-  given Arbitrary[SignUpVerifyEmail] = Arbitrary(Gen.resultOf(SignUpVerifyEmail.apply))
-
   // A non-empty list must mark exactly one entry as default, so generate non-default entries and promote one at random.
   protected def genEntriesWithSingleDefault[A](genEntry: Gen[A])(setDefault: A => A): Gen[List[A]] =
     Gen.listOf(genEntry).flatMap {
@@ -68,8 +64,6 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
           .choose(0, entries.length - 1)
           .map(defaultIndex => entries.updated(defaultIndex, setDefault(entries(defaultIndex))))
     }
-
-  given Arbitrary[BasicCredentials] = Arbitrary(Gen.resultOf(BasicCredentials.apply))
 
   given Arbitrary[ForgotPasswordReset] = Arbitrary(Gen.resultOf(ForgotPasswordReset.apply))
 
