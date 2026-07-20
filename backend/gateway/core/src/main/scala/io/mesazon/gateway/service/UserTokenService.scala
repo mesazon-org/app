@@ -11,17 +11,19 @@ object UserTokenService {
   private final class UserTokenServiceImpl(
       userTokenRepository: UserTokenRepository,
       jwtService: JwtService,
-      tokenRefreshPostRequestServiceValidator: TokenRefreshPostRequestServiceValidator,
+      userTokenRequestValidator: UserTokenRequestValidator,
   ) extends smithy.UserTokenService[ServiceTask] {
 
     /** HTTP POST /token/refresh */
     override def tokenRefreshPost(
-        request: smithy.TokenRefreshPostRequest
+        tokenRefreshPostRequestSmithy: smithy.TokenRefreshPostRequest
     ): ServiceTask[smithy.TokenRefreshPostResponse] =
       for {
-        _                 <- ZIO.logDebug("Refreshing user token")
-        tokenRefresh      <- tokenRefreshPostRequestServiceValidator.validate(request)
-        authedUserRefresh <- jwtService.verifyRefreshToken(tokenRefresh.refreshToken)
+        _                       <- ZIO.logDebug("Refreshing user token")
+        tokenRefreshPostRequest <- userTokenRequestValidator.validatedTokenRefreshPostRequest(
+          tokenRefreshPostRequestSmithy
+        )
+        authedUserRefresh <- jwtService.verifyRefreshToken(tokenRefreshPostRequest.refreshToken)
         userTokenRow      <- userTokenRepository
           .getUserToken(
             authedUserRefresh.tokenID,
@@ -52,9 +54,9 @@ object UserTokenService {
 
       /** HTTP POST /token/refresh */
       override def tokenRefreshPost(
-          request: smithy.TokenRefreshPostRequest
+          tokenRefreshPostRequestSmithy: smithy.TokenRefreshPostRequest
       ): Task[smithy.TokenRefreshPostResponse] =
-        HttpErrorHandler.errorResponseHandler(service.tokenRefreshPost(request))
+        HttpErrorHandler.errorResponseHandler(service.tokenRefreshPost(tokenRefreshPostRequestSmithy))
     }
 
   val local = ZLayer.derive[UserTokenServiceImpl].project[smithy.UserTokenService[ServiceTask]](identity)

@@ -11,7 +11,7 @@ import io.mesazon.gateway.service.*
 import io.mesazon.gateway.service.JwtService.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
-import io.mesazon.gateway.validation.domain.EmailDomainValidator
+import io.mesazon.gateway.validation.domain.EmailValidator
 import io.mesazon.gateway.validation.service.*
 import io.mesazon.generator.IDGenerator
 import io.mesazon.testkit.base.ZWordSpecBase
@@ -21,7 +21,12 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
-class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries, TokenArbitraries {
+class UserForgotPasswordServiceSpec
+    extends ZWordSpecBase,
+      SmithyArbitraries,
+      UserForgotPasswordSmithyArbitraries,
+      RepositoryArbitraries,
+      TokenArbitraries {
 
   "UserForgotPasswordService" when {
     "forgotPassword" should {
@@ -1176,10 +1181,8 @@ class UserForgotPasswordServiceSpec extends ZWordSpecBase, SmithyArbitraries, Re
       .service[smithy.UserForgotPasswordService[ServiceTask]]
       .provide(
         UserForgotPasswordService.local,
-        EmailDomainValidator.live,
-        ForgotPasswordVerifyOTPPostRequestServiceValidator.live,
-        ForgotPasswordPostRequestServiceValidator.live,
-        ForgotPasswordResetPostRequestServiceValidator.live,
+        EmailValidator.live,
+        UserForgotPasswordRequestValidator.live,
         ZLayer.succeed(userForgotPasswordConfig.copy(isDev = isDev)),
         ZLayer.succeed(otpGeneratorMock),
         ZLayer.succeed(idGeneratorMock),

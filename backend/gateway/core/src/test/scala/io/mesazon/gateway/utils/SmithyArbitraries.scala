@@ -4,8 +4,6 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.domain.waha
 import io.mesazon.gateway.smithy
 import io.mesazon.testkit.base.*
-import io.scalaland.chimney.Transformer
-import io.scalaland.chimney.dsl.*
 import org.scalacheck.*
 
 trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
@@ -34,13 +32,5 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
       )
     } yield request
   }
-
-  given Arbitrary[smithy.ForgotPasswordResetPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[ForgotPasswordReset].map(_.transformInto[smithy.ForgotPasswordResetPostRequest])
-  )
-
-  given Arbitrary[smithy.TokenRefreshPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[TokenRefresh].map(_.transformInto[smithy.TokenRefreshPostRequest])
-  )
 
 }

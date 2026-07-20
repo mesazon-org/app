@@ -26,6 +26,7 @@ class UserForgotPasswordApiSpec
     extends ZWordSpecBase,
       DockerComposeBase,
       SmithyArbitraries,
+      UserForgotPasswordSmithyArbitraries,
       RepositoryArbitraries,
       IronRefinedTypeTransformer {
 

@@ -65,7 +65,4 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
           .map(defaultIndex => entries.updated(defaultIndex, setDefault(entries(defaultIndex))))
     }
 
-  given Arbitrary[ForgotPasswordReset] = Arbitrary(Gen.resultOf(ForgotPasswordReset.apply))
-
-  given Arbitrary[TokenRefresh] = Arbitrary(Gen.resultOf(TokenRefresh.apply))
 }

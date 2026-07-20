@@ -21,7 +21,7 @@ Reuse these — do not reinvent them per feature:
   - `validateAllNested(fieldName, items)(validate)` — for lists of composite items whose own errors already carry indexes (a batch of customers each holding email lists). Re-indexing would be misleading, so each failed item collapses into one error on `fieldName` whose message lists the item's invalid fields (inner indexes intact) and whose `index` points at the item in this list.
   - `validateSingleDefault(fieldName, items)(isDefault)` — for lists of "defaultable" entries (e.g. emails/phones with an `isDefault` flag): a non-empty list must mark **exactly one** entry as default; chain it after the per-entry validation with `.andThen`.
 - **Domain validators** (`validation/domain/`) for fields whose validation is effectful or non-trivial — `EmailValidator` (JMail; generic, takes the target newtype's `.either` and returns that newtype), `PhoneNumberDomainValidator` (libphonenumber). Inject these into the feature validator; wrap their output into the feature's newtype (`CustomerPhoneNumber(phoneNumber)`).
-- `ServiceValidator[A, B]` / `DomainValidator[A, B]` — the older per-request validator traits (the onboarding/sign-up validators). Still valid, but new features use the single **feature request validator** below, and old features migrate to it when touched (see [adding-a-feature.md § Consolidating](adding-a-feature.md#consolidating-an-existing-feature-into-this-layout); `OrganizationManagementRequestValidator` was migrated this way).
+- `ServiceValidator[A, B]` / `DomainValidator[A, B]` — the older per-request validator traits (the last remaining user is `WahaServiceValidator`). Still valid, but new features use the single **feature request validator** below, and old features migrate to it when touched (see [adding-a-feature.md § Consolidating](adding-a-feature.md#consolidating-an-existing-feature-into-this-layout); the user features — `UserOnboard`, `UserSignUp`, `UserSignIn`, `UserForgotPassword`, `UserToken` — plus `OrganizationManagement` were migrated this way).
 
 ## The feature request validator pattern
 
@@ -114,5 +114,5 @@ The round-trip works because the smithy arbitrary is *derived from* the domain a
 
 ## Key files
 
-- Shared helpers: `validation/service/validation.scala`, `validation/service/ServiceValidator.scala`, `validation/domain/{DomainValidator,EmailDomainValidator,PhoneNumberDomainValidator}.scala`
+- Shared helpers: `validation/service/validation.scala`, `validation/service/ServiceValidator.scala`, `validation/domain/{DomainValidator,EmailValidator,PhoneNumberDomainValidator}.scala`
 - Example: `validation/service/CustomerBookRequestValidator.scala` + `domain/gateway/CustomerBook.scala`

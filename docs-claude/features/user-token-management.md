@@ -29,7 +29,7 @@ All tokens are signed JWTs (jjwt, HMAC via `JwtConfig.secretKey`, issuer claim r
 Defined in `backend/gateway/core/src/main/smithy/UserTokenService.smithy`.
 
 ### Flow (`UserTokenService.tokenRefreshPost`)
-1. Validate request (`TokenRefreshPostRequestServiceValidator`).
+1. Validate request (`UserTokenRequestValidator.validatedTokenRefreshPostRequest`).
 2. `jwtService.verifyRefreshToken` — checks signature, expiry, issuer, and `auth:refresh` audience; yields (`tokenID`, `userID`).
 3. The token row must exist in `user_token` → otherwise `UnauthorizedError.TokenFailedAuthorization` ("Refresh token not found in database"). This is how sign-in/sign-out-style revocation takes effect.
 4. **Rotation**: generate a new access + refresh JWT, then `upsertUserToken(..., tokenIDOptOld = Some(old))` — atomically replaces the old refresh row with the new one, so the old refresh token can never be used again.
@@ -41,6 +41,11 @@ Defined in `backend/gateway/core/src/main/smithy/UserTokenService.smithy`.
 
 ## Key files
 
+The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
+
+- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/UserToken.scala` (the `TokenRefreshPostRequest` model)
+- Validator: `validation/service/UserTokenRequestValidator.scala` (`validatedTokenRefreshPostRequest`)
+- Arbitraries: `testkit/base/UserTokenDomainArbitraries.scala`, `gateway/utils/UserTokenSmithyArbitraries.scala`
 - Endpoint: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/UserTokenService.scala`
 - JWTs: `service/JwtService.scala` (+ `JwtConfig`)
 - Bearer auth: `service/AuthorizationService.scala`, `middleware/ServerMiddleware.scala`
@@ -50,5 +55,5 @@ Defined in `backend/gateway/core/src/main/smithy/UserTokenService.smithy`.
 
 - Acceptance (see [acceptance-tests.md](../acceptance-tests.md)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserTokenRefreshApiSpec.scala` — successful rotation, missing token (validation), invalid token, and the revocation case: a cryptographically valid refresh token not present in `user_token` is rejected
 - Functional: `fun/UserTokenServiceSpec.scala`
-- Units: `unit/service/JwtServiceSpec.scala`, `unit/service/AuthorizationServiceSpec.scala`
+- Units: `unit/validation/service/UserTokenRequestValidatorSpec.scala`, `unit/service/JwtServiceSpec.scala`, `unit/service/AuthorizationServiceSpec.scala`
 - Integration: `it/UserTokenRepositorySpec.scala`
