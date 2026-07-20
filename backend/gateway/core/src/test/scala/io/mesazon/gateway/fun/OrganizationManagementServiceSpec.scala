@@ -17,7 +17,10 @@ import zio.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-class OrganizationManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries {
+class OrganizationManagementServiceSpec
+    extends ZWordSpecBase,
+      OrganizationManagementSmithyArbitraries,
+      RepositoryArbitraries {
 
   "OrganizationManagementService" when {
     "createOrganizationPost" should {
@@ -224,7 +227,7 @@ class OrganizationManagementServiceSpec extends ZWordSpecBase, SmithyArbitraries
         .provide(
           OrganizationManagementService.local,
           PhoneNumberUtil.live,
-          CreateOrganizationPostRequestServiceValidator.live,
+          OrganizationManagementRequestValidator.live,
           EmailValidator.live,
           ZLayer.succeed(organizationManagementConfig),
           ZLayer.succeed(phoneNumberValidatorConfig),

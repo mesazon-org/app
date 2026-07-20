@@ -8,44 +8,41 @@ import io.mesazon.gateway.smithy
 import io.mesazon.gateway.validation.domain.*
 import zio.*
 
-final class CreateOrganizationPostRequestServiceValidator(
+final class OrganizationManagementRequestValidator(
     emailValidator: EmailValidator,
     phoneNumberDomainValidator: PhoneNumberDomainValidator,
-) extends ServiceValidator[smithy.CreateOrganizationPostRequest, CreateOrganization] {
+) {
 
-  override def domainValidator
-      : DomainValidator[smithy.CreateOrganizationPostRequest, CreateOrganization] = { createOrganizationPostRequest =>
-    validateOrganizationEmails(createOrganizationPostRequest.emails)
-      .zip(validateOrganizationPhoneNumbers(createOrganizationPostRequest.phoneNumbers))
+  def validatedCreateOrganizationPostRequest(
+      request: smithy.CreateOrganizationPostRequest
+  ): IO[ServiceError.BadRequestError.ValidationError, CreateOrganization] =
+    toValidatedRequestIO(validateCreateOrganization(request))
+
+  private def validateCreateOrganization(
+      request: smithy.CreateOrganizationPostRequest
+  ): UIO[ValidatedNec[InvalidFieldError, CreateOrganization]] =
+    validateOrganizationEmails(request.emails)
+      .zip(validateOrganizationPhoneNumbers(request.phoneNumbers))
       .map((emailsValidated, phoneNumbersValidated) =>
         (
-          validateRequiredField("name", createOrganizationPostRequest.name, OrganizationName.either),
-          validateRequiredField("slug", createOrganizationPostRequest.slug, OrganizationSlug.either),
-          validateOptionalField("tagline", createOrganizationPostRequest.tagline, OrganizationTagline.either),
+          validateRequiredField("name", request.name, OrganizationName.either),
+          validateRequiredField("slug", request.slug, OrganizationSlug.either),
+          validateOptionalField("tagline", request.tagline, OrganizationTagline.either),
           emailsValidated,
           phoneNumbersValidated,
-          validateOptionalField(
-            "addressLine1",
-            createOrganizationPostRequest.addressLine1,
-            OrganizationAddressLine1.either,
-          ),
-          validateOptionalField(
-            "addressLine2",
-            createOrganizationPostRequest.addressLine2,
-            OrganizationAddressLine2.either,
-          ),
-          validateOptionalField("city", createOrganizationPostRequest.city, OrganizationCity.either),
-          validateOptionalField("postalCode", createOrganizationPostRequest.postalCode, OrganizationPostalCode.either),
-          validateOptionalField("country", createOrganizationPostRequest.country, OrganizationCountry.either),
+          validateOptionalField("addressLine1", request.addressLine1, OrganizationAddressLine1.either),
+          validateOptionalField("addressLine2", request.addressLine2, OrganizationAddressLine2.either),
+          validateOptionalField("city", request.city, OrganizationCity.either),
+          validateOptionalField("postalCode", request.postalCode, OrganizationPostalCode.either),
+          validateOptionalField("country", request.country, OrganizationCountry.either),
           validateOptionalField(
             "companyRegistrationNumber",
-            createOrganizationPostRequest.companyRegistrationNumber,
+            request.companyRegistrationNumber,
             OrganizationCompanyRegistrationNumber.either,
           ),
-          validateOptionalField("taxID", createOrganizationPostRequest.taxID, OrganizationTaxID.either),
+          validateOptionalField("taxID", request.taxID, OrganizationTaxID.either),
         ).mapN(CreateOrganization.apply)
       )
-  }
 
   private def validateOrganizationEmails(
       emails: List[smithy.OrganizationEmailRequest]
@@ -68,7 +65,7 @@ final class CreateOrganizationPostRequestServiceValidator(
     ).map(_.andThen(entries => validateSingleDefault("phoneNumbers", entries)(_.isDefault)))
 }
 
-object CreateOrganizationPostRequestServiceValidator {
+object OrganizationManagementRequestValidator {
 
-  val live = ZLayer.derive[CreateOrganizationPostRequestServiceValidator]
+  val live = ZLayer.derive[OrganizationManagementRequestValidator]
 }

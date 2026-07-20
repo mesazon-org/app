@@ -25,7 +25,7 @@ Any org-scoped endpoint added here follows the project-wide [standard role polic
 ## Flow
 
 ### POST /create/organization (`OrganizationManagementService.createOrganizationPost`)
-1. Read `AuthedUser` from `AuthState`; validate the request (`CreateOrganizationPostRequestServiceValidator` — name, slug, `emails` and `phoneNumbers` — lists of contact-point entries each carrying an `isDefault` flag, validated like Customer Book's (each entry individually valid, and a non-empty list must mark exactly one entry as default via `validateSingleDefault`), stored as `jsonb` columns (`emails`, `phone_numbers`) on `organization_details` — plus optional `tagline` (short "what we sell" line shown under the org name, e.g. on invoices: "Froutagora — Fruits and Vegetable Market"), optional address fields (`addressLine1`, `addressLine2`, `city`, `postalCode`, `country`), `companyRegistrationNumber` and `taxID` (VAT); each is an iron-refined domain type like `OrganizationSlug`, which uses `SlugPredicate` — a URL-friendly slug of lowercase letters, digits and single hyphens (`^[a-z0-9]+(?:-[a-z0-9]+)*$`, trimmed, non-empty, max 63), intended to key a future per-organization store website. The 63-char cap and the character set are the safe intersection of a valid URL path segment and a DNS label, so the slug can serve as either a path or a subdomain).
+1. Read `AuthedUser` from `AuthState`; validate the request (`OrganizationManagementRequestValidator.validatedCreateOrganizationPostRequest` — name, slug, `emails` and `phoneNumbers` — lists of contact-point entries each carrying an `isDefault` flag, validated like Customer Book's (each entry individually valid, and a non-empty list must mark exactly one entry as default via `validateSingleDefault`), stored as `jsonb` columns (`emails`, `phone_numbers`) on `organization_details` — plus optional `tagline` (short "what we sell" line shown under the org name, e.g. on invoices: "Froutagora — Fruits and Vegetable Market"), optional address fields (`addressLine1`, `addressLine2`, `city`, `postalCode`, `country`), `companyRegistrationNumber` and `taxID` (VAT); each is an iron-refined domain type like `OrganizationSlug`, which uses `SlugPredicate` — a URL-friendly slug of lowercase letters, digits and single hyphens (`^[a-z0-9]+(?:-[a-z0-9]+)*$`, trimmed, non-empty, max 63), intended to key a future per-organization store website. The 63-char cap and the character set are the safe intersection of a valid URL path segment and a DNS label, so the slug can serve as either a path or a subdomain).
 2. `OrganizationManagementRepository.createOrganization` inserts **in one transaction**:
    - `OrganizationDetailsRow` (generated `OrganizationID`, stage `DetailsProvided`, logo fields `None`), and
    - `OrganizationUserRow` linking the creator with `OrganizationUserRole.Owner`.
@@ -36,6 +36,11 @@ The repository also exposes `isOrganizationSlugExists` for slug-uniqueness check
 
 ## Key files
 
+The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
+
+- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OrganizationManagement.scala` (all `Organization*` newtypes, `OrganizationStage`/`OrganizationUserRole` enums, contact-point entries, `CreateOrganization`)
+- Validator: `validation/service/OrganizationManagementRequestValidator.scala`
+- Arbitraries: `testkit/base/OrganizationManagementDomainArbitraries.scala`, `gateway/utils/OrganizationManagementSmithyArbitraries.scala`
 - Service: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/OrganizationManagementService.scala`
 - Repository: `repository/OrganizationManagementRepository.scala`; rows: `repository/domain/OrganizationDetailsRow.scala`, `OrganizationUserRow.scala`; queries: `repository/queries/OrganizationDetailsQueries.scala`, `OrganizationUserQueries.scala`
 - Completed-stage gate: `middleware/ServerMiddleware.scala` + `service/AuthorizationService.scala`

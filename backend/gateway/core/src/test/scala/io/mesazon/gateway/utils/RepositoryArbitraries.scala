@@ -4,7 +4,10 @@ import io.mesazon.gateway.repository.domain.*
 import io.mesazon.testkit.base.*
 import org.scalacheck.*
 
-trait RepositoryArbitraries extends GatewayArbitraries, IronRefinedTypeArbitraries {
+trait RepositoryArbitraries
+    extends GatewayArbitraries,
+      OrganizationManagementDomainArbitraries,
+      IronRefinedTypeArbitraries {
 
   given Arbitrary[UserDetailsRow] = Arbitrary(Gen.resultOf(UserDetailsRow.apply))
 

@@ -31,10 +31,6 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
     Gen.oneOf(Seq("+447756745643", "+35799545545").map(PhoneNumberE164.assume))
   )
 
-  given Arbitrary[OrganizationStage] = Arbitrary(Gen.oneOf(OrganizationStage.values.toIndexedSeq))
-
-  given Arbitrary[OrganizationUserRole] = Arbitrary(Gen.oneOf(OrganizationUserRole.values.toIndexedSeq))
-
   given Arbitrary[OtpType] = Arbitrary(Gen.oneOf(OtpType.values.toIndexedSeq))
 
   given Arbitrary[OnboardStage] = Arbitrary(Gen.oneOf(OnboardStage.values.toIndexedSeq))
@@ -67,27 +63,6 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
 
   given Arbitrary[OnboardDetails] = Arbitrary(Gen.resultOf(OnboardDetails.apply))
 
-  given arbOrganizationEmailEntry: Arbitrary[OrganizationEmailEntry] = Arbitrary(
-    Gen.resultOf(OrganizationEmailEntry.apply)
-  )
-
-  given arbOrganizationPhoneNumberEntry: Arbitrary[OrganizationPhoneNumberEntry] = Arbitrary(
-    Gen.resultOf(OrganizationPhoneNumberEntry.apply)
-  )
-
-  // A non-empty list must mark exactly one entry as default, so generate non-default entries and promote one at random.
-  given arbOrganizationEmailEntries: Arbitrary[List[OrganizationEmailEntry]] = Arbitrary(
-    genEntriesWithSingleDefault(
-      Arbitrary.arbitrary[OrganizationEmailEntry].map(_.copy(isDefault = false))
-    )(_.copy(isDefault = true))
-  )
-
-  given arbOrganizationPhoneNumberEntries: Arbitrary[List[OrganizationPhoneNumberEntry]] = Arbitrary(
-    genEntriesWithSingleDefault(
-      Arbitrary.arbitrary[OrganizationPhoneNumberEntry].map(_.copy(isDefault = false))
-    )(_.copy(isDefault = true))
-  )
-
   protected def genEntriesWithSingleDefault[A](genEntry: Gen[A])(setDefault: A => A): Gen[List[A]] =
     Gen.listOf(genEntry).flatMap {
       case Nil     => Gen.const(Nil)
@@ -96,8 +71,6 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
           .choose(0, entries.length - 1)
           .map(defaultIndex => entries.updated(defaultIndex, setDefault(entries(defaultIndex))))
     }
-
-  given Arbitrary[CreateOrganization] = Arbitrary(Gen.resultOf(CreateOrganization.apply))
 
   given Arbitrary[OnboardVerifyPhoneNumber] = Arbitrary(Gen.resultOf(OnboardVerifyPhoneNumber.apply))
 

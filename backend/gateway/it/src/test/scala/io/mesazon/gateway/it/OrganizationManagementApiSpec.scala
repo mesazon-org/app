@@ -22,9 +22,8 @@ import zio.*
 class OrganizationManagementApiSpec
     extends ZWordSpecBase,
       DockerComposeBase,
-      SmithyArbitraries,
-      RepositoryArbitraries,
-      IronRefinedTypeTransformer {
+      OrganizationManagementSmithyArbitraries,
+      RepositoryArbitraries {
 
   override def exposedServices =
     GatewayClient.ExposedServices ++ PostgreSQLTestClient.ExposedServices ++ MailHogClient.ExposedServices

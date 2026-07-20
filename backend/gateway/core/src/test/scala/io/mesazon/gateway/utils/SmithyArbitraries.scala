@@ -73,24 +73,4 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
     Arbitrary.arbitrary[TokenRefresh].map(_.transformInto[smithy.TokenRefreshPostRequest])
   )
 
-  given Transformer[OrganizationPhoneNumber, smithy.PhoneNumberRequest] = organizationPhoneNumber =>
-    smithy.PhoneNumberRequest(
-      phoneNationalNumber = organizationPhoneNumber.value.phoneNationalNumber.value,
-      phoneCountryCode = organizationPhoneNumber.value.phoneCountryCode.value,
-    )
-
-  given Transformer[OrganizationEmailEntry, smithy.OrganizationEmailRequest] = entry =>
-    smithy.OrganizationEmailRequest(email = entry.email.value, isDefault = entry.isDefault)
-
-  given Transformer[OrganizationPhoneNumberEntry, smithy.OrganizationPhoneNumberRequest] = entry =>
-    smithy.OrganizationPhoneNumberRequest(
-      phoneNumber = entry.phoneNumber.transformInto[smithy.PhoneNumberRequest],
-      isDefault = entry.isDefault,
-    )
-
-  given Arbitrary[smithy.CreateOrganizationPostRequest] = Arbitrary {
-    Arbitrary
-      .arbitrary[CreateOrganization]
-      .map(_.transformInto[smithy.CreateOrganizationPostRequest])
-  }
 }

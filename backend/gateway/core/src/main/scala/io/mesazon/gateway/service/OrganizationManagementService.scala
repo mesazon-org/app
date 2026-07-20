@@ -5,7 +5,7 @@ import io.mesazon.gateway.clients.EmailClient
 import io.mesazon.gateway.config.OrganizationManagementConfig
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.state.AuthState
-import io.mesazon.gateway.validation.service.CreateOrganizationPostRequestServiceValidator
+import io.mesazon.gateway.validation.service.OrganizationManagementRequestValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import zio.*
 
@@ -17,7 +17,7 @@ object OrganizationManagementService {
       organizationManagementRepository: OrganizationManagementRepository,
       userDetailsRepository: UserDetailsRepository,
       emailClient: EmailClient,
-      createOrganizationPostRequestServiceValidator: CreateOrganizationPostRequestServiceValidator,
+      organizationManagementRequestValidator: OrganizationManagementRequestValidator,
   ) extends smithy.OrganizationManagementService[ServiceTask] {
 
     /** **Required Onboard Stage:** **COMPLETED**
@@ -28,7 +28,7 @@ object OrganizationManagementService {
         request: smithy.CreateOrganizationPostRequest
     ): ServiceTask[smithy.CreateOrganizationPostResponse] = for {
       authedUser         <- authState.get
-      createOrganization <- createOrganizationPostRequestServiceValidator.validate(request)
+      createOrganization <- organizationManagementRequestValidator.validatedCreateOrganizationPostRequest(request)
       userDetailsRow     <- userDetailsRepository
         .getUserDetails(authedUser.userID)
         .someOrFail(

@@ -51,7 +51,7 @@ The names on both sides must match exactly (a `Queries` class references columns
 - `timestamptz` — all timestamps (`created_at`, `updated_at`, `expires_at`, `last_update`). Never `timestamp` (without zone).
 - `boolean`, `int` — as needed.
 - Enums are stored as `text`, **not** native PG `enum` types — the value is the Scala enum case name, mapped by `Put/Get.deriveEnumString` (see §Persistence code). Columns: `onboard_stage`, `organization_stage`, `user_role`, `otp_type`, `token_type`, `action_attempt_type`.
-- Phone numbers are **four columns**, never one: `phone_region`, `phone_country_code`, `phone_national_number`, `phone_number_e164` (mirrors the `PhoneNumber` domain type).
+- A **single** phone number is **four columns**, never one: `phone_region`, `phone_country_code`, `phone_national_number`, `phone_number_e164` (mirrors the `PhoneNumber` domain type). **Multi-valued** contact points (a list of emails/phone numbers with `isDefault` flags) are a single `jsonb` column instead: `emails`, `phone_numbers` (customer book tables, `organization_details`) — mapped via `jsonbMeta` (see §Type mappings).
 
 ### 4. Nullability
 

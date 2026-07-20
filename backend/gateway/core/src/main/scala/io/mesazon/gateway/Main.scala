@@ -127,7 +127,7 @@ object Main extends ZIOAppDefault {
       ForgotPasswordVerifyOTPPostRequestServiceValidator.live,
       ForgotPasswordResetPostRequestServiceValidator.live,
       TokenRefreshPostRequestServiceValidator.live,
-      CreateOrganizationPostRequestServiceValidator.live,
+      OrganizationManagementRequestValidator.live,
 
       // Clients
       SttpBackend.live,
