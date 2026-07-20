@@ -16,7 +16,7 @@ Defined in `backend/gateway/core/src/main/smithy/UserSignupService.smithy`.
 ## Flow
 
 ### POST /signup/email
-1. Validate email (`SignUpEmailPostRequestServiceValidator`).
+1. Validate email (`UserSignUpRequestValidator.validatedSignUpEmailPostRequest`).
 2. Look up user by email, then look up an existing `EmailVerification` OTP:
    - **New user** — insert `UserDetailsRow` at stage `EmailVerification`, generate OTP, upsert it with expiry `now + otpEmailVerificationExpiresAtOffset`, send verification email.
    - **Existing user still in a sign-up stage** (`OnboardStage.signUpEmailStages` = `EmailVerification`, `EmailVerified`) — resend path: the user's stage is reset to `EmailVerification` (an `EmailVerified` user re-signing up must verify again), then if the current OTP is missing/expired/inside the resend-cooldown window a new OTP is generated and emailed; otherwise the existing OTP is reused and **no email is sent** (resend throttling).
@@ -34,10 +34,14 @@ Email sends are retried with `Schedule.recurs(maxRetries) && Schedule.exponentia
 
 ## Key files
 
+The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
+
+- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/UserSignUp.scala` (the `SignUpEmailPostRequest`/`SignUpVerifyEmailPostRequest` request models)
+- Validator: `validation/service/UserSignUpRequestValidator.scala` (one `validated<Request>` per fallible request; email goes through the generic `EmailValidator`)
+- Arbitraries: `testkit/base/UserSignUpDomainArbitraries.scala`, `gateway/utils/UserSignUpSmithyArbitraries.scala`
 - Service: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/UserSignUpService.scala`
-- Validators: `validation/service/SignUpEmailPostRequestServiceValidator.scala`, `SignUpVerifyEmailPostRequestServiceValidator.scala`
 - Repositories: `UserDetailsRepository`, `UserOtpRepository`, `UserTokenRepository`
-- Stage lists: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OnboardStage.scala`
+- Stage lists: `backend/domain/src/main/scala/io/mesazon/domain/gateway/UserOnboard.scala`
 - Config: `UserSignUpConfig` (`otpEmailVerificationExpiresAtOffset`, `otpEmailVerificationResendCooldown`, `sendEmailVerificationEmailMaxRetries`, `sendEmailVerificationEmailRetryDelay`)
 
 ## Tests
@@ -45,4 +49,4 @@ Email sends are retried with `Schedule.recurs(maxRetries) && Schedule.exponentia
 - Acceptance (black-box HTTP against the running gateway, see [acceptance-tests.md](../acceptance-tests.md)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserSignUpApiSpec.scala` — happy paths for new/re-sign-up, anti-enumeration path, plus the standard error matrix (validation, wrong/expired OTP, disallowed stage)
 - Functional (mocked repos/clients): `src/test/scala/io/mesazon/gateway/fun/UserSignUpServiceSpec.scala`
 - Integration (Postgres via docker compose): `it/UserOtpRepositorySpec.scala`, `it/UserDetailsRepositorySpec.scala`, `it/UserTokenRepositorySpec.scala`
-- Validator units: `unit/validation/service/SignUpEmailPostRequestServiceValidatorSpec.scala`, `SignUpVerifyEmailPostRequestServiceValidatorSpec.scala`
+- Validator units: `unit/validation/service/UserSignUpRequestValidatorSpec.scala`

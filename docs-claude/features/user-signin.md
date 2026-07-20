@@ -17,7 +17,7 @@ Defined in `backend/gateway/core/src/main/smithy/UserSignInService.smithy`. No r
 ### 1. Middleware authentication (`AuthenticationService.auth`)
 Wired by `ServerMiddleware` for any smithy service annotated `@httpBasicAuth`:
 
-1. Extract Basic credentials from the `Authorization` header → `UnauthorizedError.AuthHeaderMissingError` (`401`) if absent; validate format (`BasicCredentialsRequestServiceValidator`).
+1. Extract Basic credentials from the `Authorization` header → `UnauthorizedError.AuthHeaderMissingError` (`401`) if absent; validate format (`UserSignInRequestValidator.validatedBasicCredentialsRequest`, which turns the raw `AuthenticationService.BasicCredentialsRequest` into the `BasicCredentials` domain model).
 2. Look up user by email → `UnauthorizedError.AuthenticationEmailNotFound` if unknown.
 3. Stage must be in `OnboardStage.signInAllowedStages` — a user can sign in as soon as they have a password, even before phone verification (so they can resume onboarding).
 4. **Brute-force protection**: `UserActionAttemptRepository.getAndIncreaseUserActionAttempt(userID, ActionAttemptType.SignIn)`. If attempts exceed `AuthenticationConfig.signInAttemptsMax` and the last attempt is within `signInAttemptsBlockDuration`, fail `UnauthorizedError.AuthenticationTooManySignInAttempts`. Attempt counter is deleted on successful password verification (block auto-expires after the duration).
@@ -32,6 +32,11 @@ Wired by `ServerMiddleware` for any smithy service annotated `@httpBasicAuth`:
 
 ## Key files
 
+The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md), with one deviation: `SignInPost` has **no request body** (credentials travel in the Basic-auth header), so there is no smithy request shape and therefore no smithy-arbitraries trait — just the domain model, the validator, and a domain-arbitraries trait.
+
+- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/UserSignIn.scala` (the `BasicCredentials` model)
+- Validator: `validation/service/UserSignInRequestValidator.scala` (`validatedBasicCredentialsRequest`; email goes through the generic `EmailValidator`). Its input, the raw `BasicCredentialsRequest` (email/password strings), is defined in `AuthenticationService` where the Basic header is parsed.
+- Arbitraries: `testkit/base/UserSignInDomainArbitraries.scala`
 - Handler: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/UserSignInService.scala`
 - Credential auth: `service/AuthenticationService.scala`; middleware wiring: `middleware/ServerMiddleware.scala`
 - Request-scoped auth state: `state/AuthState.scala` (`io.mesazon.gateway.state`)

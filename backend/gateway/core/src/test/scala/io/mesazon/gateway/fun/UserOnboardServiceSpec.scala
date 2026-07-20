@@ -19,7 +19,11 @@ import zio.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries {
+class UserOnboardServiceSpec
+    extends ZWordSpecBase,
+      SmithyArbitraries,
+      UserOnboardSmithyArbitraries,
+      RepositoryArbitraries {
 
   "UserOnboardService" when {
     "onboardPasswordPost" should {
@@ -1135,9 +1139,7 @@ class UserOnboardServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repositor
             )
           ),
           PhoneNumberDomainValidator.live,
-          OnboardPasswordPostRequestServiceValidator.live,
-          OnboardDetailsPostRequestServiceValidator.live,
-          OnboardVerifyPhoneNumberPostRequestServiceValidator.live,
+          UserOnboardRequestValidator.live,
           ZLayer.succeed(userOnboardConfig.copy(isDev = isDev)),
           ZLayer.succeed(otpGeneratorMock),
           ZLayer.succeed(timeProviderMock),

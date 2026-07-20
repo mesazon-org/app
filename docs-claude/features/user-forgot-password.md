@@ -37,14 +37,19 @@ Note: existing refresh tokens are **not** deleted on reset; sign-in deletes all 
 
 ## Key files
 
+The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
+
+- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/UserForgotPassword.scala` (the `ForgotPasswordPostRequest`/`ForgotPasswordVerifyOTPPostRequest`/`ForgotPasswordResetPostRequest` request models)
+- Validator: `validation/service/UserForgotPasswordRequestValidator.scala` (one `validated<Request>` per fallible request; email goes through the generic `EmailValidator`)
+- Arbitraries: `testkit/base/UserForgotPasswordDomainArbitraries.scala`, `gateway/utils/UserForgotPasswordSmithyArbitraries.scala`
 - Service: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/UserForgotPasswordService.scala`
 - Tokens: `service/JwtService.scala`; hashing: `service/PasswordService.scala`
 - Repositories: `UserOtpRepository`, `UserActionAttemptRepository`, `UserCredentialsRepository`, `UserTokenRepository`, `UserDetailsRepository`
-- Validators: `ForgotPasswordPostRequestServiceValidator`, `ForgotPasswordVerifyOTPPostRequestServiceValidator`, `ForgotPasswordResetPostRequestServiceValidator`
 - Config: `UserForgotPasswordConfig` (`otpExpiresAtOffset`, `otpResendCooldown`, `otpResetAttemptsMaxRetries`, `otpVerifyAttemptsMaxRetries`, email retry settings)
 
 ## Tests
 
 - Acceptance (see [acceptance-tests.md](../acceptance-tests.md)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserForgotPasswordApiSpec.scala` — all three endpoints: OTP issue/extend/maxed-attempts behavior, anti-enumeration for unknown emails, verify-OTP attempt limit, full reset happy path, plus the standard error matrix
 - Functional: `fun/UserForgotPasswordServiceSpec.scala`
+- Validator units: `unit/validation/service/UserForgotPasswordRequestValidatorSpec.scala`
 - Integration: `it/UserActionAttemptRepositorySpec.scala`, `it/UserOtpRepositorySpec.scala`, `it/EmailClientSpec.scala`

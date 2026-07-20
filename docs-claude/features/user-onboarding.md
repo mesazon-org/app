@@ -8,7 +8,7 @@ Guides a user from a verified email to a fully onboarded account: set a password
 
 `EmailVerification` → `EmailVerified` → `PasswordProvided` → `PhoneVerification` → `PhoneVerified` (**completed**)
 
-Stages and per-flow allowed lists live in `backend/domain/src/main/scala/io/mesazon/domain/gateway/OnboardStage.scala`. When adding a stage, update the companion-object lists (there's a comment warning about this). The smithy `OnboardStage` enum mirrors the domain enum; mapping helpers `onboardStageFromDomainToSmithy` / `onboardStageFromSmithyToDomain` are in `service/service.scala`.
+Stages and per-flow allowed lists live in `backend/domain/src/main/scala/io/mesazon/domain/gateway/UserOnboard.scala` (the `OnboardStage` enum + companion). When adding a stage, update the companion-object lists (there's a comment warning about this). The smithy `OnboardStage` enum mirrors the domain enum; mapping helpers `onboardStageFromDomainToSmithy` / `onboardStageFromSmithyToDomain` are in `service/service.scala`.
 
 ## Endpoints (smithy, bearer auth — access JWT)
 
@@ -39,15 +39,19 @@ Returns the pending OTP's `otpID` and remaining seconds so the client can restor
 
 ## Key files
 
+The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
+
+- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/UserOnboard.scala` (the `OnboardStage` enum + companion, and the `OnboardPasswordPostRequest`/`OnboardDetailsPostRequest`/`OnboardVerifyPhoneNumberPostRequest` request models)
+- Validator: `validation/service/UserOnboardRequestValidator.scala` (one `validated<Request>` per fallible request)
+- Arbitraries: `testkit/base/UserOnboardDomainArbitraries.scala`, `gateway/utils/UserOnboardSmithyArbitraries.scala`
 - Service: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/UserOnboardService.scala`
 - Password hashing: `service/PasswordService.scala` (Argon2, `PasswordConfig`)
 - SMS: `clients/TwilioClient.scala`; Email: `clients/EmailClient.scala`
-- Validators: `OnboardPasswordPostRequestServiceValidator`, `OnboardDetailsPostRequestServiceValidator`, `OnboardVerifyPhoneNumberPostRequestServiceValidator`
 - Config: `UserOnboardConfig` (OTP expiry offset, resend cooldown, SMS/email retry settings)
 
 ## Tests
 
 - Acceptance (see [acceptance-tests.md](../acceptance-tests.md)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserOnboardApiSpec.scala` — all four endpoints, each with happy path + the standard error matrix (missing/invalid access token, disallowed stage, validation, wrong/expired/missing OTP)
 - Functional: `fun/UserOnboardServiceSpec.scala`
-- Units: `unit/service/PasswordServiceSpec.scala`, `unit/validation/service/OnboardDetailsPostRequestServiceValidatorSpec.scala`, `OnboardPasswordPostRequestServiceValidatorSpec.scala`
+- Units: `unit/service/PasswordServiceSpec.scala`, `unit/validation/service/UserOnboardRequestValidatorSpec.scala`
 - Integration: `it/UserCredentialsRepositorySpec.scala`, `it/UserOtpRepositorySpec.scala`, `it/TwilioClientSpec.scala`

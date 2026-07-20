@@ -18,8 +18,8 @@ object UserSignInService {
 
     /** HTTP POST /signin */
     override def signInPost(): ServiceTask[smithy.SignInPostResponse] = for {
-      authedUser  <- authState.get
-      userDetails <- userDetailsRepository
+      authedUser     <- authState.get
+      userDetailsRow <- userDetailsRepository
         .getUserDetails(authedUser.userID)
         .someOrFail(
           ServiceError.InternalServerError.UnexpectedError(
@@ -37,7 +37,7 @@ object UserSignInService {
       )
     } yield smithy.SignInPostResponse(
       accessTokenExpiresInSeconds = accessJwt.expiresIn.toSeconds,
-      onboardStage = onboardStageFromDomainToSmithy(userDetails.onboardStage),
+      onboardStage = onboardStageFromDomainToSmithy(userDetailsRow.onboardStage),
       refreshToken = refreshJwt.refreshToken.value,
       accessToken = accessJwt.accessToken.value,
     )

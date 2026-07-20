@@ -110,23 +110,17 @@ object Main extends ZIOAppDefault {
       FileServiceConfig.live,
 
       // Domain validators
-      EmailDomainValidator.live,
       EmailValidator.live,
       PhoneNumberDomainValidator.live,
       WahaPhoneNumberDomainValidator.live,
 
       // Service validators
-      SignUpEmailPostRequestServiceValidator.live,
-      BasicCredentialsRequestServiceValidator.live,
-      SignUpVerifyEmailPostRequestServiceValidator.live,
-      OnboardPasswordPostRequestServiceValidator.live,
-      OnboardDetailsPostRequestServiceValidator.live,
-      OnboardVerifyPhoneNumberPostRequestServiceValidator.live,
+      UserSignUpRequestValidator.live,
+      UserSignInRequestValidator.live,
+      UserOnboardRequestValidator.live,
       WahaServiceValidator.live,
-      ForgotPasswordPostRequestServiceValidator.live,
-      ForgotPasswordVerifyOTPPostRequestServiceValidator.live,
-      ForgotPasswordResetPostRequestServiceValidator.live,
-      TokenRefreshPostRequestServiceValidator.live,
+      UserForgotPasswordRequestValidator.live,
+      UserTokenRequestValidator.live,
       OrganizationManagementRequestValidator.live,
 
       // Clients

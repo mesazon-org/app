@@ -10,7 +10,7 @@ import io.mesazon.gateway.service.*
 import io.mesazon.gateway.service.JwtService.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
-import io.mesazon.gateway.validation.domain.EmailDomainValidator
+import io.mesazon.gateway.validation.domain.EmailValidator
 import io.mesazon.gateway.validation.service.*
 import io.mesazon.generator.IDGenerator
 import io.mesazon.testkit.base.ZWordSpecBase
@@ -19,7 +19,12 @@ import zio.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries, TokenArbitraries {
+class UserSignUpServiceSpec
+    extends ZWordSpecBase,
+      SmithyArbitraries,
+      UserSignUpSmithyArbitraries,
+      RepositoryArbitraries,
+      TokenArbitraries {
 
   "userSignUpService" when {
     "signUpEmailPost" should {
@@ -778,9 +783,8 @@ class UserSignUpServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         .provide(
           UserSignUpService.local,
           ZLayer.succeed(userSignUpConfig.copy(isDev = isDev)),
-          EmailDomainValidator.live,
-          SignUpEmailPostRequestServiceValidator.live,
-          SignUpVerifyEmailPostRequestServiceValidator.live,
+          EmailValidator.live,
+          UserSignUpRequestValidator.live,
           ZLayer.succeed(userDetailsRepositoryMock),
           ZLayer.succeed(userTokenRepositoryMock),
           ZLayer.succeed(userOtpRepositoryMock),

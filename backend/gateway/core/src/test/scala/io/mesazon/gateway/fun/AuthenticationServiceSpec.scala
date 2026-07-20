@@ -9,9 +9,9 @@ import io.mesazon.gateway.repository.{UserActionAttemptRepository, UserCredentia
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.state.AuthState
 import io.mesazon.gateway.utils.RepositoryArbitraries
-import io.mesazon.gateway.validation.domain.EmailDomainValidator
-import io.mesazon.gateway.validation.service.BasicCredentialsRequestServiceValidator
-import io.mesazon.testkit.base.ZWordSpecBase
+import io.mesazon.gateway.validation.domain.EmailValidator
+import io.mesazon.gateway.validation.service.UserSignInRequestValidator
+import io.mesazon.testkit.base.{UserSignInDomainArbitraries, ZWordSpecBase}
 import org.http4s.headers.Authorization
 import org.http4s.{BasicCredentials as Http4sBasicCredentials, *}
 import zio.*
@@ -19,7 +19,7 @@ import zio.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
+class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, UserSignInDomainArbitraries {
 
   "AuthenticationService" when {
     "auth" should {
@@ -477,8 +477,8 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries {
       .service[AuthenticationService[ServiceTask]]
       .provide(
         AuthenticationService.local,
-        EmailDomainValidator.live,
-        BasicCredentialsRequestServiceValidator.live,
+        EmailValidator.live,
+        UserSignInRequestValidator.live,
         ZLayer.succeed(authenticationConfig),
         ZLayer.succeed(authStateMock),
         ZLayer.succeed(userActionAttemptRepositoryMock),

@@ -21,6 +21,7 @@ class UserTokenRefreshApiSpec
     extends ZWordSpecBase,
       DockerComposeBase,
       SmithyArbitraries,
+      UserTokenSmithyArbitraries,
       RepositoryArbitraries,
       IronRefinedTypeTransformer {
 

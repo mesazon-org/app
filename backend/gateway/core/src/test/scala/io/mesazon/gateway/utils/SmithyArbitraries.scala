@@ -4,8 +4,6 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.domain.waha
 import io.mesazon.gateway.smithy
 import io.mesazon.testkit.base.*
-import io.scalaland.chimney.Transformer
-import io.scalaland.chimney.dsl.*
 import org.scalacheck.*
 
 trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
@@ -34,43 +32,5 @@ trait SmithyArbitraries extends GatewayArbitraries, IronRefinedTypeTransformer {
       )
     } yield request
   }
-
-  given Arbitrary[smithy.SignUpEmailPostRequest] = Arbitrary {
-    Arbitrary.arbitrary[SignUpEmail].map(_.transformInto[smithy.SignUpEmailPostRequest])
-  }
-
-  given Arbitrary[smithy.SignUpVerifyEmailPostRequest] = Arbitrary {
-    for {
-      verifyEmail <- Arbitrary.arbitrary[SignUpVerifyEmail]
-      request = smithy.SignUpVerifyEmailPostRequest(otpID = verifyEmail.otpID.value, otp = verifyEmail.otp.value)
-    } yield request
-  }
-
-  given Arbitrary[smithy.OnboardPasswordPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[OnboardPassword].map(_.transformInto[smithy.OnboardPasswordPostRequest])
-  )
-
-  given Arbitrary[smithy.OnboardDetailsPostRequest] = Arbitrary(
-    Arbitrary
-      .arbitrary[OnboardDetails]
-      .map(
-        _.into[smithy.OnboardDetailsPostRequest]
-          .withFieldComputed(_.phoneNumber.phoneCountryCode, _.phoneNumber.phoneCountryCode.value)
-          .withFieldComputed(_.phoneNumber.phoneNationalNumber, _.phoneNumber.phoneNationalNumber.value)
-          .transform
-      )
-  )
-
-  given Arbitrary[smithy.OnboardVerifyPhoneNumberPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[OnboardVerifyPhoneNumber].map(_.transformInto[smithy.OnboardVerifyPhoneNumberPostRequest])
-  )
-
-  given Arbitrary[smithy.ForgotPasswordResetPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[ForgotPasswordReset].map(_.transformInto[smithy.ForgotPasswordResetPostRequest])
-  )
-
-  given Arbitrary[smithy.TokenRefreshPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[TokenRefresh].map(_.transformInto[smithy.TokenRefreshPostRequest])
-  )
 
 }

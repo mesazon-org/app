@@ -26,28 +26,28 @@ object UserForgotPasswordService {
       emailClient: EmailClient,
       jwtService: JwtService,
       timeProvider: TimeProvider,
-      forgotPasswordPostRequestServiceValidator: ForgotPasswordPostRequestServiceValidator,
-      forgotPasswordVerifyOTPPostRequestServiceValidator: ForgotPasswordVerifyOTPPostRequestServiceValidator,
-      forgotPasswordResetPostRequestServiceValidator: ForgotPasswordResetPostRequestServiceValidator,
+      userForgotPasswordRequestValidator: UserForgotPasswordRequestValidator,
   ) extends smithy.UserForgotPasswordService[ServiceTask] {
 
     /** HTTP POST /forgot/password */
     override def forgotPasswordPost(
-        request: smithy.ForgotPasswordPostRequest
+        forgotPasswordPostRequestSmithy: smithy.ForgotPasswordPostRequest
     ): ServiceTask[smithy.ForgotPasswordPostResponse] = for {
-      _              <- ZIO.logDebug(s"Received forgot password request: [$request]")
-      forgotPassword <- forgotPasswordPostRequestServiceValidator.validate(request)
-      userDetailsOpt <- userDetailsRepository.getUserDetailsByEmail(forgotPassword.email)
-      otpID          <- userDetailsOpt match {
-        case Some(userDetails) =>
+      _                         <- ZIO.logDebug(s"Received forgot password request: [$forgotPasswordPostRequestSmithy]")
+      forgotPasswordPostRequest <- userForgotPasswordRequestValidator.validatedForgotPasswordPostRequest(
+        forgotPasswordPostRequestSmithy
+      )
+      userDetailsRowOpt <- userDetailsRepository.getUserDetailsByEmail(forgotPasswordPostRequest.email)
+      otpID             <- userDetailsRowOpt match {
+        case Some(userDetailsRow) =>
           for {
             _ <- verifyOnboardStage(
-              userDetails.userID,
-              userDetails.onboardStage,
+              userDetailsRow.userID,
+              userDetailsRow.onboardStage,
               OnboardStage.forgotPasswordAllowedStages,
             )
             userOtpRowOpt <- userOtpRepository.getUserOtpByUserID(
-              userDetails.userID,
+              userDetailsRow.userID,
               OtpType.ForgotPassword,
             )
             instantNow <- timeProvider.instantNow
@@ -58,7 +58,7 @@ object UserForgotPasswordService {
                     .isAfter(instantNow) =>
                 for {
                   userActionAttemptRow <- userActionAttemptRepository.getAndIncreaseUserActionAttempt(
-                    userDetails.userID,
+                    userDetailsRow.userID,
                     ActionAttemptType.ForgotPassword,
                   )
                   otpID <-
@@ -71,7 +71,7 @@ object UserForgotPasswordService {
                       userOtpRepository
                         .updateUserOtp(
                           otpID = userOtpRow.otpID,
-                          userID = userDetails.userID,
+                          userID = userDetailsRow.userID,
                           otpType = OtpType.ForgotPassword,
                           expiresAtUpdate =
                             ExpiresAt(instantNow.plusSeconds(userForgotPasswordConfig.otpExpiresAtOffset.toSeconds)),
@@ -83,18 +83,18 @@ object UserForgotPasswordService {
                   otpNew <- otpGenerator.generateOtp
                   expiresAt = ExpiresAt(instantNow.plusSeconds(userForgotPasswordConfig.otpExpiresAtOffset.toSeconds))
                   userOtpRow <- userOtpRepository.upsertUserOtp(
-                    userID = userDetails.userID,
+                    userID = userDetailsRow.userID,
                     otpType = OtpType.ForgotPassword,
                     otp = otpNew,
                     expiresAt = expiresAt,
                   )
                   _ <- userActionAttemptRepository.deleteUserActionAttempt(
-                    userID = userDetails.userID,
+                    userID = userDetailsRow.userID,
                     actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
                   )
                   _ <- emailClient
                     .sendForgotPasswordEmail(
-                      email = forgotPassword.email,
+                      email = forgotPasswordPostRequest.email,
                       otp = userOtpRow.otp,
                     )
                     .retry(
@@ -120,19 +120,22 @@ object UserForgotPasswordService {
 
     /** HTTP POST /forgot/password/verify-otp */
     override def forgotPasswordVerifyOTPPost(
-        request: smithy.ForgotPasswordVerifyOTPPostRequest
+        forgotPasswordVerifyOTPPostRequestSmithy: smithy.ForgotPasswordVerifyOTPPostRequest
     ): ServiceTask[smithy.ForgotPasswordVerifyOTPPostResponse] =
       for {
-        _                       <- ZIO.logDebug(s"Received forgot password verify OTP request for otpID: [$request]")
-        forgotPasswordVerifyOTP <- forgotPasswordVerifyOTPPostRequestServiceValidator.validate(request)
-        userOtpRow              <- userOtpRepository
+        _ <- ZIO.logDebug(
+          s"Received forgot password verify OTP request for otpID: [$forgotPasswordVerifyOTPPostRequestSmithy]"
+        )
+        forgotPasswordVerifyOTPPostRequest <- userForgotPasswordRequestValidator
+          .validatedForgotPasswordVerifyOTPPostRequest(forgotPasswordVerifyOTPPostRequestSmithy)
+        userOtpRow <- userOtpRepository
           .getUserOtpByOtpID(
-            forgotPasswordVerifyOTP.otpID,
+            forgotPasswordVerifyOTPPostRequest.otpID,
             OtpType.ForgotPassword,
           )
           .someOrFail(
             ServiceError.InternalServerError.UnexpectedError(
-              s"No OTP found for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
+              s"No OTP found for OTP ID [${forgotPasswordVerifyOTPPostRequest.otpID}] and OTP type [${OtpType.ForgotPassword}]"
             )
           )
         userDetailsRow <- userDetailsRepository
@@ -155,7 +158,7 @@ object UserForgotPasswordService {
           if (userActionAttemptsRow.attempts.value > userForgotPasswordConfig.otpVerifyAttemptsMaxRetries)
             ZIO.fail(
               ServiceError.BadRequestError.OtpVerifyError(
-                s"OTP validation attempts exceeded for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
+                s"OTP validation attempts exceeded for OTP ID [${forgotPasswordVerifyOTPPostRequest.otpID}] and OTP type [${OtpType.ForgotPassword}]"
               )
             )
           else ZIO.unit
@@ -168,17 +171,17 @@ object UserForgotPasswordService {
               otpType = userOtpRow.otpType,
             ) *> ZIO.fail(
               ServiceError.UnauthorizedError.OtpExpiredError(
-                s"Expired OTP provided for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
+                s"Expired OTP provided for OTP ID [${forgotPasswordVerifyOTPPostRequest.otpID}] and OTP type [${OtpType.ForgotPassword}]"
               )
             )
           else if (
-            userOtpRow.otp == forgotPasswordVerifyOTP.otp || verifyOtpInDev(
-              forgotPasswordVerifyOTP.otp,
+            userOtpRow.otp == forgotPasswordVerifyOTPPostRequest.otp || verifyOtpInDev(
+              forgotPasswordVerifyOTPPostRequest.otp,
               isDev = userForgotPasswordConfig.isDev,
             )
           )
             userOtpRepository.deleteUserOtp(
-              otpID = forgotPasswordVerifyOTP.otpID,
+              otpID = forgotPasswordVerifyOTPPostRequest.otpID,
               userID = userOtpRow.userID,
               otpType = OtpType.ForgotPassword,
             ) *> userActionAttemptRepository.deleteUserActionAttempt(
@@ -191,7 +194,7 @@ object UserForgotPasswordService {
           else
             ZIO.fail(
               ServiceError.BadRequestError.OtpVerifyError(
-                s"Wrong OTP provided for OTP ID [${forgotPasswordVerifyOTP.otpID}] and OTP type [${OtpType.ForgotPassword}]"
+                s"Wrong OTP provided for OTP ID [${forgotPasswordVerifyOTPPostRequest.otpID}] and OTP type [${OtpType.ForgotPassword}]"
               )
             )
         resetPasswordJwt <- jwtService.generateResetPasswordToken(userDetailsRow.userID)
@@ -208,12 +211,17 @@ object UserForgotPasswordService {
       )
 
     /** HTTP POST /forgot/password/reset */
-    override def forgotPasswordResetPost(request: smithy.ForgotPasswordResetPostRequest): ServiceTask[Unit] =
+    override def forgotPasswordResetPost(
+        forgotPasswordResetPostRequestSmithy: smithy.ForgotPasswordResetPostRequest
+    ): ServiceTask[Unit] =
       for {
-        _                       <- ZIO.logDebug("Received forgot password reset request")
-        forgotPasswordReset     <- forgotPasswordResetPostRequestServiceValidator.validate(request)
-        authedUserResetPassword <- jwtService.verifyResetPasswordToken(forgotPasswordReset.resetPasswordToken)
-        userDetailsRow          <- userDetailsRepository
+        _                              <- ZIO.logDebug("Received forgot password reset request")
+        forgotPasswordResetPostRequest <- userForgotPasswordRequestValidator
+          .validatedForgotPasswordResetPostRequest(forgotPasswordResetPostRequestSmithy)
+        authedUserResetPassword <- jwtService.verifyResetPasswordToken(
+          forgotPasswordResetPostRequest.resetPasswordToken
+        )
+        userDetailsRow <- userDetailsRepository
           .getUserDetails(authedUserResetPassword.userID)
           .someOrFail(
             ServiceError.InternalServerError.UnexpectedError(
@@ -236,7 +244,7 @@ object UserForgotPasswordService {
               s"Reset password token not found for tokenID: [${authedUserResetPassword.tokenID}], userID: [${authedUserResetPassword.userID}] and tokenType: [${TokenType.ResetPasswordToken}]"
             )
           )
-        passwordHash <- passwordService.hashPassword(forgotPasswordReset.password)
+        passwordHash <- passwordService.hashPassword(forgotPasswordResetPostRequest.password)
         _            <- userCredentialsRepository.updateUserCredentials(
           userID = authedUserResetPassword.userID,
           passwordHashUpdate = passwordHash,
@@ -266,17 +274,21 @@ object UserForgotPasswordService {
   private def observed(service: smithy.UserForgotPasswordService[ServiceTask]): smithy.UserForgotPasswordService[Task] =
     new smithy.UserForgotPasswordService[Task] {
       override def forgotPasswordPost(
-          request: smithy.ForgotPasswordPostRequest
+          forgotPasswordPostRequestSmithy: smithy.ForgotPasswordPostRequest
       ): Task[smithy.ForgotPasswordPostResponse] =
-        HttpErrorHandler.errorResponseHandler(service.forgotPasswordPost(request))
+        HttpErrorHandler.errorResponseHandler(service.forgotPasswordPost(forgotPasswordPostRequestSmithy))
 
       override def forgotPasswordVerifyOTPPost(
-          request: smithy.ForgotPasswordVerifyOTPPostRequest
+          forgotPasswordVerifyOTPPostRequestSmithy: smithy.ForgotPasswordVerifyOTPPostRequest
       ): Task[smithy.ForgotPasswordVerifyOTPPostResponse] =
-        HttpErrorHandler.errorResponseHandler(service.forgotPasswordVerifyOTPPost(request))
+        HttpErrorHandler.errorResponseHandler(
+          service.forgotPasswordVerifyOTPPost(forgotPasswordVerifyOTPPostRequestSmithy)
+        )
 
-      override def forgotPasswordResetPost(request: smithy.ForgotPasswordResetPostRequest): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(service.forgotPasswordResetPost(request))
+      override def forgotPasswordResetPost(
+          forgotPasswordResetPostRequestSmithy: smithy.ForgotPasswordResetPostRequest
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(service.forgotPasswordResetPost(forgotPasswordResetPostRequestSmithy))
     }
 
   val local =

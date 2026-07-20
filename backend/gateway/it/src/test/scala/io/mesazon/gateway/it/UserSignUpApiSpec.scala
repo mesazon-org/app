@@ -9,7 +9,7 @@ import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.MailHogClient.MailHogClientConfig
-import io.mesazon.gateway.utils.{MailHogClient, RepositoryArbitraries, SmithyArbitraries}
+import io.mesazon.gateway.utils.{MailHogClient, RepositoryArbitraries, SmithyArbitraries, UserSignUpSmithyArbitraries}
 import io.mesazon.test.postgresql.PostgreSQLTestClient
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.{DockerComposeBase, IronRefinedTypeTransformer, ZWordSpecBase}
@@ -24,6 +24,7 @@ class UserSignUpApiSpec
     extends ZWordSpecBase,
       DockerComposeBase,
       SmithyArbitraries,
+      UserSignUpSmithyArbitraries,
       RepositoryArbitraries,
       IronRefinedTypeTransformer {
 

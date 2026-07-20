@@ -7,11 +7,16 @@ import io.mesazon.gateway.service.*
 import io.mesazon.gateway.service.JwtService.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
-import io.mesazon.gateway.validation.service.TokenRefreshPostRequestServiceValidator
+import io.mesazon.gateway.validation.service.UserTokenRequestValidator
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 
-class UserTokenServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries, TokenArbitraries {
+class UserTokenServiceSpec
+    extends ZWordSpecBase,
+      SmithyArbitraries,
+      UserTokenSmithyArbitraries,
+      RepositoryArbitraries,
+      TokenArbitraries {
 
   "UserTokenService" when {
     "tokenRefreshPost" should {
@@ -120,7 +125,7 @@ class UserTokenServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryA
         .service[smithy.UserTokenService[ServiceTask]]
         .provide(
           UserTokenService.local,
-          TokenRefreshPostRequestServiceValidator.live,
+          UserTokenRequestValidator.live,
           ZLayer.succeed(userTokenRepositoryMock),
           ZLayer.succeed(jwtServiceMock),
         )
