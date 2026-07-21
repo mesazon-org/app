@@ -511,9 +511,15 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
           .zioValue
 
-        val customerEmail              = arbitrarySample[CustomerEmail]
-        val customerPhoneNumber1       = arbitrarySample[CustomerPhoneNumber]
-        val customerPhoneNumber2       = arbitrarySample[CustomerPhoneNumber]
+        val customerEmail        = arbitrarySample[CustomerEmail]
+        val customerPhoneNumber1 = arbitrarySample[CustomerPhoneNumber]
+        val phoneNumber2         = arbitrarySample[CustomerPhoneNumber].value
+        val customerPhoneNumber2 = CustomerPhoneNumber.assume(
+          phoneNumber2.copy(
+            phoneNationalNumber = PhoneNationalNumber.assume(s"${phoneNumber2.phoneNationalNumber.value}1"),
+            phoneNumberE164 = PhoneNumberE164.assume(s"${phoneNumber2.phoneNumberE164.value}1"),
+          )
+        )
         val customerBusinessContactID1 = arbitrarySample[CustomerBusinessContactID]
         val customerBusinessContactID2 = arbitrarySample[CustomerBusinessContactID]
 
@@ -569,7 +575,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
         val customerPhoneNumber        = arbitrarySample[CustomerPhoneNumber]
         val customerEmail1             = arbitrarySample[CustomerEmail]
-        val customerEmail2             = arbitrarySample[CustomerEmail]
+        val customerEmail2             = CustomerEmail.assume(s"x${arbitrarySample[CustomerEmail].value}")
         val customerBusinessContactID1 = arbitrarySample[CustomerBusinessContactID]
         val customerBusinessContactID2 = arbitrarySample[CustomerBusinessContactID]
 
