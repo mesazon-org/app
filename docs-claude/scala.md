@@ -94,8 +94,9 @@
 - Should in some cases omit the `{{ Owner }}` prefix when the repository is already named after the entity it manages
 - Should include `Opt` when the parameter is optional
 - Should include the behavior when the parameter is used to perform a specific action
-- ✅ `userID`, `organizationID`, `addressLine1OptUpdate`, `organizationStageOptUpdate`, `phoneNumber`
-- ❌ `userId`, `organizationId`, `id`, `addressLine1UpdateOpt`, `organizationStageUpdateOpt`, `stageOptUpdate`
+- A repository method **never takes a smithy-derived `...PostRequest`/`...PutRequest` domain model** — those carry HTTP/API vocabulary and the batch/combined grouping, which must not leak into the persistence boundary (`createOrganization` destructures `CreateOrganizationPostRequest` into flat params at the service; it never reaches the repo). Pass either flat params or a repository-owned **input model** (see §5b). Name an input parameter after its type in lower-camelCase — the full type name, never an abbreviation like `request`, `req`, or `input`.
+- ✅ `userID`, `organizationID`, `addressLine1OptUpdate`, `organizationStageOptUpdate`, `phoneNumber`, `insertCustomerBusinessInput: InsertCustomerBusinessInput`
+- ❌ `userId`, `organizationId`, `id`, `addressLine1UpdateOpt`, `organizationStageUpdateOpt`, `stageOptUpdate`, `insertCustomerBusinessPostRequest: InsertCustomerBusinessPostRequest` (a `...Request` type at the repo boundary)
 
 ##### 4. Repository domain models
 
@@ -111,6 +112,19 @@
 - Should include `Opt` when the parameter is optional
 - ✅ `userID`, `organizationID`, `addressLine1Opt`, `organizationStage`, `phoneNumber`
 - ❌ `userId`, `organizationId`, `id`
+
+##### 5b. Repository input models (decoupling the repo from the API contract)
+
+When a repository operation needs a whole aggregate as input (many fields, or a nested/repeated child such as a list of contacts), the repository defines its **own input case classes** rather than accepting the API `...PostRequest`/`...PutRequest` models. The service maps the validated request → the input with **Chimney** (`io.scalaland.chimney`; refined types via `iron-chimney`) — usually a one-line `.transformInto[…]` since the field names line up.
+
+Rules:
+
+- **Naming & placement.** Suffix `Input` (`InsertCustomerBusinessInput`, `CustomerBusinessContactInput`, `CustomerEmailEntryInput`). Define them **inside the repository's companion object** (`object CustomerBookRepository { … }`), and mirror nested request structures with nested `…Input` classes — never reach back into the `io.mesazon.domain.gateway` request models from the repo. Input fields use the same refined-type conventions as `Row` models (§5), but an input is **not** a `Row`: it carries no generated id and no `CreatedAt`/`UpdatedAt` (the repository mints those).
+- **An input class exists only to serve a batch (or a repeated child list).** If an operation has a batch form, define one input describing a **single** element; the batch takes `List[ThatInput]` and the **singular op reuses the same element class** (`insertCustomerIndividual(…, InsertCustomerIndividualInput)` and `insertCustomerIndividuals(…, List[InsertCustomerIndividualInput])`). A combined op (e.g. `insertCustomers`) reuses those same element lists.
+- **Never create a class for a single-only operation.** An operation with no batch form (updates, `remove…`) takes **flat params** — `…OptUpdate` for updates (§3), bare ids/lists for removes — exactly like `updateOrganization`. Do not invent an `Update…Input`/`Remove…Input`.
+- **`Input` reaches the `Row`, not just the method.** When a `Row`'s `jsonb`/repeated column stores a list of these small records, type that field with the `…Input` element (`emails: List[CustomerEmailEntryInput]`), not the smithy `…Request` — one type flows input → `Row` → jsonb codec, so the repository never converts `Input → Request`.
+- ✅ `object CustomerBookRepository { case class InsertCustomerIndividualInput(…); case class CustomerEmailEntryInput(…) }`; service does `request.transformInto[InsertCustomerIndividualInput]`
+- ❌ an `InsertCustomerIndividualInput` when there is no batch form; a `Row` used as insert input; the repo importing `InsertCustomerIndividualPostRequest`; an `Input` class defined as a top-level file instead of in the companion
 
 ##### 6. Repository query classes
 
@@ -151,3 +165,9 @@
 - **Don't share test *data* fixtures.** A pile of shared "valid X" / "expected Y" vals coupling many tests together is what this rule exists to prevent — each test samples its own.
 - ✅ `val individual = arbitrarySample[InsertCustomerIndividualPostRequest]` in each test; `arbitrarySample[smithy.XRequest].copy(fullName = "")` for the one bad field
 - ❌ a class-level `validRequest` / `expectedResult` reused across tests; a helper that builds the "standard" entity for everyone
+- **Name a value after its model, qualifier last.** A test binding's name is the model type in lower camelCase, not an abbreviation or a role word — `insertCustomerIndividualInput`, not `input`; `customerBusinessContactRow`, not `contact`. When you must disambiguate several of the same type, the name still **starts with the full model name** and the distinguishing suffix goes **at the end** — `customerRowIndividual`/`customerRowBusiness` (not `individualCustomerRow`), `customerID1`/`customerID2`, a derived `customerBusinessDetailsRowUpdated` — so bindings for one model sort and read together (see the [§9 result-value rule](#9-values-holding-repository-return-values)). This keeps the assertion readable as a sentence about the domain.
+- **Assert the whole model, never a projection of it.** Compare the full `Row`/response value (`shouldBe expectedRow`, `should contain theSameElementsAs List(row1, row2)`), building the complete expected value with every field. Do **not** `.map` a read down to one or two fields (`.map(_.customerID)`, `.map(r => (r.customerID, r.fullName))`) and assert only those — an untested field is an untested column. (A `.map` to project is fine only when the field itself is the whole point, e.g. asserting *which ids survived a rollback*.)
+- **Prove a "must differ" precondition with a not-equal assertion.** When a test's meaning depends on two values being distinct (two generated ids, a duplicate-name pair sharing a name but not an id), assert it in the test — `customerID1 shouldNot equal(customerID2)` — right where you set them up. Don't leave "they're different" as an unstated assumption riding on `arbitrarySample` happening not to collide.
+- **Exactly one `should` block per operation — it holds that operation's happy *and* failure paths.** Each repository/service method (or endpoint) gets its own `"<operation>" should { ... }` section named after the function, and **every** test for that function — the happy path and each failure path — is an `in` inside it. Do **not** spin off a second section for an error scenario (`"<operation> with a duplicate X" should`), and do **not** merge two different operations into one section. A test exercises exactly one operation and arranges its preconditions directly (via the `Queries`/DB, bypassing the repo — see [repository.md § Testing](repository.md#testing--repository-integration-specs-with-testcontainers)), rather than calling operation A to set up operation B. A genuine cross-function invariant (e.g. "no `customer_id` is ever in both detail tables") is not one function's path, so it may have its own descriptively-named section.
+  - ✅ `"insertCustomerIndividual" should { "insert …" in …; "fail with a UniqueConstraintViolation when the full name already exists …" in … }` — happy + failure under the one function section.
+  - ❌ a separate `"insertCustomerIndividual with a duplicate full name" should { … }`; ❌ one `"addCustomerBusinessContacts / removeCustomerBusinessContacts" should` block covering two operations.

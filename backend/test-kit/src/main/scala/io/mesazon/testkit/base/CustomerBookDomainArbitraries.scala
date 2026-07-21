@@ -5,6 +5,10 @@ import org.scalacheck.*
 
 trait CustomerBookDomainArbitraries extends GatewayArbitraries {
 
+  given arbCustomerType: Arbitrary[CustomerType] = Arbitrary(Gen.oneOf(CustomerType.values.toIndexedSeq))
+
+  given arbCustomerStatus: Arbitrary[CustomerStatus] = Arbitrary(Gen.oneOf(CustomerStatus.values.toIndexedSeq))
+
   given arbCustomerEmailEntryRequest: Arbitrary[CustomerEmailEntryRequest] = Arbitrary(
     Gen.resultOf(CustomerEmailEntryRequest.apply)
   )

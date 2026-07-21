@@ -16,6 +16,9 @@ enum TapirServerError(val code: String, val message: String, val schemaName: Str
   // 404 Not Found
   case NotFoundError extends TapirServerError("NOT_FOUND_ERROR", "Not found", "NotFoundResponseContent")
 
+  // 409 Conflict
+  case ConflictError extends TapirServerError("CONFLICT_ERROR", "Conflict", "ConflictResponseContent")
+
   // 500 Internal Server Error
   case InternalServerError
       extends TapirServerError("INTERNAL_SERVER_ERROR", "Internal server error", "InternalServerErrorResponseContent")

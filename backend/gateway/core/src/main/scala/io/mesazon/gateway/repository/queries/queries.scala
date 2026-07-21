@@ -41,7 +41,7 @@ inline given [A <: Enum](using mirror: Mirror.SumOf[A]): Get[A] = Get.deriveEnum
 
 inline given [A <: Enum](using mirror: Mirror.SumOf[A]): Put[A] = Put.deriveEnumString[A]
 
-private def jsonbMeta[A](using JsonValueCodec[A]): Meta[A] =
+private[queries] def jsonbMeta[A](using JsonValueCodec[A]): Meta[A] =
   Meta.Advanced
     .other[PGobject]("jsonb")
     .timap(pgObject => readFromString[A](pgObject.getValue)) { a =>

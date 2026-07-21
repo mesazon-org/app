@@ -168,3 +168,6 @@ type CustomerPostalCode = CustomerPostalCode.T
 
 object CustomerCountry extends RefinedType[String, NonEmptyTrimmed]
 type CustomerCountry = CustomerCountry.T
+
+object CustomerDisplayName extends RefinedType[String, NonEmptyTrimmed]
+type CustomerDisplayName = CustomerDisplayName.T

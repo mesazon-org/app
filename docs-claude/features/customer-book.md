@@ -111,7 +111,10 @@ Edit a person's contact details or a company's details in place. These touch onl
 - **Org isolation via composite keys.** Every table is PK'd/keyed on `(organization_id, ...)` and each detail/child table FKs the parent on the composite `(organization_id, customer_id)` — Postgres matches an FK by column set, so a detail or contact row can only ever attach to a customer **in the same tenant**. A caller cannot reference another org's customer.
 - **Never hard-delete a customer.** `customer` rows are archived, not deleted; orders (future) FK the customer with `on delete restrict` as a belt-and-suspenders guard. Contacts, which carry no orders, are hard-deleted.
 - **`customer_type` drives which detail table applies, enforced in the service.** The DB stays permissive for the individual-vs-business split (a plain `(organization_id, customer_id)` FK from each detail table to `customer`). The service guarantees a customer is never both kinds by writing `customer` + the matching detail table in one transaction and never the other; an integration test backstops this by asserting no `customer_id` appears in both `customer_individual_details` and `customer_business_details`. The discriminated-composite-FK alternative was considered and rejected to keep the DB permissive. (The related "contacts only under a business" rule *is* DB-enforced — `customer_business_contact` FKs `customer_business_details`.)
-- **Names are unique per organization.** `customer_business_details.business_name` and `customer_individual_details.full_name` each carry `unique (organization_id, <name>)`, so a tenant can't hold two businesses (or two individuals) with the same name; a duplicate insert surfaces as `Conflict` (409). Uniqueness is scoped to the tenant — the same name may exist in different organizations.
+- **Uniqueness is DB-enforced and mapped to a clear 409.** Four named `unique` constraints guard the customer book, and the repository translates each violation (Postgres `23505`) to `ServiceError.ConflictError.UniqueConstraintViolation` with a message naming the broken rule (see [repository.md § Error handling](../repository.md#error-handling) and [postgres.md § constraint naming](../postgres.md#constraint-naming--conflict-mapping)):
+  - `uq_customer_individual_details_full_name` / `uq_customer_business_details_business_name` — `unique (organization_id, <name>)`: a tenant can't hold two individuals (or two businesses) with the same name → *"A customer with the given full/business name already exists in this organization"*.
+  - `uq_customer_business_contact_email` / `uq_customer_business_contact_phone_number` — `unique (organization_id, customer_id, email)` and `... phone_number_e164`: within one business, no two contacts may share an email or a phone number → *"A business contact with the given email/phone number already exists for this customer"*. (`email`/`phone_number_e164` are nullable, and Postgres allows many NULLs, so contacts without an email/phone don't collide.)
+  All uniqueness is scoped by `organization_id`, so the same name/email/phone may exist in different organizations.
 
 ## Sequence diagrams (target design)
 
@@ -191,7 +194,16 @@ sequenceDiagram
 
 - Smithy: `smithy/CustomerBookService.smithy`, `smithy/domain/CustomerBook.smithy`
 - Service: `service/CustomerBookService.scala`
+- Repository: `repository/CustomerBookRepository.scala` (trait + input models), `repository/domain/Customer*Row.scala`, `repository/domain/CustomerSummaryRow.scala`
 - Migration: `backend/schemas/migrations/V2025.05.27__init.sql` (`customer`, `customer_individual_details`, `customer_business_details`, `customer_business_contact`)
+
+### Repository input models (why the repo doesn't take `...Request` types)
+
+`CustomerBookRepository` does **not** accept the smithy-derived `...PostRequest`/`...PutRequest` domain models — those are API-transport vocabulary and must not reach the persistence boundary (the same reason `createOrganization` takes flat params, never `CreateOrganizationPostRequest`). Instead the repo owns its input case classes in its **companion object** (`InsertCustomerIndividualInput`, `InsertCustomerBusinessInput`, and nested `CustomerEmailEntryInput` / `CustomerPhoneNumberEntryInput` / `CustomerBusinessContactInput`), and `CustomerBookService` maps validated request → input with **Chimney**. An input class exists only to serve a **batch**: the batch takes `List[…Input]` and the singular insert reuses the same element class; single-only operations (the two updates, remove-contacts) take **flat params** and get no class. The full rule lives in [scala.md §5b Repository input models](../scala.md#5b-repository-input-models-decoupling-the-repo-from-the-api-contract).
+
+The same rule reaches the persisted shape: the detail `Row`s type their `emails`/`phone_numbers` `jsonb` columns as `List[CustomerEmailEntryInput]` / `List[CustomerPhoneNumberEntryInput]`, **not** the smithy `...EntryRequest` models — so the whole stack (input → `Row` field → jsonb codec, the named `customerEmailEntryInputsMeta` givens in `CustomerBookQueries`) speaks one type and the repo does no `Input → Request` conversion. `CustomerBookQueries` therefore imports `CustomerBookRepository.*` and `io.github.iltotore.iron.jsoniter.given` for those codecs.
+
+`GetCustomersGet` returns a projection, not a table row — `CustomerSummaryRow(customerID, displayName, customerType)`, where `displayName` is the new `CustomerDisplayName` refined type resolved from `full_name` (INDIVIDUAL) or `business_name` (BUSINESS).
 
 ## Open design decisions
 
@@ -202,8 +214,12 @@ sequenceDiagram
 
 Schema and the full smithy contract are in place (12 operations; `smithy4sCodegen` succeeds; `gateway-core/Compile/compile` is green with a stubbed service). The rest is **not built yet**:
 
-- The `CustomerBookService.scala` handlers are stubs (each fails with `UnexpectedError`) — the `observed` error-handler wrapper and layer wiring are in place.
-- The `Row → Queries → Repository` + `RepositoryConfig` + `application.conf` stack for `customer`, `customer_individual_details`, `customer_business_details`, and `customer_business_contact` is unwritten (see the [Adding a table checklist](../postgres.md#adding-a-table--checklist)).
+- The `CustomerBookService.scala` handlers are stubs (each fails with `UnexpectedError`) — the `observed` error-handler wrapper and layer wiring are in place. **The service still needs to be wired to the repository** (validate → Chimney-map request to input → call `CustomerBookRepository` → map rows to smithy responses).
+- The full persistence stack **is built and tested**: `Row` models, `CustomerBookRepository` trait + `CustomerBookRepositoryImpl` + `live` (with its companion-object input models, see above), the single `CustomerBookQueries` class (all four tables), `RepositoryConfig` + both `application.conf`s, and `CustomerBookRepositorySpec` (15 tests, green against real Postgres — see below).
+
+### Batch inserts are atomic (one transaction), and efficient
+
+`CustomerBookQueries` exposes **multi-row** `insert…Rows` (a single `INSERT … VALUES (…),(…),…`), so a batch of N customers is one statement per table, not N. The repository runs each batch (and the combined `insertCustomers`) in a **single `transactionOrWiden`** — so a batch is **all-or-nothing**: one duplicate-name conflict rolls the whole batch back to `Conflict`. (This supersedes the earlier "per-item transaction" reading; atomic is both more efficient and the safer default. The `CustomerBookRepositorySpec` duplicate-name test asserts the rollback.) Ids and timestamps are minted in the repository; the summary read (`getCustomerSummaryRows`) is a `customer ⟕ both detail tables` join filtered `status = Active`.
 
 ## Tests
 

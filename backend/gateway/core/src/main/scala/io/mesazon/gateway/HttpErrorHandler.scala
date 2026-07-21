@@ -39,6 +39,9 @@ object HttpErrorHandler {
       case error: ServiceError.ForbiddenError =>
         logError(error)
           .as(smithy.Forbidden())
+      case error: ServiceError.ConflictError =>
+        logWarning(error)
+          .as(smithy.Conflict())
       case error: ServiceError.InternalServerError =>
         logWarning(error)
           .as(smithy.InternalServerError())
@@ -62,6 +65,9 @@ object HttpErrorHandler {
       case error: ServiceError.ForbiddenError =>
         logError(error)
           .as(TapirServerError.ForbiddenError)
+      case error: ServiceError.ConflictError =>
+        logWarning(error)
+          .as(TapirServerError.ConflictError)
       case error: ServiceError.InternalServerError =>
         logWarning(error)
           .as(TapirServerError.InternalServerError)

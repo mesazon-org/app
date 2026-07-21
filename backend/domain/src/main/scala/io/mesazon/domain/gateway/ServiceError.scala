@@ -26,6 +26,12 @@ object ServiceError {
       override val underlying: Option[Throwable] = None,
   ) extends ServiceError("ForbiddenError", message, underlying)
 
+  // 409
+  sealed abstract class ConflictError(
+      override val message: String,
+      override val underlying: Option[Throwable] = None,
+  ) extends ServiceError("ConflictError", message, underlying)
+
   // 500
   sealed abstract class InternalServerError(
       override val message: String,
@@ -105,6 +111,11 @@ object ServiceError {
           s"Invalid onboard stage user id: [$userID] with onboard stage: [$onboardStageUser], allowed: [$onboardStagesAllowed]",
           None,
         )
+  }
+
+  object ConflictError {
+    case class UniqueConstraintViolation(error: String, throwable: Throwable)
+        extends ConflictError(error, Some(throwable))
   }
 
   object InternalServerError {
