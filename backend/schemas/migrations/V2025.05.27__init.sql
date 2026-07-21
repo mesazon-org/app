@@ -122,7 +122,7 @@ create table customer_business_details
     created_at            timestamptz not null,
     updated_at            timestamptz not null,
     primary key (organization_id, customer_id),
-    unique (organization_id, business_name),
+    constraint uq_customer_business_details_business_name unique (organization_id, business_name),
     foreign key (organization_id, customer_id)
         references customer (organization_id, customer_id)
 );
@@ -142,7 +142,7 @@ create table customer_individual_details
     created_at            timestamptz not null,
     updated_at            timestamptz not null,
     primary key (organization_id, customer_id),
-    unique (organization_id, full_name),
+    constraint uq_customer_individual_details_full_name unique (organization_id, full_name),
     foreign key (organization_id, customer_id)
         references customer (organization_id, customer_id)
 );
@@ -162,6 +162,8 @@ create table customer_business_contact
     created_at                   timestamptz not null,
     updated_at                   timestamptz not null,
     primary key (organization_id, customer_id, customer_business_contact_id),
+    constraint uq_customer_business_contact_email unique (organization_id, customer_id, email),
+    constraint uq_customer_business_contact_phone_number unique (organization_id, customer_id, phone_number_e164),
     foreign key (organization_id, customer_id)
         references customer_business_details (organization_id, customer_id)
 );

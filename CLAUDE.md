@@ -12,6 +12,7 @@ Each entry links to the coding standards for that technology — **follow them w
 - [sbt](docs-claude/sbt.md) — build definition (sbt 2.x rules, module structure/naming, dependency management, CI wiring)
 - [smithy](docs-claude/smithy.md) — API contract definitions (naming conventions, coding standards, custom traits)
 - [postgres](docs-claude/postgres.md) — PostgreSQL schema & persistence (Flyway migrations, table/column naming, the Row→Queries→Repository stack)
+- [repository](docs-claude/repository.md) — the repository layer architecture (Row→Queries→Repository responsibilities, input models vs API requests, transactions, id/timestamp generation, error mapping, wiring, testing)
 
 ## Architecture
 

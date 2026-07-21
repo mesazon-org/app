@@ -64,6 +64,7 @@ private[tapir] def statusCodeFor(tapirServerError: TapirServerError): StatusCode
     case TapirServerError.UnauthorizedError       => StatusCode.Unauthorized
     case TapirServerError.ForbiddenError          => StatusCode.Forbidden
     case TapirServerError.NotFoundError           => StatusCode.NotFound
+    case TapirServerError.ConflictError           => StatusCode.Conflict
     case TapirServerError.InternalServerError     => StatusCode.InternalServerError
     case TapirServerError.ServiceUnavailableError => StatusCode.ServiceUnavailable
   }
