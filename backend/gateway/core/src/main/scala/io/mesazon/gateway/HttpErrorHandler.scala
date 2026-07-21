@@ -41,7 +41,7 @@ object HttpErrorHandler {
           .as(smithy.Forbidden())
       case error: ServiceError.ConflictError =>
         logWarning(error)
-          .as(smithy.Conflict())
+          .as(smithy.Conflict(message = error.message))
       case error: ServiceError.InternalServerError =>
         logWarning(error)
           .as(smithy.InternalServerError())

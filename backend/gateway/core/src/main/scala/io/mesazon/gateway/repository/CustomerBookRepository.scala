@@ -1,21 +1,18 @@
 package io.mesazon.gateway.repository
 
+import cats.data.NonEmptyList
 import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.repository.CustomerBookRepository.*
-import io.mesazon.gateway.repository.domain.{
-  CustomerBusinessContactRow,
-  CustomerBusinessDetailsRow,
-  CustomerIndividualDetailsRow,
-  CustomerRow,
-  CustomerSummaryRow
-}
+import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.repository.queries.CustomerBookQueries
 import io.mesazon.generator.IDGenerator
 import org.postgresql.util.{PSQLException, PSQLState}
 import org.typelevel.doobie.Transactor
 import zio.*
+
+import java.time.Instant
 
 trait CustomerBookRepository {
 
@@ -370,7 +367,7 @@ object CustomerBookRepository {
         customerID: CustomerID,
         customerBusinessContactIDs: List[CustomerBusinessContactID],
     ): IO[ServiceError, Unit] =
-      NonEmptyChunk.fromIterableOption(customerBusinessContactIDs) match {
+      NonEmptyList.fromList(customerBusinessContactIDs) match {
         case None                                     => ZIO.unit
         case Some(customerBusinessContactIDsNonEmpty) =>
           database
@@ -378,10 +375,7 @@ object CustomerBookRepository {
               customerBookQueries.deleteCustomerBusinessContactRows(
                 organizationID,
                 customerID,
-                cats.data.NonEmptyList(
-                  customerBusinessContactIDsNonEmpty.head,
-                  customerBusinessContactIDsNonEmpty.tail.toList,
-                ),
+                customerBusinessContactIDsNonEmpty,
               )
             )
             .unit
@@ -420,16 +414,21 @@ object CustomerBookRepository {
     private def toServiceError(errorMessage: String)(dbException: DbException): ServiceError =
       findUniqueConstraintViolated(dbException) match {
         case Some(constraint) =>
-          ServiceError.ConflictError.UniqueConstraintViolation(uniqueConstraintViolationMessage(constraint), dbException)
+          ServiceError.ConflictError.UniqueConstraintViolation(
+            uniqueConstraintViolationMessage(constraint),
+            dbException,
+          )
         case None =>
           ServiceError.InternalServerError.RepositoryError(errorMessage, dbException)
       }
 
     private def findUniqueConstraintViolated(throwable: Throwable): Option[String] =
       throwable match {
-        case null => None
+        case null                                                                                             => None
         case psqlException: PSQLException if psqlException.getSQLState == PSQLState.UNIQUE_VIOLATION.getState =>
-          Option(psqlException.getServerErrorMessage).flatMap(serverErrorMessage => Option(serverErrorMessage.getConstraint))
+          Option(psqlException.getServerErrorMessage).flatMap(serverErrorMessage =>
+            Option(serverErrorMessage.getConstraint)
+          )
         case other => Option(other.getCause).filterNot(_ eq other).flatMap(findUniqueConstraintViolated)
       }
 
@@ -471,7 +470,7 @@ object CustomerBookRepository {
         organizationID: OrganizationID,
         customerID: CustomerID,
         customerType: CustomerType,
-        instantNow: java.time.Instant,
+        instantNow: Instant,
     ): CustomerRow =
       CustomerRow(
         organizationID,
@@ -486,7 +485,7 @@ object CustomerBookRepository {
         organizationID: OrganizationID,
         customerID: CustomerID,
         input: InsertCustomerIndividualInput,
-        instantNow: java.time.Instant,
+        instantNow: Instant,
     ): CustomerIndividualDetailsRow =
       CustomerIndividualDetailsRow(
         organizationID,
@@ -507,7 +506,7 @@ object CustomerBookRepository {
         organizationID: OrganizationID,
         customerID: CustomerID,
         input: InsertCustomerBusinessInput,
-        instantNow: java.time.Instant,
+        instantNow: Instant,
     ): CustomerBusinessDetailsRow =
       CustomerBusinessDetailsRow(
         organizationID,
@@ -529,7 +528,7 @@ object CustomerBookRepository {
         organizationID: OrganizationID,
         customerID: CustomerID,
         contacts: List[CustomerBusinessContactInput],
-        instantNow: java.time.Instant,
+        instantNow: Instant,
     ): IO[ServiceError, List[CustomerBusinessContactRow]] =
       ZIO.foreach(contacts) { contact =>
         generateCustomerBusinessContactID.map { customerBusinessContactID =>

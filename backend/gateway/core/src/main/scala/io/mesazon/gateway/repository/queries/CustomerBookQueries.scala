@@ -283,7 +283,8 @@ final class CustomerBookQueries(
           whereAnd(
             fr"c.organization_id = $organizationID",
             fr"c.status = ${CustomerStatus.Active}",
-          )
+          ) ++
+          fr"ORDER BY LOWER(COALESCE(cid.full_name, cbd.business_name)), c.customer_id"
 
       q.query[CustomerSummaryRow].to[List]
     }

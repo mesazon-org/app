@@ -203,7 +203,7 @@ sequenceDiagram
 
 The same rule reaches the persisted shape: the detail `Row`s type their `emails`/`phone_numbers` `jsonb` columns as `List[CustomerEmailEntryInput]` / `List[CustomerPhoneNumberEntryInput]`, **not** the smithy `...EntryRequest` models — so the whole stack (input → `Row` field → jsonb codec, the named `customerEmailEntryInputsMeta` givens in `CustomerBookQueries`) speaks one type and the repo does no `Input → Request` conversion. `CustomerBookQueries` therefore imports `CustomerBookRepository.*` and `io.github.iltotore.iron.jsoniter.given` for those codecs.
 
-`GetCustomersGet` returns a projection, not a table row — `CustomerSummaryRow(customerID, displayName, customerType)`, where `displayName` is the new `CustomerDisplayName` refined type resolved from `full_name` (INDIVIDUAL) or `business_name` (BUSINESS).
+`GetCustomersGet` returns a projection, not a table row — `CustomerSummaryRow(customerID, displayName, customerType)`, where `displayName` is the new `CustomerDisplayName` refined type resolved from `full_name` (INDIVIDUAL) or `business_name` (BUSINESS). The list arrives **sorted case-insensitively by `displayName`** (see the query note below).
 
 ## Open design decisions
 
@@ -219,7 +219,7 @@ Schema and the full smithy contract are in place (12 operations; `smithy4sCodege
 
 ### Batch inserts are atomic (one transaction), and efficient
 
-`CustomerBookQueries` exposes **multi-row** `insert…Rows` (a single `INSERT … VALUES (…),(…),…`), so a batch of N customers is one statement per table, not N. The repository runs each batch (and the combined `insertCustomers`) in a **single `transactionOrWiden`** — so a batch is **all-or-nothing**: one duplicate-name conflict rolls the whole batch back to `Conflict`. (This supersedes the earlier "per-item transaction" reading; atomic is both more efficient and the safer default. The `CustomerBookRepositorySpec` duplicate-name test asserts the rollback.) Ids and timestamps are minted in the repository; the summary read (`getCustomerSummaryRows`) is a `customer ⟕ both detail tables` join filtered `status = Active`.
+`CustomerBookQueries` exposes **multi-row** `insert…Rows` (a single `INSERT … VALUES (…),(…),…`), so a batch of N customers is one statement per table, not N. The repository runs each batch (and the combined `insertCustomers`) in a **single `transactionOrWiden`** — so a batch is **all-or-nothing**: one duplicate-name conflict rolls the whole batch back to `Conflict`. (This supersedes the earlier "per-item transaction" reading; atomic is both more efficient and the safer default. The `CustomerBookRepositorySpec` duplicate-name test asserts the rollback.) Ids and timestamps are minted in the repository; the summary read (`getCustomerSummaryRows`) is a `customer ⟕ both detail tables` join filtered `status = Active`, **sorted case-insensitively by display name** (`ORDER BY LOWER(COALESCE(full_name, business_name)), customer_id` — the id tiebreak keeps the order deterministic). Sorting happens in SQL, not the service: the rows are already narrowed by the indexed `organization_id`, and a DB-side order is pagination-ready. "By type" is deliberately not the sort key — a client wanting businesses first filters on `customerType`.
 
 ## Tests
 

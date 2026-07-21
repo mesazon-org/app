@@ -7,13 +7,7 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.repository.CustomerBookRepository
 import io.mesazon.gateway.repository.CustomerBookRepository.*
-import io.mesazon.gateway.repository.domain.{
-  CustomerBusinessContactRow,
-  CustomerBusinessDetailsRow,
-  CustomerIndividualDetailsRow,
-  CustomerRow,
-  CustomerSummaryRow
-}
+import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.repository.queries.CustomerBookQueries
 import io.mesazon.gateway.utils.*
 import io.mesazon.generator.IDGenerator
@@ -131,9 +125,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
     "insertCustomerIndividuals" should {
       "insert multiple individuals in a single transaction" in new TestContext {
-        val organizationID = arbitrarySample[OrganizationID]
-        val customerID1    = arbitrarySample[CustomerID]
-        val customerID2    = arbitrarySample[CustomerID]
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val customerID1                    = arbitrarySample[CustomerID]
+        val customerID2                    = arbitrarySample[CustomerID]
         val insertCustomerIndividualInput1 =
           arbitrarySample[InsertCustomerIndividualInput].copy(fullName = CustomerFullName.assume("Individual One"))
         val insertCustomerIndividualInput2 =
@@ -148,13 +142,30 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
         )
 
         customerBookRepository
-          .insertCustomerIndividuals(organizationID, List(insertCustomerIndividualInput1, insertCustomerIndividualInput2))
+          .insertCustomerIndividuals(
+            organizationID,
+            List(insertCustomerIndividualInput1, insertCustomerIndividualInput2),
+          )
           .zioValue shouldBe List(customerID1, customerID2)
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerRowsTesting).zioValue should
           contain theSameElementsAs List(
-            CustomerRow(organizationID, customerID1, CustomerType.Individual, CustomerStatus.Active, CreatedAt(instantNow), UpdatedAt(instantNow)),
-            CustomerRow(organizationID, customerID2, CustomerType.Individual, CustomerStatus.Active, CreatedAt(instantNow), UpdatedAt(instantNow)),
+            CustomerRow(
+              organizationID,
+              customerID1,
+              CustomerType.Individual,
+              CustomerStatus.Active,
+              CreatedAt(instantNow),
+              UpdatedAt(instantNow),
+            ),
+            CustomerRow(
+              organizationID,
+              customerID2,
+              CustomerType.Individual,
+              CustomerStatus.Active,
+              CreatedAt(instantNow),
+              UpdatedAt(instantNow),
+            ),
           )
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue should
@@ -193,12 +204,14 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
     "insertCustomerBusiness" should {
       "insert a customer of type BUSINESS, its details, and any inline contacts in one transaction" in new TestContext {
-        val organizationID              = arbitrarySample[OrganizationID]
-        val customerID                  = arbitrarySample[CustomerID]
-        val customerBusinessContactID   = arbitrarySample[CustomerBusinessContactID]
+        val organizationID               = arbitrarySample[OrganizationID]
+        val customerID                   = arbitrarySample[CustomerID]
+        val customerBusinessContactID    = arbitrarySample[CustomerBusinessContactID]
         val customerBusinessContactInput = arbitrarySample[CustomerBusinessContactInput]
         val insertCustomerBusinessInput  =
-          arbitrarySample[InsertCustomerBusinessInput].copy(customerBusinessContacts = List(customerBusinessContactInput))
+          arbitrarySample[InsertCustomerBusinessInput].copy(customerBusinessContacts =
+            List(customerBusinessContactInput)
+          )
 
         inSequence(
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
@@ -210,10 +223,19 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           customerID
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerRowsTesting).zioValue shouldBe List(
-          CustomerRow(organizationID, customerID, CustomerType.Business, CustomerStatus.Active, CreatedAt(instantNow), UpdatedAt(instantNow))
+          CustomerRow(
+            organizationID,
+            customerID,
+            CustomerType.Business,
+            CustomerStatus.Active,
+            CreatedAt(instantNow),
+            UpdatedAt(instantNow),
+          )
         )
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe List(
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+          .zioValue shouldBe List(
           CustomerBusinessDetailsRow(
             organizationID,
             customerID,
@@ -231,7 +253,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           )
         )
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe List(
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+          .zioValue shouldBe List(
           CustomerBusinessContactRow(
             organizationID,
             customerID,
@@ -277,9 +301,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
     "insertCustomers" should {
       "insert individuals and businesses in a single transaction" in new TestContext {
-        val organizationID     = arbitrarySample[OrganizationID]
-        val customerIDIndividual = arbitrarySample[CustomerID]
-        val customerIDBusiness   = arbitrarySample[CustomerID]
+        val organizationID                = arbitrarySample[OrganizationID]
+        val customerIDIndividual          = arbitrarySample[CustomerID]
+        val customerIDBusiness            = arbitrarySample[CustomerID]
         val insertCustomerIndividualInput = arbitrarySample[InsertCustomerIndividualInput]
         val insertCustomerBusinessInput   =
           arbitrarySample[InsertCustomerBusinessInput].copy(customerBusinessContacts = List.empty)
@@ -298,11 +322,27 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerRowsTesting).zioValue should
           contain theSameElementsAs List(
-            CustomerRow(organizationID, customerIDIndividual, CustomerType.Individual, CustomerStatus.Active, CreatedAt(instantNow), UpdatedAt(instantNow)),
-            CustomerRow(organizationID, customerIDBusiness, CustomerType.Business, CustomerStatus.Active, CreatedAt(instantNow), UpdatedAt(instantNow)),
+            CustomerRow(
+              organizationID,
+              customerIDIndividual,
+              CustomerType.Individual,
+              CustomerStatus.Active,
+              CreatedAt(instantNow),
+              UpdatedAt(instantNow),
+            ),
+            CustomerRow(
+              organizationID,
+              customerIDBusiness,
+              CustomerType.Business,
+              CustomerStatus.Active,
+              CreatedAt(instantNow),
+              UpdatedAt(instantNow),
+            ),
           )
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue shouldBe List(
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          .zioValue shouldBe List(
           CustomerIndividualDetailsRow(
             organizationID,
             customerIDIndividual,
@@ -319,7 +359,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           )
         )
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe List(
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+          .zioValue shouldBe List(
           CustomerBusinessDetailsRow(
             organizationID,
             customerIDBusiness,
@@ -337,7 +379,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           )
         )
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe empty
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+          .zioValue shouldBe empty
       }
     }
 
@@ -349,7 +393,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .copy(organizationID = customerRow.organizationID, customerID = customerRow.customerID)
 
         postgresClient.executeQuery(customerBookQueries.insertCustomerRow(customerRow)).zioValue
-        postgresClient.executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow)).zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+          .zioValue
 
         val customerFullNameUpdate         = arbitrarySample[CustomerFullName]
         val customerEmailEntryInputsUpdate = arbitrarySample[List[CustomerEmailEntryInput]]
@@ -384,7 +430,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .copy(organizationID = customerRow.organizationID, customerID = customerRow.customerID)
 
         postgresClient.executeQuery(customerBookQueries.insertCustomerRow(customerRow)).zioValue
-        postgresClient.executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)).zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
 
         val customerBusinessNameUpdate = arbitrarySample[CustomerBusinessName]
 
@@ -414,7 +462,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .copy(organizationID = customerRow.organizationID, customerID = customerRow.customerID)
 
         postgresClient.executeQuery(customerBookQueries.insertCustomerRow(customerRow)).zioValue
-        postgresClient.executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)).zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
 
         val customerBusinessContactID    = arbitrarySample[CustomerBusinessContactID]
         val customerBusinessContactInput = arbitrarySample[CustomerBusinessContactInput]
@@ -457,7 +507,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .copy(organizationID = customerRow.organizationID, customerID = customerRow.customerID)
 
         postgresClient.executeQuery(customerBookQueries.insertCustomerRow(customerRow)).zioValue
-        postgresClient.executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)).zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
 
         val customerEmail              = arbitrarySample[CustomerEmail]
         val customerPhoneNumber1       = arbitrarySample[CustomerPhoneNumber]
@@ -480,11 +532,19 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
         )
 
         customerBookRepository
-          .addCustomerBusinessContacts(customerRow.organizationID, customerRow.customerID, List(customerBusinessContactInput1))
+          .addCustomerBusinessContacts(
+            customerRow.organizationID,
+            customerRow.customerID,
+            List(customerBusinessContactInput1),
+          )
           .zioValue
 
         val serviceError = customerBookRepository
-          .addCustomerBusinessContacts(customerRow.organizationID, customerRow.customerID, List(customerBusinessContactInput2))
+          .addCustomerBusinessContacts(
+            customerRow.organizationID,
+            customerRow.customerID,
+            List(customerBusinessContactInput2),
+          )
           .zioError
         serviceError shouldBe a[ServiceError.ConflictError.UniqueConstraintViolation]
         serviceError.message shouldBe "A business contact with the given email already exists for this customer"
@@ -503,7 +563,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .copy(organizationID = customerRow.organizationID, customerID = customerRow.customerID)
 
         postgresClient.executeQuery(customerBookQueries.insertCustomerRow(customerRow)).zioValue
-        postgresClient.executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)).zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
 
         val customerPhoneNumber        = arbitrarySample[CustomerPhoneNumber]
         val customerEmail1             = arbitrarySample[CustomerEmail]
@@ -526,11 +588,19 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
         )
 
         customerBookRepository
-          .addCustomerBusinessContacts(customerRow.organizationID, customerRow.customerID, List(customerBusinessContactInput1))
+          .addCustomerBusinessContacts(
+            customerRow.organizationID,
+            customerRow.customerID,
+            List(customerBusinessContactInput1),
+          )
           .zioValue
 
         val serviceError = customerBookRepository
-          .addCustomerBusinessContacts(customerRow.organizationID, customerRow.customerID, List(customerBusinessContactInput2))
+          .addCustomerBusinessContacts(
+            customerRow.organizationID,
+            customerRow.customerID,
+            List(customerBusinessContactInput2),
+          )
           .zioError
         serviceError shouldBe a[ServiceError.ConflictError.UniqueConstraintViolation]
         serviceError.message shouldBe "A business contact with the given phone number already exists for this customer"
@@ -559,7 +629,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           equal(customerBusinessContactRow2.customerBusinessContactID)
 
         postgresClient.executeQuery(customerBookQueries.insertCustomerRow(customerRow)).zioValue
-        postgresClient.executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)).zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
         postgresClient
           .executeQuery(
             customerBookQueries.insertCustomerBusinessContactRows(
@@ -589,8 +661,12 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .copy(organizationID = customerRow.organizationID, customerID = customerRow.customerID)
 
         postgresClient.executeQuery(customerBookQueries.insertCustomerRow(customerRow)).zioValue
-        postgresClient.executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)).zioValue
-        postgresClient.executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow))).zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
+          .zioValue
 
         customerBookRepository
           .removeCustomerBusinessContacts(customerRow.organizationID, customerRow.customerID, List.empty)
@@ -603,12 +679,14 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
     "getCustomerIndividual" should {
       "return the details row when it exists" in new TestContext {
-        val customerRow = arbitrarySample[CustomerRow].copy(customerType = CustomerType.Individual)
+        val customerRow                  = arbitrarySample[CustomerRow].copy(customerType = CustomerType.Individual)
         val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
           .copy(organizationID = customerRow.organizationID, customerID = customerRow.customerID)
 
         postgresClient.executeQuery(customerBookQueries.insertCustomerRow(customerRow)).zioValue
-        postgresClient.executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow)).zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+          .zioValue
 
         customerBookRepository
           .getCustomerIndividual(customerRow.organizationID, customerRow.customerID)
@@ -624,12 +702,14 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
     "getCustomerBusiness" should {
       "return the details row when it exists" in new TestContext {
-        val customerRow = arbitrarySample[CustomerRow].copy(customerType = CustomerType.Business)
+        val customerRow                = arbitrarySample[CustomerRow].copy(customerType = CustomerType.Business)
         val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
           .copy(organizationID = customerRow.organizationID, customerID = customerRow.customerID)
 
         postgresClient.executeQuery(customerBookQueries.insertCustomerRow(customerRow)).zioValue
-        postgresClient.executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)).zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
 
         customerBookRepository
           .getCustomerBusiness(customerRow.organizationID, customerRow.customerID)
@@ -644,36 +724,69 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
     }
 
     "getCustomers" should {
-      "return a summary of every ACTIVE customer with its display name and type" in new TestContext {
+      "return a summary of every ACTIVE customer sorted case-insensitively by display name" in new TestContext {
         val organizationID = arbitrarySample[OrganizationID]
 
-        val customerRowIndividual = arbitrarySample[CustomerRow]
+        val customerRowIndividual1 = arbitrarySample[CustomerRow]
           .copy(organizationID = organizationID, customerType = CustomerType.Individual, status = CustomerStatus.Active)
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
-          .copy(organizationID = organizationID, customerID = customerRowIndividual.customerID)
+        val customerIndividualDetailsRow1 = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(
+            organizationID = organizationID,
+            customerID = customerRowIndividual1.customerID,
+            fullName = CustomerFullName.assume("alpha individual"),
+          )
+
+        val customerRowIndividual2 = arbitrarySample[CustomerRow]
+          .copy(organizationID = organizationID, customerType = CustomerType.Individual, status = CustomerStatus.Active)
+        val customerIndividualDetailsRow2 = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(
+            organizationID = organizationID,
+            customerID = customerRowIndividual2.customerID,
+            fullName = CustomerFullName.assume("Zeta Individual"),
+          )
 
         val customerRowBusiness = arbitrarySample[CustomerRow]
           .copy(organizationID = organizationID, customerType = CustomerType.Business, status = CustomerStatus.Active)
         val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
-          .copy(organizationID = organizationID, customerID = customerRowBusiness.customerID)
+          .copy(
+            organizationID = organizationID,
+            customerID = customerRowBusiness.customerID,
+            businessName = CustomerBusinessName.assume("Beta Business"),
+          )
 
-        customerRowIndividual.customerID shouldNot equal(customerRowBusiness.customerID)
+        customerRowIndividual1.customerID shouldNot equal(customerRowIndividual2.customerID)
+        customerRowIndividual1.customerID shouldNot equal(customerRowBusiness.customerID)
+        customerRowIndividual2.customerID shouldNot equal(customerRowBusiness.customerID)
 
-        postgresClient.executeQuery(customerBookQueries.insertCustomerRow(customerRowIndividual)).zioValue
-        postgresClient.executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow)).zioValue
+        postgresClient.executeQuery(customerBookQueries.insertCustomerRow(customerRowIndividual2)).zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow2))
+          .zioValue
         postgresClient.executeQuery(customerBookQueries.insertCustomerRow(customerRowBusiness)).zioValue
-        postgresClient.executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)).zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
+        postgresClient.executeQuery(customerBookQueries.insertCustomerRow(customerRowIndividual1)).zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow1))
+          .zioValue
 
-        customerBookRepository.getCustomers(organizationID).zioValue should contain theSameElementsAs List(
+        // "alpha" < "Beta" < "Zeta" only case-insensitively — byte order would sort both capitalized names first.
+        customerBookRepository.getCustomers(organizationID).zioValue shouldBe List(
           CustomerSummaryRow(
-            customerRowIndividual.customerID,
-            CustomerDisplayName.assume(customerIndividualDetailsRow.fullName.value),
+            customerRowIndividual1.customerID,
+            CustomerDisplayName.assume(customerIndividualDetailsRow1.fullName.value),
             CustomerType.Individual,
           ),
           CustomerSummaryRow(
             customerRowBusiness.customerID,
             CustomerDisplayName.assume(customerBusinessDetailsRow.businessName.value),
             CustomerType.Business,
+          ),
+          CustomerSummaryRow(
+            customerRowIndividual2.customerID,
+            CustomerDisplayName.assume(customerIndividualDetailsRow2.fullName.value),
+            CustomerType.Individual,
           ),
         )
       }
@@ -701,9 +814,17 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
         customerBookRepository.insertCustomerBusiness(organizationID, insertCustomerBusinessInput).zioValue
 
         val customerIDsIndividual =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue.map(_.customerID).toSet
+          postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+            .zioValue
+            .map(_.customerID)
+            .toSet
         val customerIDsBusiness =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue.map(_.customerID).toSet
+          postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            .zioValue
+            .map(_.customerID)
+            .toSet
 
         customerIDsIndividual should contain(customerIDIndividual)
         customerIDsBusiness should contain(customerIDBusiness)
