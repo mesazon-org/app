@@ -45,7 +45,6 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
     import context.*
 
     eventually {
-      // customer is truncated with CASCADE, clearing the detail and contact tables that reference it.
       postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.customerTable).zioValue
     }
   }
@@ -777,7 +776,6 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow1))
           .zioValue
 
-        // "alpha" < "Beta" < "Zeta" only case-insensitively — byte order would sort both capitalized names first.
         customerBookRepository.getCustomers(organizationID).zioValue shouldBe List(
           CustomerSummaryRow(
             customerRowIndividual1.customerID,
