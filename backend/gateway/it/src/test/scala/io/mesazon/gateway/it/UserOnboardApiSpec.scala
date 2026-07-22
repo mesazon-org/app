@@ -100,6 +100,14 @@ class UserOnboardApiSpec
     eventually(
       gatewayClient.readiness.zioValue shouldBe StatusCode.NoContent
     )
+
+    eventually(
+      ZIO
+        .foreach(repositoryConfig.allTableNames)(tableName =>
+          postgresClient.checkIfTableExists(repositoryConfig.schema, tableName)
+        )
+        .zioValue should contain only true
+    )
   }
 
   override def beforeEach(): Unit = withContext { context =>

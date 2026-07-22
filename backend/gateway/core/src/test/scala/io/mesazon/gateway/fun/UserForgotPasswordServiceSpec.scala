@@ -80,7 +80,7 @@ class UserForgotPasswordServiceSpec
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val userOtpExpiresAtBufferSeconds = Random.nextLongBetween(0, 1000).zioValue
+        val userOtpExpiresAtBufferSeconds = Random.nextLongBetween(1, 1000).zioValue
         val userOtpRow                    = arbitrarySample[UserOtpRow]
           .copy(
             userID = userDetailsRow.userID,
@@ -140,7 +140,7 @@ class UserForgotPasswordServiceSpec
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val userOtpExpiresAtBufferSeconds = Random.nextLongBetween(0, 1000).zioValue
+        val userOtpExpiresAtBufferSeconds = Random.nextLongBetween(1, 1000).zioValue
         val userOtpRow                    = arbitrarySample[UserOtpRow]
           .copy(
             userID = userDetailsRow.userID,
@@ -203,7 +203,7 @@ class UserForgotPasswordServiceSpec
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val userOtpExpiresAtBufferSeconds = Random.nextLongBetween(0, 1000).zioValue
+        val userOtpExpiresAtBufferSeconds = Random.nextLongBetween(1, 1000).zioValue
         val userOtpRow                    = arbitrarySample[UserOtpRow]
           .copy(
             userID = userDetailsRow.userID,
@@ -785,7 +785,7 @@ class UserForgotPasswordServiceSpec
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
 
-        val userOtpExpiresAtBuffer = Random.nextLongBetween(0, 1000).zioValue
+        val userOtpExpiresAtBuffer = Random.nextLongBetween(1, 1000).zioValue
         val userOtpRow             = arbitrarySample[UserOtpRow]
           .copy(
             userID = userDetailsRow.userID,
