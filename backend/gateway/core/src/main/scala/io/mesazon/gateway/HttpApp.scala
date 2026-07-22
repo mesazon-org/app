@@ -52,13 +52,15 @@ object HttpApp {
     userForgotPasswordService           <- ZIO.service[smithy.UserForgotPasswordService[Task]]
     userTokenService                    <- ZIO.service[smithy.UserTokenService[Task]]
     organizationManagementService       <- ZIO.service[smithy.OrganizationManagementService[Task]]
+    customerBookService                 <- ZIO.service[smithy.CustomerBookService[Task]]
     userSignUpRoutes                    <- buildSmithyRoute(userSignUpService)
     userSignInRoutes                    <- buildSmithyRoute(userSignInService)
     userOnboardRoutes                   <- buildSmithyRoute(userOnboardService)
     userForgotPasswordRoutes            <- buildSmithyRoute(userForgotPasswordService)
     userTokenServiceRoutes              <- buildSmithyRoute(userTokenService)
     organizationManagementServiceRoutes <- buildSmithyRoute(organizationManagementService)
-  } yield userSignUpRoutes <+> userOnboardRoutes <+> userSignInRoutes <+> userForgotPasswordRoutes <+> userTokenServiceRoutes <+> organizationManagementServiceRoutes
+    customerBookServiceRoutes           <- buildSmithyRoute(customerBookService)
+  } yield userSignUpRoutes <+> userOnboardRoutes <+> userSignInRoutes <+> userForgotPasswordRoutes <+> userTokenServiceRoutes <+> organizationManagementServiceRoutes <+> customerBookServiceRoutes
 
   private def externalTapirAndDocsRoutes(
       enableDocs: Boolean

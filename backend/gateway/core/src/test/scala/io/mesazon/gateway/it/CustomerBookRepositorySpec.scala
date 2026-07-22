@@ -94,7 +94,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           )
       }
 
-      "fail with a UniqueConstraintViolation conflict error when the full name already exists, rolling back the customer row" in new TestContext {
+      "fail with a UniqueConstraintViolation when the full name already exists, rolling back the customer row" in new TestContext {
         val organizationID                = arbitrarySample[OrganizationID]
         val customerID1                   = arbitrarySample[CustomerID]
         val customerID2                   = arbitrarySample[CustomerID]
@@ -269,7 +269,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
         )
       }
 
-      "fail with a UniqueConstraintViolation conflict error when the business name already exists, rolling back the customer row" in new TestContext {
+      "fail with a UniqueConstraintViolation when the business name already exists, rolling back the customer row" in new TestContext {
         val organizationID              = arbitrarySample[OrganizationID]
         val customerID1                 = arbitrarySample[CustomerID]
         val customerID2                 = arbitrarySample[CustomerID]
@@ -499,7 +499,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           customerBusinessContactRowsAdded
       }
 
-      "fail with a UniqueConstraintViolation conflict error when the email already exists for the customer, rolling back the second contact" in new TestContext {
+      "fail with a UniqueConstraintViolation when the email already exists for the customer, rolling back the second contact" in new TestContext {
         val customerRow = arbitrarySample[CustomerRow]
           .copy(customerType = CustomerType.Business, status = CustomerStatus.Active)
         val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
@@ -561,7 +561,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .map(_.customerBusinessContactID) shouldBe List(customerBusinessContactID1)
       }
 
-      "fail with a UniqueConstraintViolation conflict error when the phone number already exists for the customer, rolling back the second contact" in new TestContext {
+      "fail with a UniqueConstraintViolation when the phone number already exists for the customer, rolling back the second contact" in new TestContext {
         val customerRow = arbitrarySample[CustomerRow]
           .copy(customerType = CustomerType.Business, status = CustomerStatus.Active)
         val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
@@ -625,10 +625,34 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
         val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
           .copy(organizationID = customerRow.organizationID, customerID = customerRow.customerID)
 
+        val customerEmail1       = arbitrarySample[CustomerEmail]
+        val customerEmail2       = CustomerEmail.assume(s"x${customerEmail1.value}")
+        val customerPhoneNumber1 = arbitrarySample[CustomerPhoneNumber]
+        val phoneNumber1         = customerPhoneNumber1.value
+        val customerPhoneNumber2 = CustomerPhoneNumber.assume(
+          phoneNumber1.copy(
+            phoneNationalNumber = PhoneNationalNumber.assume(s"${phoneNumber1.phoneNationalNumber.value}1"),
+            phoneNumberE164 = PhoneNumberE164.assume(s"${phoneNumber1.phoneNumberE164.value}1"),
+          )
+        )
+
+        customerEmail1 shouldNot equal(customerEmail2)
+        customerPhoneNumber1 shouldNot equal(customerPhoneNumber2)
+
         val customerBusinessContactRow1 = arbitrarySample[CustomerBusinessContactRow]
-          .copy(organizationID = customerRow.organizationID, customerID = customerRow.customerID)
+          .copy(
+            organizationID = customerRow.organizationID,
+            customerID = customerRow.customerID,
+            email = Some(customerEmail1),
+            phoneNumber = Some(customerPhoneNumber1),
+          )
         val customerBusinessContactRow2 = arbitrarySample[CustomerBusinessContactRow]
-          .copy(organizationID = customerRow.organizationID, customerID = customerRow.customerID)
+          .copy(
+            organizationID = customerRow.organizationID,
+            customerID = customerRow.customerID,
+            email = Some(customerEmail2),
+            phoneNumber = Some(customerPhoneNumber2),
+          )
 
         customerBusinessContactRow1.customerBusinessContactID shouldNot
           equal(customerBusinessContactRow2.customerBusinessContactID)

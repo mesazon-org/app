@@ -116,9 +116,9 @@ Edit a person's contact details or a company's details in place. These touch onl
   - `uq_customer_business_contact_email` / `uq_customer_business_contact_phone_number` — `unique (organization_id, customer_id, email)` and `... phone_number_e164`: within one business, no two contacts may share an email or a phone number → *"A business contact with the given email/phone number already exists for this customer"*. (`email`/`phone_number_e164` are nullable, and Postgres allows many NULLs, so contacts without an email/phone don't collide.)
   All uniqueness is scoped by `organization_id`, so the same name/email/phone may exist in different organizations.
 
-## Sequence diagrams (target design)
+## Sequence diagrams
 
-The service handlers are still stubs (see [Implementation status](#implementation-status)); these describe the intended flow. Every operation is Bearer + completed-onboarding authenticated, scoped by the `X-Organization-ID` header, and role-checked (writes: `OWNER`/`ADMIN`; reads: `OWNER`/`ADMIN`/`USER`) — the auth/role step is drawn once here and omitted from the per-operation diagrams.
+Every operation is Bearer + completed-onboarding authenticated, scoped by the `X-Organization-ID` header, and role-checked (writes: `OWNER`/`ADMIN`; reads: `OWNER`/`ADMIN`/`USER`) — the auth/role step is drawn once here and omitted from the per-operation diagrams.
 
 ```mermaid
 sequenceDiagram
@@ -212,10 +212,12 @@ The same rule reaches the persisted shape: the detail `Row`s type their `emails`
 
 ## Implementation status
 
-Schema and the full smithy contract are in place (12 operations; `smithy4sCodegen` succeeds; `gateway-core/Compile/compile` is green with a stubbed service). The rest is **not built yet**:
+The feature is **implemented end-to-end** except for its acceptance spec:
 
-- The `CustomerBookService.scala` handlers are stubs (each fails with `UnexpectedError`) — the `observed` error-handler wrapper and layer wiring are in place. **The service still needs to be wired to the repository** (validate → Chimney-map request to input → call `CustomerBookRepository` → map rows to smithy responses).
-- The full persistence stack **is built and tested**: `Row` models, `CustomerBookRepository` trait + `CustomerBookRepositoryImpl` + `live` (with its companion-object input models, see above), the single `CustomerBookQueries` class (all four tables), `RepositoryConfig` + both `application.conf`s, and `CustomerBookRepositorySpec` (15 tests, green against real Postgres — see below).
+- Schema and the full smithy contract are in place (12 operations).
+- `CustomerBookService.scala` is fully implemented: each handler validates via `CustomerBookRequestValidator`, Chimney-maps the validated request to the repository input (`request.transformInto[…Input]`), calls `CustomerBookRepository`, and maps `Row`s to smithy responses by hand (`.value` unwrapping; `customerTypeFromDomainToSmithy` in `service/service.scala` converts the enum). The two updates always pass `Some(emails)`/`Some(phoneNumbers)` (the smithy contract requires those lists, so an update always overwrites them) while the optional scalar fields pass through as `…OptUpdate` (absent → unchanged). The single-item GETs treat a missing customer as `InternalServerError.UnexpectedError` (the smithy operations declare no 404, matching the error matrix's "referenced entity missing → 500").
+- Wiring is live: `Main` provides `CustomerBookService.live`, `CustomerBookRepository.live`, `CustomerBookQueries.live`, and `CustomerBookRequestValidator.live`; `HttpApp.externalSmithyRoutes` serves the routes.
+- The full persistence stack **is built and tested**: `Row` models, `CustomerBookRepository` trait + `CustomerBookRepositoryImpl` + `live` (with its companion-object input models, see above), the single `CustomerBookQueries` class (all four tables), `RepositoryConfig` + both `application.conf`s, and `CustomerBookRepositorySpec` (green against real Postgres — see below).
 
 ### Batch inserts are atomic (one transaction), and efficient
 
@@ -225,6 +227,9 @@ Schema and the full smithy contract are in place (12 operations; `smithy4sCodege
 
 ## Tests
 
-None yet. When implemented, follow the pattern of [Organization Management](organization-management.md): acceptance in `backend/gateway/it` (see [acceptance-tests.md](../acceptance-tests.md)) covering create-individual, create-business (with inline contacts), the combined insert, edits, and add/remove contacts; plus functional (`fun/CustomerBookServiceSpec`) and repository integration specs.
+- **Repository integration** — `it/CustomerBookRepositorySpec` (real Postgres): every repository operation's happy and failure paths, including the four unique-constraint conflicts and batch rollback.
+- **Validator unit** — `unit/validation/service/CustomerBookRequestValidatorSpec`: one section per `validated…` method, error accumulation and index tagging.
+- **Service functional** — `fun/CustomerBookServiceSpec` (mocked `CustomerBookRepository`, real validator): one section per operation; each happy path proves the exact repository call (organization scoping, Chimney-mapped inputs, update `Opt`/`Some` semantics) and the response mapping, and each failure path proves either a `ValidationError` that never reaches the repository or a repository error (conflict/500) propagating unchanged.
+- **Acceptance** — `it/CustomerBookApiSpec` in `backend/gateway/it` (see [acceptance-tests.md](../acceptance-tests.md)), the reference implementation of the mandatory middleware-gate matrix. Each endpoint's `should` block runs the happy path (with full DB-state assertions) plus **every** applicable gate — `400` validation, `400` missing `X-Organization-ID`, `401` missing/invalid token, `403` disallowed onboard stage, `403` disallowed org role, `500` no user-details row, `500` not-an-org-member — on top of the endpoint's own `409` conflicts (business name, and the contact email/phone uniqueness on the business inserts). Done so far: `insert/customer-individual`, `insert/customer-individuals`, `insert/customer-business`. Still to add: `insert/customer-businesses`, `insert/customers`, the two updates, add/remove contacts, and the three reads.
 
 **Type-exclusivity integration test (required).** Because the individual/business split is enforced only in the service, add a repository integration test that guards the invariant directly against Postgres: after exercising the insert paths, assert that no `customer_id` exists in both `customer_individual_details` and `customer_business_details`. This is the safety net that replaces a DB-level constraint — without it, a future code path could silently create a customer that is both kinds. (The "contacts only under a business" and per-tenant unique-name rules are already DB-enforced, so they need only ordinary happy-path/duplicate-conflict coverage, not a dedicated invariant sweep.)

@@ -60,6 +60,7 @@ object Main extends ZIOAppDefault {
       JwtService.live,
       PasswordService.live,
       OrganizationManagementService.live,
+      CustomerBookService.live,
 
       // Repository
       PostgresTransactor.live,
@@ -71,6 +72,7 @@ object Main extends ZIOAppDefault {
       UserCredentialsRepository.live,
       UserActionAttemptRepository.live,
       OrganizationManagementRepository.live,
+      CustomerBookRepository.live,
 
       // Queries
       WahaQueries.live,
@@ -81,6 +83,7 @@ object Main extends ZIOAppDefault {
       UserActionAttemptQueries.live,
       OrganizationDetailsQueries.live,
       OrganizationUserQueries.live,
+      CustomerBookQueries.live,
 
       // State
       AuthState.live,
@@ -122,6 +125,7 @@ object Main extends ZIOAppDefault {
       UserForgotPasswordRequestValidator.live,
       UserTokenRequestValidator.live,
       OrganizationManagementRequestValidator.live,
+      CustomerBookRequestValidator.live,
 
       // Clients
       SttpBackend.live,

@@ -107,6 +107,7 @@ Full rule with ✅/❌: [scala.md §5b Repository input models](scala.md#5b-repo
     .flatMap(ZIO.fromEither(_).mapError(e => ServiceError.InternalServerError.UnexpectedError(s"Failed to construct customerID: [$e]")))
   ```
 - Timestamps: one `timeProvider.instantNow` per operation, used for both `CreatedAt` and `UpdatedAt` on insert and to refresh `UpdatedAt` on every mutation.
+- **Batch inserts pair each generated id with its input at generation time** — a named tuple built inside the one `ZIO.foreach` (`generateCustomerID.map(customerID => (customerID = customerID, input = input))`), with every downstream row derived from the paired list and the result read as `.map(_.customerID)`. Never generate an id list and `zip` it back onto the inputs, and never read the pair positionally — see [scala.md § Pairing values](scala.md#pairing-values--no-zip-no-_1).
 - This is what makes the layer testable: specs mock `TimeProvider`/`IDGenerator` and assert exact `createdAt`/`updatedAt` and ids (see [Testing](#testing)).
 
 ## Error handling

@@ -158,6 +158,25 @@ Rules:
 - ❌ `userDetails <- userDetailsRepository.getUserDetails(...)`, `userOtp <- ...`
 
 
+### Pairing values — no `zip`, no `._1`
+
+- **Never merge two lists with `zip` in main (compile-scope) code.** `zip` silently truncates to the shorter list and makes correctness depend on both lists having been built in the same order — a later refactor that filters, reorders, or short-circuits one of the two builds corrupts every pairing without any compile error. (`zipWithIndex` over a *single* list, and zipping ZIO *effects*, are fine — the rule is about merging two separately built collections.)
+- **Pair a generated value with its source at generation time instead**: produce the pair inside the same traversal that generates the value, then derive everything downstream from the paired structure. Use a `Map[K, V]` instead of a pair list when lookup by key is what's needed.
+- **Never access a tuple positionally (`._1`/`._2`) — anywhere.** Use a Scala 3 **named tuple** (`(customerID = …, input = …)`, read back as `.customerID`/`.input`) or destructure with a pattern match; positional access hides what the code means and silently survives a field reorder.
+- ✅ (from `CustomerBookRepository.insertCustomerIndividuals`):
+  ```scala
+  customerIDsWithInputs <- ZIO.foreach(insertCustomerIndividualInputs)(input =>
+    generateCustomerID.map(customerID => (customerID = customerID, input = input))
+  )
+  customerRows = customerIDsWithInputs.map(customerIDWithInput =>
+    buildCustomerRow(organizationID, customerIDWithInput.customerID, CustomerType.Individual, instantNow)
+  )
+  // …
+  } yield customerIDsWithInputs.map(_.customerID)
+  ```
+- ❌ `customerIDs <- ZIO.foreach(inputs)(_ => generateCustomerID)` followed by `inputs.zip(customerIDs)`; `pairs.map(_._1)`; `.map { case t => t._2 }`
+
+
 ### Testing
 
 - **Keep every test isolated.** A test builds the data it needs and asserts against it — it does not depend on values, builders, or state shared with other tests. Prefer generating inputs per test with `arbitrarySample[X]` (feature arbitraries live in their own traits — see [adding-a-feature.md](adding-a-feature.md)) and `.copy(...)` only the fields the test is about.
@@ -166,6 +185,9 @@ Rules:
 - ✅ `val individual = arbitrarySample[InsertCustomerIndividualPostRequest]` in each test; `arbitrarySample[smithy.XRequest].copy(fullName = "")` for the one bad field
 - ❌ a class-level `validRequest` / `expectedResult` reused across tests; a helper that builds the "standard" entity for everyone
 - **Name a value after its model, qualifier last.** A test binding's name is the model type in lower camelCase, not an abbreviation or a role word — `insertCustomerIndividualInput`, not `input`; `customerBusinessContactRow`, not `contact`. When you must disambiguate several of the same type, the name still **starts with the full model name** and the distinguishing suffix goes **at the end** — `customerRowIndividual`/`customerRowBusiness` (not `individualCustomerRow`), `customerID1`/`customerID2`, a derived `customerBusinessDetailsRowUpdated` — so bindings for one model sort and read together (see the [§9 result-value rule](#9-values-holding-repository-return-values)). This keeps the assertion readable as a sentence about the domain.
+- **Name a happy-path test after its successful behaviour; name a failure test `fail with a {ServiceError} …` + the behaviour.** A success name describes the observable outcome ("insert a customer of type INDIVIDUAL and its details row in one transaction", "successfully validate a batch of individuals"). A failure name **starts with `fail with a[n] {concrete ServiceError subtype}`** — the exact error the test asserts — followed by the condition and any side-effect proof.
+  - ✅ `"fail with a UniqueConstraintViolation when the full name already exists, rolling back the customer row"`; `"fail with a ValidationError accumulating every field error"`; `"fail with an UnexpectedError when the customer individual does not exist"`
+  - ❌ `"fail with the repository's error when the read fails"` (which error?); `"reject when no email is marked default"` / `"accumulate every field error"` (failure tests that never name the error)
 - **Assert the whole model, never a projection of it.** Compare the full `Row`/response value (`shouldBe expectedRow`, `should contain theSameElementsAs List(row1, row2)`), building the complete expected value with every field. Do **not** `.map` a read down to one or two fields (`.map(_.customerID)`, `.map(r => (r.customerID, r.fullName))`) and assert only those — an untested field is an untested column. (A `.map` to project is fine only when the field itself is the whole point, e.g. asserting *which ids survived a rollback*.)
 - **Prove a "must differ" precondition with a not-equal assertion.** When a test's meaning depends on two values being distinct (two generated ids, a duplicate-name pair sharing a name but not an id), assert it in the test — `customerID1 shouldNot equal(customerID2)` — right where you set them up. Don't leave "they're different" as an unstated assumption riding on `arbitrarySample` happening not to collide.
 - **When distinctness must be guaranteed, generate two arbitraries and modify one — never hard-code values, never sample-and-hope.** Some generators draw from a small fixed pool (e.g. `Arbitrary[PhoneNumber]` has a handful of numbers), so two samples collide often and the not-equal assertion above becomes a flaky failure. The fix is *not* to replace the arbitrary with hand-written literals (that bypasses the generator's realism and drifts from the domain); it is to sample both values and then **modify one** so the pair is distinct by construction, keeping the not-equal assertion as the documented proof.

@@ -37,6 +37,12 @@ def verifyOnboardStage(
       )
     )
 
+def customerTypeFromDomainToSmithy(customerType: io.mesazon.domain.gateway.CustomerType): smithy.CustomerType =
+  customerType match {
+    case CustomerType.Individual => smithy.CustomerType.INDIVIDUAL
+    case CustomerType.Business   => smithy.CustomerType.BUSINESS
+  }
+
 def organizationUserRoleFromSmithyToDomain(role: smithy.OrganizationUserRole): OrganizationUserRole = role match {
   case smithy.OrganizationUserRole.OWNER => OrganizationUserRole.Owner
   case smithy.OrganizationUserRole.ADMIN => OrganizationUserRole.Admin
