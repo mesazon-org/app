@@ -114,7 +114,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
         val organizationID                    = arbitrarySample[OrganizationID]
         val customerID                        = arbitrarySample[CustomerID]
         val insertCustomerBusinessPostRequest = arbitrarySample[InsertCustomerBusinessPostRequest]
-        val insertCustomerBusinessInput       = insertCustomerBusinessPostRequest.transformInto[InsertCustomerBusinessInput]
+        val insertCustomerBusinessInput = insertCustomerBusinessPostRequest.transformInto[InsertCustomerBusinessInput]
 
         customerBookRepositoryMock.insertCustomerBusiness
           .expects(organizationID, insertCustomerBusinessInput)
@@ -198,8 +198,8 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
 
     "insertCustomersPost" should {
       "successfully insert individuals and businesses in one payload" in new TestContext {
-        val organizationID             = arbitrarySample[OrganizationID]
-        val insertCustomersPostRequest = arbitrarySample[InsertCustomersPostRequest]
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val insertCustomersPostRequest     = arbitrarySample[InsertCustomersPostRequest]
         val insertCustomerIndividualInputs =
           insertCustomersPostRequest.customerIndividuals.map(_.transformInto[InsertCustomerIndividualInput])
         val insertCustomerBusinessInputs =
@@ -223,8 +223,8 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
       }
 
       "fail with a UniqueConstraintViolation when the combined batch conflicts" in new TestContext {
-        val organizationID             = arbitrarySample[OrganizationID]
-        val insertCustomersPostRequest = arbitrarySample[InsertCustomersPostRequest]
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val insertCustomersPostRequest     = arbitrarySample[InsertCustomersPostRequest]
         val insertCustomerIndividualInputs =
           insertCustomersPostRequest.customerIndividuals.map(_.transformInto[InsertCustomerIndividualInput])
         val insertCustomerBusinessInputs =

@@ -76,22 +76,23 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   }
 
   given JsonValueCodec[smithy.InsertCustomerIndividualPostRequest] =
-    JsonCodecMaker.make[smithy.InsertCustomerIndividualPostRequest]
+    JsonCodecMaker.make[smithy.InsertCustomerIndividualPostRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.InsertCustomerIndividualsPostRequest] =
-    JsonCodecMaker.make[smithy.InsertCustomerIndividualsPostRequest]
+    JsonCodecMaker.make[smithy.InsertCustomerIndividualsPostRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.InsertCustomerBusinessPostRequest] =
-    JsonCodecMaker.make[smithy.InsertCustomerBusinessPostRequest]
+    JsonCodecMaker.make[smithy.InsertCustomerBusinessPostRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.InsertCustomerBusinessesPostRequest] =
-    JsonCodecMaker.make[smithy.InsertCustomerBusinessesPostRequest]
-  given JsonValueCodec[smithy.InsertCustomersPostRequest] = JsonCodecMaker.make[smithy.InsertCustomersPostRequest]
+    JsonCodecMaker.make[smithy.InsertCustomerBusinessesPostRequest](CodecMakerConfig.withTransientEmpty(false))
+  given JsonValueCodec[smithy.InsertCustomersPostRequest] =
+    JsonCodecMaker.make[smithy.InsertCustomersPostRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.UpdateCustomerIndividualPutRequest] =
-    JsonCodecMaker.make[smithy.UpdateCustomerIndividualPutRequest]
+    JsonCodecMaker.make[smithy.UpdateCustomerIndividualPutRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.UpdateCustomerBusinessPutRequest] =
-    JsonCodecMaker.make[smithy.UpdateCustomerBusinessPutRequest]
+    JsonCodecMaker.make[smithy.UpdateCustomerBusinessPutRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.AddCustomerBusinessContactsPutRequest] =
-    JsonCodecMaker.make[smithy.AddCustomerBusinessContactsPutRequest]
+    JsonCodecMaker.make[smithy.AddCustomerBusinessContactsPutRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.RemoveCustomerBusinessContactsPutRequest] =
-    JsonCodecMaker.make[smithy.RemoveCustomerBusinessContactsPutRequest]
+    JsonCodecMaker.make[smithy.RemoveCustomerBusinessContactsPutRequest](CodecMakerConfig.withTransientEmpty(false))
 
   given JsonValueCodec[smithy.GetCustomerIndividualGetResponse] =
     JsonCodecMaker.make[smithy.GetCustomerIndividualGetResponse]
