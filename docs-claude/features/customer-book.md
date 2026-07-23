@@ -212,7 +212,7 @@ The same rule reaches the persisted shape: the detail `Row`s type their `emails`
 
 ## Implementation status
 
-The feature is **implemented end-to-end** except for its acceptance spec:
+The feature is **implemented and wired end-to-end**; acceptance coverage is in progress — 7 of the 12 endpoints have `CustomerBookApiSpec` tests (the four inserts other than the combined `InsertCustomersPost`, and the three reads); still to add are `InsertCustomersPost`, both updates, and add/remove contacts (see [Tests](#tests)).
 
 - Schema and the full smithy contract are in place (12 operations).
 - `CustomerBookService.scala` is fully implemented: each handler validates via `CustomerBookRequestValidator`, Chimney-maps the validated request to the repository input (`request.transformInto[…Input]`), calls `CustomerBookRepository`, and maps `Row`s to smithy responses by hand (`.value` unwrapping; `customerTypeFromDomainToSmithy` in `service/service.scala` converts the enum). The two updates always pass `Some(emails)`/`Some(phoneNumbers)` (the smithy contract requires those lists, so an update always overwrites them) while the optional scalar fields pass through as `…OptUpdate` (absent → unchanged). The single-item GETs treat a missing customer as `InternalServerError.UnexpectedError` (the smithy operations declare no 404, matching the error matrix's "referenced entity missing → 500").
