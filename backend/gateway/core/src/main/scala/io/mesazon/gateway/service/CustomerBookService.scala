@@ -157,17 +157,14 @@ object CustomerBookService {
     override def removeCustomerBusinessContactsPut(
         organizationID: UUID,
         removeCustomerBusinessContactsPutRequestSmithy: smithy.RemoveCustomerBusinessContactsPutRequest,
-    ): ServiceTask[Unit] = for {
-      removeCustomerBusinessContactsPutRequest <-
-        customerBookRequestValidator.validatedRemoveCustomerBusinessContactsPutRequest(
-          removeCustomerBusinessContactsPutRequestSmithy
-        )
-      _ <- customerBookRepository.removeCustomerBusinessContacts(
+    ): ServiceTask[Unit] =
+      customerBookRepository.removeCustomerBusinessContacts(
         OrganizationID(organizationID),
-        removeCustomerBusinessContactsPutRequest.customerID,
-        removeCustomerBusinessContactsPutRequest.customerBusinessContactIDs,
+        CustomerID(removeCustomerBusinessContactsPutRequestSmithy.customerID),
+        removeCustomerBusinessContactsPutRequestSmithy.customerBusinessContacts.map(customerBusinessContact =>
+          CustomerBusinessContactID(customerBusinessContact.customerBusinessContactID)
+        ),
       )
-    } yield ()
 
     /** HTTP GET /get/customer-individual/{customerID} */
     override def getCustomerIndividualGet(

@@ -414,17 +414,5 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           )
       }
     }
-
-    "validatedRemoveCustomerBusinessContactsPutRequest" should {
-      "successfully validate contacts to remove" in {
-        val removeCustomerBusinessContactsPutRequest = arbitrarySample[RemoveCustomerBusinessContactsPutRequest]
-
-        validator
-          .validatedRemoveCustomerBusinessContactsPutRequest(
-            removeCustomerBusinessContactsPutRequest.transformInto[smithy.RemoveCustomerBusinessContactsPutRequest]
-          )
-          .zioValue shouldBe removeCustomerBusinessContactsPutRequest
-      }
-    }
   }
 }

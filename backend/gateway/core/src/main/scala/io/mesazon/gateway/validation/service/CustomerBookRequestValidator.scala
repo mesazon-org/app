@@ -103,20 +103,6 @@ final class CustomerBookRequestValidator(
         )
     )
 
-  def validatedRemoveCustomerBusinessContactsPutRequest(
-      request: smithy.RemoveCustomerBusinessContactsPutRequest
-  ): IO[ServiceError.BadRequestError.ValidationError, RemoveCustomerBusinessContactsPutRequest] =
-    toValidatedRequestIO(
-      ZIO.succeed(
-        (
-          CustomerID(request.customerID).validNec,
-          request.customerBusinessContacts
-            .map(contact => CustomerBusinessContactID(contact.customerBusinessContactID))
-            .validNec,
-        ).mapN(RemoveCustomerBusinessContactsPutRequest.apply)
-      )
-    )
-
   private def validateCustomerEmails(
       emails: List[smithy.CustomerEmailEntryRequest]
   ): UIO[ValidatedNec[InvalidFieldError, List[CustomerEmailEntryRequest]]] =

@@ -69,8 +69,4 @@ trait CustomerBookDomainArbitraries extends GatewayArbitraries {
   given arbInsertCustomersPostRequest: Arbitrary[InsertCustomersPostRequest] = Arbitrary(
     Gen.resultOf(InsertCustomersPostRequest.apply)
   )
-
-  given arbRemoveCustomerBusinessContactsPutRequest: Arbitrary[RemoveCustomerBusinessContactsPutRequest] = Arbitrary(
-    Gen.resultOf(RemoveCustomerBusinessContactsPutRequest.apply)
-  )
 }
