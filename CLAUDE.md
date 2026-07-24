@@ -32,7 +32,7 @@ Follow the structure of the existing docs:
 - endpoints table with auth + required onboard stages
 - flow, including security/abuse defenses and other non-obvious design decisions
 - key files and config
-- tests: acceptance in `backend/gateway/it` (see [acceptance-tests.md](docs-claude/acceptance-tests.md)) plus functional/unit/integration
+- tests: acceptance in `backend/gateway/it` (see [acceptance-tests.md](docs-claude/acceptance-tests.md)) plus functional (see [functional-tests.md](docs-claude/functional-tests.md)), unit, and integration
 
 - [User Onboarding](docs-claude/features/user-onboarding.md)
 - [User Sign in](docs-claude/features/user-signin.md)

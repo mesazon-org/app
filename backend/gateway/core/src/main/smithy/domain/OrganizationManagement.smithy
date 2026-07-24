@@ -32,9 +32,9 @@ structure CreateOrganizationPostRequest {
     @required
     slug: String
     tagline: String
-    @required
+    @default([])
     emails: OrganizationEmailEntryRequests
-    @required
+    @default([])
     phoneNumbers: OrganizationPhoneNumberEntryRequests
     addressLine1: String
     addressLine2: String

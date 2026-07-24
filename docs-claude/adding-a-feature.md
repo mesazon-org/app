@@ -16,7 +16,7 @@ This is the checklist for the files a new feature `<Feature>` creates. Not every
 | **Domain arbitraries** | `backend/test-kit/src/main/scala/io/mesazon/testkit/base/<Feature>DomainArbitraries.scala` | `Arbitrary` for each domain case class. |
 | **Smithy arbitraries** | `backend/gateway/core/src/test/scala/io/mesazon/gateway/utils/<Feature>SmithyArbitraries.scala` | `Arbitrary` for each smithy request, **derived from** the domain arbitrary. |
 | **Validator spec** | `backend/gateway/core/src/test/scala/io/mesazon/gateway/unit/validation/service/<Feature>RequestValidatorSpec.scala` | Two tests per validator function. See [validators.md § Tests](validators.md#tests). |
-| **Service / repository / acceptance specs** | `fun/`, `it/`, `backend/gateway/it` | See [acceptance-tests.md](acceptance-tests.md). |
+| **Service / repository / acceptance specs** | `fun/`, `it/`, `backend/gateway/it` | See [functional-tests.md](functional-tests.md) and [acceptance-tests.md](acceptance-tests.md). |
 | **Feature doc** | `docs-claude/features/<feature-name>.md` | Required — see the documentation rule in [CLAUDE.md](../CLAUDE.md). |
 
 ## Where newtypes and enums live

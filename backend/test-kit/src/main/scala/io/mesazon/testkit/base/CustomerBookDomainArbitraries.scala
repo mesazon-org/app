@@ -35,7 +35,10 @@ trait CustomerBookDomainArbitraries extends GatewayArbitraries {
   )
 
   given arbInsertCustomerIndividualsPostRequest: Arbitrary[InsertCustomerIndividualsPostRequest] = Arbitrary(
-    Gen.resultOf(InsertCustomerIndividualsPostRequest.apply)
+    Gen
+      .choose(0, 50) // Limit the number of individuals to a reasonable range
+      .flatMap(n => Gen.listOfN(n, Arbitrary.arbitrary[InsertCustomerIndividualPostRequest]))
+      .map(InsertCustomerIndividualsPostRequest.apply)
   )
 
   given arbUpdateCustomerIndividualPutRequest: Arbitrary[UpdateCustomerIndividualPutRequest] = Arbitrary(
@@ -51,7 +54,12 @@ trait CustomerBookDomainArbitraries extends GatewayArbitraries {
   )
 
   given arbAddCustomerBusinessContactsPutRequest: Arbitrary[AddCustomerBusinessContactsPutRequest] = Arbitrary(
-    Gen.resultOf(AddCustomerBusinessContactsPutRequest.apply)
+    for {
+      customerID                 <- Arbitrary.arbitrary[CustomerID]
+      addCustomerBusinessContact <- Gen
+        .choose(0, 50) // Limit the number of contacts to a reasonable range
+        .flatMap(n => Gen.listOfN(n, Arbitrary.arbitrary[AddCustomerBusinessContact]))
+    } yield AddCustomerBusinessContactsPutRequest(customerID, addCustomerBusinessContact)
   )
 
   given arbInsertCustomerBusinessPostRequest: Arbitrary[InsertCustomerBusinessPostRequest] = Arbitrary(
@@ -67,6 +75,13 @@ trait CustomerBookDomainArbitraries extends GatewayArbitraries {
   )
 
   given arbInsertCustomersPostRequest: Arbitrary[InsertCustomersPostRequest] = Arbitrary(
-    Gen.resultOf(InsertCustomersPostRequest.apply)
+    for {
+      insertCustomerBusinessPostRequest <- Gen
+        .choose(0, 25) // Limit the number of customers to a reasonable rangee
+        .flatMap(n => Gen.listOfN(n, Arbitrary.arbitrary[InsertCustomerBusinessPostRequest]))
+      insertCustomerIndividualPostRequest <- Gen
+        .choose(0, 25) // Limit the number of customers to a reasonable rangee
+        .flatMap(n => Gen.listOfN(n, Arbitrary.arbitrary[InsertCustomerIndividualPostRequest]))
+    } yield InsertCustomersPostRequest(insertCustomerBusinessPostRequest, insertCustomerIndividualPostRequest)
   )
 }

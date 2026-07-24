@@ -38,6 +38,9 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
 - Contact-point entry structures (an email/phone plus its `isDefault` flag) are named `<Owner><Kind>EntryRequest`, list `<Owner><Kind>EntryRequests` — and per §3 the domain entry class carries the same name
 - ✅ `CustomerEmailEntryRequest` / `CustomerEmailEntryRequests`, `OrganizationPhoneNumberEntryRequest`
 - ❌ `CustomerEmailRequest` (reads as a whole request, not a list entry), `CustomerEmail` (collides with the newtype)
+- **List members on *request* structures are `@default([])`, never `@required`.** smithy4s renders `@default([])` as a non-optional `List[X] = List()` (same Scala type a `@required` list would produce), but the decoder fills it with **empty when the field is absent** from the JSON body. This matters because jsoniter clients drop empty collections by default (`transientEmpty`), so a `@required` list would 400 with a "missing required field" decode error whenever a caller sends no entries — see [[jsoniter-transient-empty-required-lists]]. `@default([])` makes an omitted-or-empty list decode to `Nil` on both transports, and the validator treats an empty list as valid (contact lists only require *exactly one default when non-empty*). The domain model stays `List[X]` and validators need no `Option`-to-empty handling. **Response** list members stay `@required` — the server always populates them.
+- ✅ `@default([]) emails: CustomerEmailEntryRequests` on `InsertCustomerBusinessPostRequest`; `@required emails: CustomerEmailEntryRequests` on `GetCustomerBusinessGetResponse`
+- ❌ `@required` list on a request structure (400s when a client omits an empty list), hand-rolling `Option[List[X]]` + `getOrElse(Nil)` in the validator instead of `@default([])`
 
 ### 5. Members
 

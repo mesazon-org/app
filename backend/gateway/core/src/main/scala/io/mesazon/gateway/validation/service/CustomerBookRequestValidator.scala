@@ -194,9 +194,7 @@ final class CustomerBookRequestValidator(
     validateCustomerEmails(request.emails)
       .zip(validateCustomerPhoneNumbers(request.phoneNumbers))
       .zip(
-        validateAll(request.customerBusinessContacts.getOrElse(List.empty))(
-          validateInsertCustomerBusinessContact
-        )
+        validateAll(request.customerBusinessContacts)(validateInsertCustomerBusinessContact)
       )
       .map((emailsValidated, phoneNumbersValidated, contactsValidated) =>
         (

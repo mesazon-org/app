@@ -29,7 +29,7 @@ trait CustomerBookSmithyArbitraries extends CustomerBookDomainArbitraries, IronR
       .into[smithy.InsertCustomerBusinessPostRequest]
       .withFieldComputed(
         _.customerBusinessContacts,
-        business => Some(business.customerBusinessContacts.map(_.transformInto[smithy.InsertCustomerBusinessContact])),
+        business => business.customerBusinessContacts.map(_.transformInto[smithy.InsertCustomerBusinessContact]),
       )
       .transform
 
@@ -81,5 +81,13 @@ trait CustomerBookSmithyArbitraries extends CustomerBookDomainArbitraries, IronR
       Arbitrary
         .arbitrary[AddCustomerBusinessContactsPutRequest]
         .map(_.transformInto[smithy.AddCustomerBusinessContactsPutRequest])
+    )
+
+  given arbRemoveCustomerBusinessContactsPutRequestSmithy: Arbitrary[smithy.RemoveCustomerBusinessContactsPutRequest] =
+    Arbitrary(
+      for {
+        customerID               <- Gen.uuid
+        customerBusinessContacts <- Gen.listOf(Gen.uuid.map(smithy.RemoveCustomerBusinessContact.apply))
+      } yield smithy.RemoveCustomerBusinessContactsPutRequest(customerID, customerBusinessContacts)
     )
 }

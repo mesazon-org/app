@@ -46,7 +46,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .zioValue shouldBe insertCustomerIndividualPostRequest
       }
 
-      "accumulate every field error" in {
+      "fail with a ValidationError accumulating every field error" in {
         val insertCustomerIndividualPostRequestSmithy = arbitrarySample[smithy.InsertCustomerIndividualPostRequest]
           .copy(
             fullName = "",
@@ -64,7 +64,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           )
       }
 
-      "report only the failing entries of an email list, tagging each with its list index" in {
+      "fail with a ValidationError reporting only the failing entries of an email list, tagged by list index" in {
         val insertCustomerIndividualPostRequestSmithy =
           arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(
             emails = List(
@@ -87,7 +87,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           )
       }
 
-      "reject when more than one email is marked default" in {
+      "fail with a ValidationError when more than one email is marked default" in {
         val insertCustomerIndividualPostRequestSmithy =
           arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(
             emails = List(validEmailSmithy(0, isDefault = true), validEmailSmithy(1, isDefault = true)),
@@ -104,7 +104,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           )
       }
 
-      "reject when no email is marked default" in {
+      "fail with a ValidationError when no email is marked default" in {
         val insertCustomerIndividualPostRequestSmithy =
           arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(
             emails = List(validEmailSmithy(0, isDefault = false)),
@@ -133,7 +133,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .zioValue shouldBe insertCustomerIndividualsPostRequest
       }
 
-      "wrap each invalid individual's errors under the batch field, tagged with the individual's index" in {
+      "fail with a ValidationError wrapping each invalid individual's errors under the batch field, tagged with the individual's index" in {
         val insertCustomerIndividualsPostRequestSmithy = arbitrarySample[smithy.InsertCustomerIndividualsPostRequest]
           .copy(
             customerIndividuals = List(
@@ -162,7 +162,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           )
       }
 
-      "report only the failing individuals of a mixed batch, keeping the inner email indexes in the message" in {
+      "fail with a ValidationError reporting only the failing individuals of a mixed batch, keeping the inner email indexes in the message" in {
         val invalidEmailsIndividualSmithy = arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(
           emails = List(
             smithy.CustomerEmailEntryRequest(email = "bad-1", isDefault = false),
@@ -220,16 +220,14 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .zioValue shouldBe insertCustomerBusinessPostRequest
       }
 
-      "accumulate business and nested contact errors" in {
+      "fail with a ValidationError accumulating business and nested contact errors" in {
         val insertCustomerBusinessPostRequestSmithy = arbitrarySample[smithy.InsertCustomerBusinessPostRequest].copy(
           businessName = "",
           emails = List(smithy.CustomerEmailEntryRequest(email = "invalid-email", isDefault = false)),
-          customerBusinessContacts = Some(
-            List(
-              arbitrarySample[smithy.AddCustomerBusinessContact]
-                .transformInto[smithy.InsertCustomerBusinessContact]
-                .copy(fullName = "")
-            )
+          customerBusinessContacts = List(
+            arbitrarySample[smithy.AddCustomerBusinessContact]
+              .transformInto[smithy.InsertCustomerBusinessContact]
+              .copy(fullName = "")
           ),
         )
 
@@ -255,7 +253,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .zioValue shouldBe insertCustomerBusinessesPostRequest
       }
 
-      "wrap each invalid business's errors under the batch field, tagged with the business's index" in {
+      "fail with a ValidationError wrapping each invalid business's errors under the batch field, tagged with the business's index" in {
         val insertCustomerBusinessesPostRequestSmithy = arbitrarySample[smithy.InsertCustomerBusinessesPostRequest]
           .copy(
             customerBusinesses = List(
@@ -263,7 +261,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
                 .copy(
                   businessName = "",
                   emails = List(smithy.CustomerEmailEntryRequest(email = "invalid-email", isDefault = true)),
-                  customerBusinessContacts = None,
+                  customerBusinessContacts = List.empty,
                 )
             )
           )
@@ -298,11 +296,11 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .zioValue shouldBe insertCustomersPostRequest
       }
 
-      "accumulate errors across businesses and individuals" in {
+      "fail with a ValidationError accumulating errors across businesses and individuals" in {
         val insertCustomersPostRequestSmithy = arbitrarySample[smithy.InsertCustomersPostRequest].copy(
           customerBusinesses = List(
             arbitrarySample[smithy.InsertCustomerBusinessPostRequest]
-              .copy(businessName = "", customerBusinessContacts = None)
+              .copy(businessName = "", customerBusinessContacts = List.empty)
           ),
           customerIndividuals = List(arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(fullName = "")),
         )
@@ -331,7 +329,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .zioValue shouldBe updateCustomerIndividualPutRequest
       }
 
-      "accumulate every field error" in {
+      "fail with a ValidationError accumulating every field error" in {
         val updateCustomerIndividualPutRequestSmithy = arbitrarySample[smithy.UpdateCustomerIndividualPutRequest]
           .copy(
             fullName = Some(""),
@@ -361,7 +359,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .zioValue shouldBe updateCustomerBusinessPutRequest
       }
 
-      "accumulate every field error" in {
+      "fail with a ValidationError accumulating every field error" in {
         val updateCustomerBusinessPutRequestSmithy = arbitrarySample[smithy.UpdateCustomerBusinessPutRequest]
           .copy(
             businessName = Some(""),
@@ -389,7 +387,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .zioValue shouldBe addCustomerBusinessContactsPutRequest
       }
 
-      "accumulate errors tagged with the index of each invalid contact" in {
+      "fail with a ValidationError tagging errors with the index of each invalid contact" in {
         val addCustomerBusinessContactsPutRequestSmithy = arbitrarySample[smithy.AddCustomerBusinessContactsPutRequest]
           .copy(
             customerBusinessContacts = List(

@@ -59,6 +59,8 @@ trait RepositoryArbitraries
 
   given Arbitrary[CustomerBusinessContactRow] = Arbitrary(Gen.resultOf(CustomerBusinessContactRow.apply))
 
+  given Arbitrary[CustomerSummaryRow] = Arbitrary(Gen.resultOf(CustomerSummaryRow.apply))
+
   given Arbitrary[CustomerBusinessContactInput] = Arbitrary(Gen.resultOf(CustomerBusinessContactInput.apply))
 
   given Arbitrary[InsertCustomerIndividualInput] = Arbitrary(Gen.resultOf(InsertCustomerIndividualInput.apply))
