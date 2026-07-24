@@ -29,7 +29,7 @@ trait CustomerBookSmithyArbitraries extends CustomerBookDomainArbitraries, IronR
       .into[smithy.InsertCustomerBusinessPostRequest]
       .withFieldComputed(
         _.customerBusinessContacts,
-        business => Some(business.customerBusinessContacts.map(_.transformInto[smithy.InsertCustomerBusinessContact])),
+        business => business.customerBusinessContacts.map(_.transformInto[smithy.InsertCustomerBusinessContact]),
       )
       .transform
 

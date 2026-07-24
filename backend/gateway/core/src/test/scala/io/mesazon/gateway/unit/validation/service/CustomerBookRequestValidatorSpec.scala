@@ -224,12 +224,10 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
         val insertCustomerBusinessPostRequestSmithy = arbitrarySample[smithy.InsertCustomerBusinessPostRequest].copy(
           businessName = "",
           emails = List(smithy.CustomerEmailEntryRequest(email = "invalid-email", isDefault = false)),
-          customerBusinessContacts = Some(
-            List(
-              arbitrarySample[smithy.AddCustomerBusinessContact]
-                .transformInto[smithy.InsertCustomerBusinessContact]
-                .copy(fullName = "")
-            )
+          customerBusinessContacts = List(
+            arbitrarySample[smithy.AddCustomerBusinessContact]
+              .transformInto[smithy.InsertCustomerBusinessContact]
+              .copy(fullName = "")
           ),
         )
 
@@ -263,7 +261,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
                 .copy(
                   businessName = "",
                   emails = List(smithy.CustomerEmailEntryRequest(email = "invalid-email", isDefault = true)),
-                  customerBusinessContacts = None,
+                  customerBusinessContacts = List.empty,
                 )
             )
           )
@@ -302,7 +300,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
         val insertCustomersPostRequestSmithy = arbitrarySample[smithy.InsertCustomersPostRequest].copy(
           customerBusinesses = List(
             arbitrarySample[smithy.InsertCustomerBusinessPostRequest]
-              .copy(businessName = "", customerBusinessContacts = None)
+              .copy(businessName = "", customerBusinessContacts = List.empty)
           ),
           customerIndividuals = List(arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(fullName = "")),
         )

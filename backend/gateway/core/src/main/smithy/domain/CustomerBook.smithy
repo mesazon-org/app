@@ -29,9 +29,9 @@ list CustomerPhoneNumberEntryRequests {
 structure InsertCustomerIndividualPostRequest {
     @required
     fullName: String
-    @required
+    @default([])
     emails: CustomerEmailEntryRequests
-    @required
+    @default([])
     phoneNumbers: CustomerPhoneNumberEntryRequests
     addressLine1: String
     addressLine2: String
@@ -45,7 +45,7 @@ list InsertCustomerIndividuals {
 }
 
 structure InsertCustomerIndividualsPostRequest {
-    @required
+    @default([])
     customerIndividuals: InsertCustomerIndividuals
 }
 
@@ -64,16 +64,17 @@ list InsertCustomerBusinessContacts {
 structure InsertCustomerBusinessPostRequest {
     @required
     businessName: String
-    @required
+    @default([])
     emails: CustomerEmailEntryRequests
     taxID: String
-    @required
+    @default([])
     phoneNumbers: CustomerPhoneNumberEntryRequests
     addressLine1: String
     addressLine2: String
     city: String
     postalCode: String
     country: String
+    @default([])
     customerBusinessContacts: InsertCustomerBusinessContacts
 }
 
@@ -82,14 +83,14 @@ list InsertCustomerBusinesses {
 }
 
 structure InsertCustomerBusinessesPostRequest {
-    @required
+    @default([])
     customerBusinesses: InsertCustomerBusinesses
 }
 
 structure InsertCustomersPostRequest {
-    @required
+    @default([])
     customerBusinesses: InsertCustomerBusinesses
-    @required
+    @default([])
     customerIndividuals: InsertCustomerIndividuals
 }
 
@@ -97,9 +98,9 @@ structure UpdateCustomerIndividualPutRequest {
     @required
     customerID: UUID
     fullName: String
-    @required
+    @default([])
     emails: CustomerEmailEntryRequests
-    @required
+    @default([])
     phoneNumbers: CustomerPhoneNumberEntryRequests
     addressLine1: String
     addressLine2: String
@@ -112,10 +113,10 @@ structure UpdateCustomerBusinessPutRequest {
     @required
     customerID: UUID
     businessName: String
-    @required
+    @default([])
     emails: CustomerEmailEntryRequests
     taxID: String
-    @required
+    @default([])
     phoneNumbers: CustomerPhoneNumberEntryRequests
     addressLine1: String
     addressLine2: String
@@ -139,7 +140,7 @@ list AddCustomerBusinessContacts {
 structure AddCustomerBusinessContactsPutRequest {
     @required
     customerID: UUID
-    @required
+    @default([])
     customerBusinessContacts: AddCustomerBusinessContacts
 }
 
@@ -155,7 +156,7 @@ list RemoveCustomerBusinessContacts {
 structure RemoveCustomerBusinessContactsPutRequest {
     @required
     customerID: UUID
-    @required
+    @default([])
     customerBusinessContacts: RemoveCustomerBusinessContacts
 }
 
