@@ -1,101 +1,259 @@
 package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
+import io.mesazon.gateway.repository.CustomerBookRepository
+import io.mesazon.gateway.repository.CustomerBookRepository.*
+import io.mesazon.gateway.validation.service.CustomerBookRequestValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
+import io.scalaland.chimney.dsl.*
 import zio.*
 
 import java.util.UUID
 
 object CustomerBookService {
 
-  private final class CustomerBookServiceImpl() extends smithy.CustomerBookService[ServiceTask] {
+  private final class CustomerBookServiceImpl(
+      customerBookRequestValidator: CustomerBookRequestValidator,
+      customerBookRepository: CustomerBookRepository,
+  ) extends smithy.CustomerBookService[ServiceTask] {
 
     /** HTTP POST /insert/customer-individual */
     override def insertCustomerIndividualPost(
         organizationID: UUID,
         insertCustomerIndividualPostRequestSmithy: smithy.InsertCustomerIndividualPostRequest,
-    ): ServiceTask[Unit] =
-      ZIO.fail(ServiceError.InternalServerError.UnexpectedError("insertCustomerIndividualPost is not implemented yet"))
+    ): ServiceTask[Unit] = for {
+      insertCustomerIndividualPostRequest <- customerBookRequestValidator.validatedInsertCustomerIndividualPostRequest(
+        insertCustomerIndividualPostRequestSmithy
+      )
+      _ <- customerBookRepository.insertCustomerIndividual(
+        OrganizationID(organizationID),
+        insertCustomerIndividualPostRequest.transformInto[InsertCustomerIndividualInput],
+      )
+    } yield ()
 
     /** HTTP POST /insert/customer-individuals */
     override def insertCustomerIndividualsPost(
         organizationID: UUID,
         insertCustomerIndividualsPostRequestSmithy: smithy.InsertCustomerIndividualsPostRequest,
-    ): ServiceTask[Unit] =
-      ZIO.fail(ServiceError.InternalServerError.UnexpectedError("insertCustomerIndividualsPost is not implemented yet"))
+    ): ServiceTask[Unit] = for {
+      insertCustomerIndividualsPostRequest <-
+        customerBookRequestValidator.validatedInsertCustomerIndividualsPostRequest(
+          insertCustomerIndividualsPostRequestSmithy
+        )
+      _ <- customerBookRepository.insertCustomerIndividuals(
+        OrganizationID(organizationID),
+        insertCustomerIndividualsPostRequest.customerIndividuals.map(_.transformInto[InsertCustomerIndividualInput]),
+      )
+    } yield ()
 
     /** HTTP POST /insert/customer-business */
     override def insertCustomerBusinessPost(
         organizationID: UUID,
         insertCustomerBusinessPostRequestSmithy: smithy.InsertCustomerBusinessPostRequest,
-    ): ServiceTask[Unit] =
-      ZIO.fail(ServiceError.InternalServerError.UnexpectedError("insertCustomerBusinessPost is not implemented yet"))
+    ): ServiceTask[Unit] = for {
+      insertCustomerBusinessPostRequest <- customerBookRequestValidator.validatedInsertCustomerBusinessPostRequest(
+        insertCustomerBusinessPostRequestSmithy
+      )
+      _ <- customerBookRepository.insertCustomerBusiness(
+        OrganizationID(organizationID),
+        insertCustomerBusinessPostRequest.transformInto[InsertCustomerBusinessInput],
+      )
+    } yield ()
 
     /** HTTP POST /insert/customer-businesses */
     override def insertCustomerBusinessesPost(
         organizationID: UUID,
         insertCustomerBusinessesPostRequestSmithy: smithy.InsertCustomerBusinessesPostRequest,
-    ): ServiceTask[Unit] =
-      ZIO.fail(ServiceError.InternalServerError.UnexpectedError("insertCustomerBusinessesPost is not implemented yet"))
+    ): ServiceTask[Unit] = for {
+      insertCustomerBusinessesPostRequest <- customerBookRequestValidator.validatedInsertCustomerBusinessesPostRequest(
+        insertCustomerBusinessesPostRequestSmithy
+      )
+      _ <- customerBookRepository.insertCustomerBusinesses(
+        OrganizationID(organizationID),
+        insertCustomerBusinessesPostRequest.customerBusinesses.map(_.transformInto[InsertCustomerBusinessInput]),
+      )
+    } yield ()
 
     /** HTTP POST /insert/customers */
     override def insertCustomersPost(
         organizationID: UUID,
         insertCustomersPostRequestSmithy: smithy.InsertCustomersPostRequest,
-    ): ServiceTask[Unit] =
-      ZIO.fail(ServiceError.InternalServerError.UnexpectedError("insertCustomersPost is not implemented yet"))
+    ): ServiceTask[Unit] = for {
+      insertCustomersPostRequest <- customerBookRequestValidator.validatedInsertCustomersPostRequest(
+        insertCustomersPostRequestSmithy
+      )
+      _ <- customerBookRepository.insertCustomers(
+        OrganizationID(organizationID),
+        insertCustomersPostRequest.customerIndividuals.map(_.transformInto[InsertCustomerIndividualInput]),
+        insertCustomersPostRequest.customerBusinesses.map(_.transformInto[InsertCustomerBusinessInput]),
+      )
+    } yield ()
 
     /** HTTP PUT /update/customer-individual */
     override def updateCustomerIndividualPut(
         organizationID: UUID,
         updateCustomerIndividualPutRequestSmithy: smithy.UpdateCustomerIndividualPutRequest,
-    ): ServiceTask[Unit] =
-      ZIO.fail(ServiceError.InternalServerError.UnexpectedError("updateCustomerIndividualPut is not implemented yet"))
+    ): ServiceTask[Unit] = for {
+      updateCustomerIndividualPutRequest <- customerBookRequestValidator.validatedUpdateCustomerIndividualPutRequest(
+        updateCustomerIndividualPutRequestSmithy
+      )
+      _ <- customerBookRepository.updateCustomerIndividual(
+        organizationID = OrganizationID(organizationID),
+        customerID = updateCustomerIndividualPutRequest.customerID,
+        fullNameOptUpdate = updateCustomerIndividualPutRequest.fullName,
+        emailsOptUpdate = Some(updateCustomerIndividualPutRequest.emails.map(_.transformInto[CustomerEmailEntryInput])),
+        phoneNumbersOptUpdate =
+          Some(updateCustomerIndividualPutRequest.phoneNumbers.map(_.transformInto[CustomerPhoneNumberEntryInput])),
+        addressLine1OptUpdate = updateCustomerIndividualPutRequest.addressLine1,
+        addressLine2OptUpdate = updateCustomerIndividualPutRequest.addressLine2,
+        cityOptUpdate = updateCustomerIndividualPutRequest.city,
+        postalCodeOptUpdate = updateCustomerIndividualPutRequest.postalCode,
+        countryOptUpdate = updateCustomerIndividualPutRequest.country,
+      )
+    } yield ()
 
     /** HTTP PUT /update/customer-business */
     override def updateCustomerBusinessPut(
         organizationID: UUID,
         updateCustomerBusinessPutRequestSmithy: smithy.UpdateCustomerBusinessPutRequest,
-    ): ServiceTask[Unit] =
-      ZIO.fail(ServiceError.InternalServerError.UnexpectedError("updateCustomerBusinessPut is not implemented yet"))
+    ): ServiceTask[Unit] = for {
+      updateCustomerBusinessPutRequest <- customerBookRequestValidator.validatedUpdateCustomerBusinessPutRequest(
+        updateCustomerBusinessPutRequestSmithy
+      )
+      _ <- customerBookRepository.updateCustomerBusiness(
+        organizationID = OrganizationID(organizationID),
+        customerID = updateCustomerBusinessPutRequest.customerID,
+        businessNameOptUpdate = updateCustomerBusinessPutRequest.businessName,
+        emailsOptUpdate = Some(updateCustomerBusinessPutRequest.emails.map(_.transformInto[CustomerEmailEntryInput])),
+        taxIDOptUpdate = updateCustomerBusinessPutRequest.taxID,
+        phoneNumbersOptUpdate =
+          Some(updateCustomerBusinessPutRequest.phoneNumbers.map(_.transformInto[CustomerPhoneNumberEntryInput])),
+        addressLine1OptUpdate = updateCustomerBusinessPutRequest.addressLine1,
+        addressLine2OptUpdate = updateCustomerBusinessPutRequest.addressLine2,
+        cityOptUpdate = updateCustomerBusinessPutRequest.city,
+        postalCodeOptUpdate = updateCustomerBusinessPutRequest.postalCode,
+        countryOptUpdate = updateCustomerBusinessPutRequest.country,
+      )
+    } yield ()
 
     /** HTTP PUT /add/customer-business-contacts */
     override def addCustomerBusinessContactsPut(
         organizationID: UUID,
         addCustomerBusinessContactsPutRequestSmithy: smithy.AddCustomerBusinessContactsPutRequest,
-    ): ServiceTask[Unit] =
-      ZIO.fail(
-        ServiceError.InternalServerError.UnexpectedError("addCustomerBusinessContactsPut is not implemented yet")
+    ): ServiceTask[Unit] = for {
+      addCustomerBusinessContactsPutRequest <-
+        customerBookRequestValidator.validatedAddCustomerBusinessContactsPutRequest(
+          addCustomerBusinessContactsPutRequestSmithy
+        )
+      _ <- customerBookRepository.addCustomerBusinessContacts(
+        OrganizationID(organizationID),
+        addCustomerBusinessContactsPutRequest.customerID,
+        addCustomerBusinessContactsPutRequest.customerBusinessContacts
+          .map(_.transformInto[CustomerBusinessContactInput]),
       )
+    } yield ()
 
     /** HTTP PUT /remove/customer-business-contacts */
     override def removeCustomerBusinessContactsPut(
         organizationID: UUID,
         removeCustomerBusinessContactsPutRequestSmithy: smithy.RemoveCustomerBusinessContactsPutRequest,
     ): ServiceTask[Unit] =
-      ZIO.fail(
-        ServiceError.InternalServerError.UnexpectedError("removeCustomerBusinessContactsPut is not implemented yet")
+      customerBookRepository.removeCustomerBusinessContacts(
+        OrganizationID(organizationID),
+        CustomerID(removeCustomerBusinessContactsPutRequestSmithy.customerID),
+        removeCustomerBusinessContactsPutRequestSmithy.customerBusinessContacts.map(customerBusinessContact =>
+          CustomerBusinessContactID(customerBusinessContact.customerBusinessContactID)
+        ),
       )
 
     /** HTTP GET /get/customer-individual/{customerID} */
     override def getCustomerIndividualGet(
         organizationID: UUID,
         customerID: UUID,
-    ): ServiceTask[smithy.GetCustomerIndividualGetResponse] =
-      ZIO.fail(ServiceError.InternalServerError.UnexpectedError("getCustomerIndividualGet is not implemented yet"))
+    ): ServiceTask[smithy.GetCustomerIndividualGetResponse] = for {
+      customerIndividualDetailsRow <- customerBookRepository
+        .getCustomerIndividual(OrganizationID(organizationID), CustomerID(customerID))
+        .someOrFail(
+          ServiceError.InternalServerError.UnexpectedError(
+            s"Customer individual not found for customerID: [$customerID]"
+          )
+        )
+    } yield smithy.GetCustomerIndividualGetResponse(
+      customerID = customerIndividualDetailsRow.customerID.value,
+      fullName = customerIndividualDetailsRow.fullName.value,
+      emails = customerIndividualDetailsRow.emails.map(customerEmailEntryInput =>
+        smithy.CustomerEmailEntryRequest(
+          email = customerEmailEntryInput.email.value,
+          isDefault = customerEmailEntryInput.isDefault,
+        )
+      ),
+      phoneNumbers = customerIndividualDetailsRow.phoneNumbers.map(customerPhoneNumberEntryInput =>
+        smithy.CustomerPhoneNumberEntryRequest(
+          phoneNumber = smithy.PhoneNumberRequest(
+            phoneNationalNumber = customerPhoneNumberEntryInput.phoneNumber.value.phoneNationalNumber.value,
+            phoneCountryCode = customerPhoneNumberEntryInput.phoneNumber.value.phoneCountryCode.value,
+          ),
+          isDefault = customerPhoneNumberEntryInput.isDefault,
+        )
+      ),
+      addressLine1 = customerIndividualDetailsRow.addressLine1.map(_.value),
+      addressLine2 = customerIndividualDetailsRow.addressLine2.map(_.value),
+      city = customerIndividualDetailsRow.city.map(_.value),
+      postalCode = customerIndividualDetailsRow.postalCode.map(_.value),
+      country = customerIndividualDetailsRow.country.map(_.value),
+    )
 
     /** HTTP GET /get/customer-business/{customerID} */
     override def getCustomerBusinessGet(
         organizationID: UUID,
         customerID: UUID,
-    ): ServiceTask[smithy.GetCustomerBusinessGetResponse] =
-      ZIO.fail(ServiceError.InternalServerError.UnexpectedError("getCustomerBusinessGet is not implemented yet"))
+    ): ServiceTask[smithy.GetCustomerBusinessGetResponse] = for {
+      customerBusinessDetailsRow <- customerBookRepository
+        .getCustomerBusiness(OrganizationID(organizationID), CustomerID(customerID))
+        .someOrFail(
+          ServiceError.InternalServerError.UnexpectedError(s"Customer business not found for customerID: [$customerID]")
+        )
+    } yield smithy.GetCustomerBusinessGetResponse(
+      customerID = customerBusinessDetailsRow.customerID.value,
+      businessName = customerBusinessDetailsRow.businessName.value,
+      emails = customerBusinessDetailsRow.emails.map(customerEmailEntryInput =>
+        smithy.CustomerEmailEntryRequest(
+          email = customerEmailEntryInput.email.value,
+          isDefault = customerEmailEntryInput.isDefault,
+        )
+      ),
+      taxID = customerBusinessDetailsRow.taxID.map(_.value),
+      phoneNumbers = customerBusinessDetailsRow.phoneNumbers.map(customerPhoneNumberEntryInput =>
+        smithy.CustomerPhoneNumberEntryRequest(
+          phoneNumber = smithy.PhoneNumberRequest(
+            phoneNationalNumber = customerPhoneNumberEntryInput.phoneNumber.value.phoneNationalNumber.value,
+            phoneCountryCode = customerPhoneNumberEntryInput.phoneNumber.value.phoneCountryCode.value,
+          ),
+          isDefault = customerPhoneNumberEntryInput.isDefault,
+        )
+      ),
+      addressLine1 = customerBusinessDetailsRow.addressLine1.map(_.value),
+      addressLine2 = customerBusinessDetailsRow.addressLine2.map(_.value),
+      city = customerBusinessDetailsRow.city.map(_.value),
+      postalCode = customerBusinessDetailsRow.postalCode.map(_.value),
+      country = customerBusinessDetailsRow.country.map(_.value),
+    )
 
     /** HTTP GET /get/customers */
     override def getCustomersGet(
         organizationID: UUID
-    ): ServiceTask[smithy.GetCustomersGetResponse] =
-      ZIO.fail(ServiceError.InternalServerError.UnexpectedError("getCustomersGet is not implemented yet"))
+    ): ServiceTask[smithy.GetCustomersGetResponse] = for {
+      customerSummaryRows <- customerBookRepository.getCustomers(OrganizationID(organizationID))
+    } yield smithy.GetCustomersGetResponse(
+      customers = customerSummaryRows.map(customerSummaryRow =>
+        smithy.GetCustomer(
+          customerID = customerSummaryRow.customerID.value,
+          displayName = customerSummaryRow.displayName.value,
+          customerType = customerTypeFromDomainToSmithy(customerSummaryRow.customerType),
+        )
+      )
+    )
+
   }
 
   private def observed(

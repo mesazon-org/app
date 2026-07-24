@@ -62,11 +62,6 @@ case class AddCustomerBusinessContactsPutRequest(
     customerBusinessContacts: List[AddCustomerBusinessContact],
 )
 
-case class RemoveCustomerBusinessContactsPutRequest(
-    customerID: CustomerID,
-    customerBusinessContactIDs: List[CustomerBusinessContactID],
-)
-
 // Businesses
 
 case class InsertCustomerBusinessPostRequest(

@@ -139,7 +139,7 @@ operation RemoveCustomerBusinessContactsPut {
         @httpPayload
         request: RemoveCustomerBusinessContactsPutRequest
     }
-    errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
+    errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`OWNER`, `ADMIN`, `USER`]

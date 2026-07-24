@@ -6,7 +6,7 @@ import zio.*
 
 type ServiceTask[A] = IO[ServiceError, A]
 
-def onboardStageFromDomainToSmithy(stage: io.mesazon.domain.gateway.OnboardStage): smithy.OnboardStage = stage match {
+def onboardStageFromDomainToSmithy(stage: OnboardStage): smithy.OnboardStage = stage match {
   case OnboardStage.EmailVerification => smithy.OnboardStage.EMAIL_VERIFICATION
   case OnboardStage.EmailVerified     => smithy.OnboardStage.EMAIL_VERIFIED
   case OnboardStage.PasswordProvided  => smithy.OnboardStage.PASSWORD_PROVIDED
@@ -14,7 +14,7 @@ def onboardStageFromDomainToSmithy(stage: io.mesazon.domain.gateway.OnboardStage
   case OnboardStage.PhoneVerified     => smithy.OnboardStage.PHONE_VERIFIED
 }
 
-def onboardStageFromSmithyToDomain(stage: smithy.OnboardStage): io.mesazon.domain.gateway.OnboardStage = stage match {
+def onboardStageFromSmithyToDomain(stage: smithy.OnboardStage): OnboardStage = stage match {
   case smithy.OnboardStage.EMAIL_VERIFICATION => OnboardStage.EmailVerification
   case smithy.OnboardStage.EMAIL_VERIFIED     => OnboardStage.EmailVerified
   case smithy.OnboardStage.PASSWORD_PROVIDED  => OnboardStage.PasswordProvided
@@ -36,6 +36,12 @@ def verifyOnboardStage(
         onboardStagesAllowed = onboardStagesAllowed,
       )
     )
+
+def customerTypeFromDomainToSmithy(customerType: CustomerType): smithy.CustomerType =
+  customerType match {
+    case CustomerType.Individual => smithy.CustomerType.INDIVIDUAL
+    case CustomerType.Business   => smithy.CustomerType.BUSINESS
+  }
 
 def organizationUserRoleFromSmithyToDomain(role: smithy.OrganizationUserRole): OrganizationUserRole = role match {
   case smithy.OrganizationUserRole.OWNER => OrganizationUserRole.Owner
