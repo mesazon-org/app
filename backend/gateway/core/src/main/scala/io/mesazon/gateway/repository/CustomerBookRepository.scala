@@ -152,7 +152,7 @@ object CustomerBookRepository {
     ): IO[ServiceError, CustomerID] = for {
       instantNow <- timeProvider.instantNow
       customerID <- generateCustomerID
-      detailsRow = buildCustomerIndividualDetailsRow(
+      customerIndividualDetailsRow = buildCustomerIndividualDetailsRow(
         organizationID,
         customerID,
         insertCustomerIndividualInput,
@@ -160,7 +160,7 @@ object CustomerBookRepository {
       )
       _ <- database
         .transactionOrWiden(
-          customerBookQueries.insertCustomerIndividualDetailsRow(detailsRow)
+          customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow)
         )
         .mapError(toServiceError(s"Failed to insert customer individual with ID: [$customerID]"))
     } yield customerID
@@ -173,7 +173,7 @@ object CustomerBookRepository {
       customerIDsWithInputs <- ZIO.foreach(insertCustomerIndividualInputs)(input =>
         generateCustomerID.map(customerID => (customerID = customerID, input = input))
       )
-      detailsRows = customerIDsWithInputs.map(customerIDWithInput =>
+      customerIndividualDetailsRows = customerIDsWithInputs.map(customerIDWithInput =>
         buildCustomerIndividualDetailsRow(
           organizationID,
           customerIDWithInput.customerID,
@@ -183,7 +183,7 @@ object CustomerBookRepository {
       )
       _ <- database
         .transactionOrWiden(
-          customerBookQueries.insertCustomerIndividualDetailsRows(detailsRows)
+          customerBookQueries.insertCustomerIndividualDetailsRows(customerIndividualDetailsRows)
         )
         .mapError(toServiceError(s"Failed to insert customer individuals for organization ID: [$organizationID]"))
     } yield customerIDsWithInputs.map(_.customerID)
@@ -224,20 +224,25 @@ object CustomerBookRepository {
         organizationID: OrganizationID,
         insertCustomerBusinessInput: InsertCustomerBusinessInput,
     ): IO[ServiceError, CustomerID] = for {
-      instantNow  <- timeProvider.instantNow
-      customerID  <- generateCustomerID
-      contactRows <- buildCustomerBusinessContactRows(
+      instantNow                  <- timeProvider.instantNow
+      customerID                  <- generateCustomerID
+      customerBusinessContactRows <- buildCustomerBusinessContactRows(
         organizationID,
         customerID,
         insertCustomerBusinessInput.customerBusinessContacts,
         instantNow,
       )
-      detailsRow = buildCustomerBusinessDetailsRow(organizationID, customerID, insertCustomerBusinessInput, instantNow)
+      customerBusinessDetailsRow = buildCustomerBusinessDetailsRow(
+        organizationID,
+        customerID,
+        insertCustomerBusinessInput,
+        instantNow,
+      )
       _ <- database
         .transactionOrWiden(
           for {
-            _ <- customerBookQueries.insertCustomerBusinessDetailsRow(detailsRow)
-            _ <- customerBookQueries.insertCustomerBusinessContactRows(contactRows)
+            _ <- customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)
+            _ <- customerBookQueries.insertCustomerBusinessContactRows(customerBusinessContactRows)
           } yield ()
         )
         .mapError(toServiceError(s"Failed to insert customer business with ID: [$customerID]"))
@@ -251,7 +256,7 @@ object CustomerBookRepository {
       customerIDsWithInputs <- ZIO.foreach(insertCustomerBusinessInputs)(input =>
         generateCustomerID.map(customerID => (customerID = customerID, input = input))
       )
-      detailsRows = customerIDsWithInputs.map(customerIDWithInput =>
+      customerBusinessDetailsRows = customerIDsWithInputs.map(customerIDWithInput =>
         buildCustomerBusinessDetailsRow(
           organizationID,
           customerIDWithInput.customerID,
@@ -259,7 +264,7 @@ object CustomerBookRepository {
           instantNow,
         )
       )
-      contactRows <- ZIO
+      customerBusinessContactRows <- ZIO
         .foreach(customerIDsWithInputs)(customerIDWithInput =>
           buildCustomerBusinessContactRows(
             organizationID,
@@ -272,8 +277,8 @@ object CustomerBookRepository {
       _ <- database
         .transactionOrWiden(
           for {
-            _ <- customerBookQueries.insertCustomerBusinessDetailsRows(detailsRows)
-            _ <- customerBookQueries.insertCustomerBusinessContactRows(contactRows)
+            _ <- customerBookQueries.insertCustomerBusinessDetailsRows(customerBusinessDetailsRows)
+            _ <- customerBookQueries.insertCustomerBusinessContactRows(customerBusinessContactRows)
           } yield ()
         )
         .mapError(toServiceError(s"Failed to insert customer businesses for organization ID: [$organizationID]"))
@@ -325,7 +330,7 @@ object CustomerBookRepository {
       customerIDsWithBusinessInputs <- ZIO.foreach(insertCustomerBusinessInputs)(input =>
         generateCustomerID.map(customerID => (customerID = customerID, input = input))
       )
-      individualDetailsRows = customerIDsWithIndividualInputs.map(customerIDWithInput =>
+      customerIndividualDetailsRows = customerIDsWithIndividualInputs.map(customerIDWithInput =>
         buildCustomerIndividualDetailsRow(
           organizationID,
           customerIDWithInput.customerID,
@@ -333,7 +338,7 @@ object CustomerBookRepository {
           instantNow,
         )
       )
-      businessDetailsRows = customerIDsWithBusinessInputs.map(customerIDWithInput =>
+      customerBusinessDetailsRows = customerIDsWithBusinessInputs.map(customerIDWithInput =>
         buildCustomerBusinessDetailsRow(
           organizationID,
           customerIDWithInput.customerID,
@@ -341,7 +346,7 @@ object CustomerBookRepository {
           instantNow,
         )
       )
-      contactRows <- ZIO
+      customerBusinessContactRows <- ZIO
         .foreach(customerIDsWithBusinessInputs)(customerIDWithInput =>
           buildCustomerBusinessContactRows(
             organizationID,
@@ -354,9 +359,9 @@ object CustomerBookRepository {
       _ <- database
         .transactionOrWiden(
           for {
-            _ <- customerBookQueries.insertCustomerIndividualDetailsRows(individualDetailsRows)
-            _ <- customerBookQueries.insertCustomerBusinessDetailsRows(businessDetailsRows)
-            _ <- customerBookQueries.insertCustomerBusinessContactRows(contactRows)
+            _ <- customerBookQueries.insertCustomerIndividualDetailsRows(customerIndividualDetailsRows)
+            _ <- customerBookQueries.insertCustomerBusinessDetailsRows(customerBusinessDetailsRows)
+            _ <- customerBookQueries.insertCustomerBusinessContactRows(customerBusinessContactRows)
           } yield ()
         )
         .mapError(toServiceError(s"Failed to insert customers for organization ID: [$organizationID]"))
@@ -367,8 +372,8 @@ object CustomerBookRepository {
         customerID: CustomerID,
         customerBusinessContactInputs: List[CustomerBusinessContactInput],
     ): IO[ServiceError, List[CustomerBusinessContactRow]] = for {
-      instantNow  <- timeProvider.instantNow
-      contactRows <- buildCustomerBusinessContactRows(
+      instantNow                  <- timeProvider.instantNow
+      customerBusinessContactRows <- buildCustomerBusinessContactRows(
         organizationID,
         customerID,
         customerBusinessContactInputs,
@@ -376,10 +381,10 @@ object CustomerBookRepository {
       )
       _ <- database
         .transactionOrWiden(
-          customerBookQueries.insertCustomerBusinessContactRows(contactRows)
+          customerBookQueries.insertCustomerBusinessContactRows(customerBusinessContactRows)
         )
         .mapError(toServiceError(s"Failed to add customer business contacts for customer ID: [$customerID]"))
-    } yield contactRows
+    } yield customerBusinessContactRows
 
     override def removeCustomerBusinessContacts(
         organizationID: OrganizationID,

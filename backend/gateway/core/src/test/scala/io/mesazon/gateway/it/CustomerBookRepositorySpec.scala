@@ -82,6 +82,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
               UpdatedAt(instantNow),
             )
           )
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 1
       }
 
       "fail with a UniqueConstraintViolation when the full name already exists, rolling back the customer row" in new TestContext {
@@ -170,6 +172,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
               UpdatedAt(instantNow),
             ),
           )
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 2
       }
     }
 
@@ -213,6 +217,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             UpdatedAt(instantNow),
           )
         )
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 1
 
         postgresClient
           .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
@@ -322,6 +328,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           )
         )
 
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 2
+
         postgresClient
           .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
           .zioValue shouldBe empty
@@ -359,6 +367,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue shouldBe
           List(customerIndividualDetailsRowUpdated)
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 1
       }
     }
 
@@ -388,6 +398,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe
           List(customerBusinessDetailsRowUpdated)
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 1
       }
     }
 
@@ -772,6 +784,10 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
         customerIDsIndividual should contain(customerIDIndividual)
         customerIDsBusiness should contain(customerIDBusiness)
         (customerIDsIndividual intersect customerIDsBusiness) shouldBe empty
+
+        // the type-filtered reads partition the table: individuals + businesses account for every row
+        (customerIDsIndividual.size + customerIDsBusiness.size) shouldBe
+          postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue.size
       }
     }
   }

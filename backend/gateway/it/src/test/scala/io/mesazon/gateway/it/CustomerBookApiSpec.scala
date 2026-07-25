@@ -143,6 +143,7 @@ class CustomerBookApiSpec
         val customerIndividualDetailsRowsAll =
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
         customerIndividualDetailsRowsAll should have size 1
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 1
         customerIndividualDetailsRowsAll.head shouldBe CustomerIndividualDetailsRow(
           organizationID = organizationUserRow.organizationID,
           customerID = customerIndividualDetailsRowsAll.head.customerID,
@@ -477,6 +478,7 @@ class CustomerBookApiSpec
         val customerIndividualDetailsRowsAll =
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
         customerIndividualDetailsRowsAll should have size 2
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 2
 
         List(insertCustomerIndividualPostRequest1, insertCustomerIndividualPostRequest2).foreach {
           insertCustomerIndividualPostRequest =>
@@ -823,6 +825,7 @@ class CustomerBookApiSpec
         val customerBusinessDetailsRowsAll =
           postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
         customerBusinessDetailsRowsAll should have size 1
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 1
         customerBusinessDetailsRowsAll.head shouldBe CustomerBusinessDetailsRow(
           organizationID = organizationUserRow.organizationID,
           customerID = customerBusinessDetailsRowsAll.head.customerID,
@@ -1258,6 +1261,7 @@ class CustomerBookApiSpec
         val customerBusinessDetailsRowsAll =
           postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
         customerBusinessDetailsRowsAll should have size 2
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 2
 
         List(insertCustomerBusinessPostRequest1, insertCustomerBusinessPostRequest2).foreach {
           insertCustomerBusinessPostRequest =>
