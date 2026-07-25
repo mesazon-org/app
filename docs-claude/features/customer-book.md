@@ -9,7 +9,7 @@ The repository exposes two typed row views over the single table — `CustomerIn
 
 **Vocabulary (read this first).** "Organization" in this codebase is the **Mesazon tenant** (the client themselves — see [Organization Management](organization-management.md)); it is *not* the customer's company. Every row here is scoped by `organization_id` (the tenant), carried in the `X-Organization-ID` header on every endpoint.
 
-**Scope**: the `customer` table, business contacts, and the `INDIVIDUAL`/`BUSINESS` distinction (the `status`/archival column exists but is not yet exposed by any endpoint). **Excludes** orders (a future feature that will FK `customer_id` and snapshot buyer details — see the order-snapshot rules in [postgres.md](../postgres.md#soft-delete--archival)) and the tenant/membership/role model ([Organization Management](organization-management.md)).
+**Scope**: the `customer` table, business contacts, the `INDIVIDUAL`/`BUSINESS` distinction, and archival (soft-delete via the `status` column, exposed by `ArchiveCustomerPut`; there is deliberately **no unarchive** endpoint). **Excludes** orders (a future feature that will FK `customer_id` and snapshot buyer details — see the order-snapshot rules in [postgres.md](../postgres.md#soft-delete--archival)) and the tenant/membership/role model ([Organization Management](organization-management.md)).
 
 ## Data model
 
@@ -53,7 +53,7 @@ A **business contact** is a point of contact inside a company (a buyer, an accou
 
 ## Endpoints
 
-One service — `CustomerBookService`, `@completedOnboardStage` (Bearer + completed onboarding). Every operation requires the `X-Organization-ID` header, declared once via the `OrganizationScopedInput` mixin (see [smithy.md §4](../smithy.md#4-organization-scoping--the-x-organization-id-header)). Operation names split by *what* they act on — `CustomerIndividual` (a standalone person) or `CustomerBusiness` (a company) — rather than one polymorphic insert, so each carries its own validator and swagger entry and its side effects are legible from the name. Inserts come in a **singular** and a **batch** (plural) form, plus a **combined** `InsertCustomersPost` that takes both individuals and businesses in one payload. Roles follow the project-wide policy (see [smithy.md § Role policy](../smithy.md#organizationuserrolesallowedroles-)): the three **GET** reads allow `OWNER`/`ADMIN`/`USER`; every write (insert/update/add/remove) allows `OWNER`/`ADMIN` only — a `USER` can view the customer book but not modify it. URIs follow the action-first style of [Organization Management](organization-management.md) (no feature prefix — that's reserved for multi-step flows like `/onboard`, `/signup`). Most writes can return `Conflict` (409) — e.g. a duplicate customer — and `ValidationError` (400). **`RemoveCustomerBusinessContactsPut` is the exception: its smithy errors are `[BadRequest, Unauthorized, Forbidden, InternalServerError]` only** (same set as the reads). It declares no `ValidationError` — its request carries only UUIDs (`customerID` + contact IDs) whose refinement is `Pure` and cannot fail — and no `Conflict`, because removal is a pure `DELETE` that can never violate a unique constraint. Every operation additionally carries the four middleware errors (`BadRequest` for a missing `X-Organization-ID`, `Unauthorized`, `Forbidden`, `InternalServerError`); the reads carry exactly those four (no body to validate, nothing written to conflict).
+One service — `CustomerBookService`, `@completedOnboardStage` (Bearer + completed onboarding). Every operation requires the `X-Organization-ID` header, declared once via the `OrganizationScopedInput` mixin (see [smithy.md §4](../smithy.md#4-organization-scoping--the-x-organization-id-header)). Operation names split by *what* they act on — `CustomerIndividual` (a standalone person) or `CustomerBusiness` (a company) — rather than one polymorphic insert, so each carries its own validator and swagger entry and its side effects are legible from the name. Inserts come in a **singular** and a **batch** (plural) form, plus a **combined** `InsertCustomersPost` that takes both individuals and businesses in one payload. Roles follow the project-wide policy (see [smithy.md § Role policy](../smithy.md#organizationuserrolesallowedroles-)): the three **GET** reads allow `OWNER`/`ADMIN`/`USER`; every write (insert/update/add/remove/archive) allows `OWNER`/`ADMIN` only — a `USER` can view the customer book but not modify it. URIs follow the action-first style of [Organization Management](organization-management.md) (no feature prefix — that's reserved for multi-step flows like `/onboard`, `/signup`). Most writes can return `Conflict` (409) — e.g. a duplicate customer — and `ValidationError` (400). **`RemoveCustomerBusinessContactsPut` and `ArchiveCustomerPut` are the exceptions: their smithy errors are `[BadRequest, Unauthorized, Forbidden, InternalServerError]` only** (same set as the reads). Both declare no `ValidationError` — their requests carry only UUIDs (whose refinement is `Pure` and cannot fail) — and no `Conflict`: removal is a pure `DELETE`, and archive only *removes* a row from the active-name set, so neither can violate a unique constraint. Every operation additionally carries the four middleware errors (`BadRequest` for a missing `X-Organization-ID`, `Unauthorized`, `Forbidden`, `InternalServerError`); the reads carry exactly those four (no body to validate, nothing written to conflict).
 
 **Reads**
 
@@ -92,6 +92,14 @@ One service — `CustomerBookService`, `@completedOnboardStage` (Bearer + comple
 | PUT | `/add/customer-business-contacts` | `AddCustomerBusinessContactsPut` | add contacts to a business (`customerID` + contacts) |
 | PUT | `/remove/customer-business-contacts` | `RemoveCustomerBusinessContactsPut` | remove contacts from a business (`customerID` + `customerBusinessContactID`s) |
 
+**Archival**
+
+| Method | Path | Operation | Effect |
+|---|---|---|---|
+| PUT | `/archive/customer` | `ArchiveCustomerPut` | soft-delete a customer (`status` → `Archived`) by `customerID`, **type-agnostic** |
+
+`ArchiveCustomerPut` is the one write whose request carries only a `customerID` (a `Pure` UUID), so — like `RemoveCustomerBusinessContactsPut` — it declares **no `ValidationError`**, and because archiving only *removes* a row from the active-name set it can never violate `uq_customer_name`, so it also declares **no `Conflict`**: its errors are `[BadRequest, Unauthorized, Forbidden, InternalServerError]`. It is **type-agnostic** (matches a customer by `customerID` regardless of `customer_type`) since a `status` flip is identical for individuals and businesses. A `customerID` that matches nothing is an `InternalServerError.UnexpectedError` (500), matching the by-id reads' "referenced entity missing → 500" convention. There is deliberately **no unarchive** operation.
+
 Smithy: `backend/gateway/core/src/main/smithy/CustomerBookService.smithy` (+ `domain/CustomerBook.smithy`). Per smithy.md §4 each operation owns its item structures (`InsertCustomerIndividualPostRequest`, `AddCustomerBusinessContact`, …) — none are shared.
 
 ## Lifecycle
@@ -108,8 +116,8 @@ Contacts are child rows keyed by `(organization_id, customer_id, customer_busine
 ### Edit (`UpdateCustomerIndividualPut`, `UpdateCustomerBusinessPut`)
 Edit a person's contact details or a company's details in place — a single `UPDATE` on the `customer` row (filtered by `customer_type`), `RETURNING` the updated typed row. A name change writes the shared `name` column.
 
-### Archival
-`customer.status` (`ACTIVE`/`ARCHIVED`) exists in the schema for the eventual soft-delete of a customer (orders reference `customer_id`, so a customer is never hard-deleted — see [postgres.md § Soft-delete & archival](../postgres.md#soft-delete--archival)). **No delete/archive endpoint is exposed yet** — the current surface only creates, edits, and reads.
+### Archive (`ArchiveCustomerPut`)
+Soft-delete a customer by flipping `customer.status` (`Active` → `Archived`) — a single type-agnostic `UPDATE customer SET status = 'Archived', updated_at = now WHERE organization_id = ? AND customer_id = ? RETURNING customer_id`. A customer is never hard-deleted (orders reference `customer_id` — see [postgres.md § Soft-delete & archival](../postgres.md#soft-delete--archival)). Because `uq_customer_name` is **partial** on `status = 'Active'`, archiving frees the name: an organization can hold any number of archived same-name customers of one kind alongside a single active one. The `RETURNING` id (`None` when no row matched) lets the service map a missing customer to a 500. **Business contacts are left in place** on archive (they carry no lifecycle of their own). There is deliberately **no unarchive** operation — reactivation would need to re-enter the active-name uniqueness set (a potential `Conflict`) and no client needs it.
 
 ## Security / design decisions
 
@@ -194,6 +202,25 @@ sequenceDiagram
     SVC-->>Client: full details  ·  list of {customerID, name, customerType}
 ```
 
+### Archive (`ArchiveCustomerPut`)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant SVC as CustomerBookService
+    participant Repo as CustomerBookRepository
+    participant DB as Postgres
+
+    Client->>SVC: PUT /archive/customer {customerID}
+    SVC->>Repo: archiveCustomer(organizationID, customerID)
+    Repo->>DB: UPDATE customer SET status='Archived' WHERE org + customerID RETURNING customer_id
+    alt row matched
+        SVC-->>Client: 204
+    else no row
+        SVC-->>Client: 500 (UnexpectedError — customer not found)
+    end
+```
+
 ## Key files
 
 - Smithy: `smithy/CustomerBookService.smithy`, `smithy/domain/CustomerBook.smithy`
@@ -211,14 +238,15 @@ The same rule reaches the persisted shape: the typed `Row`s type their `emails`/
 
 ## Open design decisions
 
-- **No archive/delete endpoint yet.** `customer.status` supports soft-delete, but no operation exposes it. When one is added, decide what happens to a business's contacts on archive (removed vs left in place).
+- **Archive leaves business contacts in place.** `ArchiveCustomerPut` only flips the parent's `status`; a business's `customer_business_contact` rows are untouched (they live and die with the business but archival is not a delete). Revisit if a client needs contacts hidden when their business is archived.
+- **No unarchive.** Archival is one-way today. If reactivation is ever needed, it must handle the `uq_customer_name` collision (an archived name may since have been reused by an active customer of the same kind) as a `Conflict`.
 - **Overlap between the singular/batch/combined inserts.** `InsertCustomerIndividualPost`, `InsertCustomerIndividualsPost`, and `InsertCustomersPost` can all create individuals; keep all three or converge once client needs are clear.
 
 ## Implementation status
 
-The feature is **implemented and wired end-to-end**; acceptance coverage is in progress — 7 of the 12 endpoints have `CustomerBookApiSpec` tests (the four inserts other than the combined `InsertCustomersPost`, and the three reads); still to add are `InsertCustomersPost`, both updates, and add/remove contacts (see [Tests](#tests)).
+The feature is **implemented and wired end-to-end**; acceptance coverage is in progress — 8 of the 13 endpoints have `CustomerBookApiSpec` tests (the four inserts other than the combined `InsertCustomersPost`, the three reads, and `ArchiveCustomerPut`); still to add are `InsertCustomersPost`, both updates, and add/remove contacts (see [Tests](#tests)).
 
-- Schema and the full smithy contract are in place (12 operations).
+- Schema and the full smithy contract are in place (13 operations).
 - `CustomerBookService.scala` is fully implemented: each handler validates via `CustomerBookRequestValidator`, Chimney-maps the validated request to the repository input (`request.transformInto[…Input]`), calls `CustomerBookRepository`, and maps `Row`s to smithy responses by hand (`.value` unwrapping; `customerTypeFromDomainToSmithy` in `service/service.scala` converts the enum). The two updates always pass `Some(emails)`/`Some(phoneNumbers)` (the smithy contract requires those lists, so an update always overwrites them) while the optional scalar fields pass through as `…OptUpdate` (absent → unchanged). The single-item GETs treat a missing customer as `InternalServerError.UnexpectedError` (the smithy operations declare no 404, matching the error matrix's "referenced entity missing → 500").
 - Wiring is live: `Main` provides `CustomerBookService.live`, `CustomerBookRepository.live`, `CustomerBookQueries.live`, and `CustomerBookRequestValidator.live`; `HttpApp.externalSmithyRoutes` serves the routes.
 - The full persistence stack **is built and tested**: the two typed `Row` models, `CustomerBookRepository` trait + `CustomerBookRepositoryImpl` + `live` (with its companion-object input models, see above), the single `CustomerBookQueries` class (the `customer` table + `customer_business_contact`), `RepositoryConfig` + both `application.conf`s, and `CustomerBookRepositorySpec` (green against real Postgres — see below).
@@ -231,9 +259,9 @@ The feature is **implemented and wired end-to-end**; acceptance coverage is in p
 
 ## Tests
 
-- **Repository integration** — `it/CustomerBookRepositorySpec` (real Postgres): every repository operation's happy and failure paths, including the three unique-constraint conflicts and batch rollback.
+- **Repository integration** — `it/CustomerBookRepositorySpec` (real Postgres): every repository operation's happy and failure paths, including the three unique-constraint conflicts and batch rollback. The `archiveCustomer` section flips an active individual/business to `Archived`, returns `None` for a missing id, and — driving the real archive op — proves the partial-index semantics: multiple same-name customers of one kind can be archived alongside a single active one, and an individual and a business sharing a name are both archivable.
 - **Validator unit** — `unit/validation/service/CustomerBookRequestValidatorSpec`: one section per `validated…` method, error accumulation and index tagging.
 - **Service functional** — `fun/CustomerBookServiceSpec` (mocked `CustomerBookRepository`, real validator): one section per operation; each happy path proves the exact repository call (organization scoping, Chimney-mapped inputs, update `Opt`/`Some` semantics) and the response mapping, and each failure path proves either a `ValidationError` that never reaches the repository or a repository error (conflict/500) propagating unchanged.
-- **Acceptance** — `it/CustomerBookApiSpec` in `backend/gateway/it` (see [acceptance-tests.md](../acceptance-tests.md)), the reference implementation of the mandatory middleware-gate matrix. Each endpoint's `should` block runs the happy path (with full DB-state assertions) plus **every** applicable gate — `400` validation, `400` missing `X-Organization-ID`, `401` missing/invalid token, `403` disallowed onboard stage, `403` disallowed org role (writes only; reads allow all three roles), `500` no user-details row, `500` not-an-org-member — on top of the endpoint's own `409` conflicts (duplicate customer name, and the contact email/phone uniqueness on the business inserts) and, for the by-id reads, a `500` when the customer is absent. Done so far: `insert/customer-individual`, `insert/customer-individuals`, `insert/customer-business`, `insert/customer-businesses`, and all three reads (`get/customer-individual`, `get/customer-business`, `get/customers`). Still to add: `insert/customers`, the two updates, and add/remove contacts.
+- **Acceptance** — `it/CustomerBookApiSpec` in `backend/gateway/it` (see [acceptance-tests.md](../acceptance-tests.md)), the reference implementation of the mandatory middleware-gate matrix. Each endpoint's `should` block runs the happy path (with full DB-state assertions) plus **every** applicable gate — `400` validation, `400` missing `X-Organization-ID`, `401` missing/invalid token, `403` disallowed onboard stage, `403` disallowed org role (writes only; reads allow all three roles), `500` no user-details row, `500` not-an-org-member — on top of the endpoint's own `409` conflicts (duplicate customer name, and the contact email/phone uniqueness on the business inserts) and, for the by-id reads, a `500` when the customer is absent. Done so far: `insert/customer-individual`, `insert/customer-individuals`, `insert/customer-business`, `insert/customer-businesses`, all three reads (`get/customer-individual`, `get/customer-business`, `get/customers`), and `archive/customer` (whose block, having no `ValidationError` or `Conflict`, additionally asserts the happy-path `status` flip and a `500` when the `customerID` matches nothing). Still to add: `insert/customers`, the two updates, and add/remove contacts.
 
 **Type exclusivity is now structural, not an invariant to police.** A customer is a single `customer` row with one `customer_type`, so it is inherently one kind — there is nothing to test that it isn't "both", and the old two-table "no `customer_id` in both detail tables" test was removed. Instead, `CustomerBookRepositorySpec` covers the semantics the `uq_customer_name` **partial** index actually introduces: an individual and a business may share a name (the key includes `customer_type`), and a new active customer may reuse an archived customer's name (the index is `where status = 'Active'`). Every insert/detail-assertion test also checks `getAllCustomerIDsTesting` size, so the type-filtered testing reads (`getAllCustomerIndividualDetailsRowsTesting` / `…Business…`) can't silently miss rows the merged table holds.

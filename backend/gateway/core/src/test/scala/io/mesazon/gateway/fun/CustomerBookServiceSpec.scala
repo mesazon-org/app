@@ -520,6 +520,58 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
       }
     }
 
+    "archiveCustomerPut" should {
+      "successfully archive a customer" in new TestContext {
+        val organizationID                  = arbitrarySample[OrganizationID]
+        val archiveCustomerPutRequestSmithy = arbitrarySample[smithy.ArchiveCustomerPutRequest]
+
+        customerBookRepositoryMock.archiveCustomer
+          .expects(organizationID, CustomerID(archiveCustomerPutRequestSmithy.customerID))
+          .returningZIO(Some(CustomerID(archiveCustomerPutRequestSmithy.customerID)))
+          .once()
+
+        val customerBookService = buildCustomerBookService
+
+        customerBookService
+          .archiveCustomerPut(organizationID.value, archiveCustomerPutRequestSmithy)
+          .zioValue shouldBe ()
+      }
+
+      "fail with an UnexpectedError when no customer matches the id" in new TestContext {
+        val organizationID                  = arbitrarySample[OrganizationID]
+        val archiveCustomerPutRequestSmithy = arbitrarySample[smithy.ArchiveCustomerPutRequest]
+
+        customerBookRepositoryMock.archiveCustomer
+          .expects(organizationID, CustomerID(archiveCustomerPutRequestSmithy.customerID))
+          .returningZIO(None)
+          .once()
+
+        val customerBookService = buildCustomerBookService
+
+        customerBookService
+          .archiveCustomerPut(organizationID.value, archiveCustomerPutRequestSmithy)
+          .zioError shouldBe ServiceError.InternalServerError.UnexpectedError(
+          s"Customer not found for customerID: [${archiveCustomerPutRequestSmithy.customerID}]"
+        )
+      }
+
+      "fail with a repository error and surface it unchanged" in new TestContext {
+        val organizationID                  = arbitrarySample[OrganizationID]
+        val archiveCustomerPutRequestSmithy = arbitrarySample[smithy.ArchiveCustomerPutRequest]
+
+        customerBookRepositoryMock.archiveCustomer
+          .expects(organizationID, CustomerID(archiveCustomerPutRequestSmithy.customerID))
+          .returns(ZIO.fail(repositoryError))
+          .once()
+
+        val customerBookService = buildCustomerBookService
+
+        customerBookService
+          .archiveCustomerPut(organizationID.value, archiveCustomerPutRequestSmithy)
+          .zioError shouldBe repositoryError
+      }
+    }
+
     "getCustomerIndividualGet" should {
       "successfully return the customer individual's full details" in new TestContext {
         val organizationID               = arbitrarySample[OrganizationID]

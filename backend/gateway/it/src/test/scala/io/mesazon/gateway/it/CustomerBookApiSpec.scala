@@ -1578,6 +1578,253 @@ class CustomerBookApiSpec
       }
     }
 
+    "PUT /archive/customer" should {
+      "successfully archive a customer" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(organizationID = organizationUserRow.organizationID, status = CustomerStatus.Active)
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+          .zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val archiveCustomerPutResponse =
+          gatewayClient
+            .archiveCustomerPut[smithy.InternalServerError](
+              smithy.ArchiveCustomerPutRequest(customerIndividualDetailsRow.customerID.value),
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+        archiveCustomerPutResponse.code shouldBe StatusCode.NoContent
+
+        val customerIndividualDetailsRowsAll =
+          postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
+        customerIndividualDetailsRowsAll shouldBe List(
+          customerIndividualDetailsRow.copy(
+            status = CustomerStatus.Archived,
+            updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
+          )
+        )
+      }
+
+      "fail with an InternalServerError when no customer matches the id" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val archiveCustomerPutResponse =
+          gatewayClient
+            .archiveCustomerPut[smithy.InternalServerError](
+              arbitrarySample[smithy.ArchiveCustomerPutRequest],
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+        archiveCustomerPutResponse.code shouldBe StatusCode.InternalServerError
+        archiveCustomerPutResponse.body.left.value shouldBe smithy.InternalServerError()
+      }
+
+      "fail with a BadRequest when the organization id header is missing" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(status = CustomerStatus.Active)
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+          .zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val archiveCustomerPutResponse =
+          gatewayClient
+            .archiveCustomerPut[smithy.BadRequest](
+              smithy.ArchiveCustomerPutRequest(customerIndividualDetailsRow.customerID.value),
+              None,
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+        archiveCustomerPutResponse.code shouldBe StatusCode.BadRequest
+        archiveCustomerPutResponse.body.left.value shouldBe smithy.BadRequest()
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue shouldBe
+          List(customerIndividualDetailsRow)
+      }
+
+      "fail with an Unauthorized when the access token is missing" in withContext { context =>
+        import context.*
+
+        val organizationID = arbitrarySample[OrganizationID]
+
+        val archiveCustomerPutResponse =
+          gatewayClient
+            .archiveCustomerPut[smithy.Unauthorized](
+              arbitrarySample[smithy.ArchiveCustomerPutRequest],
+              Some(organizationID),
+              None,
+            )
+            .zioValue
+
+        archiveCustomerPutResponse.code shouldBe StatusCode.Unauthorized
+        archiveCustomerPutResponse.body.left.value shouldBe smithy.Unauthorized()
+      }
+
+      "fail with an Unauthorized when the access token is invalid" in withContext { context =>
+        import context.*
+
+        val organizationID = arbitrarySample[OrganizationID]
+
+        val archiveCustomerPutResponse =
+          gatewayClient
+            .archiveCustomerPut[smithy.Unauthorized](
+              arbitrarySample[smithy.ArchiveCustomerPutRequest],
+              Some(organizationID),
+              Some(AccessToken("invalidtoken")),
+            )
+            .zioValue
+
+        archiveCustomerPutResponse.code shouldBe StatusCode.Unauthorized
+        archiveCustomerPutResponse.body.left.value shouldBe smithy.Unauthorized()
+      }
+
+      "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
+        import context.*
+
+        val onboardStageInvalid =
+          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStageInvalid)
+        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val archiveCustomerPutResponse =
+          gatewayClient
+            .archiveCustomerPut[smithy.Forbidden](
+              arbitrarySample[smithy.ArchiveCustomerPutRequest],
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+        archiveCustomerPutResponse.code shouldBe StatusCode.Forbidden
+        archiveCustomerPutResponse.body.left.value shouldBe smithy.Forbidden()
+      }
+
+      "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+        val organizationUserRoleInvalid =
+          Random.shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow = arbitrarySample[OrganizationUserRow]
+          .copy(userID = userDetailsRow.userID, userRole = organizationUserRoleInvalid)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val archiveCustomerPutResponse =
+          gatewayClient
+            .archiveCustomerPut[smithy.Forbidden](
+              arbitrarySample[smithy.ArchiveCustomerPutRequest],
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+        archiveCustomerPutResponse.code shouldBe StatusCode.Forbidden
+        archiveCustomerPutResponse.body.left.value shouldBe smithy.Forbidden()
+      }
+
+      "fail with an InternalServerError when the user details do not exist" in withContext { context =>
+        import context.*
+
+        val userID         = arbitrarySample[UserID]
+        val organizationID = arbitrarySample[OrganizationID]
+
+        val accessJwt = jwtService.generateAccessToken(userID).zioValue
+
+        val archiveCustomerPutResponse =
+          gatewayClient
+            .archiveCustomerPut[smithy.InternalServerError](
+              arbitrarySample[smithy.ArchiveCustomerPutRequest],
+              Some(organizationID),
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+        archiveCustomerPutResponse.code shouldBe StatusCode.InternalServerError
+        archiveCustomerPutResponse.body.left.value shouldBe smithy.InternalServerError()
+      }
+
+      "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val organizationID = arbitrarySample[OrganizationID]
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val archiveCustomerPutResponse =
+          gatewayClient
+            .archiveCustomerPut[smithy.InternalServerError](
+              arbitrarySample[smithy.ArchiveCustomerPutRequest],
+              Some(organizationID),
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+        archiveCustomerPutResponse.code shouldBe StatusCode.InternalServerError
+        archiveCustomerPutResponse.body.left.value shouldBe smithy.InternalServerError()
+      }
+    }
+
     "GET /get/customer-individual/{customerID}" should {
       "successfully return the customer individual's details" in withContext { context =>
         import context.*

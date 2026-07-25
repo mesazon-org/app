@@ -166,6 +166,23 @@ object CustomerBookService {
         ),
       )
 
+    /** HTTP PUT /archive/customer */
+    override def archiveCustomerPut(
+        organizationID: UUID,
+        archiveCustomerPutRequestSmithy: smithy.ArchiveCustomerPutRequest,
+    ): ServiceTask[Unit] =
+      customerBookRepository
+        .archiveCustomer(
+          OrganizationID(organizationID),
+          CustomerID(archiveCustomerPutRequestSmithy.customerID),
+        )
+        .someOrFail(
+          ServiceError.InternalServerError.UnexpectedError(
+            s"Customer not found for customerID: [${archiveCustomerPutRequestSmithy.customerID}]"
+          )
+        )
+        .unit
+
     /** HTTP GET /get/customer-individual/{customerID} */
     override def getCustomerIndividualGet(
         organizationID: UUID,
@@ -340,6 +357,15 @@ object CustomerBookService {
       ): Task[Unit] =
         HttpErrorHandler.errorResponseHandler(
           service.removeCustomerBusinessContactsPut(organizationID, removeCustomerBusinessContactsPutRequestSmithy)
+        )
+
+      /** HTTP PUT /archive/customer */
+      override def archiveCustomerPut(
+          organizationID: UUID,
+          archiveCustomerPutRequestSmithy: smithy.ArchiveCustomerPutRequest,
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(
+          service.archiveCustomerPut(organizationID, archiveCustomerPutRequestSmithy)
         )
 
       /** HTTP GET /get/customer-individual/{customerID} */

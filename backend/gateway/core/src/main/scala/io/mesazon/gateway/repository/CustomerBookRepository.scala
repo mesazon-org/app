@@ -81,6 +81,11 @@ trait CustomerBookRepository {
       customerBusinessContactIDs: List[CustomerBusinessContactID],
   ): IO[ServiceError, Unit]
 
+  def archiveCustomer(
+      organizationID: OrganizationID,
+      customerID: CustomerID,
+  ): IO[ServiceError, Option[CustomerID]]
+
   def getCustomerIndividual(
       organizationID: OrganizationID,
       customerID: CustomerID,
@@ -405,6 +410,18 @@ object CustomerBookRepository {
             .unit
             .mapError(toServiceError(s"Failed to remove customer business contacts for customer ID: [$customerID]"))
       }
+
+    override def archiveCustomer(
+        organizationID: OrganizationID,
+        customerID: CustomerID,
+    ): IO[ServiceError, Option[CustomerID]] = for {
+      instantNow            <- timeProvider.instantNow
+      customerIDOptArchived <- database
+        .transactionOrWiden(
+          customerBookQueries.archiveCustomerRow(organizationID, customerID, UpdatedAt(instantNow))
+        )
+        .mapError(toServiceError(s"Failed to archive customer with ID: [$customerID]"))
+    } yield customerIDOptArchived
 
     override def getCustomerIndividual(
         organizationID: OrganizationID,

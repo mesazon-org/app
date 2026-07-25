@@ -337,6 +337,31 @@ final class CustomerBookQueries(
     }
   }
 
+  // Archive (soft-delete) a customer: type-agnostic, matches by id regardless of `customer_type`,
+  // and returns the affected id (`None` when no row matched, so the caller can map a missing customer
+  // to a 500). Removing a row from the active set can never violate the partial `uq_customer_name`
+  // index. Keeps the mandatory `::customer_status` cast.
+  def archiveCustomerRow(
+      organizationID: OrganizationID,
+      customerID: CustomerID,
+      updatedAt: UpdatedAt,
+  ): TranzactIO[Option[CustomerID]] =
+    tzio {
+      val q =
+        fr"UPDATE" ++ frCustomerTable ++
+          set(
+            fr0"status = ${CustomerStatus.Archived}::" ++ frCustomerStatusType,
+            fr"updated_at = $updatedAt",
+          ) ++
+          whereAnd(
+            fr"organization_id = $organizationID",
+            fr"customer_id = $customerID",
+          ) ++
+          fr"RETURNING customer_id"
+
+      q.query[CustomerID].option
+    }
+
   def getCustomerIndividualDetailsRow(
       organizationID: OrganizationID,
       customerID: CustomerID,

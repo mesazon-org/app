@@ -90,4 +90,7 @@ trait CustomerBookSmithyArbitraries extends CustomerBookDomainArbitraries, IronR
         customerBusinessContacts <- Gen.listOf(Gen.uuid.map(smithy.RemoveCustomerBusinessContact.apply))
       } yield smithy.RemoveCustomerBusinessContactsPutRequest(customerID, customerBusinessContacts)
     )
+
+  given arbArchiveCustomerPutRequestSmithy: Arbitrary[smithy.ArchiveCustomerPutRequest] =
+    Arbitrary(Gen.uuid.map(smithy.ArchiveCustomerPutRequest.apply))
 }

@@ -648,6 +648,209 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
       }
     }
 
+    "archiveCustomer" should {
+      "archive an active individual customer, flipping its status to Archived and returning its id" in new TestContext {
+        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(status = CustomerStatus.Active)
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+          .zioValue
+
+        (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once()
+
+        customerBookRepository
+          .archiveCustomer(customerIndividualDetailsRow.organizationID, customerIndividualDetailsRow.customerID)
+          .zioValue shouldBe Some(customerIndividualDetailsRow.customerID)
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue shouldBe
+          List(customerIndividualDetailsRow.copy(status = CustomerStatus.Archived, updatedAt = UpdatedAt(instantNow)))
+      }
+
+      "archive an active business customer, flipping its status to Archived and returning its id" in new TestContext {
+        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+          .copy(status = CustomerStatus.Active)
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
+
+        (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once()
+
+        customerBookRepository
+          .archiveCustomer(customerBusinessDetailsRow.organizationID, customerBusinessDetailsRow.customerID)
+          .zioValue shouldBe Some(customerBusinessDetailsRow.customerID)
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe
+          List(customerBusinessDetailsRow.copy(status = CustomerStatus.Archived, updatedAt = UpdatedAt(instantNow)))
+      }
+
+      "return None when no customer matches the id" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+        val customerID     = arbitrarySample[CustomerID]
+
+        (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once()
+
+        customerBookRepository.archiveCustomer(organizationID, customerID).zioValue shouldBe None
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe empty
+      }
+
+      // uq_customer_name is partial on status = 'Active', so archiving frees the name: an organization
+      // can hold any number of archived same-name customers of one kind alongside a single active one.
+      "allow archiving multiple individuals that share a name, alongside one that stays active" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+        val sharedName     = CustomerFullName.assume("Shared Name")
+        val customerID1    = arbitrarySample[CustomerID]
+        val customerID2    = arbitrarySample[CustomerID]
+        val customerID3    = arbitrarySample[CustomerID]
+
+        List(customerID1, customerID2, customerID3).distinct should have size 3
+
+        val customerIndividualDetailsRow1 = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(
+            organizationID = organizationID,
+            customerID = customerID1,
+            fullName = sharedName,
+            status = CustomerStatus.Active,
+          )
+        val customerIndividualDetailsRow2 = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(
+            organizationID = organizationID,
+            customerID = customerID2,
+            fullName = sharedName,
+            status = CustomerStatus.Active,
+          )
+        val customerIndividualDetailsRow3 = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(
+            organizationID = organizationID,
+            customerID = customerID3,
+            fullName = sharedName,
+            status = CustomerStatus.Active,
+          )
+
+        (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).twice()
+
+        // Each active same-name insert only succeeds because the previous one was archived first.
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow1))
+          .zioValue
+        customerBookRepository.archiveCustomer(organizationID, customerID1).zioValue shouldBe Some(customerID1)
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow2))
+          .zioValue
+        customerBookRepository.archiveCustomer(organizationID, customerID2).zioValue shouldBe Some(customerID2)
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow3))
+          .zioValue
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue should
+          contain theSameElementsAs List(
+            customerIndividualDetailsRow1.copy(status = CustomerStatus.Archived, updatedAt = UpdatedAt(instantNow)),
+            customerIndividualDetailsRow2.copy(status = CustomerStatus.Archived, updatedAt = UpdatedAt(instantNow)),
+            customerIndividualDetailsRow3,
+          )
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 3
+      }
+
+      "allow archiving multiple businesses that share a name, alongside one that stays active" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+        val sharedName     = CustomerBusinessName.assume("Shared Name")
+        val customerID1    = arbitrarySample[CustomerID]
+        val customerID2    = arbitrarySample[CustomerID]
+        val customerID3    = arbitrarySample[CustomerID]
+
+        List(customerID1, customerID2, customerID3).distinct should have size 3
+
+        val customerBusinessDetailsRow1 = arbitrarySample[CustomerBusinessDetailsRow]
+          .copy(
+            organizationID = organizationID,
+            customerID = customerID1,
+            businessName = sharedName,
+            status = CustomerStatus.Active,
+          )
+        val customerBusinessDetailsRow2 = arbitrarySample[CustomerBusinessDetailsRow]
+          .copy(
+            organizationID = organizationID,
+            customerID = customerID2,
+            businessName = sharedName,
+            status = CustomerStatus.Active,
+          )
+        val customerBusinessDetailsRow3 = arbitrarySample[CustomerBusinessDetailsRow]
+          .copy(
+            organizationID = organizationID,
+            customerID = customerID3,
+            businessName = sharedName,
+            status = CustomerStatus.Active,
+          )
+
+        (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).twice()
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow1))
+          .zioValue
+        customerBookRepository.archiveCustomer(organizationID, customerID1).zioValue shouldBe Some(customerID1)
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow2))
+          .zioValue
+        customerBookRepository.archiveCustomer(organizationID, customerID2).zioValue shouldBe Some(customerID2)
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow3))
+          .zioValue
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue should
+          contain theSameElementsAs List(
+            customerBusinessDetailsRow1.copy(status = CustomerStatus.Archived, updatedAt = UpdatedAt(instantNow)),
+            customerBusinessDetailsRow2.copy(status = CustomerStatus.Archived, updatedAt = UpdatedAt(instantNow)),
+            customerBusinessDetailsRow3,
+          )
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 3
+      }
+
+      "archive both an individual and a business that share a name" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+        val sharedName     = "Shared Name"
+
+        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(
+            organizationID = organizationID,
+            fullName = CustomerFullName.assume(sharedName),
+            status = CustomerStatus.Active,
+          )
+        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+          .copy(
+            organizationID = organizationID,
+            businessName = CustomerBusinessName.assume(sharedName),
+            status = CustomerStatus.Active,
+          )
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+          .zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
+
+        (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).twice()
+
+        customerBookRepository
+          .archiveCustomer(organizationID, customerIndividualDetailsRow.customerID)
+          .zioValue shouldBe Some(customerIndividualDetailsRow.customerID)
+        customerBookRepository
+          .archiveCustomer(organizationID, customerBusinessDetailsRow.customerID)
+          .zioValue shouldBe Some(customerBusinessDetailsRow.customerID)
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue shouldBe
+          List(customerIndividualDetailsRow.copy(status = CustomerStatus.Archived, updatedAt = UpdatedAt(instantNow)))
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe
+          List(customerBusinessDetailsRow.copy(status = CustomerStatus.Archived, updatedAt = UpdatedAt(instantNow)))
+      }
+    }
+
     "getCustomerIndividual" should {
       "return the details row when it exists" in new TestContext {
         val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]

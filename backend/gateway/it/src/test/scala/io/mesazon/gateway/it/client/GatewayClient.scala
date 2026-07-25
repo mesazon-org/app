@@ -93,6 +93,8 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     JsonCodecMaker.make[smithy.AddCustomerBusinessContactsPutRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.RemoveCustomerBusinessContactsPutRequest] =
     JsonCodecMaker.make[smithy.RemoveCustomerBusinessContactsPutRequest](CodecMakerConfig.withTransientEmpty(false))
+  given JsonValueCodec[smithy.ArchiveCustomerPutRequest] =
+    JsonCodecMaker.make[smithy.ArchiveCustomerPutRequest]
 
   given JsonValueCodec[smithy.GetCustomerIndividualGetResponse] =
     JsonCodecMaker.make[smithy.GetCustomerIndividualGetResponse]
@@ -509,6 +511,27 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     basicRequest
       .put(externalUri.addPath("remove", "customer-business-contacts"))
       .body(asJson(removeCustomerBusinessContactsPutRequest))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonErrorUnit[E])
+      .send(sttpBackend)
+
+  def archiveCustomerPut[E: JsonValueCodec](
+      archiveCustomerPutRequest: smithy.ArchiveCustomerPutRequest,
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, Unit]]] =
+    basicRequest
+      .put(externalUri.addPath("archive", "customer"))
+      .body(asJson(archiveCustomerPutRequest))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
