@@ -373,7 +373,7 @@ class CustomerBookApiSpec
 
         insertCustomerIndividualPostResponse.code shouldBe StatusCode.Conflict
         insertCustomerIndividualPostResponse.body.left.value shouldBe smithy.Conflict(message =
-          "A customer with the given full name already exists in this organization"
+          "A customer with the given name already exists in this organization"
         )
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe
@@ -728,7 +728,7 @@ class CustomerBookApiSpec
 
           insertCustomerIndividualsPostResponse.code shouldBe StatusCode.Conflict
           insertCustomerIndividualsPostResponse.body.left.value shouldBe smithy.Conflict(message =
-            "A customer with the given full name already exists in this organization"
+            "A customer with the given name already exists in this organization"
           )
 
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe
@@ -1074,7 +1074,7 @@ class CustomerBookApiSpec
 
         insertCustomerBusinessPostResponse.code shouldBe StatusCode.Conflict
         insertCustomerBusinessPostResponse.body.left.value shouldBe smithy.Conflict(message =
-          "A customer with the given business name already exists in this organization"
+          "A customer with the given name already exists in this organization"
         )
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe
@@ -1515,7 +1515,7 @@ class CustomerBookApiSpec
 
           insertCustomerBusinessesPostResponse.code shouldBe StatusCode.Conflict
           insertCustomerBusinessesPostResponse.body.left.value shouldBe smithy.Conflict(message =
-            "A customer with the given business name already exists in this organization"
+            "A customer with the given name already exists in this organization"
           )
 
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe

@@ -106,7 +106,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
         val serviceError =
           customerBookRepository.insertCustomerIndividual(organizationID, insertCustomerIndividualInput).zioError
         serviceError shouldBe a[ServiceError.ConflictError.UniqueConstraintViolation]
-        serviceError.message shouldBe "A customer with the given full name already exists in this organization"
+        serviceError.message shouldBe "A customer with the given name already exists in this organization"
         serviceError.underlying.value shouldBe a[DbException]
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe
@@ -258,7 +258,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
         val serviceError =
           customerBookRepository.insertCustomerBusiness(organizationID, insertCustomerBusinessInput).zioError
         serviceError shouldBe a[ServiceError.ConflictError.UniqueConstraintViolation]
-        serviceError.message shouldBe "A customer with the given business name already exists in this organization"
+        serviceError.message shouldBe "A customer with the given name already exists in this organization"
         serviceError.underlying.value shouldBe a[DbException]
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe

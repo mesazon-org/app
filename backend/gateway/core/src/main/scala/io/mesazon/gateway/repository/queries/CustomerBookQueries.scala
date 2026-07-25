@@ -35,13 +35,19 @@ final class CustomerBookQueries(
   private val frCustomerTable                = frSchema ++ fr0"." ++ frCustomerTableName
   private val frCustomerBusinessContactTable = frSchema ++ fr0"." ++ frCustomerBusinessContactTableName
 
+  // The `customer_status` enum lives in the config schema (created there by Flyway). The app
+  // connection's search_path does not include that schema, so casts must qualify it — exactly as
+  // the tables above are qualified.
+  private val frCustomerStatusType = frSchema ++ fr0".customer_status"
+
   // Individual and business customers share the single `customer` table, distinguished by
   // `customer_type`. The two typed rows select a type-specific subset of columns (individuals
   // have no `tax_id`; `name` maps to `full_name` / `business_name` on the row).
   //
   // `status` is a native `customer_status` enum. The generic `CustomerStatus` codec (derived from
-  // its string labels) binds/reads it as text, so writes cast the bound param `?::customer_status`
-  // and selects read `status::text` — any new query touching `status` must keep those casts.
+  // its string labels) binds/reads it as text, so writes cast the bound param `?::<schema>.customer_status`
+  // (via `frCustomerStatusType`) and selects read `status::text` — any new query touching `status`
+  // must keep those casts.
 
   private val frCustomerIndividualInsertFields =
     fr"""
@@ -74,7 +80,7 @@ final class CustomerBookQueries(
       fr0"${row.city}",
       fr0"${row.postalCode}",
       fr0"${row.country}",
-      fr0"${row.status}::customer_status",
+      fr0"${row.status}::" ++ frCustomerStatusType,
       fr0"${row.createdAt}",
       fr0"${row.updatedAt}",
     ).intercalate(fr",") ++ fr0")"
@@ -129,7 +135,7 @@ final class CustomerBookQueries(
       fr0"${row.city}",
       fr0"${row.postalCode}",
       fr0"${row.country}",
-      fr0"${row.status}::customer_status",
+      fr0"${row.status}::" ++ frCustomerStatusType,
       fr0"${row.createdAt}",
       fr0"${row.updatedAt}",
     ).intercalate(fr",") ++ fr0")"
@@ -372,7 +378,7 @@ final class CustomerBookQueries(
           fr"FROM" ++ frCustomerTable ++
           whereAnd(
             fr"organization_id = $organizationID",
-            fr"status = ${CustomerStatus.Active}::customer_status",
+            fr0"status = ${CustomerStatus.Active}::" ++ frCustomerStatusType,
           ) ++
           fr"ORDER BY LOWER(name), customer_id"
 
