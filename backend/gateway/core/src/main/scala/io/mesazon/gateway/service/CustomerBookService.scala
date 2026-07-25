@@ -248,7 +248,7 @@ object CustomerBookService {
       customers = customerSummaryRows.map(customerSummaryRow =>
         smithy.GetCustomer(
           customerID = customerSummaryRow.customerID.value,
-          displayName = customerSummaryRow.displayName.value,
+          name = customerSummaryRow.name.value,
           customerType = customerTypeFromDomainToSmithy(customerSummaryRow.customerType),
         )
       )

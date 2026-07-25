@@ -1,50 +1,55 @@
 # Customer Book
 
-Owns the client's address book of the people and companies they do business with. One parent entity, discriminated into two kinds, plus a child table:
+Owns the client's address book of the people and companies they do business with. One table, discriminated into two kinds, plus a child table:
 
-- **Customer** (`customer`) — the *party an order is billed to* (PK `(organization_id, customer_id)`, `customer_type` `INDIVIDUAL`/`BUSINESS`, `status`). Every order (a later feature) targets a `customer_id`. This is the only order target — there is no separate "counterparty".
-- **Individual details** (`customer_individual_details`) — 1:1 with an `INDIVIDUAL` customer (the person's `full_name`, contact, address).
-- **Business details** (`customer_business_details`) — 1:1 with a `BUSINESS` customer (`business_name`, `tax_id`, contact, address).
+- **Customer** (`customer`) — the *party an order is billed to* (PK `(organization_id, customer_id)`, `customer_type` `INDIVIDUAL`/`BUSINESS`, `status`). **All customer fields live on this one table**: the shared `name` (a person's full name or a company name), `emails`/`phone_numbers`, address, and — for a `BUSINESS` — `tax_id` (null for individuals). Every order (a later feature) targets a `customer_id`. This is the only order target — there is no separate "counterparty".
 - **Business contacts** (`customer_business_contact`) — **0-to-many** people *within* a business (`customer_business_contact_id`, `full_name`, `role`, contact). A contact is **not** a customer: it has no `customer_id` of its own and is never an order target.
+
+The repository exposes two typed row views over the single table — `CustomerIndividualDetailsRow` (`fullName`, no `taxID`) and `CustomerBusinessDetailsRow` (`businessName`, `taxID`) — each selecting a `customer_type`-filtered subset of columns, with the stored `name` surfaced as `fullName`/`businessName`. There is no `CustomerRow`.
 
 **Vocabulary (read this first).** "Organization" in this codebase is the **Mesazon tenant** (the client themselves — see [Organization Management](organization-management.md)); it is *not* the customer's company. Every row here is scoped by `organization_id` (the tenant), carried in the `X-Organization-ID` header on every endpoint.
 
-**Scope**: the `customer` parent, its two detail tables, business contacts, and the `INDIVIDUAL`/`BUSINESS` distinction (the `status`/archival column exists but is not yet exposed by any endpoint). **Excludes** orders (a future feature that will FK `customer_id` and snapshot buyer details — see the order-snapshot rules in [postgres.md](../postgres.md#soft-delete--archival)) and the tenant/membership/role model ([Organization Management](organization-management.md)).
+**Scope**: the `customer` table, business contacts, and the `INDIVIDUAL`/`BUSINESS` distinction (the `status`/archival column exists but is not yet exposed by any endpoint). **Excludes** orders (a future feature that will FK `customer_id` and snapshot buyer details — see the order-snapshot rules in [postgres.md](../postgres.md#soft-delete--archival)) and the tenant/membership/role model ([Organization Management](organization-management.md)).
 
 ## Data model
 
 ```
 customer (organization_id, customer_id)  PK
-  customer_type  INDIVIDUAL | BUSINESS
-  status         ACTIVE | ARCHIVED
-    ▲                        ▲                          ▲
-    │ 1:1 (INDIVIDUAL)       │ 1:1 (BUSINESS)           │ 0:N (BUSINESS)
-    │                        │                          │
-customer_individual_details  customer_business_details  customer_business_contact
-  full_name                    business_name              (org_id, customer_id,
-  emails[], phones[] (jsonb)   tax_id                      customer_business_contact_id) PK
-  address                      emails[], phones[] (jsonb)  full_name, role, email, phone
-                               address
+  customer_type  INDIVIDUAL | BUSINESS        (text)
+  name                                        (person's full name OR company name)
+  emails[], phone_numbers[] (jsonb)
+  tax_id                                      (BUSINESS only; null for INDIVIDUAL)
+  address
+  status         customer_status enum: Active | Archived
+    │
+    │ 0:N (BUSINESS)
+    ▼
+customer_business_contact
+  (org_id, customer_id, customer_business_contact_id) PK
+  full_name, role, email, phone
+  FK (org_id, customer_id) → customer
 ```
 
-**Individual and business details hold *lists* of emails and phone numbers** (`emails` / `phone_numbers` `jsonb` columns), not a single one — a customer can have many, and each entry carries an `isDefault` flag marking the primary one. A **non-empty** email or phone list must mark **exactly one** entry as default (zero or several is a `ValidationError`); an empty list is allowed. A **business contact** still carries a single `email`/`phone` (the columns on `customer_business_contact` are unchanged). The domain models mirror this: `InsertCustomerIndividualPostRequest`/`InsertCustomerBusinessPostRequest` (and their update variants) carry `emails: List[CustomerEmailEntryRequest]` and `phoneNumbers: List[CustomerPhoneNumberEntryRequest]`, where each entry is `(CustomerEmail|CustomerPhoneNumber, isDefault: Boolean)`; the contact models keep `email: Option[...]`/`phoneNumber: Option[...]`.
+Individual and business customers share the single `customer` table, told apart by `customer_type`; `tax_id` is populated only for businesses. `status` is a **PostgreSQL enum** (`customer_status`) rather than free text — its labels (`Active`/`Archived`) are the Scala `CustomerStatus` case names verbatim (see [Query notes](#query-notes) for the `::customer_status` / `status::text` casts this requires).
+
+**Customers hold *lists* of emails and phone numbers** (`emails` / `phone_numbers` `jsonb` columns on `customer`), not a single one — a customer can have many, and each entry carries an `isDefault` flag marking the primary one. A **non-empty** email or phone list must mark **exactly one** entry as default (zero or several is a `ValidationError`); an empty list is allowed. A **business contact** still carries a single `email`/`phone` (the columns on `customer_business_contact` are unchanged). The domain models mirror this: `InsertCustomerIndividualPostRequest`/`InsertCustomerBusinessPostRequest` (and their update variants) carry `emails: List[CustomerEmailEntryRequest]` and `phoneNumbers: List[CustomerPhoneNumberEntryRequest]`, where each entry is `(CustomerEmail|CustomerPhoneNumber, isDefault: Boolean)`; the contact models keep `email: Option[...]`/`phoneNumber: Option[...]`.
 
 **List validation accumulates, tagged by index.** When validating a list — the emails/phones of one customer, the contacts of a business, or a whole batch of customers to insert/update — the validator validates **every** item and accumulates all failures (it does *not* fail fast). Each `InvalidFieldError` carries the `index` of the offending item in its list. For a **batch of customers** each failed customer's errors are wrapped into a single error on the batch field (`customerIndividuals`/`customerBusinesses`): its message lists the customer's invalid fields (with their own inner email/phone indexes intact) and its `index` points at the customer in the batch — so an email index is never mistaken for a customer index.
 
-Each detail/child table FKs the parent on the composite `(organization_id, customer_id)`, so a detail row can only ever attach to a customer **in the same tenant**. `status` lives on the parent `customer` only — the detail rows inherit it.
+The `customer_business_contact` child table FKs the parent on the composite `(organization_id, customer_id)`, so a contact can only ever attach to a customer **in the same tenant**.
 
 ### Individual vs business
 
 A customer is one of two kinds, discriminated by `customer_type` (see [postgres.md § Customer type](../postgres.md#customer-type--individual-vs-business)):
 
-- **`INDIVIDUAL`** — a standalone person. Its identity/contact live in `customer_individual_details`.
-- **`BUSINESS`** — a named company account. Its details live in `customer_business_details`, and it may own any number of `customer_business_contact` people.
+- **`INDIVIDUAL`** — a standalone person. Its `name` is the person's full name; `tax_id` is null.
+- **`BUSINESS`** — a named company account. Its `name` is the company name, it may carry a `tax_id`, and it may own any number of `customer_business_contact` people.
 
-Which detail table holds a customer's row is determined by `customer_type` and kept consistent **at the application layer** (not a DB `check` or FK trick, consistent with this schema staying permissive at the DB): the service inserts `customer` + the matching detail table in one transaction and never the other, and an integration test asserts no `customer_id` is ever present in both detail tables. See [postgres.md § Customer type](../postgres.md#customer-type--individual-vs-business).
+Both kinds are rows in the same `customer` table. Reads (`getCustomerIndividual`/`getCustomerBusiness`) and typed updates **filter by `customer_type`**, so requesting the wrong kind for a `customer_id` returns `None` — the same "not found" behaviour the two-table design gave for free. A customer is inherently one kind (one row, one `customer_type`), so it can never be both.
 
 ### Why contacts are not customers
 
-A **business contact** is a point of contact inside a company (a buyer, an accountant), not a party orders are billed to. Modelling them as child rows of the business — rather than as `customer` rows — keeps the order target unambiguous (always a `customer_id`) and means a contact carries no `status` and no lifecycle of its own: it lives and dies with its business. `customer_business_contact` FKs `customer_business_details` (not `customer`), so a contact can only ever hang off a customer that has a business-details row — i.e. a `BUSINESS`. An `INDIVIDUAL` can never acquire contacts; the DB rejects it. This replaced an earlier `counterparty`/`counterparty_customer` design where business members were themselves customers pointed at a shared counterparty.
+A **business contact** is a point of contact inside a company (a buyer, an accountant), not a party orders are billed to. Modelling them as child rows of the business — rather than as `customer` rows — keeps the order target unambiguous (always a `customer_id`) and means a contact carries no `status` and no lifecycle of its own: it lives and dies with its business. `customer_business_contact` FKs `customer` on `(organization_id, customer_id)`. The FK does not distinguish type, so "contacts only under a business" is a service-layer convention (contacts are only ever created through the business insert/add paths), not a DB constraint. This replaced an earlier `counterparty`/`counterparty_customer` design where business members were themselves customers pointed at a shared counterparty.
 
 ## Endpoints
 
@@ -56,7 +61,7 @@ One service — `CustomerBookService`, `@completedOnboardStage` (Bearer + comple
 |---|---|---|---|
 | GET | `/get/customer-individual/{customerID}` | `GetCustomerIndividualGet` | one individual's full details |
 | GET | `/get/customer-business/{customerID}` | `GetCustomerBusinessGet` | one business's full details |
-| GET | `/get/customers` | `GetCustomersGet` | every customer as `customerID` + `displayName` + `customerType` (individuals and businesses in one list) |
+| GET | `/get/customers` | `GetCustomersGet` | every customer as `customerID` + `name` + `customerType` (individuals and businesses in one list) |
 
 **Individuals** (standalone people)
 
@@ -92,27 +97,27 @@ Smithy: `backend/gateway/core/src/main/smithy/CustomerBookService.smithy` (+ `do
 ## Lifecycle
 
 ### Create individuals (`InsertCustomerIndividualPost`, `InsertCustomerIndividualsPost`)
-For each person, in **one transaction**: insert a `customer` row (`customer_type = INDIVIDUAL`, `status = ACTIVE`), then its `customer_individual_details` row. The batch form repeats this per item; the combined `InsertCustomersPost` does it for its `customerIndividuals`.
+For each person, insert one `customer` row (`customer_type = INDIVIDUAL`, `status = Active`, `tax_id` null). The batch form inserts them in a single statement; the combined `InsertCustomersPost` does it for its `customerIndividuals`. All in **one transaction**.
 
 ### Create businesses (`InsertCustomerBusinessPost`, `InsertCustomerBusinessesPost`)
-For each company, in **one transaction**: insert a `customer` row (`customer_type = BUSINESS`, `status = ACTIVE`), then its `customer_business_details` row. Any inline `customerBusinessContacts` on the request are inserted as `customer_business_contact` rows in the same transaction; more can be added later via the contact endpoints.
+For each company, insert one `customer` row (`customer_type = BUSINESS`, `status = Active`). Any inline `customerBusinessContacts` on the request are inserted as `customer_business_contact` rows in the same transaction; more can be added later via the contact endpoints.
 
 ### Manage business contacts (`AddCustomerBusinessContactsPut`, `RemoveCustomerBusinessContactsPut`)
 Contacts are child rows keyed by `(organization_id, customer_id, customer_business_contact_id)`. Both operations carry the owning business's `customerID` and operate on `customer_business_contact` rows under it: add appends new contacts, remove deletes them by `customerBusinessContactID`. Because a contact is not an order target and carries no `status`, **remove is a real row removal**, not a soft delete.
 
 ### Edit (`UpdateCustomerIndividualPut`, `UpdateCustomerBusinessPut`)
-Edit a person's contact details or a company's details in place. These touch only the entity's own detail row.
+Edit a person's contact details or a company's details in place — a single `UPDATE` on the `customer` row (filtered by `customer_type`), `RETURNING` the updated typed row. A name change writes the shared `name` column.
 
 ### Archival
 `customer.status` (`ACTIVE`/`ARCHIVED`) exists in the schema for the eventual soft-delete of a customer (orders reference `customer_id`, so a customer is never hard-deleted — see [postgres.md § Soft-delete & archival](../postgres.md#soft-delete--archival)). **No delete/archive endpoint is exposed yet** — the current surface only creates, edits, and reads.
 
 ## Security / design decisions
 
-- **Org isolation via composite keys.** Every table is PK'd/keyed on `(organization_id, ...)` and each detail/child table FKs the parent on the composite `(organization_id, customer_id)` — Postgres matches an FK by column set, so a detail or contact row can only ever attach to a customer **in the same tenant**. A caller cannot reference another org's customer.
+- **Org isolation via composite keys.** Every table is PK'd/keyed on `(organization_id, ...)` and the child `customer_business_contact` FKs `customer` on the composite `(organization_id, customer_id)` — Postgres matches an FK by column set, so a contact row can only ever attach to a customer **in the same tenant**. A caller cannot reference another org's customer.
 - **Never hard-delete a customer.** `customer` rows are archived, not deleted; orders (future) FK the customer with `on delete restrict` as a belt-and-suspenders guard. Contacts, which carry no orders, are hard-deleted.
-- **`customer_type` drives which detail table applies, enforced in the service.** The DB stays permissive for the individual-vs-business split (a plain `(organization_id, customer_id)` FK from each detail table to `customer`). The service guarantees a customer is never both kinds by writing `customer` + the matching detail table in one transaction and never the other; an integration test backstops this by asserting no `customer_id` appears in both `customer_individual_details` and `customer_business_details`. The discriminated-composite-FK alternative was considered and rejected to keep the DB permissive. (The related "contacts only under a business" rule *is* DB-enforced — `customer_business_contact` FKs `customer_business_details`.)
-- **Uniqueness is DB-enforced and mapped to a clear 409.** Four named `unique` constraints guard the customer book, and the repository translates each violation (Postgres `23505`) to `ServiceError.ConflictError.UniqueConstraintViolation` with a message naming the broken rule (see [repository.md § Error handling](../repository.md#error-handling) and [postgres.md § constraint naming](../postgres.md#constraint-naming--conflict-mapping)):
-  - `uq_customer_individual_details_full_name` / `uq_customer_business_details_business_name` — `unique (organization_id, <name>)`: a tenant can't hold two individuals (or two businesses) with the same name → *"A customer with the given full/business name already exists in this organization"*.
+- **`customer_type` discriminates one table, no cross-type leakage.** Individuals and businesses are rows in the same `customer` table; a customer is inherently one kind (one row, one `customer_type`). Typed reads/updates filter on `customer_type`, so a wrong-kind lookup returns "not found" and an update no-ops. No application invariant is needed to keep a customer from being "both kinds" — the single-row model makes that impossible.
+- **Uniqueness is DB-enforced and mapped to a clear 409.** Three named unique constraints/indexes guard the customer book, and the repository translates each violation (Postgres `23505`) to `ServiceError.ConflictError.UniqueConstraintViolation` with a message naming the broken rule (see [repository.md § Error handling](../repository.md#error-handling) and [postgres.md § constraint naming](../postgres.md#constraint-naming--conflict-mapping)):
+  - `uq_customer_name` — a **partial unique index** `unique (organization_id, customer_type, name) where status = 'Active'`: an active tenant can't hold two customers **of the same kind** with the same name → *"A customer with the given name already exists in this organization"*. Because it is partial on `status = 'Active'`, an archived customer never blocks the name, and because `customer_type` is part of the key an individual and a business may share a name.
   - `uq_customer_business_contact_email` / `uq_customer_business_contact_phone_number` — `unique (organization_id, customer_id, email)` and `... phone_number_e164`: within one business, no two contacts may share an email or a phone number → *"A business contact with the given email/phone number already exists for this customer"*. (`email`/`phone_number_e164` are nullable, and Postgres allows many NULLs, so contacts without an email/phone don't collide.)
   All uniqueness is scoped by `organization_id`, so the same name/email/phone may exist in different organizations.
 
@@ -145,8 +150,7 @@ sequenceDiagram
     V-->>SVC: domain request (or 400 ValidationError)
     SVC->>Repo: insertCustomer
     rect rgb(238,238,238)
-        Repo->>DB: INSERT customer (type INDIVIDUAL|BUSINESS, ACTIVE)
-        Repo->>DB: INSERT customer_individual_details | customer_business_details
+        Repo->>DB: INSERT customer (type INDIVIDUAL|BUSINESS, status Active, all fields)
         opt Business with inline contacts
             Repo->>DB: INSERT customer_business_contact (per contact)
         end
@@ -186,8 +190,8 @@ sequenceDiagram
 
     Client->>SVC: GET /get/customer-individual|business/{customerID}  ·  GET /get/customers
     SVC->>Repo: getCustomer(s) scoped by organizationID
-    Repo->>DB: SELECT customer (+ detail rows)
-    SVC-->>Client: full details  ·  list of {customerID, displayName, customerType}
+    Repo->>DB: SELECT customer (filtered by customer_type for the by-id reads)
+    SVC-->>Client: full details  ·  list of {customerID, name, customerType}
 ```
 
 ## Key files
@@ -195,15 +199,15 @@ sequenceDiagram
 - Smithy: `smithy/CustomerBookService.smithy`, `smithy/domain/CustomerBook.smithy`
 - Service: `service/CustomerBookService.scala`
 - Repository: `repository/CustomerBookRepository.scala` (trait + input models), `repository/domain/Customer*Row.scala`, `repository/domain/CustomerSummaryRow.scala`
-- Migration: `backend/schemas/migrations/V2025.05.27__init.sql` (`customer`, `customer_individual_details`, `customer_business_details`, `customer_business_contact`)
+- Migration: `backend/schemas/migrations/V2025.05.27__init.sql` (the `customer_status` enum, the merged `customer` table + `uq_customer_name` partial unique index, `customer_business_contact`)
 
 ### Repository input models (why the repo doesn't take `...Request` types)
 
 `CustomerBookRepository` does **not** accept the smithy-derived `...PostRequest`/`...PutRequest` domain models — those are API-transport vocabulary and must not reach the persistence boundary (the same reason `createOrganization` takes flat params, never `CreateOrganizationPostRequest`). Instead the repo owns its input case classes in its **companion object** (`InsertCustomerIndividualInput`, `InsertCustomerBusinessInput`, and nested `CustomerEmailEntryInput` / `CustomerPhoneNumberEntryInput` / `CustomerBusinessContactInput`), and `CustomerBookService` maps validated request → input with **Chimney**. An input class exists only to serve a **batch**: the batch takes `List[…Input]` and the singular insert reuses the same element class; single-only operations (the two updates, remove-contacts) take **flat params** and get no class. The full rule lives in [scala.md §5b Repository input models](../scala.md#5b-repository-input-models-decoupling-the-repo-from-the-api-contract).
 
-The same rule reaches the persisted shape: the detail `Row`s type their `emails`/`phone_numbers` `jsonb` columns as `List[CustomerEmailEntryInput]` / `List[CustomerPhoneNumberEntryInput]`, **not** the smithy `...EntryRequest` models — so the whole stack (input → `Row` field → jsonb codec, the named `customerEmailEntryInputsMeta` givens in `CustomerBookQueries`) speaks one type and the repo does no `Input → Request` conversion. `CustomerBookQueries` therefore imports `CustomerBookRepository.*` and `io.github.iltotore.iron.jsoniter.given` for those codecs.
+The same rule reaches the persisted shape: the typed `Row`s type their `emails`/`phone_numbers` `jsonb` columns as `List[CustomerEmailEntryInput]` / `List[CustomerPhoneNumberEntryInput]`, **not** the smithy `...EntryRequest` models — so the whole stack (input → `Row` field → jsonb codec, the named `customerEmailEntryInputsMeta` givens in `CustomerBookQueries`) speaks one type and the repo does no `Input → Request` conversion. `CustomerBookQueries` therefore imports `CustomerBookRepository.*` and `io.github.iltotore.iron.jsoniter.given` for those codecs.
 
-`GetCustomersGet` returns a projection, not a table row — `CustomerSummaryRow(customerID, displayName, customerType)`, where `displayName` is the new `CustomerDisplayName` refined type resolved from `full_name` (INDIVIDUAL) or `business_name` (BUSINESS). The list arrives **sorted case-insensitively by `displayName`** (see the query note below).
+`GetCustomersGet` returns a projection, not a table row — `CustomerSummaryRow(customerID, name, customerType)`, where `name` is the `CustomerName` refined type read straight from the `customer.name` column. The list arrives **sorted case-insensitively by `name`** (see the query note below). (The API response field is also called `name`, renamed from the earlier `displayName`; the `CustomerDisplayName` newtype was retired.)
 
 ## Open design decisions
 
@@ -217,19 +221,19 @@ The feature is **implemented and wired end-to-end**; acceptance coverage is in p
 - Schema and the full smithy contract are in place (12 operations).
 - `CustomerBookService.scala` is fully implemented: each handler validates via `CustomerBookRequestValidator`, Chimney-maps the validated request to the repository input (`request.transformInto[…Input]`), calls `CustomerBookRepository`, and maps `Row`s to smithy responses by hand (`.value` unwrapping; `customerTypeFromDomainToSmithy` in `service/service.scala` converts the enum). The two updates always pass `Some(emails)`/`Some(phoneNumbers)` (the smithy contract requires those lists, so an update always overwrites them) while the optional scalar fields pass through as `…OptUpdate` (absent → unchanged). The single-item GETs treat a missing customer as `InternalServerError.UnexpectedError` (the smithy operations declare no 404, matching the error matrix's "referenced entity missing → 500").
 - Wiring is live: `Main` provides `CustomerBookService.live`, `CustomerBookRepository.live`, `CustomerBookQueries.live`, and `CustomerBookRequestValidator.live`; `HttpApp.externalSmithyRoutes` serves the routes.
-- The full persistence stack **is built and tested**: `Row` models, `CustomerBookRepository` trait + `CustomerBookRepositoryImpl` + `live` (with its companion-object input models, see above), the single `CustomerBookQueries` class (all four tables), `RepositoryConfig` + both `application.conf`s, and `CustomerBookRepositorySpec` (green against real Postgres — see below).
+- The full persistence stack **is built and tested**: the two typed `Row` models, `CustomerBookRepository` trait + `CustomerBookRepositoryImpl` + `live` (with its companion-object input models, see above), the single `CustomerBookQueries` class (the `customer` table + `customer_business_contact`), `RepositoryConfig` + both `application.conf`s, and `CustomerBookRepositorySpec` (green against real Postgres — see below).
 
 ### Batch inserts are atomic (one transaction), and efficient
 
-`CustomerBookQueries` exposes **multi-row** `insert…Rows` (a single `INSERT … VALUES (…),(…),…`), so a batch of N customers is one statement per table, not N. The repository runs each batch (and the combined `insertCustomers`) in a **single `transactionOrWiden`** — so a batch is **all-or-nothing**: one duplicate-name conflict rolls the whole batch back to `Conflict`. (This supersedes the earlier "per-item transaction" reading; atomic is both more efficient and the safer default. The `CustomerBookRepositorySpec` duplicate-name test asserts the rollback.) Ids and timestamps are minted in the repository; the summary read (`getCustomerSummaryRows`) is a `customer ⟕ both detail tables` join filtered `status = Active`, **sorted case-insensitively by display name** (`ORDER BY LOWER(COALESCE(full_name, business_name)), customer_id` — the id tiebreak keeps the order deterministic). Sorting happens in SQL, not the service: the rows are already narrowed by the indexed `organization_id`, and a DB-side order is pagination-ready. "By type" is deliberately not the sort key — a client wanting businesses first filters on `customerType`.
+`CustomerBookQueries` exposes **multi-row** `insert…Rows` (a single `INSERT … VALUES (…),(…),…`), so a batch of N customers is one statement, not N. The repository runs each batch (and the combined `insertCustomers`) in a **single `transactionOrWiden`** — so a batch is **all-or-nothing**: one duplicate-name conflict rolls the whole batch back to `Conflict`. (The `CustomerBookRepositorySpec` duplicate-name test asserts the rollback.) Ids and timestamps are minted in the repository; the summary read (`getCustomerSummaryRows`) now reads the `customer` table directly — `SELECT customer_id, name, customer_type … WHERE status = 'Active'::customer_status`, **sorted case-insensitively by name** (`ORDER BY LOWER(name), customer_id` — the id tiebreak keeps the order deterministic). No joins or `COALESCE`: consolidating `name` onto `customer` collapsed the old `customer ⟕ both detail tables` join into a single-table scan. Sorting happens in SQL, not the service: the rows are already narrowed by the indexed `organization_id`, and a DB-side order is pagination-ready.
 
-**No index serves this sort, by design, and that's fine.** The key is `LOWER(COALESCE(cid.full_name, cbd.business_name))` — a function over a value COALESCE'd across two joined tables — which no single-table index can cover, so the planner always adds a Sort node. A `DESC` index would not help either (the sort is ASC, and a b-tree is scanned backward for `DESC` anyway; DESC indexes only matter for mixed-direction multi-key sorts). Every *other* access path — the `organization_id` filter, both detail joins, the FK checks, the uniqueness checks — is already served by the composite PKs/unique indexes (all lead with `(organization_id, customer_id …)`), so **no new index is warranted**. The only way to make this sort index-served is to denormalize a `display_name` column onto `customer` and index `(organization_id, lower(display_name))`; that carries sync-on-update cost and is **deferred** until `getCustomers` is paginated and large-per-tenant.
+**No index serves this sort, by design, and that's fine.** The key is `LOWER(name)` — a function over a column — which the composite PK/`uq_customer_name` indexes don't cover, so the planner adds a Sort node. That is acceptable: the rows are already narrowed by `organization_id` (served by the PK, which leads with it). Making the sort index-served would need a dedicated `(organization_id, lower(name))` expression index; it's **deferred** until `getCustomers` is paginated and large-per-tenant.
 
 ## Tests
 
-- **Repository integration** — `it/CustomerBookRepositorySpec` (real Postgres): every repository operation's happy and failure paths, including the four unique-constraint conflicts and batch rollback.
+- **Repository integration** — `it/CustomerBookRepositorySpec` (real Postgres): every repository operation's happy and failure paths, including the three unique-constraint conflicts and batch rollback.
 - **Validator unit** — `unit/validation/service/CustomerBookRequestValidatorSpec`: one section per `validated…` method, error accumulation and index tagging.
 - **Service functional** — `fun/CustomerBookServiceSpec` (mocked `CustomerBookRepository`, real validator): one section per operation; each happy path proves the exact repository call (organization scoping, Chimney-mapped inputs, update `Opt`/`Some` semantics) and the response mapping, and each failure path proves either a `ValidationError` that never reaches the repository or a repository error (conflict/500) propagating unchanged.
-- **Acceptance** — `it/CustomerBookApiSpec` in `backend/gateway/it` (see [acceptance-tests.md](../acceptance-tests.md)), the reference implementation of the mandatory middleware-gate matrix. Each endpoint's `should` block runs the happy path (with full DB-state assertions) plus **every** applicable gate — `400` validation, `400` missing `X-Organization-ID`, `401` missing/invalid token, `403` disallowed onboard stage, `403` disallowed org role (writes only; reads allow all three roles), `500` no user-details row, `500` not-an-org-member — on top of the endpoint's own `409` conflicts (business name, and the contact email/phone uniqueness on the business inserts) and, for the by-id reads, a `500` when the customer is absent. Done so far: `insert/customer-individual`, `insert/customer-individuals`, `insert/customer-business`, `insert/customer-businesses`, and all three reads (`get/customer-individual`, `get/customer-business`, `get/customers`). Still to add: `insert/customers`, the two updates, and add/remove contacts.
+- **Acceptance** — `it/CustomerBookApiSpec` in `backend/gateway/it` (see [acceptance-tests.md](../acceptance-tests.md)), the reference implementation of the mandatory middleware-gate matrix. Each endpoint's `should` block runs the happy path (with full DB-state assertions) plus **every** applicable gate — `400` validation, `400` missing `X-Organization-ID`, `401` missing/invalid token, `403` disallowed onboard stage, `403` disallowed org role (writes only; reads allow all three roles), `500` no user-details row, `500` not-an-org-member — on top of the endpoint's own `409` conflicts (duplicate customer name, and the contact email/phone uniqueness on the business inserts) and, for the by-id reads, a `500` when the customer is absent. Done so far: `insert/customer-individual`, `insert/customer-individuals`, `insert/customer-business`, `insert/customer-businesses`, and all three reads (`get/customer-individual`, `get/customer-business`, `get/customers`). Still to add: `insert/customers`, the two updates, and add/remove contacts.
 
-**Type-exclusivity integration test (required).** Because the individual/business split is enforced only in the service, add a repository integration test that guards the invariant directly against Postgres: after exercising the insert paths, assert that no `customer_id` exists in both `customer_individual_details` and `customer_business_details`. This is the safety net that replaces a DB-level constraint — without it, a future code path could silently create a customer that is both kinds. (The "contacts only under a business" and per-tenant unique-name rules are already DB-enforced, so they need only ordinary happy-path/duplicate-conflict coverage, not a dedicated invariant sweep.)
+**Type exclusivity is now structural, not an invariant to police.** A customer is a single `customer` row with one `customer_type`, so it is inherently one kind — nothing to test that it isn't "both". The retained `CustomerBookRepositorySpec` test simply confirms the type-filtered testing reads (`getAllCustomerIndividualDetailsRowsTesting` / `…Business…`) partition the customers correctly. (The per-tenant unique-name rule is DB-enforced via the `uq_customer_name` partial index, so it needs only ordinary happy-path/duplicate-conflict coverage.)

@@ -168,8 +168,13 @@ Rules:
   customerIDsWithInputs <- ZIO.foreach(insertCustomerIndividualInputs)(input =>
     generateCustomerID.map(customerID => (customerID = customerID, input = input))
   )
-  customerRows = customerIDsWithInputs.map(customerIDWithInput =>
-    buildCustomerRow(organizationID, customerIDWithInput.customerID, CustomerType.Individual, instantNow)
+  detailsRows = customerIDsWithInputs.map(customerIDWithInput =>
+    buildCustomerIndividualDetailsRow(
+      organizationID,
+      customerIDWithInput.customerID,
+      customerIDWithInput.input,
+      instantNow,
+    )
   )
   // …
   } yield customerIDsWithInputs.map(_.customerID)

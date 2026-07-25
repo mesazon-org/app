@@ -152,8 +152,7 @@ object CustomerBookRepository {
     ): IO[ServiceError, CustomerID] = for {
       instantNow <- timeProvider.instantNow
       customerID <- generateCustomerID
-      customerRow = buildCustomerRow(organizationID, customerID, CustomerType.Individual, instantNow)
-      detailsRow  = buildCustomerIndividualDetailsRow(
+      detailsRow = buildCustomerIndividualDetailsRow(
         organizationID,
         customerID,
         insertCustomerIndividualInput,
@@ -161,10 +160,7 @@ object CustomerBookRepository {
       )
       _ <- database
         .transactionOrWiden(
-          for {
-            _ <- customerBookQueries.insertCustomerRow(customerRow)
-            _ <- customerBookQueries.insertCustomerIndividualDetailsRow(detailsRow)
-          } yield ()
+          customerBookQueries.insertCustomerIndividualDetailsRow(detailsRow)
         )
         .mapError(toServiceError(s"Failed to insert customer individual with ID: [$customerID]"))
     } yield customerID
@@ -177,9 +173,6 @@ object CustomerBookRepository {
       customerIDsWithInputs <- ZIO.foreach(insertCustomerIndividualInputs)(input =>
         generateCustomerID.map(customerID => (customerID = customerID, input = input))
       )
-      customerRows = customerIDsWithInputs.map(customerIDWithInput =>
-        buildCustomerRow(organizationID, customerIDWithInput.customerID, CustomerType.Individual, instantNow)
-      )
       detailsRows = customerIDsWithInputs.map(customerIDWithInput =>
         buildCustomerIndividualDetailsRow(
           organizationID,
@@ -190,10 +183,7 @@ object CustomerBookRepository {
       )
       _ <- database
         .transactionOrWiden(
-          for {
-            _ <- customerBookQueries.insertCustomerRows(customerRows)
-            _ <- customerBookQueries.insertCustomerIndividualDetailsRows(detailsRows)
-          } yield ()
+          customerBookQueries.insertCustomerIndividualDetailsRows(detailsRows)
         )
         .mapError(toServiceError(s"Failed to insert customer individuals for organization ID: [$organizationID]"))
     } yield customerIDsWithInputs.map(_.customerID)
@@ -242,12 +232,10 @@ object CustomerBookRepository {
         insertCustomerBusinessInput.customerBusinessContacts,
         instantNow,
       )
-      customerRow = buildCustomerRow(organizationID, customerID, CustomerType.Business, instantNow)
-      detailsRow  = buildCustomerBusinessDetailsRow(organizationID, customerID, insertCustomerBusinessInput, instantNow)
+      detailsRow = buildCustomerBusinessDetailsRow(organizationID, customerID, insertCustomerBusinessInput, instantNow)
       _ <- database
         .transactionOrWiden(
           for {
-            _ <- customerBookQueries.insertCustomerRow(customerRow)
             _ <- customerBookQueries.insertCustomerBusinessDetailsRow(detailsRow)
             _ <- customerBookQueries.insertCustomerBusinessContactRows(contactRows)
           } yield ()
@@ -262,9 +250,6 @@ object CustomerBookRepository {
       instantNow            <- timeProvider.instantNow
       customerIDsWithInputs <- ZIO.foreach(insertCustomerBusinessInputs)(input =>
         generateCustomerID.map(customerID => (customerID = customerID, input = input))
-      )
-      customerRows = customerIDsWithInputs.map(customerIDWithInput =>
-        buildCustomerRow(organizationID, customerIDWithInput.customerID, CustomerType.Business, instantNow)
       )
       detailsRows = customerIDsWithInputs.map(customerIDWithInput =>
         buildCustomerBusinessDetailsRow(
@@ -287,7 +272,6 @@ object CustomerBookRepository {
       _ <- database
         .transactionOrWiden(
           for {
-            _ <- customerBookQueries.insertCustomerRows(customerRows)
             _ <- customerBookQueries.insertCustomerBusinessDetailsRows(detailsRows)
             _ <- customerBookQueries.insertCustomerBusinessContactRows(contactRows)
           } yield ()
@@ -341,12 +325,6 @@ object CustomerBookRepository {
       customerIDsWithBusinessInputs <- ZIO.foreach(insertCustomerBusinessInputs)(input =>
         generateCustomerID.map(customerID => (customerID = customerID, input = input))
       )
-      individualCustomerRows = customerIDsWithIndividualInputs.map(customerIDWithInput =>
-        buildCustomerRow(organizationID, customerIDWithInput.customerID, CustomerType.Individual, instantNow)
-      )
-      businessCustomerRows = customerIDsWithBusinessInputs.map(customerIDWithInput =>
-        buildCustomerRow(organizationID, customerIDWithInput.customerID, CustomerType.Business, instantNow)
-      )
       individualDetailsRows = customerIDsWithIndividualInputs.map(customerIDWithInput =>
         buildCustomerIndividualDetailsRow(
           organizationID,
@@ -376,7 +354,6 @@ object CustomerBookRepository {
       _ <- database
         .transactionOrWiden(
           for {
-            _ <- customerBookQueries.insertCustomerRows(individualCustomerRows ++ businessCustomerRows)
             _ <- customerBookQueries.insertCustomerIndividualDetailsRows(individualDetailsRows)
             _ <- customerBookQueries.insertCustomerBusinessDetailsRows(businessDetailsRows)
             _ <- customerBookQueries.insertCustomerBusinessContactRows(contactRows)
@@ -476,10 +453,8 @@ object CustomerBookRepository {
 
     private def uniqueConstraintViolationMessage(constraint: String): String =
       constraint match {
-        case "uq_customer_individual_details_full_name" =>
-          "A customer with the given full name already exists in this organization"
-        case "uq_customer_business_details_business_name" =>
-          "A customer with the given business name already exists in this organization"
+        case "uq_customer_name" =>
+          "A customer with the given name already exists in this organization"
         case "uq_customer_business_contact_email" =>
           "A business contact with the given email already exists for this customer"
         case "uq_customer_business_contact_phone_number" =>
@@ -508,21 +483,6 @@ object CustomerBookRepository {
             )
         )
 
-    private def buildCustomerRow(
-        organizationID: OrganizationID,
-        customerID: CustomerID,
-        customerType: CustomerType,
-        instantNow: Instant,
-    ): CustomerRow =
-      CustomerRow(
-        organizationID,
-        customerID,
-        customerType,
-        CustomerStatus.Active,
-        CreatedAt(instantNow),
-        UpdatedAt(instantNow),
-      )
-
     private def buildCustomerIndividualDetailsRow(
         organizationID: OrganizationID,
         customerID: CustomerID,
@@ -540,6 +500,7 @@ object CustomerBookRepository {
         input.city,
         input.postalCode,
         input.country,
+        CustomerStatus.Active,
         CreatedAt(instantNow),
         UpdatedAt(instantNow),
       )
@@ -554,14 +515,15 @@ object CustomerBookRepository {
         organizationID,
         customerID,
         input.businessName,
+        input.taxID,
         input.emails,
         input.phoneNumbers,
-        input.taxID,
         input.addressLine1,
         input.addressLine2,
         input.city,
         input.postalCode,
         input.country,
+        CustomerStatus.Active,
         CreatedAt(instantNow),
         UpdatedAt(instantNow),
       )

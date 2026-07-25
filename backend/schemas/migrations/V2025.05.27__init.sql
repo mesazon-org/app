@@ -95,57 +95,31 @@ create table organization_user
     primary key (organization_id, user_id)
 );
 
+create type customer_status as enum ('Active', 'Archived');
+
 create table customer
 (
-    organization_id uuid        not null,
-    customer_id     uuid        not null,
-    customer_type   text        not null,
-    status          text        not null,
-    created_at      timestamptz not null,
-    updated_at      timestamptz not null,
+    organization_id uuid            not null,
+    customer_id     uuid            not null,
+    customer_type   text            not null,
+    name            text            not null,
+    emails          jsonb           not null,
+    phone_numbers   jsonb           not null,
+    tax_id          text,
+    address_line_1  text,
+    address_line_2  text,
+    city            text,
+    postal_code     text,
+    country         text,
+    status          customer_status not null,
+    created_at      timestamptz     not null,
+    updated_at      timestamptz     not null,
     primary key (organization_id, customer_id)
 );
 
-create table customer_business_details
-(
-    organization_id       uuid        not null,
-    customer_id           uuid        not null,
-    business_name         text        not null,
-    emails                jsonb       not null,
-    phone_numbers         jsonb       not null,
-    tax_id                text,
-    address_line_1        text,
-    address_line_2        text,
-    city                  text,
-    postal_code           text,
-    country               text,
-    created_at            timestamptz not null,
-    updated_at            timestamptz not null,
-    primary key (organization_id, customer_id),
-    constraint uq_customer_business_details_business_name unique (organization_id, business_name),
-    foreign key (organization_id, customer_id)
-        references customer (organization_id, customer_id)
-);
-
-create table customer_individual_details
-(
-    organization_id       uuid        not null,
-    customer_id           uuid        not null,
-    full_name             text        not null,
-    emails                jsonb       not null,
-    phone_numbers         jsonb       not null,
-    address_line_1        text,
-    address_line_2        text,
-    city                  text,
-    postal_code           text,
-    country               text,
-    created_at            timestamptz not null,
-    updated_at            timestamptz not null,
-    primary key (organization_id, customer_id),
-    constraint uq_customer_individual_details_full_name unique (organization_id, full_name),
-    foreign key (organization_id, customer_id)
-        references customer (organization_id, customer_id)
-);
+create unique index uq_customer_name
+    on customer (organization_id, customer_type, name)
+    where status = 'Active';
 
 create table customer_business_contact
 (
@@ -165,7 +139,7 @@ create table customer_business_contact
     constraint uq_customer_business_contact_email unique (organization_id, customer_id, email),
     constraint uq_customer_business_contact_phone_number unique (organization_id, customer_id, phone_number_e164),
     foreign key (organization_id, customer_id)
-        references customer_business_details (organization_id, customer_id)
+        references customer (organization_id, customer_id)
 );
 
 

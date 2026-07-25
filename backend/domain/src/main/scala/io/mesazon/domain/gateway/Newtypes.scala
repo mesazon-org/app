@@ -136,6 +136,9 @@ type CustomerID = CustomerID.T
 object CustomerBusinessContactID extends RefinedTypeUUID
 type CustomerBusinessContactID = CustomerBusinessContactID.T
 
+object CustomerName extends RefinedType[String, NonEmptyTrimmed]
+type CustomerName = CustomerName.T
+
 object CustomerFullName extends RefinedType[String, NonEmptyTrimmed]
 type CustomerFullName = CustomerFullName.T
 
@@ -168,6 +171,3 @@ type CustomerPostalCode = CustomerPostalCode.T
 
 object CustomerCountry extends RefinedType[String, NonEmptyTrimmed]
 type CustomerCountry = CustomerCountry.T
-
-object CustomerDisplayName extends RefinedType[String, NonEmptyTrimmed]
-type CustomerDisplayName = CustomerDisplayName.T

@@ -29,31 +29,57 @@ final class CustomerBookQueries(
 
   private val frSchema = Fragment.const(config.schema)
 
-  private val frCustomerTableName                  = Fragment.const(config.customerTable)
-  private val frCustomerIndividualDetailsTableName = Fragment.const(config.customerIndividualDetailsTable)
-  private val frCustomerBusinessDetailsTableName   = Fragment.const(config.customerBusinessDetailsTable)
-  private val frCustomerBusinessContactTableName   = Fragment.const(config.customerBusinessContactTable)
+  private val frCustomerTableName                = Fragment.const(config.customerTable)
+  private val frCustomerBusinessContactTableName = Fragment.const(config.customerBusinessContactTable)
 
-  private val frCustomerTable                  = frSchema ++ fr0"." ++ frCustomerTableName
-  private val frCustomerIndividualDetailsTable = frSchema ++ fr0"." ++ frCustomerIndividualDetailsTableName
-  private val frCustomerBusinessDetailsTable   = frSchema ++ fr0"." ++ frCustomerBusinessDetailsTableName
-  private val frCustomerBusinessContactTable   = frSchema ++ fr0"." ++ frCustomerBusinessContactTableName
+  private val frCustomerTable                = frSchema ++ fr0"." ++ frCustomerTableName
+  private val frCustomerBusinessContactTable = frSchema ++ fr0"." ++ frCustomerBusinessContactTableName
 
-  private val frCustomerFields =
+  // Individual and business customers share the single `customer` table, distinguished by
+  // `customer_type`. The two typed rows select a type-specific subset of columns (individuals
+  // have no `tax_id`; `name` maps to `full_name` / `business_name` on the row).
+
+  private val frCustomerIndividualInsertFields =
     fr"""
         |organization_id,
         |customer_id,
         |customer_type,
+        |name,
+        |emails,
+        |phone_numbers,
+        |address_line_1,
+        |address_line_2,
+        |city,
+        |postal_code,
+        |country,
         |status,
         |created_at,
         |updated_at
          """.stripMargin
 
-  private val frCustomerIndividualDetailsFields =
+  private def frCustomerIndividualValues(row: CustomerIndividualDetailsRow): Fragment =
+    fr0"(" ++ List(
+      fr0"${row.organizationID}",
+      fr0"${row.customerID}",
+      fr0"${CustomerType.Individual}",
+      fr0"${row.fullName}",
+      fr0"${row.emails}",
+      fr0"${row.phoneNumbers}",
+      fr0"${row.addressLine1}",
+      fr0"${row.addressLine2}",
+      fr0"${row.city}",
+      fr0"${row.postalCode}",
+      fr0"${row.country}",
+      fr0"${row.status}::customer_status",
+      fr0"${row.createdAt}",
+      fr0"${row.updatedAt}",
+    ).intercalate(fr",") ++ fr0")"
+
+  private val frCustomerIndividualSelectFields =
     fr"""
         |organization_id,
         |customer_id,
-        |full_name,
+        |name,
         |emails,
         |phone_numbers,
         |address_line_1,
@@ -61,23 +87,63 @@ final class CustomerBookQueries(
         |city,
         |postal_code,
         |country,
+        |status::text,
         |created_at,
         |updated_at
          """.stripMargin
 
-  private val frCustomerBusinessDetailsFields =
+  private val frCustomerBusinessInsertFields =
     fr"""
         |organization_id,
         |customer_id,
-        |business_name,
+        |customer_type,
+        |name,
+        |tax_id,
         |emails,
         |phone_numbers,
-        |tax_id,
         |address_line_1,
         |address_line_2,
         |city,
         |postal_code,
         |country,
+        |status,
+        |created_at,
+        |updated_at
+         """.stripMargin
+
+  private def frCustomerBusinessValues(row: CustomerBusinessDetailsRow): Fragment =
+    fr0"(" ++ List(
+      fr0"${row.organizationID}",
+      fr0"${row.customerID}",
+      fr0"${CustomerType.Business}",
+      fr0"${row.businessName}",
+      fr0"${row.taxID}",
+      fr0"${row.emails}",
+      fr0"${row.phoneNumbers}",
+      fr0"${row.addressLine1}",
+      fr0"${row.addressLine2}",
+      fr0"${row.city}",
+      fr0"${row.postalCode}",
+      fr0"${row.country}",
+      fr0"${row.status}::customer_status",
+      fr0"${row.createdAt}",
+      fr0"${row.updatedAt}",
+    ).intercalate(fr",") ++ fr0")"
+
+  private val frCustomerBusinessSelectFields =
+    fr"""
+        |organization_id,
+        |customer_id,
+        |name,
+        |tax_id,
+        |emails,
+        |phone_numbers,
+        |address_line_1,
+        |address_line_2,
+        |city,
+        |postal_code,
+        |country,
+        |status::text,
         |created_at,
         |updated_at
          """.stripMargin
@@ -98,16 +164,6 @@ final class CustomerBookQueries(
         |updated_at
          """.stripMargin
 
-  private def insertRow[Row: Write](frTable: Fragment, frFields: Fragment, row: Row): TranzactIO[Unit] =
-    tzio {
-      val q =
-        fr"INSERT INTO" ++ frTable ++
-          fr"(" ++ frFields ++ fr")" ++
-          fr"VALUES (" ++ fr"$row" ++ fr")"
-
-      q.update.run.void
-    }
-
   private def insertRows[Row: Write](frTable: Fragment, frFields: Fragment, rows: List[Row]): TranzactIO[Unit] =
     NonEmptyList.fromList(rows).fold(ZIO.unit: TranzactIO[Unit]) { rowsNel =>
       tzio {
@@ -121,31 +177,73 @@ final class CustomerBookQueries(
       }
     }
 
-  def insertCustomerRow(customerRow: CustomerRow): TranzactIO[Unit] =
-    insertRow(frCustomerTable, frCustomerFields, customerRow)
+  private def insertRowWith[Row](
+      frTable: Fragment,
+      frFields: Fragment,
+      frValues: Row => Fragment,
+      row: Row,
+  ): TranzactIO[Unit] =
+    tzio {
+      val q =
+        fr"INSERT INTO" ++ frTable ++
+          fr"(" ++ frFields ++ fr")" ++
+          fr"VALUES" ++ frValues(row)
 
-  def insertCustomerRows(customerRows: List[CustomerRow]): TranzactIO[Unit] =
-    insertRows(frCustomerTable, frCustomerFields, customerRows)
+      q.update.run.void
+    }
+
+  private def insertRowsWith[Row](
+      frTable: Fragment,
+      frFields: Fragment,
+      frValues: Row => Fragment,
+      rows: List[Row],
+  ): TranzactIO[Unit] =
+    NonEmptyList.fromList(rows).fold(ZIO.unit: TranzactIO[Unit]) { rowsNel =>
+      tzio {
+        val frAllValues = rowsNel.toList.map(frValues).intercalate(fr",")
+        val q           =
+          fr"INSERT INTO" ++ frTable ++
+            fr"(" ++ frFields ++ fr")" ++
+            fr"VALUES" ++ frAllValues
+
+        q.update.run.void
+      }
+    }
 
   def insertCustomerIndividualDetailsRow(
       customerIndividualDetailsRow: CustomerIndividualDetailsRow
   ): TranzactIO[Unit] =
-    insertRow(frCustomerIndividualDetailsTable, frCustomerIndividualDetailsFields, customerIndividualDetailsRow)
+    insertRowWith(
+      frCustomerTable,
+      frCustomerIndividualInsertFields,
+      frCustomerIndividualValues,
+      customerIndividualDetailsRow,
+    )
 
   def insertCustomerIndividualDetailsRows(
       customerIndividualDetailsRows: List[CustomerIndividualDetailsRow]
   ): TranzactIO[Unit] =
-    insertRows(frCustomerIndividualDetailsTable, frCustomerIndividualDetailsFields, customerIndividualDetailsRows)
+    insertRowsWith(
+      frCustomerTable,
+      frCustomerIndividualInsertFields,
+      frCustomerIndividualValues,
+      customerIndividualDetailsRows,
+    )
 
   def insertCustomerBusinessDetailsRow(
       customerBusinessDetailsRow: CustomerBusinessDetailsRow
   ): TranzactIO[Unit] =
-    insertRow(frCustomerBusinessDetailsTable, frCustomerBusinessDetailsFields, customerBusinessDetailsRow)
+    insertRowWith(frCustomerTable, frCustomerBusinessInsertFields, frCustomerBusinessValues, customerBusinessDetailsRow)
 
   def insertCustomerBusinessDetailsRows(
       customerBusinessDetailsRows: List[CustomerBusinessDetailsRow]
   ): TranzactIO[Unit] =
-    insertRows(frCustomerBusinessDetailsTable, frCustomerBusinessDetailsFields, customerBusinessDetailsRows)
+    insertRowsWith(
+      frCustomerTable,
+      frCustomerBusinessInsertFields,
+      frCustomerBusinessValues,
+      customerBusinessDetailsRows,
+    )
 
   def insertCustomerBusinessContactRows(
       customerBusinessContactRows: List[CustomerBusinessContactRow]
@@ -168,7 +266,7 @@ final class CustomerBookQueries(
     val updates = NonEmptyList.of(
       fr"updated_at = $updatedAt"
     ) ++ List(
-      fullNameOptUpdate.map(v => fr"full_name = $v"),
+      fullNameOptUpdate.map(v => fr"name = $v"),
       emailsOptUpdate.map(v => fr"emails = $v"),
       phoneNumbersOptUpdate.map(v => fr"phone_numbers = $v"),
       addressLine1OptUpdate.map(v => fr"address_line_1 = $v"),
@@ -180,13 +278,14 @@ final class CustomerBookQueries(
 
     tzio {
       val q =
-        fr"UPDATE" ++ frCustomerIndividualDetailsTable ++
+        fr"UPDATE" ++ frCustomerTable ++
           set(updates) ++
           whereAnd(
             fr"organization_id = $organizationID",
             fr"customer_id = $customerID",
+            fr"customer_type = ${CustomerType.Individual}",
           ) ++
-          fr"RETURNING" ++ frCustomerIndividualDetailsFields
+          fr"RETURNING" ++ frCustomerIndividualSelectFields
 
       q.query[CustomerIndividualDetailsRow].unique
     }
@@ -209,9 +308,9 @@ final class CustomerBookQueries(
     val updates = NonEmptyList.of(
       fr"updated_at = $updatedAt"
     ) ++ List(
-      businessNameOptUpdate.map(v => fr"business_name = $v"),
-      emailsOptUpdate.map(v => fr"emails = $v"),
+      businessNameOptUpdate.map(v => fr"name = $v"),
       taxIDOptUpdate.map(v => fr"tax_id = $v"),
+      emailsOptUpdate.map(v => fr"emails = $v"),
       phoneNumbersOptUpdate.map(v => fr"phone_numbers = $v"),
       addressLine1OptUpdate.map(v => fr"address_line_1 = $v"),
       addressLine2OptUpdate.map(v => fr"address_line_2 = $v"),
@@ -222,13 +321,14 @@ final class CustomerBookQueries(
 
     tzio {
       val q =
-        fr"UPDATE" ++ frCustomerBusinessDetailsTable ++
+        fr"UPDATE" ++ frCustomerTable ++
           set(updates) ++
           whereAnd(
             fr"organization_id = $organizationID",
             fr"customer_id = $customerID",
+            fr"customer_type = ${CustomerType.Business}",
           ) ++
-          fr"RETURNING" ++ frCustomerBusinessDetailsFields
+          fr"RETURNING" ++ frCustomerBusinessSelectFields
 
       q.query[CustomerBusinessDetailsRow].unique
     }
@@ -240,11 +340,12 @@ final class CustomerBookQueries(
   ): TranzactIO[Option[CustomerIndividualDetailsRow]] =
     tzio {
       val q =
-        fr"SELECT" ++ frCustomerIndividualDetailsFields ++
-          fr"FROM" ++ frCustomerIndividualDetailsTable ++
+        fr"SELECT" ++ frCustomerIndividualSelectFields ++
+          fr"FROM" ++ frCustomerTable ++
           whereAnd(
             fr"organization_id = $organizationID",
             fr"customer_id = $customerID",
+            fr"customer_type = ${CustomerType.Individual}",
           )
 
       q.query[CustomerIndividualDetailsRow].option
@@ -256,35 +357,27 @@ final class CustomerBookQueries(
   ): TranzactIO[Option[CustomerBusinessDetailsRow]] =
     tzio {
       val q =
-        fr"SELECT" ++ frCustomerBusinessDetailsFields ++
-          fr"FROM" ++ frCustomerBusinessDetailsTable ++
+        fr"SELECT" ++ frCustomerBusinessSelectFields ++
+          fr"FROM" ++ frCustomerTable ++
           whereAnd(
             fr"organization_id = $organizationID",
             fr"customer_id = $customerID",
+            fr"customer_type = ${CustomerType.Business}",
           )
 
       q.query[CustomerBusinessDetailsRow].option
     }
 
-  private val frCustomerSummaryFromJoins =
-    Fragment.const(
-      s"""FROM ${config.schema}.${config.customerTable} c
-         |LEFT JOIN ${config.schema}.${config.customerIndividualDetailsTable} cid
-         |  ON cid.organization_id = c.organization_id AND cid.customer_id = c.customer_id
-         |LEFT JOIN ${config.schema}.${config.customerBusinessDetailsTable} cbd
-         |  ON cbd.organization_id = c.organization_id AND cbd.customer_id = c.customer_id""".stripMargin
-    )
-
   def getCustomerSummaryRows(organizationID: OrganizationID): TranzactIO[List[CustomerSummaryRow]] =
     tzio {
       val q =
-        fr"SELECT c.customer_id, COALESCE(cid.full_name, cbd.business_name), c.customer_type" ++
-          frCustomerSummaryFromJoins ++
+        fr"SELECT customer_id, name, customer_type" ++
+          fr"FROM" ++ frCustomerTable ++
           whereAnd(
-            fr"c.organization_id = $organizationID",
-            fr"c.status = ${CustomerStatus.Active}",
+            fr"organization_id = $organizationID",
+            fr"status = ${CustomerStatus.Active}::customer_status",
           ) ++
-          fr"ORDER BY LOWER(COALESCE(cid.full_name, cbd.business_name)), c.customer_id"
+          fr"ORDER BY LOWER(name), customer_id"
 
       q.query[CustomerSummaryRow].to[List]
     }
@@ -307,21 +400,27 @@ final class CustomerBookQueries(
     }
 
   // Testing
-  def getAllCustomerRowsTesting: TranzactIO[List[CustomerRow]] =
+  def getAllCustomerIDsTesting: TranzactIO[List[CustomerID]] =
     tzio {
-      val q = fr"SELECT" ++ frCustomerFields ++ fr"FROM" ++ frCustomerTable
-      q.query[CustomerRow].to[List]
+      val q = fr"SELECT customer_id FROM" ++ frCustomerTable
+      q.query[CustomerID].to[List]
     }
 
   def getAllCustomerIndividualDetailsRowsTesting: TranzactIO[List[CustomerIndividualDetailsRow]] =
     tzio {
-      val q = fr"SELECT" ++ frCustomerIndividualDetailsFields ++ fr"FROM" ++ frCustomerIndividualDetailsTable
+      val q =
+        fr"SELECT" ++ frCustomerIndividualSelectFields ++
+          fr"FROM" ++ frCustomerTable ++
+          fr"WHERE customer_type = ${CustomerType.Individual}"
       q.query[CustomerIndividualDetailsRow].to[List]
     }
 
   def getAllCustomerBusinessDetailsRowsTesting: TranzactIO[List[CustomerBusinessDetailsRow]] =
     tzio {
-      val q = fr"SELECT" ++ frCustomerBusinessDetailsFields ++ fr"FROM" ++ frCustomerBusinessDetailsTable
+      val q =
+        fr"SELECT" ++ frCustomerBusinessSelectFields ++
+          fr"FROM" ++ frCustomerTable ++
+          fr"WHERE customer_type = ${CustomerType.Business}"
       q.query[CustomerBusinessDetailsRow].to[List]
     }
 

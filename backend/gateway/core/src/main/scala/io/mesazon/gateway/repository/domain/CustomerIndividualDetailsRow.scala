@@ -14,6 +14,7 @@ case class CustomerIndividualDetailsRow(
     city: Option[CustomerCity],
     postalCode: Option[CustomerPostalCode],
     country: Option[CustomerCountry],
+    status: CustomerStatus,
     createdAt: CreatedAt,
     updatedAt: UpdatedAt,
 )
