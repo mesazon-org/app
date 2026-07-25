@@ -38,6 +38,10 @@ final class CustomerBookQueries(
   // Individual and business customers share the single `customer` table, distinguished by
   // `customer_type`. The two typed rows select a type-specific subset of columns (individuals
   // have no `tax_id`; `name` maps to `full_name` / `business_name` on the row).
+  //
+  // `status` is a native `customer_status` enum. The generic `CustomerStatus` codec (derived from
+  // its string labels) binds/reads it as text, so writes cast the bound param `?::customer_status`
+  // and selects read `status::text` — any new query touching `status` must keep those casts.
 
   private val frCustomerIndividualInsertFields =
     fr"""
@@ -164,18 +168,11 @@ final class CustomerBookQueries(
         |updated_at
          """.stripMargin
 
+  // Whole-row insert via doobie's positional `Write` binding — for rows that map 1:1 to their table
+  // (e.g. `CustomerBusinessContactRow`). Rows that are a typed view over a shared table build their
+  // VALUES explicitly through the `…With` helpers below.
   private def insertRows[Row: Write](frTable: Fragment, frFields: Fragment, rows: List[Row]): TranzactIO[Unit] =
-    NonEmptyList.fromList(rows).fold(ZIO.unit: TranzactIO[Unit]) { rowsNel =>
-      tzio {
-        val frValues = rowsNel.toList.map(row => fr0"(" ++ fr"$row" ++ fr0")").intercalate(fr",")
-        val q        =
-          fr"INSERT INTO" ++ frTable ++
-            fr"(" ++ frFields ++ fr")" ++
-            fr"VALUES" ++ frValues
-
-        q.update.run.void
-      }
-    }
+    insertRowsWith(frTable, frFields, (row: Row) => fr0"(" ++ fr"$row" ++ fr0")", rows)
 
   private def insertRowWith[Row](
       frTable: Fragment,

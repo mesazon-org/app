@@ -747,47 +747,53 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
       }
     }
 
-    "the individual/business type-exclusivity invariant" should {
-      "never place a customer_id in both detail tables" in new TestContext {
-        val organizationID                = arbitrarySample[OrganizationID]
-        val customerIDIndividual          = arbitrarySample[CustomerID]
-        val customerIDBusiness            = arbitrarySample[CustomerID]
-        val insertCustomerIndividualInput = arbitrarySample[InsertCustomerIndividualInput]
-        val insertCustomerBusinessInput   =
-          arbitrarySample[InsertCustomerBusinessInput].copy(customerBusinessContacts = List.empty)
+    // uq_customer_name is a partial unique index on (organization_id, customer_type, name) WHERE status = 'Active',
+    // so uniqueness is scoped to *active* customers *of the same kind*.
+    "the uq_customer_name partial unique index" should {
+      "allow an individual and a business to share a name within an organization" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+        val sharedName     = "Shared Name"
 
-        customerIDIndividual shouldNot equal(customerIDBusiness)
+        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(
+            organizationID = organizationID,
+            fullName = CustomerFullName.assume(sharedName),
+            status = CustomerStatus.Active,
+          )
+        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+          .copy(
+            organizationID = organizationID,
+            businessName = CustomerBusinessName.assume(sharedName),
+            status = CustomerStatus.Active,
+          )
 
-        inSequence(
-          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
-          (() => idGeneratorMock.generateID).expects().returningZIO(customerIDIndividual.value).once(),
-          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
-          (() => idGeneratorMock.generateID).expects().returningZIO(customerIDBusiness.value).once(),
-        )
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+          .zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
 
-        customerBookRepository.insertCustomerIndividual(organizationID, insertCustomerIndividualInput).zioValue
-        customerBookRepository.insertCustomerBusiness(organizationID, insertCustomerBusinessInput).zioValue
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 2
+      }
 
-        val customerIDsIndividual =
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue
-            .map(_.customerID)
-            .toSet
-        val customerIDsBusiness =
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue
-            .map(_.customerID)
-            .toSet
+      "allow a new active customer to reuse an archived customer's name" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+        val reusedName     = CustomerFullName.assume("Reused Name")
 
-        customerIDsIndividual should contain(customerIDIndividual)
-        customerIDsBusiness should contain(customerIDBusiness)
-        (customerIDsIndividual intersect customerIDsBusiness) shouldBe empty
+        val customerIndividualDetailsRowArchived = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(organizationID = organizationID, fullName = reusedName, status = CustomerStatus.Archived)
+        val customerIndividualDetailsRowActive = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(organizationID = organizationID, fullName = reusedName, status = CustomerStatus.Active)
 
-        // the type-filtered reads partition the table: individuals + businesses account for every row
-        (customerIDsIndividual.size + customerIDsBusiness.size) shouldBe
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue.size
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRowArchived))
+          .zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRowActive))
+          .zioValue
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 2
       }
     }
   }

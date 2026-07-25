@@ -2036,6 +2036,9 @@ class CustomerBookApiSpec
           .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRowArchived))
           .zioValue
 
+        // all three customers are stored; the response below returns only the two ACTIVE ones
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 3
+
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val getCustomersGetResponse =
