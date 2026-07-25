@@ -4,6 +4,6 @@ import io.mesazon.domain.gateway.*
 
 case class CustomerSummaryRow(
     customerID: CustomerID,
-    displayName: CustomerDisplayName,
+    name: CustomerName,
     customerType: CustomerType,
 )

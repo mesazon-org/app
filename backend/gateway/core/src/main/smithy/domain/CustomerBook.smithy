@@ -197,7 +197,7 @@ structure GetCustomer {
     @required
     customerID: UUID
     @required
-    displayName: String
+    name: String
     @required
     customerType: CustomerType
 }

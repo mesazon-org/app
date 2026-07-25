@@ -51,8 +51,6 @@ trait RepositoryArbitraries
     )(_.copy(isDefault = true))
   )
 
-  given Arbitrary[CustomerRow] = Arbitrary(Gen.resultOf(CustomerRow.apply))
-
   given Arbitrary[CustomerIndividualDetailsRow] = Arbitrary(Gen.resultOf(CustomerIndividualDetailsRow.apply))
 
   given Arbitrary[CustomerBusinessDetailsRow] = Arbitrary(Gen.resultOf(CustomerBusinessDetailsRow.apply))
