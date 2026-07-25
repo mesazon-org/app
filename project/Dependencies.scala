@@ -9,7 +9,7 @@ object Dependencies {
   lazy val zioInteropCatsV      = "23.1.0.13"
   lazy val catsV                = "2.13.0"
   lazy val zioLoggingV          = "2.5.3"
-  lazy val logbackV             = "1.5.38"
+  lazy val logbackV             = "1.6.0"
   lazy val julToSlf4jV          = "2.0.18"
   lazy val jclToSlf4jV          = "2.0.18"
   lazy val pureconfigV          = "0.17.10"
@@ -27,7 +27,7 @@ object Dependencies {
   lazy val libphonenumberV      = "9.0.35"
   lazy val circeV               = "0.14.16"
   lazy val sttpV                = "4.0.26"
-  lazy val tapirV               = "1.13.28"
+  lazy val tapirV               = "1.13.29"
   lazy val jsoniterV            = "2.39.1"
   lazy val sttpAIV              = "0.5.4"
   lazy val jmailV               = "2.1.0"
@@ -40,7 +40,7 @@ object Dependencies {
   lazy val scalamockV           = "7.5.5"
   lazy val scrimageV            = "4.6.6"
   lazy val tikaV                = "3.3.2"
-  lazy val awssdkV              = "2.48.4"
+  lazy val awssdkV              = "2.49.3"
   lazy val zioS3V               = "0.4.4"
 
   // Http4s
