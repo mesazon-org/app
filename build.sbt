@@ -227,8 +227,11 @@ lazy val backendGatewayIt = createBackendGatewayModule(Some("it"))
     Dependencies.circeGeneric      % Test,
   )
   .settings(
+    // All acceptance specs share one docker-compose stack (see GatewayAcceptanceSpec), so the nested specs must not run
+    // concurrently against the single database — deny sbt a Distributor to keep nested-suite execution sequential.
+    Test / parallelExecution := false,
     Settings.testAfterDockerPublish(
       backendWiremock / Docker / publishLocal,
       backendGatewayCore / Docker / publishLocal,
-    )
+    ),
   )
