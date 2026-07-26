@@ -10,6 +10,3 @@
 # Force ANSI colour on regardless of the client's TTY detection (sbt 2's thin client
 # otherwise drops colour in some terminals). GitHub Actions renders ANSI, so CI is unaffected.
 -Dsbt.color=always
-
-# Use compact object headers to reduce memory footprint of the sbt server JVM.
--XX:+UseCompactObjectHeaders
