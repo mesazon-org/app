@@ -53,7 +53,11 @@ module "gateway_core_app" {
     ORGANIZATION_LOGOS_S3_CLIENT_REGION   = data.digitalocean_spaces_bucket.organization_logos_bucket.region
     ORGANIZATION_LOGOS_S3_CLIENT_BUCKET   = data.digitalocean_spaces_bucket.organization_logos_bucket.name
 
-    JAVA_OPTS = "-XX:InitialRAMPercentage=65.0 -XX:MaxRAMPercentage=65.0 -XX:MaxMetaspaceSize=256m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -XX:+UseContainerSupport"
+    # JAVA_TOOL_OPTIONS (not JAVA_OPTS): the image ENTRYPOINT is the bare `java` binary,
+    # which reads JAVA_TOOL_OPTIONS natively but ignores the wrapper-script JAVA_OPTS
+    # convention. UseCompactObjectHeaders is a JDK 25 product feature (JEP 519), off by
+    # default, that shrinks object headers 12->8 bytes.
+    JAVA_TOOL_OPTIONS = "-XX:InitialRAMPercentage=65.0 -XX:MaxRAMPercentage=65.0 -XX:MaxMetaspaceSize=256m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -XX:+UseContainerSupport -XX:+UseCompactObjectHeaders"
 
     REPOSITORY_SCHEMA = local.repository_schema
     DATABASE_NAME     = local.database_name
