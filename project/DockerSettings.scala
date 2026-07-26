@@ -10,7 +10,9 @@ object DockerSettings {
   private lazy val dockerTagEnv        = sys.env.get("DOCKER_IMAGE_TAG")
 
   private lazy val daemonUser = "nonroot"
-  private lazy val baseImage  = s"gcr.io/distroless/java21-debian12:$daemonUser"
+  // Distroless ships the java25 image on debian13 (trixie) only — there is no
+  // java25-debian12. Older lines (java17/java21) still exist on debian12.
+  private lazy val baseImage = s"gcr.io/distroless/java25-debian13:$daemonUser"
 
   private lazy val workDir      = "/opt/docker"
   private lazy val pasteJarsDir = "jars/"

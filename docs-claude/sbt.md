@@ -1,6 +1,6 @@
 # sbt Build Definition
 
-The build runs on **sbt 2.0.2** (Scala 3 metabuild — everything under `project/` and `build.sbt` is Scala 3 syntax, formatted with the `scala3` scalafmt dialect). Scala version for all modules: **3.8.4**, JDK 21 (temurin, see `.tool-versions`).
+The build runs on **sbt 2.0.2** (Scala 3 metabuild — everything under `project/` and `build.sbt` is Scala 3 syntax, formatted with the `scala3` scalafmt dialect). Scala version for all modules: **3.8.4**, JDK 25 (temurin, see `.tool-versions`).
 
 ## File map
 
@@ -13,7 +13,7 @@ The build runs on **sbt 2.0.2** (Scala 3 metabuild — everything under `project
 | `project/Settings.scala` | `Settings.ScalaCompiler` (tpolecat scalac options `-no-indent`, `-old-syntax`, `-experimental`, `--preview`, `-Wunused:all` + test-only warning suppressions) and `Settings.testAfterDockerPublish` (publish docker images before tests) |
 | `project/Projects.scala` | `ProjectOps.withDependencies(deps*)` extension used instead of raw `libraryDependencies ++=` |
 | `project/Aliases.scala` | Command aliases: `checkLint`/`runLint` (fix+fmt), `gateway-build`, `waha-build` (CI entrypoints: `clean; project <x>; checkLint; test`) |
-| `project/DockerSettings.scala` | `DockerSettings.compileScope`: distroless java21 image for gateway-core (native-packager stage layers `2/` = dependency jars, `4/` = app jars) |
+| `project/DockerSettings.scala` | `DockerSettings.compileScope`: distroless `java25-debian13` image for gateway-core — java25 ships on debian13 only, there is no java25-debian12 (native-packager stage layers `2/` = dependency jars, `4/` = app jars). ENTRYPOINT is the bare `java` binary; runtime JVM flags live in Terraform via `JAVA_TOOL_OPTIONS` (`terraform/dev/gateway/app.tf`), **not** `JAVA_OPTS` (which the bare `java` binary ignores) |
 | `project/DockerWiremockSettings.scala` | Wiremock image with `backend/wiremock/mappings/` baked in |
 | `.sbtopts` | sbt server JVM memory/GC + `-Dsbt.color=always` (sbt 2's thin client otherwise drops colour in some terminals) |
 
@@ -64,7 +64,7 @@ The `<service>-build` aliases are the CI entrypoints and follow a fixed shape: *
 
 ## CI
 
-`.github/workflows/job-scala-build.yml` runs `sbt <module>-build` (the alias above) on JDK 21 with `setup-java` sbt caching (covers coursier) and uploads the docker image built by `Docker / publishLocal` (tag from `DOCKER_IMAGE_TAG` env, repo from `DOCKER_REPOSITORY`). Lint-on-compile is env-gated via `ENABLE_SCALA_LINT_ON_COMPILE` (off in CI compile; `checkLint` runs explicitly in the alias). New services need: a `pipeline-<name>-ci.yml`, a `<name>-build` alias in `Aliases.scala`, and path filters mirroring `pipeline-waha-ci.yml`.
+`.github/workflows/job-scala-build.yml` runs `sbt <module>-build` (the alias above) on JDK 25 with `setup-java` sbt caching (covers coursier) and uploads the docker image built by `Docker / publishLocal` (tag from `DOCKER_IMAGE_TAG` env, repo from `DOCKER_REPOSITORY`). Lint-on-compile is env-gated via `ENABLE_SCALA_LINT_ON_COMPILE` (off in CI compile; `checkLint` runs explicitly in the alias). New services need: a `pipeline-<name>-ci.yml`, a `<name>-build` alias in `Aliases.scala`, and path filters mirroring `pipeline-waha-ci.yml`.
 
 ## Common commands
 

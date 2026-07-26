@@ -8,6 +8,7 @@ services:
       - "8082:8082" # Health
       - "8083:8083" # Docs
     environment:
+      JAVA_TOOL_OPTIONS: "-XX:InitialRAMPercentage=65.0 -XX:MaxRAMPercentage=65.0 -XX:MaxMetaspaceSize=256m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -XX:+UseContainerSupport -XX:+UseCompactObjectHeaders"
       LOG_LEVEL: INFO
       DATABASE_NAME: local_db
       DATABASE_HOST: postgres
