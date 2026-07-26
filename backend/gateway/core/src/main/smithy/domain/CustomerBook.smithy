@@ -160,6 +160,11 @@ structure RemoveCustomerBusinessContactsPutRequest {
     customerBusinessContacts: RemoveCustomerBusinessContacts
 }
 
+structure ArchiveCustomerPutRequest {
+    @required
+    customerID: UUID
+}
+
 structure GetCustomerIndividualGetResponse {
     @required
     customerID: UUID

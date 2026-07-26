@@ -37,7 +37,7 @@ trait CustomerBookRepository {
       cityOptUpdate: Option[CustomerCity] = None,
       postalCodeOptUpdate: Option[CustomerPostalCode] = None,
       countryOptUpdate: Option[CustomerCountry] = None,
-  ): IO[ServiceError, CustomerIndividualDetailsRow]
+  ): IO[ServiceError, Option[CustomerIndividualDetailsRow]]
 
   def insertCustomerBusiness(
       organizationID: OrganizationID,
@@ -61,7 +61,7 @@ trait CustomerBookRepository {
       cityOptUpdate: Option[CustomerCity] = None,
       postalCodeOptUpdate: Option[CustomerPostalCode] = None,
       countryOptUpdate: Option[CustomerCountry] = None,
-  ): IO[ServiceError, CustomerBusinessDetailsRow]
+  ): IO[ServiceError, Option[CustomerBusinessDetailsRow]]
 
   def insertCustomers(
       organizationID: OrganizationID,
@@ -80,6 +80,11 @@ trait CustomerBookRepository {
       customerID: CustomerID,
       customerBusinessContactIDs: List[CustomerBusinessContactID],
   ): IO[ServiceError, Unit]
+
+  def archiveCustomer(
+      organizationID: OrganizationID,
+      customerID: CustomerID,
+  ): IO[ServiceError, Option[CustomerID]]
 
   def getCustomerIndividual(
       organizationID: OrganizationID,
@@ -199,7 +204,7 @@ object CustomerBookRepository {
         cityOptUpdate: Option[CustomerCity],
         postalCodeOptUpdate: Option[CustomerPostalCode],
         countryOptUpdate: Option[CustomerCountry],
-    ): IO[ServiceError, CustomerIndividualDetailsRow] = for {
+    ): IO[ServiceError, Option[CustomerIndividualDetailsRow]] = for {
       instantNow                          <- timeProvider.instantNow
       customerIndividualDetailsRowUpdated <- database
         .transactionOrWiden(
@@ -296,7 +301,7 @@ object CustomerBookRepository {
         cityOptUpdate: Option[CustomerCity],
         postalCodeOptUpdate: Option[CustomerPostalCode],
         countryOptUpdate: Option[CustomerCountry],
-    ): IO[ServiceError, CustomerBusinessDetailsRow] = for {
+    ): IO[ServiceError, Option[CustomerBusinessDetailsRow]] = for {
       instantNow                        <- timeProvider.instantNow
       customerBusinessDetailsRowUpdated <- database
         .transactionOrWiden(
@@ -379,12 +384,21 @@ object CustomerBookRepository {
         customerBusinessContactInputs,
         instantNow,
       )
-      _ <- database
+      // Contacts are only added to an active business; an archived (or absent) parent is a silent no-op.
+      customerBusinessContactRowsInserted <- database
         .transactionOrWiden(
-          customerBookQueries.insertCustomerBusinessContactRows(customerBusinessContactRows)
+          for {
+            active   <- customerBookQueries.customerActiveExists(organizationID, customerID)
+            inserted <-
+              if (active)
+                customerBookQueries
+                  .insertCustomerBusinessContactRows(customerBusinessContactRows)
+                  .as(customerBusinessContactRows)
+              else ZIO.succeed(List.empty[CustomerBusinessContactRow])
+          } yield inserted
         )
         .mapError(toServiceError(s"Failed to add customer business contacts for customer ID: [$customerID]"))
-    } yield customerBusinessContactRows
+    } yield customerBusinessContactRowsInserted
 
     override def removeCustomerBusinessContacts(
         organizationID: OrganizationID,
@@ -396,15 +410,32 @@ object CustomerBookRepository {
         case Some(customerBusinessContactIDsNonEmpty) =>
           database
             .transactionOrWiden(
-              customerBookQueries.deleteCustomerBusinessContactRows(
-                organizationID,
-                customerID,
-                customerBusinessContactIDsNonEmpty,
-              )
+              // Contacts are only removed from an active business; an archived (or absent) parent is a no-op.
+              for {
+                active <- customerBookQueries.customerActiveExists(organizationID, customerID)
+                _      <- ZIO.when(active)(
+                  customerBookQueries.deleteCustomerBusinessContactRows(
+                    organizationID,
+                    customerID,
+                    customerBusinessContactIDsNonEmpty,
+                  )
+                )
+              } yield ()
             )
-            .unit
             .mapError(toServiceError(s"Failed to remove customer business contacts for customer ID: [$customerID]"))
       }
+
+    override def archiveCustomer(
+        organizationID: OrganizationID,
+        customerID: CustomerID,
+    ): IO[ServiceError, Option[CustomerID]] = for {
+      instantNow            <- timeProvider.instantNow
+      customerIDOptArchived <- database
+        .transactionOrWiden(
+          customerBookQueries.archiveCustomerRow(organizationID, customerID, UpdatedAt(instantNow))
+        )
+        .mapError(toServiceError(s"Failed to archive customer with ID: [$customerID]"))
+    } yield customerIDOptArchived
 
     override def getCustomerIndividual(
         organizationID: OrganizationID,

@@ -27,6 +27,8 @@ service CustomerBookService {
         AddCustomerBusinessContactsPut
         RemoveCustomerBusinessContactsPut
 
+        ArchiveCustomerPut
+
         GetCustomerIndividualGet
         GetCustomerBusinessGet
 
@@ -138,6 +140,18 @@ operation RemoveCustomerBusinessContactsPut {
         @required
         @httpPayload
         request: RemoveCustomerBusinessContactsPutRequest
+    }
+    errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
+}
+
+/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
+@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+@http(method: "PUT", uri: "/archive/customer", code: 204)
+operation ArchiveCustomerPut {
+    input := with [OrganizationScopedInput] {
+        @required
+        @httpPayload
+        request: ArchiveCustomerPutRequest
     }
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }

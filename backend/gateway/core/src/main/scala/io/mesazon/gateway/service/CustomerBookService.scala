@@ -166,6 +166,19 @@ object CustomerBookService {
         ),
       )
 
+    /** HTTP PUT /archive/customer */
+    override def archiveCustomerPut(
+        organizationID: UUID,
+        archiveCustomerPutRequestSmithy: smithy.ArchiveCustomerPutRequest,
+    ): ServiceTask[Unit] =
+      // Archiving a missing (or already-archived) customer is a silent no-op — no 404/500.
+      customerBookRepository
+        .archiveCustomer(
+          OrganizationID(organizationID),
+          CustomerID(archiveCustomerPutRequestSmithy.customerID),
+        )
+        .unit
+
     /** HTTP GET /get/customer-individual/{customerID} */
     override def getCustomerIndividualGet(
         organizationID: UUID,
@@ -340,6 +353,15 @@ object CustomerBookService {
       ): Task[Unit] =
         HttpErrorHandler.errorResponseHandler(
           service.removeCustomerBusinessContactsPut(organizationID, removeCustomerBusinessContactsPutRequestSmithy)
+        )
+
+      /** HTTP PUT /archive/customer */
+      override def archiveCustomerPut(
+          organizationID: UUID,
+          archiveCustomerPutRequestSmithy: smithy.ArchiveCustomerPutRequest,
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(
+          service.archiveCustomerPut(organizationID, archiveCustomerPutRequestSmithy)
         )
 
       /** HTTP GET /get/customer-individual/{customerID} */

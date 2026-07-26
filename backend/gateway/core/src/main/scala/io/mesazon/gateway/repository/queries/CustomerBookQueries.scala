@@ -265,7 +265,7 @@ final class CustomerBookQueries(
       cityOptUpdate: Option[CustomerCity] = None,
       postalCodeOptUpdate: Option[CustomerPostalCode] = None,
       countryOptUpdate: Option[CustomerCountry] = None,
-  ): TranzactIO[CustomerIndividualDetailsRow] = {
+  ): TranzactIO[Option[CustomerIndividualDetailsRow]] = {
     val updates = NonEmptyList.of(
       fr"updated_at = $updatedAt"
     ) ++ List(
@@ -280,6 +280,8 @@ final class CustomerBookQueries(
     ).flatten
 
     tzio {
+      // Only active customers are editable: archived (or absent) rows match nothing, so the update is
+      // a silent no-op (`.option` → None). Keeps the mandatory `::customer_status` cast.
       val q =
         fr"UPDATE" ++ frCustomerTable ++
           set(updates) ++
@@ -287,10 +289,11 @@ final class CustomerBookQueries(
             fr"organization_id = $organizationID",
             fr"customer_id = $customerID",
             fr"customer_type = ${CustomerType.Individual}",
+            fr0"status = ${CustomerStatus.Active}::" ++ frCustomerStatusType,
           ) ++
           fr"RETURNING" ++ frCustomerIndividualSelectFields
 
-      q.query[CustomerIndividualDetailsRow].unique
+      q.query[CustomerIndividualDetailsRow].option
     }
   }
 
@@ -307,7 +310,7 @@ final class CustomerBookQueries(
       cityOptUpdate: Option[CustomerCity] = None,
       postalCodeOptUpdate: Option[CustomerPostalCode] = None,
       countryOptUpdate: Option[CustomerCountry] = None,
-  ): TranzactIO[CustomerBusinessDetailsRow] = {
+  ): TranzactIO[Option[CustomerBusinessDetailsRow]] = {
     val updates = NonEmptyList.of(
       fr"updated_at = $updatedAt"
     ) ++ List(
@@ -323,6 +326,8 @@ final class CustomerBookQueries(
     ).flatten
 
     tzio {
+      // Only active customers are editable: archived (or absent) rows match nothing, so the update is
+      // a silent no-op (`.option` → None). Keeps the mandatory `::customer_status` cast.
       val q =
         fr"UPDATE" ++ frCustomerTable ++
           set(updates) ++
@@ -330,12 +335,57 @@ final class CustomerBookQueries(
             fr"organization_id = $organizationID",
             fr"customer_id = $customerID",
             fr"customer_type = ${CustomerType.Business}",
+            fr0"status = ${CustomerStatus.Active}::" ++ frCustomerStatusType,
           ) ++
           fr"RETURNING" ++ frCustomerBusinessSelectFields
 
-      q.query[CustomerBusinessDetailsRow].unique
+      q.query[CustomerBusinessDetailsRow].option
     }
   }
+
+  // Archive (soft-delete) a customer: type-agnostic (matches by id regardless of `customer_type`),
+  // but only an *active* one — a missing or already-archived customer matches nothing and returns
+  // `None` (a silent no-op for the caller). Removing a row from the active set can never violate the
+  // partial `uq_customer_name` index. Keeps the mandatory `::customer_status` cast.
+  def archiveCustomerRow(
+      organizationID: OrganizationID,
+      customerID: CustomerID,
+      updatedAt: UpdatedAt,
+  ): TranzactIO[Option[CustomerID]] =
+    tzio {
+      val q =
+        fr"UPDATE" ++ frCustomerTable ++
+          set(
+            fr0"status = ${CustomerStatus.Archived}::" ++ frCustomerStatusType,
+            fr"updated_at = $updatedAt",
+          ) ++
+          whereAnd(
+            fr"organization_id = $organizationID",
+            fr"customer_id = $customerID",
+            fr0"status = ${CustomerStatus.Active}::" ++ frCustomerStatusType,
+          ) ++
+          fr"RETURNING customer_id"
+
+      q.query[CustomerID].option
+    }
+
+  // Guards the contact writes: they only touch a business whose parent customer is still Active, so
+  // adding/removing contacts on an archived (or absent) customer is a silent no-op. Keeps the cast.
+  def customerActiveExists(
+      organizationID: OrganizationID,
+      customerID: CustomerID,
+  ): TranzactIO[Boolean] =
+    tzio {
+      val q =
+        fr"SELECT EXISTS(SELECT 1 FROM" ++ frCustomerTable ++
+          whereAnd(
+            fr"organization_id = $organizationID",
+            fr"customer_id = $customerID",
+            fr0"status = ${CustomerStatus.Active}::" ++ frCustomerStatusType,
+          ) ++ fr")"
+
+      q.query[Boolean].unique
+    }
 
   def getCustomerIndividualDetailsRow(
       organizationID: OrganizationID,
