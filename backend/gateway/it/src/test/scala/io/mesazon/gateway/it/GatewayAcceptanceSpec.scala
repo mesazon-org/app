@@ -89,7 +89,7 @@ class GatewayAcceptanceSpec
       mailHogClientConfig    = MailHogClientConfig.from(container)
       s3TestClientConfig     = S3TestClientConfig.from(container)
       repositoryConfig <- ZIO.service[RepositoryConfig].provide(RepositoryConfig.live, appNameLive)
-      postgresClient <- ZIO
+      postgresClient   <- ZIO
         .service[PostgreSQLTestClient]
         .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgreSQLClientConfig))
       gatewayClient <- ZIO
@@ -104,7 +104,7 @@ class GatewayAcceptanceSpec
       jwtService <- ZIO
         .service[JwtService]
         .provide(JwtService.live, JwtConfig.live, IDGenerator.liveUUIDv7, TimeProvider.liveSystemUTC, appNameLive)
-      passwordService <- ZIO.service[PasswordService].provide(PasswordService.live, PasswordConfig.live, appNameLive)
+      passwordService    <- ZIO.service[PasswordService].provide(PasswordService.live, PasswordConfig.live, appNameLive)
       userDetailsQueries <- ZIO
         .service[UserDetailsQueries]
         .provide(UserDetailsQueries.live, RepositoryConfig.live, appNameLive)
