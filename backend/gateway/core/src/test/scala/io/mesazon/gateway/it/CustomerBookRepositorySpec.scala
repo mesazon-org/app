@@ -495,6 +495,35 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           customerBusinessContactRowsAdded
       }
 
+      "silently do nothing and insert no contacts when the business is archived" in new TestContext {
+        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+          .copy(status = CustomerStatus.Archived)
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
+
+        val customerBusinessContactID    = arbitrarySample[CustomerBusinessContactID]
+        val customerBusinessContactInput = arbitrarySample[CustomerBusinessContactInput]
+
+        inSequence(
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(customerBusinessContactID.value).once(),
+        )
+
+        customerBookRepository
+          .addCustomerBusinessContacts(
+            customerBusinessDetailsRow.organizationID,
+            customerBusinessDetailsRow.customerID,
+            List(customerBusinessContactInput),
+          )
+          .zioValue shouldBe empty
+
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+          .zioValue shouldBe empty
+      }
+
       "fail with a UniqueConstraintViolation when the email already exists for the customer, rolling back the second contact" in new TestContext {
         val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
           .copy(status = CustomerStatus.Active)
@@ -605,35 +634,6 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
           .zioValue
           .map(_.customerBusinessContactID) shouldBe List(customerBusinessContactID1)
-      }
-
-      "silently do nothing and insert no contacts when the business is archived" in new TestContext {
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
-          .copy(status = CustomerStatus.Archived)
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        val customerBusinessContactID    = arbitrarySample[CustomerBusinessContactID]
-        val customerBusinessContactInput = arbitrarySample[CustomerBusinessContactInput]
-
-        inSequence(
-          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
-          (() => idGeneratorMock.generateID).expects().returningZIO(customerBusinessContactID.value).once(),
-        )
-
-        customerBookRepository
-          .addCustomerBusinessContacts(
-            customerBusinessDetailsRow.organizationID,
-            customerBusinessDetailsRow.customerID,
-            List(customerBusinessContactInput),
-          )
-          .zioValue shouldBe empty
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue shouldBe empty
       }
     }
 

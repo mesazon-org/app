@@ -98,7 +98,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
         )
       }
 
-      "fail with a repository error and surface it unchanged" in new TestContext {
+      "fail with a RepositoryError and surface it unchanged" in new TestContext {
         val organizationID                      = arbitrarySample[OrganizationID]
         val insertCustomerIndividualPostRequest = arbitrarySample[InsertCustomerIndividualPostRequest]
 
@@ -141,7 +141,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           .zioValue shouldBe ()
       }
 
-      "fail with a repository error and surface it unchanged" in new TestContext {
+      "fail with a RepositoryError and surface it unchanged" in new TestContext {
         val organizationID                       = arbitrarySample[OrganizationID]
         val insertCustomerIndividualsPostRequest = arbitrarySample[InsertCustomerIndividualsPostRequest]
         val insertCustomerIndividualInputs       =
@@ -198,7 +198,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
         )
       }
 
-      "fail with a repository error and surface it unchanged" in new TestContext {
+      "fail with a RepositoryError and surface it unchanged" in new TestContext {
         val organizationID                    = arbitrarySample[OrganizationID]
         val insertCustomerBusinessPostRequest = arbitrarySample[InsertCustomerBusinessPostRequest]
 
@@ -241,7 +241,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           .zioValue shouldBe ()
       }
 
-      "fail with a repository error and surface it unchanged" in new TestContext {
+      "fail with a RepositoryError and surface it unchanged" in new TestContext {
         val organizationID                      = arbitrarySample[OrganizationID]
         val insertCustomerBusinessesPostRequest = arbitrarySample[InsertCustomerBusinessesPostRequest]
         val insertCustomerBusinessInputs        =
@@ -289,7 +289,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           .zioValue shouldBe ()
       }
 
-      "fail with a repository error and surface it unchanged" in new TestContext {
+      "fail with a RepositoryError and surface it unchanged" in new TestContext {
         val organizationID                 = arbitrarySample[OrganizationID]
         val insertCustomersPostRequest     = arbitrarySample[InsertCustomersPostRequest]
         val insertCustomerIndividualInputs =
@@ -496,7 +496,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           .zioValue shouldBe ()
       }
 
-      "fail with a repository error and surface it unchanged" in new TestContext {
+      "fail with a RepositoryError and surface it unchanged" in new TestContext {
         val organizationID                                 = arbitrarySample[OrganizationID]
         val removeCustomerBusinessContactsPutRequestSmithy =
           arbitrarySample[smithy.RemoveCustomerBusinessContactsPutRequest]
@@ -553,7 +553,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           .zioValue shouldBe ()
       }
 
-      "fail with a repository error and surface it unchanged" in new TestContext {
+      "fail with a RepositoryError and surface it unchanged" in new TestContext {
         val organizationID                  = arbitrarySample[OrganizationID]
         val archiveCustomerPutRequestSmithy = arbitrarySample[smithy.ArchiveCustomerPutRequest]
 
@@ -718,7 +718,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
         )
       }
 
-      "fail with a repository error and surface it unchanged" in new TestContext {
+      "fail with a RepositoryError and surface it unchanged" in new TestContext {
         val organizationID = arbitrarySample[OrganizationID]
 
         customerBookRepositoryMock.getCustomers
