@@ -1622,7 +1622,7 @@ class CustomerBookApiSpec
         )
       }
 
-      "fail with an InternalServerError when no customer matches the id" in withContext { context =>
+      "silently succeed with no side effect when no customer matches the id" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
@@ -1646,8 +1646,9 @@ class CustomerBookApiSpec
             )
             .zioValue
 
-        archiveCustomerPutResponse.code shouldBe StatusCode.InternalServerError
-        archiveCustomerPutResponse.body.left.value shouldBe smithy.InternalServerError()
+        archiveCustomerPutResponse.code shouldBe StatusCode.NoContent
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe empty
       }
 
       "fail with a BadRequest when the organization id header is missing" in withContext { context =>

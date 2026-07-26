@@ -359,16 +359,41 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           )
           .zioValue
 
-        customerIndividualDetailsRowUpdated shouldBe customerIndividualDetailsRow.copy(
-          fullName = customerFullNameUpdate,
-          emails = customerEmailEntryInputsUpdate,
-          updatedAt = UpdatedAt(instantNow),
+        customerIndividualDetailsRowUpdated shouldBe Some(
+          customerIndividualDetailsRow.copy(
+            fullName = customerFullNameUpdate,
+            emails = customerEmailEntryInputsUpdate,
+            updatedAt = UpdatedAt(instantNow),
+          )
         )
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue shouldBe
-          List(customerIndividualDetailsRowUpdated)
+          customerIndividualDetailsRowUpdated.toList
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 1
+      }
+
+      "silently do nothing and return None when the individual is archived" in new TestContext {
+        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(status = CustomerStatus.Archived)
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+          .zioValue
+
+        (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once()
+
+        customerBookRepository
+          .updateCustomerIndividual(
+            customerIndividualDetailsRow.organizationID,
+            customerIndividualDetailsRow.customerID,
+            fullNameOptUpdate = Some(arbitrarySample[CustomerFullName]),
+          )
+          .zioValue shouldBe None
+
+        // The archived row is left untouched.
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue shouldBe
+          List(customerIndividualDetailsRow)
       }
     }
 
@@ -393,13 +418,37 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           )
           .zioValue
 
-        customerBusinessDetailsRowUpdated shouldBe
+        customerBusinessDetailsRowUpdated shouldBe Some(
           customerBusinessDetailsRow.copy(businessName = customerBusinessNameUpdate, updatedAt = UpdatedAt(instantNow))
+        )
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe
-          List(customerBusinessDetailsRowUpdated)
+          customerBusinessDetailsRowUpdated.toList
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 1
+      }
+
+      "silently do nothing and return None when the business is archived" in new TestContext {
+        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+          .copy(status = CustomerStatus.Archived)
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
+
+        (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once()
+
+        customerBookRepository
+          .updateCustomerBusiness(
+            customerBusinessDetailsRow.organizationID,
+            customerBusinessDetailsRow.customerID,
+            businessNameOptUpdate = Some(arbitrarySample[CustomerBusinessName]),
+          )
+          .zioValue shouldBe None
+
+        // The archived row is left untouched.
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe
+          List(customerBusinessDetailsRow)
       }
     }
 
@@ -557,6 +606,35 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .zioValue
           .map(_.customerBusinessContactID) shouldBe List(customerBusinessContactID1)
       }
+
+      "silently do nothing and insert no contacts when the business is archived" in new TestContext {
+        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+          .copy(status = CustomerStatus.Archived)
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
+
+        val customerBusinessContactID    = arbitrarySample[CustomerBusinessContactID]
+        val customerBusinessContactInput = arbitrarySample[CustomerBusinessContactInput]
+
+        inSequence(
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(customerBusinessContactID.value).once(),
+        )
+
+        customerBookRepository
+          .addCustomerBusinessContacts(
+            customerBusinessDetailsRow.organizationID,
+            customerBusinessDetailsRow.customerID,
+            List(customerBusinessContactInput),
+          )
+          .zioValue shouldBe empty
+
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+          .zioValue shouldBe empty
+      }
     }
 
     "removeCustomerBusinessContacts" should {
@@ -646,6 +724,34 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
         postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe
           List(customerBusinessContactRow)
       }
+
+      "silently do nothing and keep the contacts when the business is archived" in new TestContext {
+        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+          .copy(status = CustomerStatus.Archived)
+        val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow]
+          .copy(
+            organizationID = customerBusinessDetailsRow.organizationID,
+            customerID = customerBusinessDetailsRow.customerID,
+          )
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          .zioValue
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
+          .zioValue
+
+        customerBookRepository
+          .removeCustomerBusinessContacts(
+            customerBusinessDetailsRow.organizationID,
+            customerBusinessDetailsRow.customerID,
+            List(customerBusinessContactRow.customerBusinessContactID),
+          )
+          .zioValue
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe
+          List(customerBusinessContactRow)
+      }
     }
 
     "archiveCustomer" should {
@@ -694,6 +800,24 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
         customerBookRepository.archiveCustomer(organizationID, customerID).zioValue shouldBe None
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe empty
+      }
+
+      "return None and leave the row untouched when the customer is already archived" in new TestContext {
+        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+          .copy(status = CustomerStatus.Archived)
+
+        postgresClient
+          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+          .zioValue
+
+        (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once()
+
+        customerBookRepository
+          .archiveCustomer(customerIndividualDetailsRow.organizationID, customerIndividualDetailsRow.customerID)
+          .zioValue shouldBe None
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue shouldBe
+          List(customerIndividualDetailsRow)
       }
 
       // uq_customer_name is partial on status = 'Active', so archiving frees the name: an organization

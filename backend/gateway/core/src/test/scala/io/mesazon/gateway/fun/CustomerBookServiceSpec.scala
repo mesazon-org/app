@@ -340,7 +340,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
             updateCustomerIndividualPutRequest.postalCode,
             updateCustomerIndividualPutRequest.country,
           )
-          .returningZIO(customerIndividualDetailsRow)
+          .returningZIO(Some(customerIndividualDetailsRow))
           .once()
 
         val customerBookService = buildCustomerBookService
@@ -396,7 +396,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
             updateCustomerBusinessPutRequest.postalCode,
             updateCustomerBusinessPutRequest.country,
           )
-          .returningZIO(customerBusinessDetailsRow)
+          .returningZIO(Some(customerBusinessDetailsRow))
           .once()
 
         val customerBookService = buildCustomerBookService
@@ -537,7 +537,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           .zioValue shouldBe ()
       }
 
-      "fail with an UnexpectedError when no customer matches the id" in new TestContext {
+      "silently succeed when no customer matches the id" in new TestContext {
         val organizationID                  = arbitrarySample[OrganizationID]
         val archiveCustomerPutRequestSmithy = arbitrarySample[smithy.ArchiveCustomerPutRequest]
 
@@ -550,9 +550,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
 
         customerBookService
           .archiveCustomerPut(organizationID.value, archiveCustomerPutRequestSmithy)
-          .zioError shouldBe ServiceError.InternalServerError.UnexpectedError(
-          s"Customer not found for customerID: [${archiveCustomerPutRequestSmithy.customerID}]"
-        )
+          .zioValue shouldBe ()
       }
 
       "fail with a repository error and surface it unchanged" in new TestContext {

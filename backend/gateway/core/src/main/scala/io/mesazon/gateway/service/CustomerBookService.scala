@@ -171,15 +171,11 @@ object CustomerBookService {
         organizationID: UUID,
         archiveCustomerPutRequestSmithy: smithy.ArchiveCustomerPutRequest,
     ): ServiceTask[Unit] =
+      // Archiving a missing (or already-archived) customer is a silent no-op — no 404/500.
       customerBookRepository
         .archiveCustomer(
           OrganizationID(organizationID),
           CustomerID(archiveCustomerPutRequestSmithy.customerID),
-        )
-        .someOrFail(
-          ServiceError.InternalServerError.UnexpectedError(
-            s"Customer not found for customerID: [${archiveCustomerPutRequestSmithy.customerID}]"
-          )
         )
         .unit
 
