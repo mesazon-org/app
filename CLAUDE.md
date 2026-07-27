@@ -4,6 +4,8 @@ Mesazon is a Business Management Platform. Its goal is to enhance businesses wit
 powerful tools to orchestrate their workflows, taking a pragmatic approach: features are derived from real business
 needs.
 
+Toolchain, local services, and how to build/run/test the gateway: [Repository setup](docs/repository-setup.md).
+
 ## Tech stack
 
 Each entry links to the coding standards for that technology — **follow them when writing code**.
@@ -20,9 +22,13 @@ Each entry links to the coding standards for that technology — **follow them w
 - [Request validation](docs-claude/validators.md) — how a raw smithy request is validated into a refined domain model (feature request validators, shared helpers, error accumulation, tests)
 - [Adding a feature](docs-claude/adding-a-feature.md) — the per-feature file layout (domain models, validator, arbitrary traits, specs) and the order of work
 
+## Agent pipeline
+
+Feature requests can be run through a 4-role Claude Code subagent pipeline (Product Owner → Engineering Manager → Lead Engineer → Senior Engineer) via `/feature "<description>"`. The roles are checked into `.claude/agents/` and `.claude/commands/feature.md`; the local model-routing gateway (OmniRoute) each engineer needs is not — see [Agent pipeline setup](docs-claude/agent-pipeline-setup.md) for the one-time per-machine setup (macOS).
+
 ## Features completed
 
-**Documentation rule (for Claude): every new feature ships with its doc.** When you implement a feature, also write `docs-claude/features/<feature-name>.md` and link it in the list below — you are generating context for your own future sessions, so capture what the code alone won't tell you. When you change an existing feature's behavior, update its doc.
+**Documentation rule (for Claude): every new feature ships with its doc, from the very first request.** The moment a new feature is requested — even if you only build the first slice (e.g. tables + schemas) — create `docs-claude/features/<feature-name>.md` and link it in the list below. The doc must always carry a **Status** section that splits the work into **what is done** and **what remains to be completed**, so a partially-built feature is legible to future sessions: update that section as each subsequent part lands, and only drop it once the feature is fully implemented and tested. You are generating context for your own future sessions, so capture what the code alone won't tell you. When you change an existing feature's behavior, update its doc.
 
 **Rename rule (for Claude): docs reference code by name.** Whenever you rename an identifier that could be named in prose (service errors, types, endpoints, config keys, files), grep `docs-claude/` (and this `CLAUDE.md`) for the old name and update every match in the same change — the same way you would for the code and tests.
 
@@ -42,3 +48,4 @@ Follow the structure of the existing docs:
 - [Organization Management](docs-claude/features/organization-management.md)
 - [Files Management](docs-claude/features/files-management.md)
 - [Customer Book](docs-claude/features/customer-book.md)
+- [Catalogue](docs-claude/features/catalogue.md) — **in progress** (part 1: tables + schemas)
