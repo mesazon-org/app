@@ -22,7 +22,7 @@ The Lead Engineer's final output is a task list, each task tagged with a recomme
 ## 4. Implementation
 For each task, in the order the Lead Engineer specified:
 1. Mark the task `in_progress`.
-2. Spawn a `senior-engineer` subagent for it, passing the task's full description + acceptance criteria. Set the `model` parameter on the Agent call to match the Lead Engineer's tier recommendation for that task (map `trivial`→`haiku`, `standard`→`sonnet`, `complex`→`opus`, unless the user has since pointed these at specific OmniRoute model IDs — check the `model:` line conventions currently in `.claude/agents/senior-engineer.md` if unsure).
+2. Spawn a `senior-engineer` subagent for it, passing the task's full description + acceptance criteria. `senior-engineer`'s own frontmatter already defaults to a free-tier model — for `trivial`/`standard` tasks, spawn it with **no** `model` override so it uses that default. Only for tasks the Lead Engineer tagged `complex`, pass `model: "opus"` on the Agent call to escalate to the paid subscription tier — this is the only tier the Agent tool's `model` override actually supports besides `sonnet`/`haiku`/`fable`, so don't try to pass an arbitrary OmniRoute model ID here even if `.claude/agents/senior-engineer.md` uses one.
 3. Once it reports done, get the diff (`git status` / `git diff`) and send it to the *same* `lead-engineer` session from step 3 for review (`SendMessage`, don't respawn — it already has full context on the plan).
 4. If the Lead Engineer requests changes: `SendMessage` the specific feedback back to the *same* senior-engineer session to fix, then re-review. Loop until approved.
 5. Mark the task `completed`.

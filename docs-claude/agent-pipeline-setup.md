@@ -84,9 +84,50 @@ export ANTHROPIC_API_KEY="" # must be explicitly empty, or Claude Code may prefe
 export CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1
 ```
 
-Claude Code reads these once at startup, so **restart every open Claude Code session** (including the one you used to edit `.zshrc`) after this step. Once restarted, `/model` should list gateway-routed models alongside the native Claude ones, and the four subagents' `model: haiku|sonnet|opus` frontmatter values will route through OmniRoute automatically (OmniRoute recognizes real Anthropic model IDs and forwards them to your Tier-1 Claude subscription connection by default).
+**Also required**, not optional: once OmniRoute has more than one provider capable of serving the same bare model name (e.g. its built-in `cc` — Claude Code subscription — tier alongside a `claude` provider connection you added), Claude Code's default alias resolution (`opus` → `claude-opus-4-8`) becomes ambiguous and every request fails with `API Error: 400 Ambiguous model 'claude-opus-4-8'. Use provider/model prefix`. Pin the aliases explicitly:
 
-If you want specific roles pinned to specific cheap/free-tier OmniRoute models instead of the default alias passthrough, run `omniroute models` to see what's available for your configured providers, then edit the `model:` line in the relevant `.claude/agents/*.md` file — the roles most worth cost-optimizing are `product-owner` (haiku today) and routine `senior-engineer` tasks; leave `lead-engineer` (opus) on your strongest available model since it's the quality gate.
+```sh
+export ANTHROPIC_DEFAULT_OPUS_MODEL="cc/claude-opus-4-8"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="cc/claude-sonnet-5"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="cc/claude-haiku-4-5-20251001"
+```
+
+Run `OMNIROUTE_API_KEY=<your-key> omniroute models` to see the exact provider-prefixed IDs available for *your* configured providers — the ones above are the `cc` tier's current names and may drift as new Claude models ship. Sanity-check before moving on:
+
+```sh
+OMNIROUTE_API_KEY=<your-key> omniroute chat "reply with exactly: pong" --model cc/claude-opus-4-8
+```
+
+Claude Code reads all of this once at startup, so **restart every open Claude Code session** (including the one you used to edit `.zshrc`) after this step. Once restarted, `/model` should list gateway-routed models alongside the native Claude ones.
+
+## Cost: who actually uses your paid subscription
+
+A naive setup routes every one of the four roles through your paid Claude subscription — for a small ask, that's a lot of subscription usage for a lot of low-stakes work (asking clarifying questions, writing a brief). The defaults checked into `.claude/agents/*.md` instead only spend paid tokens where it actually matters:
+
+| Role | Default model | Why |
+|---|---|---|
+| `product-owner` | `oc/deepseek-v4-flash-free` — a free tier OmniRoute ships with no extra setup | restating a request doesn't need a frontier model |
+| `engineering-manager` | `oc/deepseek-v4-flash-free` | same reasoning — clarifying questions and a requirements doc don't need the paid tier |
+| `senior-engineer` | `oc/deepseek-v4-flash-free` by default, **escalated to `cc/claude-opus-4-8` (paid) only for tasks the Lead Engineer tags `complex`** | routine implementation is fine on the free tier; genuinely hard tasks aren't |
+| `lead-engineer` | `opus` (→ `cc/claude-opus-4-8`, paid) — always | this is the quality gate (architecture decisions + reviewing every diff); don't cheapen it |
+
+`oc/deepseek-v4-flash-free` is the one free-tier model I confirmed actually works reliably — several other `-free`-suffixed options in `omniroute models` (`minimax-m3-free`, `qwen3.6-plus-free`) returned `401 Unauthorized`, and the `ddgw/*` free gateway hit DuckDuckGo's anti-abuse challenge. Re-run `OMNIROUTE_API_KEY=<your-key> omniroute chat "reply with exactly: pong" --model <id>` before trusting any other free model, and don't assume availability is stable — OmniRoute's free catalog can change.
+
+**Why the escalation only reaches `opus`, not a specific free/paid mix per task**: the orchestrator (`.claude/commands/feature.md`) spawns `senior-engineer` via the `Agent` tool, whose `model` override parameter only accepts the named tiers `sonnet`/`opus`/`haiku`/`fable` — it can't pass an arbitrary OmniRoute model ID at spawn time. So escalation is binary: the free-tier default, or a full jump to `opus` (mapped to your paid subscription via `ANTHROPIC_DEFAULT_OPUS_MODEL` above) when the Lead Engineer marks a task `complex`. A subagent's own frontmatter `model:` field *can* hold an arbitrary provider-prefixed ID (that's how the free-tier default above works) — it's specifically the dynamic per-call override that's restricted.
+
+If you want a different split (e.g. also give the Engineering Manager a paid tier for tricky requirements), edit the `model:` line directly in the relevant `.claude/agents/*.md` file.
+
+## If you run Claude Code in an autonomous/"don't ask" permission mode
+
+The Engineering Manager needs `AskUserQuestion` to ask you clarifying questions directly, and any role may need `WebFetch`/`WebSearch`. If your permission mode auto-denies anything not explicitly allow-listed (you'll see errors like `Permission to use AskUserQuestion has been denied because Claude Code is running in don't ask mode`), add these to `.claude/settings.local.json`'s `permissions.allow` list:
+
+```json
+"AskUserQuestion",
+"WebFetch",
+"WebSearch"
+```
+
+`.claude/settings.local.json` is gitignored (personal, per-machine) — this isn't something that ships with the repo, every engineer running the pipeline under a restrictive/autonomous permission mode needs to add it themselves. Note this is a different mechanism from Claude Code's separate heuristic "auto mode classifier" safety layer (the one that produces `Permission for this action was denied by the Claude Code auto mode classifier` errors) — that layer isn't configurable via `settings.json` and may still occasionally block an action regardless of your allow list.
 
 ## 5. Use it
 
@@ -104,3 +145,4 @@ This runs the request through Product Owner → Engineering Manager (may ask you
 - **`omniroute: command not found` in a new terminal**: nvm block missing/misplaced in `~/.zshrc`, or you never ran `nvm alias default 22`.
 - **Claude Code not picking up gateway models after restart**: confirm `ANTHROPIC_BASE_URL` has no trailing `/v1` and that you fully quit and reopened the terminal/session (env is read once at process start).
 - **`omniroute config set claude` / `omniroute setup --list` crash**: expected, see the known-bug note in step 2 — use step 4's manual env vars instead.
+- **`API Error: 400 Ambiguous model 'claude-opus-4-8'. Use provider/model prefix`**: you're missing the `ANTHROPIC_DEFAULT_*_MODEL` env vars from step 4, or added a provider connection that now duplicates a model the built-in `cc` tier already serves. Add/re-check the three `ANTHROPIC_DEFAULT_*_MODEL` exports and restart Claude Code.

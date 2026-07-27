@@ -171,3 +171,20 @@ type CustomerPostalCode = CustomerPostalCode.T
 
 object CustomerCountry extends RefinedType[String, NonEmptyTrimmed]
 type CustomerCountry = CustomerCountry.T
+
+// Catalogue
+
+object CatalogueItemID extends RefinedTypeUUID
+type CatalogueItemID = CatalogueItemID.T
+
+object CatalogueItemName extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemName = CatalogueItemName.T
+
+object CatalogueItemUnit extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemUnit = CatalogueItemUnit.T
+
+object CatalogueItemPriceAmount extends RefinedType[BigDecimal, Pure]
+type CatalogueItemPriceAmount = CatalogueItemPriceAmount.T
+
+object CatalogueItemPriceCurrency extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemPriceCurrency = CatalogueItemPriceCurrency.T
