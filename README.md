@@ -6,6 +6,8 @@ A business owner signs up, verifies their email and phone, and creates their **o
 
 This repo is the **backend**: one HTTP gateway in Scala, backed by PostgreSQL, with API contracts defined in Smithy.
 
+New to the repo? Start with [Repository setup](docs/repository-setup.md) — toolchain, local services, building and running the gateway.
+
 ## How it fits together
 
 One gateway fronts every feature. A request is authenticated and authorized, validated into a strongly-typed model, handled by a feature service, and saved to PostgreSQL. Email, SMS, file storage, and WhatsApp live behind their own clients.
