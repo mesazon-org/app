@@ -1,128 +1,24 @@
 package io.mesazon.gateway.it
 
-import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.config.*
 import io.mesazon.gateway.it.client.GatewayClient
-import io.mesazon.gateway.it.client.GatewayClient.{GatewayClientConfig, given}
+import io.mesazon.gateway.it.client.GatewayClient.given
+import io.mesazon.gateway.it.harness.GatewayAcceptanceTest
 import io.mesazon.gateway.repository.domain.*
-import io.mesazon.gateway.repository.queries.*
-import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
-import io.mesazon.generator.IDGenerator
-import io.mesazon.test.postgresql.PostgreSQLTestClient
-import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
-import io.mesazon.test.s3.S3TestClient
-import io.mesazon.test.s3.S3TestClient.S3TestClientConfig
 import io.mesazon.testkit.base.*
+import org.scalatest.DoNotDiscover
 import sttp.model.*
 import zio.*
 import zio.stream.ZStream
 
-class FileApiSpec
-    extends ZWordSpecBase,
-      DockerComposeBase,
-      SmithyArbitraries,
-      RepositoryArbitraries,
-      IronRefinedTypeTransformer {
-
-  override def exposedServices =
-    GatewayClient.ExposedServices ++ PostgreSQLTestClient.ExposedServices ++ S3TestClient.ExposedServices
+@DoNotDiscover
+class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryArbitraries, IronRefinedTypeTransformer {
 
   // Mirrors the gateway container's organization-s3-client config (application.conf)
   private val organizationLogoBucket           = "organization-logo-bucket"
   private val organizationLogoBucketPathPrefix = "organization/logos"
-
-  case class Context(
-      gatewayClient: GatewayClient,
-      postgresClient: PostgreSQLTestClient,
-      s3TestClient: S3TestClient,
-      repositoryConfig: RepositoryConfig,
-      organizationDetailsQueries: OrganizationDetailsQueries,
-      organizationUserQueries: OrganizationUserQueries,
-      userDetailsQueries: UserDetailsQueries,
-      jwtService: JwtService,
-  )
-
-  def withContext[A](f: Context => A): A = withContainers { container =>
-    val context = for {
-      postgreSQLClientConfig = PostgreSQLTestClientConfig.from(container)
-      gatewayApiClientConfig = GatewayClientConfig.from(container)
-      s3TestClientConfig     = S3TestClientConfig.from(container)
-      repositoryConfig <- ZIO.service[RepositoryConfig].provide(RepositoryConfig.live, appNameLive)
-      postgreSQLClient <- ZIO
-        .service[PostgreSQLTestClient]
-        .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgreSQLClientConfig))
-      gatewayApiClient <- ZIO
-        .service[GatewayClient]
-        .provide(GatewayClient.live, ZLayer.succeed(gatewayApiClientConfig))
-      s3TestClient <- ZIO
-        .service[S3TestClient]
-        .provide(S3TestClient.live, ZLayer.succeed(s3TestClientConfig))
-      organizationDetailsQueries <- ZIO
-        .service[OrganizationDetailsQueries]
-        .provide(OrganizationDetailsQueries.live, RepositoryConfig.live, appNameLive)
-      organizationUserQueries <- ZIO
-        .service[OrganizationUserQueries]
-        .provide(OrganizationUserQueries.live, RepositoryConfig.live, appNameLive)
-      userDetailsQueries <- ZIO
-        .service[UserDetailsQueries]
-        .provide(UserDetailsQueries.live, RepositoryConfig.live, appNameLive)
-      jwtService <- ZIO
-        .service[JwtService]
-        .provide(
-          JwtService.live,
-          JwtConfig.live,
-          IDGenerator.liveUUIDv7,
-          TimeProvider.liveSystemUTC,
-          appNameLive,
-        )
-    } yield Context(
-      gatewayApiClient,
-      postgreSQLClient,
-      s3TestClient,
-      repositoryConfig,
-      organizationDetailsQueries,
-      organizationUserQueries,
-      userDetailsQueries,
-      jwtService,
-    )
-
-    f(context.zioValue)
-  }
-
-  override def beforeAll(): Unit = withContext { context =>
-    import context.*
-
-    super.beforeAll()
-
-    eventually(
-      gatewayClient.readiness.zioValue shouldBe StatusCode.NoContent
-    )
-
-    eventually(
-      ZIO
-        .foreach(repositoryConfig.allTableNames)(tableName =>
-          postgresClient.checkIfTableExists(repositoryConfig.schema, tableName)
-        )
-        .zioValue should contain only true
-    )
-  }
-
-  override def beforeEach(): Unit = withContext { context =>
-    import context.*
-
-    super.beforeEach()
-
-    ZIO
-      .foreach(repositoryConfig.allTableNames)(tableName =>
-        postgresClient.truncateTable(repositoryConfig.schema, tableName)
-      )
-      .zioValue
-
-    s3TestClient.emptyAllBuckets().zioValue
-  }
 
   "File Service API" when {
     "/upload/organization/logo" should {

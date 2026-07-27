@@ -1,108 +1,24 @@
 package io.mesazon.gateway.it
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.config.*
 import io.mesazon.gateway.it.client.GatewayClient
-import io.mesazon.gateway.it.client.GatewayClient.{GatewayClientConfig, given}
+import io.mesazon.gateway.it.client.GatewayClient.given
+import io.mesazon.gateway.it.harness.GatewayAcceptanceTest
 import io.mesazon.gateway.repository.domain.*
-import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
-import io.mesazon.test.postgresql.PostgreSQLTestClient
-import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.*
+import org.scalatest.DoNotDiscover
 import sttp.model.*
 import zio.*
 
+@DoNotDiscover
 class UserSignInApiSpec
-    extends ZWordSpecBase,
-      DockerComposeBase,
+    extends GatewayAcceptanceTest,
       SmithyArbitraries,
       RepositoryArbitraries,
       IronRefinedTypeTransformer {
-
-  override def exposedServices =
-    GatewayClient.ExposedServices ++ PostgreSQLTestClient.ExposedServices ++ MailHogClient.ExposedServices
-
-  case class Context(
-      gatewayClient: GatewayClient,
-      postgresClient: PostgreSQLTestClient,
-      repositoryConfig: RepositoryConfig,
-      userDetailsQueries: UserDetailsQueries,
-      userCredentialsQueries: UserCredentialsQueries,
-      userActionAttemptQueries: UserActionAttemptQueries,
-      userTokenQueries: UserTokenQueries,
-      passwordService: PasswordService,
-  )
-
-  def withContext[A](f: Context => A): A = withContainers { container =>
-    val context = for {
-      postgreSQLClientConfig = PostgreSQLTestClientConfig.from(container)
-      gatewayApiClientConfig = GatewayClientConfig.from(container)
-      repositoryConfig <- ZIO.service[RepositoryConfig].provide(RepositoryConfig.live, appNameLive)
-      postgreSQLClient <- ZIO
-        .service[PostgreSQLTestClient]
-        .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgreSQLClientConfig))
-      gatewayApiClient <- ZIO
-        .service[GatewayClient]
-        .provide(GatewayClient.live, ZLayer.succeed(gatewayApiClientConfig))
-      userDetailsQueries <- ZIO
-        .service[UserDetailsQueries]
-        .provide(UserDetailsQueries.live, RepositoryConfig.live, appNameLive)
-      userCredentialsQueries <- ZIO
-        .service[UserCredentialsQueries]
-        .provide(UserCredentialsQueries.live, RepositoryConfig.live, appNameLive)
-      userActionAttemptQueries <- ZIO
-        .service[UserActionAttemptQueries]
-        .provide(UserActionAttemptQueries.live, RepositoryConfig.live, appNameLive)
-      userTokenQueries <- ZIO
-        .service[UserTokenQueries]
-        .provide(UserTokenQueries.live, RepositoryConfig.live, appNameLive)
-      passwordService <- ZIO.service[PasswordService].provide(PasswordService.live, PasswordConfig.live, appNameLive)
-    } yield Context(
-      gatewayApiClient,
-      postgreSQLClient,
-      repositoryConfig,
-      userDetailsQueries,
-      userCredentialsQueries,
-      userActionAttemptQueries,
-      userTokenQueries,
-      passwordService,
-    )
-
-    f(context.zioValue)
-  }
-
-  override def beforeAll(): Unit = withContext { context =>
-    import context.*
-
-    super.beforeAll()
-
-    eventually(
-      gatewayClient.readiness.zioValue shouldBe StatusCode.NoContent
-    )
-
-    eventually(
-      ZIO
-        .foreach(repositoryConfig.allTableNames)(tableName =>
-          postgresClient.checkIfTableExists(repositoryConfig.schema, tableName)
-        )
-        .zioValue should contain only true
-    )
-  }
-
-  override def beforeEach(): Unit = withContext { context =>
-    import context.*
-
-    super.beforeEach()
-
-    ZIO
-      .foreach(repositoryConfig.allTableNames)(tableName =>
-        postgresClient.truncateTable(repositoryConfig.schema, tableName)
-      )
-      .zioValue
-  }
 
   "User Sign In API" when {
     "POST /signin" should {

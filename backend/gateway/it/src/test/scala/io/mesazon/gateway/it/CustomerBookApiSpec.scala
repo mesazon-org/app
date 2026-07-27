@@ -1,114 +1,20 @@
 package io.mesazon.gateway.it
 
-import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.config.*
 import io.mesazon.gateway.it.client.GatewayClient
-import io.mesazon.gateway.it.client.GatewayClient.{GatewayClientConfig, given}
+import io.mesazon.gateway.it.client.GatewayClient.given
+import io.mesazon.gateway.it.harness.GatewayAcceptanceTest
 import io.mesazon.gateway.repository.CustomerBookRepository.*
 import io.mesazon.gateway.repository.domain.*
-import io.mesazon.gateway.repository.queries.*
-import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
-import io.mesazon.generator.IDGenerator
-import io.mesazon.test.postgresql.PostgreSQLTestClient
-import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
-import io.mesazon.testkit.base.*
 import io.scalaland.chimney.dsl.*
+import org.scalatest.DoNotDiscover
 import sttp.model.*
 import zio.*
 
-class CustomerBookApiSpec
-    extends ZWordSpecBase,
-      DockerComposeBase,
-      CustomerBookSmithyArbitraries,
-      RepositoryArbitraries {
-
-  override def exposedServices =
-    GatewayClient.ExposedServices ++ PostgreSQLTestClient.ExposedServices
-
-  case class Context(
-      gatewayClient: GatewayClient,
-      postgresClient: PostgreSQLTestClient,
-      repositoryConfig: RepositoryConfig,
-      userDetailsQueries: UserDetailsQueries,
-      organizationUserQueries: OrganizationUserQueries,
-      customerBookQueries: CustomerBookQueries,
-      jwtService: JwtService,
-  )
-
-  def withContext[A](f: Context => A): A = withContainers { container =>
-    val context = for {
-      postgreSQLClientConfig = PostgreSQLTestClientConfig.from(container)
-      gatewayApiClientConfig = GatewayClientConfig.from(container)
-      repositoryConfig <- ZIO.service[RepositoryConfig].provide(RepositoryConfig.live, appNameLive)
-      postgreSQLClient <- ZIO
-        .service[PostgreSQLTestClient]
-        .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgreSQLClientConfig))
-      gatewayApiClient <- ZIO
-        .service[GatewayClient]
-        .provide(GatewayClient.live, ZLayer.succeed(gatewayApiClientConfig))
-      userDetailsQueries <- ZIO
-        .service[UserDetailsQueries]
-        .provide(UserDetailsQueries.live, RepositoryConfig.live, appNameLive)
-      organizationUserQueries <- ZIO
-        .service[OrganizationUserQueries]
-        .provide(OrganizationUserQueries.live, RepositoryConfig.live, appNameLive)
-      customerBookQueries <- ZIO
-        .service[CustomerBookQueries]
-        .provide(CustomerBookQueries.live, RepositoryConfig.live, appNameLive)
-      jwtService <- ZIO
-        .service[JwtService]
-        .provide(
-          JwtService.live,
-          JwtConfig.live,
-          IDGenerator.liveUUIDv7,
-          TimeProvider.liveSystemUTC,
-          appNameLive,
-        )
-    } yield Context(
-      gatewayApiClient,
-      postgreSQLClient,
-      repositoryConfig,
-      userDetailsQueries,
-      organizationUserQueries,
-      customerBookQueries,
-      jwtService,
-    )
-
-    f(context.zioValue)
-  }
-
-  override def beforeAll(): Unit = withContext { context =>
-    import context.*
-
-    super.beforeAll()
-
-    eventually(
-      gatewayClient.readiness.zioValue shouldBe StatusCode.NoContent
-    )
-
-    eventually(
-      ZIO
-        .foreach(repositoryConfig.allTableNames)(tableName =>
-          postgresClient.checkIfTableExists(repositoryConfig.schema, tableName)
-        )
-        .zioValue should contain only true
-    )
-  }
-
-  override def beforeEach(): Unit = withContext { context =>
-    import context.*
-
-    super.beforeEach()
-
-    ZIO
-      .foreach(repositoryConfig.allTableNames)(tableName =>
-        postgresClient.truncateTable(repositoryConfig.schema, tableName)
-      )
-      .zioValue
-  }
+@DoNotDiscover
+class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbitraries, RepositoryArbitraries {
 
   "Customer Book Service API" when {
     "POST /insert/customer-individual" should {
