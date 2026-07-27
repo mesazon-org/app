@@ -3,6 +3,7 @@ package io.mesazon.gateway.it
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient
 import io.mesazon.gateway.it.client.GatewayClient.given
+import io.mesazon.gateway.it.harness.GatewayAcceptanceTest
 import io.mesazon.gateway.repository.domain.{UserDetailsRow, UserOtpRow}
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.{RepositoryArbitraries, SmithyArbitraries, UserOnboardSmithyArbitraries}

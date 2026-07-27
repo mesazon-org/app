@@ -3,6 +3,7 @@ package io.mesazon.gateway.it
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient
 import io.mesazon.gateway.it.client.GatewayClient.given
+import io.mesazon.gateway.it.harness.GatewayAcceptanceTest
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
@@ -18,6 +19,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
   // Mirrors the gateway container's organization-s3-client config (application.conf)
   private val organizationLogoBucket           = "organization-logo-bucket"
   private val organizationLogoBucketPathPrefix = "organization/logos"
+
   "File Service API" when {
     "/upload/organization/logo" should {
       "upload the logo and store the original and normalized objects in S3" in withContext { context =>
