@@ -76,16 +76,22 @@ Tracks what is built vs. outstanding — keep this current as each part lands, p
 
 - **Migration** — `catalogue_item_status` enum + `catalogue_item` table + `uq_catalogue_item_name` partial unique index, in `V2025.05.27__init.sql`.
 - **Smithy contract** — `CatalogueService` with all six operations and every `domain/Catalogue.smithy` request/response shape; `smithy4sCodegen` is **green** (generates `CatalogueItemPriceRequest(amount: BigDecimal, currency: String)` and the six operations).
+- **Domain models** — `CatalogueItemID`/`CatalogueItemName`/`CatalogueItemUnit`/`CatalogueItemPriceAmount` (`BigDecimal`)/`CatalogueItemPriceCurrency` newtypes in `Newtypes.scala`; the `CatalogueItemStatus` Scala enum (`CatalogueItemStatus.scala`, labels `Active`/`Archived`). (The entry/request case classes in `domain/gateway/Catalogue.scala` are **not** yet added — they belong to the validator/service slice.)
+
+### Done — part 2: repository layer
+
+- **`CatalogueItemRow`** (`repository/domain/CatalogueItemRow.scala`) — case class in table-column order. The three `photo_*` columns reuse the `OrganizationLogo*` bucket-key/file-name newtypes (structurally identical S3 key/filename strings; revisit with dedicated `CataloguePhoto*` types when photo upload lands).
+- **`CatalogueItemQueries`** (`repository/queries/CatalogueItemQueries.scala`) — single/batch insert, partial `update` (dynamic `SET` + `RETURNING`), `archive` (status flip + `RETURNING id`), single get (any status), list active, and a testing getter. Native-enum casts (`::<schema>.catalogue_item_status` on writes, `status::text` on reads) mirror `CustomerBookQueries`. **No bespoke `numeric ↔ BigDecimal` `Meta`**: `CatalogueItemPriceAmount` is `RefinedType[BigDecimal, Pure]`, so the generic `RefinedType.Mirror` given in `queries.scala` lifts doobie's `Meta[BigDecimal]` — round-trips with no precision loss.
+- **`CatalogueRepository`** (`repository/CatalogueRepository.scala`) — trait + private impl + `InsertCatalogueItemInput` companion model; ID via `IDGenerator` → `CatalogueItemID.either`, timestamps via `TimeProvider`; `23505` on `uq_catalogue_item_name` → `ConflictError.UniqueConstraintViolation`, else `RepositoryError`. Update treats `None` price fields as keep-existing (no clear-price — see [Open design decisions](#open-design-decisions)); photo fields hardcoded to `None` (upload deferred).
+- **Config** — `RepositoryConfig.catalogueItemTable` (+ `allTableNames`); `catalogue-item-table = "catalogue_item"` in **both** `application.conf`s (core main + `it` test).
 
 ### Remaining — to be completed
 
 Follow the [Adding a feature](../adding-a-feature.md) order of work and the [Adding a table checklist](../postgres.md#adding-a-table--checklist):
 
-- **Domain models** — `catalogueItemID`/`CatalogueItemName`/`CatalogueItemUnit`/`CatalogueItemPriceAmount` (`BigDecimal`)/`CatalogueItemPriceCurrency` newtypes in `Newtypes.scala`; a `CatalogueItemStatus` Scala enum (its own file, labels `Active`/`Archived`); the entry/request case classes in `domain/gateway/Catalogue.scala`.
+- **Domain request models** — the entry/request case classes in `domain/gateway/Catalogue.scala`.
 - **Validator** — `CatalogueRequestValidator` (one `validated…` per fallible request) + spec.
-- **Persistence** — `CatalogueItemRow`, `CatalogueItemQueries` (incl. the `numeric ↔ BigDecimal` `Meta` and the `::catalogue_item_status` / `status::text` casts the native enum needs — see `CustomerBookQueries`), `CatalogueRepository` (trait + impl + input models + `23505` → `Conflict` mapping for `uq_catalogue_item_name`) + `live` wiring in `Main`.
-- **Config** — `RepositoryConfig.catalogueItemTable` (+ `allTableNames`); `catalogue-item-table = "catalogue_item"` in **both** `application.conf`s (core main + `it` test).
-- **Service** — `CatalogueService.scala` implementing the generated trait; `HttpApp.externalSmithyRoutes` wiring.
+- **Service + wiring** — `CatalogueService.scala` implementing the generated trait; `HttpApp.externalSmithyRoutes` wiring; **and** the `CatalogueRepository.live` + `CatalogueItemQueries.live` layers in `Main` (deferred from part 2 — ZIO's compile-time layer-graph check rejects them as unused until a consumer exists).
 - **Photo upload** — a Tapir streaming endpoint reusing the [Files Management](files-management.md) pipeline (`FileScanner`/`ImageProcessing`/S3) to populate the three `photo_*` columns and surface presigned URLs in the GET responses; keep entity-size limits in sync (see files-management.md).
 - **Arbitraries + tests** — `CatalogueDomainArbitraries` / `CatalogueSmithyArbitraries`; validator unit spec, `CatalogueRepositorySpec` (real Postgres — cover the `uq_catalogue_item_name` conflict, batch rollback, archive semantics, and a `BigDecimal` price round-trip proving no precision loss), `CatalogueServiceSpec` (functional), and `CatalogueApiSpec` acceptance with the full middleware-gate matrix (see [[acceptance-test-middleware-gates-mandatory]]).
 

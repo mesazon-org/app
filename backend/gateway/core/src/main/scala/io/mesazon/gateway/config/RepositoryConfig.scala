@@ -14,6 +14,7 @@ case class RepositoryConfig(
     wahaUserMessageTable: String = "",
     customerTable: String = "",
     customerBusinessContactTable: String = "",
+    catalogueItemTable: String = "",
 ) {
   val allTableNames = List(
     userCredentialsTable,
@@ -28,6 +29,7 @@ case class RepositoryConfig(
     wahaUserMessageTable,
     customerTable,
     customerBusinessContactTable,
+    catalogueItemTable,
   ).filter(_.nonEmpty)
 }
 

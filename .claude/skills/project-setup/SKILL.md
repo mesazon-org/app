@@ -102,7 +102,11 @@ export ANTHROPIC_DEFAULT_HAIKU_MODEL="cc/claude-haiku-4-5-20251001"
 ```
 Remind them these env vars only take effect after restarting Claude Code (env is read once at startup).
 
-### 7. Docker
+### 7. Interactive-tool permissions (autonomous/"don't ask" modes only)
+
+Skip this step entirely if the engineer isn't running Claude Code in an autonomous permission mode — most won't need it. If `.claude/settings.local.json` has `permissions.defaultMode` set to something autonomous (e.g. `dontAsk`) and `permissions.allow` doesn't already include `AskUserQuestion`, `WebFetch`, and `WebSearch`, add them — otherwise the Engineering Manager can't ask clarifying questions and any role that needs to look something up on the web will be silently denied (`Permission to use AskUserQuestion has been denied because Claude Code is running in don't ask mode`). This file is gitignored per-machine, so this has to be applied on every engineer's own setup, not just once. Note this is unrelated to the separate heuristic "auto mode classifier" safety layer, which isn't configurable this way and may still occasionally block an action.
+
+### 8. Docker
 ```sh
 docker info   # already satisfied if this succeeds
 brew install --cask docker   # only if the CLI itself is missing

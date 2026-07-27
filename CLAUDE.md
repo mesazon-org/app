@@ -48,4 +48,4 @@ Follow the structure of the existing docs:
 - [Organization Management](docs-claude/features/organization-management.md)
 - [Files Management](docs-claude/features/files-management.md)
 - [Customer Book](docs-claude/features/customer-book.md)
-- [Catalogue](docs-claude/features/catalogue.md) — **in progress** (part 1: tables + schemas)
+- [Catalogue](docs-claude/features/catalogue.md) — **in progress** (part 1: tables + schemas; part 2: repository layer)
