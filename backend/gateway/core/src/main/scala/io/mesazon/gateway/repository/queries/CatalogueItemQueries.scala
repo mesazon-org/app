@@ -17,22 +17,9 @@ final class CatalogueItemQueries(
 ) {
 
   private val frSchema = Fragment.const(config.schema)
-
   private val frCatalogueItemTableName = Fragment.const(config.catalogueItemTable)
-
   private val frCatalogueItemTable = frSchema ++ fr0"." ++ frCatalogueItemTableName
-
-  // The `catalogue_item_status` enum lives in the config schema (created there by Flyway). The app
-  // connection's search_path does not include that schema, so casts must qualify it — exactly as
-  // the table above is qualified.
   private val frCatalogueItemStatusType = frSchema ++ fr0".catalogue_item_status"
-
-  // `status` is a native `catalogue_item_status` enum. The generic `CatalogueItemStatus` codec
-  // (derived from its string labels) binds/reads it as text, so writes cast the bound param
-  // `?::<schema>.catalogue_item_status` (via `frCatalogueItemStatusType`) and selects read
-  // `status::text` — any new query touching `status` must keep those casts. `price_amount` maps to
-  // a `numeric` column: doobie's `Meta[BigDecimal]` (lifted onto `CatalogueItemPriceAmount` by the
-  // generic `RefinedType.Mirror` given in `queries.scala`) round-trips it with no precision loss.
 
   private val frCatalogueItemInsertFields =
     fr"""
@@ -140,8 +127,6 @@ final class CatalogueItemQueries(
     ).flatten
 
     tzio {
-      // Only active items are editable: archived (or absent) rows match nothing, so the update is a
-      // silent no-op (`.option` → None). Keeps the mandatory `::catalogue_item_status` cast.
       val q =
         fr"UPDATE" ++ frCatalogueItemTable ++
           set(updates) ++
@@ -156,10 +141,6 @@ final class CatalogueItemQueries(
     }
   }
 
-  // Archive (soft-delete) a catalogue item: only an *active* one — a missing or already-archived
-  // item matches nothing and returns `None` (a silent no-op for the caller). Removing a row from the
-  // active set can never violate the partial `uq_catalogue_item_name` index. Keeps the mandatory
-  // `::catalogue_item_status` cast.
   def archiveCatalogueItemRow(
       organizationID: OrganizationID,
       catalogueItemID: CatalogueItemID,
