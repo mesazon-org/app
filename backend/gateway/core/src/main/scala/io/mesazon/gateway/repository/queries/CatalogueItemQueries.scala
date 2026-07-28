@@ -16,9 +16,9 @@ final class CatalogueItemQueries(
     config: RepositoryConfig
 ) {
 
-  private val frSchema = Fragment.const(config.schema)
-  private val frCatalogueItemTableName = Fragment.const(config.catalogueItemTable)
-  private val frCatalogueItemTable = frSchema ++ fr0"." ++ frCatalogueItemTableName
+  private val frSchema                  = Fragment.const(config.schema)
+  private val frCatalogueItemTableName  = Fragment.const(config.catalogueItemTable)
+  private val frCatalogueItemTable      = frSchema ++ fr0"." ++ frCatalogueItemTableName
   private val frCatalogueItemStatusType = frSchema ++ fr0".catalogue_item_status"
 
   private val frCatalogueItemInsertFields =
