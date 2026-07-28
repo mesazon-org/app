@@ -1,10 +1,10 @@
 # Scala
 
-Project-agnostic Scala 3 standards for implementation code and tests — type-system usage, naming, and test-writing discipline that hold regardless of framework, transport, database, or architecture.
+Project-agnostic Scala 3 naming and test-writing standards — hold regardless of framework, transport, database, or architecture.
 
-Do **not** place technology, transport, persistence, or architecture rules here (API-contract naming and transport↔domain mappings, database/repository conventions, framework-specific effect/DI/serialization patterns, test-harness setup). Those belong to the document owning that boundary; a rule here may be linked from there, never duplicated.
+Not owned here: API-contract naming/transport↔domain mapping, database/repository conventions, framework-specific effect/DI/serialization, test-harness setup — each belongs to the document owning that boundary; link, never duplicate.
 
-Do **not** restate a global convention an agent already knows by default (e.g. camelCase for values, PascalCase for types, Arrange-Act-Assert) — record only standards unique to this team that deviate from or add to default practice.
+Dense, LLM-oriented rules only — no narrative, no restating a global convention an agent already knows (camelCase, PascalCase, Arrange-Act-Assert). Record only standards unique to this team.
 
 ## General coding standards
 
