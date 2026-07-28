@@ -147,7 +147,7 @@ Table names are **config, never string literals** — [postgres.md § Configurat
 
 Repository (and `Queries`) behaviour is proven against a **real PostgreSQL** run by [Testcontainers](https://testcontainers.com/), never a mocked/H2 DB — the whole point is to exercise the actual SQL, the Flyway schema, the jsonb/enum codecs, and the DB-enforced constraints. These are the `it` specs under `backend/gateway/core/src/test/scala/io/mesazon/gateway/it/<Entity>RepositorySpec.scala`. `OrganizationManagementRepositorySpec` is the reference to copy.
 
-> "Integration spec" here = repository ⇄ real DB, in the **`gateway-core`** test sources. It is distinct from the black-box HTTP **acceptance** tests in the separate `gateway-it` module ([acceptance-tests.md](acceptance-tests.md)), which spin up the whole app.
+> "Integration spec" here = repository ⇄ real DB, in the **`gateway-core`** test sources. It is distinct from the black-box HTTP **acceptance** tests in the separate `gateway-it` module ([acceptance-tests.md](acceptance-tests.md)), which spin up the whole app. The shape shared by every spec in the `it` package — including non-repository client specs (`EmailClientSpec`, `TwilioClientSpec`, `OrganizationLogosS3ClientSpec`) — is documented in [integration-tests.md](integration-tests.md); this section covers only what's specific to a repository spec.
 
 ### The container stack
 
