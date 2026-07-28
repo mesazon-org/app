@@ -2,8 +2,8 @@
 
 The repository layer is the boundary between the service layer and PostgreSQL. It is written in Scala over **Doobie** (`org.typelevel.doobie`) wrapped in **Tranzactio** (`io.github.gaelrenoux.tranzactio`) for ZIO — no ORM. This doc owns the **architecture and practices** of that layer; two neighbours own the halves it depends on:
 
-- [postgres.md](postgres.md) — the schema (migrations, table/column naming, types, soft-delete) the code must stay in lockstep with, plus the type-mapping and config mechanics.
-- [scala.md](scala.md) — the naming rules for every identifier named here (repository classes/methods/params, `Row` models, query classes). This doc references those sections rather than restating them.
+- [postgres.md](stack/postgres.md) — the schema (migrations, table/column naming, types, soft-delete) the code must stay in lockstep with, plus the type-mapping and config mechanics.
+- [scala.md](stack/scala.md) — the naming rules for every identifier named here (repository classes/methods/params, `Row` models, query classes). This doc references those sections rather than restating them.
 
 Request flow: **`Service` → `Repository` (ZIO boundary) → `Queries` (SQL) → Postgres**, with `Row` models as the currency in and `Row`/projections out.
 
@@ -23,7 +23,7 @@ Each layer only knows the one below it. The service talks to the `Repository` tr
 
 - `case class FooBarRow(...)` whose fields are Iron refined types / enums / `CreatedAt` / `UpdatedAt`, in **the same order as the column list** in the queries fields fragment — whole-row `Write` is positional, so order is load-bearing, not cosmetic.
 - Nullable columns are `Option[...]`; the presence/absence of `not null` in the migration must match. A mismatch is a runtime decode failure, not a compile error.
-- Naming and parameter conventions: [scala.md §4 Repository domain models](scala.md) and [§5 domain model parameters](scala.md).
+- Naming and parameter conventions: [scala.md §4 Repository domain models](stack/scala.md) and [§5 domain model parameters](stack/scala.md).
 - A `Row` represents a **persisted row you read back or write whole** — it carries the generated id and `createdAt`/`updatedAt`. It is **not** an insert input (those are minted in the repository — see [Inputs](#inputs-never-the-api-request-models)).
 - A `jsonb`/repeated column that stores a list of small records (e.g. `emails`, `phoneNumbers`) is typed with the repository-owned **`...Input`** element model, **never** a smithy `...Request` model — request vocabulary must not leak even into the persisted `Row` shape or its jsonb codec. `CustomerIndividualDetailsRow.emails` is `List[CustomerEmailEntryInput]`, so the whole stack — input → `Row` field → jsonb codec — speaks one type and the repository needs no `Input → Request` conversion.
 
@@ -41,7 +41,7 @@ Each layer only knows the one below it. The service talks to the `Repository` tr
 - Keep **one** `frFooBarFields` fragment (the column list) reused by every `SELECT` / `INSERT` / `RETURNING` — the single place column order is defined; it must match the `Row` case class.
 - Methods return `TranzactIO[...]` and wrap SQL in `tzio { ... }`. Build SQL with `fr"..."` and the Doobie helpers `whereAnd`, `set`, `orderBy`, `NonEmptyList` for update sets. Insert a whole row with `fr"$fooBarRow"`. Updates that return the new state end with `fr"RETURNING" ++ frFooBarFields` and `.query[FooBarRow].unique`.
 - Dynamic update: start the `set` list with `NonEmptyList.of(fr"updated_at = $updatedAt")` and append `optUpdate.map(v => fr"col = $v")` entries, `.flatten` — only the provided fields hit the `SET`.
-- Method names are **bare operation verbs** (`get`, `insert`, `update`, `delete`, `upsert`, `is...`) — no entity name (the class already carries it), plural for multi-row. Test-only helpers take a `...Testing` suffix. See [scala.md §7](scala.md) / [§8](scala.md).
+- Method names are **bare operation verbs** (`get`, `insert`, `update`, `delete`, `upsert`, `is...`) — no entity name (the class already carries it), plural for multi-row. Test-only helpers take a `...Testing` suffix. See [scala.md §7](stack/scala.md) / [§8](stack/scala.md).
 
 ### Repository — the ZIO boundary
 
@@ -51,7 +51,7 @@ Each layer only knows the one below it. The service talks to the `Repository` tr
   2. runs its queries inside `database.transactionOrWiden(...)` — see [Transactions](#transactions);
   3. maps the `DbException` failure through one `toServiceError(s"...")` mapper — `RepositoryError` (500) by default, `ConflictError.UniqueConstraintViolation` (409) for a `unique` violation — see [Error handling](#error-handling).
 - `val live = ZLayer.derive[FooRepositoryImpl].project[FooRepository](identity)`.
-- Naming: methods **carry the entity name** (`getFooByUserID`, `insertFoo`), unlike the bare-verb query methods — [scala.md §1](scala.md) / [§2](scala.md).
+- Naming: methods **carry the entity name** (`getFooByUserID`, `insertFoo`), unlike the bare-verb query methods — [scala.md §1](stack/scala.md) / [§2](stack/scala.md).
 
 ## Inputs: never the API request models
 
@@ -82,14 +82,14 @@ object CustomerBookRepository {
 }
 ```
 
-Full rule with ✅/❌: [scala.md §5b Repository input models](scala.md#5b-repository-input-models-decoupling-the-repo-from-the-api-contract).
+Full rule with ✅/❌: [scala.md §5b Repository input models](stack/scala.md#5b-repository-input-models-decoupling-the-repo-from-the-api-contract).
 
 ## Return types
 
 - A repository returns **`Row` models** (or projections), never Doobie/`TranzactIO` types and never a smithy response — the service maps `Row` → smithy.
 - `get` returns `Option[...Row]`; a `create`/`update` returns the affected `...Row` (via `RETURNING`); a multi-row read returns `List[...Row]`.
 - Inserts that the caller needs to reference later return the generated id(s) (`CustomerID` / `List[CustomerID]`).
-- Values holding results are named after the row: `fooBarRow`, `fooBarRowOpt`, `fooBarRows`, and a re-fetched/updated one is qualified (`fooBarRowUpdated`) — [scala.md §9](scala.md).
+- Values holding results are named after the row: `fooBarRow`, `fooBarRowOpt`, `fooBarRows`, and a re-fetched/updated one is qualified (`fooBarRowUpdated`) — [scala.md §9](stack/scala.md).
 
 ## Transactions
 
@@ -107,7 +107,7 @@ Full rule with ✅/❌: [scala.md §5b Repository input models](scala.md#5b-repo
     .flatMap(ZIO.fromEither(_).mapError(e => ServiceError.InternalServerError.UnexpectedError(s"Failed to construct customerID: [$e]")))
   ```
 - Timestamps: one `timeProvider.instantNow` per operation, used for both `CreatedAt` and `UpdatedAt` on insert and to refresh `UpdatedAt` on every mutation.
-- **Batch inserts pair each generated id with its input at generation time** — a named tuple built inside the one `ZIO.foreach` (`generateCustomerID.map(customerID => (customerID = customerID, input = input))`), with every downstream row derived from the paired list and the result read as `.map(_.customerID)`. Never generate an id list and `zip` it back onto the inputs, and never read the pair positionally — see [scala.md § Pairing values](scala.md#pairing-values--no-zip-no-_1).
+- **Batch inserts pair each generated id with its input at generation time** — a named tuple built inside the one `ZIO.foreach` (`generateCustomerID.map(customerID => (customerID = customerID, input = input))`), with every downstream row derived from the paired list and the result read as `.map(_.customerID)`. Never generate an id list and `zip` it back onto the inputs, and never read the pair positionally — see [scala.md § Pairing values](stack/scala.md#pairing-values--no-zip-no-_1).
 - This is what makes the layer testable: specs mock `TimeProvider`/`IDGenerator` and assert exact `createdAt`/`updatedAt` and ids (see [Testing](#testing)).
 
 ## Error handling
@@ -117,7 +117,7 @@ Full rule with ✅/❌: [scala.md §5b Repository input models](scala.md#5b-repo
   .mapError(toServiceError(s"Failed to create customer with ID: [$customerID]"))
   ```
 - The generic case is `ServiceError.InternalServerError.RepositoryError(errorMessage, dbException)` (500): the message names the operation and the key id; the original `DbException` is kept as `underlying` (specs assert `serviceError.underlying.value shouldBe a[DbException]`).
-- **DB-enforced conflicts get a distinct 409, mapped *in* the repository.** A `unique` violation arrives as a `DbException` wrapping a Postgres `PSQLException` with SQL state `23505`; the mapper detects it (via `PSQLState.UNIQUE_VIOLATION`), reads the **violated constraint name** off `getServerErrorMessage.getConstraint`, and produces `ServiceError.ConflictError.UniqueConstraintViolation(message, dbException)` — a `ConflictError` (409, distinct from `RepositoryError`) whose `message` states in plain language which rule was broken. This is why the DB constraints are **named** (`uq_<table>_<columns>`, see [postgres.md § constraint naming](postgres.md#constraint-naming--conflict-mapping)) — the mapper `match`es on the name to pick the message, and an unmapped name falls back to a generic "unique constraint was violated: [name]". The repository does **not** pre-check existence with a `SELECT` (racy); it lets the DB enforce and translates the failure.
+- **DB-enforced conflicts get a distinct 409, mapped *in* the repository.** A `unique` violation arrives as a `DbException` wrapping a Postgres `PSQLException` with SQL state `23505`; the mapper detects it (via `PSQLState.UNIQUE_VIOLATION`), reads the **violated constraint name** off `getServerErrorMessage.getConstraint`, and produces `ServiceError.ConflictError.UniqueConstraintViolation(message, dbException)` — a `ConflictError` (409, distinct from `RepositoryError`) whose `message` states in plain language which rule was broken. This is why the DB constraints are **named** (`uq_<table>_<columns>`, see [postgres.md § constraint naming](stack/postgres.md#constraint-naming--conflict-mapping)) — the mapper `match`es on the name to pick the message, and an unmapped name falls back to a generic "unique constraint was violated: [name]". The repository does **not** pre-check existence with a `SELECT` (racy); it lets the DB enforce and translates the failure.
   ```scala
   private def toServiceError(errorMessage: String)(dbException: DbException): ServiceError =
     findUniqueConstraintViolated(dbException) match
@@ -131,11 +131,11 @@ Full rule with ✅/❌: [scala.md §5b Repository input models](scala.md#5b-repo
 Given instances in `repository/queries/queries.scala` derive Doobie `Read`/`Write`/`Get`/`Put`/`Meta` for **all** Iron refined types (via `RefinedType.Mirror`) and Scala `enum`s (`Get/Put.deriveEnumString` → the case name as `text`), so a new refined type or enum needs **no** per-type codec. Exceptions:
 
 - A refined type over a **non-standard base** still needs a `Meta` for that base.
-- **`jsonb` columns** (a `List[...]` field) need one **explicitly named** given pair per list type — a jsoniter `JsonValueCodec` plus a `Meta` built via `jsonbMeta`. Anonymous givens of the same shape collide and shadow each other, so name them (`customerEmailEntryInputsMeta: Meta[List[CustomerEmailEntryInput]]`). The list element is the repository-owned `...Input` model (see [Row](#row--the-table-shape)), so these givens live in the **feature's `Queries` class** next to the `Row` they serve — that file must `import <Feature>Repository.*` for the `Input` types and `import io.github.iltotore.iron.jsoniter.given` so the jsoniter macro can find the Iron base codecs (missing this import surfaces as a macro `StackOverflowError`, not a plain "no given"). See [postgres.md § Type mappings](postgres.md#type-mappings-repositoryqueriesqueriesscala).
+- **`jsonb` columns** (a `List[...]` field) need one **explicitly named** given pair per list type — a jsoniter `JsonValueCodec` plus a `Meta` built via `jsonbMeta`. Anonymous givens of the same shape collide and shadow each other, so name them (`customerEmailEntryInputsMeta: Meta[List[CustomerEmailEntryInput]]`). The list element is the repository-owned `...Input` model (see [Row](#row--the-table-shape)), so these givens live in the **feature's `Queries` class** next to the `Row` they serve — that file must `import <Feature>Repository.*` for the `Input` types and `import io.github.iltotore.iron.jsoniter.given` so the jsoniter macro can find the Iron base codecs (missing this import surfaces as a macro `StackOverflowError`, not a plain "no given"). See [postgres.md § Type mappings](stack/postgres.md#type-mappings-repositoryqueriesqueriesscala).
 
 ## Configuration
 
-Table names are **config, never string literals** — [postgres.md § Configuration](postgres.md#configuration--table-names-are-config-not-constants). Adding a table touches, at minimum: `RepositoryConfig` (`<entity>Table` field + `allTableNames`), **both** `application.conf`s (`core` main **and** `it` test), the migration, and the three code layers. The `it` copy is easy to forget and its omission only fails at acceptance-test time.
+Table names are **config, never string literals** — [postgres.md § Configuration](stack/postgres.md#configuration--table-names-are-config-not-constants). Adding a table touches, at minimum: `RepositoryConfig` (`<entity>Table` field + `allTableNames`), **both** `application.conf`s (`core` main **and** `it` test), the migration, and the three code layers. The `it` copy is easy to forget and its omission only fails at acceptance-test time.
 
 ## Layer wiring
 
@@ -191,7 +191,7 @@ Every test runs in `new TestContext {}` — an inner `trait` that wires a fresh 
 - **Act** through the repository method under test with `.zioValue` (or `.zioError` for the failure path).
 - **Assert** by reading the table back with a `…Testing` query helper and comparing **whole `Row`s** (`should contain theSameElementsAs`, `have size`), and for repo-minted rows assert the injected `createdAt`/`updatedAt`/ids.
 - **Cover**: happy path; `None`/empty on missing; **DB-enforced failures** — every `unique` constraint gets its own section asserting the mapped `ServiceError.ConflictError.UniqueConstraintViolation` (`serviceError shouldBe a[...UniqueConstraintViolation]`, `serviceError.message shouldBe "<the clear message>"`, `underlying.value shouldBe a[DbException]`), that the table is left unchanged (the losing row rolled back), and, for a multi-statement method, that a mid-transaction failure **rolls back** the earlier writes (assert the sibling table is empty). Trigger each constraint in isolation — e.g. for the contact email-vs-phone uniques, hold one column equal and keep the other distinct so only the intended constraint fires.
-- **Isolate**: each test samples its own data with `arbitrarySample[…]` and `.copy(…)`s only the field under test — no shared "valid X" fixtures ([scala.md § Testing](scala.md)).
+- **Isolate**: each test samples its own data with `arbitrarySample[…]` and `.copy(…)`s only the field under test — no shared "valid X" fixtures ([scala.md § Testing](stack/scala.md)).
 
 Where an invariant is enforced in the **service** rather than the DB, add a repository integration test that guards it directly against Postgres (e.g. Customer Book asserts no `customer_id` is in both detail tables — [customer-book.md](features/customer-book.md)). Feature-level behaviour lives in acceptance tests — [acceptance-tests.md](acceptance-tests.md).
 
@@ -201,4 +201,4 @@ They need Docker. `sbt "gateway-core/testOnly *<Entity>RepositorySpec"` runs one
 
 ## Checklists
 
-Adding a table and adding a column both walk this same stack; the step-by-step (with the traps — positional row order, the `it` `application.conf`, optional-param defaults hiding missed call sites) lives in [postgres.md § Adding a table](postgres.md#adding-a-table--checklist) and [§ Adding a column](postgres.md#adding-a-column-to-an-existing-table--checklist).
+Adding a table and adding a column both walk this same stack; the step-by-step (with the traps — positional row order, the `it` `application.conf`, optional-param defaults hiding missed call sites) lives in [postgres.md § Adding a table](stack/postgres.md#adding-a-table--checklist) and [§ Adding a column](stack/postgres.md#adding-a-column-to-an-existing-table--checklist).

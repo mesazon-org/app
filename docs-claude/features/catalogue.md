@@ -4,7 +4,7 @@ Owns the client's **catalogue of items they sell** — a per-organization list o
 
 **Vocabulary.** "Organization" is the **Mesazon tenant** (the client themselves — see [Organization Management](organization-management.md)), not a third party. Every row here is scoped by `organization_id`, carried in the `X-Organization-ID` header on every endpoint.
 
-**Scope**: the `catalogue_item` table, its name/unit/price/photo fields, and archival (soft-delete via the `status` column). **Excludes**: the photo **upload transport** (a Tapir streaming endpoint reusing the [Files Management](files-management.md) pipeline — deferred, see [Status](#status)); orders/line-items that will later reference a `catalogue_item_id` and snapshot its details (a future feature — see the order-snapshot rules in [postgres.md § Soft-delete & archival](../postgres.md#soft-delete--archival)); and the tenant/membership/role model ([Organization Management](organization-management.md)).
+**Scope**: the `catalogue_item` table, its name/unit/price/photo fields, and archival (soft-delete via the `status` column). **Excludes**: the photo **upload transport** (a Tapir streaming endpoint reusing the [Files Management](files-management.md) pipeline — deferred, see [Status](#status)); orders/line-items that will later reference a `catalogue_item_id` and snapshot its details (a future feature — see the order-snapshot rules in [postgres.md § Soft-delete & archival](../stack/postgres.md#soft-delete--archival)); and the tenant/membership/role model ([Organization Management](organization-management.md)).
 
 ## Data model
 
@@ -21,8 +21,8 @@ catalogue_item (organization_id, catalogue_item_id)  PK
 ```
 
 - **Org isolation via a composite PK** `(organization_id, catalogue_item_id)` — a caller can never reference another tenant's item. Same pattern as `customer`.
-- **Soft-delete, never hard-delete.** `status` is a native PostgreSQL enum (`catalogue_item_status`, labels `Active`/`Archived` = the Scala `CatalogueItemStatus` case names verbatim), exactly like `customer.status`. Rationale: a catalogue item will be referenced by future order line-items, so it must never be physically deleted (see [postgres.md § Soft-delete & archival](../postgres.md#soft-delete--archival)). Archiving flips `status`; there is deliberately **no unarchive** (matching Customer Book).
-- **`uq_catalogue_item_name`** — a **partial** unique index `unique (organization_id, name) where status = 'Active'`: an org can't hold two *active* items with the same name. Because it is partial on `status = 'Active'`, archiving frees the name, and same-name items may accumulate once archived. **Named** so the repository maps its `23505` violation to a specific `409` (see [postgres.md § Constraint naming](../postgres.md#constraint-naming--conflict-mapping)).
+- **Soft-delete, never hard-delete.** `status` is a native PostgreSQL enum (`catalogue_item_status`, labels `Active`/`Archived` = the Scala `CatalogueItemStatus` case names verbatim), exactly like `customer.status`. Rationale: a catalogue item will be referenced by future order line-items, so it must never be physically deleted (see [postgres.md § Soft-delete & archival](../stack/postgres.md#soft-delete--archival)). Archiving flips `status`; there is deliberately **no unarchive** (matching Customer Book).
+- **`uq_catalogue_item_name`** — a **partial** unique index `unique (organization_id, name) where status = 'Active'`: an org can't hold two *active* items with the same name. Because it is partial on `status = 'Active'`, archiving frees the name, and same-name items may accumulate once archived. **Named** so the repository maps its `23505` violation to a specific `409` (see [postgres.md § Constraint naming](../stack/postgres.md#constraint-naming--conflict-mapping)).
 
 ### Unit is free text (not an enum)
 
@@ -44,7 +44,7 @@ The photo is modelled as the three nullable bucket-key columns (`photo_original_
 
 ## Endpoints
 
-One service — `CatalogueService`, `@completedOnboardStage` (Bearer + completed onboarding). Every operation carries the `X-Organization-ID` header via the `OrganizationScopedInput` mixin (see [smithy.md §4](../smithy.md#4-organization-scoping--the-x-organization-id-header)) and an `@organizationUserRolesAllowed` trait following the [standard role policy](../smithy.md#organizationuserrolesallowedroles-): reads allow `OWNER`/`ADMIN`/`USER`, writes allow `OWNER`/`ADMIN`. URIs are verb-first (`/insert/...`, `/get/...`), no feature prefix.
+One service — `CatalogueService`, `@completedOnboardStage` (Bearer + completed onboarding). Every operation carries the `X-Organization-ID` header via the `OrganizationScopedInput` mixin (see [smithy.md §4](../stack/smithy.md#4-organization-scoping--the-x-organization-id-header)) and an `@organizationUserRolesAllowed` trait following the [standard role policy](../stack/smithy.md#organizationuserrolesallowedroles-): reads allow `OWNER`/`ADMIN`/`USER`, writes allow `OWNER`/`ADMIN`. URIs are verb-first (`/insert/...`, `/get/...`), no feature prefix.
 
 | Method | Path | Operation | Roles | Effect / Returns |
 |---|---|---|---|---|
@@ -55,7 +55,7 @@ One service — `CatalogueService`, `@completedOnboardStage` (Bearer + completed
 | GET | `/get/catalogue-item/{catalogueItemID}` | `GetCatalogueItemGet` | OWNER, ADMIN, USER | one item's full details |
 | GET | `/get/catalogue-items` | `GetCatalogueItemsGet` | OWNER, ADMIN, USER | every active item |
 
-**Errors** (ordered by status code, per [smithy.md §3](../smithy.md#3-operations)):
+**Errors** (ordered by status code, per [smithy.md §3](../stack/smithy.md#3-operations)):
 
 - Writes that validate a body and can collide on the name — inserts and `UpdateCatalogueItemPut` — declare `[BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]`.
 - `ArchiveCatalogueItemPut` carries only a `catalogueItemID` (a `Pure` UUID that cannot fail refinement) and archiving only *removes* a row from the active-name set (never violates `uq_catalogue_item_name`), so — like `ArchiveCustomerPut` — it declares **no `ValidationError`** and **no `Conflict`**: `[BadRequest, Unauthorized, Forbidden, InternalServerError]`.
@@ -87,7 +87,7 @@ Tracks what is built vs. outstanding — keep this current as each part lands, p
 
 ### Remaining — to be completed
 
-Follow the [Adding a feature](../adding-a-feature.md) order of work and the [Adding a table checklist](../postgres.md#adding-a-table--checklist):
+Follow the [Adding a feature](../adding-a-feature.md) order of work and the [Adding a table checklist](../stack/postgres.md#adding-a-table--checklist):
 
 - **Domain request models** — the entry/request case classes in `domain/gateway/Catalogue.scala`.
 - **Validator** — `CatalogueRequestValidator` (one `validated…` per fallible request) + spec.

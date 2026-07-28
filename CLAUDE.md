@@ -1,6 +1,6 @@
-# Mesazon
+# Mesazon App
 
-Business management platform backend. One HTTP gateway, Scala, PostgreSQL, API contracts in Smithy. Features are built only when driven by real business needs.
+Mesazon is a Business Management Platform. Its goal is to enhance businesses with powerful tools to orchestrate their workflows, taking a pragmatic approach: features are derived from real business needs.
 
 ## Architecture
 
@@ -31,13 +31,14 @@ Local build/run/test setup: [Repository setup](docs/repository-setup.md).
 
 Standards per technology, in request-flow order. Follow when writing code.
 
-- [smithy](docs-claude/smithy.md) — API contracts: naming, coding standards, custom traits
+- [smithy](docs-claude/stack/smithy.md) — API contracts: naming, coding standards, custom traits
 - [middleware](docs-claude/middleware.md) — auth (basic/bearer), `@completedOnboardStage`, org role via `X-Organization-ID`
 - [validators](docs-claude/validators.md) — smithy request → refined domain model; error accumulation
-- [scala](docs-claude/scala.md) — language conventions + test-writing standards
-- [postgres](docs-claude/postgres.md) — Flyway migrations, table/column naming, Row→Queries→Repository
+- [scala](docs-claude/stack/scala.md) — language conventions + test-writing standards
+- [postgres](docs-claude/stack/postgres.md) — Flyway migrations, table/column naming, Row→Queries→Repository
+- [tapir](docs-claude/stack/tapir.md) — streaming file-upload transport, error model, security parity with middleware
 - [repository](docs-claude/repository.md) — Row→Queries→Repository layer: inputs vs API requests, transactions, id/timestamp gen, error mapping, wiring, testing
-- [sbt](docs-claude/sbt.md) — sbt 2.x rules, module structure, dependency mgmt, CI wiring
+- [sbt](docs-claude/stack/sbt.md) — sbt 2.x rules, module structure, dependency mgmt, CI wiring
 
 ## Validation flow (rules, run in order, every change)
 

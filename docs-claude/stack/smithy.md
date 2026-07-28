@@ -1,6 +1,6 @@
 # Smithy — API contract standards
 
-API contracts are smithy-first: shapes live under `backend/gateway/core/src/main/smithy/` and smithy4s generates the Scala code (`io.mesazon.gateway.smithy` package) at compile time. Services implement the generated trait (see the service pattern in existing `service/*.scala`). The auth-related traits declared here are enforced by the HTTP middleware — see [middleware.md](middleware.md) for how that works.
+API contracts are smithy-first: shapes live under `backend/gateway/core/src/main/smithy/` and smithy4s generates the Scala code (`io.mesazon.gateway.smithy` package) at compile time. Services implement the generated trait (see the service pattern in existing `service/*.scala`). The auth-related traits declared here are enforced by the HTTP middleware — see [middleware.md](../middleware.md) for how that works.
 
 ## Naming Conventions
 
@@ -24,7 +24,7 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
 - ✅ `InsertCustomersPostRequest`, `GetCustomerIndividualGetResponse`
 - ❌ `CustomerInsertBody`, `GetCustomerResponse` (not matching the operation name)
 
-**Smithy names are the gold standard.** The domain case class a request validates into is named **exactly** after its smithy request structure — smithy `CreateOrganizationPostRequest` validates into domain `case class CreateOrganizationPostRequest`; smithy `InsertCustomerIndividualPostRequest` into domain `InsertCustomerIndividualPostRequest`. The two are distinguished purely by qualification (next rule), never by inventing a second name for the same shape. Renaming one side renames the other (and, per the [Rename rule](../CLAUDE.md), the docs).
+**Smithy names are the gold standard.** The domain case class a request validates into is named **exactly** after its smithy request structure — smithy `CreateOrganizationPostRequest` validates into domain `case class CreateOrganizationPostRequest`; smithy `InsertCustomerIndividualPostRequest` into domain `InsertCustomerIndividualPostRequest`. The two are distinguished purely by qualification (next rule), never by inventing a second name for the same shape. Renaming one side renames the other (and, per the [Rename rule](../../CLAUDE.md), the docs).
 
 **Smithy types are always referenced qualified.** Scala code imports the *package* — `import io.mesazon.gateway.smithy` (or with the feature's imports, `io.mesazon.gateway.{smithy, ...}`) — and writes `smithy.CreateOrganizationPostRequest`. Never import a smithy member directly (`import io.mesazon.gateway.smithy.SomeShape` ❌): with domain and smithy shapes sharing names, the `smithy.` prefix is what tells the wire shape from the domain model at every use site.
 
@@ -116,16 +116,16 @@ API contracts are smithy-first: shapes live under `backend/gateway/core/src/main
   }
   ```
 
-  Mixins flatten at model-build time, so smithy4s still generates `organizationID` as the operation's first method parameter **and** OpenAPI still renders `X-Organization-ID` as a required header parameter on every operation — the header is defined once but documented per operation. It stays an input member on purpose (not a service-level trait): it is a tenant **scope selector**, most truthfully documented as a header *parameter*, and the middleware reads the header off the raw request itself regardless (see [middleware.md](middleware.md)).
+  Mixins flatten at model-build time, so smithy4s still generates `organizationID` as the operation's first method parameter **and** OpenAPI still renders `X-Organization-ID` as a required header parameter on every operation — the header is defined once but documented per operation. It stays an input member on purpose (not a service-level trait): it is a tenant **scope selector**, most truthfully documented as a header *parameter*, and the middleware reads the header off the raw request itself regardless (see [middleware.md](../middleware.md)).
 - Rationale: the middleware can read a fixed header without parsing the body (impossible for GETs and streaming uploads), and URIs stay untouched by the scoping standard
 - **Make the role requirement obvious in swagger** — neither the `@organizationUserRolesAllowed` trait nor the middleware role check appears in the generated OpenAPI, so a reader of the swagger learns *which role is required* only from the operation's `/// **Required Organization User Roles:** [...]` doc comment (which becomes the operation `description`)
-- **Tapir endpoints follow the same standard** — the header is declared as a typed `securityIn` (`header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString)`) and passed to `AuthorizationService.auth` together with the endpoint's allowed roles; missing required headers (`Authorization`, `X-Organization-ID`) are a generic `400 BadRequest` and disallowed-role failures a `403 Forbidden` on **both** transports (see `FileServiceEndpoints.scala` and [middleware.md](middleware.md)). Because the Tapir role check runs inside `zServerSecurityLogic` (invisible to OpenAPI), give the endpoint a `.description(requiredOrganizationRolesDescription(...))` passing the same `OrganizationUserRole` list the security logic enforces (e.g. `OrganizationUserRole.adminRoles`) — the shared helper renders the identical `**Required Organization User Roles:** [...]` marker used on the smithy operations, so the Tapir swagger states the required roles too and cannot drift from the enforced list
+- **Tapir endpoints follow the same standard** — the header is declared as a typed `securityIn` (`header[OrganizationID](AuthorizationService.OrganizationIDHeader.toString)`) and passed to `AuthorizationService.auth` together with the endpoint's allowed roles; missing required headers (`Authorization`, `X-Organization-ID`) are a generic `400 BadRequest` and disallowed-role failures a `403 Forbidden` on **both** transports (see `FileServiceEndpoints.scala` and [middleware.md](../middleware.md)). Because the Tapir role check runs inside `zServerSecurityLogic` (invisible to OpenAPI), give the endpoint a `.description(requiredOrganizationRolesDescription(...))` passing the same `OrganizationUserRole` list the security logic enforces (e.g. `OrganizationUserRole.adminRoles`) — the shared helper renders the identical `**Required Organization User Roles:** [...]` marker used on the smithy operations, so the Tapir swagger states the required roles too and cannot drift from the enforced list
 - ✅ `input := with [OrganizationScopedInput] { ... }` on every org-scoped operation
 - ❌ redeclaring `@httpHeader("X-Organization-ID") organizationID: UUID` inline per operation instead of mixing in `OrganizationScopedInput`, `organizationID` as a request-body field or path parameter (`/insert/customers/{organizationID}`), a Tapir endpoint doing its own org check differently from the smithy middleware
 
 ## Custom traits
 
-All custom traits live in `domain/Gateway.smithy` and are enforced by [the HTTP middleware](middleware.md) via smithy4s service hints.
+All custom traits live in `domain/Gateway.smithy` and are enforced by [the HTTP middleware](../middleware.md) via smithy4s service hints.
 
 ### `@completedOnboardStage`
 

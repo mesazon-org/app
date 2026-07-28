@@ -20,7 +20,7 @@ Smithy spec: `backend/gateway/core/src/main/smithy/OrganizationManagementService
 
 ## Role policy (for future org-scoped endpoints)
 
-Any org-scoped endpoint added here follows the project-wide [standard role policy](../smithy.md#organizationuserrolesallowedroles-): reads (`GET`) allow `OWNER`/`ADMIN`/`USER`, mutations allow `OWNER`/`ADMIN`. The one carve-out this feature owns: **deleting an organization is `OWNER` only** (`@organizationUserRolesAllowed(roles: ["OWNER"])`) — an `ADMIN` may run every other action but cannot delete the org itself.
+Any org-scoped endpoint added here follows the project-wide [standard role policy](../stack/smithy.md#organizationuserrolesallowedroles-): reads (`GET`) allow `OWNER`/`ADMIN`/`USER`, mutations allow `OWNER`/`ADMIN`. The one carve-out this feature owns: **deleting an organization is `OWNER` only** (`@organizationUserRolesAllowed(roles: ["OWNER"])`) — an `ADMIN` may run every other action but cannot delete the org itself.
 
 ## Flow
 
