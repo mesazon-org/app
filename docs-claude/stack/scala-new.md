@@ -2,9 +2,9 @@
 
 Project-agnostic Scala 3 naming and test-writing standards — hold regardless of framework, transport, database, or architecture.
 
-Not owned here: API-contract naming/transport↔domain mapping, database/repository conventions, framework-specific effect/DI/serialization, test-harness setup — each belongs to the document owning that boundary; link, never duplicate.
+Not owned here: refined/identifier-newtype naming ([iron-new.md](iron-new.md)), API-contract naming/transport↔domain mapping, database/repository conventions, framework-specific effect/DI/serialization, test-harness setup — each belongs to the document owning that boundary; link, never duplicate.
 
-Dense, LLM-oriented rules only — no narrative, no restating a global convention an agent already knows (camelCase, PascalCase, Arrange-Act-Assert). Record only standards unique to this team.
+Dense, LLM-oriented rules only — no narrative, no restating a global convention an agent already knows (camelCase, PascalCase, Arrange-Act-Assert). Record only standards unique to this team. Concrete values for this codebase: [scala-project.md](scala-project.md).
 
 ## General coding standards
 
@@ -61,13 +61,6 @@ A short conventional name (`i`, `A`) is fine only in a small, unambiguous scope 
 ### Case and grammatical form
 
 Types, traits, objects, and named constants are `PascalCase`; values, fields, parameters, and methods are `camelCase`.
-
-#### Identifier types
-
-Name an identifier type after the entity it identifies; never use a context-free identifier type.
-
-- ✅ `CustomerID`, `InvoiceID`, `SubscriptionID`
-- ❌ `ID`, `EntityID`, `Identifier`
 
 #### Optionals
 
