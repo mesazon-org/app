@@ -77,7 +77,7 @@ It does **not** own what *happens* at request time. The contract merely *declare
 - **Service handler** (implementing the generated trait): name the generated request parameter after the full request type + `Smithy` (`createOrganizationPostRequestSmithy: smithy.CreateOrganizationPostRequest`), and the validator's output — the domain model — after the domain type (`createOrganizationPostRequest`). Do this for the whole feature's handlers, both the impl and any observed/wrapped variant.
 - **Tests**: a value holding a domain sample is named after its type (`insertCustomerIndividualPostRequest`), a value holding a generated sample takes the `Smithy` suffix (`insertCustomerIndividualPostRequestSmithy`) — the same disambiguation the test arbitraries use (see [adding-a-feature-new.md § naming the givens](../adding-a-feature-new.md)).
 
-The general "name a binding after its precise type" rule lives in [scala-new.md](scala-new.md#qualifiers-and-precise-names); this is its contract-first specialization.
+The general "name a binding after its precise type, not a vague role word" rule lives in [scala-new.md § General principles](scala-new.md#general-principles); this is its contract-first specialization.
 
 ### Item structures and lists
 
