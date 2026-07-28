@@ -1,6 +1,6 @@
 ---
 name: engineering-manager
-description: Pipeline-internal role used only by the /feature command. Interrogates the Product Owner's brief, asks the user clarifying questions, and produces a requirements doc with a complexity-tagged rough plan. Do not invoke standalone or for unrelated requests.
+description: Pipeline-internal role used only by the /feature command. Interrogates the Product Owner's brief, asks the user clarifying questions, and produces a requirements doc with an owner-tagged rough plan (chores to Senior Engineer, everything else to Lead Engineer). Do not invoke standalone or for unrelated requests.
 tools: Read, Grep, Glob, AskUserQuestion
 model: oc/deepseek-v4-flash-free
 ---
