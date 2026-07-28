@@ -32,6 +32,8 @@ Feature requests can be run through a 4-role Claude Code subagent pipeline (Prod
 
 **Rename rule (for Claude): docs reference code by name.** Whenever you rename an identifier that could be named in prose (service errors, types, endpoints, config keys, files), grep `docs-claude/` (and this `CLAUDE.md`) for the old name and update every match in the same change — the same way you would for the code and tests.
 
+**Doc-currency rule (for Claude): every change re-checks the docs.** For *anything* you change — a feature, a test harness, a build setting, a naming or testing convention — before you call the work done, scan `docs-claude/` (and this `CLAUDE.md`) for statements your change made inaccurate and fix them in the same change; a stale doc misleads future sessions worse than a missing one. When a change establishes a new convention or standard, add it to the relevant doc so it is applied consistently thereafter. This rule is broader than the Documentation rule (new features) and Rename rule (renamed identifiers): it covers every change, not only those two.
+
 Follow the structure of the existing docs:
 
 - scope paragraph: what the feature owns, what it deliberately excludes, links to the owning features at each boundary

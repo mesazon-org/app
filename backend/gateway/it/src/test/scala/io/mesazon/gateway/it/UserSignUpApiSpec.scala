@@ -1,115 +1,27 @@
 package io.mesazon.gateway.it
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.it.client.GatewayClient
-import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.it.client.GatewayClient.given
+import io.mesazon.gateway.it.harness.GatewayAcceptanceTest
 import io.mesazon.gateway.repository.domain.*
-import io.mesazon.gateway.repository.queries.*
 import io.mesazon.gateway.smithy
-import io.mesazon.gateway.utils.MailHogClient.MailHogClientConfig
-import io.mesazon.gateway.utils.{MailHogClient, RepositoryArbitraries, SmithyArbitraries, UserSignUpSmithyArbitraries}
-import io.mesazon.test.postgresql.PostgreSQLTestClient
-import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
-import io.mesazon.testkit.base.{DockerComposeBase, IronRefinedTypeTransformer, ZWordSpecBase}
-import sttp.client4.httpclient.zio.HttpClientZioBackend
+import io.mesazon.gateway.utils.{RepositoryArbitraries, SmithyArbitraries, UserSignUpSmithyArbitraries}
+import io.mesazon.testkit.base.IronRefinedTypeTransformer
+import org.scalatest.DoNotDiscover
 import sttp.model.*
 import zio.*
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
+@DoNotDiscover
 class UserSignUpApiSpec
-    extends ZWordSpecBase,
-      DockerComposeBase,
+    extends GatewayAcceptanceTest,
       SmithyArbitraries,
       UserSignUpSmithyArbitraries,
       RepositoryArbitraries,
       IronRefinedTypeTransformer {
-
-  override def exposedServices =
-    GatewayClient.ExposedServices ++ PostgreSQLTestClient.ExposedServices ++ MailHogClient.ExposedServices
-
-  case class Context(
-      gatewayClient: GatewayClient,
-      postgresClient: PostgreSQLTestClient,
-      repositoryConfig: RepositoryConfig,
-      mailHogClient: MailHogClient,
-      userDetailsQueries: UserDetailsQueries,
-      userOtpQueries: UserOtpQueries,
-      userTokenQueries: UserTokenQueries,
-  )
-
-  def withContext[A](f: Context => A): A = withContainers { container =>
-    val context = for {
-      postgreSQLClientConfig = PostgreSQLTestClientConfig.from(container)
-      mailHogClientConfig    = MailHogClientConfig.from(container)
-      gatewayApiClientConfig = GatewayClientConfig.from(container)
-      repositoryConfig <- ZIO.service[RepositoryConfig].provide(RepositoryConfig.live, appNameLive)
-      postgreSQLClient <- ZIO
-        .service[PostgreSQLTestClient]
-        .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgreSQLClientConfig))
-      mailHogClient <- ZIO
-        .service[MailHogClient]
-        .provide(MailHogClient.live, HttpClientZioBackend.layer(), ZLayer.succeed(mailHogClientConfig))
-      gatewayApiClient <- ZIO
-        .service[GatewayClient]
-        .provide(GatewayClient.live, ZLayer.succeed(gatewayApiClientConfig))
-      userDetailsQueries <- ZIO
-        .service[UserDetailsQueries]
-        .provide(UserDetailsQueries.live, RepositoryConfig.live, appNameLive)
-      userOtpQueries <- ZIO
-        .service[UserOtpQueries]
-        .provide(UserOtpQueries.live, RepositoryConfig.live, appNameLive)
-      userTokenQueries <- ZIO
-        .service[UserTokenQueries]
-        .provide(UserTokenQueries.live, RepositoryConfig.live, appNameLive)
-    } yield Context(
-      gatewayApiClient,
-      postgreSQLClient,
-      repositoryConfig,
-      mailHogClient,
-      userDetailsQueries,
-      userOtpQueries,
-      userTokenQueries,
-    )
-
-    f(context.zioValue)
-  }
-
-  override def beforeAll(): Unit = withContext { context =>
-    import context.*
-
-    super.beforeAll()
-
-    // Ensure the GatewayApiClient is initialized before running tests
-    eventually(
-      gatewayClient.readiness.zioValue shouldBe StatusCode.NoContent
-    )
-
-    eventually(
-      ZIO
-        .foreach(repositoryConfig.allTableNames)(tableName =>
-          postgresClient.checkIfTableExists(repositoryConfig.schema, tableName)
-        )
-        .zioValue should contain only true
-    )
-  }
-
-  override def beforeEach(): Unit = withContext { context =>
-    import context.*
-
-    super.beforeEach()
-
-    mailHogClient.clearInbox().zioValue
-
-    ZIO
-      .foreach(repositoryConfig.allTableNames)(tableName =>
-        postgresClient.truncateTable(repositoryConfig.schema, tableName)
-      )
-      .zioValue
-  }
 
   "User Signup API" when {
     "POST /signup/email" should {
