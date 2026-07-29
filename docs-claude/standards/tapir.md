@@ -1,6 +1,6 @@
 # Alternate transport — the escape hatch beside the primary API contract
 
-Project-agnostic rules for routes the primary contract cannot express. Other owners: [primary contract](smithy.md), [middleware](../../middleware.md), [Scala](scala.md). Mesazon: [project/tapir.md](../project/tapir.md).
+Project-agnostic rules for routes the primary contract cannot express. Other owners: [primary contract](smithy.md), [authentication](../project/authentication.md), [Scala](scala.md). Mesazon: [Alternate HTTP](../project/alternate-http.md).
 
 ## File layout
 

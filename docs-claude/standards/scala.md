@@ -1,6 +1,6 @@
 # Scala
 
-Project-agnostic Scala naming/coding/test rules. Boundary-specific rules: [Iron](iron.md), [Smithy](smithy.md), [Doobie](doobie.md), [Postgres](postgres.md). Mesazon values: [project/scala.md](../project/scala.md).
+Project-agnostic Scala naming/coding/test rules. Boundary-specific rules: [Iron](iron.md), [Smithy](smithy.md), [Doobie](doobie.md), [Postgres](postgres.md). Mesazon values are scoped in [validation](../features/flow/02-validation.md), [repository](../features/flow/04-repository.md), and [service](../features/flow/05-service.md).
 
 ## Code
 

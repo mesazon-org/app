@@ -3,6 +3,10 @@ node_modules
 dist
 null
 
+# Claude-specific local runtime state
+.claude/settings.local.json
+.claude/worktrees/
+
 # local env files
 .env.local
 .env.*.local

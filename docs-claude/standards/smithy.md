@@ -1,6 +1,6 @@
 # Contract-first HTTP API
 
-Project-agnostic Smithy-style rules. Other owners: [middleware](../../middleware.md), [validation](../../validators.md), [newtypes](iron.md), [Scala/tests](scala.md), [alternate transport](tapir.md). Mesazon: [project/smithy.md](../project/smithy.md).
+Project-agnostic Smithy-style rules. Other owners: [Mesazon endpoints](../features/flow/01-endpoints.md), [authentication](../project/authentication.md), [validation](../features/flow/02-validation.md), [newtypes](iron.md), [Scala/tests](scala.md), [alternate transport](tapir.md).
 
 ## Names
 

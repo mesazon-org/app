@@ -92,7 +92,7 @@ sequenceDiagram
 
 ## Key files
 
-The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
+The feature follows the [current consolidated layout](../project/feature-consolidation.md): one domain file, one request validator, one arbitraries trait per layer.
 
 - Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/UserToken.scala` (the `TokenRefreshPostRequest` model)
 - Validator: `validation/service/UserTokenRequestValidator.scala` (`validatedTokenRefreshPostRequest`)
@@ -104,7 +104,7 @@ The feature follows the consolidated per-feature layout of [adding-a-feature.md]
 
 ## Tests
 
-- Acceptance (see [acceptance-tests.md](../acceptance-tests.md)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserTokenRefreshApiSpec.scala` — successful rotation, missing token (validation), invalid token, and the revocation case: a cryptographically valid refresh token not present in `user_token` is rejected
+- Acceptance (see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserTokenRefreshApiSpec.scala` — successful rotation, missing token (validation), invalid token, and the revocation case: a cryptographically valid refresh token not present in `user_token` is rejected
 - Functional: `fun/UserTokenServiceSpec.scala`
 - Units: `unit/validation/service/UserTokenRequestValidatorSpec.scala`, `unit/service/JwtServiceSpec.scala`, `unit/service/AuthorizationServiceSpec.scala`
 - Integration: `it/UserTokenRepositorySpec.scala`

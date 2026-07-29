@@ -1,6 +1,6 @@
 # Agent pipeline setup (OmniRoute + Claude Code roles)
 
-This repo has a 4-role Claude Code subagent pipeline — Product Owner → Engineering Manager → Lead Engineer → Senior Engineer — invoked via `/feature "<description>"`. The roles themselves are checked into git (`.claude/agents/*.md`, `.claude/commands/feature.md`) — cloning the repo is enough to get them. What's **not** checked in, and what every engineer must set up once on their own machine, is [OmniRoute](https://github.com/diegosouzapw/OmniRoute), the local AI gateway that routes each role's Claude Code calls across model tiers (your Claude subscription, paid API keys, free providers) instead of hard-coding one model for everything.
+This repo has a 4-role Claude Code subagent pipeline — Product Owner → Engineering Manager → Lead Engineer → Senior Engineer — invoked via `/feature "<description>"`. Shared sources live in `.agents/` (`.agents/agents/*.md`, `.agents/commands/feature.md`); corresponding files under the real `.claude/` directory are relative symlinks. Edit a shared file in `.agents/`. Claude-specific files/config may live directly in `.claude/`, and an intentionally divergent Claude file replaces only its own symlink. What's **not** checked in, and what every engineer must set up once on their own machine, is [OmniRoute](https://github.com/diegosouzapw/OmniRoute), the local AI gateway that routes each role's Claude Code calls across model tiers (your Claude subscription, paid API keys, free providers) instead of hard-coding one model for everything.
 
 OmniRoute runs **locally per engineer** — it is not shared infrastructure. Each person configures their own provider connections (their own Claude subscription login, their own API keys) in their own local instance. Never commit an OmniRoute API key, provider API key, or the admin password to this repo.
 
@@ -102,7 +102,7 @@ Claude Code reads all of this once at startup, so **restart every open Claude Co
 
 ## Cost: who actually uses your paid subscription
 
-A naive setup routes every one of the four roles through your paid Claude subscription — for a small ask, that's a lot of subscription usage for a lot of low-stakes work (asking clarifying questions, writing a brief). The defaults checked into `.claude/agents/*.md` instead only spend paid tokens where it actually matters:
+A naive setup routes every one of the four roles through your paid Claude subscription — for a small ask, that's a lot of subscription usage for a lot of low-stakes work (asking clarifying questions, writing a brief). The defaults checked into `.agents/agents/*.md` instead only spend paid tokens where it actually matters:
 
 | Role | Default model | Why |
 |---|---|---|
@@ -115,11 +115,11 @@ A naive setup routes every one of the four roles through your paid Claude subscr
 
 **How work is split between Senior and Lead**: the Engineering Manager tags each unit of work in its rough plan with a suggested owner — `senior-engineer` for chores, `lead-engineer` for anything that's a new feature or non-trivial (the Lead Engineer can override this during planning if its technical read disagrees). The orchestrator then routes each task accordingly: `senior-engineer` tasks get spawned fresh and reviewed by the Lead Engineer before being marked done; `lead-engineer` tasks are implemented by the Lead Engineer directly, in the same session that did the planning, with no separate review step (there's no one above it in the pipeline to review its own work). This means the cost split is really an ownership split, not a per-task model override — no dynamic model selection needed at spawn time.
 
-If you want a different split (e.g. also give the Engineering Manager a paid tier for tricky requirements), edit the `model:` line directly in the relevant `.claude/agents/*.md` file.
+If you want a different split (e.g. also give the Engineering Manager a paid tier for tricky requirements), edit the `model:` line directly in the relevant `.agents/agents/*.md` file.
 
 ## If you run Claude Code in an autonomous/"don't ask" permission mode
 
-The Engineering Manager needs `AskUserQuestion` to ask you clarifying questions directly, and any role may need `WebFetch`/`WebSearch`. If your permission mode auto-denies anything not explicitly allow-listed (you'll see errors like `Permission to use AskUserQuestion has been denied because Claude Code is running in don't ask mode`), add these to `.claude/settings.local.json`'s `permissions.allow` list:
+The Engineering Manager needs `AskUserQuestion` to ask you clarifying questions directly, and any role may need `WebFetch`/`WebSearch`. If your permission mode auto-denies anything not explicitly allow-listed (you'll see errors like `Permission to use AskUserQuestion has been denied because Claude Code is running in don't ask mode`), add these to Claude-specific `.claude/settings.local.json`'s `permissions.allow` list:
 
 ```json
 "AskUserQuestion",
@@ -137,7 +137,7 @@ From inside this repo, in a fresh Claude Code session:
 /feature "add a health-check endpoint"
 ```
 
-This runs the request through Product Owner → Engineering Manager (may ask you clarifying questions) → Engineering Manager/Lead Engineer technical discussion → Senior Engineer implementation → Lead Engineer review, following `docs-claude/adding-a-feature.md`'s order of work throughout.
+This runs the request through Product Owner → Engineering Manager (may ask you clarifying questions) → Engineering Manager/Lead Engineer technical discussion → Senior Engineer implementation → Lead Engineer review, following `docs-claude/features/flow/README.md`'s PR slices and per-slice tests throughout.
 
 ## Troubleshooting
 

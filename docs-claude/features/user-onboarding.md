@@ -8,7 +8,7 @@ Guides a user from a verified email to a fully onboarded account: set a password
 
 `EmailVerification` → `EmailVerified` → `PasswordProvided` → `PhoneVerification` → `PhoneVerified` (**completed**)
 
-Stages and per-flow allowed lists live in `backend/domain/src/main/scala/io/mesazon/domain/gateway/OnboardStage.scala` (the `OnboardStage` enum + companion — it has its own file since other features read it too, see [adding-a-feature.md § Where newtypes and enums live](../adding-a-feature.md#where-newtypes-and-enums-live)). When adding a stage, update the companion-object lists (there's a comment warning about this). The smithy `OnboardStage` enum mirrors the domain enum; mapping helpers `onboardStageFromDomainToSmithy` / `onboardStageFromSmithyToDomain` are in `service/service.scala`.
+Stages and per-flow allowed lists live in `backend/domain/src/main/scala/io/mesazon/domain/gateway/OnboardStage.scala` (the `OnboardStage` enum + companion — it has its own file since other features read it too, see [domain placement](flow/02-validation.md#domain-placement)). When adding a stage, update the companion-object lists (there's a comment warning about this). The smithy `OnboardStage` enum mirrors the domain enum; mapping helpers `onboardStageFromDomainToSmithy` / `onboardStageFromSmithyToDomain` are in `service/service.scala`.
 
 ## Endpoints (smithy, bearer auth — access JWT)
 
@@ -140,7 +140,7 @@ sequenceDiagram
 
 ## Key files
 
-The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
+The feature follows the [current consolidated layout](../project/feature-consolidation.md): one domain file, one request validator, one arbitraries trait per layer.
 
 - Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/UserOnboard.scala` (the `OnboardPasswordPostRequest`/`OnboardDetailsPostRequest`/`OnboardVerifyPhoneNumberPostRequest` request models); the `OnboardStage` enum lives in its own `OnboardStage.scala`
 - Validator: `validation/service/UserOnboardRequestValidator.scala` (one `validated<Request>` per fallible request)
@@ -152,7 +152,7 @@ The feature follows the consolidated per-feature layout of [adding-a-feature.md]
 
 ## Tests
 
-- Acceptance (see [acceptance-tests.md](../acceptance-tests.md)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserOnboardApiSpec.scala` — all four endpoints, each with happy path + the standard error matrix (missing/invalid access token, disallowed stage, validation, wrong/expired/missing OTP)
+- Acceptance (see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserOnboardApiSpec.scala` — all four endpoints, each with happy path + the standard error matrix (missing/invalid access token, disallowed stage, validation, wrong/expired/missing OTP)
 - Functional: `fun/UserOnboardServiceSpec.scala`
 - Units: `unit/service/PasswordServiceSpec.scala`, `unit/validation/service/UserOnboardRequestValidatorSpec.scala`
 - Integration: `it/UserCredentialsRepositorySpec.scala`, `it/UserOtpRepositorySpec.scala`, `it/TwilioClientSpec.scala`

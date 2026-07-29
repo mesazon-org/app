@@ -73,7 +73,7 @@ Each feature has its own short design doc — what it does, its endpoints, seque
 
 **Scala 3** · **PostgreSQL** · **Smithy** (API contracts) · **sbt**. Integrations: email, Twilio SMS, S3, WhatsApp.
 
-Deeper docs for contributors live in [`docs-claude/`](docs-claude/) — start with [adding a feature](docs-claude/adding-a-feature.md).
+Deeper docs for contributors live in [`docs-claude/`](docs-claude/) — start with [feature flow](docs-claude/features/flow/README.md).
 
 ## Scala CI/CD
 

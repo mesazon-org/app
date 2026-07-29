@@ -4,7 +4,7 @@ Owns the client's **catalogue of items they sell** — a per-organization list o
 
 **Vocabulary.** "Organization" is the **Mesazon tenant** (the client themselves — see [Organization Management](organization-management.md)), not a third party. Every row here is scoped by `organization_id`, carried in the `X-Organization-ID` header on every endpoint.
 
-**Scope**: the `catalogue_item` table, its name/unit/price/photo fields, and archival (soft-delete via the `status` column). **Excludes**: the photo **upload transport** (a Tapir streaming endpoint reusing the [Files Management](files-management.md) pipeline — deferred, see [Status](#status)); orders/line-items that will later reference a `catalogue_item_id` and snapshot its details (a future feature — see the [historical-data rules](../standards/agnostic/postgres.md#historical-data)); and the tenant/membership/role model ([Organization Management](organization-management.md)).
+**Scope**: the `catalogue_item` table, its name/unit/price/photo fields, and archival (soft-delete via the `status` column). **Excludes**: the photo **upload transport** (a Tapir streaming endpoint reusing the [Files Management](files-management.md) pipeline — deferred, see [Status](#status)); orders/line-items that will later reference a `catalogue_item_id` and snapshot its details (a future feature — see the [historical-data rules](../standards/postgres.md#historical-data)); and the tenant/membership/role model ([Organization Management](organization-management.md)).
 
 ## Data model
 
@@ -21,12 +21,12 @@ catalogue_item (organization_id, catalogue_item_id)  PK
 ```
 
 - **Org isolation via a composite PK** `(organization_id, catalogue_item_id)` — a caller can never reference another tenant's item. Same pattern as `customer`.
-- **Soft-delete, never hard-delete.** `status` is a native PostgreSQL enum (`catalogue_item_status`, labels `Active`/`Archived` = the Scala `CatalogueItemStatus` case names verbatim), exactly like `customer.status`. Rationale: a catalogue item will be referenced by future order line-items, so it must never be physically deleted (see [historical-data rules](../standards/agnostic/postgres.md#historical-data)). Archiving flips `status`; there is deliberately **no unarchive** (matching Customer Book).
-- **`uq_catalogue_item_name`** — a **partial** unique index `unique (organization_id, name) where status = 'Active'`: an org can't hold two *active* items with the same name. Because it is partial on `status = 'Active'`, archiving frees the name, and same-name items may accumulate once archived. **Named** so the repository maps its `23505` violation to a specific `409` (see [constraint rules](../standards/agnostic/postgres.md#keys-constraints-indexes)).
+- **Soft-delete, never hard-delete.** `status` is a native PostgreSQL enum (`catalogue_item_status`, labels `Active`/`Archived` = the Scala `CatalogueItemStatus` case names verbatim), exactly like `customer.status`. Rationale: a catalogue item will be referenced by future order line-items, so it must never be physically deleted (see [historical-data rules](../standards/postgres.md#historical-data)). Archiving flips `status`; there is deliberately **no unarchive** (matching Customer Book).
+- **`uq_catalogue_item_name`** — a **partial** unique index `unique (organization_id, name) where status = 'Active'`: an org can't hold two *active* items with the same name. Because it is partial on `status = 'Active'`, archiving frees the name, and same-name items may accumulate once archived. **Named** so the repository maps its `23505` violation to a specific `409` (see [constraint rules](../standards/postgres.md#keys-constraints-indexes)).
 
 ### Unit is free text (not an enum)
 
-`unit` is a plain `text` column / `String` member, not a curated enum. A curated `CatalogueItemUnit` enum was considered and **rejected**: businesses sell in open-ended units (physical measures, packages, time, bespoke services), and an enum would force a code+migration change per new unit. The domain newtype (part 2) only enforces non-empty/trimmed.
+`unit` is a plain `text` column / `String` member, not a curated enum. A curated `CatalogueItemUnit` enum was considered and **rejected**: businesses sell in open-ended units (physical measures, packages, time, bespoke services), and an enum would force a code+migration change per new unit. The validation-layer domain newtype only enforces non-empty/trimmed.
 
 ### Price is exact decimal, fiat **and** crypto
 
@@ -44,7 +44,7 @@ The photo is modelled as the three nullable bucket-key columns (`photo_original_
 
 ## Endpoints
 
-One service — `CatalogueService`, `@completedOnboardStage` (Bearer + completed onboarding). Every operation carries the `X-Organization-ID` header via the `OrganizationScopedInput` mixin (see [tenant scope](../standards/agnostic/smithy.md#tenant-scope)) and an `@organizationUserRolesAllowed` trait following the [standard role policy](../standards/agnostic/smithy.md#custom-traits): reads allow `OWNER`/`ADMIN`/`USER`, writes allow `OWNER`/`ADMIN`. URIs are verb-first (`/insert/...`, `/get/...`), no feature prefix.
+One service — `CatalogueService`, `@completedOnboardStage` (Bearer + completed onboarding). Every operation carries the `X-Organization-ID` header via the `OrganizationScopedInput` mixin (see [tenant scope](../standards/smithy.md#tenant-scope)) and an `@organizationUserRolesAllowed` trait following the [standard role policy](../standards/smithy.md#custom-traits): reads allow `OWNER`/`ADMIN`/`USER`, writes allow `OWNER`/`ADMIN`. URIs are verb-first (`/insert/...`, `/get/...`), no feature prefix.
 
 | Method | Path | Operation | Roles | Effect / Returns |
 |---|---|---|---|---|
@@ -55,7 +55,7 @@ One service — `CatalogueService`, `@completedOnboardStage` (Bearer + completed
 | GET | `/get/catalogue-item/{catalogueItemID}` | `GetCatalogueItemGet` | OWNER, ADMIN, USER | one item's full details |
 | GET | `/get/catalogue-items` | `GetCatalogueItemsGet` | OWNER, ADMIN, USER | every active item |
 
-**Errors** (ordered by status code, per [operation rules](../standards/agnostic/smithy.md#operation)):
+**Errors** (ordered by status code, per [operation rules](../standards/smithy.md#operation)):
 
 - Writes that validate a body and can collide on the name — inserts and `UpdateCatalogueItemPut` — declare `[BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]`.
 - `ArchiveCatalogueItemPut` carries only a `catalogueItemID` (a `Pure` UUID that cannot fail refinement) and archiving only *removes* a row from the active-name set (never violates `uq_catalogue_item_name`), so — like `ArchiveCustomerPut` — it declares **no `ValidationError`** and **no `Conflict`**: `[BadRequest, Unauthorized, Forbidden, InternalServerError]`.
@@ -70,30 +70,40 @@ Smithy: `smithy/CatalogueService.smithy` (+ `smithy/domain/Catalogue.smithy`). `
 
 ## Status
 
-Tracks what is built vs. outstanding — keep this current as each part lands, per the documentation rule in [CLAUDE.md](../../CLAUDE.md).
+Tracks each [feature-flow](flow/README.md) slice; update in every PR per [AGENTS.md](../../AGENTS.md).
 
-### Done — part 1: tables + schemas
+| Slice | Done | Remaining |
+|---|---|---|
+| Endpoints | Smithy service, six operations, request/response models; codegen green | Photo upload is excluded/deferred as a separate Tapir extension |
+| Validation | Shared newtypes and `CatalogueItemStatus` exist | Request/entry models, arbitraries, validator, unit tests |
+| Schema | Enum, table, partial unique index, config | — |
+| Repository | Row, Queries, Repository implementation, config | Real-Postgres `CatalogueRepositorySpec`; slice is not complete until it passes |
+| Service | — | Service implementation/wiring, functional and acceptance tests |
 
-- **Migration** — `catalogue_item_status` enum + `catalogue_item` table + `uq_catalogue_item_name` partial unique index, in `V2025.05.27__init.sql`.
+### Endpoints
+
 - **Smithy contract** — `CatalogueService` with all six operations and every `domain/Catalogue.smithy` request/response shape; `smithy4sCodegen` is **green** (generates `CatalogueItemPriceRequest(amount: BigDecimal, currency: String)` and the six operations).
-- **Domain models** — `CatalogueItemID`/`CatalogueItemName`/`CatalogueItemUnit`/`CatalogueItemPriceAmount` (`BigDecimal`)/`CatalogueItemPriceCurrency` newtypes in `Newtypes.scala`; the `CatalogueItemStatus` Scala enum (`CatalogueItemStatus.scala`, labels `Active`/`Archived`). (The entry/request case classes in `domain/gateway/Catalogue.scala` are **not** yet added — they belong to the validator/service slice.)
 
-### Done — part 2: repository layer
+### Validation
+
+- **Done:** `CatalogueItemID`/`CatalogueItemName`/`CatalogueItemUnit`/`CatalogueItemPriceAmount` (`BigDecimal`)/`CatalogueItemPriceCurrency` newtypes in `Newtypes.scala`; `CatalogueItemStatus` enum (`CatalogueItemStatus.scala`, labels `Active`/`Archived`).
+- **Remaining:** entry/request case classes in `domain/gateway/Catalogue.scala`, `CatalogueDomainArbitraries`, `CatalogueSmithyArbitraries`, `CatalogueRequestValidator`, and validator unit spec.
+
+### Schema
+
+- **Done:** `catalogue_item_status` enum + `catalogue_item` table + `uq_catalogue_item_name` partial unique index in `V2025.05.27__init.sql`; `RepositoryConfig.catalogueItemTable` (+ `allTableNames`) and `catalogue-item-table = "catalogue_item"` in both `application.conf`s.
+
+### Repository
 
 - **`CatalogueItemRow`** (`repository/domain/CatalogueItemRow.scala`) — case class in table-column order. The three `photo_*` columns reuse the `OrganizationLogo*` bucket-key/file-name newtypes (structurally identical S3 key/filename strings; revisit with dedicated `CataloguePhoto*` types when photo upload lands).
 - **`CatalogueItemQueries`** (`repository/queries/CatalogueItemQueries.scala`) — single/batch insert, partial `update` (dynamic `SET` + `RETURNING`), `archive` (status flip + `RETURNING id`), single get (any status), list active, and a testing getter. Native-enum casts (`::<schema>.catalogue_item_status` on writes, `status::text` on reads) mirror `CustomerBookQueries`. **No bespoke `numeric ↔ BigDecimal` `Meta`**: `CatalogueItemPriceAmount` is `RefinedType[BigDecimal, Pure]`, so the generic `RefinedType.Mirror` given in `queries.scala` lifts doobie's `Meta[BigDecimal]` — round-trips with no precision loss.
 - **`CatalogueRepository`** (`repository/CatalogueRepository.scala`) — trait + private impl + `InsertCatalogueItemInput` companion model; ID via `IDGenerator` → `CatalogueItemID.either`, timestamps via `TimeProvider`; `23505` on `uq_catalogue_item_name` → `ConflictError.UniqueConstraintViolation`, else `RepositoryError`. Update treats `None` price fields as keep-existing (no clear-price — see [Open design decisions](#open-design-decisions)); photo fields hardcoded to `None` (upload deferred).
-- **Config** — `RepositoryConfig.catalogueItemTable` (+ `allTableNames`); `catalogue-item-table = "catalogue_item"` in **both** `application.conf`s (core main + `it` test).
+- **Remaining proof:** `CatalogueRepositorySpec` against real Postgres, covering `uq_catalogue_item_name`, batch rollback, archive semantics, and a precision-preserving `BigDecimal` round-trip. The repository slice remains incomplete until this passes.
 
-### Remaining — to be completed
+### Service
 
-Follow the [Adding a feature](../adding-a-feature.md) order of work and the [new-table checklist](../standards/agnostic/postgres.md#checklists):
-
-- **Domain request models** — the entry/request case classes in `domain/gateway/Catalogue.scala`.
-- **Validator** — `CatalogueRequestValidator` (one `validated…` per fallible request) + spec.
-- **Service + wiring** — `CatalogueService.scala` implementing the generated trait; `HttpApp.externalSmithyRoutes` wiring; **and** the `CatalogueRepository.live` + `CatalogueItemQueries.live` layers in `Main` (deferred from part 2 — ZIO's compile-time layer-graph check rejects them as unused until a consumer exists).
+- **Remaining:** `CatalogueService.scala`, `HttpApp.externalSmithyRoutes`, `CatalogueRepository.live` + `CatalogueItemQueries.live` in `Main` (deferred because ZIO rejects unused layers), `CatalogueServiceSpec`, and `CatalogueApiSpec` with the full middleware-gate matrix.
 - **Photo upload** — a Tapir streaming endpoint reusing the [Files Management](files-management.md) pipeline (`FileScanner`/`ImageProcessing`/S3) to populate the three `photo_*` columns and surface presigned URLs in the GET responses; keep entity-size limits in sync (see files-management.md).
-- **Arbitraries + tests** — `CatalogueDomainArbitraries` / `CatalogueSmithyArbitraries`; validator unit spec, `CatalogueRepositorySpec` (real Postgres — cover the `uq_catalogue_item_name` conflict, batch rollback, archive semantics, and a `BigDecimal` price round-trip proving no precision loss), `CatalogueServiceSpec` (functional), and `CatalogueApiSpec` acceptance with the full middleware-gate matrix (see [[acceptance-test-middleware-gates-mandatory]]).
 
 ## Open design decisions
 

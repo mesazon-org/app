@@ -70,7 +70,7 @@ Module layout (`build.sbt`): the root aggregates `backend` (domain/clock/generat
 
 ```sh
 sbt compile              # compiles everything; smithy4s codegen runs automatically as part of this
-sbt smithy4sCodegen       # standalone check that only the Smithy contract compiles (see docs-claude/adding-a-feature.md)
+sbt smithy4sCodegen       # standalone Smithy contract check (see docs-claude/features/flow/01-endpoints.md)
 sbt "checkLint"           # scalafix + scalafmt, check only
 sbt "runLint"             # scalafix + scalafmt, applies fixes
 sbt "gateway-build"       # the CI alias: clean -> project backend -> checkLint -> testFull

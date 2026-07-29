@@ -104,7 +104,7 @@ sequenceDiagram
 
 ## Key files
 
-The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
+The feature follows the [current consolidated layout](../project/feature-consolidation.md): one domain file, one request validator, one arbitraries trait per layer.
 
 - Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/UserSignUp.scala` (the `SignUpEmailPostRequest`/`SignUpVerifyEmailPostRequest` request models)
 - Validator: `validation/service/UserSignUpRequestValidator.scala` (one `validated<Request>` per fallible request; email goes through the generic `EmailValidator`)
@@ -116,7 +116,7 @@ The feature follows the consolidated per-feature layout of [adding-a-feature.md]
 
 ## Tests
 
-- Acceptance (black-box HTTP against the running gateway, see [acceptance-tests.md](../acceptance-tests.md)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserSignUpApiSpec.scala` — happy paths for new/re-sign-up, anti-enumeration path, plus the standard error matrix (validation, wrong/expired OTP, disallowed stage)
+- Acceptance (black-box HTTP against the running gateway, see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserSignUpApiSpec.scala` — happy paths for new/re-sign-up, anti-enumeration path, plus the standard error matrix (validation, wrong/expired OTP, disallowed stage)
 - Functional (mocked repos/clients): `src/test/scala/io/mesazon/gateway/fun/UserSignUpServiceSpec.scala`
 - Integration (Postgres via docker compose): `it/UserOtpRepositorySpec.scala`, `it/UserDetailsRepositorySpec.scala`, `it/UserTokenRepositorySpec.scala`
 - Validator units: `unit/validation/service/UserSignUpRequestValidatorSpec.scala`

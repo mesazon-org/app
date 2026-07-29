@@ -1,6 +1,6 @@
 # sbt Build Definition
 
-Project-agnostic Scala 3/sbt 2 multi-module build rules. Test semantics: [functional](../../functional-tests.md), [integration](../../integration-tests.md), [acceptance](../../acceptance-tests.md). Mesazon: [project/sbt.md](../project/sbt.md).
+Project-agnostic Scala 3/sbt 2 multi-module build rules. Mesazon build values: [Build changes](../project/build.md). Feature test semantics: [repository](../features/flow/04-repository.md), [service](../features/flow/05-service.md), and [external clients](../project/external-client.md).
 
 ## Metabuild conventions
 

@@ -20,7 +20,7 @@ Smithy spec: `backend/gateway/core/src/main/smithy/OrganizationManagementService
 
 ## Role policy (for future org-scoped endpoints)
 
-Any org-scoped endpoint added here follows the project-wide [standard role policy](../standards/agnostic/smithy.md#custom-traits): reads (`GET`) allow `OWNER`/`ADMIN`/`USER`, mutations allow `OWNER`/`ADMIN`. The one carve-out this feature owns: **deleting an organization is `OWNER` only** (`@organizationUserRolesAllowed(roles: ["OWNER"])`) — an `ADMIN` may run every other action but cannot delete the org itself.
+Any org-scoped endpoint added here follows the project-wide [standard role policy](../standards/smithy.md#custom-traits): reads (`GET`) allow `OWNER`/`ADMIN`/`USER`, mutations allow `OWNER`/`ADMIN`. The one carve-out this feature owns: **deleting an organization is `OWNER` only** (`@organizationUserRolesAllowed(roles: ["OWNER"])`) — an `ADMIN` may run every other action but cannot delete the org itself.
 
 ## Flow
 
@@ -66,9 +66,9 @@ sequenceDiagram
 
 ## Key files
 
-The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
+The feature follows the [current consolidated layout](../project/feature-consolidation.md): one domain file, one request validator, one arbitraries trait per layer.
 
-- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OrganizationManagement.scala` (contact-point entries, `CreateOrganizationPostRequest`); `Organization*` newtypes live in the shared `Newtypes.scala`, and the `OrganizationStage`/`OrganizationUserRole` enums each have their own file (`OrganizationStage.scala`, `OrganizationUserRole.scala`) — see [adding-a-feature.md § Where newtypes and enums live](../adding-a-feature.md#where-newtypes-and-enums-live)
+- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OrganizationManagement.scala` (contact-point entries, `CreateOrganizationPostRequest`); `Organization*` newtypes live in the shared `Newtypes.scala`, and the `OrganizationStage`/`OrganizationUserRole` enums each have their own file (`OrganizationStage.scala`, `OrganizationUserRole.scala`) — see [domain placement](flow/02-validation.md#domain-placement)
 - Validator: `validation/service/OrganizationManagementRequestValidator.scala`
 - Arbitraries: `testkit/base/OrganizationManagementDomainArbitraries.scala`, `gateway/utils/OrganizationManagementSmithyArbitraries.scala`
 - Service: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/OrganizationManagementService.scala`
@@ -78,6 +78,6 @@ The feature follows the consolidated per-feature layout of [adding-a-feature.md]
 
 ## Tests
 
-- Acceptance (see [acceptance-tests.md](../acceptance-tests.md)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/OrganizationManagementApiSpec.scala` — creation happy path (org + owner rows in DB), duplicate slug failure, plus missing/invalid token, disallowed stage, and validation cases
+- Acceptance (see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/OrganizationManagementApiSpec.scala` — creation happy path (org + owner rows in DB), duplicate slug failure, plus missing/invalid token, disallowed stage, and validation cases
 - Functional: `fun/OrganizationManagementServiceSpec.scala`
 - Integration: `it/OrganizationManagementRepositorySpec.scala`

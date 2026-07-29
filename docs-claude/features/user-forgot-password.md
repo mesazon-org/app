@@ -140,7 +140,7 @@ sequenceDiagram
 
 ## Key files
 
-The feature follows the consolidated per-feature layout of [adding-a-feature.md](../adding-a-feature.md): one domain file, one request validator, one arbitraries trait per layer.
+The feature follows the [current consolidated layout](../project/feature-consolidation.md): one domain file, one request validator, one arbitraries trait per layer.
 
 - Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/UserForgotPassword.scala` (the `ForgotPasswordPostRequest`/`ForgotPasswordVerifyOTPPostRequest`/`ForgotPasswordResetPostRequest` request models)
 - Validator: `validation/service/UserForgotPasswordRequestValidator.scala` (one `validated<Request>` per fallible request; email goes through the generic `EmailValidator`)
@@ -152,7 +152,7 @@ The feature follows the consolidated per-feature layout of [adding-a-feature.md]
 
 ## Tests
 
-- Acceptance (see [acceptance-tests.md](../acceptance-tests.md)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserForgotPasswordApiSpec.scala` — all three endpoints: OTP issue/extend/maxed-attempts behavior, anti-enumeration for unknown emails, verify-OTP attempt limit, full reset happy path, plus the standard error matrix
+- Acceptance (see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserForgotPasswordApiSpec.scala` — all three endpoints: OTP issue/extend/maxed-attempts behavior, anti-enumeration for unknown emails, verify-OTP attempt limit, full reset happy path, plus the standard error matrix
 - Functional: `fun/UserForgotPasswordServiceSpec.scala`
 - Validator units: `unit/validation/service/UserForgotPasswordRequestValidatorSpec.scala`
 - Integration: `it/UserActionAttemptRepositorySpec.scala`, `it/UserOtpRepositorySpec.scala`, `it/EmailClientSpec.scala`

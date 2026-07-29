@@ -27,36 +27,63 @@ flowchart LR
 
 Local build/run/test setup: [Repository setup](docs/repository-setup.md).
 
-## Tech stack
+## Documentation router
 
-Read both agnostic rules and Mesazon values for each technology.
+Read only the documents needed for the current change. For any feature change, first read its file in `docs-claude/features/`.
 
-- Smithy: [agnostic](docs-claude/standards/agnostic/smithy.md) + [project](docs-claude/standards/project/smithy.md)
-- [Middleware](docs-claude/middleware.md)
-- [Validators](docs-claude/validators.md)
-- Scala: [agnostic](docs-claude/standards/agnostic/scala.md) + [project](docs-claude/standards/project/scala.md)
-- Iron: [agnostic](docs-claude/standards/agnostic/iron.md) + [project](docs-claude/standards/project/iron.md)
-- PostgreSQL: [agnostic](docs-claude/standards/agnostic/postgres.md) + [project](docs-claude/standards/project/postgres.md)
-- Doobie: [agnostic](docs-claude/standards/agnostic/doobie.md) + [project](docs-claude/standards/project/doobie.md)
-- Tapir: [agnostic](docs-claude/standards/agnostic/tapir.md) + [project](docs-claude/standards/project/tapir.md)
-- [Repository](docs-claude/repository.md)
-- sbt: [agnostic](docs-claude/standards/agnostic/sbt.md) + [project](docs-claude/standards/project/sbt.md)
+### New feature or endpoint
+
+Start with [Feature flow](docs-claude/features/flow/README.md), then read only the current PR slice:
+
+| Guide | Read when |
+|---|---|
+| [1. Endpoints](docs-claude/features/flow/01-endpoints.md) | Adding/changing Smithy or Tapir endpoints and their transport models, auth traits, errors, or API docs |
+| [2. Validation](docs-claude/features/flow/02-validation.md) | Adding/changing validated domain models, newtypes, arbitraries, validators, or unit tests |
+| [3. Schema](docs-claude/features/flow/03-schema.md) | Adding/changing migrations, tables, constraints, indexes, or table config only |
+| [4. Repository](docs-claude/features/flow/04-repository.md) | Adding/changing persisted types, Rows, Queries, Repositories, codecs, or DB tests |
+| [5. Service](docs-claude/features/flow/05-service.md) | Combining all layers into orchestration, endpoint implementation/wiring, functional tests, and acceptance tests |
+
+Each slice guide links the agnostic technology standards it requires.
+
+### Exceptional changes
+
+| Guide | Read when |
+|---|---|
+| [Authentication](docs-claude/project/authentication.md) | Changing middleware, auth/onboard/organization-role policy, `AuthState`, or transport security |
+| [Alternate HTTP](docs-claude/project/alternate-http.md) | Changing Tapir/streaming endpoints, their docs, limits, or error model |
+| [External client](docs-claude/project/external-client.md) | Adding/changing SMTP, S3, or outbound HTTP clients and dependency integration tests |
+| [Database runtime](docs-claude/project/database-runtime.md) | Changing datasource/pool, transactor, SQL logging, or shared PostgreSQL test-client mechanics |
+| [Build](docs-claude/project/build.md) | Changing sbt, dependencies, modules, tasks, Docker packaging, Scala/JDK, or CI |
+| [Feature consolidation](docs-claude/project/feature-consolidation.md) | Moving an old feature to the current layout without behavior changes |
+
+### Technology standards
+
+Read every standard whose trigger matches the task:
+
+| Standard | Read when |
+|---|---|
+| [Scala](docs-claude/standards/scala.md) | Writing, changing, reviewing, or testing Scala code, including naming and refactoring |
+| [Smithy](docs-claude/standards/smithy.md) | Adding/changing Smithy endpoints, operations, transport models, traits, errors, or generated contracts |
+| [Tapir](docs-claude/standards/tapir.md) | Adding/changing Tapir endpoints, streaming inputs, security, errors, or OpenAPI docs |
+| [Iron](docs-claude/standards/iron.md) | Adding/changing refined newtypes, domain constraints, validation boundaries, or refined conversions/codecs |
+| [PostgreSQL](docs-claude/standards/postgres.md) | Adding/changing migrations, tables, columns, types, constraints, indexes, or stored-data lifecycle |
+| [Doobie](docs-claude/standards/doobie.md) | Adding/changing SQL queries, fragments, row codecs, repository DB effects, transactions, or pool wiring |
+| [sbt](docs-claude/standards/sbt.md) | Adding/changing dependencies, modules, build settings/tasks/plugins, Scala/JDK versions, Docker build wiring, or CI commands |
+
+### Agent configuration ownership
+
+`.agents/` is canonical only for agents, commands, and skills intentionally shared across tools. `.claude/` is a real Claude-specific directory; each shared file inside it is a relative symlink to its `.agents/` source. Edit shared files through `.agents/`. Claude-only files/config stay directly under `.claude/`; if one shared file must diverge for Claude, replace only that file's symlink with a real Claude-specific file rather than forking the whole tree. `.claude/settings.local.json` and `.claude/worktrees/` are local and gitignored.
 
 ## Validation flow (rules, run in order, every change)
 
-1. **Standards compliance** — must match [tech stack](#tech-stack) docs. New feature → [Adding a feature](docs-claude/adding-a-feature.md) order: smithy → domain models → validator → service → persistence.
-2. **Lint** — `sbt "runLint"` (scalafix+scalafmt, autofix) before done. `checkLint` = check-only, CI-enforced.
-3. **Tests** — write + pass at every applicable layer:
+1. **Feature doc first** — read the relevant `docs-claude/features/` file before coding. For a new feature, create `docs-claude/features/<feature-name>.md` in PR 1, link it under [Features](#features), and update its status/content in every slice. Never wait until the final PR. Required structure: scope/boundaries; endpoint auth/onboard/roles; flow/security/decisions; key files/config; unit/functional/integration/acceptance tests. See [Feature flow](docs-claude/features/flow/README.md).
+2. **Standards compliance** — read the current slice or exceptional-change guide from the [documentation router](#documentation-router) and its linked agnostic standards.
+3. **Tests in every PR** — write and pass the current slice's applicable tests; never defer them:
    - **Unit** `gateway/core/.../unit` — validators, pure helpers.
-   - **Functional** `gateway/core/.../fun` — one service, all deps mocked. [functional-tests.md](docs-claude/functional-tests.md)
-   - **Integration** `gateway/core/.../it` — repository/client vs real dependency (Testcontainers), no HTTP. [integration-tests.md](docs-claude/integration-tests.md)
-   - **Acceptance** `gateway/it` module — real gateway + real Postgres over HTTP. [acceptance-tests.md](docs-claude/acceptance-tests.md)
-4. **Feature docs** — check `docs-claude/features/` before coding. New feature → create `docs-claude/features/<feature-name>.md` at first slice (even schema-only), link under [Features](#features), include **Status**: done / remaining — update per slice, drop only when fully shipped+tested. See [Adding a feature § file layout](docs-claude/adding-a-feature.md#file-layout). Structure:
-   - scope: owns / excludes / boundary links
-   - endpoints table: auth + onboard stage
-   - flow: incl. security/abuse defenses, non-obvious decisions
-   - key files + config
-   - tests: acceptance, functional, unit, integration
+   - **Functional** `gateway/core/.../fun` — one service, effectful dependencies mocked.
+   - **Integration** `gateway/core/.../it` — one repository/client vs a real dependency; no application HTTP.
+   - **Acceptance** `gateway/it` — real gateway and dependencies over HTTP.
+4. **Lint** — run `sbt "runLint"` before done. `checkLint` is the read-only CI gate.
 5. **Docs currency** — every task scans `docs-claude/` + this file for now-inaccurate statements (incl. renamed identifiers: errors, types, endpoints, config keys, files) and fixes them in the same change. New convention → document it. Stale doc > missing doc, in badness.
 
 ## Project structure
@@ -73,11 +100,11 @@ Read both agnostic rules and Mesazon values for each technology.
 - `terraform/` — infra as code
 - `docs/` — human-facing setup docs
 - `docs-claude/` — standards + feature docs (this file's links)
-- `.claude/agents/`, `.claude/commands/` — `/feature` pipeline
+- `.agents/{agents,commands,skills}/` — shared agent sources; `.claude/` holds per-file symlinks plus Claude-specific files/config
 
 ## Features
 
-New feature → [Adding a feature](docs-claude/adding-a-feature.md); doc requirement: [Validation flow §4](#validation-flow-rules-run-in-order-every-change).
+New feature → [Feature flow](docs-claude/features/flow/README.md); create/link its feature doc in PR 1 per [Validation flow §1](#validation-flow-rules-run-in-order-every-change).
 
 - [User Onboarding](docs-claude/features/user-onboarding.md)
 - [User Sign in](docs-claude/features/user-signin.md)
@@ -87,7 +114,7 @@ New feature → [Adding a feature](docs-claude/adding-a-feature.md); doc require
 - [Organization Management](docs-claude/features/organization-management.md)
 - [Files Management](docs-claude/features/files-management.md)
 - [Customer Book](docs-claude/features/customer-book.md)
-- [Catalogue](docs-claude/features/catalogue.md) — in progress (part 1: tables+schemas; part 2: repository layer)
+- [Catalogue](docs-claude/features/catalogue.md) — in progress; see its five-slice status
 
 ## Commands
 
@@ -106,4 +133,4 @@ sbt "gatewayCore/Docker/publishLocal"                   # build gateway image
 docker compose -f compose/compose.yaml up -d            # local stack: postgres, flyway, gateway, mocks
 ```
 
-`/feature "<description>"` — 4-role subagent pipeline (Product Owner → Engineering Manager → Lead Engineer → Senior Engineer), defined in `.claude/agents/` + `.claude/commands/feature.md`. Requires OmniRoute (local model-routing gateway, per-machine setup, not shared infra): [Agent pipeline setup](docs-claude/agent-pipeline-setup.md).
+`/feature "<description>"` — 4-role subagent pipeline (Product Owner → Engineering Manager → Lead Engineer → Senior Engineer), defined in `.agents/agents/` + `.agents/commands/feature.md` and exposed to Claude Code by per-file symlinks under `.claude/`. Requires OmniRoute (local model-routing gateway, per-machine setup, not shared infra): [Agent pipeline setup](docs-claude/agent-pipeline-setup.md).
