@@ -5,6 +5,7 @@ Reusable Scala code/name/test rules. Boundaries: [Iron](iron.md), [Smithy](smith
 ## Code
 
 - Prefer precise domain types, sealed alternatives, `Option`, and `Either` over nulls, sentinels, string flags, or ambiguous booleans.
+- Model coupled optional fields as one `Option` around a composite value whose members are mandatory. Use reusable component and composite names without a feature prefix (`Price`, `Photo`), then add a `Pure` newtype named for the owning entity when the same shape has distinct domain meanings (`CatalogueItemPrice`, `CatalogueItemPhoto`). Never represent joint presence with parallel `Option` fields.
 - Comments explain only a non-obvious decision, workaround, invariant the compiler cannot express, or unrecoverable context. Never restate code or add section/banner comments; improve structure/names instead.
 - Never combine independently built collections with `zip` when correctness requires equal length/order: it truncates silently. `zipWithIndex` on one collection and zipping effects are allowed.
 - Create related values together; retain the relation in a named tuple/case class, or `Map` for lookup.
@@ -23,7 +24,7 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 
 - Spell out domain names; only established acronyms and `Impl` may abbreviate. Avoid vague `data`, `item`, `result`, `value`, `helper`, `thing`.
 - Types/traits/objects/enums/type aliases/constants: `PascalCase`. Values/fields/parameters/methods: `camelCase`.
-- Every `Option`-typed value/field/parameter ends in `Opt`; `Opt` is always the final suffix.
+- Every `Option`-typed value/field/parameter ends in `Opt`; `Opt` is always the final suffix. Repository `Row` and repository-owned `...Input` fields are the exception: they mirror persisted/domain concept names without `Opt`.
 - `ID` stays uppercase in types and values (`CustomerID`, `customerID`, `IDGenerator`). Treat other acronyms as words (`Http`, `Jwt`, `Url`) unless an external standard fixes the spelling.
 - Name types for domain concepts, not representations/consumers: `EmailAddress`, not `EmailString`/`EmailColumn`.
 - Test values follow the same concept-first form and start with the complete model name. Add qualifiers last: `customerRowIndividual`, `customerRowBusiness`, `customerID1`, `customerID2`; never `individualCustomerRow`, `input`, or `contact`.
@@ -40,11 +41,19 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 ### Data and assertions
 
 - Name bindings after their exact models; qualifiers follow the model name.
+- Repository integration tests sample complete inputs/Rows with `arbitrarySample[ExactType]` and use `.copy(...)` only to force scenario fields. Keep `TestContext` free of helper methods and repeat arrangement, dependency expectations, and database reads locally; test isolation/readability takes precedence over removing duplication.
+- Derive a near-identical second expected model from the first with `.copy(...)`, changing only intentional differences. Assert correlated/equal and distinct fields directly through the expected models immediately after setup, so reviewers can verify the complete scenario from those models.
 - Build expected mappings independently and field-by-field; never use the mapper/transform/serializer/helper under test to create expected output. Using that transform to arrange test input is allowed.
 - Assert the complete returned model. Project only when the field is the test's entire contract (for example, IDs surviving rollback).
 - Assert order only when contractual; otherwise compare order-insensitively.
 - If distinctness matters, guarantee it during setup and assert `not equal`. With low-cardinality generators, sample twice then modify one value; do not hard-code or sample-and-hope.
 - Control time/random/IDs/concurrency. For strict comparisons (`isAfter`, `isBefore`, `>`), exclude an equality-producing random offset when equality can change the expected branch; offset `0` is allowed when every generated value takes the same branch.
+
+### Arbitraries
+
+- Name every `Arbitrary` given `arb<ExactTypeName>`; plural/list givens use the exact plural type name. Never use anonymous `given Arbitrary[...]` declarations.
+- Prefer `Arbitrary(Gen.resultOf(ExactType.apply))` when fields are independent and their existing givens already generate valid values. Use an explicit generator when fields must be correlated, normalized, bounded, or otherwise preserve a cross-field invariant.
+- List arbitraries must include the empty-list case and use a bounded size. Default to `Gen.choose(0, 50).flatMap(size => Gen.listOfN(size, elementGen))`; use a smaller explicit maximum only when nesting, encoded body size, or dependency cost requires it.
 
 ### Ownership
 

@@ -30,8 +30,8 @@ trait CatalogueRepository {
       catalogueItemID: CatalogueItemID,
       nameOptUpdate: Option[CatalogueItemName] = None,
       unitOptUpdate: Option[CatalogueItemUnit] = None,
-      priceAmountOptUpdate: Option[CatalogueItemPriceAmount] = None,
-      priceCurrencyOptUpdate: Option[CatalogueItemPriceCurrency] = None,
+      priceOptUpdate: Option[CatalogueItemPrice] = None,
+      photoOptUpdate: Option[CatalogueItemPhoto] = None,
   ): IO[ServiceError, Option[CatalogueItemRow]]
 
   def archiveCatalogueItem(
@@ -54,8 +54,7 @@ object CatalogueRepository {
   case class InsertCatalogueItemInput(
       name: CatalogueItemName,
       unit: CatalogueItemUnit,
-      priceAmount: Option[CatalogueItemPriceAmount] = None,
-      priceCurrency: Option[CatalogueItemPriceCurrency] = None,
+      price: Option[CatalogueItemPrice] = None,
   )
 
   private final class CatalogueRepositoryImpl(
@@ -85,31 +84,36 @@ object CatalogueRepository {
     override def insertCatalogueItems(
         organizationID: OrganizationID,
         insertCatalogueItemInputs: List[InsertCatalogueItemInput],
-    ): IO[ServiceError, List[CatalogueItemID]] = for {
-      instantNow                 <- timeProvider.instantNow
-      catalogueItemIDsWithInputs <- ZIO.foreach(insertCatalogueItemInputs)(input =>
-        generateCatalogueItemID.map(catalogueItemID => (catalogueItemID = catalogueItemID, input = input))
-      )
-      catalogueItemRows = catalogueItemIDsWithInputs.map(catalogueItemIDWithInput =>
-        buildCatalogueItemRow(
-          organizationID,
-          catalogueItemIDWithInput.catalogueItemID,
-          catalogueItemIDWithInput.input,
-          instantNow,
-        )
-      )
-      _ <- database
-        .transactionOrWiden(catalogueItemQueries.insertCatalogueItemRows(catalogueItemRows))
-        .mapError(toServiceError(s"Failed to insert catalogue items for organization ID: [$organizationID]"))
-    } yield catalogueItemIDsWithInputs.map(_.catalogueItemID)
+    ): IO[ServiceError, List[CatalogueItemID]] =
+      ZIO
+        .when(insertCatalogueItemInputs.nonEmpty) {
+          for {
+            instantNow                 <- timeProvider.instantNow
+            catalogueItemIDsWithInputs <- ZIO.foreach(insertCatalogueItemInputs)(input =>
+              generateCatalogueItemID.map(catalogueItemID => (catalogueItemID = catalogueItemID, input = input))
+            )
+            catalogueItemRows = catalogueItemIDsWithInputs.map(catalogueItemIDWithInput =>
+              buildCatalogueItemRow(
+                organizationID,
+                catalogueItemIDWithInput.catalogueItemID,
+                catalogueItemIDWithInput.input,
+                instantNow,
+              )
+            )
+            _ <- database
+              .transactionOrWiden(catalogueItemQueries.insertCatalogueItemRows(catalogueItemRows))
+              .mapError(toServiceError(s"Failed to insert catalogue items for organization ID: [$organizationID]"))
+          } yield catalogueItemIDsWithInputs.map(_.catalogueItemID)
+        }
+        .map(_.getOrElse(Nil))
 
     override def updateCatalogueItem(
         organizationID: OrganizationID,
         catalogueItemID: CatalogueItemID,
         nameOptUpdate: Option[CatalogueItemName],
         unitOptUpdate: Option[CatalogueItemUnit],
-        priceAmountOptUpdate: Option[CatalogueItemPriceAmount],
-        priceCurrencyOptUpdate: Option[CatalogueItemPriceCurrency],
+        priceOptUpdate: Option[CatalogueItemPrice],
+        photoOptUpdate: Option[CatalogueItemPhoto],
     ): IO[ServiceError, Option[CatalogueItemRow]] = for {
       instantNow              <- timeProvider.instantNow
       catalogueItemRowUpdated <- database
@@ -120,8 +124,8 @@ object CatalogueRepository {
             UpdatedAt(instantNow),
             nameOptUpdate,
             unitOptUpdate,
-            priceAmountOptUpdate,
-            priceCurrencyOptUpdate,
+            priceOptUpdate,
+            photoOptUpdate,
           )
         )
         .mapError(toServiceError(s"Failed to update catalogue item with ID: [$catalogueItemID]"))
@@ -205,10 +209,7 @@ object CatalogueRepository {
         catalogueItemID,
         input.name,
         input.unit,
-        input.priceAmount,
-        input.priceCurrency,
-        None,
-        None,
+        input.price,
         None,
         CatalogueItemStatus.Active,
         CreatedAt(instantNow),

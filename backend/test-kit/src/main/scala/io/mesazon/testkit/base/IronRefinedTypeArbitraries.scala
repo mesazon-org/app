@@ -11,9 +11,21 @@ import java.util.UUID
 
 trait IronRefinedTypeArbitraries {
 
-  given Arbitrary[Instant :| Pure] = Arbitrary(
+  given arbInstantPure: Arbitrary[Instant :| Pure] = Arbitrary(
     Gen.choose(0, 100).map(Instant.now().truncatedTo(ChronoUnit.MILLIS).plusMillis(_))
   )
+
+  given arbBigDecimalPure: Arbitrary[BigDecimal :| Pure] = Arbitrary {
+    for {
+      whole <- Gen.choose(0L, 999_999_999_999L)
+      scale <- Gen.frequency(
+        9 -> Gen.choose(0, 4),
+        1 -> Gen.choose(5, 18),
+      )
+      scaleFactor = BigInt(10).pow(scale)
+      fraction <- Gen.choose(0L, (scaleFactor - 1).toLong)
+    } yield BigDecimal(BigInt(whole) * scaleFactor + BigInt(fraction), scale).refineUnsafe[Pure]
+  }
 
   given arbUUIDPure: Arbitrary[UUID :| Pure] = Arbitrary(Gen.uuid.map(_.refineUnsafe[Pure]))
 
@@ -119,10 +131,10 @@ trait IronRefinedTypeArbitraries {
       .map(_.refineUnsafe[WhatsappIDPredicate])
   }
 
-  given [Internal](using arb: Arbitrary[Internal]): Arbitrary[Internal :| Pure] =
+  given arbPure[Internal](using arb: Arbitrary[Internal]): Arbitrary[Internal :| Pure] =
     arb.asInstanceOf[Arbitrary[Internal :| Pure]]
 
-  given [WrappedType](using
+  given arbRefinedType[WrappedType](using
       mirror: RefinedType.Mirror[WrappedType],
       arb: Arbitrary[mirror.IronType],
   ): Arbitrary[WrappedType] = arb.asInstanceOf[Arbitrary[WrappedType]]
