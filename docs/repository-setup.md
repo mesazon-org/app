@@ -70,7 +70,7 @@ Module layout (`build.sbt`): the root aggregates `backend` (domain/clock/generat
 
 ```sh
 sbt compile              # compiles everything; smithy4s codegen runs automatically as part of this
-sbt smithy4sCodegen       # standalone Smithy contract check (see docs-claude/features/flow/01-endpoints.md)
+sbt smithy4sCodegen       # standalone Smithy contract check (see agent-docs/features/flow/01-endpoints.md)
 sbt "checkLint"           # scalafix + scalafmt, check only
 sbt "runLint"             # scalafix + scalafmt, applies fixes
 sbt "gateway-build"       # the CI alias: clean -> project backend -> checkLint -> testFull
@@ -109,4 +109,4 @@ Flyway migrations live in `backend/schemas/migrations/V<date>__<name>.sql` and a
 
 ## 7. Agent pipeline (optional)
 
-`/feature "<description>"` runs Product Owner → Engineering Manager → complexity-selected Lead Engineer (`LOW|MEDIUM|HIGH|EXTREME`). Claude routes tiers through each engineer's local [OmniRoute](https://github.com/diegosouzapw/OmniRoute); it is not shared infrastructure. One-time setup: [agent-pipeline-setup.md](../docs-claude/agent-pipeline-setup.md).
+`/feature "<description>"` runs Product Owner → Engineering Manager → complexity-selected Lead Engineer (`LOW|MEDIUM|HIGH|EXTREME`). Claude routes tiers through each engineer's local [OmniRoute](https://github.com/diegosouzapw/OmniRoute); it is not shared infrastructure. One-time setup: [agent-pipeline-setup.md](../agent-docs/agent-pipeline-setup.md).

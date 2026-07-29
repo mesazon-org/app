@@ -8,6 +8,8 @@ This repo is the **backend**: one HTTP gateway in Scala, backed by PostgreSQL, w
 
 New to the repo? Start with [Repository setup](docs/repository-setup.md) — toolchain, local services, building and running the gateway.
 
+Agent troubleshooting guidance lives in [Known issues](agent-docs/known-issues.md).
+
 ## How it fits together
 
 One gateway fronts every feature. A request is authenticated and authorized, validated into a strongly-typed model, handled by a feature service, and saved to PostgreSQL. Email, SMS, file storage, and WhatsApp live behind their own clients.
@@ -60,20 +62,20 @@ Each feature has its own short design doc — what it does, its endpoints, seque
 
 | Feature | What it does |
 |---|---|
-| [Sign up](docs-claude/features/user-signup.md) | Create an account and verify the email |
-| [Onboarding](docs-claude/features/user-onboarding.md) | Set a password, add details, verify the phone |
-| [Sign in](docs-claude/features/user-signin.md) | Log in with email + password |
-| [Forgot password](docs-claude/features/user-forgot-password.md) | Recover a lost password |
-| [Tokens](docs-claude/features/user-token-management.md) | Keep sessions alive and revocable |
-| [Organization](docs-claude/features/organization-management.md) | The tenant, its members and roles |
-| [Customer book](docs-claude/features/customer-book.md) | The address book of customers |
-| [Files](docs-claude/features/files-management.md) | Uploads, image processing, storage |
+| [Sign up](agent-docs/features/user-signup.md) | Create an account and verify the email |
+| [Onboarding](agent-docs/features/user-onboarding.md) | Set a password, add details, verify the phone |
+| [Sign in](agent-docs/features/user-signin.md) | Log in with email + password |
+| [Forgot password](agent-docs/features/user-forgot-password.md) | Recover a lost password |
+| [Tokens](agent-docs/features/user-token-management.md) | Keep sessions alive and revocable |
+| [Organization](agent-docs/features/organization-management.md) | The tenant, its members and roles |
+| [Customer book](agent-docs/features/customer-book.md) | The address book of customers |
+| [Files](agent-docs/features/files-management.md) | Uploads, image processing, storage |
 
 ## Built with
 
 **Scala 3** · **PostgreSQL** · **Smithy** (API contracts) · **sbt**. Integrations: email, Twilio SMS, S3, WhatsApp.
 
-Deeper docs for contributors live in [`docs-claude/`](docs-claude/) — start with [feature flow](docs-claude/features/flow/README.md).
+Concise LLM instructions live in [`agent-docs/`](agent-docs/) — start with [feature flow](agent-docs/features/flow/README.md).
 
 ## Scala CI/CD
 

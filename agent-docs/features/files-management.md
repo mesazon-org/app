@@ -6,7 +6,7 @@ Streams uploads without whole-file buffering; enforces size/real MIME, normalize
 
 ## Why Tapir (and not smithy)
 
-Smithy JSON routes use a 2 MB `EntityLimiter`; Tapir streams binary and allows 20 MB. Keep `TapirMaxEntitySize` = `file-service.max-organization-logo-bytes`.
+Smithy JSON routes use a 5 MB `EntityLimiter`; Tapir streams binary and allows 20 MB. Keep `TapirMaxEntitySize` = `file-service.max-organization-logo-bytes`.
 
 When docs are enabled, `OpenAPIDocsInterpreter` serves `GET /docs/specs/io.mesazon.gateway.smithy.FileService.json`; `FileServiceEndpoints.smithy4sDocsID` registers it in shared Swagger. Mount Tapir docs before Smithy Swagger or Smithy intercepts the path and returns 500. See [Tapir](../standards/tapir.md).
 

@@ -5,7 +5,7 @@ description: Bootstrap a fresh macOS machine to build/run Mesazon and use its /f
 
 # Project setup
 
-Idempotent machine bootstrap for building/running Mesazon and using the `/feature` agent pipeline. This is the "just do it" version of [`docs/repository-setup.md`](../../../docs/repository-setup.md) and [`docs-claude/agent-pipeline-setup.md`](../../../docs-claude/agent-pipeline-setup.md) — read those for the *why* behind each step; keep all three in sync if one changes.
+Idempotent machine bootstrap for building/running Mesazon and using the `/feature` agent pipeline. This is the "just do it" version of [`docs/repository-setup.md`](../../../docs/repository-setup.md) and [`agent-docs/agent-pipeline-setup.md`](../../../agent-docs/agent-pipeline-setup.md) — read those for the *why* behind each step; keep all three in sync if one changes.
 
 Work through this in two passes: **audit everything first, then apply fixes.** Don't skip straight to installing — the whole point is to only touch what's actually missing or wrong, and to show the engineer running this a clear picture before making changes.
 
@@ -120,4 +120,4 @@ Print a final table: tool → outcome (already satisfied / installed just now / 
 ## Notes
 
 - Never write secrets (the OmniRoute API key, admin password, any provider key) anywhere except the user's own `~/.zshrc`. Never into a file inside this repo.
-- If you change a step here, check whether `docs/repository-setup.md` or `docs-claude/agent-pipeline-setup.md` also needs updating — the three are meant to stay consistent.
+- If you change a step here, check whether `docs/repository-setup.md` or `agent-docs/agent-pipeline-setup.md` also needs updating — the three are meant to stay consistent.

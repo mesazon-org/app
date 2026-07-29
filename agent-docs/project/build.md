@@ -54,6 +54,6 @@ Versions: sbt 2.0.4; Scala 3 metabuild; application Scala 3.8.4; Temurin JDK 25.
 
 Root registers `Aliases.all`. `.github/workflows/job-scala-build.yml` uses `<service>-build`, JDK 25, caches, and publishes Docker image via `DOCKER_IMAGE_TAG`/`DOCKER_REPOSITORY`; lint-on-compile is disabled because the alias runs it. A new service needs `pipeline-<name>-ci.yml`, its build alias, and a path filter modeled on `pipeline-waha-ci.yml`.
 
-Known harmless stderr: Testcontainers 2.0.5 may emit post-suite `NoClassDefFoundError: ...PathUtils` through sbt 2's closed forked classloader while tests exit 0. `DockerComposeBase` drops only this exception. Do not “fix” it with sbt/env/log settings, `Tests.Setup`, classloader layering, preload, or disabled forking.
+Known harmless stderr: Testcontainers 2.0.5 may emit post-suite `NoClassDefFoundError: ...PathUtils` through sbt 2's closed forked classloader while tests exit 0. `DockerComposeBase` drops only this exception. Do not “fix” it with sbt/env/log settings, `Tests.Setup`, classloader layering, preload, or disabled forking. See the [known-issue diagnosis and fix](../known-issues.md#testcontainers-shutdown-hook-cannot-load-pathutils).
 
 Validate the changed task/alias directly, then `sbt "checkLint"` and the affected `<service>-build`.

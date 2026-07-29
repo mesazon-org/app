@@ -25,7 +25,7 @@ Keep code grouped by feature and concern: one class/trait per file except the in
 
 ## Feature doc: mandatory in PR 1
 
-Create `docs-claude/features/<feature-name>.md` before or with the first endpoint slice, link it in `AGENTS.md`, and update it in every PR. Never wait for the final service PR.
+Create `agent-docs/features/<feature-name>.md` before or with the first endpoint slice, link it in `AGENTS.md`, and update it in every PR. Never wait for the final service PR.
 
 Minimum structure:
 
@@ -57,7 +57,7 @@ Security/abuse defenses and non-obvious decisions.
 Unit, functional, integration, acceptance.
 ```
 
-Keep `Status` until every slice is shipped and tested; then replace it with a concise completed statement. A rename of any documented error/type/endpoint/config/file updates the feature doc, all `docs-claude/`, and `AGENTS.md` in the same PR.
+Keep `Status` until every slice is shipped and tested; then replace it with a concise completed statement. A rename of any documented error/type/endpoint/config/file updates the feature doc, all `agent-docs/`, and `AGENTS.md` in the same PR.
 
 ## Shared file placement
 

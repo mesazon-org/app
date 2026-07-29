@@ -12,7 +12,7 @@ Owns organization details/address/slug/stage, membership roles, and creation. `@
 
 | Method | Path | Transport | Auth | Purpose |
 |---|---|---|---|---|
-| POST | `/create/organization` | smithy (JSON, 2 MB limit) | Bearer + completed onboarding | Create an organization |
+| POST | `/create/organization` | smithy (JSON, 5 MB limit) | Bearer + completed onboarding | Create an organization |
 
 Smithy spec: `backend/gateway/core/src/main/smithy/OrganizationManagementService.smithy` (+ `domain/OrganizationManagement.smithy`).
 

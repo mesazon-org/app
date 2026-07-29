@@ -37,6 +37,7 @@ Nullable contact fields allow multiple `NULL`s. Repository maps only SQL state `
 ## Endpoints
 
 Service: `CustomerBookService`; bearer + completed onboarding. Reads allow `OWNER|ADMIN|USER`; writes allow `OWNER|ADMIN`.
+Smithy JSON requests are limited to 5 MiB by `HttpApp.SmithyMaxEntitySize`.
 
 | Method | Path | Operation | Result/effect |
 |---|---|---|---|
