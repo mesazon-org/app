@@ -27,7 +27,7 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 
 - Spell out domain names; only established acronyms and `Impl` may abbreviate. Avoid vague `data`, `item`, `result`, `value`, `helper`, `thing`.
 - Types/traits/objects/enums/type aliases/constants: `PascalCase`. Values/fields/parameters/methods: `camelCase`.
-- Every `Option`-typed value/field/parameter ends in `Opt`; `Opt` is always the final suffix, including local repository result bindings such as `catalogueItemRowUpdatedOpt`. Repository `Row` and repository-owned `...Input` fields are the only exception: their fields mirror persisted/domain concept names without `Opt`.
+- Every `Option`-typed value/field/parameter ends in `Opt`; `Opt` is always the final suffix, including local repository result bindings such as `catalogueItemRowUpdatedOpt`. Repository `Row` fields, repository-owned `...Input` fields, and validated request-model fields that mirror transport members are the only exceptions: their fields retain the persisted/domain or transport concept names without `Opt`.
 - `ID` stays uppercase in types and values (`CustomerID`, `customerID`, `IDGenerator`). Treat other acronyms as words (`Http`, `Jwt`, `Url`) unless an external standard fixes the spelling.
 - Name types for domain concepts, not representations/consumers: `EmailAddress`, not `EmailString`/`EmailColumn`.
 - Test values follow the same concept-first form and start with the complete model/type name in lower camel case. Add every qualifier last: `catalogueItemNameUpdate`, `catalogueRepositoryInvalid`, `organizationIDForeign`, `customerRowIndividual`, `customerID1`; never `nameUpdate`, `invalidRepository`, `foreignOrganizationID`, `individualCustomerRow`, `input`, or `contact`.

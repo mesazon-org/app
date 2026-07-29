@@ -33,7 +33,7 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 
 ## Generated Smithy TASTy cannot be loaded after codegen
 
-- **Status:** Resolved 2026-07-29
+- **Status:** Mitigated 2026-07-29
 - **Severity:** Medium
 - **Signature:** Gateway compilation fails in an otherwise unrelated source such as `FileServiceEndpoints.scala` with `Could not read TASTy file` or `cannot be loaded from .../smithy/<Type>.tasty` immediately after Smithy code generation. A clean invocation can pass and a later incremental invocation can reproduce the same failure.
 - **Cause:** Incremental build outputs can retain generated Smithy classes that no longer match the classpath used to compile an inlined dependent endpoint. The issue can recur after a successful clean build when a later invocation incrementally recompiles shared test or generated sources.

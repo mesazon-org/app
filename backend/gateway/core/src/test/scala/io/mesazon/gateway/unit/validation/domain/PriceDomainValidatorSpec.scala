@@ -38,7 +38,76 @@ class PriceDomainValidatorSpec extends ZWordSpecBase {
         pricesValidated.map(_.amount.value.scale) shouldBe List(2, 2, 0, 3, 0)
       }
 
-      "accumulate a negative amount and unsupported currency" in {
+      "accept the largest supported whole component with valid currency precision" in {
+        inside(
+          priceDomainValidator
+            .validate((amountRaw = BigDecimal("999999999999.999"), currencyRaw = "KWD"))
+            .zioValue
+            .toOption
+        ) { case Some(priceValidated) =>
+          priceValidated.amount.value shouldBe BigDecimal("999999999999.999")
+          priceValidated.amount.value.scale shouldBe 3
+        }
+      }
+
+      "accept zero with an extreme negative scale while normalizing upward" in {
+        inside(
+          priceDomainValidator
+            .validate((amountRaw = BigDecimal(BigInt(0), -1_000_000), currencyRaw = "USD"))
+            .zioValue
+            .toOption
+        ) { case Some(priceValidated) =>
+          priceValidated.amount.value shouldBe BigDecimal("0.00")
+          priceValidated.amount.value.scale shouldBe 2
+        }
+      }
+
+      "fail with an InvalidFieldError when an amount has thirteen integer digits" in {
+        priceDomainValidator
+          .validate((amountRaw = BigDecimal("1000000000000"), currencyRaw = "USD"))
+          .zioValue
+          .toEither
+          .left
+          .toOption
+          .value
+          .toNonEmptyList
+          .toList shouldBe
+          List(
+            InvalidFieldError(
+              "amount",
+              "Amount must have at most [12] integer digits",
+              List("1000000000000"),
+            )
+          )
+      }
+
+      "fail with an InvalidFieldError chain for a compact extreme-exponent amount and unsupported currency" in {
+        val amountRawExtremeExponent = BigDecimal(BigInt(1), -1_000_000)
+
+        priceDomainValidator
+          .validate((amountRaw = amountRawExtremeExponent, currencyRaw = "not-a-currency"))
+          .zioValue
+          .toEither
+          .left
+          .toOption
+          .value
+          .toNonEmptyList
+          .toList shouldBe
+          List(
+            InvalidFieldError(
+              "amount",
+              "Amount must have at most [12] integer digits",
+              List("1E+1000000"),
+            ),
+            InvalidFieldError(
+              "currency",
+              "Unsupported ISO currency: [not-a-currency]",
+              List("not-a-currency"),
+            ),
+          )
+      }
+
+      "fail with an InvalidFieldError chain for a negative amount and unsupported currency" in {
         priceDomainValidator
           .validate((amountRaw = BigDecimal(-1), currencyRaw = "not-a-currency"))
           .zioValue
@@ -54,7 +123,7 @@ class PriceDomainValidatorSpec extends ZWordSpecBase {
           )
       }
 
-      "reject unsupported, blank, and pseudo currencies" in {
+      "fail with an InvalidFieldError for unsupported, blank, and pseudo currencies" in {
         priceDomainValidator
           .validate((amountRaw = BigDecimal(1), currencyRaw = "   "))
           .zioValue
@@ -84,7 +153,7 @@ class PriceDomainValidatorSpec extends ZWordSpecBase {
           )
       }
 
-      "reject raw scales above each currency fraction-digit boundary without rounding or removing trailing zeros" in {
+      "fail with an InvalidFieldError when raw scale exceeds the currency fraction-digit boundary" in {
         val invalidFieldErrorsAmountExpected = List(
           InvalidFieldError("amount", "Amount scale [2] exceeds currency fraction digits [0]", List("1.00")),
           InvalidFieldError("amount", "Amount scale [3] exceeds currency fraction digits [2]", List("1.230")),

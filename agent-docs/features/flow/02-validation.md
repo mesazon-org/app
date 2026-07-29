@@ -42,7 +42,7 @@ Reuse `validation/service/validation.scala`:
 - `validateAllNested`: collapses a composite item's errors under the outer field while preserving inner indexes.
 - `validateSingleDefault`: a non-empty defaultable list must have exactly one default; chain after item validation with `.andThen`.
 
-Use `validation/domain/EmailValidator` or `PhoneNumberDomainValidator` for effectful/non-trivial fields, then wrap the result in the feature newtype. Shared helpers are `private[validation]`. New features use one feature validator; legacy `ServiceValidator`/`DomainValidator` remains only for untouched old code (`WahaServiceValidator` is the last user).
+Use concrete reusable domain validators such as `EmailValidator`, `PhoneNumberDomainValidator`, or `PriceDomainValidator` for effectful/non-trivial fields, then wrap the result in the feature newtype. Do not make new domain validators extend the legacy generic `DomainValidator`; keep their concrete `validate` API. Shared helpers are `private[validation]`. New features use one feature request validator; legacy `ServiceValidator`/`DomainValidator` remains only for untouched old code (`WahaServiceValidator` is the last user).
 
 ## Feature validator
 
@@ -56,7 +56,7 @@ File: `validation/service/<Feature>RequestValidator.scala`.
 - Singular, batch, and combined requests reuse private per-item/per-field validation; never duplicate field lists.
 - A batch error identifies one failed element, so pass the singular item concept to `validateAllNested` (for example `catalogueItem`, not the plural request member `catalogueItems`). Preserve the source index and return no error for valid elements between failures.
 - For an optional composite, validate mandatory inner members in declaration order, accumulate their errors under the outer field, then wrap the valid case class in its contextual newtype.
-- Monetary validation uses `PriceDomainValidator` with JDK `Currency`: normalize trim/uppercase ISO codes, reject unsupported or no-fixed-fraction currencies, and reject negative amounts or supplied scales above the currency fraction digits. Normalize valid lower-scale amounts upward to the exact currency scale by appending zeros; never round or remove supplied precision.
+- Monetary validation uses `PriceDomainValidator` with JDK `Currency`: normalize trim/uppercase ISO codes, reject unsupported or no-fixed-fraction currencies, and require non-negative amounts with at most 12 integer digits (equivalent to `[0, 1,000,000,000,000)`) and supplied scale no greater than the currency fraction digits. For non-zero amounts, check the integer-digit bound with widened `precision - scale` arithmetic before normalization so compact extreme-exponent inputs cannot cause unbounded allocation; zero bypasses that representation-derived bound because its exponent does not change its value. Normalize valid lower-scale amounts upward to the exact currency scale by appending zeros; never round or remove supplied precision.
 - Pure fields use required/optional helpers with `.either`; effectful fields use domain validators.
 - Expose `val live = ZLayer.derive[...]`; PR 5 wires it into the service graph.
 

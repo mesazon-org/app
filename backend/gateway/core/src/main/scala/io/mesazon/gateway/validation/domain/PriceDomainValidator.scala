@@ -8,9 +8,9 @@ import zio.*
 
 import java.util.{Currency, Locale}
 
-final class PriceDomainValidator extends DomainValidator[PriceDomainValidator.PriceRaw, Price] {
+final class PriceDomainValidator {
 
-  override def validate(priceRaw: PriceDomainValidator.PriceRaw): UIO[ValidatedNec[InvalidFieldError, Price]] =
+  def validate(priceRaw: PriceDomainValidator.PriceRaw): UIO[ValidatedNec[InvalidFieldError, Price]] =
     ZIO.succeed {
       val (amountRaw, currencyRaw) = priceRaw
       val currencyFormatted        = currencyRaw.trim.toUpperCase(Locale.ROOT)
@@ -27,6 +27,15 @@ final class PriceDomainValidator extends DomainValidator[PriceDomainValidator.Pr
   private def validateAmount(amountRaw: BigDecimal): ValidatedNec[InvalidFieldError, PriceAmount] =
     if (amountRaw.signum < 0)
       InvalidFieldError("amount", "Amount must be non-negative", List(amountRaw.toString)).invalidNec
+    else if (
+      amountRaw.signum != 0 &&
+      amountRaw.precision.toLong - amountRaw.scale.toLong > PriceDomainValidator.MaximumIntegerDigits
+    )
+      InvalidFieldError(
+        "amount",
+        s"Amount must have at most [${PriceDomainValidator.MaximumIntegerDigits}] integer digits",
+        List(amountRaw.toString),
+      ).invalidNec
     else PriceAmount(amountRaw).validNec
 
   private def validateCurrency(
@@ -70,6 +79,8 @@ final class PriceDomainValidator extends DomainValidator[PriceDomainValidator.Pr
 }
 
 object PriceDomainValidator {
+
+  private val MaximumIntegerDigits = 12
 
   type PriceRaw = (
       amountRaw: BigDecimal,
