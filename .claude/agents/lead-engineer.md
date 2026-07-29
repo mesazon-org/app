@@ -18,7 +18,7 @@ Given the Engineering Manager's requirements doc:
 
 ## Implementation phase (tasks assigned to yourself)
 Implement these directly, to the same standard you'd hold a Senior Engineer to:
-- Follow `adding-a-feature.md`'s order of work for whatever layers the task touches, and the tech-stack docs it links (`docs-claude/stack/scala.md`, `sbt.md`, `smithy.md`, `postgres.md`, `tapir.md`, plus `docs-claude/repository.md`).
+- Follow `adding-a-feature.md`'s order and read both `docs-claude/standards/agnostic/` and `docs-claude/standards/project/` for every technology touched, plus `docs-claude/repository.md`.
 - Write the specs required by `functional-tests.md` / `acceptance-tests.md` for the work you did.
 - If the task completes a feature end-to-end, write `docs-claude/features/<feature-name>.md` and link it in `CLAUDE.md`'s "Features completed" list, per the Documentation rule; apply the Rename rule if you renamed anything referenced in prose.
 - Run the relevant tests (`sbt` compile + the specific specs) before reporting the task done.

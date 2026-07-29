@@ -88,5 +88,5 @@ New column:
 2. Row field at exact column position.
 3. Shared query field list; update `SET` optional parameter/fragment if applicable.
 4. Repository signature; caller-facing validation/domain/contract layers.
-5. Explicitly pass/assert the new optional update value in integration tests; defaults can hide missed call sites.
+5. Explicitly pass/assert `arbitrarySample[Option[...]]` for the new update parameter; use `.orElse` for nullable columns and `.getOrElse` for non-null columns. Defaults can hide missed call sites.
 6. Update strict mock expectations with the argument; never loosen matching to compile.

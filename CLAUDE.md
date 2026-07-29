@@ -29,16 +29,18 @@ Local build/run/test setup: [Repository setup](docs/repository-setup.md).
 
 ## Tech stack
 
-Standards per technology, in request-flow order. Follow when writing code.
+Read both agnostic rules and Mesazon values for each technology.
 
-- [smithy](docs-claude/stack/smithy.md) — API contracts: naming, coding standards, custom traits
-- [middleware](docs-claude/middleware.md) — auth (basic/bearer), `@completedOnboardStage`, org role via `X-Organization-ID`
-- [validators](docs-claude/validators.md) — smithy request → refined domain model; error accumulation
-- [scala](docs-claude/stack/scala.md) — language conventions + test-writing standards
-- [postgres](docs-claude/stack/postgres.md) — Flyway migrations, table/column naming, Row→Queries→Repository
-- [tapir](docs-claude/stack/tapir.md) — streaming file-upload transport, error model, security parity with middleware
-- [repository](docs-claude/repository.md) — Row→Queries→Repository layer: inputs vs API requests, transactions, id/timestamp gen, error mapping, wiring, testing
-- [sbt](docs-claude/stack/sbt.md) — sbt 2.x rules, module structure, dependency mgmt, CI wiring
+- Smithy: [agnostic](docs-claude/standards/agnostic/smithy.md) + [project](docs-claude/standards/project/smithy.md)
+- [Middleware](docs-claude/middleware.md)
+- [Validators](docs-claude/validators.md)
+- Scala: [agnostic](docs-claude/standards/agnostic/scala.md) + [project](docs-claude/standards/project/scala.md)
+- Iron: [agnostic](docs-claude/standards/agnostic/iron.md) + [project](docs-claude/standards/project/iron.md)
+- PostgreSQL: [agnostic](docs-claude/standards/agnostic/postgres.md) + [project](docs-claude/standards/project/postgres.md)
+- Doobie: [agnostic](docs-claude/standards/agnostic/doobie.md) + [project](docs-claude/standards/project/doobie.md)
+- Tapir: [agnostic](docs-claude/standards/agnostic/tapir.md) + [project](docs-claude/standards/project/tapir.md)
+- [Repository](docs-claude/repository.md)
+- sbt: [agnostic](docs-claude/standards/agnostic/sbt.md) + [project](docs-claude/standards/project/sbt.md)
 
 ## Validation flow (rules, run in order, every change)
 

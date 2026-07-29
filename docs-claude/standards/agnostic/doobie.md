@@ -26,7 +26,7 @@ Project-agnostic functional JDBC rules: fragments, codecs, effects, pools. Other
 
 - Dynamic `SET` = non-empty mandatory assignments + flattened optional assignments; no mutable/string builder.
 - Multiple values use `IN`, not `OR` equality chains.
-- Upsert declares conflict target and update assignments (including attempted-insert values); no racy pre-check.
+- Upsert declares its conflict target and uses `DO UPDATE` with explicit assignments (including attempted-insert values) or `DO NOTHING`; no racy pre-check.
 
 ## Effect integration
 

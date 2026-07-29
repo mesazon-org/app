@@ -40,11 +40,11 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 ### Data and assertions
 
 - Name bindings after their exact models; qualifiers follow the model name.
-- Build expected mappings independently and field-by-field; never use the mapper/transform/serializer/helper under test to create expected output.
+- Build expected mappings independently and field-by-field; never use the mapper/transform/serializer/helper under test to create expected output. Using that transform to arrange test input is allowed.
 - Assert the complete returned model. Project only when the field is the test's entire contract (for example, IDs surviving rollback).
 - Assert order only when contractual; otherwise compare order-insensitively.
 - If distinctness matters, guarantee it during setup and assert `not equal`. With low-cardinality generators, sample twice then modify one value; do not hard-code or sample-and-hope.
-- Control time/random/IDs/concurrency. For strict comparisons (`isAfter`, `isBefore`, `>`), random offsets must exclude the equality boundary.
+- Control time/random/IDs/concurrency. For strict comparisons (`isAfter`, `isBefore`, `>`), exclude an equality-producing random offset when equality can change the expected branch; offset `0` is allowed when every generated value takes the same branch.
 
 ### Ownership
 
