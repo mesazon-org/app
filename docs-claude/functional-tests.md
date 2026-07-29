@@ -1,6 +1,6 @@
 # Functional tests (`backend/gateway/core/src/test/scala/io/mesazon/gateway/fun`)
 
-White-box tests of **one service implementation with every effectful dependency mocked** — no HTTP, no DB, no docker. They drive the service's `ServiceTask` interface directly and prove its *orchestration*: that validation is wired in, that the repository/clients are called with **exactly** the right arguments (org scoping, Chimney-mapped inputs, `Opt`/`Some` update semantics), that each branch returns/raises the right value, and that retries/counters behave. Business-logic branches belong here; acceptance specs (see [acceptance-tests.md](acceptance-tests.md)) prove the integrated wiring, and `unit/` specs cover validators and pure helpers. The general test-writing standards (naming, whole-model asserts, one `should` per operation, distinctness proofs) are in [scala.md § Testing](stack/scala.md#testing) and apply here unchanged.
+White-box tests of **one service implementation with every effectful dependency mocked** — no HTTP, no DB, no docker. They drive the service's `ServiceTask` interface directly and prove its *orchestration*: that validation is wired in, that the repository/clients are called with **exactly** the right arguments (org scoping, Chimney-mapped inputs, `Opt`/`Some` update semantics), that each branch returns/raises the right value, and that retries/counters behave. Business-logic branches belong here; acceptance specs (see [acceptance-tests.md](acceptance-tests.md)) prove the integrated wiring, and `unit/` specs cover validators and pure helpers. Apply the [Scala test standards](standards/agnostic/scala.md#tests).
 
 ## Naming & scope
 
@@ -16,7 +16,7 @@ White-box tests of **one service implementation with every effectful dependency 
 
 ## TestContext — fresh mocks per test
 
-Every spec ends with a `trait TestContext`; each test opens with `in new TestContext` so mocks and config are rebuilt per test (test isolation — nothing shared, see [scala.md](stack/scala.md)).
+Every spec ends with a `trait TestContext`; each test opens with `in new TestContext` so mocks and config are rebuilt per test (see [test isolation](standards/agnostic/scala.md#structure-and-names)).
 
 ```scala
 trait TestContext {
@@ -41,7 +41,7 @@ trait TestContext {
 - **Build `.local`, never `.live`.** The `observed` wrapper only translates `ServiceError` → smithy error responses (proved end-to-end by acceptance tests); fun specs assert the raw `ServiceError` with `.zioError shouldBe …`.
 - **Real validators, mocked everything else.** The `<Feature>RequestValidator` + domain validators (`EmailValidator`, `PhoneNumberDomainValidator` with `PhoneNumberUtil` and a hardcoded `PhoneNumberValidatorConfig(Set("CY", "GB"))`) are provided live — mocking them would just restate the test. Repositories, clients, `AuthState`, `JwtService`, `TimeProvider`, `IDGenerator`, `OtpGenerator` are scalamock mocks provided via `ZLayer.succeed(mock)`.
 - **Config is a hardcoded copy of `application.conf` values** (`UserForgotPasswordConfig(otpExpiresAtOffset = 60.seconds, …)`) — same gotcha as acceptance tests: change the conf and the spec's copy must change too. A `build…Service(isDev = false)` parameter + `config.copy(...)` is the pattern for config-dependent branches.
-- **Time is pinned**: `val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)` in `TestContext`, returned by the `TimeProvider` mock (truncated because Postgres/JSON round-trips are millis; irrelevant here but kept consistent). Mind the strict-boundary rule in [scala.md](stack/scala.md) when deriving offsets from `instantNow`.
+- **Time is pinned**: `val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)` in `TestContext`, returned by the `TimeProvider` mock (truncated because Postgres/JSON round-trips are millis; irrelevant here but kept consistent). Mind the [strict-boundary rule](standards/agnostic/scala.md#data-and-assertions) when deriving offsets from `instantNow`.
 
 ## Expectations
 

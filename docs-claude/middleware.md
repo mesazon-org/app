@@ -1,6 +1,6 @@
 # HTTP middleware — authentication & authorization
 
-How every gateway endpoint gets its auth. The rule of thumb: **handlers never check credentials** — by the time a service method runs, the caller is authenticated, authorized, and available via `AuthState`. What gets checked is declared in the smithy contract (see [smithy.md](stack/smithy.md)) and enforced here.
+How every gateway endpoint gets its auth. The rule of thumb: **handlers never check credentials** — by the time a service method runs, the caller is authenticated, authorized, and available via `AuthState`. What gets checked is declared in the [Smithy contract](standards/agnostic/smithy.md) and enforced here.
 
 ## Where it hooks in
 
@@ -50,7 +50,7 @@ Runs for `@httpBearerAuth` services and for Tapir endpoints:
 
 ## Organization permissions — `@organizationUserRolesAllowed` + `X-Organization-ID`
 
-Each smithy **operation** declares which organization roles may call it, e.g. `@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])` — operation-level so permissions can differ per endpoint within one service. The project-wide policy (defined in [smithy.md](stack/smithy.md#organizationuserrolesallowedroles-)) is: reads (`GET`) allow `OWNER`/`ADMIN`/`USER` — a `USER` may always view data — mutations allow `OWNER`/`ADMIN`, and deleting the organization allows `OWNER` only. (Customer book follows this: its three `GET`s allow `USER`, every write is `OWNER`/`ADMIN`.) Every org-scoped operation carries the organization in the **required `X-Organization-ID` header** — declared once via the `OrganizationScopedInput` mixin (mixed into each operation input), never in the body or URI (a fixed header is readable by the middleware without parsing bodies, and it works identically for GETs, JSON posts and streaming uploads). `AuthorizationService.auth` reads the header straight off the raw request, independent of the decoded input.
+Each smithy **operation** declares which organization roles may call it, e.g. `@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])` — operation-level so permissions can differ per endpoint within one service. The project-wide [role policy](standards/agnostic/smithy.md#custom-traits) is: reads (`GET`) allow `OWNER`/`ADMIN`/`USER` — a `USER` may always view data — mutations allow `OWNER`/`ADMIN`, and deleting the organization allows `OWNER` only. (Customer book follows this: its three `GET`s allow `USER`, every write is `OWNER`/`ADMIN`.) Every org-scoped operation carries the organization in the **required `X-Organization-ID` header** — declared once via the `OrganizationScopedInput` mixin (mixed into each operation input), never in the body or URI (a fixed header is readable by the middleware without parsing bodies, and it works identically for GETs, JSON posts and streaming uploads). `AuthorizationService.auth` reads the header straight off the raw request, independent of the decoded input.
 
 Enforcement, mirroring the `completedOnboardStage` mechanism:
 

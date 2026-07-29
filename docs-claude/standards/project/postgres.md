@@ -1,6 +1,6 @@
 # PostgreSQL schema — Mesazon specifics
 
-Concrete values that fill in the placeholders in [postgres-new.md](postgres-new.md). Not a standard on its own — read each fact against the rule it instantiates there. Schema is applied by **Flyway** SQL migrations and read through a hand-written Scala repository layer over **Doobie**/**Tranzactio** — no ORM, no schema generation from code (see [doobie-project.md](doobie-project.md) for the persistence-library facts).
+Read with the [agnostic Postgres rules](../agnostic/postgres.md). Flyway schema + hand-written Doobie/Tranzactio persistence; no ORM/code-generated schema. See [Doobie specifics](doobie.md).
 
 ## Schema module layout
 
@@ -22,27 +22,28 @@ Deployment: `terraform/dev/gateway-flyway/` runs this image as a one-shot `app-j
 ## Column types
 
 - `IDGenerator` generates identifiers (UUIDv7) in the application.
+- `TimeProvider.instantNow` supplies `CreatedAt`/`UpdatedAt`; repositories set them.
 - Enum-as-text columns: `onboard_stage`, `organization_stage`, `user_role`, `otp_type`, `token_type`, `action_attempt_type`.
 - Four-column phone number: `phone_region`, `phone_country_code`, `phone_national_number`, `phone_number_e164` (mirrors the `PhoneNumber` domain type). Multi-valued contact points as `jsonb`: `emails`, `phone_numbers` (customer book tables, `organization_details`).
 
 ## Soft-delete & archival
 
-`customer.status` is stored as a native PostgreSQL `customer_status` enum type rather than `text` — the one deliberate exception to the enum-as-text convention, whose labels are the domain `CustomerStatus` case names. See the end-to-end example in the [customer-book feature doc](../features/customer-book.md).
+`customer.status` is native PG `customer_status` (`Active`/`Archived` domain case names), the sole enum-as-text exception. Archive, never hard-delete. See [Customer Book](../../features/customer-book.md).
 
 ## Discriminated subtypes on one table
 
-`customer` carries `customer_type` (`INDIVIDUAL` | `BUSINESS`); all customer data lives on that one table (for `INDIVIDUAL`, `name` is the person's full name and `tax_id` is null; for `BUSINESS`, `name` is the company name, `tax_id` may be set). `customer_business_contact` is the child table, keyed `(organization_id, customer_id, customer_business_contact_id)`, foreign-keyed to `customer (organization_id, customer_id)`. See the full lifecycle in the [customer-book feature doc](../features/customer-book.md).
+`customer` carries `customer_type` (`INDIVIDUAL` | `BUSINESS`); all data lives on it. Individual: `name` = full name, `tax_id` null. Business: `name` = company, optional `tax_id`. `customer_business_contact` is not a customer/order target and has no status; key `(organization_id, customer_id, customer_business_contact_id)`, tenant-scoped FK to `customer`. `uq_customer_name` is unique per active tenant/type; contact email/phone use `uq_customer_business_contact_email` / `uq_customer_business_contact_phone_number`. See [Customer Book](../../features/customer-book.md).
 
 ## Configuration
 
-`RepositoryConfig` (`schema`, `<entity>Table = ""` per table, collected into `allTableNames`) is populated from `repository { ... }` blocks in **two** separate `application.conf` files: `backend/gateway/core/src/main/resources/application.conf` (main service) and `backend/gateway/it/src/test/resources/application.conf` (integration-test module's own copy) — adding a table means touching the migration, `RepositoryConfig`, and *both* files.
+`RepositoryConfig` (`schema`, `<entity>Table = ""`, `allTableNames`) comes from two `repository` configs: `backend/gateway/core/src/main/resources/application.conf` and `backend/gateway/it/src/test/resources/application.conf` (acceptance-test copy). Update both.
 
 ## Testing
 
 - `local_test_user` holds the `TRUNCATE` grant used to reset tables between tests (granted in `local/postgres/init.sql`).
-- The test-database client/harness, its methods, and its testcontainers wiring are `PostgreSQLTestClient` — see [doobie-project.md § Testing](doobie-project.md#testing) (that library owns the client's mechanics; this doc only owns the grant that makes `truncateTable` work).
+- The test-database client/harness, its methods, and its testcontainers wiring are `PostgreSQLTestClient` — see [Doobie tests](doobie.md#tests) (that library owns the client's mechanics; this doc only owns the grant that makes `truncateTable` work).
 - Query classes expose `...Testing` helpers (e.g. `getAllTesting`) for assertions.
-- Acceptance tests live in `backend/gateway/it` — see [acceptance-tests.md](acceptance-tests.md).
+- Acceptance tests live in `backend/gateway/it` — see [acceptance-tests.md](../../acceptance-tests.md).
 
 ## Adding a table — checklist file paths
 

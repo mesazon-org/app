@@ -164,7 +164,7 @@ So adding a table touches, at minimum: the migration, `RepositoryConfig`, both `
 - `backend/postgresql-test` provides `PostgreSQLTestClient` (testcontainers docker-compose): `checkIfTableExists(schema, table)`, `truncateTable(schema, table)` (used between tests via the `TRUNCATE`-granted `local_test_user`), and `executeQuery`.
 - Query classes expose `...Testing` helpers (e.g. `getAllTesting`) for assertions — see [scala.md §Repository query class methods for testing](scala.md).
 - The full recipe for a Postgres-backed repository/queries integration spec — the container stack, base traits, `TestContext`, mocking time/ids, what to assert — is in [repository.md § Testing](../repository.md#testing--repository-integration-specs-with-testcontainers).
-- Feature behaviour is proven by acceptance tests in `backend/gateway/it` — see [acceptance-tests.md](acceptance-tests.md).
+- Feature behaviour is proven by acceptance tests in `backend/gateway/it` — see [acceptance-tests.md](../acceptance-tests.md).
 
 ## Adding a table — checklist
 

@@ -29,33 +29,35 @@ Local build/run/test setup: [Repository setup](docs/repository-setup.md).
 
 ## Tech stack
 
-Standards per technology, in request-flow order. Follow when writing code.
+Read both agnostic rules and Mesazon values for each technology.
 
-- [smithy](docs-Codex/stack/smithy.md) — API contracts: naming, coding standards, custom traits
-- [middleware](docs-Codex/middleware.md) — auth (basic/bearer), `@completedOnboardStage`, org role via `X-Organization-ID`
-- [validators](docs-Codex/validators.md) — smithy request → refined domain model; error accumulation
-- [scala](docs-Codex/stack/scala.md) — language conventions + test-writing standards
-- [postgres](docs-Codex/stack/postgres.md) — Flyway migrations, table/column naming, Row→Queries→Repository
-- [tapir](docs-Codex/stack/tapir.md) — streaming file-upload transport, error model, security parity with middleware
-- [repository](docs-Codex/repository.md) — Row→Queries→Repository layer: inputs vs API requests, transactions, id/timestamp gen, error mapping, wiring, testing
-- [sbt](docs-Codex/stack/sbt.md) — sbt 2.x rules, module structure, dependency mgmt, CI wiring
+- Smithy: [agnostic](docs-claude/standards/agnostic/smithy.md) + [project](docs-claude/standards/project/smithy.md)
+- [Middleware](docs-claude/middleware.md)
+- [Validators](docs-claude/validators.md)
+- Scala: [agnostic](docs-claude/standards/agnostic/scala.md) + [project](docs-claude/standards/project/scala.md)
+- Iron: [agnostic](docs-claude/standards/agnostic/iron.md) + [project](docs-claude/standards/project/iron.md)
+- PostgreSQL: [agnostic](docs-claude/standards/agnostic/postgres.md) + [project](docs-claude/standards/project/postgres.md)
+- Doobie: [agnostic](docs-claude/standards/agnostic/doobie.md) + [project](docs-claude/standards/project/doobie.md)
+- Tapir: [agnostic](docs-claude/standards/agnostic/tapir.md) + [project](docs-claude/standards/project/tapir.md)
+- [Repository](docs-claude/repository.md)
+- sbt: [agnostic](docs-claude/standards/agnostic/sbt.md) + [project](docs-claude/standards/project/sbt.md)
 
 ## Validation flow (rules, run in order, every change)
 
-1. **Standards compliance** — must match [tech stack](#tech-stack) docs, not generic convention. New feature → [Adding a feature](docs-Codex/adding-a-feature.md) order: smithy → domain models → validator → service → persistence.
+1. **Standards compliance** — must match [tech stack](#tech-stack) docs. New feature → [Adding a feature](docs-claude/adding-a-feature.md) order: smithy → domain models → validator → service → persistence.
 2. **Lint** — `sbt "runLint"` (scalafix+scalafmt, autofix) before done. `checkLint` = check-only, CI-enforced.
 3. **Tests** — write + pass at every applicable layer:
    - **Unit** `gateway/core/.../unit` — validators, pure helpers.
-   - **Functional** `gateway/core/.../fun` — one service, all deps mocked. [functional-tests.md](docs-Codex/functional-tests.md)
-   - **Integration** `gateway/core/.../it` — repository/client vs real dependency (Testcontainers), no HTTP. [integration-tests.md](docs-Codex/integration-tests.md)
-   - **Acceptance** `gateway/it` module — real gateway + real Postgres over HTTP. [acceptance-tests.md](docs-Codex/acceptance-tests.md)
-4. **Feature docs** — check `docs-Codex/features/` before coding. New feature → create `docs-Codex/features/<feature-name>.md` at first slice (even schema-only), link under [Features](#features), include **Status**: done / remaining — update per slice, drop only when fully shipped+tested. See [Adding a feature § file layout](docs-Codex/adding-a-feature.md#file-layout). Structure:
+   - **Functional** `gateway/core/.../fun` — one service, all deps mocked. [functional-tests.md](docs-claude/functional-tests.md)
+   - **Integration** `gateway/core/.../it` — repository/client vs real dependency (Testcontainers), no HTTP. [integration-tests.md](docs-claude/integration-tests.md)
+   - **Acceptance** `gateway/it` module — real gateway + real Postgres over HTTP. [acceptance-tests.md](docs-claude/acceptance-tests.md)
+4. **Feature docs** — check `docs-claude/features/` before coding. New feature → create `docs-claude/features/<feature-name>.md` at first slice (even schema-only), link under [Features](#features), include **Status**: done / remaining — update per slice, drop only when fully shipped+tested. See [Adding a feature § file layout](docs-claude/adding-a-feature.md#file-layout). Structure:
    - scope: owns / excludes / boundary links
    - endpoints table: auth + onboard stage
    - flow: incl. security/abuse defenses, non-obvious decisions
    - key files + config
    - tests: acceptance, functional, unit, integration
-5. **Docs currency** — every task scans `docs-Codex/` + this file for now-inaccurate statements (incl. renamed identifiers: errors, types, endpoints, config keys, files) and fixes them in the same change. New convention → document it. Stale doc > missing doc, in badness.
+5. **Docs currency** — every task scans `docs-claude/` + this file for now-inaccurate statements (incl. renamed identifiers: errors, types, endpoints, config keys, files) and fixes them in the same change. New convention → document it. Stale doc > missing doc, in badness.
 
 ## Project structure
 
@@ -70,22 +72,22 @@ Standards per technology, in request-flow order. Follow when writing code.
 - `compose/` — local dev docker-compose stack
 - `terraform/` — infra as code
 - `docs/` — human-facing setup docs
-- `docs-Codex/` — standards + feature docs (this file's links)
-- `.Codex/agents/`, `.Codex/commands/` — `/feature` pipeline
+- `docs-claude/` — standards + feature docs (this file's links)
+- `.claude/agents/`, `.claude/commands/` — `/feature` pipeline
 
 ## Features
 
-New feature → [Adding a feature](docs-Codex/adding-a-feature.md); doc requirement: [Validation flow §4](#validation-flow-rules-run-in-order-every-change).
+New feature → [Adding a feature](docs-claude/adding-a-feature.md); doc requirement: [Validation flow §4](#validation-flow-rules-run-in-order-every-change).
 
-- [User Onboarding](docs-Codex/features/user-onboarding.md)
-- [User Sign in](docs-Codex/features/user-signin.md)
-- [User Sign up](docs-Codex/features/user-signup.md)
-- [User Forgot Password](docs-Codex/features/user-forgot-password.md)
-- [User Token Management](docs-Codex/features/user-token-management.md)
-- [Organization Management](docs-Codex/features/organization-management.md)
-- [Files Management](docs-Codex/features/files-management.md)
-- [Customer Book](docs-Codex/features/customer-book.md)
-- [Catalogue](docs-Codex/features/catalogue.md) — in progress (part 1: tables+schemas; part 2: repository layer)
+- [User Onboarding](docs-claude/features/user-onboarding.md)
+- [User Sign in](docs-claude/features/user-signin.md)
+- [User Sign up](docs-claude/features/user-signup.md)
+- [User Forgot Password](docs-claude/features/user-forgot-password.md)
+- [User Token Management](docs-claude/features/user-token-management.md)
+- [Organization Management](docs-claude/features/organization-management.md)
+- [Files Management](docs-claude/features/files-management.md)
+- [Customer Book](docs-claude/features/customer-book.md)
+- [Catalogue](docs-claude/features/catalogue.md) — in progress (part 1: tables+schemas; part 2: repository layer)
 
 ## Commands
 
@@ -104,4 +106,4 @@ sbt "gatewayCore/Docker/publishLocal"                   # build gateway image
 docker compose -f compose/compose.yaml up -d            # local stack: postgres, flyway, gateway, mocks
 ```
 
-`/feature "<description>"` — 4-role subagent pipeline (Product Owner → Engineering Manager → Lead Engineer → Senior Engineer), defined in `.Codex/agents/` + `.Codex/commands/feature.md`. Requires OmniRoute (local model-routing gateway, per-machine setup, not shared infra): [Agent pipeline setup](docs-Codex/agent-pipeline-setup.md).
+`/feature "<description>"` — 4-role subagent pipeline (Product Owner → Engineering Manager → Lead Engineer → Senior Engineer), defined in `.claude/agents/` + `.claude/commands/feature.md`. Requires OmniRoute (local model-routing gateway, per-machine setup, not shared infra): [Agent pipeline setup](docs-claude/agent-pipeline-setup.md).
