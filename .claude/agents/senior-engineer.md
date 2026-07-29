@@ -1,1 +1,0 @@
-../../.agents/agents/senior-engineer.md

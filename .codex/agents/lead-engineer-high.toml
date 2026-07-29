@@ -1,0 +1,6 @@
+name = "lead-engineer-high"
+description = "/feature Lead Engineer for EM-classified HIGH work."
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
+developer_instructions = """
+Read and follow `.agents/contracts/lead-engineer.md`. Accept only `HIGH` packages; otherwise request EM reclassification."""

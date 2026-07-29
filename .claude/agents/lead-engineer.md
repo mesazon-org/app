@@ -1,1 +1,0 @@
-../../.agents/agents/lead-engineer.md

@@ -72,7 +72,7 @@ Read every standard whose trigger matches the task:
 
 ### Agent configuration ownership
 
-`.agents/` is canonical only for agents, commands, and skills intentionally shared across tools. `.claude/` is a real Claude-specific directory; each shared file inside it is a relative symlink to its `.agents/` source. Edit shared files through `.agents/`. Claude-only files/config stay directly under `.claude/`; if one shared file must diverge for Claude, replace only that file's symlink with a real Claude-specific file rather than forking the whole tree. `.claude/settings.local.json` and `.claude/worktrees/` are local and gitignored.
+`.agents/` is canonical for shared agents, contracts, commands, and skills. `.claude/` is a real Claude-specific directory; each shared file inside it is a relative symlink to `.agents/`. Edit shared files in `.agents/`. Claude-only files/config stay directly under `.claude/`; to diverge one shared file, replace only its symlink. `.claude/settings.local.json` and `.claude/worktrees/` are local/gitignored.
 
 ## Validation flow (rules, run in order, every change)
 
@@ -100,7 +100,7 @@ Read every standard whose trigger matches the task:
 - `terraform/` — infra as code
 - `docs/` — human-facing setup docs
 - `docs-claude/` — standards + feature docs (this file's links)
-- `.agents/{agents,commands,skills}/` — shared agent sources; `.claude/` holds per-file symlinks plus Claude-specific files/config
+- `.agents/{agents,contracts,commands,skills}/` — shared agent sources; `.claude/` holds per-file symlinks plus Claude-specific files/config
 
 ## Features
 
@@ -133,4 +133,4 @@ sbt "gatewayCore/Docker/publishLocal"                   # build gateway image
 docker compose -f compose/compose.yaml up -d            # local stack: postgres, flyway, gateway, mocks
 ```
 
-`/feature "<description>"` — 4-role subagent pipeline (Product Owner → Engineering Manager → Lead Engineer → Senior Engineer), defined in `.agents/agents/` + `.agents/commands/feature.md` and exposed to Claude Code by per-file symlinks under `.claude/`. Requires OmniRoute (local model-routing gateway, per-machine setup, not shared infra): [Agent pipeline setup](docs-claude/agent-pipeline-setup.md).
+`/feature "<description>"` — Product Owner → Engineering Manager → complexity-selected Lead Engineer (`LOW|MEDIUM|HIGH|EXTREME`). PO owns product requirements; EM resolves edge cases, maps docs/outcome slices, and applies the [complexity contract](.agents/contracts/complexity.md); the selected Lead follows the [Lead contract](.agents/contracts/lead-engineer.md) to design, implement, and verify. Sources: `.agents/`; Claude: per-file `.claude/` symlinks; Codex: `.codex/agents/`. Setup: [Agent pipeline](docs-claude/agent-pipeline-setup.md).

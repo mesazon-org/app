@@ -1,8 +1,8 @@
 # Agent pipeline setup
 
-`/feature "<description>"` runs Product Owner → Engineering Manager → Lead Engineer → Senior Engineer through local [OmniRoute](https://github.com/diegosouzapw/OmniRoute).
+`/feature "<description>"` runs Product Owner → Engineering Manager → one complexity-selected Lead Engineer through local [OmniRoute](https://github.com/diegosouzapw/OmniRoute).
 
-Shared sources are `.agents/{agents,commands,skills}/`; matching `.claude/` files are relative symlinks. Edit `.agents/`. Claude-only config/files remain real files in `.claude/`; diverge one shared file by replacing only its symlink.
+Shared sources are `.agents/{agents,contracts,commands,skills}/`; matching `.claude/` files are relative symlinks. Edit `.agents/`. Claude-only config/files remain real files in `.claude/`; diverge one shared file by replacing only its symlink. `.codex/agents/` contains thin Codex profiles that reuse the shared contracts and pin native Codex model/effort tiers.
 
 OmniRoute is per-engineer local infrastructure. Never commit its admin password, API key, or provider keys.
 
@@ -79,16 +79,18 @@ OMNIROUTE_API_KEY=<key> omniroute chat "reply with exactly: pong" --model cc/cla
 
 Restart every Claude Code process; environment is read at startup. `ANTHROPIC_BASE_URL` must not end in `/v1`.
 
-## Checked-in model/ownership policy
+## Checked-in roles/routing
 
-| Role | Model | Ownership |
-|---|---|---|
-| Product Owner | `oc/deepseek-v4-flash-free` | brief |
-| Engineering Manager | `oc/deepseek-v4-flash-free` | clarification/requirements/rough ownership |
-| Senior Engineer | `oc/deepseek-v4-flash-free` | chore-level task only |
-| Lead Engineer | `opus` → configured `cc/...` | all new/non-trivial work; review every Senior diff |
+| Role | Claude | Codex | Ownership |
+|---|---|---|---|
+| Product Owner | `oc/deepseek-v4-flash-free` | parent default | complete product requirements/decisions |
+| Engineering Manager | `oc/deepseek-v4-flash-free` | parent default | edge cases, doc topology, outcome chunks, complexity |
+| Lead LOW | `oc/deepseek-v4-flash-free` | `gpt-5.6-terra`/low | bounded known-pattern work |
+| Lead MEDIUM | `haiku` | `gpt-5.6-terra`/medium | contained new behavior |
+| Lead HIGH | `sonnet` | `gpt-5.6-sol`/high | multi-layer/risky work |
+| Lead EXTREME | `opus` | `gpt-5.6-sol`/xhigh | highest-risk/system-wide work |
 
-EM suggests owners; Lead may override. Senior receives fresh chore tasks and revises after Lead review. Lead implements its tasks in its planning session. Change a role’s `model:` only in `.agents/agents/<role>.md`.
+EM classifies the whole request by `.agents/contracts/complexity.md`'s highest material trigger. One matching Lead session plans, implements, and reviews the full request; scope changes force reclassification. Shared execution rules live in `.agents/contracts/lead-engineer.md`.
 
 Only `oc/deepseek-v4-flash-free` was confirmed reliable among tested free routes. Other free IDs may return 401/anti-abuse failures and availability may change; verify each with `omniroute chat` before use.
 
@@ -112,7 +114,7 @@ In a fresh Claude Code session:
 /feature "add a health-check endpoint"
 ```
 
-The pipeline follows [Feature flow](features/flow/README.md), including PR slices and same-PR tests.
+PO owns the final product specification. EM challenges it, asks PO first, escalates unknown stakeholder decisions to the user, maps only required docs/outcome slices, and assigns complexity. The selected expert Lead owns all coding decisions and follows [Feature flow](features/flow/README.md), including same-PR tests/docs.
 
 ## Troubleshooting
 

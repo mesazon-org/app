@@ -1,38 +1,57 @@
 ---
-description: Run a feature request through the Product Owner → Engineering Manager → Lead Engineer → Senior Engineer pipeline
+description: Product Owner → Engineering Manager → complexity-selected Lead Engineer
 argument-hint: <feature description>
 ---
 
-You are the orchestrator for a feature request: **"$ARGUMENTS"**. You do not implement or design anything yourself — your job is to run the pipeline below, relay information between the roles faithfully (don't summarize away detail they need), and keep the user informed at each handoff. Use `TaskCreate`/`TaskUpdate` to track the task list once the Lead Engineer produces it, so progress is visible.
+Orchestrate **"$ARGUMENTS"**. Do not design/code. Preserve full role outputs; keep sessions alive; show handoffs/progress. Never commit/push.
 
-## 1. Product Owner
-Spawn the `product-owner` subagent with the raw request above. Get back the brief.
+## 1 Product
 
-## 2. Engineering Manager
-Spawn the `engineering-manager` subagent with the brief. It may call `AskUserQuestion` on the user directly — let it. It returns a requirements doc with a rough plan where each unit is tagged with a suggested owner (`senior-engineer` for chores, `lead-engineer` for new features / mid-high complexity work). Keep this agent's session alive (don't discard it) — you may need to relay Lead Engineer questions back to it in step 3.
+Spawn `product-owner` with the raw request. Keep session. Require `PRODUCT_SPEC`.
 
-## 3. Engineering Manager ↔ Lead Engineer discussion
-Spawn the `lead-engineer` subagent with the EM's requirements doc, and tell it explicitly that it can raise technical questions for the EM. If it raises any:
-- Use `SendMessage` to send the question to the *same* engineering-manager agent session from step 2 (do not respawn — it needs the prior context to answer well).
-- Use `SendMessage` to send the EM's answer back to the *same* lead-engineer session.
-- Repeat until the Lead Engineer has no more open questions.
+## 2 Engineering
 
-The Lead Engineer's final output is a task list, each task tagged with an **owner** (`senior-engineer` or `lead-engineer` — the Lead Engineer may have revised the EM's suggestion). Register these as tasks via `TaskCreate` so the user can see progress. Keep this `lead-engineer` session alive too — it implements its own tasks and reviews the Senior Engineer's in step 4, so it needs to stay the same session throughout.
+Spawn `engineering-manager` with `PRODUCT_SPEC`. Keep session.
 
-## 4. Implementation
-For each task, in the order the Lead Engineer specified, branch on its owner:
+If EM returns `PRODUCT_QUESTIONS`:
 
-**Owner `senior-engineer`:**
-1. Mark the task `in_progress`.
-2. Spawn a `senior-engineer` subagent for it, passing the task's full description + acceptance criteria. No `model` override needed — its frontmatter default (free tier) is always the right choice, since only chore-level tasks reach this role.
-3. Once it reports done, get the diff (`git status` / `git diff`) and send it to the *same* `lead-engineer` session from step 3 for review (`SendMessage`, don't respawn — it already has full context on the plan).
-4. If the Lead Engineer requests changes: `SendMessage` the specific feedback back to the *same* senior-engineer session to fix, then re-review. Loop until approved.
-5. Mark the task `completed`.
+1. Send them to the same PO.
+2. PO answers or returns `USER_DECISION_REQUIRED`.
+3. Send answers to EM.
+4. For `USER_DECISION_REQUIRED`, tell EM to call `AskUserQuestion`.
+5. Send user decisions to PO; require updated `PRODUCT_SPEC`; send it to EM.
+6. Repeat until EM returns `ENGINEERING_PACKAGE` with no open product questions.
 
-**Owner `lead-engineer`:**
-1. Mark the task `in_progress`.
-2. `SendMessage` the task's full description + acceptance criteria to the *same* `lead-engineer` session from step 3 (don't respawn — it needs the planning context), asking it to implement the task directly.
-3. Once it reports done, mark the task `completed` — no separate review step; the Lead Engineer is the review gate, there's no one above it in this pipeline to review its own work.
+Do not let EM bypass PO for product decisions unless PO explicitly escalates.
 
-## 5. Wrap-up
-Once every task is approved, report what was built and changed; confirm the feature doc was created/linked in the first slice and updated through the final state per `AGENTS.md`. Do not commit or push anything — leave that decision to the user.
+## 3 Complexity route
+
+Validate package level/profile:
+
+| Level | Agent |
+|---|---|
+| LOW | `lead-engineer-low` |
+| MEDIUM | `lead-engineer-medium` |
+| HIGH | `lead-engineer-high` |
+| EXTREME | `lead-engineer-extreme` |
+
+Spawn exactly that Lead with the full package. Keep session for planning, implementation, and final review.
+
+If Lead returns `REQUIREMENT_QUESTIONS`, send to same EM. EM answers from package or repeats PO→user escalation above. Return the resolved answer and updated package/spec to the same Lead. Lead owns coding decisions; never route coding questions to EM/PO/user.
+
+## 4 Plan/execute
+
+Require `IMPLEMENTATION_PLAN`. Register tasks with `TaskCreate`.
+
+For each task in order:
+
+1. `TaskUpdate` → `in_progress`.
+2. Send full task + package to same Lead and request implementation/verification.
+3. If requirement uncertainty appears, use step 3 escalation; resume same Lead.
+4. Require command evidence; `TaskUpdate` → `completed`.
+
+After tasks, ask same Lead for full-diff review and `IMPLEMENTATION_REPORT`. If it finds issues, track/fix/recheck before completion.
+
+## 5 Wrap
+
+Report requirements delivered, docs/status, verification, remaining/N/A work, and complexity/profile used. Confirm feature doc lifecycle and docs currency from `AGENTS.md`.
