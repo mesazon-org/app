@@ -1,6 +1,6 @@
 # Database runtime changes
 
-Read [agnostic Doobie](../standards/doobie.md) plus this file only when changing the PostgreSQL transactor, datasource/pool, SQL logging, or shared database test client. Feature SQL/repositories use [Repository](../features/flow/04-repository.md).
+For transactor, datasource/pool, SQL logging, or shared DB test-client changes, read [Doobie](../standards/doobie.md) and this file. Feature SQL/repositories use [Repository](../features/flow/04-repository.md).
 
 Runtime: Doobie `1.0.0-RC13` (`doobie-core`, Hikari, PostgreSQL) plus Tranzactio `6.0.0` (`tranzactio-doobie`) for ZIO.
 

@@ -1,6 +1,6 @@
 # Functional JDBC (Doobie)
 
-Project-agnostic functional JDBC rules: fragments, codecs, effects, pools. Other owners: [schema](postgres.md), [Mesazon repository](../features/flow/04-repository.md), [database runtime](../project/database-runtime.md), [newtypes](iron.md), [Scala](scala.md).
+Reusable functional JDBC rules. Related: [schema](postgres.md), [repository](../features/flow/04-repository.md), [database runtime](../project/database-runtime.md), [newtypes](iron.md), [Scala](scala.md).
 
 ## Fragment composition
 

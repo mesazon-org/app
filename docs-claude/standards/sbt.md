@@ -1,6 +1,6 @@
-# sbt Build Definition
+# sbt
 
-Project-agnostic Scala 3/sbt 2 multi-module build rules. Mesazon build values: [Build changes](../project/build.md). Feature test semantics: [repository](../features/flow/04-repository.md), [service](../features/flow/05-service.md), and [external clients](../project/external-client.md).
+Reusable Scala 3/sbt 2 multi-module rules. Mesazon values: [build](../project/build.md). Tests: [repository](../features/flow/04-repository.md), [service](../features/flow/05-service.md), [external clients](../project/external-client.md).
 
 ## Metabuild conventions
 

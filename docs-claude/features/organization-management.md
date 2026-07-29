@@ -1,6 +1,6 @@
 # Organization Management
 
-Owns the organization domain: the organization entity (details, address, slug, stage), the organization↔user membership with roles (`OrganizationUserRow`, creator becomes `OrganizationUserRole.Owner`), and the creation flow. It is the first feature gated on **completed onboarding**: the smithy service carries `@completedOnboardStage`, so `AuthorizationService` requires the user's stage to be in `OnboardStage.completedStages` (= `PhoneVerified`) on top of a valid access token.
+Owns organization details/address/slug/stage, membership roles, and creation. `@completedOnboardStage` requires a valid access token and `OnboardStage.completedStages` (`PhoneVerified`).
 
 **Scope**: organization rows, membership/roles, creation endpoint, slug uniqueness. The logo upload pipeline that advances the organization to `LogoProvided` lives in [Files Management](files-management.md) — this feature only owns the row it updates.
 
@@ -20,53 +20,23 @@ Smithy spec: `backend/gateway/core/src/main/smithy/OrganizationManagementService
 
 ## Role policy (for future org-scoped endpoints)
 
-Any org-scoped endpoint added here follows the project-wide [standard role policy](../standards/smithy.md#custom-traits): reads (`GET`) allow `OWNER`/`ADMIN`/`USER`, mutations allow `OWNER`/`ADMIN`. The one carve-out this feature owns: **deleting an organization is `OWNER` only** (`@organizationUserRolesAllowed(roles: ["OWNER"])`) — an `ADMIN` may run every other action but cannot delete the org itself.
+Follow the [role policy](../standards/smithy.md#custom-traits): reads `OWNER|ADMIN|USER`; mutations `OWNER|ADMIN`; organization deletion `OWNER` only.
 
 ## Flow
 
 ### POST /create/organization (`OrganizationManagementService.createOrganizationPost`)
-1. Read `AuthedUser` from `AuthState`; validate the request (`OrganizationManagementRequestValidator.validatedCreateOrganizationPostRequest` — name, slug, `emails` and `phoneNumbers` — lists of contact-point entries each carrying an `isDefault` flag, validated like Customer Book's (each entry individually valid, and a non-empty list must mark exactly one entry as default via `validateSingleDefault`), stored as `jsonb` columns (`emails`, `phone_numbers`) on `organization_details` — plus optional `tagline` (short "what we sell" line shown under the org name, e.g. on invoices: "Froutagora — Fruits and Vegetable Market"), optional address fields (`addressLine1`, `addressLine2`, `city`, `postalCode`, `country`), `companyRegistrationNumber` and `taxID` (VAT); each is an iron-refined domain type like `OrganizationSlug`, which uses `SlugPredicate` — a URL-friendly slug of lowercase letters, digits and single hyphens (`^[a-z0-9]+(?:-[a-z0-9]+)*$`, trimmed, non-empty, max 63), intended to key a future per-organization store website. The 63-char cap and the character set are the safe intersection of a valid URL path segment and a DNS label, so the slug can serve as either a path or a subdomain).
+1. Read `AuthedUser`; validate name, slug, contacts, optional tagline/address/company registration/tax ID.
+   - `emails`/`phoneNumbers` are JSONB lists of value + `isDefault`; validate every entry and exactly one default when non-empty.
+   - `OrganizationSlug`: trimmed, non-empty, max 63, `^[a-z0-9]+(?:-[a-z0-9]+)*$`; safe for URL path or DNS label.
 2. `OrganizationManagementRepository.createOrganization` inserts **in one transaction**:
    - `OrganizationDetailsRow` (generated `OrganizationID`, stage `DetailsProvided`, logo fields `None`), and
    - `OrganizationUserRow` linking the creator with `OrganizationUserRole.Owner`.
-3. Send an "organization created" email — best-effort: retried, final failure only logged, never fails the request.
+3. Retry the created email; final failure is logged and does not fail the request.
 4. Response: the new `organizationID`.
 
 The repository also exposes `isOrganizationSlugExists` for slug-uniqueness checks, and `updateOrganization` (used by [Files Management](files-management.md) for logo bucket keys and stage updates).
 
-## Sequence diagram
-
-### POST /create/organization  (Bearer + completed onboarding → OWNER membership)
-
-```mermaid
-sequenceDiagram
-    actor Client
-    participant MW as AuthorizationService (middleware)
-    participant SVC as OrganizationManagementService
-    participant V as OrganizationManagementRequestValidator
-    participant Repo as OrganizationManagementRepository
-    participant DB as Postgres
-    participant Email as EmailClient
-
-    Client->>MW: POST /create/organization {name, slug, emails, phoneNumbers, ...} (Bearer)
-    MW->>MW: verify access JWT + completedStages (PhoneVerified)
-    MW->>SVC: AuthedUser(userID) in AuthState
-    SVC->>V: validatedCreateOrganizationPostRequest
-    Note over V: name, slug, tagline, emails/phones<br/>(each valid, exactly one default), address, taxID
-    V-->>SVC: CreateOrganizationPostRequest (or 400 ValidationError)
-    SVC->>Repo: createOrganization
-    rect rgb(238,238,238)
-        Repo->>DB: INSERT organization_details (DetailsProvided)
-        Repo->>DB: INSERT organization_user (creator = OWNER)
-    end
-    Note over Repo,DB: one transaction — duplicate slug → Conflict
-    SVC->>Email: sendOrganizationCreatedEmail (best-effort)
-    SVC-->>Client: organizationID
-```
-
 ## Key files
-
-The feature follows the [current consolidated layout](../project/feature-consolidation.md): one domain file, one request validator, one arbitraries trait per layer.
 
 - Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OrganizationManagement.scala` (contact-point entries, `CreateOrganizationPostRequest`); `Organization*` newtypes live in the shared `Newtypes.scala`, and the `OrganizationStage`/`OrganizationUserRole` enums each have their own file (`OrganizationStage.scala`, `OrganizationUserRole.scala`) — see [domain placement](flow/02-validation.md#domain-placement)
 - Validator: `validation/service/OrganizationManagementRequestValidator.scala`

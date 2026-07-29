@@ -1,6 +1,6 @@
 # PR 1 — Endpoints and transport models
 
-Declare endpoints and their request/response/error models before internal implementation. Use Smithy by default: read [agnostic Smithy](../../standards/smithy.md). Use Tapir only when Smithy cannot express the transport (currently streaming upload): read [agnostic Tapir](../../standards/tapir.md) and [Mesazon alternate HTTP](../../project/alternate-http.md). Do not implement validation, schema, repository, or service behavior here.
+Declare endpoints and transport models before implementation. Default: [Smithy](../../standards/smithy.md). Use [Tapir](../../standards/tapir.md) + [Mesazon alternate HTTP](../../project/alternate-http.md) only when Smithy cannot express the transport (currently streaming upload). Exclude validation, schema, repository, and service behavior.
 
 ## Smithy files
 

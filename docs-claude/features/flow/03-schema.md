@@ -1,6 +1,6 @@
 # PR 3 — Database schema
 
-Read [agnostic PostgreSQL rules](../../standards/postgres.md). This PR owns DDL and physical configuration only; Row/Queries/Repository land in PR 4.
+Read [PostgreSQL](../../standards/postgres.md). This PR owns DDL/config only; Row/Queries/Repository land in PR 4.
 
 ## Mesazon schema
 

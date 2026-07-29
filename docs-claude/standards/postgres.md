@@ -1,6 +1,6 @@
 # PostgreSQL schema
 
-Project-agnostic rules. Other owners: [Mesazon schema](../features/flow/03-schema.md), [repository](../features/flow/04-repository.md), [Doobie](doobie.md), [newtypes](iron.md), [Scala](scala.md).
+Reusable schema rules. Related: [Mesazon schema](../features/flow/03-schema.md), [repository](../features/flow/04-repository.md), [Doobie](doobie.md), [newtypes](iron.md), [Scala](scala.md).
 
 ## Layout and migrations
 

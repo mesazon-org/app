@@ -1,6 +1,6 @@
 # Refined newtypes
 
-Project-agnostic refined-newtype rules. Other owners: [Mesazon validation](../features/flow/02-validation.md), [schema](postgres.md), [codecs](doobie.md), [transport](smithy.md), [Scala naming](scala.md).
+Reusable refined-newtype rules. Related: [validation](../features/flow/02-validation.md), [schema](postgres.md), [codecs](doobie.md), [transport](smithy.md), [Scala naming](scala.md).
 
 ## Use
 

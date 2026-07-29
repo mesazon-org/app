@@ -1,6 +1,6 @@
 # Alternate HTTP transport changes
 
-Read [feature endpoints](../features/flow/01-endpoints.md), [agnostic Tapir](../standards/tapir.md), this file, and [Authentication](authentication.md) when changing non-Smithy endpoints. Tapir exists only when Smithy cannot express the transport; currently that is streaming organization-logo upload with a separate size limit.
+For non-Smithy endpoints read [feature endpoints](../features/flow/01-endpoints.md), [Tapir](../standards/tapir.md), this file, and [Authentication](authentication.md). Tapir is only for transports Smithy cannot express; currently streaming organization-logo upload with a separate size limit.
 
 ## Files
 

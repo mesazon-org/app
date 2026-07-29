@@ -1,8 +1,8 @@
 # Build changes
 
-Read [agnostic sbt](../standards/sbt.md) plus this file only when changing dependencies, modules, tasks, plugins, Docker packaging, aliases, Scala/JDK versions, or CI build wiring.
+For dependencies, modules, tasks, plugins, Docker packaging, aliases, Scala/JDK versions, or CI build wiring, read [sbt](../standards/sbt.md) and this file.
 
-Versions: sbt 2.0.2; Scala 3 metabuild; application Scala 3.8.4; Temurin JDK 25.
+Versions: sbt 2.0.4; Scala 3 metabuild; application Scala 3.8.4; Temurin JDK 25.
 
 ## Ownership
 

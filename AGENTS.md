@@ -1,6 +1,6 @@
 # Mesazon App
 
-Mesazon is a Business Management Platform. Its goal is to enhance businesses with powerful tools to orchestrate their workflows, taking a pragmatic approach: features are derived from real business needs.
+Mesazon is a business-management platform; features derive from real business needs.
 
 ## Architecture
 
@@ -43,7 +43,7 @@ Start with [Feature flow](docs-claude/features/flow/README.md), then read only t
 | [4. Repository](docs-claude/features/flow/04-repository.md) | Adding/changing persisted types, Rows, Queries, Repositories, codecs, or DB tests |
 | [5. Service](docs-claude/features/flow/05-service.md) | Combining all layers into orchestration, endpoint implementation/wiring, functional tests, and acceptance tests |
 
-Each slice guide links the agnostic technology standards it requires.
+Each slice guide links its technology standards.
 
 ### Exceptional changes
 
@@ -77,14 +77,14 @@ Read every standard whose trigger matches the task:
 ## Validation flow (rules, run in order, every change)
 
 1. **Feature doc first** — read the relevant `docs-claude/features/` file before coding. For a new feature, create `docs-claude/features/<feature-name>.md` in PR 1, link it under [Features](#features), and update its status/content in every slice. Never wait until the final PR. Required structure: scope/boundaries; endpoint auth/onboard/roles; flow/security/decisions; key files/config; unit/functional/integration/acceptance tests. See [Feature flow](docs-claude/features/flow/README.md).
-2. **Standards compliance** — read the current slice or exceptional-change guide from the [documentation router](#documentation-router) and its linked agnostic standards.
+2. **Standards compliance** — read the current slice or exceptional-change guide from the [documentation router](#documentation-router) and its linked technology standards.
 3. **Tests in every PR** — write and pass the current slice's applicable tests; never defer them:
    - **Unit** `gateway/core/.../unit` — validators, pure helpers.
    - **Functional** `gateway/core/.../fun` — one service, effectful dependencies mocked.
    - **Integration** `gateway/core/.../it` — one repository/client vs a real dependency; no application HTTP.
    - **Acceptance** `gateway/it` — real gateway and dependencies over HTTP.
 4. **Lint** — run `sbt "runLint"` before done. `checkLint` is the read-only CI gate.
-5. **Docs currency** — every task scans `docs-claude/` + this file for now-inaccurate statements (incl. renamed identifiers: errors, types, endpoints, config keys, files) and fixes them in the same change. New convention → document it. Stale doc > missing doc, in badness.
+5. **Docs currency** — every task fixes affected stale statements in `docs-claude/` and this file, including renamed errors, types, endpoints, config keys, and files. Document new conventions. A stale doc is worse than no doc.
 
 ## Project structure
 

@@ -1,6 +1,6 @@
 # Feature flow
 
-Use this router for a new feature or endpoint. Read only the current slice guide, its linked agnostic standards, and the feature doc. Each PR is independently reviewable and includes its applicable tests; never defer a slice's tests.
+For a new feature/endpoint, read its feature doc, current slice guide, and linked technology standards only. Every PR is independently reviewable and contains its applicable tests.
 
 ## PR sequence
 
@@ -72,7 +72,7 @@ Keep `Status` until every slice is shipped and tested; then replace it with a co
 
 ## Every PR
 
-1. Apply the current slice guide and linked agnostic standards.
+1. Apply the current slice guide and linked technology standards.
 2. Add/update the slice's tests in the same PR.
 3. Update the feature doc status, files, config, decisions, and tests.
 4. Run `sbt "runLint"` then the slice-specific command.

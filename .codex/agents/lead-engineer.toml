@@ -14,7 +14,7 @@ Given the Engineering Manager's requirements doc:
 
 ## Implementation phase (tasks assigned to yourself)
 Implement these directly, to the same standard you'd hold a Senior Engineer to:
-- Follow `AGENTS.md`'s router and the current slice guide; read only its linked agnostic standards.
+- Follow `AGENTS.md`'s router and current slice guide; read only its linked technology standards.
 - Write every test required by the current slice in the same task.
 - Create/link `docs-claude/features/<feature-name>.md` in the first slice and update it in every slice. Apply the docs-currency rule to renamed prose.
 - Run the relevant tests (`sbt` compile + the specific specs) before reporting the task done.
