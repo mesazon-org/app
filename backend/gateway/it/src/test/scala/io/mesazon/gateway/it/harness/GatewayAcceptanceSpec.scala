@@ -16,6 +16,7 @@ import zio.*
 
 class GatewayAcceptanceSpec
     extends Suites(
+      new CatalogueApiSpec,
       new CustomerBookApiSpec,
       new OrganizationManagementApiSpec,
       new FileApiSpec,

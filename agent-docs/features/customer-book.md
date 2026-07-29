@@ -108,6 +108,6 @@ Implementation, wiring, schema, validation, repository, functional tests, and re
 - Unit: `CustomerBookRequestValidatorSpec` — every validator, accumulation, nested indexes/default rules.
 - Integration: `CustomerBookRepositorySpec` — every repository operation; three conflicts; atomic rollback; enum/partial-index semantics; archived mutation guards; whole-row IDs/timestamps.
 - Functional: `CustomerBookServiceSpec` — exact org-scoped calls/mappings/responses; validation blocks repository; repository errors propagate.
-- Acceptance: `CustomerBookApiSpec` — per completed endpoint, status-ordered matrix from [Service flow](flow/05-service.md#acceptance-tests-real-app-over-http), full DB state, no forbidden effects. Also proves duplicate/contact conflicts, by-ID missing → 500, archive state flip, and missing archive → 204.
+- Acceptance: `CustomerBookApiSpec` — per completed endpoint, the [acceptance-testing matrix](../project/acceptance-testing.md), full DB state, and no forbidden effects. Also proves duplicate/contact conflicts, by-ID missing → 500, archive state flip, and missing archive → 204.
 
 Structural type exclusivity needs no dedicated “not both” test. Repository tests instead prove cross-type same names are valid, archived names are reusable, and typed reads do not miss rows.
