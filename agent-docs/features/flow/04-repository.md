@@ -8,17 +8,18 @@ Flow: `Service → Repository (ZIO boundary) → Queries (SQL) → PostgreSQL`. 
 
 | Layer | File/type | Rule |
 |---|---|---|
-| Row | `repository/domain/<Entity>Row.scala` | One field per column in query-field order; nullable fields are `Option` and end `Opt`. Non-table projections also end `Row`. |
+| Row | `repository/domain/<Entity>Row.scala` | Fields use persisted/domain concept names without an `Opt` suffix; nullable fields use `Option`. Non-table projections also end `Row`. |
 | Queries | `repository/queries/<Table>Queries.scala` | `final class`; bare verbs (`get`, `getByUserID`, `insert`, `update`, `delete`, `upsert`, `is...`); plural for many, `All` for all rows, `Testing` for test-only reads. |
 | Repository | `repository/<Entity>Repository.scala` | Trait `<Entity>Repository`; private `<Entity>RepositoryImpl`; methods include entity + operation and `By<Selector>` where needed. |
 
-Use project acronyms (`UserID`, `OtpID`, `IDGenerator`, `JwtService`, `WahaClient`), state suffixes (`otpNew`, `rowUpdated`), and optional suffixes (`emailRawOpt`, `addressLine1OptUpdate`). Repository result bindings retain the exact row shape: `userDetailsRow`, `userOtpRowOpt`, `userDetailsRows`, `userDetailsRowUpdated`.
+Use project acronyms (`UserID`, `OtpID`, `IDGenerator`, `JwtService`, `WahaClient`) and state suffixes (`otpNew`, `rowUpdated`). Repository `Row` and repository-owned `...Input` fields mirror persisted/domain names and omit `Opt`; local values, method parameters, update parameters, and optional results retain the suffix (`emailRawOpt`, `addressLine1OptUpdate`, `userOtpRowOpt`). Repository result bindings retain the exact row shape and cardinality: `userDetailsRow`, `userDetailsRows`, `userDetailsRowUpdatedOpt`.
 
 `Impl` exists only to distinguish the concrete implementation from its trait; never name a trait `...Impl` or use a bare `...Implementation`. Domain concepts are named directly (`OtpType`, `TokenType`, `OrganizationUserRole`), never after storage representation (`...String`, `...Column`).
 
 ## Rows and repository inputs
 
 - Row field order must equal the shared SQL field fragment: whole-row `Read`/`Write` is positional. Migration nullability must equal `Option` usage.
+- Coupled nullable columns that form one jointly optional domain value use one field around a composite value with mandatory members, not parallel `Option` fields. Repository `Row` and repository-owned `...Input` fields have no `Opt` suffix; operational update parameters retain their normal `Opt` suffix. Keep the columns adjacent, flatten the same option for writes/updates, and use the composite product codec for reads.
 - A persisted Row contains generated ID and audit fields; it is not an insert input.
 - Repeated/`jsonb` fields use repository-owned `...Input` elements, never Smithy `...Request` types.
 - Default repository inputs are flat parameters with full domain names. Do not pass API/Smithy request models.
@@ -81,6 +82,12 @@ Harness:
 - `PostgreSQLTestClient.live` exposes `databaseLive`; `executeQuery` arranges/reads via Queries outside the repository under test.
 - The test client uses `PGSimpleDataSource` (not Hikari/scoped pooling), reuses production `DbContext`, runs `executeQuery(ConnectionIO|TranzactIO)` through `transactionOrDie`, and resolves the Testcontainers `postgres:5432` mapping with `PostgreSQLTestClientConfig.from`.
 - Each test uses a fresh `TestContext` with container-derived config, Queries/repository layers, and fresh mocked `TimeProvider`/`IDGenerator`. Batch expectations cover one call per item in order.
+- Use `CustomerBookRepositorySpec` as the canonical repository-spec layout. `TestContext` contains only typed shared values, configuration, clients, layers, and mocks; never put arrangement, expectation, query, or fixture helper methods in it. Repeat those operations inside each test so the complete scenario is locally readable and isolated. `TestContext` fields may use established concise infrastructure aliases such as `postgresClient`; this is the only exception to naming bindings after their complete model/type.
+- Within each test, separate arrange data, distinctness/invariant assertions, mock expectations, repository action, and database assertions with blank lines. Keep a single-use database read in its assertion (`postgresClient.executeQuery(...).zioValue shouldBe ...`); bind it only when the exact result is reused.
+- Phrase each `should` description as a plain observable domain outcome beginning with the repository action (`insert ...`, `update ...`, `return ...`, `fail ...`). Avoid implementation-oriented or compressed adjective phrases such as `create a tenant-scoped ... with absent ...`.
+- Generate complete domain inputs and Rows with `arbitrarySample[ExactType]`, then use `.copy(...)` only for fields the scenario must correlate or force, such as tenant, duplicate name, status, optional presence, or expected audit values. Do not hand-build Rows/inputs, call newtype `assume`, or hide fixture construction behind helpers.
+- When two expected models intentionally share most fields, sample/build the first expected model and derive the second with `firstExpected.copy(...)`, changing only the fields that differ. Immediately assert every scenario-defining relationship through the expected models themselves—for example organization/item IDs differ while names are equal—rather than asserting the detached source bindings.
+- Format multi-line repository/query calls as one method chain and use named arguments for optional update parameters. Bindings use exact model names followed by state/cardinality suffixes (`catalogueItemRowExpected`, `catalogueItemRowUpdatedOpt`), matching production naming; only `TestContext` infrastructure fields use the concise-alias exception above.
 - Add Row/input arbitraries to `RepositoryArbitraries`. Explicitly define `Arbitrary[List[Input]]` before any Row/input that uses it and encode list invariants there.
 
 For each method:

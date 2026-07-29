@@ -24,6 +24,21 @@ type Email = Email.T
 object FullName extends RefinedType[String, NonEmptyTrimmed]
 type FullName = FullName.T
 
+object PriceAmount extends RefinedType[BigDecimal, Pure]
+type PriceAmount = PriceAmount.T
+
+object PriceCurrency extends RefinedType[String, NonEmptyTrimmed]
+type PriceCurrency = PriceCurrency.T
+
+object PhotoOriginalBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type PhotoOriginalBucketKey = PhotoOriginalBucketKey.T
+
+object PhotoNormalizedBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type PhotoNormalizedBucketKey = PhotoNormalizedBucketKey.T
+
+object PhotoOriginalFileName extends RefinedType[String, NonEmptyTrimmed]
+type PhotoOriginalFileName = PhotoOriginalFileName.T
+
 object Password extends RefinedType[String, PasswordPredicate]
 type Password = Password.T
 
@@ -183,8 +198,8 @@ type CatalogueItemName = CatalogueItemName.T
 object CatalogueItemUnit extends RefinedType[String, NonEmptyTrimmed]
 type CatalogueItemUnit = CatalogueItemUnit.T
 
-object CatalogueItemPriceAmount extends RefinedType[BigDecimal, Pure]
-type CatalogueItemPriceAmount = CatalogueItemPriceAmount.T
+object CatalogueItemPrice extends RefinedType[Price, Pure]
+type CatalogueItemPrice = CatalogueItemPrice.T
 
-object CatalogueItemPriceCurrency extends RefinedType[String, NonEmptyTrimmed]
-type CatalogueItemPriceCurrency = CatalogueItemPriceCurrency.T
+object CatalogueItemPhoto extends RefinedType[Photo, Pure]
+type CatalogueItemPhoto = CatalogueItemPhoto.T

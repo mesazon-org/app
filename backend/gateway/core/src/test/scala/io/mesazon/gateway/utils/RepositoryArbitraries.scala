@@ -1,5 +1,7 @@
 package io.mesazon.gateway.utils
 
+import io.mesazon.domain.gateway.*
+import io.mesazon.gateway.repository.CatalogueRepository.*
 import io.mesazon.gateway.repository.CustomerBookRepository.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.testkit.base.*
@@ -11,25 +13,42 @@ trait RepositoryArbitraries
       CustomerBookDomainArbitraries,
       IronRefinedTypeArbitraries {
 
-  given Arbitrary[UserDetailsRow] = Arbitrary(Gen.resultOf(UserDetailsRow.apply))
+  given arbCatalogueItemStatus: Arbitrary[CatalogueItemStatus] =
+    Arbitrary(Gen.oneOf(CatalogueItemStatus.values.toIndexedSeq))
 
-  given Arbitrary[WahaUserRow] = Arbitrary(Gen.resultOf(WahaUserRow.apply))
+  given arbUserDetailsRow: Arbitrary[UserDetailsRow] = Arbitrary(Gen.resultOf(UserDetailsRow.apply))
 
-  given Arbitrary[WahaUserActivityRow] = Arbitrary(Gen.resultOf(WahaUserActivityRow.apply))
+  given arbWahaUserRow: Arbitrary[WahaUserRow] = Arbitrary(Gen.resultOf(WahaUserRow.apply))
 
-  given Arbitrary[WahaUserMessageRow] = Arbitrary(Gen.resultOf(WahaUserMessageRow.apply))
+  given arbWahaUserActivityRow: Arbitrary[WahaUserActivityRow] = Arbitrary(Gen.resultOf(WahaUserActivityRow.apply))
 
-  given Arbitrary[UserOtpRow] = Arbitrary(Gen.resultOf(UserOtpRow.apply))
+  given arbWahaUserMessageRow: Arbitrary[WahaUserMessageRow] = Arbitrary(Gen.resultOf(WahaUserMessageRow.apply))
 
-  given Arbitrary[UserTokenRow] = Arbitrary(Gen.resultOf(UserTokenRow.apply))
+  given arbUserOtpRow: Arbitrary[UserOtpRow] = Arbitrary(Gen.resultOf(UserOtpRow.apply))
 
-  given Arbitrary[UserCredentialsRow] = Arbitrary(Gen.resultOf(UserCredentialsRow.apply))
+  given arbUserTokenRow: Arbitrary[UserTokenRow] = Arbitrary(Gen.resultOf(UserTokenRow.apply))
 
-  given Arbitrary[UserActionAttemptRow] = Arbitrary(Gen.resultOf(UserActionAttemptRow.apply))
+  given arbUserCredentialsRow: Arbitrary[UserCredentialsRow] = Arbitrary(Gen.resultOf(UserCredentialsRow.apply))
 
-  given Arbitrary[OrganizationDetailsRow] = Arbitrary(Gen.resultOf(OrganizationDetailsRow.apply))
+  given arbUserActionAttemptRow: Arbitrary[UserActionAttemptRow] = Arbitrary(Gen.resultOf(UserActionAttemptRow.apply))
 
-  given Arbitrary[OrganizationUserRow] = Arbitrary(Gen.resultOf(OrganizationUserRow.apply))
+  given arbOrganizationDetailsRow: Arbitrary[OrganizationDetailsRow] =
+    Arbitrary(Gen.resultOf(OrganizationDetailsRow.apply))
+
+  given arbOrganizationUserRow: Arbitrary[OrganizationUserRow] = Arbitrary(Gen.resultOf(OrganizationUserRow.apply))
+
+  given arbCatalogueItemRow: Arbitrary[CatalogueItemRow] = Arbitrary(Gen.resultOf(CatalogueItemRow.apply))
+
+  given arbInsertCatalogueItemInput: Arbitrary[InsertCatalogueItemInput] =
+    Arbitrary(Gen.resultOf(InsertCatalogueItemInput.apply))
+
+  given arbInsertCatalogueItemInputs: Arbitrary[List[InsertCatalogueItemInput]] = Arbitrary(
+    Gen
+      .choose(0, 50)
+      .flatMap(numberOfCatalogueItems =>
+        Gen.listOfN(numberOfCatalogueItems, Arbitrary.arbitrary[InsertCatalogueItemInput])
+      )
+  )
 
   given arbCustomerEmailEntryInput: Arbitrary[CustomerEmailEntryInput] = Arbitrary(
     Gen.resultOf(CustomerEmailEntryInput.apply)
@@ -51,17 +70,23 @@ trait RepositoryArbitraries
     )(_.copy(isDefault = true))
   )
 
-  given Arbitrary[CustomerIndividualDetailsRow] = Arbitrary(Gen.resultOf(CustomerIndividualDetailsRow.apply))
+  given arbCustomerIndividualDetailsRow: Arbitrary[CustomerIndividualDetailsRow] =
+    Arbitrary(Gen.resultOf(CustomerIndividualDetailsRow.apply))
 
-  given Arbitrary[CustomerBusinessDetailsRow] = Arbitrary(Gen.resultOf(CustomerBusinessDetailsRow.apply))
+  given arbCustomerBusinessDetailsRow: Arbitrary[CustomerBusinessDetailsRow] =
+    Arbitrary(Gen.resultOf(CustomerBusinessDetailsRow.apply))
 
-  given Arbitrary[CustomerBusinessContactRow] = Arbitrary(Gen.resultOf(CustomerBusinessContactRow.apply))
+  given arbCustomerBusinessContactRow: Arbitrary[CustomerBusinessContactRow] =
+    Arbitrary(Gen.resultOf(CustomerBusinessContactRow.apply))
 
-  given Arbitrary[CustomerSummaryRow] = Arbitrary(Gen.resultOf(CustomerSummaryRow.apply))
+  given arbCustomerSummaryRow: Arbitrary[CustomerSummaryRow] = Arbitrary(Gen.resultOf(CustomerSummaryRow.apply))
 
-  given Arbitrary[CustomerBusinessContactInput] = Arbitrary(Gen.resultOf(CustomerBusinessContactInput.apply))
+  given arbCustomerBusinessContactInput: Arbitrary[CustomerBusinessContactInput] =
+    Arbitrary(Gen.resultOf(CustomerBusinessContactInput.apply))
 
-  given Arbitrary[InsertCustomerIndividualInput] = Arbitrary(Gen.resultOf(InsertCustomerIndividualInput.apply))
+  given arbInsertCustomerIndividualInput: Arbitrary[InsertCustomerIndividualInput] =
+    Arbitrary(Gen.resultOf(InsertCustomerIndividualInput.apply))
 
-  given Arbitrary[InsertCustomerBusinessInput] = Arbitrary(Gen.resultOf(InsertCustomerBusinessInput.apply))
+  given arbInsertCustomerBusinessInput: Arbitrary[InsertCustomerBusinessInput] =
+    Arbitrary(Gen.resultOf(InsertCustomerBusinessInput.apply))
 }

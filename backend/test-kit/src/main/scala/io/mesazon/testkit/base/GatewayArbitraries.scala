@@ -6,7 +6,7 @@ import org.scalacheck.*
 
 trait GatewayArbitraries extends IronRefinedTypeArbitraries {
 
-  given Arbitrary[PhoneNumber] = Arbitrary(
+  given arbPhoneNumber: Arbitrary[PhoneNumber] = Arbitrary(
     for {
       phoneRegion <- Gen.oneOf(Seq("CY", "GB").map(PhoneRegion.assume))
       phoneCountryCode =
@@ -19,31 +19,37 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
     } yield PhoneNumber(phoneRegion, phoneCountryCode, phoneNationalNumber, phoneNumberE164)
   )
 
-  given Arbitrary[PhoneCountryCode] = Arbitrary(Gen.oneOf(Seq("+357", "+44").map(PhoneCountryCode.assume)))
+  given arbPhoneCountryCode: Arbitrary[PhoneCountryCode] =
+    Arbitrary(Gen.oneOf(Seq("+357", "+44").map(PhoneCountryCode.assume)))
 
-  given Arbitrary[PhoneRegion] = Arbitrary(Gen.oneOf(Seq("CY", "GB").map(PhoneRegion.assume)))
+  given arbPhoneRegion: Arbitrary[PhoneRegion] = Arbitrary(Gen.oneOf(Seq("CY", "GB").map(PhoneRegion.assume)))
 
-  given Arbitrary[PhoneNationalNumber] = Arbitrary(
+  given arbPhoneNationalNumber: Arbitrary[PhoneNationalNumber] = Arbitrary(
     Gen.oneOf(Seq("7756745643", "99545545").map(PhoneNationalNumber.assume))
   )
 
-  given Arbitrary[PhoneNumberE164] = Arbitrary(
+  given arbPhoneNumberE164: Arbitrary[PhoneNumberE164] = Arbitrary(
     Gen.oneOf(Seq("+447756745643", "+35799545545").map(PhoneNumberE164.assume))
   )
 
-  given Arbitrary[OtpType] = Arbitrary(Gen.oneOf(OtpType.values.toIndexedSeq))
+  given arbOtpType: Arbitrary[OtpType] = Arbitrary(Gen.oneOf(OtpType.values.toIndexedSeq))
 
-  given Arbitrary[OnboardStage] = Arbitrary(Gen.oneOf(OnboardStage.values.toIndexedSeq))
+  given arbOnboardStage: Arbitrary[OnboardStage] = Arbitrary(Gen.oneOf(OnboardStage.values.toIndexedSeq))
 
-  given Arbitrary[TokenType] = Arbitrary(Gen.oneOf(TokenType.values.toIndexedSeq))
+  given arbTokenType: Arbitrary[TokenType] = Arbitrary(Gen.oneOf(TokenType.values.toIndexedSeq))
 
-  given Arbitrary[ActionAttemptType] = Arbitrary(Gen.oneOf(ActionAttemptType.values.toIndexedSeq))
+  given arbActionAttemptType: Arbitrary[ActionAttemptType] =
+    Arbitrary(Gen.oneOf(ActionAttemptType.values.toIndexedSeq))
 
-  given Arbitrary[AuthedUser] = Arbitrary(Gen.resultOf(AuthedUser.apply))
+  given arbPrice: Arbitrary[Price] = Arbitrary(Gen.resultOf(Price.apply))
 
-  given Arbitrary[AssistantResponse] = Arbitrary(Gen.resultOf(AssistantResponse.apply))
+  given arbPhoto: Arbitrary[Photo] = Arbitrary(Gen.resultOf(Photo.apply))
 
-  given Arbitrary[WahaMessage] = Arbitrary(
+  given arbAuthedUser: Arbitrary[AuthedUser] = Arbitrary(Gen.resultOf(AuthedUser.apply))
+
+  given arbAssistantResponse: Arbitrary[AssistantResponse] = Arbitrary(Gen.resultOf(AssistantResponse.apply))
+
+  given arbWahaMessage: Arbitrary[WahaMessage] = Arbitrary(
     for {
       wahaMessage     <- Gen.resultOf(WahaMessage.apply)
       phoneNumberE164 <- Arbitrary.arbitrary[PhoneNumberE164]

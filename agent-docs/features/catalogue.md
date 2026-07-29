@@ -13,9 +13,9 @@ Owns `catalogue_item`: name, free-text unit, optional exact price/currency, opti
 - PK `(organization_id, catalogue_item_id)`; all access is tenant-scoped.
 - `name text not null`.
 - `unit text not null`: open vocabulary (`piece`, `kg`, `hour`, bespoke services); rejected enum because new units must not require code/migrations.
-- `price_amount numeric` + `price_currency text`: both null or both present. `numeric`/Scala `BigDecimal` is exact; never pass through `Double`. Free-text currency supports fiat and crypto. `bigint` minor units were rejected because 18-decimal crypto can overflow. Currency scale is a domain/display concern.
+- `price_amount numeric` + `price_currency text`: both null or both present. The application models them as optional `CatalogueItemPrice`, a `Pure` newtype over `Price` with mandatory amount/currency, so a half-price is unrepresentable. `numeric`/Scala `BigDecimal` is exact; never pass through `Double`. Free-text currency supports fiat and crypto. `bigint` minor units were rejected because 18-decimal crypto can overflow. Currency scale is a domain/display concern.
 - Smithy encodes `BigDecimal` as a JSON number. If JS clients need exact high-scale crypto, change wire `amount` to `String` and parse in validation.
-- Photo columns: optional `photo_original_bucket_key`, `photo_normalized_bucket_key`, `photo_original_file_name`; reuse the organization-logo pipeline. Insert/update contain no bytes; GET models already expose presigned URL fields.
+- Photo columns: `photo_original_bucket_key`, `photo_normalized_bucket_key`, and `photo_original_file_name` are jointly optional. The application models them as optional `CatalogueItemPhoto`, a `Pure` newtype over `Photo` with mandatory original bucket key, normalized bucket key, and original file name, so partial photo metadata is unrepresentable. Reuse the organization-logo upload pipeline, but use the shared `Photo*` value newtypes rather than organization-owned logo newtypes. Insert/update contain no bytes; GET models already expose presigned URL fields.
 - `status catalogue_item_status` (`Active|Archived`): native PG enum matching Scala case names. Never hard-delete; no unarchive.
 - `uq_catalogue_item_name`: partial unique `(organization_id, name) where status='Active'`; archive frees names. Repository maps its `23505` to 409.
 
@@ -48,22 +48,22 @@ Contract: `smithy/CatalogueService.smithy`, `smithy/domain/Catalogue.smithy`. Op
 | Endpoints | six operations/models; codegen green | photo upload excluded/deferred |
 | Validation | newtypes; `CatalogueItemStatus` | request models, domain/Smithy arbitraries, validator, unit spec |
 | Schema | enum, table, partial unique index, config | — |
-| Repository | Row, Queries, Repository, config | real-Postgres spec |
+| Repository | Row, Queries, Repository, config; real-Postgres lifecycle proof | — |
 | Service | — | implementation/wiring, functional + acceptance specs |
 
 Details:
 
-- Newtypes: `CatalogueItemID`, `CatalogueItemName`, `CatalogueItemUnit`, `CatalogueItemPriceAmount` (`BigDecimal`), `CatalogueItemPriceCurrency`; enum in `CatalogueItemStatus.scala`.
+- Shared price types: `PriceAmount` (`BigDecimal`), `PriceCurrency`, and `Price` with mandatory amount/currency. Shared photo types: `PhotoOriginalBucketKey`, `PhotoNormalizedBucketKey`, `PhotoOriginalFileName`, and `Photo` with all three members mandatory. Catalogue owns only the contextual `CatalogueItemPrice` (`Pure[Price]`) and `CatalogueItemPhoto` (`Pure[Photo]`) wrappers alongside `CatalogueItemID`, `CatalogueItemName`, and `CatalogueItemUnit`; the enum is in `CatalogueItemStatus.scala`.
 - Schema/config: `V2025.05.27__init.sql`; `RepositoryConfig.catalogueItemTable`, `allTableNames`, and `catalogue-item-table` in both configs.
-- `CatalogueItemRow` follows table order. Photo fields temporarily reuse `OrganizationLogo*` newtypes; introduce `CataloguePhoto*` when upload lands.
+- `CatalogueItemRow.price` spans the adjacent amount/currency columns and `CatalogueItemRow.photo` spans the three adjacent photo metadata columns through composite refined codecs.
 - `CatalogueItemQueries`: single/batch insert, dynamic update + returning, archive + returning ID, get any status, list active, test getter. Preserve qualified native-enum write/read casts.
 - Generic refined `Meta[BigDecimal]` provides exact codec; no bespoke codec.
-- `CatalogueRepository`: companion `InsertCatalogueItemInput`, UUIDv7/time generation, named unique mapping. `None` price fields mean unchanged; clearing price is not supported. Photo fields remain `None`.
+- `CatalogueRepository`: companion `InsertCatalogueItemInput`, UUIDv7/time generation, named unique mapping. `priceOptUpdate` and `photoOptUpdate` flatten their optional composites across all corresponding columns. `None` means unchanged; clearing price or photo is not supported. New item photo metadata remains `None`.
 - Do not add unused live layers: wire repository/queries with the service because ZIO rejects unused layers.
 
 ## Required remaining proof
 
-`CatalogueRepositorySpec` must cover every method, `uq_catalogue_item_name`, batch rollback, archive/name-reuse semantics, and high-scale `BigDecimal` round-trip. Repository slice remains incomplete until green.
+`CatalogueRepositorySpec` covers every repository method against real PostgreSQL: controlled IDs/timestamps and complete rows sampled from repository arbitraries; absent/present exact `BigDecimal` prices from the shared monetary generator; absent creation photo metadata and composite photo updates; tenant scope; active-name conflicts and exact error mapping; batch order, no-op, and rollback; update/no-op semantics; archive/name reuse; active-and-archived reads; and active-only unordered listing.
 
 Service completion adds `CatalogueService.scala`, routes, `Main` layers, `CatalogueServiceSpec`, and `CatalogueApiSpec` with the [acceptance matrix](flow/05-service.md#acceptance-tests-real-app-over-http).
 
