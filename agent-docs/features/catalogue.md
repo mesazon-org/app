@@ -50,7 +50,7 @@ Contract: `smithy/CatalogueService.smithy`, `smithy/domain/Catalogue.smithy`. Op
 | Validation | request models, shared ISO price validation, domain/Smithy arbitraries, validator, unit specs | — |
 | Schema | enum, table, partial unique index, config | — |
 | Repository | Row, Queries, Repository, config; real-Postgres lifecycle proof | — |
-| Service | — | implementation/wiring, functional + acceptance specs |
+| Service | Smithy service, production wiring, and functional spec | acceptance specs |
 
 Details:
 
@@ -72,9 +72,15 @@ Details:
 
 ## Required remaining proof
 
-Service completion adds `CatalogueService.scala`, routes, `Main` layers, `CatalogueServiceSpec`, and `CatalogueApiSpec` with the [acceptance matrix](flow/05-service.md#acceptance-tests-real-app-over-http).
+Acceptance completion adds `CatalogueApiSpec` with the [acceptance matrix](flow/05-service.md#acceptance-tests-real-app-over-http). It must cover every Catalogue endpoint over the real gateway and PostgreSQL stack; it is intentionally deferred to the next change.
 
-Photo completion adds a Tapir streaming endpoint using `FileScanner`, `ImageProcessing`, and S3; updates the three photo columns; returns presigned URLs; and keeps entity limits synchronized.
+Photo completion adds a Tapir streaming endpoint using `FileScanner`, `ImageProcessing`, and S3; updates the three photo columns; returns presigned URLs; and keeps entity limits synchronized. Current Catalogue reads map the persisted original and normalized photo fields directly to the optional response URL fields; the photo slice will replace that direct mapping with presigned URLs.
+
+## Service implementation
+
+`CatalogueService` validates insert/update bodies, maps validated requests into repository-owned insert inputs, preserves the organization ID on every repository call, and maps rows back to Smithy responses. Missing catalogue-item reads become `InternalServerError` with the stable `catalogueItemID` message. Update and archive remain silent `204` no-ops for missing or archived items, matching the repository's active-row mutation semantics.
+
+`CatalogueServiceSpec` uses real price validation and a strict `CatalogueRepository` mock. It proves each of the six operations' mapping and response behavior, validation isolation, missing-item policy, no-op mutations, and unchanged repository failures. Acceptance coverage remains deferred.
 
 ## Open decisions
 
