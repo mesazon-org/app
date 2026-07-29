@@ -16,6 +16,17 @@ import zio.*
 @DoNotDiscover
 class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbitraries, RepositoryArbitraries {
 
+  private def insertCustomerBusinessesPostRequestSmithySingleBusiness: smithy.InsertCustomerBusinessesPostRequest = {
+    val insertCustomerBusinessPostRequestSmithy = arbitrarySample[smithy.InsertCustomerBusinessPostRequest]
+      .copy(
+        emails = List.empty,
+        phoneNumbers = List.empty,
+        customerBusinessContacts = List.empty,
+      )
+
+    smithy.InsertCustomerBusinessesPostRequest(customerBusinesses = List(insertCustomerBusinessPostRequestSmithy))
+  }
+
   "Customer Book Service API" when {
     "POST /insert/customer-individual" should {
       "successfully insert a customer individual" in withContext { context =>
@@ -1242,7 +1253,8 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        val insertCustomerBusinessesPostRequestSmithy = arbitrarySample[smithy.InsertCustomerBusinessesPostRequest]
+        val insertCustomerBusinessesPostRequestSmithy =
+          insertCustomerBusinessesPostRequestSmithySingleBusiness
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
@@ -1264,8 +1276,9 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
       "fail with an Unauthorized when the access token is missing" in withContext { context =>
         import context.*
 
-        val insertCustomerBusinessesPostRequestSmithy = arbitrarySample[smithy.InsertCustomerBusinessesPostRequest]
-        val organizationID                            = arbitrarySample[OrganizationID]
+        val insertCustomerBusinessesPostRequestSmithy =
+          insertCustomerBusinessesPostRequestSmithySingleBusiness
+        val organizationID = arbitrarySample[OrganizationID]
 
         val insertCustomerBusinessesPostResponse =
           gatewayClient
@@ -1285,8 +1298,9 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
       "fail with an Unauthorized when the access token is invalid" in withContext { context =>
         import context.*
 
-        val insertCustomerBusinessesPostRequestSmithy = arbitrarySample[smithy.InsertCustomerBusinessesPostRequest]
-        val organizationID                            = arbitrarySample[OrganizationID]
+        val insertCustomerBusinessesPostRequestSmithy =
+          insertCustomerBusinessesPostRequestSmithySingleBusiness
+        val organizationID = arbitrarySample[OrganizationID]
 
         val insertCustomerBusinessesPostResponse =
           gatewayClient
@@ -1317,7 +1331,8 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
-        val insertCustomerBusinessesPostRequestSmithy = arbitrarySample[smithy.InsertCustomerBusinessesPostRequest]
+        val insertCustomerBusinessesPostRequestSmithy =
+          insertCustomerBusinessesPostRequestSmithySingleBusiness
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
@@ -1350,7 +1365,8 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
-        val insertCustomerBusinessesPostRequestSmithy = arbitrarySample[smithy.InsertCustomerBusinessesPostRequest]
+        val insertCustomerBusinessesPostRequestSmithy =
+          insertCustomerBusinessesPostRequestSmithySingleBusiness
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
@@ -1434,7 +1450,8 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         val userID         = arbitrarySample[UserID]
         val organizationID = arbitrarySample[OrganizationID]
 
-        val insertCustomerBusinessesPostRequestSmithy = arbitrarySample[smithy.InsertCustomerBusinessesPostRequest]
+        val insertCustomerBusinessesPostRequestSmithy =
+          insertCustomerBusinessesPostRequestSmithySingleBusiness
 
         val accessJwt = jwtService.generateAccessToken(userID).zioValue
 
@@ -1464,7 +1481,8 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         val organizationID = arbitrarySample[OrganizationID]
 
-        val insertCustomerBusinessesPostRequestSmithy = arbitrarySample[smithy.InsertCustomerBusinessesPostRequest]
+        val insertCustomerBusinessesPostRequestSmithy =
+          insertCustomerBusinessesPostRequestSmithySingleBusiness
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 

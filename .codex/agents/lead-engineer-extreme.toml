@@ -1,0 +1,6 @@
+name = "lead-engineer-extreme"
+description = "/feature Lead Engineer for EM-classified EXTREME work."
+model = "gpt-5.6-sol"
+model_reasoning_effort = "xhigh"
+developer_instructions = """
+Read and follow `.agents/contracts/lead-engineer.md`. Accept only `EXTREME` packages; otherwise request EM reclassification."""

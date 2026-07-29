@@ -67,7 +67,10 @@ trait CustomerBookDomainArbitraries extends GatewayArbitraries {
   )
 
   given arbInsertCustomerBusinessesPostRequest: Arbitrary[InsertCustomerBusinessesPostRequest] = Arbitrary(
-    Gen.resultOf(InsertCustomerBusinessesPostRequest.apply)
+    Gen
+      .choose(0, 10)
+      .flatMap(n => Gen.listOfN(n, Arbitrary.arbitrary[InsertCustomerBusinessPostRequest]))
+      .map(InsertCustomerBusinessesPostRequest.apply)
   )
 
   given arbUpdateCustomerBusinessPutRequest: Arbitrary[UpdateCustomerBusinessPutRequest] = Arbitrary(

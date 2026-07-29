@@ -22,8 +22,8 @@ object HttpApp {
 
   given Network[Task] = Network.forAsync[Task]
 
-  // Smithy (JSON) routes keep the conservative 2 MB request-body limit.
-  private val SmithyMaxEntitySize: Long = 2L * 1024 * 1024
+  // Smithy (JSON) routes allow batch requests up to 5 MB.
+  private val SmithyMaxEntitySize: Long = 5L * 1024 * 1024
   // Tapir routes carry logo uploads, so they allow up to 20 MB.
   // Keep in sync with `file-service.max-organization-logo-bytes`.
   private val TapirMaxEntitySize: Long = 20L * 1024 * 1024

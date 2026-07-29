@@ -70,7 +70,7 @@ Module layout (`build.sbt`): the root aggregates `backend` (domain/clock/generat
 
 ```sh
 sbt compile              # compiles everything; smithy4s codegen runs automatically as part of this
-sbt smithy4sCodegen       # standalone check that only the Smithy contract compiles (see docs-claude/adding-a-feature.md)
+sbt smithy4sCodegen       # standalone Smithy contract check (see agent-docs/features/flow/01-endpoints.md)
 sbt "checkLint"           # scalafix + scalafmt, check only
 sbt "runLint"             # scalafix + scalafmt, applies fixes
 sbt "gateway-build"       # the CI alias: clean -> project backend -> checkLint -> testFull
@@ -109,4 +109,4 @@ Flyway migrations live in `backend/schemas/migrations/V<date>__<name>.sql` and a
 
 ## 7. Agent pipeline (optional)
 
-This repo also has a 4-role Claude Code subagent pipeline (Product Owner → Engineering Manager → Lead Engineer → Senior Engineer) for working feature requests, invoked via `/feature "<description>"`. It runs on top of [OmniRoute](https://github.com/diegosouzapw/OmniRoute), a local AI gateway that routes each role's model calls across tiers (your Claude subscription, paid API keys, free providers) instead of hard-coding one model for everything — each engineer installs and configures their own local OmniRoute instance, it's not shared infrastructure. Full one-time setup (installing Node via nvm, installing OmniRoute, a known upstream CLI bug to avoid, dashboard/provider configuration, wiring Claude Code's env vars) is in [agent-pipeline-setup.md](../docs-claude/agent-pipeline-setup.md) — separate from everything above.
+`/feature "<description>"` runs Product Owner → Engineering Manager → complexity-selected Lead Engineer (`LOW|MEDIUM|HIGH|EXTREME`). Claude routes tiers through each engineer's local [OmniRoute](https://github.com/diegosouzapw/OmniRoute); it is not shared infrastructure. One-time setup: [agent-pipeline-setup.md](../agent-docs/agent-pipeline-setup.md).
