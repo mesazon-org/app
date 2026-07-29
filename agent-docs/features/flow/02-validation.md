@@ -21,8 +21,8 @@ Validation is the only boundary where untrusted transport primitives become refi
 
 Keep feature values out of generic arbitrary traits:
 
-- Shared refined-base generators such as monetary `BigDecimal :| Pure` live in `IronRefinedTypeArbitraries`; feature arbitraries reuse them through their newtypes instead of redefining ranges.
-- Shared domain case-class generators such as `Price` and `Photo` live in `GatewayArbitraries`; repository-only traits contain only repository Rows/inputs and persistence-specific enums.
+- Shared refined-base generators such as exact `BigDecimal :| Pure` live in `IronRefinedTypeArbitraries`; feature arbitraries reuse them through their newtypes instead of redefining ranges.
+- Shared domain case-class generators such as `Price` and `Photo` live in `GatewayArbitraries`; repository-only traits contain only repository Rows/inputs and persistence-specific enums. A valid canonical `Price` is correlated: generate a supported, fixed-fraction ISO currency first, then a realistically bounded non-negative amount at exactly that currency's fraction-digit scale. Never derive `Price` with independent `Gen.resultOf` fields.
 - `<Feature>DomainArbitraries` in test-kit extends `GatewayArbitraries`; define one explicitly named `given arb<ExactTypeName>` per domain case class. Use `Arbitrary(Gen.resultOf(Type.apply))` when existing field givens independently produce valid instances; write a custom generator only for correlations, normalization, bounds, or cross-field invariants.
 - Smithy route: `<Feature>SmithyArbitraries` in gateway-core test utils extends the domain trait plus `IronRefinedTypeTransformer`. Derive every Smithy arbitrary from the domain arbitrary using Chimney `transformInto`; add explicit `Transformer`s only where shapes differ.
 - Tapir route: derive the typed endpoint-input arbitrary from the same domain arbitrary beside the endpoint tests; the domain generator remains the source of valid data.
@@ -55,6 +55,7 @@ File: `validation/service/<Feature>RequestValidator.scala`.
 - `fieldName` exactly equals the Smithy member.
 - Singular, batch, and combined requests reuse private per-item/per-field validation; never duplicate field lists.
 - For an optional composite, validate mandatory inner members in declaration order, accumulate their errors under the outer field, then wrap the valid case class in its contextual newtype.
+- Monetary validation uses `PriceDomainValidator` with JDK `Currency`: normalize trim/uppercase ISO codes, reject unsupported or no-fixed-fraction currencies, and reject negative amounts or supplied scales above the currency fraction digits. Normalize valid lower-scale amounts upward to the exact currency scale by appending zeros; never round or remove supplied precision.
 - Pure fields use required/optional helpers with `.either`; effectful fields use domain validators.
 - Expose `val live = ZLayer.derive[...]`; PR 5 wires it into the service graph.
 
