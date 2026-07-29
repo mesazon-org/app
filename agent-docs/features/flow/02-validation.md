@@ -21,8 +21,8 @@ Validation is the only boundary where untrusted transport primitives become refi
 
 Keep feature values out of generic arbitrary traits:
 
-- Shared refined-base generators such as monetary `BigDecimal :| Pure` live in `IronRefinedTypeArbitraries`; feature arbitraries reuse them through their newtypes instead of redefining ranges.
-- Shared domain case-class generators such as `Price` and `Photo` live in `GatewayArbitraries`; repository-only traits contain only repository Rows/inputs and persistence-specific enums.
+- Shared refined-base generators such as exact `BigDecimal :| Pure` live in `IronRefinedTypeArbitraries`; feature arbitraries reuse them through their newtypes instead of redefining ranges.
+- Shared domain case-class generators such as `Price` and `Photo` live in `GatewayArbitraries`; repository-only traits contain only repository Rows/inputs and persistence-specific enums. A valid canonical `Price` is correlated: generate a supported, fixed-fraction ISO currency first, then a realistically bounded non-negative amount at exactly that currency's fraction-digit scale. Never derive `Price` with independent `Gen.resultOf` fields.
 - `<Feature>DomainArbitraries` in test-kit extends `GatewayArbitraries`; define one explicitly named `given arb<ExactTypeName>` per domain case class. Use `Arbitrary(Gen.resultOf(Type.apply))` when existing field givens independently produce valid instances; write a custom generator only for correlations, normalization, bounds, or cross-field invariants.
 - Smithy route: `<Feature>SmithyArbitraries` in gateway-core test utils extends the domain trait plus `IronRefinedTypeTransformer`. Derive every Smithy arbitrary from the domain arbitrary using Chimney `transformInto`; add explicit `Transformer`s only where shapes differ.
 - Tapir route: derive the typed endpoint-input arbitrary from the same domain arbitrary beside the endpoint tests; the domain generator remains the source of valid data.
@@ -42,7 +42,7 @@ Reuse `validation/service/validation.scala`:
 - `validateAllNested`: collapses a composite item's errors under the outer field while preserving inner indexes.
 - `validateSingleDefault`: a non-empty defaultable list must have exactly one default; chain after item validation with `.andThen`.
 
-Use `validation/domain/EmailValidator` or `PhoneNumberDomainValidator` for effectful/non-trivial fields, then wrap the result in the feature newtype. Shared helpers are `private[validation]`. New features use one feature validator; legacy `ServiceValidator`/`DomainValidator` remains only for untouched old code (`WahaServiceValidator` is the last user).
+Use concrete reusable domain validators such as `EmailValidator`, `PhoneNumberDomainValidator`, or `PriceDomainValidator` for effectful/non-trivial fields, then wrap the result in the feature newtype. Do not make new domain validators extend the legacy generic `DomainValidator`; keep their concrete `validate` API. Shared helpers are `private[validation]`. New features use one feature request validator; legacy `ServiceValidator`/`DomainValidator` remains only for untouched old code (`WahaServiceValidator` is the last user).
 
 ## Feature validator
 
@@ -52,9 +52,11 @@ File: `validation/service/<Feature>RequestValidator.scala`.
 - Do not create a validator when wire decoding already guarantees the entire request (for example UUID-only input); construct its newtypes in the service.
 - Bind Smithy inputs as `<fullRequestName>Smithy`; qualify Tapir inputs equivalently. Bind validated values as the plain domain request name.
 - Compose fields in declaration order with `ValidatedNec` + `mapN`; clients must receive all errors in stable field order.
-- `fieldName` exactly equals the Smithy member.
+- `fieldName` exactly equals the Smithy member, except a `validateAllNested` batch wrapper uses the singular item concept because the error represents one indexed element.
 - Singular, batch, and combined requests reuse private per-item/per-field validation; never duplicate field lists.
+- A batch error identifies one failed element, so pass the singular item concept to `validateAllNested` (for example `catalogueItem`, not the plural request member `catalogueItems`). Preserve the source index and return no error for valid elements between failures.
 - For an optional composite, validate mandatory inner members in declaration order, accumulate their errors under the outer field, then wrap the valid case class in its contextual newtype.
+- Monetary validation uses `PriceDomainValidator` with JDK `Currency`: normalize trim/uppercase ISO codes, reject unsupported or no-fixed-fraction currencies, and require non-negative amounts with at most 12 integer digits (equivalent to `[0, 1,000,000,000,000)`) and supplied scale no greater than the currency fraction digits. For non-zero amounts, check the integer-digit bound with widened `precision - scale` arithmetic before normalization so compact extreme-exponent inputs cannot cause unbounded allocation; zero bypasses that representation-derived bound because its exponent does not change its value. Normalize valid lower-scale amounts upward to the exact currency scale by appending zeros; never round or remove supplied precision.
 - Pure fields use required/optional helpers with `.either`; effectful fields use domain validators.
 - Expose `val live = ZLayer.derive[...]`; PR 5 wires it into the service graph.
 
@@ -65,7 +67,7 @@ File: `unit/validation/service/<Feature>RequestValidatorSpec.scala`; extend `ZWo
 1. **Success round-trip:** sample the domain request, transform to the transport request, validate, assert the original domain value.
 2. **Failure accumulation:** sample a valid transport request, replace all targeted fields with invalid values, and assert the exact ordered `List[InvalidFieldError]`, including nested indexes.
 
-Use fresh `arbitrarySample` data per test; no shared valid fixtures. Add extra cases for list/default/nested behavior when the two required cases cannot prove them.
+Use fresh `arbitrarySample` data per test; no shared valid fixtures. Sampling is not free: never generate a batch/list wrapper and then replace its entire expensive collection. In that case, sample the single element model once, derive scenario variants with `.copy(...)`, and construct the one-field wrapper directly from the controlled list. Sample the complete batch only when the generator/round-trip itself is under proof. Add extra cases for list/default/nested behavior when the two required cases cannot prove them.
 
 Run:
 

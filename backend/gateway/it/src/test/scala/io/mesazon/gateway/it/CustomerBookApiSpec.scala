@@ -454,7 +454,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         insertCustomerIndividualsPostResponse.code shouldBe StatusCode.BadRequest
         insertCustomerIndividualsPostResponse.body.left.value shouldBe smithy.ValidationError(fields =
-          List("customerIndividuals")
+          List("customerIndividual")
         )
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
@@ -1238,7 +1238,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         insertCustomerBusinessesPostResponse.code shouldBe StatusCode.BadRequest
         insertCustomerBusinessesPostResponse.body.left.value shouldBe smithy.ValidationError(fields =
-          List("customerBusinesses")
+          List("customerBusiness")
         )
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0

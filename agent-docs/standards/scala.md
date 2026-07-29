@@ -27,7 +27,7 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 
 - Spell out domain names; only established acronyms and `Impl` may abbreviate. Avoid vague `data`, `item`, `result`, `value`, `helper`, `thing`.
 - Types/traits/objects/enums/type aliases/constants: `PascalCase`. Values/fields/parameters/methods: `camelCase`.
-- Every `Option`-typed value/field/parameter ends in `Opt`; `Opt` is always the final suffix, including local repository result bindings such as `catalogueItemRowUpdatedOpt`. Repository `Row` and repository-owned `...Input` fields are the only exception: their fields mirror persisted/domain concept names without `Opt`.
+- Every `Option`-typed value/field/parameter ends in `Opt`; `Opt` is always the final suffix, including local repository result bindings such as `catalogueItemRowUpdatedOpt`. Repository `Row` fields, repository-owned `...Input` fields, and validated request-model fields that mirror transport members are the only exceptions: their fields retain the persisted/domain or transport concept names without `Opt`.
 - `ID` stays uppercase in types and values (`CustomerID`, `customerID`, `IDGenerator`). Treat other acronyms as words (`Http`, `Jwt`, `Url`) unless an external standard fixes the spelling.
 - Name types for domain concepts, not representations/consumers: `EmailAddress`, not `EmailString`/`EmailColumn`.
 - Test values follow the same concept-first form and start with the complete model/type name in lower camel case. Add every qualifier last: `catalogueItemNameUpdate`, `catalogueRepositoryInvalid`, `organizationIDForeign`, `customerRowIndividual`, `customerID1`; never `nameUpdate`, `invalidRepository`, `foreignOrganizationID`, `individualCustomerRow`, `input`, or `contact`.
@@ -45,6 +45,7 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 ### Data and assertions
 
 - Name bindings after their exact models; qualifiers follow the model name.
+- Treat `arbitrarySample` as real work, especially for nested/list generators. If a test replaces a wrapper's entire generated collection, do not sample and discard that collection: sample the element model, derive related cases with `.copy(...)`, and directly construct the wrapper from the controlled elements. Sample the complete wrapper only when its generator or full round-trip is part of the proof.
 - Repository integration tests sample complete inputs/Rows with `arbitrarySample[ExactType]` and use `.copy(...)` only to force scenario fields. Keep `TestContext` free of helper methods and repeat arrangement, dependency expectations, and database reads locally; test isolation/readability takes precedence over removing duplication.
 - Derive a near-identical second expected model from the first with `.copy(...)`, changing only intentional differences. Assert correlated/equal and distinct fields directly through the expected models immediately after setup, so reviewers can verify the complete scenario from those models.
 - Build expected mappings independently and field-by-field; never use the mapper/transform/serializer/helper under test to create expected output. Using that transform to arrange test input is allowed.

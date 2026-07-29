@@ -152,12 +152,12 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           ServiceError.BadRequestError.ValidationError(
             invalidFields = List(
               InvalidFieldError(
-                "customerIndividuals",
+                "customerIndividual",
                 s"Failed with invalid fields [$fullNameError]",
                 List(),
                 index = 0,
               ),
-              InvalidFieldError("customerIndividuals", s"Failed with invalid fields [$emailError]", List(), index = 1),
+              InvalidFieldError("customerIndividual", s"Failed with invalid fields [$emailError]", List(), index = 1),
             )
           )
       }
@@ -193,13 +193,13 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           ServiceError.BadRequestError.ValidationError(
             invalidFields = List(
               InvalidFieldError(
-                "customerIndividuals",
+                "customerIndividual",
                 s"Failed with invalid fields [$firstEmailError, $thirdEmailError]",
                 List(),
                 index = 1,
               ),
               InvalidFieldError(
-                "customerIndividuals",
+                "customerIndividual",
                 s"Failed with invalid fields [$fullNameError]",
                 List(),
                 index = 3,
@@ -275,7 +275,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           ServiceError.BadRequestError.ValidationError(
             invalidFields = List(
               InvalidFieldError(
-                "customerBusinesses",
+                "customerBusiness",
                 s"Failed with invalid fields [$businessNameError, $emailError]",
                 List(),
                 index = 0,
@@ -311,8 +311,8 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
         validator.validatedInsertCustomersPostRequest(insertCustomersPostRequestSmithy).zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
             invalidFields = List(
-              InvalidFieldError("customerBusinesses", s"Failed with invalid fields [$businessNameError]", List()),
-              InvalidFieldError("customerIndividuals", s"Failed with invalid fields [$fullNameError]", List()),
+              InvalidFieldError("customerBusiness", s"Failed with invalid fields [$businessNameError]", List()),
+              InvalidFieldError("customerIndividual", s"Failed with invalid fields [$fullNameError]", List()),
             )
           )
       }
