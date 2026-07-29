@@ -74,6 +74,8 @@ Details:
 
 Acceptance completion adds `CatalogueApiSpec` with the [acceptance matrix](flow/05-service.md#acceptance-tests-real-app-over-http). It must cover every Catalogue endpoint over the real gateway and PostgreSQL stack; it is intentionally deferred to the next change.
 
+`GatewayClient` already supplies typed JSON codecs and HTTP methods for all six Catalogue operations, including required-list encoding for batch insert.
+
 Photo completion adds a Tapir streaming endpoint using `FileScanner`, `ImageProcessing`, and S3; updates the three photo columns; returns presigned URLs; and keeps entity limits synchronized. Current Catalogue reads map the persisted original and normalized photo fields directly to the optional response URL fields; the photo slice will replace that direct mapping with presigned URLs.
 
 ## Service implementation

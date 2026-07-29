@@ -92,7 +92,8 @@ object CatalogueService {
       catalogueRepository
         .getCatalogueItem(OrganizationID(organizationID), CatalogueItemID(catalogueItemID))
         .someOrFail(
-          ServiceError.InternalServerError.UnexpectedError(s"Catalogue item not found for catalogueItemID: [$catalogueItemID]")
+          ServiceError.InternalServerError
+            .UnexpectedError(s"Catalogue item not found for catalogueItemID: [$catalogueItemID]")
         )
         .map(toGetCatalogueItemGetResponse)
 
