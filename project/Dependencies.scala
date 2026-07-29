@@ -29,9 +29,8 @@ object Dependencies {
   lazy val sttpV                = "4.0.26"
   lazy val tapirV               = "1.13.29"
   lazy val jsoniterV            = "2.39.1"
-  lazy val sttpAIV              = "0.5.4"
+  lazy val sttpAIV              = "0.5.5"
   lazy val jmailV               = "2.2.0"
-  lazy val simplejavamailV      = "9.1.0"
   lazy val jjwtV                = "0.13.0"
   lazy val springSecurityV      = "7.1.0"
   lazy val springCoreV          = "7.0.8"
@@ -40,7 +39,7 @@ object Dependencies {
   lazy val scalamockV           = "7.5.5"
   lazy val scrimageV            = "4.6.7"
   lazy val tikaV                = "3.3.2"
-  lazy val awssdkV              = "2.49.3"
+  lazy val awssdkV              = "2.49.5"
   lazy val zioS3V               = "0.4.4"
 
   // Http4s
