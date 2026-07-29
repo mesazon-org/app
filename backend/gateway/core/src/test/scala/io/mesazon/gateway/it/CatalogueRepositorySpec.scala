@@ -27,8 +27,8 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val context = new TestContext {}
-    import context.*
+    val testContext = new TestContext {}
+    import testContext.*
 
     eventually {
       postgresClient
@@ -40,8 +40,8 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
   override def beforeEach(): Unit = {
     super.beforeEach()
 
-    val context = new TestContext {}
-    import context.*
+    val testContext = new TestContext {}
+    import testContext.*
 
     eventually {
       postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.catalogueItemTable).zioValue
@@ -247,17 +247,17 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           status = CatalogueItemStatus.Active
         )
-        val nameUpdate               = arbitrarySample[CatalogueItemName]
+        val catalogueItemNameUpdate  = arbitrarySample[CatalogueItemName]
         val catalogueItemPriceUpdate = arbitrarySample[CatalogueItemPrice]
         val catalogueItemPhotoUpdate = arbitrarySample[CatalogueItemPhoto]
         val catalogueItemRowExpected = catalogueItemRow.copy(
-          name = nameUpdate,
+          name = catalogueItemNameUpdate,
           price = Some(catalogueItemPriceUpdate),
           photo = Some(catalogueItemPhotoUpdate),
           updatedAt = UpdatedAt(instantNow),
         )
 
-        nameUpdate shouldNot equal(catalogueItemRow.name)
+        catalogueItemNameUpdate shouldNot equal(catalogueItemRow.name)
 
         postgresClient
           .executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow))
@@ -268,18 +268,18 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .returningZIO(instantNow)
           .once()
 
-        val catalogueItemRowUpdated = catalogueRepository
+        val catalogueItemRowUpdatedOpt = catalogueRepository
           .updateCatalogueItem(
             catalogueItemRow.organizationID,
             catalogueItemRow.catalogueItemID,
-            nameOptUpdate = Some(nameUpdate),
+            nameOptUpdate = Some(catalogueItemNameUpdate),
             unitOptUpdate = None,
             priceOptUpdate = Some(catalogueItemPriceUpdate),
             photoOptUpdate = Some(catalogueItemPhotoUpdate),
           )
           .zioValue
 
-        catalogueItemRowUpdated shouldBe Some(catalogueItemRowExpected)
+        catalogueItemRowUpdatedOpt shouldBe Some(catalogueItemRowExpected)
 
         postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
           List(catalogueItemRowExpected)
@@ -315,8 +315,8 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           status = CatalogueItemStatus.Active
         )
-        val catalogueItemIDMissing = arbitrarySample[CatalogueItemID]
-        val nameUpdate             = arbitrarySample[CatalogueItemName]
+        val catalogueItemIDMissing  = arbitrarySample[CatalogueItemID]
+        val catalogueItemNameUpdate = arbitrarySample[CatalogueItemName]
 
         catalogueItemIDMissing shouldNot equal(catalogueItemRow.catalogueItemID)
 
@@ -333,7 +333,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .updateCatalogueItem(
             catalogueItemRow.organizationID,
             catalogueItemIDMissing,
-            nameOptUpdate = Some(nameUpdate),
+            nameOptUpdate = Some(catalogueItemNameUpdate),
           )
           .zioValue shouldBe None
 
@@ -345,10 +345,10 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           status = CatalogueItemStatus.Active
         )
-        val foreignOrganizationID = arbitrarySample[OrganizationID]
-        val nameUpdate            = arbitrarySample[CatalogueItemName]
+        val organizationIDForeign   = arbitrarySample[OrganizationID]
+        val catalogueItemNameUpdate = arbitrarySample[CatalogueItemName]
 
-        foreignOrganizationID shouldNot equal(catalogueItemRow.organizationID)
+        organizationIDForeign shouldNot equal(catalogueItemRow.organizationID)
 
         postgresClient
           .executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow))
@@ -361,9 +361,9 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         catalogueRepository
           .updateCatalogueItem(
-            foreignOrganizationID,
+            organizationIDForeign,
             catalogueItemRow.catalogueItemID,
-            nameOptUpdate = Some(nameUpdate),
+            nameOptUpdate = Some(catalogueItemNameUpdate),
           )
           .zioValue shouldBe None
 
@@ -375,7 +375,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           status = CatalogueItemStatus.Archived
         )
-        val nameUpdate = arbitrarySample[CatalogueItemName]
+        val catalogueItemNameUpdate = arbitrarySample[CatalogueItemName]
 
         postgresClient
           .executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow))
@@ -390,7 +390,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .updateCatalogueItem(
             catalogueItemRow.organizationID,
             catalogueItemRow.catalogueItemID,
-            nameOptUpdate = Some(nameUpdate),
+            nameOptUpdate = Some(catalogueItemNameUpdate),
           )
           .zioValue shouldBe None
 
@@ -540,9 +540,9 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           status = CatalogueItemStatus.Active
         )
-        val foreignOrganizationID = arbitrarySample[OrganizationID]
+        val organizationIDForeign = arbitrarySample[OrganizationID]
 
-        foreignOrganizationID shouldNot equal(catalogueItemRow.organizationID)
+        organizationIDForeign shouldNot equal(catalogueItemRow.organizationID)
 
         postgresClient
           .executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow))
@@ -555,7 +555,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         catalogueRepository
           .archiveCatalogueItem(
-            foreignOrganizationID,
+            organizationIDForeign,
             catalogueItemRow.catalogueItemID,
           )
           .zioValue shouldBe None
@@ -610,16 +610,16 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
       "return None for another organization" in new TestContext {
         val catalogueItemRow      = arbitrarySample[CatalogueItemRow]
-        val foreignOrganizationID = arbitrarySample[OrganizationID]
+        val organizationIDForeign = arbitrarySample[OrganizationID]
 
-        foreignOrganizationID shouldNot equal(catalogueItemRow.organizationID)
+        organizationIDForeign shouldNot equal(catalogueItemRow.organizationID)
 
         postgresClient
           .executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow))
           .zioValue
 
         catalogueRepository
-          .getCatalogueItem(foreignOrganizationID, catalogueItemRow.catalogueItemID)
+          .getCatalogueItem(organizationIDForeign, catalogueItemRow.catalogueItemID)
           .zioValue shouldBe None
       }
     }
@@ -673,26 +673,26 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
       }
 
       "map an unexpected database failure to RepositoryError with its underlying exception" in new TestContext {
-        val invalidQueries = ZIO
+        val catalogueItemQueriesInvalid = ZIO
           .service[CatalogueItemQueries]
           .provide(
             CatalogueItemQueries.live,
             ZLayer.succeed(repositoryConfig.copy(catalogueItemTable = "not_a_catalogue_table")),
           )
           .zioValue
-        val invalidRepository = ZIO
+        val catalogueRepositoryInvalid = ZIO
           .service[CatalogueRepository]
           .provide(
             CatalogueRepository.live,
             postgresClient.databaseLive,
-            ZLayer.succeed(invalidQueries),
+            ZLayer.succeed(catalogueItemQueriesInvalid),
             ZLayer.succeed(timeProviderMock),
             ZLayer.succeed(idGeneratorMock),
           )
           .zioValue
         val organizationID = arbitrarySample[OrganizationID]
 
-        val serviceError = invalidRepository.getCatalogueItems(organizationID).zioError
+        val serviceError = catalogueRepositoryInvalid.getCatalogueItems(organizationID).zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.RepositoryError]
         serviceError.message shouldBe s"Failed to get catalogue items for organization ID: [$organizationID]"
@@ -709,11 +709,11 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
       catalogueItemTable = "catalogue_item",
     )
 
-    val postgreSQLTestClientConfig = withContainers(PostgreSQLTestClientConfig.from(_))
+    val postgresClientConfig = withContainers(PostgreSQLTestClientConfig.from(_))
 
     val postgresClient = ZIO
       .service[PostgreSQLTestClient]
-      .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgreSQLTestClientConfig))
+      .provide(PostgreSQLTestClient.live, ZLayer.succeed(postgresClientConfig))
       .zioValue
 
     val catalogueItemQueries = ZIO

@@ -20,14 +20,18 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 | raw/validated | `emailRaw`, `emailValidated` | `rawEmail`, `validatedEmail` |
 | new/existing/updated | `invoiceNew`, `invoiceExisting`, `invoiceUpdated` | `newInvoice`, `updatedInvoice` |
 | expected | `paymentExpected` | `expectedPayment` |
+| invalid | `catalogueRepositoryInvalid`, `catalogueItemQueriesInvalid` | `invalidRepository`, `invalidQueries` |
+| foreign | `organizationIDForeign` | `foreignOrganizationID` |
+| missing | `catalogueItemIDMissing` | `missingCatalogueItemID` |
 | optional raw | `emailRawOpt` | `emailOptRaw`, `optionalEmail` |
 
 - Spell out domain names; only established acronyms and `Impl` may abbreviate. Avoid vague `data`, `item`, `result`, `value`, `helper`, `thing`.
 - Types/traits/objects/enums/type aliases/constants: `PascalCase`. Values/fields/parameters/methods: `camelCase`.
-- Every `Option`-typed value/field/parameter ends in `Opt`; `Opt` is always the final suffix. Repository `Row` and repository-owned `...Input` fields are the exception: they mirror persisted/domain concept names without `Opt`.
+- Every `Option`-typed value/field/parameter ends in `Opt`; `Opt` is always the final suffix, including local repository result bindings such as `catalogueItemRowUpdatedOpt`. Repository `Row` and repository-owned `...Input` fields are the only exception: their fields mirror persisted/domain concept names without `Opt`.
 - `ID` stays uppercase in types and values (`CustomerID`, `customerID`, `IDGenerator`). Treat other acronyms as words (`Http`, `Jwt`, `Url`) unless an external standard fixes the spelling.
 - Name types for domain concepts, not representations/consumers: `EmailAddress`, not `EmailString`/`EmailColumn`.
-- Test values follow the same concept-first form and start with the complete model name. Add qualifiers last: `customerRowIndividual`, `customerRowBusiness`, `customerID1`, `customerID2`; never `individualCustomerRow`, `input`, or `contact`.
+- Test values follow the same concept-first form and start with the complete model/type name in lower camel case. Add every qualifier last: `catalogueItemNameUpdate`, `catalogueRepositoryInvalid`, `organizationIDForeign`, `customerRowIndividual`, `customerID1`; never `nameUpdate`, `invalidRepository`, `foreignOrganizationID`, `individualCustomerRow`, `input`, or `contact`.
+- Fields owned by an integration test's `TestContext` are the exception to exact model/type binding names: established concise infrastructure aliases such as `postgresClient` are allowed. This exception does not apply to scenario/domain values declared inside tests or relax qualifier ordering.
 
 ## Tests
 
