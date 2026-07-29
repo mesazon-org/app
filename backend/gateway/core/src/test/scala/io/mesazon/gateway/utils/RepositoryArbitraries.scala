@@ -37,10 +37,6 @@ trait RepositoryArbitraries
 
   given arbOrganizationUserRow: Arbitrary[OrganizationUserRow] = Arbitrary(Gen.resultOf(OrganizationUserRow.apply))
 
-  given arbPrice: Arbitrary[Price] = Arbitrary(Gen.resultOf(Price.apply))
-
-  given arbPhoto: Arbitrary[Photo] = Arbitrary(Gen.resultOf(Photo.apply))
-
   given arbCatalogueItemRow: Arbitrary[CatalogueItemRow] = Arbitrary(Gen.resultOf(CatalogueItemRow.apply))
 
   given arbInsertCatalogueItemInput: Arbitrary[InsertCatalogueItemInput] =

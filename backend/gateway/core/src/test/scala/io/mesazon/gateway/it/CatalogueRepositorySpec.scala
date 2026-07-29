@@ -31,7 +31,9 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
     import context.*
 
     eventually {
-      postgresClient.checkIfTableExists(repositoryConfig.schema, repositoryConfig.catalogueItemTable).zioValue shouldBe true
+      postgresClient
+        .checkIfTableExists(repositoryConfig.schema, repositoryConfig.catalogueItemTable)
+        .zioValue shouldBe true
     }
   }
 
@@ -71,13 +73,15 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemID.value).once(),
         )
 
-        catalogueRepository.insertCatalogueItem(organizationID, insertCatalogueItemInput).zioValue shouldBe catalogueItemID
+        catalogueRepository
+          .insertCatalogueItem(organizationID, insertCatalogueItemInput)
+          .zioValue shouldBe catalogueItemID
 
         postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
           List(catalogueItemRowExpected)
       }
 
-      "fail with a UniqueConstraintViolation for an active same-organization name" in new TestContext {
+      "fail with a UniqueConstraintViolation when an active name already exists in the organization" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
         val catalogueItemID1         = arbitrarySample[CatalogueItemID]
         val catalogueItemID2         = arbitrarySample[CatalogueItemID]
@@ -116,11 +120,11 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
       }
 
       "allow the same active name in another organization" in new TestContext {
-        val organizationID1          = arbitrarySample[OrganizationID]
-        val organizationID2          = arbitrarySample[OrganizationID]
-        val catalogueItemID1         = arbitrarySample[CatalogueItemID]
-        val catalogueItemID2         = arbitrarySample[CatalogueItemID]
-        val insertCatalogueItemInput = arbitrarySample[InsertCatalogueItemInput]
+        val organizationID1           = arbitrarySample[OrganizationID]
+        val organizationID2           = arbitrarySample[OrganizationID]
+        val catalogueItemID1          = arbitrarySample[CatalogueItemID]
+        val catalogueItemID2          = arbitrarySample[CatalogueItemID]
+        val insertCatalogueItemInput  = arbitrarySample[InsertCatalogueItemInput]
         val catalogueItemRow1Expected = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID1,
           catalogueItemID = catalogueItemID1,
@@ -158,10 +162,10 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
     }
 
     "insertCatalogueItems" should {
-      "create items atomically and return generated IDs in input order" in new TestContext {
-        val organizationID              = arbitrarySample[OrganizationID]
-        val catalogueItemID1            = arbitrarySample[CatalogueItemID]
-        val catalogueItemID2            = arbitrarySample[CatalogueItemID]
+      "insert multiple catalogue items atomically and return generated IDs in input order" in new TestContext {
+        val organizationID            = arbitrarySample[OrganizationID]
+        val catalogueItemID1          = arbitrarySample[CatalogueItemID]
+        val catalogueItemID2          = arbitrarySample[CatalogueItemID]
         val insertCatalogueItemInput1 = arbitrarySample[InsertCatalogueItemInput].copy(price = None)
         val insertCatalogueItemInput2 = arbitrarySample[InsertCatalogueItemInput].copy(
           price = Some(arbitrarySample[CatalogueItemPrice])
@@ -178,20 +182,15 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
         )
-        val catalogueItemRow2Expected = arbitrarySample[CatalogueItemRow].copy(
-          organizationID = organizationID,
+        val catalogueItemRow2Expected = catalogueItemRow1Expected.copy(
           catalogueItemID = catalogueItemID2,
           name = insertCatalogueItemInput2.name,
           unit = insertCatalogueItemInput2.unit,
           price = insertCatalogueItemInput2.price,
-          photo = None,
-          status = CatalogueItemStatus.Active,
-          createdAt = CreatedAt(instantNow),
-          updatedAt = UpdatedAt(instantNow),
         )
 
-        catalogueItemID1 shouldNot equal(catalogueItemID2)
-        insertCatalogueItemInput1.name shouldNot equal(insertCatalogueItemInput2.name)
+        catalogueItemRow1Expected.catalogueItemID shouldNot equal(catalogueItemRow2Expected.catalogueItemID)
+        catalogueItemRow1Expected.name shouldNot equal(catalogueItemRow2Expected.name)
 
         inSequence(
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
@@ -207,7 +206,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
       }
 
       "return an empty result without generating time or IDs for an empty batch" in new TestContext {
-        val organizationID           = arbitrarySample[OrganizationID]
+        val organizationID            = arbitrarySample[OrganizationID]
         val insertCatalogueItemInputs = List.empty[InsertCatalogueItemInput]
 
         catalogueRepository.insertCatalogueItems(organizationID, insertCatalogueItemInputs).zioValue shouldBe Nil
@@ -215,7 +214,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe Nil
       }
 
-      "fail with a UniqueConstraintViolation and roll back a duplicate batch" in new TestContext {
+      "fail with a UniqueConstraintViolation and roll back when the batch contains duplicate names" in new TestContext {
         val organizationID            = arbitrarySample[OrganizationID]
         val catalogueItemID1          = arbitrarySample[CatalogueItemID]
         val catalogueItemID2          = arbitrarySample[CatalogueItemID]
@@ -244,7 +243,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
     }
 
     "updateCatalogueItem" should {
-      "replace supplied name price and photo metadata while retaining the omitted unit" in new TestContext {
+      "update the supplied name, price, and photo metadata while retaining the omitted unit" in new TestContext {
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           status = CatalogueItemStatus.Active
         )
@@ -286,7 +285,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           List(catalogueItemRowExpected)
       }
 
-      "refresh updatedAt without changing business fields for an empty update" in new TestContext {
+      "update only updatedAt when no business fields are supplied" in new TestContext {
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           status = CatalogueItemStatus.Active
         )
@@ -312,24 +311,17 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           List(catalogueItemRowExpected)
       }
 
-      "return None for missing foreign and archived items" in new TestContext {
-        val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
+      "return None and leave the row unchanged when no catalogue item matches the ID" in new TestContext {
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           status = CatalogueItemStatus.Active
         )
-        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
-          status = CatalogueItemStatus.Archived
-        )
-        val foreignOrganizationID = arbitrarySample[OrganizationID]
         val catalogueItemIDMissing = arbitrarySample[CatalogueItemID]
         val nameUpdate             = arbitrarySample[CatalogueItemName]
 
-        foreignOrganizationID shouldNot equal(catalogueItemRowActive.organizationID)
-        catalogueItemIDMissing shouldNot equal(catalogueItemRowActive.catalogueItemID)
+        catalogueItemIDMissing shouldNot equal(catalogueItemRow.catalogueItemID)
 
         postgresClient
-          .executeQuery(
-            catalogueItemQueries.insertCatalogueItemRows(List(catalogueItemRowActive, catalogueItemRowArchived))
-          )
+          .executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow))
           .zioValue
 
         (() => timeProviderMock.instantNow)
@@ -339,11 +331,28 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         catalogueRepository
           .updateCatalogueItem(
-            catalogueItemRowActive.organizationID,
+            catalogueItemRow.organizationID,
             catalogueItemIDMissing,
             nameOptUpdate = Some(nameUpdate),
           )
           .zioValue shouldBe None
+
+        postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
+          List(catalogueItemRow)
+      }
+
+      "return None and leave the row unchanged for another organization" in new TestContext {
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
+          status = CatalogueItemStatus.Active
+        )
+        val foreignOrganizationID = arbitrarySample[OrganizationID]
+        val nameUpdate            = arbitrarySample[CatalogueItemName]
+
+        foreignOrganizationID shouldNot equal(catalogueItemRow.organizationID)
+
+        postgresClient
+          .executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow))
+          .zioValue
 
         (() => timeProviderMock.instantNow)
           .expects()
@@ -353,10 +362,24 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         catalogueRepository
           .updateCatalogueItem(
             foreignOrganizationID,
-            catalogueItemRowActive.catalogueItemID,
+            catalogueItemRow.catalogueItemID,
             nameOptUpdate = Some(nameUpdate),
           )
           .zioValue shouldBe None
+
+        postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
+          List(catalogueItemRow)
+      }
+
+      "return None and leave an archived catalogue item unchanged" in new TestContext {
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
+          status = CatalogueItemStatus.Archived
+        )
+        val nameUpdate = arbitrarySample[CatalogueItemName]
+
+        postgresClient
+          .executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow))
+          .zioValue
 
         (() => timeProviderMock.instantNow)
           .expects()
@@ -365,15 +388,18 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         catalogueRepository
           .updateCatalogueItem(
-            catalogueItemRowArchived.organizationID,
-            catalogueItemRowArchived.catalogueItemID,
+            catalogueItemRow.organizationID,
+            catalogueItemRow.catalogueItemID,
             nameOptUpdate = Some(nameUpdate),
           )
           .zioValue shouldBe None
+
+        postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
+          List(catalogueItemRow)
       }
 
       "fail with a UniqueConstraintViolation when renaming to an active same-organization name" in new TestContext {
-        val organizationID = arbitrarySample[OrganizationID]
+        val organizationID    = arbitrarySample[OrganizationID]
         val catalogueItemRow1 = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           status = CatalogueItemStatus.Active,
@@ -413,7 +439,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
     }
 
     "archiveCatalogueItem" should {
-      "archive an active item, retain it, and free its active name" in new TestContext {
+      "archive an active catalogue item, retain it, and free its active name" in new TestContext {
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           price = Some(arbitrarySample[CatalogueItemPrice]),
           photo = Some(arbitrarySample[CatalogueItemPhoto]),
@@ -423,7 +449,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           status = CatalogueItemStatus.Archived,
           updatedAt = UpdatedAt(instantNow),
         )
-        val catalogueItemIDNew = arbitrarySample[CatalogueItemID]
+        val catalogueItemIDNew       = arbitrarySample[CatalogueItemID]
         val insertCatalogueItemInput = arbitrarySample[InsertCatalogueItemInput].copy(
           name = catalogueItemRow.name
         )
@@ -472,22 +498,13 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           List(catalogueItemRowArchivedExpected, catalogueItemRowNewExpected)
       }
 
-      "return None for repeat missing and foreign archive requests" in new TestContext {
+      "return None and leave the row unchanged when the catalogue item is already archived" in new TestContext {
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
-          status = CatalogueItemStatus.Active
+          status = CatalogueItemStatus.Archived
         )
-        val catalogueItemRowForeignTarget = arbitrarySample[CatalogueItemRow].copy(
-          status = CatalogueItemStatus.Active
-        )
-        val catalogueItemIDMissing = arbitrarySample[CatalogueItemID]
-
-        catalogueItemRow.organizationID shouldNot equal(catalogueItemRowForeignTarget.organizationID)
-        catalogueItemIDMissing shouldNot equal(catalogueItemRow.catalogueItemID)
 
         postgresClient
-          .executeQuery(
-            catalogueItemQueries.insertCatalogueItemRows(List(catalogueItemRow, catalogueItemRowForeignTarget))
-          )
+          .executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow))
           .zioValue
 
         (() => timeProviderMock.instantNow)
@@ -497,7 +514,15 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         catalogueRepository
           .archiveCatalogueItem(catalogueItemRow.organizationID, catalogueItemRow.catalogueItemID)
-          .zioValue shouldBe Some(catalogueItemRow.catalogueItemID)
+          .zioValue shouldBe None
+
+        postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
+          List(catalogueItemRow)
+      }
+
+      "return None when no catalogue item matches the ID" in new TestContext {
+        val organizationID  = arbitrarySample[OrganizationID]
+        val catalogueItemID = arbitrarySample[CatalogueItemID]
 
         (() => timeProviderMock.instantNow)
           .expects()
@@ -505,17 +530,23 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .once()
 
         catalogueRepository
-          .archiveCatalogueItem(catalogueItemRow.organizationID, catalogueItemRow.catalogueItemID)
+          .archiveCatalogueItem(organizationID, catalogueItemID)
           .zioValue shouldBe None
 
-        (() => timeProviderMock.instantNow)
-          .expects()
-          .returningZIO(instantNow)
-          .once()
+        postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe Nil
+      }
 
-        catalogueRepository
-          .archiveCatalogueItem(catalogueItemRow.organizationID, catalogueItemIDMissing)
-          .zioValue shouldBe None
+      "return None and leave the row unchanged for another organization" in new TestContext {
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
+          status = CatalogueItemStatus.Active
+        )
+        val foreignOrganizationID = arbitrarySample[OrganizationID]
+
+        foreignOrganizationID shouldNot equal(catalogueItemRow.organizationID)
+
+        postgresClient
+          .executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow))
+          .zioValue
 
         (() => timeProviderMock.instantNow)
           .expects()
@@ -524,26 +555,27 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         catalogueRepository
           .archiveCatalogueItem(
-            catalogueItemRow.organizationID,
-            catalogueItemRowForeignTarget.catalogueItemID,
+            foreignOrganizationID,
+            catalogueItemRow.catalogueItemID,
           )
           .zioValue shouldBe None
+
+        postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
+          List(catalogueItemRow)
       }
     }
 
     "getCatalogueItem" should {
-      "get active and archived rows only for the supplied organization" in new TestContext {
+      "get active and archived catalogue items for the supplied organization" in new TestContext {
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
           status = CatalogueItemStatus.Active
         )
         val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
-          status = CatalogueItemStatus.Archived
+          organizationID = catalogueItemRowActive.organizationID,
+          status = CatalogueItemStatus.Archived,
         )
-        val foreignOrganizationID = arbitrarySample[OrganizationID]
-        val catalogueItemIDMissing = arbitrarySample[CatalogueItemID]
 
-        foreignOrganizationID shouldNot equal(catalogueItemRowActive.organizationID)
-        catalogueItemIDMissing shouldNot equal(catalogueItemRowActive.catalogueItemID)
+        catalogueItemRowActive.catalogueItemID shouldNot equal(catalogueItemRowArchived.catalogueItemID)
 
         postgresClient
           .executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRowActive))
@@ -565,13 +597,29 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
             catalogueItemRowArchived.catalogueItemID,
           )
           .zioValue shouldBe Some(catalogueItemRowArchived)
+      }
+
+      "return None when no catalogue item matches the ID" in new TestContext {
+        val organizationID  = arbitrarySample[OrganizationID]
+        val catalogueItemID = arbitrarySample[CatalogueItemID]
 
         catalogueRepository
-          .getCatalogueItem(foreignOrganizationID, catalogueItemRowActive.catalogueItemID)
+          .getCatalogueItem(organizationID, catalogueItemID)
           .zioValue shouldBe None
+      }
+
+      "return None for another organization" in new TestContext {
+        val catalogueItemRow      = arbitrarySample[CatalogueItemRow]
+        val foreignOrganizationID = arbitrarySample[OrganizationID]
+
+        foreignOrganizationID shouldNot equal(catalogueItemRow.organizationID)
+
+        postgresClient
+          .executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow))
+          .zioValue
 
         catalogueRepository
-          .getCatalogueItem(catalogueItemRowActive.organizationID, catalogueItemIDMissing)
+          .getCatalogueItem(foreignOrganizationID, catalogueItemRow.catalogueItemID)
           .zioValue shouldBe None
       }
     }
@@ -583,8 +631,8 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         catalogueRepository.getCatalogueItems(organizationID).zioValue shouldBe Nil
       }
 
-      "list only active rows for the supplied organization without asserting database order" in new TestContext {
-        val organizationID = arbitrarySample[OrganizationID]
+      "return only active catalogue items for the supplied organization" in new TestContext {
+        val organizationID          = arbitrarySample[OrganizationID]
         val catalogueItemRowActive1 = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           status = CatalogueItemStatus.Active,
@@ -627,7 +675,10 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
       "map an unexpected database failure to RepositoryError with its underlying exception" in new TestContext {
         val invalidQueries = ZIO
           .service[CatalogueItemQueries]
-          .provide(CatalogueItemQueries.live, ZLayer.succeed(repositoryConfig.copy(catalogueItemTable = "not_a_catalogue_table")))
+          .provide(
+            CatalogueItemQueries.live,
+            ZLayer.succeed(repositoryConfig.copy(catalogueItemTable = "not_a_catalogue_table")),
+          )
           .zioValue
         val invalidRepository = ZIO
           .service[CatalogueRepository]
