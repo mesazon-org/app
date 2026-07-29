@@ -13,7 +13,7 @@ final class PriceDomainValidator extends DomainValidator[PriceDomainValidator.Pr
   override def validate(priceRaw: PriceDomainValidator.PriceRaw): UIO[ValidatedNec[InvalidFieldError, Price]] =
     ZIO.succeed {
       val (amountRaw, currencyRaw) = priceRaw
-      val currencyFormatted = currencyRaw.trim.toUpperCase(Locale.ROOT)
+      val currencyFormatted        = currencyRaw.trim.toUpperCase(Locale.ROOT)
       (
         validateAmount(amountRaw),
         validateCurrency(amountRaw, currencyRaw, currencyFormatted),
@@ -47,9 +47,11 @@ final class PriceDomainValidator extends DomainValidator[PriceDomainValidator.Pr
             List(currencyRaw),
           ).invalidNec
         else
-          PriceCurrency.either(currencyFormatted).leftMap(errorMessage =>
-            InvalidFieldError("currency", errorMessage, List(currencyRaw))
-          ).map(PriceCurrencyWithFractionDigits(_, fractionDigits)).toValidatedNec
+          PriceCurrency
+            .either(currencyFormatted)
+            .leftMap(errorMessage => InvalidFieldError("currency", errorMessage, List(currencyRaw)))
+            .map(PriceCurrencyWithFractionDigits(_, fractionDigits))
+            .toValidatedNec
       }
       .andThen { priceCurrencyWithFractionDigits =>
         if (amountRaw.scale > priceCurrencyWithFractionDigits.fractionDigits)

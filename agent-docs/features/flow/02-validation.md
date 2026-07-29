@@ -52,8 +52,9 @@ File: `validation/service/<Feature>RequestValidator.scala`.
 - Do not create a validator when wire decoding already guarantees the entire request (for example UUID-only input); construct its newtypes in the service.
 - Bind Smithy inputs as `<fullRequestName>Smithy`; qualify Tapir inputs equivalently. Bind validated values as the plain domain request name.
 - Compose fields in declaration order with `ValidatedNec` + `mapN`; clients must receive all errors in stable field order.
-- `fieldName` exactly equals the Smithy member.
+- `fieldName` exactly equals the Smithy member, except a `validateAllNested` batch wrapper uses the singular item concept because the error represents one indexed element.
 - Singular, batch, and combined requests reuse private per-item/per-field validation; never duplicate field lists.
+- A batch error identifies one failed element, so pass the singular item concept to `validateAllNested` (for example `catalogueItem`, not the plural request member `catalogueItems`). Preserve the source index and return no error for valid elements between failures.
 - For an optional composite, validate mandatory inner members in declaration order, accumulate their errors under the outer field, then wrap the valid case class in its contextual newtype.
 - Monetary validation uses `PriceDomainValidator` with JDK `Currency`: normalize trim/uppercase ISO codes, reject unsupported or no-fixed-fraction currencies, and reject negative amounts or supplied scales above the currency fraction digits. Normalize valid lower-scale amounts upward to the exact currency scale by appending zeros; never round or remove supplied precision.
 - Pure fields use required/optional helpers with `.either`; effectful fields use domain validators.
@@ -66,7 +67,7 @@ File: `unit/validation/service/<Feature>RequestValidatorSpec.scala`; extend `ZWo
 1. **Success round-trip:** sample the domain request, transform to the transport request, validate, assert the original domain value.
 2. **Failure accumulation:** sample a valid transport request, replace all targeted fields with invalid values, and assert the exact ordered `List[InvalidFieldError]`, including nested indexes.
 
-Use fresh `arbitrarySample` data per test; no shared valid fixtures. Add extra cases for list/default/nested behavior when the two required cases cannot prove them.
+Use fresh `arbitrarySample` data per test; no shared valid fixtures. Sampling is not free: never generate a batch/list wrapper and then replace its entire expensive collection. In that case, sample the single element model once, derive scenario variants with `.copy(...)`, and construct the one-field wrapper directly from the controlled list. Sample the complete batch only when the generator/round-trip itself is under proof. Add extra cases for list/default/nested behavior when the two required cases cannot prove them.
 
 Run:
 

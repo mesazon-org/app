@@ -39,7 +39,15 @@ class PriceDomainValidatorSpec extends ZWordSpecBase {
       }
 
       "accumulate a negative amount and unsupported currency" in {
-        priceDomainValidator.validate((amountRaw = BigDecimal(-1), currencyRaw = "not-a-currency")).zioValue.toEither.left.toOption.value.toNonEmptyList.toList shouldBe
+        priceDomainValidator
+          .validate((amountRaw = BigDecimal(-1), currencyRaw = "not-a-currency"))
+          .zioValue
+          .toEither
+          .left
+          .toOption
+          .value
+          .toNonEmptyList
+          .toList shouldBe
           List(
             InvalidFieldError("amount", "Amount must be non-negative", List("-1")),
             InvalidFieldError("currency", "Unsupported ISO currency: [not-a-currency]", List("not-a-currency")),

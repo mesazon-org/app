@@ -45,6 +45,7 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 ### Data and assertions
 
 - Name bindings after their exact models; qualifiers follow the model name.
+- Treat `arbitrarySample` as real work, especially for nested/list generators. If a test replaces a wrapper's entire generated collection, do not sample and discard that collection: sample the element model, derive related cases with `.copy(...)`, and directly construct the wrapper from the controlled elements. Sample the complete wrapper only when its generator or full round-trip is part of the proof.
 - Repository integration tests sample complete inputs/Rows with `arbitrarySample[ExactType]` and use `.copy(...)` only to force scenario fields. Keep `TestContext` free of helper methods and repeat arrangement, dependency expectations, and database reads locally; test isolation/readability takes precedence over removing duplication.
 - Derive a near-identical second expected model from the first with `.copy(...)`, changing only intentional differences. Assert correlated/equal and distinct fields directly through the expected models immediately after setup, so reviewers can verify the complete scenario from those models.
 - Build expected mappings independently and field-by-field; never use the mapper/transform/serializer/helper under test to create expected output. Using that transform to arrange test input is allowed.

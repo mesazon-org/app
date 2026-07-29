@@ -21,7 +21,9 @@ final class CatalogueRequestValidator(
       insertCatalogueItemsPostRequestSmithy: smithy.InsertCatalogueItemsPostRequest
   ): IO[ServiceError.BadRequestError.ValidationError, InsertCatalogueItemsPostRequest] =
     toValidatedRequestIO(
-      validateAllNested("catalogueItems", insertCatalogueItemsPostRequestSmithy.catalogueItems)(validateInsertCatalogueItem)
+      validateAllNested("catalogueItem", insertCatalogueItemsPostRequestSmithy.catalogueItems)(
+        validateInsertCatalogueItem
+      )
         .map(_.map(InsertCatalogueItemsPostRequest.apply))
     )
 
@@ -53,7 +55,7 @@ final class CatalogueRequestValidator(
       catalogueItemPriceRequestSmithyOpt: Option[smithy.CatalogueItemPriceRequest]
   ): UIO[ValidatedNec[InvalidFieldError, Option[CatalogueItemPrice]]] =
     catalogueItemPriceRequestSmithyOpt match {
-      case None => ZIO.succeed(none[CatalogueItemPrice].validNec)
+      case None                                  => ZIO.succeed(none[CatalogueItemPrice].validNec)
       case Some(catalogueItemPriceRequestSmithy) =>
         priceDomainValidator
           .validate(

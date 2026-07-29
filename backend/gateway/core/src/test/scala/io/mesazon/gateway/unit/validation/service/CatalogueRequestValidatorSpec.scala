@@ -25,7 +25,9 @@ class CatalogueRequestValidatorSpec extends ZWordSpecBase, CatalogueSmithyArbitr
       "validate a valid catalogue item round-trip" in {
         val insertCatalogueItemPostRequest = arbitrarySample[InsertCatalogueItemPostRequest]
         catalogueRequestValidator
-          .validatedInsertCatalogueItemPostRequest(insertCatalogueItemPostRequest.transformInto[smithy.InsertCatalogueItemPostRequest])
+          .validatedInsertCatalogueItemPostRequest(
+            insertCatalogueItemPostRequest.transformInto[smithy.InsertCatalogueItemPostRequest]
+          )
           .zioValue shouldBe insertCatalogueItemPostRequest
       }
 
@@ -72,31 +74,57 @@ class CatalogueRequestValidatorSpec extends ZWordSpecBase, CatalogueSmithyArbitr
       "validate a valid batch round-trip" in {
         val insertCatalogueItemsPostRequest = arbitrarySample[InsertCatalogueItemsPostRequest]
         catalogueRequestValidator
-          .validatedInsertCatalogueItemsPostRequest(insertCatalogueItemsPostRequest.transformInto[smithy.InsertCatalogueItemsPostRequest])
+          .validatedInsertCatalogueItemsPostRequest(
+            insertCatalogueItemsPostRequest.transformInto[smithy.InsertCatalogueItemsPostRequest]
+          )
           .zioValue shouldBe insertCatalogueItemsPostRequest
       }
 
       "validate an empty batch" in {
-        val insertCatalogueItemsPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemsPostRequest].copy(
-          catalogueItems = Nil
-        )
+        val insertCatalogueItemsPostRequestSmithy = smithy.InsertCatalogueItemsPostRequest(Nil)
 
         catalogueRequestValidator
           .validatedInsertCatalogueItemsPostRequest(insertCatalogueItemsPostRequestSmithy)
           .zioValue shouldBe InsertCatalogueItemsPostRequest(Nil)
       }
 
-      "fail with a ValidationError wrapping invalid items under the batch field with stable indexes" in {
-        val insertCatalogueItemsPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemsPostRequest].copy(
-          catalogueItems = List(
-            arbitrarySample[smithy.InsertCatalogueItemPostRequest].copy(name = "", price = None),
-            arbitrarySample[smithy.InsertCatalogueItemPostRequest].copy(unit = "", price = None),
+      "fail with a ValidationError for the first, middle, and last invalid catalogue items while accepting the second and fourth" in {
+        val insertCatalogueItemPostRequestSmithy =
+          arbitrarySample[smithy.InsertCatalogueItemPostRequest]
+        val insertCatalogueItemPostRequestSmithy1 =
+          insertCatalogueItemPostRequestSmithy.copy(name = "", price = None)
+        val insertCatalogueItemPostRequestSmithy2 =
+          insertCatalogueItemPostRequestSmithy
+        val insertCatalogueItemPostRequestSmithy3 =
+          insertCatalogueItemPostRequestSmithy.copy(unit = "", price = None)
+        val insertCatalogueItemPostRequestSmithy4 =
+          insertCatalogueItemPostRequestSmithy
+        val insertCatalogueItemPostRequestSmithy5 =
+          insertCatalogueItemPostRequestSmithy.copy(
+            price = Some(smithy.CatalogueItemPriceRequest(BigDecimal(-1), "bad"))
+          )
+        val insertCatalogueItemsPostRequestSmithy = smithy.InsertCatalogueItemsPostRequest(
+          List(
+            insertCatalogueItemPostRequestSmithy1,
+            insertCatalogueItemPostRequestSmithy2,
+            insertCatalogueItemPostRequestSmithy3,
+            insertCatalogueItemPostRequestSmithy4,
+            insertCatalogueItemPostRequestSmithy5,
           )
         )
         val invalidFieldErrorName =
           InvalidFieldError("name", invalidFieldErrorMessageNonEmptyTrimmed, List(""))
         val invalidFieldErrorUnit =
           InvalidFieldError("unit", invalidFieldErrorMessageNonEmptyTrimmed, List(""))
+        val invalidFieldErrorAmount =
+          InvalidFieldError("amount", "Amount must be non-negative", List("-1"))
+        val invalidFieldErrorCurrency =
+          InvalidFieldError("currency", "Unsupported ISO currency: [bad]", List("bad"))
+        val invalidFieldErrorPrice = InvalidFieldError(
+          "price",
+          s"Failed with invalid fields [$invalidFieldErrorAmount, $invalidFieldErrorCurrency]",
+          List("-1", "bad"),
+        )
 
         catalogueRequestValidator
           .validatedInsertCatalogueItemsPostRequest(insertCatalogueItemsPostRequestSmithy)
@@ -104,16 +132,22 @@ class CatalogueRequestValidatorSpec extends ZWordSpecBase, CatalogueSmithyArbitr
           ServiceError.BadRequestError.ValidationError(
             invalidFields = List(
               InvalidFieldError(
-                "catalogueItems",
+                "catalogueItem",
                 s"Failed with invalid fields [$invalidFieldErrorName]",
                 List(),
                 index = 0,
               ),
               InvalidFieldError(
-                "catalogueItems",
+                "catalogueItem",
                 s"Failed with invalid fields [$invalidFieldErrorUnit]",
                 List(),
-                index = 1,
+                index = 2,
+              ),
+              InvalidFieldError(
+                "catalogueItem",
+                s"Failed with invalid fields [$invalidFieldErrorPrice]",
+                List(),
+                index = 4,
               ),
             )
           )
@@ -124,7 +158,9 @@ class CatalogueRequestValidatorSpec extends ZWordSpecBase, CatalogueSmithyArbitr
       "validate a valid update round-trip" in {
         val updateCatalogueItemPutRequest = arbitrarySample[UpdateCatalogueItemPutRequest]
         catalogueRequestValidator
-          .validatedUpdateCatalogueItemPutRequest(updateCatalogueItemPutRequest.transformInto[smithy.UpdateCatalogueItemPutRequest])
+          .validatedUpdateCatalogueItemPutRequest(
+            updateCatalogueItemPutRequest.transformInto[smithy.UpdateCatalogueItemPutRequest]
+          )
           .zioValue shouldBe updateCatalogueItemPutRequest
       }
 
