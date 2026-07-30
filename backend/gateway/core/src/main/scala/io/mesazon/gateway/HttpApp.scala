@@ -53,6 +53,7 @@ object HttpApp {
     userTokenService                    <- ZIO.service[smithy.UserTokenService[Task]]
     organizationManagementService       <- ZIO.service[smithy.OrganizationManagementService[Task]]
     customerBookService                 <- ZIO.service[smithy.CustomerBookService[Task]]
+    catalogueService                    <- ZIO.service[smithy.CatalogueService[Task]]
     userSignUpRoutes                    <- buildSmithyRoute(userSignUpService)
     userSignInRoutes                    <- buildSmithyRoute(userSignInService)
     userOnboardRoutes                   <- buildSmithyRoute(userOnboardService)
@@ -60,7 +61,15 @@ object HttpApp {
     userTokenServiceRoutes              <- buildSmithyRoute(userTokenService)
     organizationManagementServiceRoutes <- buildSmithyRoute(organizationManagementService)
     customerBookServiceRoutes           <- buildSmithyRoute(customerBookService)
-  } yield userSignUpRoutes <+> userOnboardRoutes <+> userSignInRoutes <+> userForgotPasswordRoutes <+> userTokenServiceRoutes <+> organizationManagementServiceRoutes <+> customerBookServiceRoutes
+    catalogueServiceRoutes              <- buildSmithyRoute(catalogueService)
+  } yield userSignUpRoutes <+>
+    userOnboardRoutes <+>
+    userSignInRoutes <+>
+    userForgotPasswordRoutes <+>
+    userTokenServiceRoutes <+>
+    organizationManagementServiceRoutes <+>
+    customerBookServiceRoutes <+>
+    catalogueServiceRoutes
 
   private def externalTapirAndDocsRoutes(
       enableDocs: Boolean
@@ -91,6 +100,7 @@ object HttpApp {
     smithy.UserTokenService,
     smithy.OrganizationManagementService,
     smithy.CustomerBookService,
+    smithy.CatalogueService,
     FileServiceEndpoints.smithy4sDocsID,
   )
 

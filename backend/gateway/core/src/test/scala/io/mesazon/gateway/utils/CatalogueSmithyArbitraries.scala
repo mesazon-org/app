@@ -23,4 +23,10 @@ trait CatalogueSmithyArbitraries extends CatalogueDomainArbitraries, IronRefined
   given arbUpdateCatalogueItemPutRequestSmithy: Arbitrary[smithy.UpdateCatalogueItemPutRequest] = Arbitrary(
     Arbitrary.arbitrary[UpdateCatalogueItemPutRequest].map(_.transformInto[smithy.UpdateCatalogueItemPutRequest])
   )
+
+  given arbArchiveCatalogueItemPutRequestSmithy: Arbitrary[smithy.ArchiveCatalogueItemPutRequest] = Arbitrary(
+    Arbitrary
+      .arbitrary[CatalogueItemID]
+      .map(catalogueItemID => smithy.ArchiveCatalogueItemPutRequest(catalogueItemID.value))
+  )
 }

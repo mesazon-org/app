@@ -61,6 +61,7 @@ object Main extends ZIOAppDefault {
       PasswordService.live,
       OrganizationManagementService.live,
       CustomerBookService.live,
+      CatalogueService.live,
 
       // Repository
       PostgresTransactor.live,
@@ -73,6 +74,7 @@ object Main extends ZIOAppDefault {
       UserActionAttemptRepository.live,
       OrganizationManagementRepository.live,
       CustomerBookRepository.live,
+      CatalogueRepository.live,
 
       // Queries
       WahaQueries.live,
@@ -84,6 +86,7 @@ object Main extends ZIOAppDefault {
       OrganizationDetailsQueries.live,
       OrganizationUserQueries.live,
       CustomerBookQueries.live,
+      CatalogueItemQueries.live,
 
       // State
       AuthState.live,
@@ -115,6 +118,7 @@ object Main extends ZIOAppDefault {
       // Domain validators
       EmailValidator.live,
       PhoneNumberDomainValidator.live,
+      PriceDomainValidator.live,
       WahaPhoneNumberDomainValidator.live,
 
       // Service validators
@@ -126,6 +130,7 @@ object Main extends ZIOAppDefault {
       UserTokenRequestValidator.live,
       OrganizationManagementRequestValidator.live,
       CustomerBookRequestValidator.live,
+      CatalogueRequestValidator.live,
 
       // Clients
       SttpBackend.live,

@@ -38,55 +38,6 @@ sbt "gateway-core/testOnly io.mesazon.gateway.fun.*"
 
 ## Acceptance tests: real app over HTTP
 
-File: `backend/gateway/it/.../<Feature>ApiSpec`. Harness types live in `io.mesazon.gateway.it.harness`; feature specs remain in `io.mesazon.gateway.it`. The shared `backend/gateway/it/compose.yaml` stack supplies gateway, PostgreSQL+Flyway, MailHog, Wiremock, and S3; nothing inside the app is mocked.
+Follow [Acceptance testing](../../project/acceptance-testing.md), the single source of truth for acceptance structure, endpoint matrices, middleware cases, naming/layout, harness wiring, clients/codecs, assertions, review, and verification.
 
-Harness rules:
-
-- `@DoNotDiscover class <Feature>ApiSpec extends GatewayAcceptanceTest, <FeatureArbitraries>`.
-- Add `new <Feature>ApiSpec` to `GatewayAcceptanceSpec`; never give a child spec its own Docker/context/lifecycle. The parent boots one stack and waits for gateway plus every `RepositoryConfig.allTableNames` table.
-- The table wait belongs in the parent's `afterContainersStart`; readiness alone may precede Flyway. Reset belongs in each nested spec's shared `GatewayAcceptanceTest.beforeEach`, because a `Suites` parent has no tests on which its own `beforeEach` could run.
-- Keep `gateway-it / Test / parallelExecution := false`: nested suites share the database.
-- Add required clients/Queries to `GatewayItContext.build`. Use `withContext`; arrange/read through production Queries, call HTTP through `GatewayClient`, and inspect MailHog/S3 where relevant.
-- Shared `beforeEach` truncates all tables and resets external services. Tests must remain independent.
-- Structure: `"<Feature> API" when { "<METHOD> /path" should { ... } }`.
-- Order tests by HTTP status: happy 200/204, then 400, 401, 403, 409, 500, 503. Within one code use a sensible order.
-
-Per endpoint, prove:
-
-1. Happy status + full body + complete DB/external state.
-2. Business edges end-to-end and their follow-up state.
-3. Every applicable standard error below; route wiring is per endpoint, so no case is “covered elsewhere.”
-4. After every rejection, all prohibited DB/email/storage effects are absent.
-
-| Case | Result | Applies |
-|---|---|---|
-| Invalid field/body | `400 ValidationError` with exact fields | endpoint has fallible input |
-| Missing organization header | `400 BadRequest` | organization-role trait |
-| Missing credentials/token | `401 Unauthorized` | authenticated endpoint |
-| Invalid token | `401 Unauthorized` | bearer endpoint |
-| Token row missing | `401 Unauthorized` | refresh/reset token lookup |
-| Wrong OTP | `400 BadRequest` | OTP verify |
-| Expired OTP | `401 Unauthorized`, OTP deleted | OTP verify |
-| Disallowed onboard stage | `403 Forbidden` | stage gate |
-| Disallowed organization role | `403 Forbidden` | organization-role trait |
-| Conflict | `409 Conflict` | endpoint declares conflict |
-| Missing user-details row | `500 InternalServerError` | completed-stage gate |
-| Not an organization member | `500 InternalServerError` | organization-role trait |
-| Referenced entity missing | `500 InternalServerError` | lookup-by-ID behavior |
-
-For the common bearer + completed-stage + organization-role endpoint, isolate and include all eight gates: validation, missing organization header, missing token, invalid token, disallowed stage, disallowed role, missing user details, and missing membership. Seed every unrelated prerequisite validly. Choose allowed/disallowed stages and roles from their sets/complements; do not hardcode `Owner`. Assert untouched endpoint tables for every rejection.
-
-Acceptance specifics:
-
-- Expected error type is the `GatewayClient` type parameter.
-- Specs run only through `sbt "gateway-it/test"` or `testOnly *GatewayAcceptanceSpec`; `testOnly *<Feature>ApiSpec` does not discover them.
-- A required-list request codec must use `JsonCodecMaker.make[T](CodecMakerConfig.withTransientEmpty(false))`; otherwise empty lists are omitted and fail Smithy required-field decoding before validation. When diagnosing a 400, assert `.fields`, not `toString`.
-- Config limits copied into specs must change with `application.conf`.
-
-Run:
-
-```sh
-sbt "gateway-it/test"
-```
-
-Finally update the feature doc to completed or list exact remaining slices/tests; never remove or falsely complete it.
+The service slice is complete only when every endpoint's applicable acceptance matrix passes against the real gateway and dependencies. Update the feature doc with exact completed and remaining cases; never remove or falsely complete its status.

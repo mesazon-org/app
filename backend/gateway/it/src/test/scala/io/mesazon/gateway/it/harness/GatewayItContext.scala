@@ -33,6 +33,7 @@ final case class GatewayItContext(
     organizationDetailsQueries: OrganizationDetailsQueries,
     organizationUserQueries: OrganizationUserQueries,
     customerBookQueries: CustomerBookQueries,
+    catalogueItemQueries: CatalogueItemQueries,
 )
 
 object GatewayItContext {
@@ -83,6 +84,9 @@ object GatewayItContext {
     customerBookQueries <- ZIO
       .service[CustomerBookQueries]
       .provide(CustomerBookQueries.live, RepositoryConfig.live, appNameLive)
+    catalogueItemQueries <- ZIO
+      .service[CatalogueItemQueries]
+      .provide(CatalogueItemQueries.live, RepositoryConfig.live, appNameLive)
   } yield GatewayItContext(
     gatewayClient,
     postgresClient,
@@ -99,5 +103,6 @@ object GatewayItContext {
     organizationDetailsQueries,
     organizationUserQueries,
     customerBookQueries,
+    catalogueItemQueries,
   )
 }

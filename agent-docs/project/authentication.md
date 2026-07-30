@@ -70,7 +70,7 @@ Tapir logo upload uses the same header, completed-stage requirement, and admin r
 
 - Unit-test `AuthorizationService`: allowed role, missing/invalid header, missing membership, disallowed role, and token/stage paths changed.
 - Functional-test auth orchestration and brute-force/retry behavior.
-- Every affected endpoint repeats the complete acceptance middleware matrix from [Service](../features/flow/05-service.md); never rely on another route's test.
+- Every affected endpoint repeats the complete middleware matrix from [Acceptance testing](acceptance-testing.md); never rely on another route's test.
 - Keep Smithy and Tapir contract descriptions/security inputs in parity.
 
 Known gap: `ServerMiddleware` has no direct spec (issue #25); acceptance matrices exercise its route wiring.

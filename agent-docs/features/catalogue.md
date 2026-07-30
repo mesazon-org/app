@@ -50,7 +50,7 @@ Contract: `smithy/CatalogueService.smithy`, `smithy/domain/Catalogue.smithy`. Op
 | Validation | request models, shared ISO price validation, domain/Smithy arbitraries, validator, unit specs | — |
 | Schema | enum, table, partial unique index, config | — |
 | Repository | Row, Queries, Repository, config; real-Postgres lifecycle proof | — |
-| Service | — | implementation/wiring, functional + acceptance specs |
+| Service | Smithy service, production wiring, functional spec, and acceptance spec | — |
 
 Details:
 
@@ -70,11 +70,19 @@ Details:
 
 `CatalogueRepositorySpec` covers every repository method against real PostgreSQL: controlled IDs/timestamps and complete rows sampled from repository arbitraries; absent/present exact ISO-valid prices from the shared correlated generator; absent creation photo metadata and composite photo updates; tenant scope; active-name conflicts and exact error mapping; batch order, no-op, and rollback; update/no-op semantics; archive/name reuse; active-and-archived reads; and active-only unordered listing.
 
-## Required remaining proof
+## Acceptance proof
 
-Service completion adds `CatalogueService.scala`, routes, `Main` layers, `CatalogueServiceSpec`, and `CatalogueApiSpec` with the [acceptance matrix](flow/05-service.md#acceptance-tests-real-app-over-http).
+`CatalogueApiSpec` follows [Acceptance testing](../project/acceptance-testing.md) and covers all six endpoints over the real gateway and PostgreSQL stack. It proves complete rows/responses, exact validation and conflict bodies, atomic batch rollback and empty batches, update/archive no-ops for missing, archived, or foreign-organization items, archived by-ID visibility, active-only tenant-filtered listing, persisted photo-field mapping, and every applicable organization middleware branch. Writes prove that `USER` is forbidden. Reads allow every defined role, so the disallowed-role case is structurally impossible and intentionally omitted.
 
-Photo completion adds a Tapir streaming endpoint using `FileScanner`, `ImageProcessing`, and S3; updates the three photo columns; returns presigned URLs; and keeps entity limits synchronized.
+`GatewayClient` supplies typed JSON codecs and HTTP methods for all six Catalogue operations, including required-list encoding for batch insert. `GatewayAcceptanceSpec` registers the child spec, and `GatewayItContext` exposes `CatalogueItemQueries` for direct arrangement and complete state assertions.
+
+Photo completion adds a Tapir streaming endpoint using `FileScanner`, `ImageProcessing`, and S3; updates the three photo columns; returns presigned URLs; and keeps entity limits synchronized. Current Catalogue reads map the persisted original and normalized photo fields directly to the optional response URL fields; the photo slice will replace that direct mapping with presigned URLs.
+
+## Service implementation
+
+`CatalogueService` validates insert/update bodies, maps validated requests into repository-owned insert inputs, preserves the organization ID on every repository call, and maps rows back to Smithy responses. Missing catalogue-item reads become `InternalServerError` with the stable `catalogueItemID` message. Update and archive remain silent `204` no-ops for missing or archived items, matching the repository's active-row mutation semantics.
+
+`CatalogueServiceSpec` uses real price validation and a strict `CatalogueRepository` mock. It proves each of the six operations' mapping and response behavior, validation isolation, missing-item policy, no-op mutations, and unchanged repository failures.
 
 ## Open decisions
 
