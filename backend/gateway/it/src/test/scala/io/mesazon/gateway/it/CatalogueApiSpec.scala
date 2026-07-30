@@ -19,10 +19,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "successfully insert an active catalogue item" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -31,7 +31,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
         val insertCatalogueItemPostRequest = arbitrarySample[InsertCatalogueItemPostRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                      = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val insertCatalogueItemPostResponse = gatewayClient
           .insertCatalogueItemPost[smithy.InternalServerError](
@@ -49,16 +49,16 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
 
         catalogueItemRowsAll shouldBe List(
           CatalogueItemRow(
-          organizationID = organizationUserRow.organizationID,
-          catalogueItemID = catalogueItemRowInserted.catalogueItemID,
-          name = insertCatalogueItemPostRequest.name,
-          unit = insertCatalogueItemPostRequest.unit,
-          price = insertCatalogueItemPostRequest.price,
-          photo = None,
-          status = CatalogueItemStatus.Active,
-          createdAt = catalogueItemRowInserted.createdAt,
-          updatedAt = catalogueItemRowInserted.updatedAt,
-        )
+            organizationID = organizationUserRow.organizationID,
+            catalogueItemID = catalogueItemRowInserted.catalogueItemID,
+            name = insertCatalogueItemPostRequest.name,
+            unit = insertCatalogueItemPostRequest.unit,
+            price = insertCatalogueItemPostRequest.price,
+            photo = None,
+            status = CatalogueItemStatus.Active,
+            createdAt = catalogueItemRowInserted.createdAt,
+            updatedAt = catalogueItemRowInserted.updatedAt,
+          )
         )
         catalogueItemRowInserted.createdAt.value shouldBe catalogueItemRowInserted.updatedAt.value
       }
@@ -66,10 +66,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with a ValidationError and leave the catalogue empty when the name is invalid" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -98,13 +98,13 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with a BadRequest when the organization id header is missing" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
         val insertCatalogueItemPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemPostRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                            = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val insertCatalogueItemPostResponse = gatewayClient
           .insertCatalogueItemPost[smithy.BadRequest](
@@ -124,7 +124,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         import context.*
 
         val insertCatalogueItemPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemPostRequest]
-        val organizationID = arbitrarySample[OrganizationID]
+        val organizationID                       = arbitrarySample[OrganizationID]
 
         val insertCatalogueItemPostResponse = gatewayClient
           .insertCatalogueItemPost[smithy.Unauthorized](
@@ -144,7 +144,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         import context.*
 
         val insertCatalogueItemPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemPostRequest]
-        val organizationID = arbitrarySample[OrganizationID]
+        val organizationID                       = arbitrarySample[OrganizationID]
 
         val insertCatalogueItemPostResponse = gatewayClient
           .insertCatalogueItemPost[smithy.Unauthorized](
@@ -165,9 +165,9 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
 
         val onboardStageInvalid =
           Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -176,7 +176,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
         val insertCatalogueItemPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemPostRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                            = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val insertCatalogueItemPostResponse = gatewayClient
           .insertCatalogueItemPost[smithy.Forbidden](
@@ -195,8 +195,8 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage                = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow              = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRoleInvalid =
           Random.shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles).zioValue.head
         val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
@@ -208,7 +208,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
         val insertCatalogueItemPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemPostRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                            = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val insertCatalogueItemPostResponse = gatewayClient
           .insertCatalogueItemPost[smithy.Forbidden](
@@ -224,55 +224,54 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe Nil
       }
 
-      "fail with a Conflict when the catalogue item name already exists in the organization" in withContext {
-        context =>
-          import context.*
+      "fail with a Conflict when the catalogue item name already exists in the organization" in withContext { context =>
+        import context.*
 
-          val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
-            userID = userDetailsRow.userID,
-            userRole = organizationUserRole,
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
+          userID = userDetailsRow.userID,
+          userRole = organizationUserRole,
+        )
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationUserRow.organizationID,
+          status = CatalogueItemStatus.Active,
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+        postgresClient.executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
+
+        val insertCatalogueItemPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemPostRequest].copy(
+          name = catalogueItemRow.name.value
+        )
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val insertCatalogueItemPostResponse = gatewayClient
+          .insertCatalogueItemPost[smithy.Conflict](
+            insertCatalogueItemPostRequestSmithy,
+            Some(organizationUserRow.organizationID),
+            Some(accessJwt.accessToken),
           )
-          val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            status = CatalogueItemStatus.Active,
-          )
+          .zioValue
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-          postgresClient.executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
+        insertCatalogueItemPostResponse.code shouldBe StatusCode.Conflict
+        insertCatalogueItemPostResponse.body.left.value shouldBe smithy.Conflict(message =
+          "A catalogue item with the given name already exists in this organization"
+        )
 
-          val insertCatalogueItemPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemPostRequest].copy(
-            name = catalogueItemRow.name.value
-          )
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-          val insertCatalogueItemPostResponse = gatewayClient
-            .insertCatalogueItemPost[smithy.Conflict](
-              insertCatalogueItemPostRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-          insertCatalogueItemPostResponse.code shouldBe StatusCode.Conflict
-          insertCatalogueItemPostResponse.body.left.value shouldBe smithy.Conflict(message =
-            "A catalogue item with the given name already exists in this organization"
-          )
-
-          postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
-            List(catalogueItemRow)
+        postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
+          List(catalogueItemRow)
       }
 
       "fail with an InternalServerError when the user details do not exist" in withContext { context =>
         import context.*
 
-        val userID = arbitrarySample[UserID]
+        val userID                               = arbitrarySample[UserID]
         val insertCatalogueItemPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemPostRequest]
-        val organizationID = arbitrarySample[OrganizationID]
-        val accessJwt = jwtService.generateAccessToken(userID).zioValue
+        val organizationID                       = arbitrarySample[OrganizationID]
+        val accessJwt                            = jwtService.generateAccessToken(userID).zioValue
 
         val insertCatalogueItemPostResponse = gatewayClient
           .insertCatalogueItemPost[smithy.InternalServerError](
@@ -291,14 +290,14 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
         val insertCatalogueItemPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemPostRequest]
-        val organizationID = arbitrarySample[OrganizationID]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val organizationID                       = arbitrarySample[OrganizationID]
+        val accessJwt                            = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val insertCatalogueItemPostResponse = gatewayClient
           .insertCatalogueItemPost[smithy.InternalServerError](
@@ -319,10 +318,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "successfully insert every catalogue item atomically" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -330,7 +329,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
-        val catalogueItemName = arbitrarySample[CatalogueItemName]
+        val catalogueItemName      = arbitrarySample[CatalogueItemName]
         val catalogueItemNameOther = CatalogueItemName.assume(s"${catalogueItemName.value.take(253)}-N")
 
         catalogueItemNameOther shouldNot equal(catalogueItemName)
@@ -379,10 +378,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "successfully insert an empty batch with no side effect" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -391,7 +390,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
         val insertCatalogueItemsPostRequestSmithy = smithy.InsertCatalogueItemsPostRequest(Nil)
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                             = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val insertCatalogueItemsPostResponse = gatewayClient
           .insertCatalogueItemsPost[smithy.InternalServerError](
@@ -410,10 +409,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         context =>
           import context.*
 
-          val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
           val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+          val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
             userID = userDetailsRow.userID,
             userRole = organizationUserRole,
           )
@@ -447,13 +446,13 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with a BadRequest when the organization id header is missing" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
         val insertCatalogueItemsPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemsPostRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                             = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val insertCatalogueItemsPostResponse = gatewayClient
           .insertCatalogueItemsPost[smithy.BadRequest](
@@ -473,7 +472,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         import context.*
 
         val insertCatalogueItemsPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemsPostRequest]
-        val organizationID = arbitrarySample[OrganizationID]
+        val organizationID                        = arbitrarySample[OrganizationID]
 
         val insertCatalogueItemsPostResponse = gatewayClient
           .insertCatalogueItemsPost[smithy.Unauthorized](
@@ -493,7 +492,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         import context.*
 
         val insertCatalogueItemsPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemsPostRequest]
-        val organizationID = arbitrarySample[OrganizationID]
+        val organizationID                        = arbitrarySample[OrganizationID]
 
         val insertCatalogueItemsPostResponse = gatewayClient
           .insertCatalogueItemsPost[smithy.Unauthorized](
@@ -514,9 +513,9 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
 
         val onboardStageInvalid =
           Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -525,7 +524,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
         val insertCatalogueItemsPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemsPostRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                             = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val insertCatalogueItemsPostResponse = gatewayClient
           .insertCatalogueItemsPost[smithy.Forbidden](
@@ -544,8 +543,8 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage                = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow              = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRoleInvalid =
           Random.shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles).zioValue.head
         val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
@@ -557,7 +556,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
         val insertCatalogueItemsPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemsPostRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                             = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val insertCatalogueItemsPostResponse = gatewayClient
           .insertCatalogueItemsPost[smithy.Forbidden](
@@ -577,10 +576,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         context =>
           import context.*
 
-          val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
           val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+          val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
             userID = userDetailsRow.userID,
             userRole = organizationUserRole,
           )
@@ -627,10 +626,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with an InternalServerError when the user details do not exist" in withContext { context =>
         import context.*
 
-        val userID = arbitrarySample[UserID]
+        val userID                                = arbitrarySample[UserID]
         val insertCatalogueItemsPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemsPostRequest]
-        val organizationID = arbitrarySample[OrganizationID]
-        val accessJwt = jwtService.generateAccessToken(userID).zioValue
+        val organizationID                        = arbitrarySample[OrganizationID]
+        val accessJwt                             = jwtService.generateAccessToken(userID).zioValue
 
         val insertCatalogueItemsPostResponse = gatewayClient
           .insertCatalogueItemsPost[smithy.InternalServerError](
@@ -649,14 +648,14 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
         val insertCatalogueItemsPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemsPostRequest]
-        val organizationID = arbitrarySample[OrganizationID]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val organizationID                        = arbitrarySample[OrganizationID]
+        val accessJwt                             = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val insertCatalogueItemsPostResponse = gatewayClient
           .insertCatalogueItemsPost[smithy.InternalServerError](
@@ -672,17 +671,16 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe Nil
       }
 
-
     }
 
     "PUT /update/catalogue-item" should {
       "successfully update an active catalogue item while retaining absent fields" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -694,8 +692,8 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
         postgresClient.executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
 
-        val catalogueItemNameUpdate = arbitrarySample[CatalogueItemName]
-        val catalogueItemUnitUpdate = arbitrarySample[CatalogueItemUnit]
+        val catalogueItemNameUpdate             = arbitrarySample[CatalogueItemName]
+        val catalogueItemUnitUpdate             = arbitrarySample[CatalogueItemUnit]
         val updateCatalogueItemPutRequestSmithy = smithy.UpdateCatalogueItemPutRequest(
           catalogueItemID = catalogueItemRow.catalogueItemID.value,
           name = Some(catalogueItemNameUpdate.value),
@@ -740,10 +738,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "silently succeed with no side effect when no active catalogue item matches the id" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -783,10 +781,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         context =>
           import context.*
 
-          val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
           val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+          val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
             userID = userDetailsRow.userID,
             userRole = organizationUserRole,
           )
@@ -825,10 +823,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "silently succeed with no side effect when the catalogue item is already archived" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -867,10 +865,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         context =>
           import context.*
 
-          val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
           val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+          val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
             userID = userDetailsRow.userID,
             userRole = organizationUserRole,
           )
@@ -905,13 +903,13 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with a BadRequest when the organization id header is missing" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
         val updateCatalogueItemPutRequestSmithy = arbitrarySample[smithy.UpdateCatalogueItemPutRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                           = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val updateCatalogueItemPutResponse = gatewayClient
           .updateCatalogueItemPut[smithy.BadRequest](
@@ -931,7 +929,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         import context.*
 
         val updateCatalogueItemPutRequestSmithy = arbitrarySample[smithy.UpdateCatalogueItemPutRequest]
-        val organizationID = arbitrarySample[OrganizationID]
+        val organizationID                      = arbitrarySample[OrganizationID]
 
         val updateCatalogueItemPutResponse = gatewayClient
           .updateCatalogueItemPut[smithy.Unauthorized](
@@ -951,7 +949,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         import context.*
 
         val updateCatalogueItemPutRequestSmithy = arbitrarySample[smithy.UpdateCatalogueItemPutRequest]
-        val organizationID = arbitrarySample[OrganizationID]
+        val organizationID                      = arbitrarySample[OrganizationID]
 
         val updateCatalogueItemPutResponse = gatewayClient
           .updateCatalogueItemPut[smithy.Unauthorized](
@@ -972,9 +970,9 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
 
         val onboardStageInvalid =
           Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -983,7 +981,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
         val updateCatalogueItemPutRequestSmithy = arbitrarySample[smithy.UpdateCatalogueItemPutRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                           = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val updateCatalogueItemPutResponse = gatewayClient
           .updateCatalogueItemPut[smithy.Forbidden](
@@ -1002,8 +1000,8 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage                = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow              = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRoleInvalid =
           Random.shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles).zioValue.head
         val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
@@ -1015,7 +1013,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
         val updateCatalogueItemPutRequestSmithy = arbitrarySample[smithy.UpdateCatalogueItemPutRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                           = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val updateCatalogueItemPutResponse = gatewayClient
           .updateCatalogueItemPut[smithy.Forbidden](
@@ -1035,15 +1033,15 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         context =>
           import context.*
 
-          val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
           val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+          val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
             userID = userDetailsRow.userID,
             userRole = organizationUserRole,
           )
           val catalogueItemNameExisting = arbitrarySample[CatalogueItemName]
-          val catalogueItemName =
+          val catalogueItemName         =
             CatalogueItemName.assume(s"${catalogueItemNameExisting.value.take(253)}-N")
           val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
             organizationID = organizationUserRow.organizationID,
@@ -1061,7 +1059,9 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
           postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
           postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
           postgresClient
-            .executeQuery(catalogueItemQueries.insertCatalogueItemRows(List(catalogueItemRow, catalogueItemRowExisting)))
+            .executeQuery(
+              catalogueItemQueries.insertCatalogueItemRows(List(catalogueItemRow, catalogueItemRowExisting))
+            )
             .zioValue
 
           val updateCatalogueItemPutRequestSmithy = smithy.UpdateCatalogueItemPutRequest(
@@ -1092,10 +1092,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with an InternalServerError when the user details do not exist" in withContext { context =>
         import context.*
 
-        val userID = arbitrarySample[UserID]
+        val userID                              = arbitrarySample[UserID]
         val updateCatalogueItemPutRequestSmithy = arbitrarySample[smithy.UpdateCatalogueItemPutRequest]
-        val organizationID = arbitrarySample[OrganizationID]
-        val accessJwt = jwtService.generateAccessToken(userID).zioValue
+        val organizationID                      = arbitrarySample[OrganizationID]
+        val accessJwt                           = jwtService.generateAccessToken(userID).zioValue
 
         val updateCatalogueItemPutResponse = gatewayClient
           .updateCatalogueItemPut[smithy.InternalServerError](
@@ -1114,14 +1114,14 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
         val updateCatalogueItemPutRequestSmithy = arbitrarySample[smithy.UpdateCatalogueItemPutRequest]
-        val organizationID = arbitrarySample[OrganizationID]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val organizationID                      = arbitrarySample[OrganizationID]
+        val accessJwt                           = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val updateCatalogueItemPutResponse = gatewayClient
           .updateCatalogueItemPut[smithy.InternalServerError](
@@ -1137,17 +1137,16 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(catalogueItemQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe Nil
       }
 
-
     }
 
     "PUT /archive/catalogue-item" should {
       "successfully archive an active catalogue item" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -1192,10 +1191,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "silently succeed with no side effect when no catalogue item matches the id" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -1233,10 +1232,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         context =>
           import context.*
 
-          val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
           val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+          val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
             userID = userDetailsRow.userID,
             userRole = organizationUserRole,
           )
@@ -1273,10 +1272,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "silently succeed with no side effect when the catalogue item is already archived" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -1312,13 +1311,13 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with a BadRequest when the organization id header is missing" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
         val archiveCatalogueItemPutRequestSmithy = arbitrarySample[smithy.ArchiveCatalogueItemPutRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                            = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val archiveCatalogueItemPutResponse = gatewayClient
           .archiveCatalogueItemPut[smithy.BadRequest](
@@ -1338,7 +1337,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         import context.*
 
         val archiveCatalogueItemPutRequestSmithy = arbitrarySample[smithy.ArchiveCatalogueItemPutRequest]
-        val organizationID = arbitrarySample[OrganizationID]
+        val organizationID                       = arbitrarySample[OrganizationID]
 
         val archiveCatalogueItemPutResponse = gatewayClient
           .archiveCatalogueItemPut[smithy.Unauthorized](
@@ -1358,7 +1357,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         import context.*
 
         val archiveCatalogueItemPutRequestSmithy = arbitrarySample[smithy.ArchiveCatalogueItemPutRequest]
-        val organizationID = arbitrarySample[OrganizationID]
+        val organizationID                       = arbitrarySample[OrganizationID]
 
         val archiveCatalogueItemPutResponse = gatewayClient
           .archiveCatalogueItemPut[smithy.Unauthorized](
@@ -1379,9 +1378,9 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
 
         val onboardStageInvalid =
           Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -1390,7 +1389,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
         val archiveCatalogueItemPutRequestSmithy = arbitrarySample[smithy.ArchiveCatalogueItemPutRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                            = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val archiveCatalogueItemPutResponse = gatewayClient
           .archiveCatalogueItemPut[smithy.Forbidden](
@@ -1409,8 +1408,8 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage                = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow              = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRoleInvalid =
           Random.shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles).zioValue.head
         val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
@@ -1422,7 +1421,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
         val archiveCatalogueItemPutRequestSmithy = arbitrarySample[smithy.ArchiveCatalogueItemPutRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt                            = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val archiveCatalogueItemPutResponse = gatewayClient
           .archiveCatalogueItemPut[smithy.Forbidden](
@@ -1441,10 +1440,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with an InternalServerError when the user details do not exist" in withContext { context =>
         import context.*
 
-        val userID = arbitrarySample[UserID]
+        val userID                               = arbitrarySample[UserID]
         val archiveCatalogueItemPutRequestSmithy = arbitrarySample[smithy.ArchiveCatalogueItemPutRequest]
-        val organizationID = arbitrarySample[OrganizationID]
-        val accessJwt = jwtService.generateAccessToken(userID).zioValue
+        val organizationID                       = arbitrarySample[OrganizationID]
+        val accessJwt                            = jwtService.generateAccessToken(userID).zioValue
 
         val archiveCatalogueItemPutResponse = gatewayClient
           .archiveCatalogueItemPut[smithy.InternalServerError](
@@ -1463,14 +1462,14 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
         val archiveCatalogueItemPutRequestSmithy = arbitrarySample[smithy.ArchiveCatalogueItemPutRequest]
-        val organizationID = arbitrarySample[OrganizationID]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val organizationID                       = arbitrarySample[OrganizationID]
+        val accessJwt                            = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val archiveCatalogueItemPutResponse = gatewayClient
           .archiveCatalogueItemPut[smithy.InternalServerError](
@@ -1488,57 +1487,56 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
     }
 
     "GET /get/catalogue-item/{catalogueItemID}" should {
-      "successfully return an active catalogue item including its persisted photo fields" in withContext {
-        context =>
-          import context.*
+      "successfully return an active catalogue item including its persisted photo fields" in withContext { context =>
+        import context.*
 
-          val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
-            userID = userDetailsRow.userID,
-            userRole = organizationUserRole,
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
+          userID = userDetailsRow.userID,
+          userRole = organizationUserRole,
+        )
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationUserRow.organizationID,
+          status = CatalogueItemStatus.Active,
+          photo = Some(arbitrarySample[CatalogueItemPhoto]),
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+        postgresClient.executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val getCatalogueItemGetResponse = gatewayClient
+          .getCatalogueItemGet[smithy.InternalServerError](
+            catalogueItemRow.catalogueItemID,
+            Some(organizationUserRow.organizationID),
+            Some(accessJwt.accessToken),
           )
-          val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            status = CatalogueItemStatus.Active,
-            photo = Some(arbitrarySample[CatalogueItemPhoto]),
-          )
+          .zioValue
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-          postgresClient.executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
-
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-          val getCatalogueItemGetResponse = gatewayClient
-            .getCatalogueItemGet[smithy.InternalServerError](
-              catalogueItemRow.catalogueItemID,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-          getCatalogueItemGetResponse.code shouldBe StatusCode.Ok
-          getCatalogueItemGetResponse.body.value shouldBe smithy.GetCatalogueItemGetResponse(
-            catalogueItemID = catalogueItemRow.catalogueItemID.value,
-            name = catalogueItemRow.name.value,
-            unit = catalogueItemRow.unit.value,
-            price = catalogueItemRow.price.map(price =>
-              smithy.CatalogueItemPriceRequest(price.value.amount.value, price.value.currency.value)
-            ),
-            photoOriginalUrl = catalogueItemRow.photo.map(_.value.originalBucketKey.value),
-            photoNormalizedUrl = catalogueItemRow.photo.map(_.value.normalizedBucketKey.value),
-          )
+        getCatalogueItemGetResponse.code shouldBe StatusCode.Ok
+        getCatalogueItemGetResponse.body.value shouldBe smithy.GetCatalogueItemGetResponse(
+          catalogueItemID = catalogueItemRow.catalogueItemID.value,
+          name = catalogueItemRow.name.value,
+          unit = catalogueItemRow.unit.value,
+          price = catalogueItemRow.price.map(price =>
+            smithy.CatalogueItemPriceRequest(price.value.amount.value, price.value.currency.value)
+          ),
+          photoOriginalUrl = catalogueItemRow.photo.map(_.value.originalBucketKey.value),
+          photoNormalizedUrl = catalogueItemRow.photo.map(_.value.normalizedBucketKey.value),
+        )
       }
 
       "successfully return an archived catalogue item by id" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -1570,13 +1568,13 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with a BadRequest when the organization id header is missing" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
         val catalogueItemID = arbitrarySample[CatalogueItemID]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val getCatalogueItemGetResponse = gatewayClient
           .getCatalogueItemGet[smithy.BadRequest](
@@ -1594,7 +1592,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         import context.*
 
         val catalogueItemID = arbitrarySample[CatalogueItemID]
-        val organizationID = arbitrarySample[OrganizationID]
+        val organizationID  = arbitrarySample[OrganizationID]
 
         val getCatalogueItemGetResponse = gatewayClient
           .getCatalogueItemGet[smithy.Unauthorized](
@@ -1612,7 +1610,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         import context.*
 
         val catalogueItemID = arbitrarySample[CatalogueItemID]
-        val organizationID = arbitrarySample[OrganizationID]
+        val organizationID  = arbitrarySample[OrganizationID]
 
         val getCatalogueItemGetResponse = gatewayClient
           .getCatalogueItemGet[smithy.Unauthorized](
@@ -1631,9 +1629,9 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
 
         val onboardStageInvalid =
           Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -1642,7 +1640,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
         val catalogueItemID = arbitrarySample[CatalogueItemID]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val getCatalogueItemGetResponse = gatewayClient
           .getCatalogueItemGet[smithy.Forbidden](
@@ -1660,10 +1658,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         context =>
           import context.*
 
-          val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
           val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+          val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
             userID = userDetailsRow.userID,
             userRole = organizationUserRole,
           )
@@ -1694,10 +1692,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with an InternalServerError when the user details do not exist" in withContext { context =>
         import context.*
 
-        val userID = arbitrarySample[UserID]
+        val userID          = arbitrarySample[UserID]
         val catalogueItemID = arbitrarySample[CatalogueItemID]
-        val organizationID = arbitrarySample[OrganizationID]
-        val accessJwt = jwtService.generateAccessToken(userID).zioValue
+        val organizationID  = arbitrarySample[OrganizationID]
+        val accessJwt       = jwtService.generateAccessToken(userID).zioValue
 
         val getCatalogueItemGetResponse = gatewayClient
           .getCatalogueItemGet[smithy.InternalServerError](
@@ -1714,14 +1712,14 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
         val catalogueItemID = arbitrarySample[CatalogueItemID]
-        val organizationID = arbitrarySample[OrganizationID]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val organizationID  = arbitrarySample[OrganizationID]
+        val accessJwt       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val getCatalogueItemGetResponse = gatewayClient
           .getCatalogueItemGet[smithy.InternalServerError](
@@ -1735,17 +1733,16 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         getCatalogueItemGetResponse.body.left.value shouldBe smithy.InternalServerError()
       }
 
-
     }
 
     "GET /get/catalogue-items" should {
       "successfully return only active catalogue items for the organization" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -1802,10 +1799,10 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "successfully return an empty catalogue when the organization has no active items" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -1829,7 +1826,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with a BadRequest when the organization id header is missing" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
@@ -1884,9 +1881,9 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
 
         val onboardStageInvalid =
           Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
+        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
         val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
           userRole = organizationUserRole,
         )
@@ -1910,9 +1907,9 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with an InternalServerError when the user details do not exist" in withContext { context =>
         import context.*
 
-        val userID = arbitrarySample[UserID]
+        val userID         = arbitrarySample[UserID]
         val organizationID = arbitrarySample[OrganizationID]
-        val accessJwt = jwtService.generateAccessToken(userID).zioValue
+        val accessJwt      = jwtService.generateAccessToken(userID).zioValue
 
         val getCatalogueItemsGetResponse = gatewayClient
           .getCatalogueItemsGet[smithy.InternalServerError](
@@ -1928,13 +1925,13 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
       "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
         import context.*
 
-        val onboardStage = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
         val organizationID = arbitrarySample[OrganizationID]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt      = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val getCatalogueItemsGetResponse = gatewayClient
           .getCatalogueItemsGet[smithy.InternalServerError](
