@@ -4,7 +4,7 @@ Tenant-scoped products/services sold by the organization.
 
 ## Scope
 
-Owns `catalogue_item`: name, free-text unit, optional exact price/currency, optional photo metadata, and one-way archival. Excludes photo upload (future Tapir route reusing [Files Management](files-management.md)), orders/line items, and tenant membership/roles.
+Owns `catalogue_item`: name, free-text unit, optional exact price/currency, optional photo metadata, and one-way archival. Photo *upload* (`POST /upload/catalogue-item/image`) is a [Files Management](files-management.md) Tapir endpoint that writes back the three photo columns; it does not change `CatalogueItemStatus`. Excludes orders/line items and tenant membership/roles.
 
 ## Model and decisions
 
@@ -46,11 +46,11 @@ Contract: `smithy/CatalogueService.smithy`, `smithy/domain/Catalogue.smithy`. Op
 
 | Slice | Done | Remaining |
 |---|---|---|
-| Endpoints | six operations/models; codegen green | photo upload excluded/deferred |
+| Endpoints | six Smithy operations/models plus the Tapir `POST /upload/catalogue-item/image` endpoint; codegen green | — |
 | Validation | request models, shared ISO price validation, domain/Smithy arbitraries, validator, unit specs | — |
 | Schema | enum, table, partial unique index, config | — |
 | Repository | Row, Queries, Repository, config; real-Postgres lifecycle proof | — |
-| Service | Smithy service, production wiring, functional spec, and acceptance spec | — |
+| Service | Smithy service, production wiring, functional spec, and acceptance spec; `FileService.uploadCatalogueItemImage` (scan/normalize/upload/persist), functional + acceptance coverage | presigned URL generation for catalogue item photos (currently maps persisted bucket keys directly, like the pre-photo-slice GET response) |
 
 Details:
 
@@ -76,7 +76,7 @@ Details:
 
 `GatewayClient` supplies typed JSON codecs and HTTP methods for all six Catalogue operations, including required-list encoding for batch insert. `GatewayAcceptanceSpec` registers the child spec, and `GatewayItContext` exposes `CatalogueItemQueries` for direct arrangement and complete state assertions.
 
-Photo completion adds a Tapir streaming endpoint using `FileScanner`, `ImageProcessing`, and S3; updates the three photo columns; returns presigned URLs; and keeps entity limits synchronized. Current Catalogue reads map the persisted original and normalized photo fields directly to the optional response URL fields; the photo slice will replace that direct mapping with presigned URLs.
+Photo upload is a Tapir streaming endpoint (`POST /upload/catalogue-item/image`, owned by [Files Management](files-management.md#endpoints-tapir-bearer-auth--completed-onboarding)) using `FileScanner`, `ImageProcessing`, and a dedicated `CatalogueItemImagesS3Client`; it updates the three photo columns via `CatalogueRepository.updateCatalogueItem`'s `photoOptUpdate` and requires the item to already be `Active` (missing or `Archived` → `500`). See `FileApiSpec`'s `/upload/catalogue-item/image` block for the full acceptance matrix. Current Catalogue reads still map the persisted original and normalized photo fields directly to the optional response URL fields; presigned URL generation remains deferred.
 
 ## Service implementation
 

@@ -205,7 +205,10 @@ object CatalogueItemImagesS3Client {
               .credentialsProvider(
                 StaticCredentialsProvider.create(
                   AwsBasicCredentials
-                    .create(catalogueItemImagesS3ClientConfig.accessKeyId, catalogueItemImagesS3ClientConfig.secretAccessKey)
+                    .create(
+                      catalogueItemImagesS3ClientConfig.accessKeyId,
+                      catalogueItemImagesS3ClientConfig.secretAccessKey,
+                    )
                 )
               )
               .endpointOverride(catalogueItemImagesS3ClientConfig.uri.toJavaUri)
@@ -240,7 +243,10 @@ object CatalogueItemImagesS3Client {
               .credentialsProvider(
                 StaticCredentialsProvider.create(
                   AwsBasicCredentials
-                    .create(catalogueItemImagesS3ClientConfig.accessKeyId, catalogueItemImagesS3ClientConfig.secretAccessKey)
+                    .create(
+                      catalogueItemImagesS3ClientConfig.accessKeyId,
+                      catalogueItemImagesS3ClientConfig.secretAccessKey,
+                    )
                 )
               )
               .pipe { builder =>
@@ -268,7 +274,12 @@ object CatalogueItemImagesS3Client {
           catalogueItemImageNormalizedByteStream: ImageNormalizedByteStream,
       ): IO[ServiceError, UploadedImageResult] =
         catalogueItemImagesS3Client
-          .upload(organizationID, catalogueItemID, catalogueItemImageOriginalByteStream, catalogueItemImageNormalizedByteStream)
+          .upload(
+            organizationID,
+            catalogueItemID,
+            catalogueItemImageOriginalByteStream,
+            catalogueItemImageNormalizedByteStream,
+          )
 
       override def getOriginalUrl(
           catalogueItemImageOriginalBucketKey: PhotoOriginalBucketKey
