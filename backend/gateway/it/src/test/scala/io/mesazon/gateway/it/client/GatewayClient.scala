@@ -348,6 +348,40 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .response(asJsonErrorUnit[E])
       .send(sttpBackend)
 
+  def uploadCatalogueItemImagePost[E: JsonValueCodec](
+      organizationIDOpt: Option[OrganizationID],
+      catalogueItemIDOpt: Option[CatalogueItemID],
+      catalogueItemImageOriginalFileNameOpt: Option[PhotoOriginalFileName],
+      imageBytes: Chunk[Byte],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, Unit]]] =
+    basicRequest
+      .post(externalUri.addPath("upload", "catalogue-item", "image"))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        catalogueItemIDOpt.fold(request)(catalogueItemID =>
+          request.header("X-Catalogue-Item-ID", catalogueItemID.value.toString)
+        )
+      )
+      .pipe(request =>
+        catalogueItemImageOriginalFileNameOpt.fold(request)(catalogueItemImageOriginalFileName =>
+          request.header("X-File-Name", catalogueItemImageOriginalFileName.value)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .body(imageBytes.toArray)
+      .contentType(MediaType.ApplicationOctetStream)
+      .response(asJsonErrorUnit[E])
+      .send(sttpBackend)
+
   def insertCustomerIndividualPost[E: JsonValueCodec](
       insertCustomerIndividualPostRequest: smithy.InsertCustomerIndividualPostRequest,
       organizationIDOpt: Option[OrganizationID],

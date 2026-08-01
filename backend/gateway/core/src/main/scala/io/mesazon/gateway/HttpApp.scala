@@ -25,7 +25,7 @@ object HttpApp {
   // Smithy (JSON) routes allow batch requests up to 5 MB.
   private val SmithyMaxEntitySize: Long = 5L * 1024 * 1024
   // Tapir routes carry logo uploads, so they allow up to 20 MB.
-  // Keep in sync with `file-service.max-organization-logo-bytes`.
+  // Keep in sync with `file-service.max-upload-bytes`.
   private val TapirMaxEntitySize: Long = 20L * 1024 * 1024
 
   private def buildSmithyRoute[Alg[_[_, _, _, _, _]]](

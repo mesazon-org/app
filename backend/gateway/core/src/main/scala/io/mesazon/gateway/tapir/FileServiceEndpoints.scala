@@ -37,6 +37,25 @@ object FileServiceEndpoints {
       )
       .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
 
+  private val uploadCatalogueItemImagePostEndpoint =
+    securedEndpoint.post
+      .in("upload" / "catalogue-item" / "image")
+      .in(header[CatalogueItemID]("X-Catalogue-Item-ID"))
+      .in(header[PhotoOriginalFileName]("X-File-Name"))
+      .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
+      .out(statusCode(StatusCode.Ok))
+      .errorOut(
+        tapirServerErrorOut(
+          NonEmptyChunk(
+            TapirServerError.UnauthorizedError,
+            TapirServerError.ForbiddenError,
+            TapirServerError.BadRequestError,
+            TapirServerError.InternalServerError,
+          )
+        )
+      )
+      .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
+
   private val docsEndpoint =
     endpoint.get
       .in("docs" / "specs" / s"${smithy4sDocsID.id.namespace}.${smithy4sDocsID.id.name}.json")
@@ -61,12 +80,30 @@ object FileServiceEndpoints {
         }
           .serverLogic(organizationID => { case (organizationLogoOriginalFileName, organizationLogoFile) =>
             fileService.uploadOrganizationLogo(organizationID, organizationLogoOriginalFileName, organizationLogoFile)
-          })
+          }),
+        uploadCatalogueItemImagePostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
+          authorizationService
+            .auth(
+              accessToken = accessToken,
+              requiresCompletedOnboardStage = true,
+              organizationIDOpt = Some(organizationID),
+              organizationUserRolesAllowedOpt = Some(OrganizationUserRole.adminRoles),
+            )
+            .as(organizationID)
+        }
+          .serverLogic(organizationID => { case (catalogueItemID, catalogueItemImageFileName, catalogueItemImageFile) =>
+            fileService.uploadCatalogueItemImage(
+              organizationID,
+              catalogueItemID,
+              catalogueItemImageFileName,
+              catalogueItemImageFile,
+            )
+          }),
       )
       openApiDocsOpt = Option.when(enableDocs)(
         OpenAPIDocsInterpreter()
           .toOpenAPI(
-            List(uploadOrganizationLogoPostEndpoint),
+            List(uploadOrganizationLogoPostEndpoint, uploadCatalogueItemImagePostEndpoint),
             Info(
               title = "FileService",
               version = "1.0",

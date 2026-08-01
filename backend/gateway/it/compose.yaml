@@ -20,6 +20,7 @@ services:
       JWT_SECRET_KEY: "Yk8zYkwwNGtVa0JvbE1NSU5lS2dtODdIMWlITzA4cDlZSkRiaFhBZmE4TT0="
       TWILIO_CLIENT_HOST: wiremock
       ORGANIZATION_LOGOS_S3_CLIENT_URI: http://s3:9090
+      CATALOGUE_ITEM_IMAGES_S3_CLIENT_URI: http://s3:9090
 
   postgres:
     image: postgres:17.5-alpine
@@ -61,5 +62,5 @@ services:
     #    ports:
     #      - "9090:9090" # HTTP port
     environment:
-      - COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=organization-logo-bucket
+      - COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=organization-logo-bucket,catalogue-item-images-bucket
       - COM_ADOBE_TESTING_S3MOCK_STORE_RETAIN_FILES_ON_EXIT=true
