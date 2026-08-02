@@ -20,8 +20,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
   private val organizationLogoBucket           = "organization-logo-bucket"
   private val organizationLogoBucketPathPrefix = "organization/logos"
 
-  // Mirrors the gateway container's catalogue-item-images-s3-client config (application.conf)
-  private val catalogueItemImageBucket           = "catalogue-item-images-bucket"
+  // Mirrors the gateway container's s3-client-organization-media config (application.conf)
+  private val catalogueItemImageBucket           = "organization-media"
   private val catalogueItemImageBucketPathPrefix = "catalogue/item-images"
 
   "File Service API" when {
@@ -358,7 +358,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val catalogueItemRowActive = arbitrarySample[CatalogueItemRow]
             .copy(
-              photo = None,
+              image = None,
               status = CatalogueItemStatus.Active,
             )
 
@@ -380,7 +380,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-          val catalogueItemImageOriginalFileName = PhotoOriginalFileName.assume("test-logo-1.jpeg")
+          val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
           val organizationID                     = catalogueItemRowActive.organizationID
           val catalogueItemID                    = catalogueItemRowActive.catalogueItemID
           val imageBytes                         =
@@ -419,10 +419,10 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
             .zioValue
 
           catalogueItemRowUpdated.isDefined shouldBe true
-          catalogueItemRowUpdated.get.photo.isDefined shouldBe true
-          catalogueItemRowUpdated.get.photo.get.value.originalFileName shouldBe catalogueItemImageOriginalFileName
-          catalogueItemRowUpdated.get.photo.get.value.originalBucketKey.value shouldBe s"$expectedBucketKeyPrefix/original"
-          catalogueItemRowUpdated.get.photo.get.value.normalizedBucketKey.value shouldBe s"$expectedBucketKeyPrefix/normalized"
+          catalogueItemRowUpdated.get.image.isDefined shouldBe true
+          catalogueItemRowUpdated.get.image.get.value.originalFileName shouldBe catalogueItemImageOriginalFileName
+          catalogueItemRowUpdated.get.image.get.value.originalBucketKey.value shouldBe s"$expectedBucketKeyPrefix/original"
+          catalogueItemRowUpdated.get.image.get.value.normalizedBucketKey.value shouldBe s"$expectedBucketKeyPrefix/normalized"
           catalogueItemRowUpdated.get.status shouldBe CatalogueItemStatus.Active
       }
 
@@ -444,7 +444,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val catalogueItemImageOriginalFileName = PhotoOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -507,7 +507,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val catalogueItemImageOriginalFileName = PhotoOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -529,7 +529,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val organizationID                     = arbitrarySample[OrganizationID]
-        val catalogueItemImageOriginalFileName = PhotoOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -551,7 +551,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val organizationID                     = arbitrarySample[OrganizationID]
-        val catalogueItemImageOriginalFileName = PhotoOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -594,7 +594,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
           val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-          val catalogueItemImageOriginalFileName = PhotoOriginalFileName.assume("test-logo-1.jpeg")
+          val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
           val imageBytes                         =
             ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
@@ -625,7 +625,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val organizationID                     = arbitrarySample[OrganizationID]
-        val catalogueItemImageOriginalFileName = PhotoOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -654,7 +654,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val organizationID                     = arbitrarySample[OrganizationID]
-        val catalogueItemImageOriginalFileName = PhotoOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -690,7 +690,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val catalogueItemImageOriginalFileName = PhotoOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -713,7 +713,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow]
           .copy(
             status = CatalogueItemStatus.Archived,
-            photo = None,
+            image = None,
           )
 
         postgresClient.executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRowArchived)).zioValue
@@ -734,7 +734,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val catalogueItemImageOriginalFileName = PhotoOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -769,7 +769,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow]
           .copy(
-            photo = None,
+            image = None,
             status = CatalogueItemStatus.Active,
           )
 
@@ -791,7 +791,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val catalogueItemImageOriginalFileName = PhotoOriginalFileName.assume("malformed.png")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("malformed.png")
         val organizationID                     = catalogueItemRowActive.organizationID
         val catalogueItemID                    = catalogueItemRowActive.catalogueItemID
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
@@ -813,7 +813,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           .executeQuery(catalogueItemQueries.getCatalogueItemRow(organizationID, catalogueItemID))
           .zioValue
 
-        catalogueItemRowUpdated.get.photo shouldBe None
+        catalogueItemRowUpdated.get.image shouldBe None
 
         val expectedBucketKeyPrefix =
           s"$catalogueItemImageBucketPathPrefix/${organizationID.value}/${catalogueItemID.value}"
@@ -835,7 +835,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val catalogueItemRowOrgA = arbitrarySample[CatalogueItemRow]
             .copy(
-              photo = None,
+              image = None,
               status = CatalogueItemStatus.Active,
             )
 
@@ -858,7 +858,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-          val catalogueItemImageOriginalFileName = PhotoOriginalFileName.assume("test-logo-1.jpeg")
+          val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
           val imageBytes                         =
             ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 

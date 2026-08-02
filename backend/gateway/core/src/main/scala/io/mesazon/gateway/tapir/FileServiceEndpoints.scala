@@ -41,7 +41,7 @@ object FileServiceEndpoints {
     securedEndpoint.post
       .in("upload" / "catalogue-item" / "image")
       .in(header[CatalogueItemID]("X-Catalogue-Item-ID"))
-      .in(header[PhotoOriginalFileName]("X-File-Name"))
+      .in(header[ImageOriginalFileName]("X-File-Name"))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
       .out(statusCode(StatusCode.Ok))
       .errorOut(

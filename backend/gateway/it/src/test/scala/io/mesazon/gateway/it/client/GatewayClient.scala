@@ -75,6 +75,23 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     override def nullValue: smithy.CustomerType = null
   }
 
+  given JsonValueCodec[smithy.CatalogueItemStatus] = new JsonValueCodec[smithy.CatalogueItemStatus] {
+    override def decodeValue(in: JsonReader, default: smithy.CatalogueItemStatus): smithy.CatalogueItemStatus =
+      in.readString(null) match {
+        case "ACTIVE"   => smithy.CatalogueItemStatus.ACTIVE
+        case "ARCHIVED" => smithy.CatalogueItemStatus.ARCHIVED
+        case str        => throw new IllegalArgumentException(s"Unknown CatalogueItemStatus: $str")
+      }
+
+    override def encodeValue(x: smithy.CatalogueItemStatus, out: JsonWriter): Unit =
+      x match {
+        case smithy.CatalogueItemStatus.ACTIVE   => out.writeVal("ACTIVE")
+        case smithy.CatalogueItemStatus.ARCHIVED => out.writeVal("ARCHIVED")
+      }
+
+    override def nullValue: smithy.CatalogueItemStatus = null
+  }
+
   given JsonValueCodec[smithy.InsertCustomerIndividualPostRequest] =
     JsonCodecMaker.make[smithy.InsertCustomerIndividualPostRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.InsertCustomerIndividualsPostRequest] =
@@ -351,7 +368,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   def uploadCatalogueItemImagePost[E: JsonValueCodec](
       organizationIDOpt: Option[OrganizationID],
       catalogueItemIDOpt: Option[CatalogueItemID],
-      catalogueItemImageOriginalFileNameOpt: Option[PhotoOriginalFileName],
+      catalogueItemImageOriginalFileNameOpt: Option[ImageOriginalFileName],
       imageBytes: Chunk[Byte],
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, Unit]]] =

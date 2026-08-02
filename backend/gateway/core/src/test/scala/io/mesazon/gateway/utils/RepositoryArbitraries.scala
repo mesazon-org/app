@@ -39,6 +39,9 @@ trait RepositoryArbitraries
 
   given arbCatalogueItemRow: Arbitrary[CatalogueItemRow] = Arbitrary(Gen.resultOf(CatalogueItemRow.apply))
 
+  given arbCatalogueItemSummaryRow: Arbitrary[CatalogueItemSummaryRow] =
+    Arbitrary(Gen.resultOf(CatalogueItemSummaryRow.apply))
+
   given arbInsertCatalogueItemInput: Arbitrary[InsertCatalogueItemInput] =
     Arbitrary(Gen.resultOf(InsertCatalogueItemInput.apply))
 

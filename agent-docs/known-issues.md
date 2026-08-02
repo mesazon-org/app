@@ -31,6 +31,26 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Prevention:** Do not add a real end-to-end acceptance test that uploads a file past the entity limit over live HTTP; it reproduces this hang and can destabilize the rest of the acceptance suite. Cover oversized-file rejection at the unit level (`FileScannerSpec`) and functional level (`FileServiceSpec`, mocked `FileScanner`) instead, as both upload endpoints already do.
 - **Verify:** N/A until root-caused. To reproduce: send a real HTTP POST with a body > 20 MB to either upload endpoint with valid auth/headers and observe the hang.
 
+## sbt 2 action cache replays a stale compile failure indefinitely
+
+- **Status:** Resolved 2026-08-02
+- **Severity:** Medium
+- **Signature:** A compile fails with real-looking Smithy-generated `Not found: type X` errors (e.g. in `WahaWebhookMessageInput.scala`, `UserSignUpService.scala`) followed by `sbt.util.CachedCompileFailure$$anon$1: Compilation failed` at `sbt.util.ActionCache$.cache`. The failure reproduces identically across `sbt clean`, killing and restarting the sbt server, and rerunning `smithy4sCodegen` by hand — none of which should leave a stale failure behind.
+- **Cause:** sbt 2's action cache persists to disk at `~/Library/Caches/sbt/v2/ac` (content store at `.../cas`), independent of the project's `target/` directory. Once a task run is cached as failed under a given input hash, `sbt clean` (which only clears `target/`) does not invalidate it, so a later invocation with the same inputs replays the cached failure instead of recompiling — even though the actual current source state compiles fine.
+- **Fix:** `rm -rf ~/Library/Caches/sbt/v2/ac` (the action-cache directory only; leave `cas` and `proc`), then rerun the target. It recompiles for real and the cache repopulates.
+- **Prevention:** If a `clean` invocation and a killed/restarted sbt server both fail to clear a persistent-looking compile error — especially one citing Smithy-generated sources unrelated to the current change — suspect the action cache before suspecting the code. Do not spend time re-diagnosing the Smithy/TASTy content of the error; check for `CachedCompileFailure` in the stack trace first.
+- **Verify:** The same command that previously failed now recompiles (visible `compiling N Scala sources ...` output) and succeeds.
+
+## Stale sbt server produces a Docker context missing a numbered layer directory
+
+- **Status:** Resolved 2026-08-02
+- **Severity:** Medium
+- **Signature:** `gateway-core / Docker / publishLocal` (or any `gateway-it` acceptance run that packages the image) fails during `docker buildx build` with `ERROR: failed to calculate checksum of ref ...: "/4/opt/docker/lib": not found`, even though the Dockerfile's prior `COPY 2/opt/docker/lib/ jars/` step succeeds (often shown as `CACHED`). Reproduces identically across `sbt clean`, deleting `target/docker`, removing the `local/gateway-core:latest` image, `docker buildx prune -af`, and even a full Docker Desktop restart — none of those clear it.
+- **Cause:** The long-running sbt server (thin-client mode keeps one alive across invocations) held a stale in-memory/on-disk staging result for `Docker/stage` from an earlier interrupted or cache-corrupted run (see the action-cache known issue above — the two can compound). sbt-native-packager splits the app's jars into numbered layer directories (`2/...`, `4/...`); the server kept serving a context missing the `4/` group while still emitting a Dockerfile that references it.
+- **Fix:** Kill the sbt server process (`ps aux | grep sbt-launch`, then `kill <pid>`) and clear the action cache (`rm -rf ~/Library/Caches/sbt/v2/ac`) together, then rerun. A fresh server re-stages the Docker context correctly. Clearing only one of the two was insufficient in practice.
+- **Prevention:** If a Docker packaging failure survives `clean` + image removal + a Docker daemon restart, suspect the sbt server's own stale state next rather than the Docker/BuildKit side. Restarting the sbt server is a normal recovery step after this repo's known sbt 2 action-cache issue, not just a last resort.
+- **Verify:** `gateway-core / Docker / publishLocal` completes (`Built image gateway-core with tags [latest, latest]`) and a subsequent `gateway-it/testOnly *GatewayAcceptanceSpec` run reports a non-zero test count with the expected pass/fail split.
+
 ## Testcontainers shutdown hook cannot load `PathUtils`
 
 - **Status:** Resolved 2026-07-16

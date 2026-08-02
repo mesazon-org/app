@@ -49,6 +49,11 @@ def organizationUserRoleFromSmithyToDomain(role: smithy.OrganizationUserRole): O
   case smithy.OrganizationUserRole.USER  => OrganizationUserRole.User
 }
 
+def catalogueItemStatusFromDomainToSmithy(status: CatalogueItemStatus): smithy.CatalogueItemStatus = status match {
+  case CatalogueItemStatus.Active   => smithy.CatalogueItemStatus.ACTIVE
+  case CatalogueItemStatus.Archived => smithy.CatalogueItemStatus.ARCHIVED
+}
+
 val DevOtp = "123QWE"
 
 def verifyOtpInDev(otp: Otp, isDev: Boolean): Boolean = isDev && otp.value == DevOtp

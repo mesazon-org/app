@@ -4,20 +4,20 @@ import software.amazon.awssdk.regions.Region
 import sttp.model.Uri
 import zio.Duration
 
-case class CatalogueItemImagesS3ClientConfig(
+case class S3ClientOrganizationMediaConfig(
     useMock: Boolean,
     uri: Uri,
     region: Region,
     accessKeyId: String,
     secretAccessKey: String,
     bucket: String,
-    bucketPathPrefix: String,
+    catalogueItemImageBucketPathPrefix: String,
     originalFileName: String,
     normalizedFileName: String,
     urlExpiresAtOffset: Duration,
 )
 
-object CatalogueItemImagesS3ClientConfig {
+object S3ClientOrganizationMediaConfig {
 
-  val live = deriveConfigLayer[CatalogueItemImagesS3ClientConfig]("catalogue-item-images-s3-client")
+  val live = deriveConfigLayer[S3ClientOrganizationMediaConfig]("s3-client-organization-media")
 }

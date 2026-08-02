@@ -7,7 +7,7 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.CatalogueRepository
 import io.mesazon.gateway.repository.CatalogueRepository.InsertCatalogueItemInput
-import io.mesazon.gateway.repository.domain.CatalogueItemRow
+import io.mesazon.gateway.repository.domain.{CatalogueItemRow, CatalogueItemSummaryRow}
 import io.mesazon.gateway.repository.queries.CatalogueItemQueries
 import io.mesazon.gateway.utils.*
 import io.mesazon.generator.IDGenerator
@@ -50,7 +50,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
   "CatalogueRepository" when {
     "insertCatalogueItem" should {
-      "insert an active catalogue item with an exact price and no photo metadata" in new TestContext {
+      "insert an active catalogue item with an exact price and no image metadata" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
         val catalogueItemID          = arbitrarySample[CatalogueItemID]
         val insertCatalogueItemInput = arbitrarySample[InsertCatalogueItemInput].copy(
@@ -62,7 +62,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           name = insertCatalogueItemInput.name,
           unit = insertCatalogueItemInput.unit,
           price = insertCatalogueItemInput.price,
-          photo = None,
+          image = None,
           status = CatalogueItemStatus.Active,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -92,7 +92,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           name = insertCatalogueItemInput.name,
           unit = insertCatalogueItemInput.unit,
           price = insertCatalogueItemInput.price,
-          photo = None,
+          image = None,
           status = CatalogueItemStatus.Active,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -131,7 +131,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           name = insertCatalogueItemInput.name,
           unit = insertCatalogueItemInput.unit,
           price = insertCatalogueItemInput.price,
-          photo = None,
+          image = None,
           status = CatalogueItemStatus.Active,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -177,7 +177,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           name = insertCatalogueItemInput1.name,
           unit = insertCatalogueItemInput1.unit,
           price = insertCatalogueItemInput1.price,
-          photo = None,
+          image = None,
           status = CatalogueItemStatus.Active,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -243,17 +243,17 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
     }
 
     "updateCatalogueItem" should {
-      "update the supplied name, price, and photo metadata while retaining the omitted unit" in new TestContext {
+      "update the supplied name, price, and image metadata while retaining the omitted unit" in new TestContext {
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           status = CatalogueItemStatus.Active
         )
         val catalogueItemNameUpdate  = arbitrarySample[CatalogueItemName]
         val catalogueItemPriceUpdate = arbitrarySample[CatalogueItemPrice]
-        val catalogueItemPhotoUpdate = arbitrarySample[CatalogueItemPhoto]
+        val catalogueItemImageUpdate = arbitrarySample[CatalogueItemImage]
         val catalogueItemRowExpected = catalogueItemRow.copy(
           name = catalogueItemNameUpdate,
           price = Some(catalogueItemPriceUpdate),
-          photo = Some(catalogueItemPhotoUpdate),
+          image = Some(catalogueItemImageUpdate),
           updatedAt = UpdatedAt(instantNow),
         )
 
@@ -275,7 +275,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
             nameOptUpdate = Some(catalogueItemNameUpdate),
             unitOptUpdate = None,
             priceOptUpdate = Some(catalogueItemPriceUpdate),
-            photoOptUpdate = Some(catalogueItemPhotoUpdate),
+            imageOptUpdate = Some(catalogueItemImageUpdate),
           )
           .zioValue
 
@@ -442,7 +442,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
       "archive an active catalogue item, retain it, and free its active name" in new TestContext {
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           price = Some(arbitrarySample[CatalogueItemPrice]),
-          photo = Some(arbitrarySample[CatalogueItemPhoto]),
+          image = Some(arbitrarySample[CatalogueItemImage]),
           status = CatalogueItemStatus.Active,
         )
         val catalogueItemRowArchivedExpected = catalogueItemRow.copy(
@@ -459,7 +459,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           name = insertCatalogueItemInput.name,
           unit = insertCatalogueItemInput.unit,
           price = insertCatalogueItemInput.price,
-          photo = None,
+          image = None,
           status = CatalogueItemStatus.Active,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -624,11 +624,11 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
       }
     }
 
-    "getCatalogueItems" should {
+    "getCatalogueItemsActive" should {
       "return an empty list when the organization has no active catalogue items" in new TestContext {
         val organizationID = arbitrarySample[OrganizationID]
 
-        catalogueRepository.getCatalogueItems(organizationID).zioValue shouldBe Nil
+        catalogueRepository.getCatalogueItemsActive(organizationID).zioValue shouldBe Nil
       }
 
       "return only active catalogue items for the supplied organization" in new TestContext {
@@ -668,8 +668,15 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           )
           .zioValue
 
-        catalogueRepository.getCatalogueItems(organizationID).zioValue should contain theSameElementsAs
-          List(catalogueItemRowActive1, catalogueItemRowActive2)
+        catalogueRepository.getCatalogueItemsActive(organizationID).zioValue should contain theSameElementsAs
+          List(catalogueItemRowActive1, catalogueItemRowActive2).map(catalogueItemRow =>
+            CatalogueItemSummaryRow(
+              catalogueItemID = catalogueItemRow.catalogueItemID,
+              name = catalogueItemRow.name,
+              image = catalogueItemRow.image,
+              status = catalogueItemRow.status,
+            )
+          )
       }
 
       "map an unexpected database failure to RepositoryError with its underlying exception" in new TestContext {
@@ -692,7 +699,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue
         val organizationID = arbitrarySample[OrganizationID]
 
-        val serviceError = catalogueRepositoryInvalid.getCatalogueItems(organizationID).zioError
+        val serviceError = catalogueRepositoryInvalid.getCatalogueItemsActive(organizationID).zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.RepositoryError]
         serviceError.message shouldBe s"Failed to get catalogue items for organization ID: [$organizationID]"

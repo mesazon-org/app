@@ -2,9 +2,10 @@ package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.repository.CatalogueRepository
 import io.mesazon.gateway.repository.CatalogueRepository.InsertCatalogueItemInput
-import io.mesazon.gateway.repository.domain.CatalogueItemRow
+import io.mesazon.gateway.repository.domain.{CatalogueItemRow, CatalogueItemSummaryRow}
 import io.mesazon.gateway.service.{CatalogueService, ServiceTask}
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
@@ -306,8 +307,44 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
       "successfully return a catalogue item's full details" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
-          photo = Some(arbitrarySample[CatalogueItemPhoto])
+          image = Some(arbitrarySample[CatalogueItemImage])
         )
+        val catalogueItemImageOriginalUrl   = arbitrarySample[S3OriginalUrl]
+        val catalogueItemImageNormalizedUrl = arbitrarySample[S3NormalizedUrl]
+
+        catalogueRepositoryMock.getCatalogueItem
+          .expects(organizationID, catalogueItemRow.catalogueItemID)
+          .returningZIO(Some(catalogueItemRow))
+          .once()
+
+        s3ClientOrganizationMediaMock.getOriginalUrl
+          .expects(catalogueItemRow.image.value.value.originalBucketKey)
+          .returningZIO(catalogueItemImageOriginalUrl)
+          .once()
+
+        s3ClientOrganizationMediaMock.getNormalizedUrl
+          .expects(catalogueItemRow.image.value.value.normalizedBucketKey)
+          .returningZIO(catalogueItemImageNormalizedUrl)
+          .once()
+
+        buildCatalogueService
+          .getCatalogueItemGet(organizationID.value, catalogueItemRow.catalogueItemID.value)
+          .zioValue
+          .shouldBe(
+            smithy.GetCatalogueItemGetResponse(
+              catalogueItemID = catalogueItemRow.catalogueItemID.value,
+              name = catalogueItemRow.name.value,
+              unit = catalogueItemRow.unit.value,
+              price = catalogueItemRow.price.map(toCatalogueItemPriceRequest),
+              imageOriginalUrl = Some(catalogueItemImageOriginalUrl.value),
+              imageNormalizedUrl = Some(catalogueItemImageNormalizedUrl.value),
+            )
+          )
+      }
+
+      "successfully return a catalogue item without image URLs when it has no image" in new TestContext {
+        val organizationID   = arbitrarySample[OrganizationID]
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(image = None)
 
         catalogueRepositoryMock.getCatalogueItem
           .expects(organizationID, catalogueItemRow.catalogueItemID)
@@ -323,8 +360,8 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
               name = catalogueItemRow.name.value,
               unit = catalogueItemRow.unit.value,
               price = catalogueItemRow.price.map(toCatalogueItemPriceRequest),
-              photoOriginalUrl = catalogueItemRow.photo.map(_.value.originalBucketKey.value),
-              photoNormalizedUrl = catalogueItemRow.photo.map(_.value.normalizedBucketKey.value),
+              imageOriginalUrl = None,
+              imageNormalizedUrl = None,
             )
           )
       }
@@ -366,17 +403,27 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
 
     "getCatalogueItemsGet" should {
       "successfully return every active catalogue item in the repository's order" in new TestContext {
-        val organizationID    = arbitrarySample[OrganizationID]
-        val catalogueItemRow1 = arbitrarySample[CatalogueItemRow].copy(
-          photo = Some(arbitrarySample[CatalogueItemPhoto])
+        val organizationID           = arbitrarySample[OrganizationID]
+        val catalogueItemSummaryRow1 = arbitrarySample[CatalogueItemSummaryRow].copy(
+          image = Some(arbitrarySample[CatalogueItemImage]),
+          status = CatalogueItemStatus.Active,
         )
-        val catalogueItemRow2 = arbitrarySample[CatalogueItemRow].copy(photo = None)
+        val catalogueItemSummaryRow2 = arbitrarySample[CatalogueItemSummaryRow].copy(
+          image = None,
+          status = CatalogueItemStatus.Active,
+        )
+        val catalogueItemImageNormalizedUrl = arbitrarySample[S3NormalizedUrl]
 
-        catalogueItemRow1 should not be catalogueItemRow2
+        catalogueItemSummaryRow1 should not be catalogueItemSummaryRow2
 
-        catalogueRepositoryMock.getCatalogueItems
+        catalogueRepositoryMock.getCatalogueItemsActive
           .expects(organizationID)
-          .returningZIO(List(catalogueItemRow1, catalogueItemRow2))
+          .returningZIO(List(catalogueItemSummaryRow1, catalogueItemSummaryRow2))
+          .once()
+
+        s3ClientOrganizationMediaMock.getNormalizedUrl
+          .expects(catalogueItemSummaryRow1.image.value.value.normalizedBucketKey)
+          .returningZIO(catalogueItemImageNormalizedUrl)
           .once()
 
         buildCatalogueService
@@ -384,14 +431,19 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           .zioValue
           .shouldBe(
             smithy.GetCatalogueItemsGetResponse(
-              List(catalogueItemRow1, catalogueItemRow2).map(catalogueItemRow =>
+              List(
                 smithy.GetCatalogueItem(
-                  catalogueItemID = catalogueItemRow.catalogueItemID.value,
-                  name = catalogueItemRow.name.value,
-                  unit = catalogueItemRow.unit.value,
-                  price = catalogueItemRow.price.map(toCatalogueItemPriceRequest),
-                  photoNormalizedUrl = catalogueItemRow.photo.map(_.value.normalizedBucketKey.value),
-                )
+                  catalogueItemID = catalogueItemSummaryRow1.catalogueItemID.value,
+                  name = catalogueItemSummaryRow1.name.value,
+                  status = smithy.CatalogueItemStatus.ACTIVE,
+                  imageNormalizedUrl = Some(catalogueItemImageNormalizedUrl.value),
+                ),
+                smithy.GetCatalogueItem(
+                  catalogueItemID = catalogueItemSummaryRow2.catalogueItemID.value,
+                  name = catalogueItemSummaryRow2.name.value,
+                  status = smithy.CatalogueItemStatus.ACTIVE,
+                  imageNormalizedUrl = None,
+                ),
               )
             )
           )
@@ -400,7 +452,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
       "fail with a RepositoryError and surface it unchanged" in new TestContext {
         val organizationID = arbitrarySample[OrganizationID]
 
-        catalogueRepositoryMock.getCatalogueItems
+        catalogueRepositoryMock.getCatalogueItemsActive
           .expects(organizationID)
           .returns(ZIO.fail(repositoryError))
           .once()
@@ -411,7 +463,8 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
   }
 
   trait TestContext {
-    val catalogueRepositoryMock = mock[CatalogueRepository]
+    val catalogueRepositoryMock       = mock[CatalogueRepository]
+    val s3ClientOrganizationMediaMock = mock[S3ClientOrganizationMedia]
 
     def buildCatalogueService: smithy.CatalogueService[ServiceTask] =
       ZIO
@@ -421,6 +474,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           CatalogueRequestValidator.live,
           PriceDomainValidator.live,
           ZLayer.succeed(catalogueRepositoryMock),
+          ZLayer.succeed(s3ClientOrganizationMediaMock),
         )
         .zioValue
   }

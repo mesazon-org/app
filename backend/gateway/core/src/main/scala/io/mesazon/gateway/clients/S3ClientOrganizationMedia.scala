@@ -1,0 +1,286 @@
+package io.mesazon.gateway.clients
+
+import io.mesazon.domain.gateway.*
+import io.mesazon.gateway.clients.S3ClientOrganizationMedia.UploadedCatalogueItemImageResult
+import io.mesazon.gateway.config.S3ClientOrganizationMediaConfig
+import io.mesazon.gateway.utils.*
+import software.amazon.awssdk.auth.credentials.*
+import software.amazon.awssdk.core.async.AsyncRequestBody
+import software.amazon.awssdk.services.s3.*
+import software.amazon.awssdk.services.s3.model.{HeadBucketRequest, PutObjectRequest}
+import software.amazon.awssdk.services.s3.presigner.S3Presigner
+import zio.*
+import zio.stream.*
+
+import scala.util.chaining.scalaUtilChainingOps
+
+trait S3ClientOrganizationMedia {
+  def upload(
+      organizationID: OrganizationID,
+      catalogueItemID: CatalogueItemID,
+      catalogueItemImageOriginalByteStream: ImageOriginalByteStream,
+      catalogueItemImageNormalizedByteStream: ImageNormalizedByteStream,
+  ): IO[ServiceError, UploadedCatalogueItemImageResult]
+
+  def getOriginalUrl(
+      originalBucketKey: ImageOriginalBucketKey
+  ): IO[ServiceError, S3OriginalUrl]
+
+  def getNormalizedUrl(
+      normalizedBucketKey: ImageNormalizedBucketKey
+  ): IO[ServiceError, S3NormalizedUrl]
+
+  def readiness: IO[ServiceError.ServiceUnavailableError.S3UnavailableError, Unit]
+}
+
+object S3ClientOrganizationMedia {
+
+  type UploadedCatalogueItemImageResult = (
+      catalogueItemImageOriginalBucketKey: ImageOriginalBucketKey,
+      catalogueItemImageNormalizedBucketKey: ImageNormalizedBucketKey,
+  )
+
+  private final class S3ClientOrganizationMediaImpl(
+      s3ClientOrganizationMediaConfig: S3ClientOrganizationMediaConfig,
+      s3AsyncClient: S3AsyncClient,
+      s3Presigner: S3Presigner,
+  ) extends S3ClientOrganizationMedia {
+
+    private def uploadFile(
+        bucketPathPrefix: String,
+        entityPathSegments: List[String],
+        fileName: String,
+        fileByteStream: ZStream[Any, Throwable, Byte],
+    )(using Trace): IO[ServiceError, String] =
+      ZIO.scoped {
+        for {
+          bucketKey = (bucketPathPrefix :: entityPathSegments ::: List(fileName)).mkString("/")
+          tempPath  <- TempFile.createScoped("organization-media-s3-upload-")
+          bytesSize <- fileByteStream
+            .run(ZSink.fromPath(tempPath))
+            .mapError(e =>
+              ServiceError.InternalServerError.UnexpectedError("Failed to write organization media to temp file", Some(e))
+            )
+          putObjectRequest <- ZIO
+            .attempt(
+              PutObjectRequest
+                .builder()
+                .bucket(s3ClientOrganizationMediaConfig.bucket)
+                .key(bucketKey)
+                .contentLength(bytesSize)
+                .build()
+            )
+            .mapError(e =>
+              ServiceError.InternalServerError.UnexpectedError("Failed to create PutObjectRequest", Some(e))
+            )
+          asyncRequestBody <- ZIO
+            .attempt(AsyncRequestBody.fromFile(tempPath))
+            .mapError(e =>
+              ServiceError.InternalServerError.UnexpectedError("Failed to create AsyncRequestBody from temp file", Some(e))
+            )
+          _ <- ZIO
+            .fromCompletableFuture(
+              s3AsyncClient.putObject(putObjectRequest, asyncRequestBody)
+            )
+            .mapError(e =>
+              ServiceError.InternalServerError.UnexpectedError("Failed to upload organization media to S3", Some(e))
+            )
+        } yield bucketKey
+      }
+
+    private def getMediaUrl(
+        mediaBucketKey: String
+    )(using Trace): IO[ServiceError, String] =
+      for {
+        getObjectRequest <- ZIO
+          .attempt(
+            software.amazon.awssdk.services.s3.model.GetObjectRequest
+              .builder()
+              .bucket(s3ClientOrganizationMediaConfig.bucket)
+              .key(mediaBucketKey)
+              .build()
+          )
+          .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to create GetObjectRequest", Some(e)))
+        presignGetObjectRequest <- ZIO
+          .attempt(
+            software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
+              .builder()
+              .getObjectRequest(getObjectRequest)
+              .signatureDuration(s3ClientOrganizationMediaConfig.urlExpiresAtOffset)
+              .build()
+          )
+          .mapError(e =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to create GetObjectPresignRequest", Some(e))
+          )
+        url <- ZIO
+          .attempt(s3Presigner.presignGetObject(presignGetObjectRequest).url())
+          .mapError(e =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to presignGetObject request", Some(e))
+          )
+      } yield url.toString
+
+    override def upload(
+        organizationID: OrganizationID,
+        catalogueItemID: CatalogueItemID,
+        catalogueItemImageOriginalByteStream: ImageOriginalByteStream,
+        catalogueItemImageNormalizedByteStream: ImageNormalizedByteStream,
+    ): IO[ServiceError, UploadedCatalogueItemImageResult] =
+      for {
+        catalogueItemImageOriginalBucketKeyRaw <- uploadFile(
+          s3ClientOrganizationMediaConfig.catalogueItemImageBucketPathPrefix,
+          List(organizationID.value.toString, catalogueItemID.value.toString),
+          s3ClientOrganizationMediaConfig.originalFileName,
+          catalogueItemImageOriginalByteStream.value,
+        )
+        catalogueItemImageNormalizedBucketKeyRaw <- uploadFile(
+          s3ClientOrganizationMediaConfig.catalogueItemImageBucketPathPrefix,
+          List(organizationID.value.toString, catalogueItemID.value.toString),
+          s3ClientOrganizationMediaConfig.normalizedFileName,
+          catalogueItemImageNormalizedByteStream.value,
+        )
+        catalogueItemImageOriginalBucketKey <- ZIO
+          .fromEither(ImageOriginalBucketKey.either(catalogueItemImageOriginalBucketKeyRaw))
+          .mapError(e =>
+            ServiceError.InternalServerError.UnexpectedError(s"Failed to construct ImageOriginalBucketKey: [$e]")
+          )
+        catalogueItemImageNormalizedBucketKey <- ZIO
+          .fromEither(ImageNormalizedBucketKey.either(catalogueItemImageNormalizedBucketKeyRaw))
+          .mapError(e =>
+            ServiceError.InternalServerError.UnexpectedError(s"Failed to construct ImageNormalizedBucketKey: [$e]")
+          )
+      } yield (catalogueItemImageOriginalBucketKey, catalogueItemImageNormalizedBucketKey)
+
+    override def getOriginalUrl(
+        originalBucketKey: ImageOriginalBucketKey
+    ): IO[ServiceError, S3OriginalUrl] =
+      for {
+        originalUrlRaw <- getMediaUrl(originalBucketKey.value)
+        originalUrl    <- ZIO
+          .fromEither(S3OriginalUrl.either(originalUrlRaw))
+          .mapError(e => ServiceError.InternalServerError.UnexpectedError(s"Failed to construct S3OriginalUrl: [$e]"))
+      } yield originalUrl
+
+    override def getNormalizedUrl(
+        normalizedBucketKey: ImageNormalizedBucketKey
+    ): IO[ServiceError, S3NormalizedUrl] =
+      for {
+        normalizedUrlRaw <- getMediaUrl(normalizedBucketKey.value)
+        normalizedUrl    <- ZIO
+          .fromEither(S3NormalizedUrl.either(normalizedUrlRaw))
+          .mapError(e =>
+            ServiceError.InternalServerError.UnexpectedError(s"Failed to construct S3NormalizedUrl: [$e]")
+          )
+      } yield normalizedUrl
+
+    override def readiness: IO[ServiceError.ServiceUnavailableError.S3UnavailableError, Unit] =
+      ZIO
+        .attempt(
+          HeadBucketRequest
+            .builder()
+            .bucket(s3ClientOrganizationMediaConfig.bucket)
+            .build()
+        )
+        .flatMap(headBucketRequest => ZIO.fromCompletableFuture(s3AsyncClient.headBucket(headBucketRequest)))
+        .mapError(ServiceError.ServiceUnavailableError.S3UnavailableError(s3ClientOrganizationMediaConfig.bucket, _))
+        .unit
+  }
+
+  private val s3AsyncClientLayer: ZLayer[S3ClientOrganizationMediaConfig, Throwable, S3AsyncClient] =
+    ZLayer.scoped(
+      for {
+        s3ClientOrganizationMediaConfig <- ZIO.service[S3ClientOrganizationMediaConfig]
+        s3AsyncClient                   <- ZIO.acquireRelease(
+          ZIO.attemptBlocking(
+            S3AsyncClient
+              .builder()
+              .region(s3ClientOrganizationMediaConfig.region)
+              .credentialsProvider(
+                StaticCredentialsProvider.create(
+                  AwsBasicCredentials
+                    .create(s3ClientOrganizationMediaConfig.accessKeyId, s3ClientOrganizationMediaConfig.secretAccessKey)
+                )
+              )
+              .endpointOverride(s3ClientOrganizationMediaConfig.uri.toJavaUri)
+              .pipe { builder =>
+                if (s3ClientOrganizationMediaConfig.useMock)
+                  builder
+                    .serviceConfiguration(
+                      S3Configuration.builder().pathStyleAccessEnabled(true).build()
+                    )
+                else
+                  builder
+              }
+              .build()
+          )
+        )(client =>
+          ZIO.succeed(client.close()) <* ZIO.logError(
+            "S3AsyncClient closed"
+          )
+        )
+      } yield s3AsyncClient
+    )
+
+  private val s3PresignerLayer: ZLayer[S3ClientOrganizationMediaConfig, Throwable, S3Presigner] =
+    ZLayer.scoped(
+      for {
+        s3ClientOrganizationMediaConfig <- ZIO.service[S3ClientOrganizationMediaConfig]
+        s3Presigner                     <- ZIO.acquireRelease(
+          ZIO.attemptBlocking(
+            S3Presigner
+              .builder()
+              .region(s3ClientOrganizationMediaConfig.region)
+              .credentialsProvider(
+                StaticCredentialsProvider.create(
+                  AwsBasicCredentials
+                    .create(s3ClientOrganizationMediaConfig.accessKeyId, s3ClientOrganizationMediaConfig.secretAccessKey)
+                )
+              )
+              .pipe { builder =>
+                if (s3ClientOrganizationMediaConfig.useMock)
+                  builder
+                    .endpointOverride(s3ClientOrganizationMediaConfig.uri.toJavaUri)
+                    .serviceConfiguration(
+                      S3Configuration.builder().pathStyleAccessEnabled(true).build()
+                    )
+                else
+                  builder
+              }
+              .build()
+          )
+        )(s3Presigner => ZIO.succeed(s3Presigner.close()) <* ZIO.logError("S3Presigner closed"))
+      } yield s3Presigner
+    )
+
+  private def observed(s3ClientOrganizationMedia: S3ClientOrganizationMedia): S3ClientOrganizationMedia =
+    new S3ClientOrganizationMedia {
+      override def upload(
+          organizationID: OrganizationID,
+          catalogueItemID: CatalogueItemID,
+          catalogueItemImageOriginalByteStream: ImageOriginalByteStream,
+          catalogueItemImageNormalizedByteStream: ImageNormalizedByteStream,
+      ): IO[ServiceError, UploadedCatalogueItemImageResult] =
+        s3ClientOrganizationMedia.upload(
+          organizationID,
+          catalogueItemID,
+          catalogueItemImageOriginalByteStream,
+          catalogueItemImageNormalizedByteStream,
+        )
+
+      override def getOriginalUrl(
+          originalBucketKey: ImageOriginalBucketKey
+      ): IO[ServiceError, S3OriginalUrl] =
+        s3ClientOrganizationMedia.getOriginalUrl(originalBucketKey)
+
+      override def getNormalizedUrl(
+          normalizedBucketKey: ImageNormalizedBucketKey
+      ): IO[ServiceError, S3NormalizedUrl] =
+        s3ClientOrganizationMedia.getNormalizedUrl(normalizedBucketKey)
+
+      override def readiness: IO[ServiceError.ServiceUnavailableError.S3UnavailableError, Unit] =
+        s3ClientOrganizationMedia.readiness
+    }
+
+  val live =
+    (s3PresignerLayer ++ s3AsyncClientLayer) >>> ZLayer.derive[S3ClientOrganizationMediaImpl] >>>
+      ZLayer.fromFunction(observed)
+}

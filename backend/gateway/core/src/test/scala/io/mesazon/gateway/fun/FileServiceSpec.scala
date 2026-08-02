@@ -1,7 +1,7 @@
 package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.clients.{CatalogueItemImagesS3Client, OrganizationLogosS3Client}
+import io.mesazon.gateway.clients.{OrganizationLogosS3Client, S3ClientOrganizationMedia}
 import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.domain.*
@@ -260,7 +260,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "successfully scan, normalize, upload and persist the catalogue item image" in new TestContext {
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val catalogueItemImageOriginalFileName = arbitrarySample[PhotoOriginalFileName]
+        val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
@@ -275,16 +275,16 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
-        val catalogueItemImageOriginalBucketKey   = arbitrarySample[PhotoOriginalBucketKey]
-        val catalogueItemImageNormalizedBucketKey = arbitrarySample[PhotoNormalizedBucketKey]
-        val uploadedImageResult: CatalogueItemImagesS3Client.UploadedImageResult =
+        val catalogueItemImageOriginalBucketKey   = arbitrarySample[ImageOriginalBucketKey]
+        val catalogueItemImageNormalizedBucketKey = arbitrarySample[ImageNormalizedBucketKey]
+        val uploadedImageResult: S3ClientOrganizationMedia.UploadedCatalogueItemImageResult =
           (
             catalogueItemImageOriginalBucketKey = catalogueItemImageOriginalBucketKey,
             catalogueItemImageNormalizedBucketKey = catalogueItemImageNormalizedBucketKey,
           )
 
-        val catalogueItemPhoto = CatalogueItemPhoto.assume(
-          Photo(
+        val catalogueItemImage = CatalogueItemImage.assume(
+          Image(
             originalBucketKey = catalogueItemImageOriginalBucketKey,
             normalizedBucketKey = catalogueItemImageNormalizedBucketKey,
             originalFileName = catalogueItemImageOriginalFileName,
@@ -319,7 +319,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
               None,
               None,
               None,
-              Some(catalogueItemPhoto),
+              Some(catalogueItemImage),
             )
             .returningZIO(Some(catalogueItemRowActive))
             .once(),
@@ -342,7 +342,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "fail with InternalServerError when the catalogue item is missing" in new TestContext {
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val catalogueItemImageOriginalFileName = arbitrarySample[PhotoOriginalFileName]
+        val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         inSequence(
@@ -369,7 +369,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "fail with InternalServerError when the catalogue item is archived" in new TestContext {
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val catalogueItemImageOriginalFileName = arbitrarySample[PhotoOriginalFileName]
+        val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
@@ -402,7 +402,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "fail with InternalServerError when the catalogue item is not found (foreign organization isolation)" in new TestContext {
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val catalogueItemImageOriginalFileName = arbitrarySample[PhotoOriginalFileName]
+        val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         inSequence(
@@ -429,7 +429,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "fail and stop the pipeline with InternalServerError when scanning the catalogue item image fails" in new TestContext {
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val catalogueItemImageOriginalFileName = arbitrarySample[PhotoOriginalFileName]
+        val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
@@ -472,7 +472,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "fail and stop the pipeline with InternalServerError when normalizing the catalogue item image fails" in new TestContext {
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val catalogueItemImageOriginalFileName = arbitrarySample[PhotoOriginalFileName]
+        val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
@@ -521,7 +521,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "fail and stop the pipeline with InternalServerError when uploading the catalogue item image to S3 fails" in new TestContext {
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val catalogueItemImageOriginalFileName = arbitrarySample[PhotoOriginalFileName]
+        val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
@@ -579,7 +579,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "fail with InternalServerError when persisting the catalogue item image details fails" in new TestContext {
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val catalogueItemImageOriginalFileName = arbitrarySample[PhotoOriginalFileName]
+        val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
@@ -594,16 +594,16 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
-        val catalogueItemImageOriginalBucketKey   = arbitrarySample[PhotoOriginalBucketKey]
-        val catalogueItemImageNormalizedBucketKey = arbitrarySample[PhotoNormalizedBucketKey]
-        val uploadedImageResult: CatalogueItemImagesS3Client.UploadedImageResult =
+        val catalogueItemImageOriginalBucketKey   = arbitrarySample[ImageOriginalBucketKey]
+        val catalogueItemImageNormalizedBucketKey = arbitrarySample[ImageNormalizedBucketKey]
+        val uploadedImageResult: S3ClientOrganizationMedia.UploadedCatalogueItemImageResult =
           (
             catalogueItemImageOriginalBucketKey = catalogueItemImageOriginalBucketKey,
             catalogueItemImageNormalizedBucketKey = catalogueItemImageNormalizedBucketKey,
           )
 
-        val catalogueItemPhoto = CatalogueItemPhoto.assume(
-          Photo(
+        val catalogueItemImage = CatalogueItemImage.assume(
+          Image(
             originalBucketKey = catalogueItemImageOriginalBucketKey,
             normalizedBucketKey = catalogueItemImageNormalizedBucketKey,
             originalFileName = catalogueItemImageOriginalFileName,
@@ -640,7 +640,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
               None,
               None,
               None,
-              Some(catalogueItemPhoto),
+              Some(catalogueItemImage),
             )
             .failingZIO(updateError)
             .once(),
@@ -672,7 +672,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
     val organizationS3ClientMock             = mock[OrganizationLogosS3Client]
     val organizationManagementRepositoryMock = mock[OrganizationManagementRepository]
     val catalogueRepositoryMock              = mock[CatalogueRepository]
-    val catalogueItemS3ClientMock            = mock[CatalogueItemImagesS3Client]
+    val catalogueItemS3ClientMock            = mock[S3ClientOrganizationMedia]
 
     def buildFileService: FileService[ServiceTask] = ZIO
       .service[FileService[ServiceTask]]

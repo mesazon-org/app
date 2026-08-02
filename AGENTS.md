@@ -120,7 +120,6 @@ New feature → [Feature flow](agent-docs/features/flow/README.md); create/link 
 - [User Forgot Password](agent-docs/features/user-forgot-password.md)
 - [User Token Management](agent-docs/features/user-token-management.md)
 - [Organization Management](agent-docs/features/organization-management.md)
-- [Files Management](agent-docs/features/files-management.md)
 - [Customer Book](agent-docs/features/customer-book.md)
 - [Catalogue](agent-docs/features/catalogue.md) — in progress; see its five-slice status
 

@@ -2,14 +2,9 @@ package io.mesazon.gateway.repository.domain
 
 import io.mesazon.domain.gateway.*
 
-case class CatalogueItemRow(
-    organizationID: OrganizationID,
+case class CatalogueItemSummaryRow(
     catalogueItemID: CatalogueItemID,
     name: CatalogueItemName,
-    unit: CatalogueItemUnit,
-    price: Option[CatalogueItemPrice],
     image: Option[CatalogueItemImage],
     status: CatalogueItemStatus,
-    createdAt: CreatedAt,
-    updatedAt: UpdatedAt,
 )

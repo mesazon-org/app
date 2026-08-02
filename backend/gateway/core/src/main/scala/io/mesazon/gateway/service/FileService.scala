@@ -2,7 +2,7 @@ package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
-import io.mesazon.gateway.clients.{CatalogueItemImagesS3Client, OrganizationLogosS3Client}
+import io.mesazon.gateway.clients.{OrganizationLogosS3Client, S3ClientOrganizationMedia}
 import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.repository.{CatalogueRepository, OrganizationManagementRepository}
 import io.mesazon.gateway.tapir.TapirTask
@@ -20,7 +20,7 @@ trait FileService[F[_]] {
   def uploadCatalogueItemImage(
       organizationID: OrganizationID,
       catalogueItemID: CatalogueItemID,
-      catalogueItemImageOriginalFileName: PhotoOriginalFileName,
+      catalogueItemImageOriginalFileName: ImageOriginalFileName,
       catalogueItemImageFile: ZStream[Any, Throwable, Byte],
   ): F[Unit]
 }
@@ -34,7 +34,7 @@ object FileService {
       fileScanner: FileScanner,
       imageProcessing: ImageProcessing,
       organizationLogosS3Client: OrganizationLogosS3Client,
-      catalogueItemImagesS3Client: CatalogueItemImagesS3Client,
+      s3ClientOrganizationMedia: S3ClientOrganizationMedia,
   ) extends FileService[ServiceTask] {
 
     override def uploadOrganizationLogo(
@@ -71,7 +71,7 @@ object FileService {
     override def uploadCatalogueItemImage(
         organizationID: OrganizationID,
         catalogueItemID: CatalogueItemID,
-        catalogueItemImageOriginalFileName: PhotoOriginalFileName,
+        catalogueItemImageOriginalFileName: ImageOriginalFileName,
         catalogueItemImageByteStream: ZStream[Any, Throwable, Byte],
     ): ServiceTask[Unit] = ZIO
       .scoped(for {
@@ -102,29 +102,29 @@ object FileService {
           SupportedMediaTypes.images,
         )
         catalogueItemUploadImagesResult <-
-          catalogueItemImagesS3Client
+          s3ClientOrganizationMedia
             .upload(
               organizationID,
               catalogueItemID,
               catalogueItemImageNormalizedResult.imageOriginalByteStream,
               catalogueItemImageNormalizedResult.imageNormalizedByteStream,
             )
-        photoObject = Photo(
+        imageObject = Image(
           originalBucketKey = catalogueItemUploadImagesResult.catalogueItemImageOriginalBucketKey,
           normalizedBucketKey = catalogueItemUploadImagesResult.catalogueItemImageNormalizedBucketKey,
           originalFileName = catalogueItemImageOriginalFileName,
         )
-        catalogueItemPhoto <- ZIO
-          .fromEither(CatalogueItemPhoto.either(photoObject))
+        catalogueItemImage <- ZIO
+          .fromEither(CatalogueItemImage.either(imageObject))
           .mapError(e =>
             ServiceError.InternalServerError.UnexpectedError(
-              s"Failed to construct CatalogueItemPhoto: [$e]"
+              s"Failed to construct CatalogueItemImage: [$e]"
             )
           )
         _ <- catalogueRepository.updateCatalogueItem(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          photoOptUpdate = Some(catalogueItemPhoto),
+          imageOptUpdate = Some(catalogueItemImage),
         )
       } yield ())
       .catchAll(err => ZIO.logErrorCause("uploadCatalogueItemImage failed", Cause.fail(err)) *> ZIO.fail(err))
@@ -145,7 +145,7 @@ object FileService {
       override def uploadCatalogueItemImage(
           organizationID: OrganizationID,
           catalogueItemID: CatalogueItemID,
-          catalogueItemImageOriginalFileName: PhotoOriginalFileName,
+          catalogueItemImageOriginalFileName: ImageOriginalFileName,
           catalogueItemImageFile: ZStream[Any, Throwable, Byte],
       ): TapirTask[Unit] =
         HttpErrorHandler.errorResponseHandlerTapir(
