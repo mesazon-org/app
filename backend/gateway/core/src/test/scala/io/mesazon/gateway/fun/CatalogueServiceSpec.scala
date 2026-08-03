@@ -2,6 +2,7 @@ package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.domain.to
 import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.repository.CatalogueRepository
 import io.mesazon.gateway.repository.CatalogueRepository.InsertCatalogueItemInput
@@ -309,21 +310,21 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           imageAsset = Some(arbitrarySample[CatalogueItemImageAsset])
         )
-        val catalogueItemImageOriginalUrl   = arbitrarySample[S3OriginalUrl]
-        val catalogueItemImageNormalizedUrl = arbitrarySample[S3NormalizedUrl]
+        val catalogueItemImageOriginalUrl   = arbitrarySample[S3MediaUrl]
+        val catalogueItemImageNormalizedUrl = arbitrarySample[S3MediaUrl]
 
         catalogueRepositoryMock.getCatalogueItem
           .expects(organizationID, catalogueItemRow.catalogueItemID)
           .returningZIO(Some(catalogueItemRow))
           .once()
 
-        s3ClientOrganizationMediaMock.getOriginalUrl
-          .expects(catalogueItemRow.imageAsset.value.value.imageOriginalBucketKey)
+        s3ClientOrganizationMediaMock.genMediaUrl
+          .expects(catalogueItemRow.imageAsset.value.value.imageOriginalBucketKey.to[S3BucketKey])
           .returningZIO(catalogueItemImageOriginalUrl)
           .once()
 
-        s3ClientOrganizationMediaMock.getNormalizedUrl
-          .expects(catalogueItemRow.imageAsset.value.value.imageNormalizedBucketKey)
+        s3ClientOrganizationMediaMock.genMediaUrl
+          .expects(catalogueItemRow.imageAsset.value.value.imageNormalizedBucketKey.to[S3BucketKey])
           .returningZIO(catalogueItemImageNormalizedUrl)
           .once()
 
@@ -412,7 +413,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           imageAsset = None,
           status = CatalogueItemStatus.Active,
         )
-        val catalogueItemImageNormalizedUrl = arbitrarySample[S3NormalizedUrl]
+        val catalogueItemImageNormalizedUrl = arbitrarySample[S3MediaUrl]
 
         catalogueItemSummaryRow1 should not be catalogueItemSummaryRow2
 
@@ -421,8 +422,8 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           .returningZIO(List(catalogueItemSummaryRow1, catalogueItemSummaryRow2))
           .once()
 
-        s3ClientOrganizationMediaMock.getNormalizedUrl
-          .expects(catalogueItemSummaryRow1.imageAsset.value.value.imageNormalizedBucketKey)
+        s3ClientOrganizationMediaMock.genMediaUrl
+          .expects(catalogueItemSummaryRow1.imageAsset.value.value.imageNormalizedBucketKey.to[S3BucketKey])
           .returningZIO(catalogueItemImageNormalizedUrl)
           .once()
 

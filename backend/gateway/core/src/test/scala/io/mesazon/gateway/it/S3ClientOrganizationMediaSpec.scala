@@ -1,7 +1,8 @@
 package io.mesazon.gateway.it
 
 import com.dimafeng.testcontainers.ExposedService
-import io.mesazon.domain.gateway.{CatalogueItemID, OrganizationID}
+import io.mesazon.domain.gateway.{CatalogueItemID, OrganizationID, S3BucketKey}
+import io.mesazon.domain.to
 import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.config.S3ClientOrganizationMediaConfig
 import io.mesazon.gateway.utils.{ImageNormalizedByteStream, ImageOriginalByteStream}
@@ -122,7 +123,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
       }
     }
 
-    "getOriginalUrl" should {
+    "genMediaUrl" should {
       "return a presigned URL that serves the original image" in new TestContext {
         val organizationID          = arbitrarySample[OrganizationID]
         val catalogueItemID         = arbitrarySample[CatalogueItemID]
@@ -145,7 +146,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val imageOriginalPresignedUrl = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.getOriginalUrl(uploadedImageBucketKeys.catalogueItemImageOriginalBucketKey)
+            _.genMediaUrl(uploadedImageBucketKeys.catalogueItemImageOriginalBucketKey.to[S3BucketKey])
           )
           .provide(
             S3ClientOrganizationMedia.live,
@@ -163,9 +164,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
         Chunk.from(imageBytesFromPresignedUrl) should contain theSameElementsInOrderAs
           imageOriginalByteStream.runCollect.zioValue
       }
-    }
 
-    "getNormalizedUrl" should {
       "return a presigned URL that serves the normalized image" in new TestContext {
         val organizationID            = arbitrarySample[OrganizationID]
         val catalogueItemID           = arbitrarySample[CatalogueItemID]
@@ -188,7 +187,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val imageNormalizedPresignedUrl = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.getNormalizedUrl(uploadedImageBucketKeys.catalogueItemImageNormalizedBucketKey)
+            _.genMediaUrl(uploadedImageBucketKeys.catalogueItemImageNormalizedBucketKey.to[S3BucketKey])
           )
           .provide(
             S3ClientOrganizationMedia.live,

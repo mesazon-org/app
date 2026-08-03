@@ -22,13 +22,9 @@ trait S3ClientOrganizationMedia {
       catalogueItemImageNormalizedByteStream: ImageNormalizedByteStream,
   ): IO[ServiceError, UploadedCatalogueItemImageResult]
 
-  def getOriginalUrl(
-      imageOriginalBucketKey: ImageOriginalBucketKey
-  ): IO[ServiceError, S3OriginalUrl]
-
-  def getNormalizedUrl(
-      imageNormalizedBucketKey: ImageNormalizedBucketKey
-  ): IO[ServiceError, S3NormalizedUrl]
+  def genMediaUrl(
+      bucketKey: S3BucketKey
+  ): IO[ServiceError, S3MediaUrl]
 
   def readiness: IO[ServiceError.ServiceUnavailableError.S3UnavailableError, Unit]
 }
@@ -90,37 +86,6 @@ object S3ClientOrganizationMedia {
         } yield bucketKey
       }
 
-    private def getMediaUrl(
-        mediaBucketKey: String
-    )(using Trace): IO[ServiceError, String] =
-      for {
-        getObjectRequest <- ZIO
-          .attempt(
-            software.amazon.awssdk.services.s3.model.GetObjectRequest
-              .builder()
-              .bucket(s3ClientOrganizationMediaConfig.bucket)
-              .key(mediaBucketKey)
-              .build()
-          )
-          .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to create GetObjectRequest", Some(e)))
-        presignGetObjectRequest <- ZIO
-          .attempt(
-            software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
-              .builder()
-              .getObjectRequest(getObjectRequest)
-              .signatureDuration(s3ClientOrganizationMediaConfig.urlExpiresAtOffset)
-              .build()
-          )
-          .mapError(e =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to create GetObjectPresignRequest", Some(e))
-          )
-        url <- ZIO
-          .attempt(s3Presigner.presignGetObject(presignGetObjectRequest).url())
-          .mapError(e =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to presignGetObject request", Some(e))
-          )
-      } yield url.toString
-
     override def upload(
         organizationID: OrganizationID,
         catalogueItemID: CatalogueItemID,
@@ -152,25 +117,39 @@ object S3ClientOrganizationMedia {
           )
       } yield (catalogueItemImageOriginalBucketKey, catalogueItemImageNormalizedBucketKey)
 
-    override def getOriginalUrl(
-        imageOriginalBucketKey: ImageOriginalBucketKey
-    ): IO[ServiceError, S3OriginalUrl] =
+    override def genMediaUrl(
+        bucketKey: S3BucketKey
+    ): IO[ServiceError, S3MediaUrl] =
       for {
-        originalUrlRaw <- getMediaUrl(imageOriginalBucketKey.value)
-        originalUrl    <- ZIO
-          .fromEither(S3OriginalUrl.either(originalUrlRaw))
-          .mapError(e => ServiceError.InternalServerError.UnexpectedError(s"Failed to construct S3OriginalUrl: [$e]"))
-      } yield originalUrl
-
-    override def getNormalizedUrl(
-        imageNormalizedBucketKey: ImageNormalizedBucketKey
-    ): IO[ServiceError, S3NormalizedUrl] =
-      for {
-        normalizedUrlRaw <- getMediaUrl(imageNormalizedBucketKey.value)
-        normalizedUrl    <- ZIO
-          .fromEither(S3NormalizedUrl.either(normalizedUrlRaw))
-          .mapError(e => ServiceError.InternalServerError.UnexpectedError(s"Failed to construct S3NormalizedUrl: [$e]"))
-      } yield normalizedUrl
+        getObjectRequest <- ZIO
+          .attempt(
+            software.amazon.awssdk.services.s3.model.GetObjectRequest
+              .builder()
+              .bucket(s3ClientOrganizationMediaConfig.bucket)
+              .key(bucketKey.value)
+              .build()
+          )
+          .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to create GetObjectRequest", Some(e)))
+        presignGetObjectRequest <- ZIO
+          .attempt(
+            software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
+              .builder()
+              .getObjectRequest(getObjectRequest)
+              .signatureDuration(s3ClientOrganizationMediaConfig.urlExpiresAtOffset)
+              .build()
+          )
+          .mapError(e =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to create GetObjectPresignRequest", Some(e))
+          )
+        mediaUrlRaw <- ZIO
+          .attempt(s3Presigner.presignGetObject(presignGetObjectRequest).url().toString)
+          .mapError(e =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to presignGetObject request", Some(e))
+          )
+        mediaUrl <- ZIO
+          .fromEither(S3MediaUrl.either(mediaUrlRaw))
+          .mapError(e => ServiceError.InternalServerError.UnexpectedError(s"Failed to construct S3MediaUrl: [$e]"))
+      } yield mediaUrl
 
     override def readiness: IO[ServiceError.ServiceUnavailableError.S3UnavailableError, Unit] =
       ZIO
@@ -272,15 +251,10 @@ object S3ClientOrganizationMedia {
           catalogueItemImageNormalizedByteStream,
         )
 
-      override def getOriginalUrl(
-          originalBucketKey: ImageOriginalBucketKey
-      ): IO[ServiceError, S3OriginalUrl] =
-        s3ClientOrganizationMedia.getOriginalUrl(originalBucketKey)
-
-      override def getNormalizedUrl(
-          normalizedBucketKey: ImageNormalizedBucketKey
-      ): IO[ServiceError, S3NormalizedUrl] =
-        s3ClientOrganizationMedia.getNormalizedUrl(normalizedBucketKey)
+      override def genMediaUrl(
+          bucketKey: S3BucketKey
+      ): IO[ServiceError, S3MediaUrl] =
+        s3ClientOrganizationMedia.genMediaUrl(bucketKey)
 
       override def readiness: IO[ServiceError.ServiceUnavailableError.S3UnavailableError, Unit] =
         s3ClientOrganizationMedia.readiness

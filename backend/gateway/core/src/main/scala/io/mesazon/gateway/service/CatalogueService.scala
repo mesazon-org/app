@@ -1,6 +1,7 @@
 package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
+import io.mesazon.domain.to
 import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.repository.CatalogueRepository
 import io.mesazon.gateway.repository.CatalogueRepository.InsertCatalogueItemInput
@@ -120,14 +121,18 @@ object CatalogueService {
         catalogueItemImageAssetOpt: Option[CatalogueItemImageAsset]
     ): ServiceTask[Option[String]] =
       ZIO.foreach(catalogueItemImageAssetOpt)(catalogueItemImageAsset =>
-        s3ClientOrganizationMedia.getOriginalUrl(catalogueItemImageAsset.value.imageOriginalBucketKey).map(_.value)
+        s3ClientOrganizationMedia
+          .genMediaUrl(catalogueItemImageAsset.value.imageOriginalBucketKey.to[S3BucketKey])
+          .map(_.value)
       )
 
     private def imageNormalizedUrlOpt(
         catalogueItemImageAssetOpt: Option[CatalogueItemImageAsset]
     ): ServiceTask[Option[String]] =
       ZIO.foreach(catalogueItemImageAssetOpt)(catalogueItemImageAsset =>
-        s3ClientOrganizationMedia.getNormalizedUrl(catalogueItemImageAsset.value.imageNormalizedBucketKey).map(_.value)
+        s3ClientOrganizationMedia
+          .genMediaUrl(catalogueItemImageAsset.value.imageNormalizedBucketKey.to[S3BucketKey])
+          .map(_.value)
       )
 
     private def toGetCatalogueItem(

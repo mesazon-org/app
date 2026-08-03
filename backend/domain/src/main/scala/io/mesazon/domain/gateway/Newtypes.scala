@@ -36,11 +36,11 @@ type ImageOriginalBucketKey = ImageOriginalBucketKey.T
 object ImageNormalizedBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
 type ImageNormalizedBucketKey = ImageNormalizedBucketKey.T
 
-object S3OriginalUrl extends RefinedType[String, NonEmptyTrimmedUnsafe]
-type S3OriginalUrl = S3OriginalUrl.T
+object S3BucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type S3BucketKey = S3BucketKey.T
 
-object S3NormalizedUrl extends RefinedType[String, NonEmptyTrimmedUnsafe]
-type S3NormalizedUrl = S3NormalizedUrl.T
+object S3MediaUrl extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type S3MediaUrl = S3MediaUrl.T
 
 object ImageOriginalFileName extends RefinedType[String, NonEmptyTrimmed]
 type ImageOriginalFileName = ImageOriginalFileName.T

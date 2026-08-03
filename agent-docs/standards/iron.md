@@ -23,6 +23,11 @@ Reusable refined-newtype rules. Related: [validation](../features/flow/02-valida
 - Keep all refined newtypes in **one shared flat location**, wildcard-imported everywhere; group by feature inside it, not into files.
 - A type broader than a single value — an enum/state machine or role read by multiple features — gets **its own file named after the type**, not folded into a feature file, because it tends to grow real behavior later.
 
+## Converting between refined newtypes
+
+- To reuse a value across an API shaped around a different but structurally identical newtype (same base type, same constraint), convert with `.to[Target]` (`io.mesazon.domain.to`, defined in `domain.scala` alongside `SameRefinement`) instead of a manual `Target.assume(source.value)`. It only compiles when both newtypes share the same base type and constraint, so a mismatched conversion is a compile error, not a runtime bug; there is no check to write or test.
+- Do not add `.to[Target]` for two newtypes that happen to both wrap `String` but encode different constraints — that pair is deliberately excluded, not a bug in the extension.
+
 ## Arbitraries
 
 - Shared refined-base generators live in `IronRefinedTypeArbitraries` and are explicitly named.
