@@ -54,7 +54,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
             name = insertCatalogueItemPostRequest.name,
             unit = insertCatalogueItemPostRequest.unit,
             price = insertCatalogueItemPostRequest.price,
-            image = None,
+            imageAsset = None,
             status = CatalogueItemStatus.Active,
             createdAt = catalogueItemRowInserted.createdAt,
             updatedAt = catalogueItemRowInserted.updatedAt,
@@ -368,7 +368,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
           (catalogueItem.name, catalogueItem.unit, catalogueItem.price)
         )
         catalogueItemRowsAll.map(_.organizationID) should contain only organizationUserRow.organizationID
-        catalogueItemRowsAll.map(_.image) should contain only None
+        catalogueItemRowsAll.map(_.imageAsset) should contain only None
         catalogueItemRowsAll.map(_.status) should contain only CatalogueItemStatus.Active
         catalogueItemRowsAll.foreach(catalogueItemRow =>
           catalogueItemRow.createdAt.value shouldBe catalogueItemRow.updatedAt.value
@@ -728,7 +728,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
           name = catalogueItemNameUpdate,
           unit = catalogueItemUnitUpdate,
           price = catalogueItemRow.price,
-          image = catalogueItemRow.image,
+          imageAsset = catalogueItemRow.imageAsset,
           status = catalogueItemRow.status,
           createdAt = catalogueItemRow.createdAt,
           updatedAt = catalogueItemRowUpdated.updatedAt,
@@ -1500,7 +1500,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationUserRow.organizationID,
           status = CatalogueItemStatus.Active,
-          image = Some(arbitrarySample[CatalogueItemImage]),
+          imageAsset = Some(arbitrarySample[CatalogueItemImageAsset]),
         )
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
@@ -1753,7 +1753,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationUserRow.organizationID,
           status = CatalogueItemStatus.Active,
-          image = Some(arbitrarySample[CatalogueItemImage]),
+          imageAsset = Some(arbitrarySample[CatalogueItemImageAsset]),
         )
         val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationUserRow.organizationID,

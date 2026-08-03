@@ -358,7 +358,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val catalogueItemRowActive = arbitrarySample[CatalogueItemRow]
             .copy(
-              image = None,
+              imageAsset = None,
               status = CatalogueItemStatus.Active,
             )
 
@@ -419,10 +419,10 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
             .zioValue
 
           catalogueItemRowUpdated.isDefined shouldBe true
-          catalogueItemRowUpdated.get.image.isDefined shouldBe true
-          catalogueItemRowUpdated.get.image.get.value.originalFileName shouldBe catalogueItemImageOriginalFileName
-          catalogueItemRowUpdated.get.image.get.value.originalBucketKey.value shouldBe s"$expectedBucketKeyPrefix/original"
-          catalogueItemRowUpdated.get.image.get.value.normalizedBucketKey.value shouldBe s"$expectedBucketKeyPrefix/normalized"
+          catalogueItemRowUpdated.get.imageAsset.isDefined shouldBe true
+          catalogueItemRowUpdated.get.imageAsset.get.value.imageOriginalFileName shouldBe catalogueItemImageOriginalFileName
+          catalogueItemRowUpdated.get.imageAsset.get.value.imageOriginalBucketKey.value shouldBe s"$expectedBucketKeyPrefix/original"
+          catalogueItemRowUpdated.get.imageAsset.get.value.imageNormalizedBucketKey.value shouldBe s"$expectedBucketKeyPrefix/normalized"
           catalogueItemRowUpdated.get.status shouldBe CatalogueItemStatus.Active
       }
 
@@ -713,7 +713,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow]
           .copy(
             status = CatalogueItemStatus.Archived,
-            image = None,
+            imageAsset = None,
           )
 
         postgresClient.executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRowArchived)).zioValue
@@ -769,7 +769,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow]
           .copy(
-            image = None,
+            imageAsset = None,
             status = CatalogueItemStatus.Active,
           )
 
@@ -813,7 +813,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           .executeQuery(catalogueItemQueries.getCatalogueItemRow(organizationID, catalogueItemID))
           .zioValue
 
-        catalogueItemRowUpdated.get.image shouldBe None
+        catalogueItemRowUpdated.get.imageAsset shouldBe None
 
         val expectedBucketKeyPrefix =
           s"$catalogueItemImageBucketPathPrefix/${organizationID.value}/${catalogueItemID.value}"
@@ -835,7 +835,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val catalogueItemRowOrgA = arbitrarySample[CatalogueItemRow]
             .copy(
-              image = None,
+              imageAsset = None,
               status = CatalogueItemStatus.Active,
             )
 

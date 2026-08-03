@@ -5,6 +5,6 @@ import io.mesazon.domain.gateway.*
 case class CatalogueItemSummaryRow(
     catalogueItemID: CatalogueItemID,
     name: CatalogueItemName,
-    image: Option[CatalogueItemImage],
+    imageAsset: Option[CatalogueItemImageAsset],
     status: CatalogueItemStatus,
 )

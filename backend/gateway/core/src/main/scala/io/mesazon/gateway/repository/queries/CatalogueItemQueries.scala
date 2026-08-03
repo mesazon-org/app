@@ -45,9 +45,9 @@ final class CatalogueItemQueries(
       fr0"${row.unit}",
       fr0"${row.price.map(_.value.amount)}",
       fr0"${row.price.map(_.value.currency)}",
-      fr0"${row.image.map(_.value.originalBucketKey)}",
-      fr0"${row.image.map(_.value.normalizedBucketKey)}",
-      fr0"${row.image.map(_.value.originalFileName)}",
+      fr0"${row.imageAsset.map(_.value.imageOriginalBucketKey)}",
+      fr0"${row.imageAsset.map(_.value.imageNormalizedBucketKey)}",
+      fr0"${row.imageAsset.map(_.value.imageOriginalFileName)}",
       fr0"${row.status}::" ++ frCatalogueItemStatusType,
       fr0"${row.createdAt}",
       fr0"${row.updatedAt}",
@@ -125,7 +125,7 @@ final class CatalogueItemQueries(
       nameOptUpdate: Option[CatalogueItemName] = None,
       unitOptUpdate: Option[CatalogueItemUnit] = None,
       priceOptUpdate: Option[CatalogueItemPrice] = None,
-      imageOptUpdate: Option[CatalogueItemImage] = None,
+      imageAssetOptUpdate: Option[CatalogueItemImageAsset] = None,
   ): TranzactIO[Option[CatalogueItemRow]] = {
     val updates = NonEmptyList.of(
       fr"updated_at = $updatedAt"
@@ -134,9 +134,9 @@ final class CatalogueItemQueries(
       unitOptUpdate.map(v => fr"unit = $v"),
       priceOptUpdate.map(v => fr"price_amount = ${v.value.amount}"),
       priceOptUpdate.map(v => fr"price_currency = ${v.value.currency}"),
-      imageOptUpdate.map(v => fr"image_original_bucket_key = ${v.value.originalBucketKey}"),
-      imageOptUpdate.map(v => fr"image_normalized_bucket_key = ${v.value.normalizedBucketKey}"),
-      imageOptUpdate.map(v => fr"image_original_file_name = ${v.value.originalFileName}"),
+      imageAssetOptUpdate.map(v => fr"image_original_bucket_key = ${v.value.imageOriginalBucketKey}"),
+      imageAssetOptUpdate.map(v => fr"image_normalized_bucket_key = ${v.value.imageNormalizedBucketKey}"),
+      imageAssetOptUpdate.map(v => fr"image_original_file_name = ${v.value.imageOriginalFileName}"),
     ).flatten
 
     tzio {

@@ -23,11 +23,11 @@ trait S3ClientOrganizationMedia {
   ): IO[ServiceError, UploadedCatalogueItemImageResult]
 
   def getOriginalUrl(
-      originalBucketKey: ImageOriginalBucketKey
+      imageOriginalBucketKey: ImageOriginalBucketKey
   ): IO[ServiceError, S3OriginalUrl]
 
   def getNormalizedUrl(
-      normalizedBucketKey: ImageNormalizedBucketKey
+      imageNormalizedBucketKey: ImageNormalizedBucketKey
   ): IO[ServiceError, S3NormalizedUrl]
 
   def readiness: IO[ServiceError.ServiceUnavailableError.S3UnavailableError, Unit]
@@ -54,12 +54,13 @@ object S3ClientOrganizationMedia {
     )(using Trace): IO[ServiceError, String] =
       ZIO.scoped {
         for {
-          bucketKey = (bucketPathPrefix :: entityPathSegments ::: List(fileName)).mkString("/")
-          tempPath  <- TempFile.createScoped("organization-media-s3-upload-")
+          bucketKey = bucketPathPrefix + "/" + entityPathSegments.mkString("/") + "/" + fileName
+          tempPath  <- TempFile.createScoped("s3-client-organization-media-")
           bytesSize <- fileByteStream
             .run(ZSink.fromPath(tempPath))
             .mapError(e =>
-              ServiceError.InternalServerError.UnexpectedError("Failed to write organization media to temp file", Some(e))
+              ServiceError.InternalServerError
+                .UnexpectedError("Failed to write organization media to temp file", Some(e))
             )
           putObjectRequest <- ZIO
             .attempt(
@@ -76,7 +77,8 @@ object S3ClientOrganizationMedia {
           asyncRequestBody <- ZIO
             .attempt(AsyncRequestBody.fromFile(tempPath))
             .mapError(e =>
-              ServiceError.InternalServerError.UnexpectedError("Failed to create AsyncRequestBody from temp file", Some(e))
+              ServiceError.InternalServerError
+                .UnexpectedError("Failed to create AsyncRequestBody from temp file", Some(e))
             )
           _ <- ZIO
             .fromCompletableFuture(
@@ -151,25 +153,23 @@ object S3ClientOrganizationMedia {
       } yield (catalogueItemImageOriginalBucketKey, catalogueItemImageNormalizedBucketKey)
 
     override def getOriginalUrl(
-        originalBucketKey: ImageOriginalBucketKey
+        imageOriginalBucketKey: ImageOriginalBucketKey
     ): IO[ServiceError, S3OriginalUrl] =
       for {
-        originalUrlRaw <- getMediaUrl(originalBucketKey.value)
+        originalUrlRaw <- getMediaUrl(imageOriginalBucketKey.value)
         originalUrl    <- ZIO
           .fromEither(S3OriginalUrl.either(originalUrlRaw))
           .mapError(e => ServiceError.InternalServerError.UnexpectedError(s"Failed to construct S3OriginalUrl: [$e]"))
       } yield originalUrl
 
     override def getNormalizedUrl(
-        normalizedBucketKey: ImageNormalizedBucketKey
+        imageNormalizedBucketKey: ImageNormalizedBucketKey
     ): IO[ServiceError, S3NormalizedUrl] =
       for {
-        normalizedUrlRaw <- getMediaUrl(normalizedBucketKey.value)
+        normalizedUrlRaw <- getMediaUrl(imageNormalizedBucketKey.value)
         normalizedUrl    <- ZIO
           .fromEither(S3NormalizedUrl.either(normalizedUrlRaw))
-          .mapError(e =>
-            ServiceError.InternalServerError.UnexpectedError(s"Failed to construct S3NormalizedUrl: [$e]")
-          )
+          .mapError(e => ServiceError.InternalServerError.UnexpectedError(s"Failed to construct S3NormalizedUrl: [$e]"))
       } yield normalizedUrl
 
     override def readiness: IO[ServiceError.ServiceUnavailableError.S3UnavailableError, Unit] =
@@ -197,7 +197,10 @@ object S3ClientOrganizationMedia {
               .credentialsProvider(
                 StaticCredentialsProvider.create(
                   AwsBasicCredentials
-                    .create(s3ClientOrganizationMediaConfig.accessKeyId, s3ClientOrganizationMediaConfig.secretAccessKey)
+                    .create(
+                      s3ClientOrganizationMediaConfig.accessKeyId,
+                      s3ClientOrganizationMediaConfig.secretAccessKey,
+                    )
                 )
               )
               .endpointOverride(s3ClientOrganizationMediaConfig.uri.toJavaUri)
@@ -232,7 +235,10 @@ object S3ClientOrganizationMedia {
               .credentialsProvider(
                 StaticCredentialsProvider.create(
                   AwsBasicCredentials
-                    .create(s3ClientOrganizationMediaConfig.accessKeyId, s3ClientOrganizationMediaConfig.secretAccessKey)
+                    .create(
+                      s3ClientOrganizationMediaConfig.accessKeyId,
+                      s3ClientOrganizationMediaConfig.secretAccessKey,
+                    )
                 )
               )
               .pipe { builder =>

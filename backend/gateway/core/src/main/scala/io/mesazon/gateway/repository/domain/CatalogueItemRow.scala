@@ -8,7 +8,7 @@ case class CatalogueItemRow(
     name: CatalogueItemName,
     unit: CatalogueItemUnit,
     price: Option[CatalogueItemPrice],
-    image: Option[CatalogueItemImage],
+    imageAsset: Option[CatalogueItemImageAsset],
     status: CatalogueItemStatus,
     createdAt: CreatedAt,
     updatedAt: UpdatedAt,

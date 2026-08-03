@@ -109,22 +109,22 @@ object FileService {
               catalogueItemImageNormalizedResult.imageOriginalByteStream,
               catalogueItemImageNormalizedResult.imageNormalizedByteStream,
             )
-        imageObject = Image(
-          originalBucketKey = catalogueItemUploadImagesResult.catalogueItemImageOriginalBucketKey,
-          normalizedBucketKey = catalogueItemUploadImagesResult.catalogueItemImageNormalizedBucketKey,
-          originalFileName = catalogueItemImageOriginalFileName,
+        imageAsset = ImageAsset(
+          imageOriginalBucketKey = catalogueItemUploadImagesResult.catalogueItemImageOriginalBucketKey,
+          imageNormalizedBucketKey = catalogueItemUploadImagesResult.catalogueItemImageNormalizedBucketKey,
+          imageOriginalFileName = catalogueItemImageOriginalFileName,
         )
-        catalogueItemImage <- ZIO
-          .fromEither(CatalogueItemImage.either(imageObject))
+        catalogueItemImageAsset <- ZIO
+          .fromEither(CatalogueItemImageAsset.either(imageAsset))
           .mapError(e =>
             ServiceError.InternalServerError.UnexpectedError(
-              s"Failed to construct CatalogueItemImage: [$e]"
+              s"Failed to construct CatalogueItemImageAsset: [$e]"
             )
           )
         _ <- catalogueRepository.updateCatalogueItem(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          imageOptUpdate = Some(catalogueItemImage),
+          imageAssetOptUpdate = Some(catalogueItemImageAsset),
         )
       } yield ())
       .catchAll(err => ZIO.logErrorCause("uploadCatalogueItemImage failed", Cause.fail(err)) *> ZIO.fail(err))

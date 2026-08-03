@@ -31,7 +31,7 @@ trait CatalogueRepository {
       nameOptUpdate: Option[CatalogueItemName] = None,
       unitOptUpdate: Option[CatalogueItemUnit] = None,
       priceOptUpdate: Option[CatalogueItemPrice] = None,
-      imageOptUpdate: Option[CatalogueItemImage] = None,
+      imageAssetOptUpdate: Option[CatalogueItemImageAsset] = None,
   ): IO[ServiceError, Option[CatalogueItemRow]]
 
   def archiveCatalogueItem(
@@ -113,7 +113,7 @@ object CatalogueRepository {
         nameOptUpdate: Option[CatalogueItemName],
         unitOptUpdate: Option[CatalogueItemUnit],
         priceOptUpdate: Option[CatalogueItemPrice],
-        imageOptUpdate: Option[CatalogueItemImage],
+        imageAssetOptUpdate: Option[CatalogueItemImageAsset],
     ): IO[ServiceError, Option[CatalogueItemRow]] = for {
       instantNow              <- timeProvider.instantNow
       catalogueItemRowUpdated <- database
@@ -125,7 +125,7 @@ object CatalogueRepository {
             nameOptUpdate,
             unitOptUpdate,
             priceOptUpdate,
-            imageOptUpdate,
+            imageAssetOptUpdate,
           )
         )
         .mapError(toServiceError(s"Failed to update catalogue item with ID: [$catalogueItemID]"))

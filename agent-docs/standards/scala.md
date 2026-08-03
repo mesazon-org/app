@@ -5,7 +5,7 @@ Reusable Scala code/name/test rules. Boundaries: [Iron](iron.md), [Smithy](smith
 ## Code
 
 - Prefer precise domain types, sealed alternatives, `Option`, and `Either` over nulls, sentinels, string flags, or ambiguous booleans.
-- Model coupled optional fields as one `Option` around a composite value whose members are mandatory. Use reusable component and composite names without a feature prefix (`Price`, `Image`), then add a `Pure` newtype named for the owning entity when the same shape has distinct domain meanings (`CatalogueItemPrice`, `CatalogueItemImage`). Never represent joint presence with parallel `Option` fields.
+- Model coupled optional fields as one `Option` around a composite value whose members are mandatory. Use reusable component and composite names without a feature prefix (`Price`, `ImageAsset`), then add a `Pure` newtype named for the owning entity when the same shape has distinct domain meanings (`CatalogueItemPrice`, `CatalogueItemImageAsset`). Never represent joint presence with parallel `Option` fields.
 - Comments explain only a non-obvious decision, workaround, invariant the compiler cannot express, or unrecoverable context. Never restate code or add section/banner comments; improve structure/names instead.
 - Never combine independently built collections with `zip` when correctness requires equal length/order: it truncates silently. `zipWithIndex` on one collection and zipping effects are allowed.
 - Create related values together; retain the relation in a named tuple/case class, or `Map` for lookup.

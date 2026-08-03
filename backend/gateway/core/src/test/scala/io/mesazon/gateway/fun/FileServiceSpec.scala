@@ -283,11 +283,11 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             catalogueItemImageNormalizedBucketKey = catalogueItemImageNormalizedBucketKey,
           )
 
-        val catalogueItemImage = CatalogueItemImage.assume(
-          Image(
-            originalBucketKey = catalogueItemImageOriginalBucketKey,
-            normalizedBucketKey = catalogueItemImageNormalizedBucketKey,
-            originalFileName = catalogueItemImageOriginalFileName,
+        val catalogueItemImageAsset = CatalogueItemImageAsset.assume(
+          ImageAsset(
+            imageOriginalBucketKey = catalogueItemImageOriginalBucketKey,
+            imageNormalizedBucketKey = catalogueItemImageNormalizedBucketKey,
+            imageOriginalFileName = catalogueItemImageOriginalFileName,
           )
         )
 
@@ -319,7 +319,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
               None,
               None,
               None,
-              Some(catalogueItemImage),
+              Some(catalogueItemImageAsset),
             )
             .returningZIO(Some(catalogueItemRowActive))
             .once(),
@@ -602,11 +602,11 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             catalogueItemImageNormalizedBucketKey = catalogueItemImageNormalizedBucketKey,
           )
 
-        val catalogueItemImage = CatalogueItemImage.assume(
-          Image(
-            originalBucketKey = catalogueItemImageOriginalBucketKey,
-            normalizedBucketKey = catalogueItemImageNormalizedBucketKey,
-            originalFileName = catalogueItemImageOriginalFileName,
+        val catalogueItemImageAsset = CatalogueItemImageAsset.assume(
+          ImageAsset(
+            imageOriginalBucketKey = catalogueItemImageOriginalBucketKey,
+            imageNormalizedBucketKey = catalogueItemImageNormalizedBucketKey,
+            imageOriginalFileName = catalogueItemImageOriginalFileName,
           )
         )
 
@@ -640,7 +640,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
               None,
               None,
               None,
-              Some(catalogueItemImage),
+              Some(catalogueItemImageAsset),
             )
             .failingZIO(updateError)
             .once(),

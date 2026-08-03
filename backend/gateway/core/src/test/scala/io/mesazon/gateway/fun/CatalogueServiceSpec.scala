@@ -307,7 +307,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
       "successfully return a catalogue item's full details" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
-          image = Some(arbitrarySample[CatalogueItemImage])
+          imageAsset = Some(arbitrarySample[CatalogueItemImageAsset])
         )
         val catalogueItemImageOriginalUrl   = arbitrarySample[S3OriginalUrl]
         val catalogueItemImageNormalizedUrl = arbitrarySample[S3NormalizedUrl]
@@ -318,12 +318,12 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           .once()
 
         s3ClientOrganizationMediaMock.getOriginalUrl
-          .expects(catalogueItemRow.image.value.value.originalBucketKey)
+          .expects(catalogueItemRow.imageAsset.value.value.imageOriginalBucketKey)
           .returningZIO(catalogueItemImageOriginalUrl)
           .once()
 
         s3ClientOrganizationMediaMock.getNormalizedUrl
-          .expects(catalogueItemRow.image.value.value.normalizedBucketKey)
+          .expects(catalogueItemRow.imageAsset.value.value.imageNormalizedBucketKey)
           .returningZIO(catalogueItemImageNormalizedUrl)
           .once()
 
@@ -344,7 +344,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
 
       "successfully return a catalogue item without image URLs when it has no image" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
-        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(image = None)
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(imageAsset = None)
 
         catalogueRepositoryMock.getCatalogueItem
           .expects(organizationID, catalogueItemRow.catalogueItemID)
@@ -405,11 +405,11 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
       "successfully return every active catalogue item in the repository's order" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
         val catalogueItemSummaryRow1 = arbitrarySample[CatalogueItemSummaryRow].copy(
-          image = Some(arbitrarySample[CatalogueItemImage]),
+          imageAsset = Some(arbitrarySample[CatalogueItemImageAsset]),
           status = CatalogueItemStatus.Active,
         )
         val catalogueItemSummaryRow2 = arbitrarySample[CatalogueItemSummaryRow].copy(
-          image = None,
+          imageAsset = None,
           status = CatalogueItemStatus.Active,
         )
         val catalogueItemImageNormalizedUrl = arbitrarySample[S3NormalizedUrl]
@@ -422,7 +422,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           .once()
 
         s3ClientOrganizationMediaMock.getNormalizedUrl
-          .expects(catalogueItemSummaryRow1.image.value.value.normalizedBucketKey)
+          .expects(catalogueItemSummaryRow1.imageAsset.value.value.imageNormalizedBucketKey)
           .returningZIO(catalogueItemImageNormalizedUrl)
           .once()
 

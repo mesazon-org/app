@@ -62,7 +62,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           name = insertCatalogueItemInput.name,
           unit = insertCatalogueItemInput.unit,
           price = insertCatalogueItemInput.price,
-          image = None,
+          imageAsset = None,
           status = CatalogueItemStatus.Active,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -92,7 +92,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           name = insertCatalogueItemInput.name,
           unit = insertCatalogueItemInput.unit,
           price = insertCatalogueItemInput.price,
-          image = None,
+          imageAsset = None,
           status = CatalogueItemStatus.Active,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -131,7 +131,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           name = insertCatalogueItemInput.name,
           unit = insertCatalogueItemInput.unit,
           price = insertCatalogueItemInput.price,
-          image = None,
+          imageAsset = None,
           status = CatalogueItemStatus.Active,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -177,7 +177,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           name = insertCatalogueItemInput1.name,
           unit = insertCatalogueItemInput1.unit,
           price = insertCatalogueItemInput1.price,
-          image = None,
+          imageAsset = None,
           status = CatalogueItemStatus.Active,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -247,13 +247,13 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           status = CatalogueItemStatus.Active
         )
-        val catalogueItemNameUpdate  = arbitrarySample[CatalogueItemName]
-        val catalogueItemPriceUpdate = arbitrarySample[CatalogueItemPrice]
-        val catalogueItemImageUpdate = arbitrarySample[CatalogueItemImage]
-        val catalogueItemRowExpected = catalogueItemRow.copy(
+        val catalogueItemNameUpdate       = arbitrarySample[CatalogueItemName]
+        val catalogueItemPriceUpdate      = arbitrarySample[CatalogueItemPrice]
+        val catalogueItemImageAssetUpdate = arbitrarySample[CatalogueItemImageAsset]
+        val catalogueItemRowExpected      = catalogueItemRow.copy(
           name = catalogueItemNameUpdate,
           price = Some(catalogueItemPriceUpdate),
-          image = Some(catalogueItemImageUpdate),
+          imageAsset = Some(catalogueItemImageAssetUpdate),
           updatedAt = UpdatedAt(instantNow),
         )
 
@@ -275,7 +275,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
             nameOptUpdate = Some(catalogueItemNameUpdate),
             unitOptUpdate = None,
             priceOptUpdate = Some(catalogueItemPriceUpdate),
-            imageOptUpdate = Some(catalogueItemImageUpdate),
+            imageAssetOptUpdate = Some(catalogueItemImageAssetUpdate),
           )
           .zioValue
 
@@ -442,7 +442,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
       "archive an active catalogue item, retain it, and free its active name" in new TestContext {
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           price = Some(arbitrarySample[CatalogueItemPrice]),
-          image = Some(arbitrarySample[CatalogueItemImage]),
+          imageAsset = Some(arbitrarySample[CatalogueItemImageAsset]),
           status = CatalogueItemStatus.Active,
         )
         val catalogueItemRowArchivedExpected = catalogueItemRow.copy(
@@ -459,7 +459,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           name = insertCatalogueItemInput.name,
           unit = insertCatalogueItemInput.unit,
           price = insertCatalogueItemInput.price,
-          image = None,
+          imageAsset = None,
           status = CatalogueItemStatus.Active,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -673,7 +673,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
             CatalogueItemSummaryRow(
               catalogueItemID = catalogueItemRow.catalogueItemID,
               name = catalogueItemRow.name,
-              image = catalogueItemRow.image,
+              imageAsset = catalogueItemRow.imageAsset,
               status = catalogueItemRow.status,
             )
           )

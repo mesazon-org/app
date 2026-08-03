@@ -97,8 +97,8 @@ object CatalogueService {
           ServiceError.InternalServerError
             .UnexpectedError(s"Catalogue item not found for catalogueItemID: [$catalogueItemID]")
         )
-      imageOriginalUrl   <- imageOriginalUrlOpt(catalogueItemRow.image)
-      imageNormalizedUrl <- imageNormalizedUrlOpt(catalogueItemRow.image)
+      imageOriginalUrl   <- imageOriginalUrlOpt(catalogueItemRow.imageAsset)
+      imageNormalizedUrl <- imageNormalizedUrlOpt(catalogueItemRow.imageAsset)
     } yield smithy.GetCatalogueItemGetResponse(
       catalogueItemID = catalogueItemRow.catalogueItemID.value,
       name = catalogueItemRow.name.value,
@@ -116,22 +116,24 @@ object CatalogueService {
       catalogueItems           <- ZIO.foreach(catalogueItemSummaryRows)(toGetCatalogueItem)
     } yield smithy.GetCatalogueItemsGetResponse(catalogueItems)
 
-    private def imageOriginalUrlOpt(catalogueItemImageOpt: Option[CatalogueItemImage]): ServiceTask[Option[String]] =
-      ZIO.foreach(catalogueItemImageOpt)(catalogueItemImage =>
-        s3ClientOrganizationMedia.getOriginalUrl(catalogueItemImage.value.originalBucketKey).map(_.value)
+    private def imageOriginalUrlOpt(
+        catalogueItemImageAssetOpt: Option[CatalogueItemImageAsset]
+    ): ServiceTask[Option[String]] =
+      ZIO.foreach(catalogueItemImageAssetOpt)(catalogueItemImageAsset =>
+        s3ClientOrganizationMedia.getOriginalUrl(catalogueItemImageAsset.value.imageOriginalBucketKey).map(_.value)
       )
 
     private def imageNormalizedUrlOpt(
-        catalogueItemImageOpt: Option[CatalogueItemImage]
+        catalogueItemImageAssetOpt: Option[CatalogueItemImageAsset]
     ): ServiceTask[Option[String]] =
-      ZIO.foreach(catalogueItemImageOpt)(catalogueItemImage =>
-        s3ClientOrganizationMedia.getNormalizedUrl(catalogueItemImage.value.normalizedBucketKey).map(_.value)
+      ZIO.foreach(catalogueItemImageAssetOpt)(catalogueItemImageAsset =>
+        s3ClientOrganizationMedia.getNormalizedUrl(catalogueItemImageAsset.value.imageNormalizedBucketKey).map(_.value)
       )
 
     private def toGetCatalogueItem(
         catalogueItemSummaryRow: CatalogueItemSummaryRow
     ): ServiceTask[smithy.GetCatalogueItem] =
-      imageNormalizedUrlOpt(catalogueItemSummaryRow.image).map(imageNormalizedUrl =>
+      imageNormalizedUrlOpt(catalogueItemSummaryRow.imageAsset).map(imageNormalizedUrl =>
         smithy.GetCatalogueItem(
           catalogueItemID = catalogueItemSummaryRow.catalogueItemID.value,
           name = catalogueItemSummaryRow.name.value,
