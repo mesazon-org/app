@@ -39,7 +39,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.upload(
+            _.uploadImage(
               organizationID,
               catalogueItemID,
               ImageOriginalByteStream(imageOriginalByteStream),
@@ -55,23 +55,23 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
         val expectedBucketKeyPrefix =
           s"${s3ClientOrganizationMediaConfig.catalogueItemImageBucketPathPrefix}/${organizationID.value}/${catalogueItemID.value}"
 
-        uploadedImageBucketKeys.catalogueItemImageOriginalBucketKey.value shouldBe
+        uploadedImageBucketKeys.imageOriginalS3BucketKey.value shouldBe
           s"$expectedBucketKeyPrefix/${s3ClientOrganizationMediaConfig.originalFileName}"
 
-        uploadedImageBucketKeys.catalogueItemImageNormalizedBucketKey.value shouldBe
+        uploadedImageBucketKeys.imageNormalizedS3BucketKey.value shouldBe
           s"$expectedBucketKeyPrefix/${s3ClientOrganizationMediaConfig.normalizedFileName}"
 
         s3TestClient
           .getObject(
             s3ClientOrganizationMediaConfig.bucket,
-            uploadedImageBucketKeys.catalogueItemImageOriginalBucketKey.value,
+            uploadedImageBucketKeys.imageOriginalS3BucketKey.value,
           )
           .zioValue should contain theSameElementsInOrderAs imageOriginalByteStream.runCollect.zioValue
 
         s3TestClient
           .getObject(
             s3ClientOrganizationMediaConfig.bucket,
-            uploadedImageBucketKeys.catalogueItemImageNormalizedBucketKey.value,
+            uploadedImageBucketKeys.imageNormalizedS3BucketKey.value,
           )
           .zioValue should contain theSameElementsInOrderAs imageNormalizedByteStream.runCollect.zioValue
       }
@@ -84,7 +84,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys1 = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.upload(
+            _.uploadImage(
               organizationID,
               catalogueItemID,
               ImageOriginalByteStream(imageOriginalByteStream1),
@@ -99,7 +99,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys2 = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.upload(
+            _.uploadImage(
               organizationID,
               catalogueItemID,
               ImageOriginalByteStream(imageOriginalByteStream2),
@@ -117,7 +117,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
         s3TestClient
           .getObject(
             s3ClientOrganizationMediaConfig.bucket,
-            uploadedImageBucketKeys2.catalogueItemImageOriginalBucketKey.value,
+            uploadedImageBucketKeys2.imageOriginalS3BucketKey.value,
           )
           .zioValue should contain theSameElementsInOrderAs imageOriginalByteStream2.runCollect.zioValue
       }
@@ -131,7 +131,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.upload(
+            _.uploadImage(
               organizationID,
               catalogueItemID,
               ImageOriginalByteStream(imageOriginalByteStream),
@@ -146,7 +146,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val imageOriginalPresignedUrl = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.genMediaUrl(uploadedImageBucketKeys.catalogueItemImageOriginalBucketKey.to[S3BucketKey])
+            _.genMediaUrl(uploadedImageBucketKeys.imageOriginalS3BucketKey.to[S3BucketKey])
           )
           .provide(
             S3ClientOrganizationMedia.live,
@@ -172,7 +172,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.upload(
+            _.uploadImage(
               organizationID,
               catalogueItemID,
               ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg")),
@@ -187,7 +187,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val imageNormalizedPresignedUrl = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.genMediaUrl(uploadedImageBucketKeys.catalogueItemImageNormalizedBucketKey.to[S3BucketKey])
+            _.genMediaUrl(uploadedImageBucketKeys.imageNormalizedS3BucketKey.to[S3BucketKey])
           )
           .provide(
             S3ClientOrganizationMedia.live,

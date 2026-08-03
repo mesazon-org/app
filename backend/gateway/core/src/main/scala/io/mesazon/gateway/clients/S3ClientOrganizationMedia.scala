@@ -1,7 +1,7 @@
 package io.mesazon.gateway.clients
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.clients.S3ClientOrganizationMedia.UploadedCatalogueItemImageResult
+import io.mesazon.gateway.clients.S3ClientOrganizationMedia.UploadedImageResult
 import io.mesazon.gateway.config.S3ClientOrganizationMediaConfig
 import io.mesazon.gateway.utils.*
 import software.amazon.awssdk.auth.credentials.*
@@ -15,12 +15,12 @@ import zio.stream.*
 import scala.util.chaining.scalaUtilChainingOps
 
 trait S3ClientOrganizationMedia {
-  def upload(
+  def uploadImage(
       organizationID: OrganizationID,
       catalogueItemID: CatalogueItemID,
       catalogueItemImageOriginalByteStream: ImageOriginalByteStream,
       catalogueItemImageNormalizedByteStream: ImageNormalizedByteStream,
-  ): IO[ServiceError, UploadedCatalogueItemImageResult]
+  ): IO[ServiceError, UploadedImageResult]
 
   def genMediaUrl(
       bucketKey: S3BucketKey
@@ -31,9 +31,9 @@ trait S3ClientOrganizationMedia {
 
 object S3ClientOrganizationMedia {
 
-  type UploadedCatalogueItemImageResult = (
-      catalogueItemImageOriginalBucketKey: ImageOriginalBucketKey,
-      catalogueItemImageNormalizedBucketKey: ImageNormalizedBucketKey,
+  type UploadedImageResult = (
+      imageOriginalS3BucketKey: ImageOriginalS3BucketKey,
+      imageNormalizedS3BucketKey: ImageNormalizedS3BucketKey,
   )
 
   private final class S3ClientOrganizationMediaImpl(
@@ -86,36 +86,36 @@ object S3ClientOrganizationMedia {
         } yield bucketKey
       }
 
-    override def upload(
+    override def uploadImage(
         organizationID: OrganizationID,
         catalogueItemID: CatalogueItemID,
         catalogueItemImageOriginalByteStream: ImageOriginalByteStream,
         catalogueItemImageNormalizedByteStream: ImageNormalizedByteStream,
-    ): IO[ServiceError, UploadedCatalogueItemImageResult] =
+    ): IO[ServiceError, UploadedImageResult] =
       for {
-        catalogueItemImageOriginalBucketKeyRaw <- uploadFile(
+        imageOriginalS3BucketKeyRaw <- uploadFile(
           s3ClientOrganizationMediaConfig.catalogueItemImageBucketPathPrefix,
           List(organizationID.value.toString, catalogueItemID.value.toString),
           s3ClientOrganizationMediaConfig.originalFileName,
           catalogueItemImageOriginalByteStream.value,
         )
-        catalogueItemImageNormalizedBucketKeyRaw <- uploadFile(
+        imageNormalizedS3BucketKeyRaw <- uploadFile(
           s3ClientOrganizationMediaConfig.catalogueItemImageBucketPathPrefix,
           List(organizationID.value.toString, catalogueItemID.value.toString),
           s3ClientOrganizationMediaConfig.normalizedFileName,
           catalogueItemImageNormalizedByteStream.value,
         )
-        catalogueItemImageOriginalBucketKey <- ZIO
-          .fromEither(ImageOriginalBucketKey.either(catalogueItemImageOriginalBucketKeyRaw))
+        imageOriginalS3BucketKey <- ZIO
+          .fromEither(ImageOriginalS3BucketKey.either(imageOriginalS3BucketKeyRaw))
           .mapError(e =>
-            ServiceError.InternalServerError.UnexpectedError(s"Failed to construct ImageOriginalBucketKey: [$e]")
+            ServiceError.InternalServerError.UnexpectedError(s"Failed to construct ImageOriginalS3BucketKey: [$e]")
           )
-        catalogueItemImageNormalizedBucketKey <- ZIO
-          .fromEither(ImageNormalizedBucketKey.either(catalogueItemImageNormalizedBucketKeyRaw))
+        imageNormalizedS3BucketKey <- ZIO
+          .fromEither(ImageNormalizedS3BucketKey.either(imageNormalizedS3BucketKeyRaw))
           .mapError(e =>
-            ServiceError.InternalServerError.UnexpectedError(s"Failed to construct ImageNormalizedBucketKey: [$e]")
+            ServiceError.InternalServerError.UnexpectedError(s"Failed to construct ImageNormalizedS3BucketKey: [$e]")
           )
-      } yield (catalogueItemImageOriginalBucketKey, catalogueItemImageNormalizedBucketKey)
+      } yield (imageOriginalS3BucketKey, imageNormalizedS3BucketKey)
 
     override def genMediaUrl(
         bucketKey: S3BucketKey
@@ -238,13 +238,13 @@ object S3ClientOrganizationMedia {
 
   private def observed(s3ClientOrganizationMedia: S3ClientOrganizationMedia): S3ClientOrganizationMedia =
     new S3ClientOrganizationMedia {
-      override def upload(
+      override def uploadImage(
           organizationID: OrganizationID,
           catalogueItemID: CatalogueItemID,
           catalogueItemImageOriginalByteStream: ImageOriginalByteStream,
           catalogueItemImageNormalizedByteStream: ImageNormalizedByteStream,
-      ): IO[ServiceError, UploadedCatalogueItemImageResult] =
-        s3ClientOrganizationMedia.upload(
+      ): IO[ServiceError, UploadedImageResult] =
+        s3ClientOrganizationMedia.uploadImage(
           organizationID,
           catalogueItemID,
           catalogueItemImageOriginalByteStream,

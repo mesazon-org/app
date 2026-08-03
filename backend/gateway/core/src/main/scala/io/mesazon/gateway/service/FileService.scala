@@ -101,17 +101,17 @@ object FileService {
           catalogueItemImageScannedByteStream,
           SupportedMediaTypes.images,
         )
-        catalogueItemUploadImagesResult <-
+        uploadedImageResult <-
           s3ClientOrganizationMedia
-            .upload(
+            .uploadImage(
               organizationID,
               catalogueItemID,
               catalogueItemImageNormalizedResult.imageOriginalByteStream,
               catalogueItemImageNormalizedResult.imageNormalizedByteStream,
             )
         imageAsset = ImageAsset(
-          imageOriginalBucketKey = catalogueItemUploadImagesResult.catalogueItemImageOriginalBucketKey,
-          imageNormalizedBucketKey = catalogueItemUploadImagesResult.catalogueItemImageNormalizedBucketKey,
+          imageOriginalS3BucketKey = uploadedImageResult.imageOriginalS3BucketKey,
+          imageNormalizedS3BucketKey = uploadedImageResult.imageNormalizedS3BucketKey,
           imageOriginalFileName = catalogueItemImageOriginalFileName,
         )
         catalogueItemImageAsset <- ZIO

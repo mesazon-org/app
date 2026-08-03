@@ -13,7 +13,7 @@ Validation is the only boundary where untrusted transport primitives become refi
 
 ## Domain modeling
 
-- Name reusable value concepts without a feature prefix (`PriceAmount`, `PriceCurrency`, `Price`, `ImageOriginalBucketKey`, `ImageNormalizedBucketKey`, `ImageOriginalFileName`, `ImageAsset`).
+- Name reusable value concepts without a feature prefix (`PriceAmount`, `PriceCurrency`, `Price`, `ImageOriginalS3BucketKey`, `ImageNormalizedS3BucketKey`, `ImageOriginalFileName`, `ImageAsset`).
 - When a shared value shape has a distinct feature meaning, wrap it in an owner-specific `Pure` newtype named for the owning entity (`CatalogueItemPrice`, `CatalogueItemImageAsset`).
 - Represent coupled optional fields as one `Option` around a composite case class whose members are mandatory. Never expose parallel `Option` fields that permit half-present domain values.
 

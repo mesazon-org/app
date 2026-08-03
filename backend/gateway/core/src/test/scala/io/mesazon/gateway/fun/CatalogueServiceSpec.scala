@@ -319,12 +319,12 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           .once()
 
         s3ClientOrganizationMediaMock.genMediaUrl
-          .expects(catalogueItemRow.imageAsset.value.value.imageOriginalBucketKey.to[S3BucketKey])
+          .expects(catalogueItemRow.imageAsset.value.value.imageOriginalS3BucketKey.to[S3BucketKey])
           .returningZIO(catalogueItemImageOriginalUrl)
           .once()
 
         s3ClientOrganizationMediaMock.genMediaUrl
-          .expects(catalogueItemRow.imageAsset.value.value.imageNormalizedBucketKey.to[S3BucketKey])
+          .expects(catalogueItemRow.imageAsset.value.value.imageNormalizedS3BucketKey.to[S3BucketKey])
           .returningZIO(catalogueItemImageNormalizedUrl)
           .once()
 
@@ -423,7 +423,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           .once()
 
         s3ClientOrganizationMediaMock.genMediaUrl
-          .expects(catalogueItemSummaryRow1.imageAsset.value.value.imageNormalizedBucketKey.to[S3BucketKey])
+          .expects(catalogueItemSummaryRow1.imageAsset.value.value.imageNormalizedS3BucketKey.to[S3BucketKey])
           .returningZIO(catalogueItemImageNormalizedUrl)
           .once()
 

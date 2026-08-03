@@ -421,8 +421,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           catalogueItemRowUpdated.isDefined shouldBe true
           catalogueItemRowUpdated.get.imageAsset.isDefined shouldBe true
           catalogueItemRowUpdated.get.imageAsset.get.value.imageOriginalFileName shouldBe catalogueItemImageOriginalFileName
-          catalogueItemRowUpdated.get.imageAsset.get.value.imageOriginalBucketKey.value shouldBe s"$expectedBucketKeyPrefix/original"
-          catalogueItemRowUpdated.get.imageAsset.get.value.imageNormalizedBucketKey.value shouldBe s"$expectedBucketKeyPrefix/normalized"
+          catalogueItemRowUpdated.get.imageAsset.get.value.imageOriginalS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/original"
+          catalogueItemRowUpdated.get.imageAsset.get.value.imageNormalizedS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/normalized"
           catalogueItemRowUpdated.get.status shouldBe CatalogueItemStatus.Active
       }
 

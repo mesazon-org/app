@@ -122,7 +122,7 @@ object CatalogueService {
     ): ServiceTask[Option[String]] =
       ZIO.foreach(catalogueItemImageAssetOpt)(catalogueItemImageAsset =>
         s3ClientOrganizationMedia
-          .genMediaUrl(catalogueItemImageAsset.value.imageOriginalBucketKey.to[S3BucketKey])
+          .genMediaUrl(catalogueItemImageAsset.value.imageOriginalS3BucketKey.to[S3BucketKey])
           .map(_.value)
       )
 
@@ -131,7 +131,7 @@ object CatalogueService {
     ): ServiceTask[Option[String]] =
       ZIO.foreach(catalogueItemImageAssetOpt)(catalogueItemImageAsset =>
         s3ClientOrganizationMedia
-          .genMediaUrl(catalogueItemImageAsset.value.imageNormalizedBucketKey.to[S3BucketKey])
+          .genMediaUrl(catalogueItemImageAsset.value.imageNormalizedS3BucketKey.to[S3BucketKey])
           .map(_.value)
       )
 

@@ -30,11 +30,11 @@ type PriceAmount = PriceAmount.T
 object PriceCurrency extends RefinedType[String, NonEmptyTrimmed]
 type PriceCurrency = PriceCurrency.T
 
-object ImageOriginalBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
-type ImageOriginalBucketKey = ImageOriginalBucketKey.T
+object ImageOriginalS3BucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type ImageOriginalS3BucketKey = ImageOriginalS3BucketKey.T
 
-object ImageNormalizedBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
-type ImageNormalizedBucketKey = ImageNormalizedBucketKey.T
+object ImageNormalizedS3BucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type ImageNormalizedS3BucketKey = ImageNormalizedS3BucketKey.T
 
 object S3BucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
 type S3BucketKey = S3BucketKey.T

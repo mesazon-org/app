@@ -275,18 +275,18 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
-        val catalogueItemImageOriginalBucketKey   = arbitrarySample[ImageOriginalBucketKey]
-        val catalogueItemImageNormalizedBucketKey = arbitrarySample[ImageNormalizedBucketKey]
-        val uploadedImageResult: S3ClientOrganizationMedia.UploadedCatalogueItemImageResult =
+        val catalogueItemImageOriginalS3BucketKey   = arbitrarySample[ImageOriginalS3BucketKey]
+        val catalogueItemImageNormalizedS3BucketKey = arbitrarySample[ImageNormalizedS3BucketKey]
+        val uploadedImageResult: S3ClientOrganizationMedia.UploadedImageResult =
           (
-            catalogueItemImageOriginalBucketKey = catalogueItemImageOriginalBucketKey,
-            catalogueItemImageNormalizedBucketKey = catalogueItemImageNormalizedBucketKey,
+            imageOriginalS3BucketKey = catalogueItemImageOriginalS3BucketKey,
+            imageNormalizedS3BucketKey = catalogueItemImageNormalizedS3BucketKey,
           )
 
         val catalogueItemImageAsset = CatalogueItemImageAsset.assume(
           ImageAsset(
-            imageOriginalBucketKey = catalogueItemImageOriginalBucketKey,
-            imageNormalizedBucketKey = catalogueItemImageNormalizedBucketKey,
+            imageOriginalS3BucketKey = catalogueItemImageOriginalS3BucketKey,
+            imageNormalizedS3BucketKey = catalogueItemImageNormalizedS3BucketKey,
             imageOriginalFileName = catalogueItemImageOriginalFileName,
           )
         )
@@ -308,7 +308,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          catalogueItemS3ClientMock.upload
+          catalogueItemS3ClientMock.uploadImage
             .expects(organizationID, catalogueItemID, originalByteStream, normalizedByteStream)
             .returningZIO(uploadedImageResult)
             .once(),
@@ -556,7 +556,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          catalogueItemS3ClientMock.upload
+          catalogueItemS3ClientMock.uploadImage
             .expects(organizationID, catalogueItemID, originalByteStream, normalizedByteStream)
             .failingZIO(uploadError)
             .once(),
@@ -594,18 +594,18 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
-        val catalogueItemImageOriginalBucketKey   = arbitrarySample[ImageOriginalBucketKey]
-        val catalogueItemImageNormalizedBucketKey = arbitrarySample[ImageNormalizedBucketKey]
-        val uploadedImageResult: S3ClientOrganizationMedia.UploadedCatalogueItemImageResult =
+        val catalogueItemImageOriginalS3BucketKey   = arbitrarySample[ImageOriginalS3BucketKey]
+        val catalogueItemImageNormalizedS3BucketKey = arbitrarySample[ImageNormalizedS3BucketKey]
+        val uploadedImageResult: S3ClientOrganizationMedia.UploadedImageResult =
           (
-            catalogueItemImageOriginalBucketKey = catalogueItemImageOriginalBucketKey,
-            catalogueItemImageNormalizedBucketKey = catalogueItemImageNormalizedBucketKey,
+            imageOriginalS3BucketKey = catalogueItemImageOriginalS3BucketKey,
+            imageNormalizedS3BucketKey = catalogueItemImageNormalizedS3BucketKey,
           )
 
         val catalogueItemImageAsset = CatalogueItemImageAsset.assume(
           ImageAsset(
-            imageOriginalBucketKey = catalogueItemImageOriginalBucketKey,
-            imageNormalizedBucketKey = catalogueItemImageNormalizedBucketKey,
+            imageOriginalS3BucketKey = catalogueItemImageOriginalS3BucketKey,
+            imageNormalizedS3BucketKey = catalogueItemImageNormalizedS3BucketKey,
             imageOriginalFileName = catalogueItemImageOriginalFileName,
           )
         )
@@ -629,7 +629,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          catalogueItemS3ClientMock.upload
+          catalogueItemS3ClientMock.uploadImage
             .expects(organizationID, catalogueItemID, originalByteStream, normalizedByteStream)
             .returningZIO(uploadedImageResult)
             .once(),
