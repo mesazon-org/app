@@ -310,17 +310,11 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           imageAsset = Some(arbitrarySample[CatalogueItemImageAsset])
         )
-        val catalogueItemImageOriginalUrl   = arbitrarySample[S3MediaUrl]
         val catalogueItemImageNormalizedUrl = arbitrarySample[S3MediaUrl]
 
         catalogueRepositoryMock.getCatalogueItem
           .expects(organizationID, catalogueItemRow.catalogueItemID)
           .returningZIO(Some(catalogueItemRow))
-          .once()
-
-        s3ClientOrganizationMediaMock.genMediaUrl
-          .expects(catalogueItemRow.imageAsset.value.value.imageOriginalS3BucketKey.to[S3BucketKey])
-          .returningZIO(catalogueItemImageOriginalUrl)
           .once()
 
         s3ClientOrganizationMediaMock.genMediaUrl
@@ -337,7 +331,6 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
               name = catalogueItemRow.name.value,
               unit = catalogueItemRow.unit.value,
               price = catalogueItemRow.price.map(toCatalogueItemPriceRequest),
-              imageOriginalUrl = Some(catalogueItemImageOriginalUrl.value),
               imageNormalizedUrl = Some(catalogueItemImageNormalizedUrl.value),
             )
           )
@@ -361,7 +354,6 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
               name = catalogueItemRow.name.value,
               unit = catalogueItemRow.unit.value,
               price = catalogueItemRow.price.map(toCatalogueItemPriceRequest),
-              imageOriginalUrl = None,
               imageNormalizedUrl = None,
             )
           )
@@ -417,7 +409,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
 
         catalogueItemSummaryRow1 should not be catalogueItemSummaryRow2
 
-        catalogueRepositoryMock.getCatalogueItemsActive
+        catalogueRepositoryMock.getCatalogueItemSummariesActive
           .expects(organizationID)
           .returningZIO(List(catalogueItemSummaryRow1, catalogueItemSummaryRow2))
           .once()
@@ -453,7 +445,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
       "fail with a RepositoryError and surface it unchanged" in new TestContext {
         val organizationID = arbitrarySample[OrganizationID]
 
-        catalogueRepositoryMock.getCatalogueItemsActive
+        catalogueRepositoryMock.getCatalogueItemSummariesActive
           .expects(organizationID)
           .returns(ZIO.fail(repositoryError))
           .once()

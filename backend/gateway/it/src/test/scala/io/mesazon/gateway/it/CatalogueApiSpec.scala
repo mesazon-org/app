@@ -1530,7 +1530,6 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         // Presigned URLs are generated on the fly (signature + expiry query params) rather than the raw
         // bucket key, so only presence is asserted here; `S3ClientOrganizationMediaSpec` proves the URLs
         // themselves actually serve the uploaded bytes.
-        getCatalogueItemGetResponseBody.imageOriginalUrl shouldBe defined
         getCatalogueItemGetResponseBody.imageNormalizedUrl shouldBe defined
       }
 

@@ -32,7 +32,7 @@ The `numeric` choice is the documented exception to the usual primitive set.
 | POST | `/insert/catalogue-items` | `InsertCatalogueItemsPost` | atomic batch |
 | PUT | `/update/catalogue-item` | `UpdateCatalogueItemPut` | update name/unit/price |
 | PUT | `/archive/catalogue-item` | `ArchiveCatalogueItemPut` | archive by ID |
-| GET | `/get/catalogue-item/{catalogueItemID}` | `GetCatalogueItemGet` | full item: name, unit, price, both image URLs |
+| GET | `/get/catalogue-item/{catalogueItemID}` | `GetCatalogueItemGet` | full item: name, unit, price, normalized image URL only |
 | GET | `/get/catalogue-items` | `GetCatalogueItemsGet` | active-item summaries: name, status, normalized image URL only — no unit/price |
 
 Errors:
@@ -87,11 +87,11 @@ Details:
 - Shared price types: `PriceAmount` (`BigDecimal`), `PriceCurrency`, and `Price` with mandatory amount/currency. Shared image types: `ImageOriginalS3BucketKey`, `ImageNormalizedS3BucketKey`, `ImageOriginalFileName`, and `ImageAsset` with all three members mandatory. Catalogue owns only the contextual `CatalogueItemPrice` (`Pure[Price]`) and `CatalogueItemImageAsset` (`Pure[ImageAsset]`) wrappers alongside `CatalogueItemID`, `CatalogueItemName`, and `CatalogueItemUnit`; the enum is in `CatalogueItemStatus.scala`.
 - `PriceDomainValidator` owns the reusable ISO currency/amount invariant. `CatalogueRequestValidator` validates single insert, batch insert, and update; UUID-only archive remains outside the feature validator. Batch failures use the singular item field `catalogueItem` and preserve each invalid item's stable source index while omitting valid positions from the error list.
 - Schema/config: `V2025.05.27__init.sql`; `RepositoryConfig.catalogueItemTable`, `allTableNames`, and `catalogue-item-table` in both configs.
-- `CatalogueItemRow.price` spans the adjacent amount/currency columns and `CatalogueItemRow.image` spans the three adjacent image metadata columns through composite refined codecs. `CatalogueItemSummaryRow` (`catalogueItemID`, `name`, `image`, `status`) is a lighter projection returned only by `getCatalogueItemsActive`, backed by a dedicated narrower `SELECT`; it deliberately excludes `unit`/`price`/`organizationID`/timestamps, which the list endpoint doesn't need.
+- `CatalogueItemRow.price` spans the adjacent amount/currency columns and `CatalogueItemRow.imageAsset` spans the three adjacent image metadata columns through composite refined codecs. `CatalogueItemSummaryRow` (`catalogueItemID`, `name`, `imageAsset`, `status`) is a lighter projection returned only by `CatalogueRepository.getCatalogueItemSummariesActive`, backed by a dedicated narrower `SELECT`; it deliberately excludes `unit`/`price`/`organizationID`/timestamps, which the list endpoint doesn't need.
 - Validation normalizes ISO currency with trim plus uppercase, accepts amounts in `[0, 1,000,000,000,000)`, rejects values whose supplied scale exceeds the ISO currency's fixed fraction digits, then appends zeros to reach that exact scale without rounding. `XXX` and currencies with `fractionDigits = -1` are rejected.
 - `CatalogueItemQueries`: single/batch insert, dynamic update + returning, archive + returning ID, get any status, `getCatalogueItemRow` (full row), `getCatalogueItemRowsActive` → renamed to and now backed by `getCatalogueItemSummaryRowsActive` (summary projection), test getter. Preserve qualified native-enum write/read casts.
 - Generic refined `Meta[BigDecimal]` provides exact codec; no bespoke codec.
-- `CatalogueRepository`: companion `InsertCatalogueItemInput`, UUIDv7/time generation, named unique mapping. `priceOptUpdate` and `imageOptUpdate` flatten their optional composites across all corresponding columns. `None` means unchanged; clearing price or image is not supported. New item image metadata remains `None`. `getCatalogueItemsActive` returns `List[CatalogueItemSummaryRow]`, not `List[CatalogueItemRow]`.
+- `CatalogueRepository`: companion `InsertCatalogueItemInput`, UUIDv7/time generation, named unique mapping. `priceOptUpdate` and `imageAssetOptUpdate` flatten their optional composites across all corresponding columns. `None` means unchanged; clearing price or image is not supported. New item image metadata remains `None`. `getCatalogueItemSummariesActive` returns `List[CatalogueItemSummaryRow]`, not `List[CatalogueItemRow]`.
 - Do not add unused live layers: wire repository/queries with the service because ZIO rejects unused layers.
 
 ## Completed proof
@@ -112,7 +112,7 @@ See [Image upload](#image-upload) for the `POST /upload/catalogue-item/image` en
 
 `CatalogueService` validates insert/update bodies, maps validated requests into repository-owned insert inputs, preserves the organization ID on every repository call, and maps rows back to Smithy responses. Missing catalogue-item reads become `InternalServerError` with the stable `catalogueItemID` message. Update and archive remain silent `204` no-ops for missing or archived items, matching the repository's active-row mutation semantics.
 
-Both GET operations depend on `S3ClientOrganizationMedia` to resolve real presigned URLs from the persisted bucket keys — `getCatalogueItemGet` resolves both `imageOriginalUrl`/`imageNormalizedUrl` (`Option[String]`, absent when the item has no image); `getCatalogueItemsGet` resolves only `imageNormalizedUrl` per item, via `ZIO.foreach` over the repository's `CatalogueItemSummaryRow` list.
+Both GET operations depend on `S3ClientOrganizationMedia.genMediaUrl` to resolve a real presigned URL from the persisted normalized bucket key — `getCatalogueItemGet` and `getCatalogueItemsGet` each resolve only `imageNormalizedUrl` (`Option[String]`, absent when the item has no image); the original bucket key is persisted (for migrations and user download) but never resolved to a URL in either response. `getCatalogueItemsGet` resolves it per item via `ZIO.foreach` over the repository's `CatalogueItemSummaryRow` list.
 
 `CatalogueServiceSpec` uses real price validation, a strict `CatalogueRepository` mock, and a strict `S3ClientOrganizationMedia` mock. It proves each of the six operations' mapping and response behavior, validation isolation, missing-item policy, no-op mutations, unchanged repository failures, and both the with-image and without-image branches of the GET endpoints' presigned-URL resolution.
 

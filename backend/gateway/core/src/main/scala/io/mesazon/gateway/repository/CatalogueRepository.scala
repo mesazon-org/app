@@ -44,7 +44,7 @@ trait CatalogueRepository {
       catalogueItemID: CatalogueItemID,
   ): IO[ServiceError, Option[CatalogueItemRow]]
 
-  def getCatalogueItemsActive(
+  def getCatalogueItemSummariesActive(
       organizationID: OrganizationID
   ): IO[ServiceError, List[CatalogueItemSummaryRow]]
 }
@@ -151,7 +151,7 @@ object CatalogueRepository {
         .transactionOrWiden(catalogueItemQueries.getCatalogueItemRow(organizationID, catalogueItemID))
         .mapError(toServiceError(s"Failed to get catalogue item with ID: [$catalogueItemID]"))
 
-    override def getCatalogueItemsActive(
+    override def getCatalogueItemSummariesActive(
         organizationID: OrganizationID
     ): IO[ServiceError, List[CatalogueItemSummaryRow]] =
       database

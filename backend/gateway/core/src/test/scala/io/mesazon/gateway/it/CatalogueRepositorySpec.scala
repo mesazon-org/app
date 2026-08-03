@@ -624,11 +624,11 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
       }
     }
 
-    "getCatalogueItemsActive" should {
+    "getCatalogueItemSummariesActive" should {
       "return an empty list when the organization has no active catalogue items" in new TestContext {
         val organizationID = arbitrarySample[OrganizationID]
 
-        catalogueRepository.getCatalogueItemsActive(organizationID).zioValue shouldBe Nil
+        catalogueRepository.getCatalogueItemSummariesActive(organizationID).zioValue shouldBe Nil
       }
 
       "return only active catalogue items for the supplied organization" in new TestContext {
@@ -668,7 +668,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           )
           .zioValue
 
-        catalogueRepository.getCatalogueItemsActive(organizationID).zioValue should contain theSameElementsAs
+        catalogueRepository.getCatalogueItemSummariesActive(organizationID).zioValue should contain theSameElementsAs
           List(catalogueItemRowActive1, catalogueItemRowActive2).map(catalogueItemRow =>
             CatalogueItemSummaryRow(
               catalogueItemID = catalogueItemRow.catalogueItemID,
@@ -699,7 +699,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue
         val organizationID = arbitrarySample[OrganizationID]
 
-        val serviceError = catalogueRepositoryInvalid.getCatalogueItemsActive(organizationID).zioError
+        val serviceError = catalogueRepositoryInvalid.getCatalogueItemSummariesActive(organizationID).zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.RepositoryError]
         serviceError.message shouldBe s"Failed to get catalogue items for organization ID: [$organizationID]"

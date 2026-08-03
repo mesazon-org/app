@@ -54,7 +54,6 @@ structure GetCatalogueItemGetResponse {
     @required
     unit: String
     price: CatalogueItemPriceRequest
-    imageOriginalUrl: String
     imageNormalizedUrl: String
 }
 
