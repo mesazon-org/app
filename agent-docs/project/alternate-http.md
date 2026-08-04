@@ -1,6 +1,6 @@
 # Alternate HTTP transport changes
 
-For non-Smithy endpoints read [feature endpoints](../features/flow/01-endpoints.md), [Tapir](../standards/tapir.md), this file, and [Authentication](authentication.md). Tapir is only for transports Smithy cannot express; currently streaming organization-logo upload with a separate size limit.
+For non-Smithy endpoints read [feature endpoints](../features/flow/01-endpoints.md), [Tapir](../standards/tapir.md), this file, and [Authentication](authentication.md). Tapir is only for transports Smithy cannot express; currently the [Organization Management](../features/organization-management.md#logo-upload) logo upload and [Catalogue](../features/catalogue.md#image-upload) image upload, both streaming with a separate size limit.
 
 ## Files
 
@@ -18,6 +18,6 @@ Each endpoint explicitly wires `zServerSecurityLogic(authorizationService.auth(.
 - Error handler mirrors Smithy. Schema names use Smithy `<Structure>ResponseContent`; fallback is `ServerError`. Unknown JSON error code calls `in.decodeError`.
 - Preserve transport error parity described in [Authentication](authentication.md).
 
-`HttpApp` limits Smithy to 5 MB and Tapir to 20 MB. Keep `TapirMaxEntitySize` equal to `file-service.max-organization-logo-bytes`.
+`HttpApp` limits Smithy to 5 MB and Tapir to 20 MB. Keep `TapirMaxEntitySize` equal to `file-service.max-upload-bytes`. For how `FileScanner`/`ImageProcessing` handle the streamed bytes against that limit, see [Streaming uploads](streaming-uploads.md).
 
-Test security/status/error rendering and the streaming side effect end-to-end; update `files-management.md` when rationale or behavior changes.
+Test security/status/error rendering and the streaming side effect end-to-end; update the owning feature doc (`organization-management.md` or `catalogue.md`) when an upload endpoint's rationale or behavior changes.

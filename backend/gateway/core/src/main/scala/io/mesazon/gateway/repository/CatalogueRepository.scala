@@ -31,7 +31,7 @@ trait CatalogueRepository {
       nameOptUpdate: Option[CatalogueItemName] = None,
       unitOptUpdate: Option[CatalogueItemUnit] = None,
       priceOptUpdate: Option[CatalogueItemPrice] = None,
-      photoOptUpdate: Option[CatalogueItemPhoto] = None,
+      imageAssetOptUpdate: Option[CatalogueItemImageAsset] = None,
   ): IO[ServiceError, Option[CatalogueItemRow]]
 
   def archiveCatalogueItem(
@@ -44,9 +44,9 @@ trait CatalogueRepository {
       catalogueItemID: CatalogueItemID,
   ): IO[ServiceError, Option[CatalogueItemRow]]
 
-  def getCatalogueItems(
+  def getCatalogueItemSummariesActive(
       organizationID: OrganizationID
-  ): IO[ServiceError, List[CatalogueItemRow]]
+  ): IO[ServiceError, List[CatalogueItemSummaryRow]]
 }
 
 object CatalogueRepository {
@@ -113,7 +113,7 @@ object CatalogueRepository {
         nameOptUpdate: Option[CatalogueItemName],
         unitOptUpdate: Option[CatalogueItemUnit],
         priceOptUpdate: Option[CatalogueItemPrice],
-        photoOptUpdate: Option[CatalogueItemPhoto],
+        imageAssetOptUpdate: Option[CatalogueItemImageAsset],
     ): IO[ServiceError, Option[CatalogueItemRow]] = for {
       instantNow              <- timeProvider.instantNow
       catalogueItemRowUpdated <- database
@@ -125,7 +125,7 @@ object CatalogueRepository {
             nameOptUpdate,
             unitOptUpdate,
             priceOptUpdate,
-            photoOptUpdate,
+            imageAssetOptUpdate,
           )
         )
         .mapError(toServiceError(s"Failed to update catalogue item with ID: [$catalogueItemID]"))
@@ -151,11 +151,11 @@ object CatalogueRepository {
         .transactionOrWiden(catalogueItemQueries.getCatalogueItemRow(organizationID, catalogueItemID))
         .mapError(toServiceError(s"Failed to get catalogue item with ID: [$catalogueItemID]"))
 
-    override def getCatalogueItems(
+    override def getCatalogueItemSummariesActive(
         organizationID: OrganizationID
-    ): IO[ServiceError, List[CatalogueItemRow]] =
+    ): IO[ServiceError, List[CatalogueItemSummaryRow]] =
       database
-        .transactionOrWiden(catalogueItemQueries.getActiveCatalogueItemRows(organizationID))
+        .transactionOrWiden(catalogueItemQueries.getCatalogueItemSummaryRowsActive(organizationID))
         .mapError(toServiceError(s"Failed to get catalogue items for organization ID: [$organizationID]"))
 
     private def toServiceError(errorMessage: String)(dbException: DbException): ServiceError =

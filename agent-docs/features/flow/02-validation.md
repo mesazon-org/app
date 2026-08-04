@@ -13,8 +13,8 @@ Validation is the only boundary where untrusted transport primitives become refi
 
 ## Domain modeling
 
-- Name reusable value concepts without a feature prefix (`PriceAmount`, `PriceCurrency`, `Price`, `PhotoOriginalBucketKey`, `PhotoNormalizedBucketKey`, `PhotoOriginalFileName`, `Photo`).
-- When a shared value shape has a distinct feature meaning, wrap it in an owner-specific `Pure` newtype named for the owning entity (`CatalogueItemPrice`, `CatalogueItemPhoto`).
+- Name reusable value concepts without a feature prefix (`PriceAmount`, `PriceCurrency`, `Price`, `ImageOriginalS3BucketKey`, `ImageNormalizedS3BucketKey`, `ImageOriginalFileName`, `ImageAsset`).
+- When a shared value shape has a distinct feature meaning, wrap it in an owner-specific `Pure` newtype named for the owning entity (`CatalogueItemPrice`, `CatalogueItemImageAsset`).
 - Represent coupled optional fields as one `Option` around a composite case class whose members are mandatory. Never expose parallel `Option` fields that permit half-present domain values.
 
 ## Arbitraries
@@ -22,7 +22,7 @@ Validation is the only boundary where untrusted transport primitives become refi
 Keep feature values out of generic arbitrary traits:
 
 - Shared refined-base generators such as exact `BigDecimal :| Pure` live in `IronRefinedTypeArbitraries`; feature arbitraries reuse them through their newtypes instead of redefining ranges.
-- Shared domain case-class generators such as `Price` and `Photo` live in `GatewayArbitraries`; repository-only traits contain only repository Rows/inputs and persistence-specific enums. A valid canonical `Price` is correlated: generate a supported, fixed-fraction ISO currency first, then a realistically bounded non-negative amount at exactly that currency's fraction-digit scale. Never derive `Price` with independent `Gen.resultOf` fields.
+- Shared domain case-class generators such as `Price` and `ImageAsset` live in `GatewayArbitraries`; repository-only traits contain only repository Rows/inputs and persistence-specific enums. A valid canonical `Price` is correlated: generate a supported, fixed-fraction ISO currency first, then a realistically bounded non-negative amount at exactly that currency's fraction-digit scale. Never derive `Price` with independent `Gen.resultOf` fields.
 - `<Feature>DomainArbitraries` in test-kit extends `GatewayArbitraries`; define one explicitly named `given arb<ExactTypeName>` per domain case class. Use `Arbitrary(Gen.resultOf(Type.apply))` when existing field givens independently produce valid instances; write a custom generator only for correlations, normalization, bounds, or cross-field invariants.
 - Smithy route: `<Feature>SmithyArbitraries` in gateway-core test utils extends the domain trait plus `IronRefinedTypeTransformer`. Derive every Smithy arbitrary from the domain arbitrary using Chimney `transformInto`; add explicit `Transformer`s only where shapes differ.
 - Tapir route: derive the typed endpoint-input arbitrary from the same domain arbitrary beside the endpoint tests; the domain generator remains the source of valid data.

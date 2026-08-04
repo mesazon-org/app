@@ -1,9 +1,10 @@
 package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
+import io.mesazon.domain.to
+import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.repository.CatalogueRepository
 import io.mesazon.gateway.repository.CatalogueRepository.InsertCatalogueItemInput
-import io.mesazon.gateway.repository.domain.CatalogueItemRow
 import io.mesazon.gateway.validation.service.CatalogueRequestValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import zio.*
@@ -15,6 +16,7 @@ object CatalogueService {
   private final class CatalogueServiceImpl(
       catalogueRequestValidator: CatalogueRequestValidator,
       catalogueRepository: CatalogueRepository,
+      s3ClientOrganizationMedia: S3ClientOrganizationMedia,
   ) extends smithy.CatalogueService[ServiceTask] {
 
     /** HTTP POST /insert/catalogue-item */
@@ -88,50 +90,54 @@ object CatalogueService {
     override def getCatalogueItemGet(
         organizationID: UUID,
         catalogueItemID: UUID,
-    ): ServiceTask[smithy.GetCatalogueItemGetResponse] =
-      catalogueRepository
+    ): ServiceTask[smithy.GetCatalogueItemGetResponse] = for {
+      catalogueItemRow <- catalogueRepository
         .getCatalogueItem(OrganizationID(organizationID), CatalogueItemID(catalogueItemID))
         .someOrFail(
           ServiceError.InternalServerError
             .UnexpectedError(s"Catalogue item not found for catalogueItemID: [$catalogueItemID]")
         )
-        .map(toGetCatalogueItemGetResponse)
+      imageNormalizedUrlOpt <- ZIO.foreach(catalogueItemRow.imageAsset)(catalogueItemImageAsset =>
+        s3ClientOrganizationMedia
+          .genMediaUrl(catalogueItemImageAsset.value.imageNormalizedS3BucketKey.to[S3BucketKey])
+          .map(_.value)
+      )
+    } yield smithy.GetCatalogueItemGetResponse(
+      catalogueItemID = catalogueItemRow.catalogueItemID.value,
+      name = catalogueItemRow.name.value,
+      unit = catalogueItemRow.unit.value,
+      price = catalogueItemRow.price.map(catalogueItemPrice =>
+        smithy.CatalogueItemPriceRequest(
+          amount = catalogueItemPrice.value.amount.value,
+          currency = catalogueItemPrice.value.currency.value,
+        )
+      ),
+      imageNormalizedUrl = imageNormalizedUrlOpt,
+    )
 
     /** HTTP GET /get/catalogue-items */
     override def getCatalogueItemsGet(
         organizationID: UUID
-    ): ServiceTask[smithy.GetCatalogueItemsGetResponse] =
-      catalogueRepository
-        .getCatalogueItems(OrganizationID(organizationID))
-        .map(catalogueItemRows => smithy.GetCatalogueItemsGetResponse(catalogueItemRows.map(toGetCatalogueItem)))
+    ): ServiceTask[smithy.GetCatalogueItemsGetResponse] = for {
+      catalogueItemSummaryRows <- catalogueRepository.getCatalogueItemSummariesActive(OrganizationID(organizationID))
+      catalogueItems           <- ZIO.foreach(catalogueItemSummaryRows)(catalogueItemSummaryRow =>
+        ZIO
+          .foreach(catalogueItemSummaryRow.imageAsset)(catalogueItemImageAsset =>
+            s3ClientOrganizationMedia
+              .genMediaUrl(catalogueItemImageAsset.value.imageNormalizedS3BucketKey.to[S3BucketKey])
+              .map(_.value)
+          )
+          .map(imageNormalizedUrlOpt =>
+            smithy.GetCatalogueItem(
+              catalogueItemID = catalogueItemSummaryRow.catalogueItemID.value,
+              name = catalogueItemSummaryRow.name.value,
+              status = catalogueItemStatusFromDomainToSmithy(catalogueItemSummaryRow.status),
+              imageNormalizedUrl = imageNormalizedUrlOpt,
+            )
+          )
+      )
+    } yield smithy.GetCatalogueItemsGetResponse(catalogueItems)
   }
-
-  private def toCatalogueItemPriceRequest(
-      catalogueItemPrice: CatalogueItemPrice
-  ): smithy.CatalogueItemPriceRequest =
-    smithy.CatalogueItemPriceRequest(
-      amount = catalogueItemPrice.value.amount.value,
-      currency = catalogueItemPrice.value.currency.value,
-    )
-
-  private def toGetCatalogueItemGetResponse(catalogueItemRow: CatalogueItemRow): smithy.GetCatalogueItemGetResponse =
-    smithy.GetCatalogueItemGetResponse(
-      catalogueItemID = catalogueItemRow.catalogueItemID.value,
-      name = catalogueItemRow.name.value,
-      unit = catalogueItemRow.unit.value,
-      price = catalogueItemRow.price.map(toCatalogueItemPriceRequest),
-      photoOriginalUrl = catalogueItemRow.photo.map(_.value.originalBucketKey.value),
-      photoNormalizedUrl = catalogueItemRow.photo.map(_.value.normalizedBucketKey.value),
-    )
-
-  private def toGetCatalogueItem(catalogueItemRow: CatalogueItemRow): smithy.GetCatalogueItem =
-    smithy.GetCatalogueItem(
-      catalogueItemID = catalogueItemRow.catalogueItemID.value,
-      name = catalogueItemRow.name.value,
-      unit = catalogueItemRow.unit.value,
-      price = catalogueItemRow.price.map(toCatalogueItemPriceRequest),
-      photoNormalizedUrl = catalogueItemRow.photo.map(_.value.normalizedBucketKey.value),
-    )
 
   private def observed(service: smithy.CatalogueService[ServiceTask]): smithy.CatalogueService[Task] =
     new smithy.CatalogueService[Task] {

@@ -4,6 +4,11 @@ namespace io.mesazon.gateway.smithy
 
 use alloy#UUID
 
+enum CatalogueItemStatus {
+    ACTIVE
+    ARCHIVED
+}
+
 structure CatalogueItemPriceRequest {
     @required
     amount: BigDecimal
@@ -49,8 +54,7 @@ structure GetCatalogueItemGetResponse {
     @required
     unit: String
     price: CatalogueItemPriceRequest
-    photoOriginalUrl: String
-    photoNormalizedUrl: String
+    imageNormalizedUrl: String
 }
 
 structure GetCatalogueItem {
@@ -59,9 +63,8 @@ structure GetCatalogueItem {
     @required
     name: String
     @required
-    unit: String
-    price: CatalogueItemPriceRequest
-    photoNormalizedUrl: String
+    status: CatalogueItemStatus
+    imageNormalizedUrl: String
 }
 
 list GetCatalogueItems {

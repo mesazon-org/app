@@ -52,11 +52,13 @@ Each slice guide links its technology standards.
 |---|---|
 | [Authentication](agent-docs/project/authentication.md) | Changing middleware, auth/onboard/organization-role policy, `AuthState`, or transport security |
 | [Alternate HTTP](agent-docs/project/alternate-http.md) | Changing Tapir/streaming endpoints, their docs, limits, or error model |
+| [Streaming uploads](agent-docs/project/streaming-uploads.md) | Changing `FileScanner`/`ImageProcessing` byte handling, upload cap enforcement, or `EntityLimiter` interaction |
 | [External client](agent-docs/project/external-client.md) | Adding/changing SMTP, S3, or outbound HTTP clients and dependency integration tests |
 | [Database runtime](agent-docs/project/database-runtime.md) | Changing datasource/pool, transactor, SQL logging, or shared PostgreSQL test-client mechanics |
 | [Build](agent-docs/project/build.md) | Changing sbt, dependencies, modules, tasks, Docker packaging, Scala/JDK, or CI |
 | [Feature consolidation](agent-docs/project/feature-consolidation.md) | Moving an old feature to the current layout without behavior changes |
 | [Acceptance testing](agent-docs/project/acceptance-testing.md) | Adding/reviewing real-gateway HTTP acceptance specs, `GatewayClient` test methods/codecs, shared acceptance harness wiring, organization middleware matrices, or rejected-side-effect assertions |
+| [Terraform](agent-docs/project/terraform.md) | Changing `terraform/`, or finishing a feature that added an external dependency, credential, or required env var |
 
 ### Diagnostics
 
@@ -120,7 +122,6 @@ New feature → [Feature flow](agent-docs/features/flow/README.md); create/link 
 - [User Forgot Password](agent-docs/features/user-forgot-password.md)
 - [User Token Management](agent-docs/features/user-token-management.md)
 - [Organization Management](agent-docs/features/organization-management.md)
-- [Files Management](agent-docs/features/files-management.md)
 - [Customer Book](agent-docs/features/customer-book.md)
 - [Catalogue](agent-docs/features/catalogue.md) — in progress; see its five-slice status
 

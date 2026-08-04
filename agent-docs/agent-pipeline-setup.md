@@ -83,16 +83,16 @@ Restart every Claude Code process; environment is read at startup. `ANTHROPIC_BA
 
 | Role | Claude | Codex | Ownership |
 |---|---|---|---|
-| Product Owner | `oc/deepseek-v4-flash-free` | parent default | complete product requirements/decisions |
-| Engineering Manager | `oc/deepseek-v4-flash-free` | parent default | edge cases, doc topology, outcome chunks, complexity |
-| Lead LOW | `oc/deepseek-v4-flash-free` | `gpt-5.6-terra`/low | bounded known-pattern work |
+| Product Owner | `haiku` | parent default | complete product requirements/decisions |
+| Engineering Manager | `haiku` | parent default | edge cases, doc topology, outcome chunks, complexity |
+| Lead LOW | `haiku` | `gpt-5.6-terra`/low | bounded known-pattern work |
 | Lead MEDIUM | `haiku` | `gpt-5.6-terra`/medium | contained new behavior |
 | Lead HIGH | `sonnet` | `gpt-5.6-sol`/high | multi-layer/risky work |
 | Lead EXTREME | `opus` | `gpt-5.6-sol`/xhigh | highest-risk/system-wide work |
 
 EM classifies the whole request by `.agents/contracts/complexity.md`'s highest material trigger. One matching Lead session plans, implements, and reviews the full request; scope changes force reclassification. Shared execution rules live in `.agents/contracts/lead-engineer.md`.
 
-Only `oc/deepseek-v4-flash-free` was confirmed reliable among tested free routes. Other free IDs may return 401/anti-abuse failures and availability may change; verify each with `omniroute chat` before use.
+The Product Owner, Engineering Manager, and Lead LOW roles run on `haiku` (Claude Haiku 4.5) — the cheapest capable Claude tier — so the whole pipeline runs on Anthropic models without depending on external free routes. If you instead route through OmniRoute free IDs, verify each with `omniroute chat` before use, as availability changes and some return 401/anti-abuse failures.
 
 ## Restrictive Claude permissions
 

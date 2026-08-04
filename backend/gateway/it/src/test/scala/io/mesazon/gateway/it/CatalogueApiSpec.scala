@@ -54,7 +54,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
             name = insertCatalogueItemPostRequest.name,
             unit = insertCatalogueItemPostRequest.unit,
             price = insertCatalogueItemPostRequest.price,
-            photo = None,
+            imageAsset = None,
             status = CatalogueItemStatus.Active,
             createdAt = catalogueItemRowInserted.createdAt,
             updatedAt = catalogueItemRowInserted.updatedAt,
@@ -368,7 +368,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
           (catalogueItem.name, catalogueItem.unit, catalogueItem.price)
         )
         catalogueItemRowsAll.map(_.organizationID) should contain only organizationUserRow.organizationID
-        catalogueItemRowsAll.map(_.photo) should contain only None
+        catalogueItemRowsAll.map(_.imageAsset) should contain only None
         catalogueItemRowsAll.map(_.status) should contain only CatalogueItemStatus.Active
         catalogueItemRowsAll.foreach(catalogueItemRow =>
           catalogueItemRow.createdAt.value shouldBe catalogueItemRow.updatedAt.value
@@ -728,7 +728,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
           name = catalogueItemNameUpdate,
           unit = catalogueItemUnitUpdate,
           price = catalogueItemRow.price,
-          photo = catalogueItemRow.photo,
+          imageAsset = catalogueItemRow.imageAsset,
           status = catalogueItemRow.status,
           createdAt = catalogueItemRow.createdAt,
           updatedAt = catalogueItemRowUpdated.updatedAt,
@@ -1487,7 +1487,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
     }
 
     "GET /get/catalogue-item/{catalogueItemID}" should {
-      "successfully return an active catalogue item including its persisted photo fields" in withContext { context =>
+      "successfully return an active catalogue item including its persisted image fields" in withContext { context =>
         import context.*
 
         val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
@@ -1500,7 +1500,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationUserRow.organizationID,
           status = CatalogueItemStatus.Active,
-          photo = Some(arbitrarySample[CatalogueItemPhoto]),
+          imageAsset = Some(arbitrarySample[CatalogueItemImageAsset]),
         )
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
@@ -1518,16 +1518,19 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
           .zioValue
 
         getCatalogueItemGetResponse.code shouldBe StatusCode.Ok
-        getCatalogueItemGetResponse.body.value shouldBe smithy.GetCatalogueItemGetResponse(
-          catalogueItemID = catalogueItemRow.catalogueItemID.value,
-          name = catalogueItemRow.name.value,
-          unit = catalogueItemRow.unit.value,
-          price = catalogueItemRow.price.map(price =>
-            smithy.CatalogueItemPriceRequest(price.value.amount.value, price.value.currency.value)
-          ),
-          photoOriginalUrl = catalogueItemRow.photo.map(_.value.originalBucketKey.value),
-          photoNormalizedUrl = catalogueItemRow.photo.map(_.value.normalizedBucketKey.value),
+
+        val getCatalogueItemGetResponseBody = getCatalogueItemGetResponse.body.value
+
+        getCatalogueItemGetResponseBody.catalogueItemID shouldBe catalogueItemRow.catalogueItemID.value
+        getCatalogueItemGetResponseBody.name shouldBe catalogueItemRow.name.value
+        getCatalogueItemGetResponseBody.unit shouldBe catalogueItemRow.unit.value
+        getCatalogueItemGetResponseBody.price shouldBe catalogueItemRow.price.map(price =>
+          smithy.CatalogueItemPriceRequest(price.value.amount.value, price.value.currency.value)
         )
+        // Presigned URLs are generated on the fly (signature + expiry query params) rather than the raw
+        // bucket key, so only presence is asserted here; `S3ClientOrganizationMediaSpec` proves the URLs
+        // themselves actually serve the uploaded bytes.
+        getCatalogueItemGetResponseBody.imageNormalizedUrl shouldBe defined
       }
 
       "successfully return an archived catalogue item by id" in withContext { context =>
@@ -1749,7 +1752,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationUserRow.organizationID,
           status = CatalogueItemStatus.Active,
-          photo = Some(arbitrarySample[CatalogueItemPhoto]),
+          imageAsset = Some(arbitrarySample[CatalogueItemImageAsset]),
         )
         val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationUserRow.organizationID,
@@ -1781,19 +1784,17 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
           .zioValue
 
         getCatalogueItemsGetResponse.code shouldBe StatusCode.Ok
-        getCatalogueItemsGetResponse.body.value shouldBe smithy.GetCatalogueItemsGetResponse(
-          List(
-            smithy.GetCatalogueItem(
-              catalogueItemID = catalogueItemRowActive.catalogueItemID.value,
-              name = catalogueItemRowActive.name.value,
-              unit = catalogueItemRowActive.unit.value,
-              price = catalogueItemRowActive.price.map(price =>
-                smithy.CatalogueItemPriceRequest(price.value.amount.value, price.value.currency.value)
-              ),
-              photoNormalizedUrl = catalogueItemRowActive.photo.map(_.value.normalizedBucketKey.value),
-            )
-          )
-        )
+
+        val getCatalogueItemsGetResponseBody = getCatalogueItemsGetResponse.body.value
+
+        getCatalogueItemsGetResponseBody.catalogueItems should have size 1
+
+        val getCatalogueItem = getCatalogueItemsGetResponseBody.catalogueItems.head
+
+        getCatalogueItem.catalogueItemID shouldBe catalogueItemRowActive.catalogueItemID.value
+        getCatalogueItem.name shouldBe catalogueItemRowActive.name.value
+        getCatalogueItem.status shouldBe smithy.CatalogueItemStatus.ACTIVE
+        getCatalogueItem.imageNormalizedUrl shouldBe defined
       }
 
       "successfully return an empty catalogue when the organization has no active items" in withContext { context =>

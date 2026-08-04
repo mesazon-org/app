@@ -25,3 +25,16 @@ trait RefinedTypeUUID extends RefinedType[UUID, Pure] {
   def eitherFromString(s: String): Either[String, T] =
     allCatch.either(apply(UUID.fromString(s))).left.map(error => s"Invalid UUID format error: [${error.getMessage}]")
 }
+
+/** Evidence that refined newtypes `T` and `U` share the same base type and constraint. */
+sealed trait SameRefinement[T, U]
+
+object SameRefinement {
+  given sameRefinement[T, U, A, C](using
+      mt: RefinedType.Mirror[T] { type BaseType = A; type ConstraintType = C },
+      mu: RefinedType.Mirror[U] { type BaseType = A; type ConstraintType = C },
+  ): SameRefinement[T, U] = new SameRefinement[T, U] {}
+}
+
+// Safely converts between refined newtypes sharing the same base type and constraint, with no runtime check.
+extension [T](value: T) def to[U](using SameRefinement[T, U]): U = value.asInstanceOf[U]

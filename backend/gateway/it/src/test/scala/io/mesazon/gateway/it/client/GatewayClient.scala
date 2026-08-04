@@ -75,6 +75,23 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     override def nullValue: smithy.CustomerType = null
   }
 
+  given JsonValueCodec[smithy.CatalogueItemStatus] = new JsonValueCodec[smithy.CatalogueItemStatus] {
+    override def decodeValue(in: JsonReader, default: smithy.CatalogueItemStatus): smithy.CatalogueItemStatus =
+      in.readString(null) match {
+        case "ACTIVE"   => smithy.CatalogueItemStatus.ACTIVE
+        case "ARCHIVED" => smithy.CatalogueItemStatus.ARCHIVED
+        case str        => throw new IllegalArgumentException(s"Unknown CatalogueItemStatus: $str")
+      }
+
+    override def encodeValue(x: smithy.CatalogueItemStatus, out: JsonWriter): Unit =
+      x match {
+        case smithy.CatalogueItemStatus.ACTIVE   => out.writeVal("ACTIVE")
+        case smithy.CatalogueItemStatus.ARCHIVED => out.writeVal("ARCHIVED")
+      }
+
+    override def nullValue: smithy.CatalogueItemStatus = null
+  }
+
   given JsonValueCodec[smithy.InsertCustomerIndividualPostRequest] =
     JsonCodecMaker.make[smithy.InsertCustomerIndividualPostRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.InsertCustomerIndividualsPostRequest] =
@@ -344,6 +361,40 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
         )
       )
       .body(logoBytes.toArray)
+      .contentType(MediaType.ApplicationOctetStream)
+      .response(asJsonErrorUnit[E])
+      .send(sttpBackend)
+
+  def uploadCatalogueItemImagePost[E: JsonValueCodec](
+      organizationIDOpt: Option[OrganizationID],
+      catalogueItemIDOpt: Option[CatalogueItemID],
+      catalogueItemImageOriginalFileNameOpt: Option[ImageOriginalFileName],
+      imageBytes: Chunk[Byte],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, Unit]]] =
+    basicRequest
+      .post(externalUri.addPath("upload", "catalogue-item", "image"))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        catalogueItemIDOpt.fold(request)(catalogueItemID =>
+          request.header("X-Catalogue-Item-ID", catalogueItemID.value.toString)
+        )
+      )
+      .pipe(request =>
+        catalogueItemImageOriginalFileNameOpt.fold(request)(catalogueItemImageOriginalFileName =>
+          request.header("X-File-Name", catalogueItemImageOriginalFileName.value)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .body(imageBytes.toArray)
       .contentType(MediaType.ApplicationOctetStream)
       .response(asJsonErrorUnit[E])
       .send(sttpBackend)

@@ -113,6 +113,7 @@ object Main extends ZIOAppDefault {
       UserForgotPasswordConfig.live,
       OrganizationManagementConfig.live,
       OrganizationLogosS3ClientConfig.live,
+      S3ClientOrganizationMediaConfig.live,
       FileServiceConfig.live,
 
       // Domain validators
@@ -139,6 +140,7 @@ object Main extends ZIOAppDefault {
       EmailClient.live,
       TwilioClient.live,
       OrganizationLogosS3Client.live,
+      S3ClientOrganizationMedia.live,
 
       // Streams
       ReplyingToMessagesCronJobStream.live,

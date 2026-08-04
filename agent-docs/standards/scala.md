@@ -5,7 +5,7 @@ Reusable Scala code/name/test rules. Boundaries: [Iron](iron.md), [Smithy](smith
 ## Code
 
 - Prefer precise domain types, sealed alternatives, `Option`, and `Either` over nulls, sentinels, string flags, or ambiguous booleans.
-- Model coupled optional fields as one `Option` around a composite value whose members are mandatory. Use reusable component and composite names without a feature prefix (`Price`, `Photo`), then add a `Pure` newtype named for the owning entity when the same shape has distinct domain meanings (`CatalogueItemPrice`, `CatalogueItemPhoto`). Never represent joint presence with parallel `Option` fields.
+- Model coupled optional fields as one `Option` around a composite value whose members are mandatory. Use reusable component and composite names without a feature prefix (`Price`, `ImageAsset`), then add a `Pure` newtype named for the owning entity when the same shape has distinct domain meanings (`CatalogueItemPrice`, `CatalogueItemImageAsset`). Never represent joint presence with parallel `Option` fields.
 - Comments explain only a non-obvious decision, workaround, invariant the compiler cannot express, or unrecoverable context. Never restate code or add section/banner comments; improve structure/names instead.
 - Never combine independently built collections with `zip` when correctness requires equal length/order: it truncates silently. `zipWithIndex` on one collection and zipping effects are allowed.
 - Create related values together; retain the relation in a named tuple/case class, or `Map` for lookup.
@@ -28,6 +28,8 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 - Spell out domain names; only established acronyms and `Impl` may abbreviate. Avoid vague `data`, `item`, `result`, `value`, `helper`, `thing`.
 - Types/traits/objects/enums/type aliases/constants: `PascalCase`. Values/fields/parameters/methods: `camelCase`.
 - Every `Option`-typed value/field/parameter ends in `Opt`; `Opt` is always the final suffix, including local repository result bindings such as `catalogueItemRowUpdatedOpt`. Repository `Row` fields, repository-owned `...Input` fields, and validated request-model fields that mirror transport members are the only exceptions: their fields retain the persisted/domain or transport concept names without `Opt`.
+- That transport-mirroring exception covers only the field/parameter *declared on* the transport/persisted type — never a local `for`-binding or lambda parameter that merely computes the value fed into it. A service method assembling a transport response still names its own `Option`-typed local `imageNormalizedUrlOpt`, even though it flows straight into the response's non-`Opt` `imageNormalizedUrl` field: `imageNormalizedUrlOpt <- ...; ... yield Response(imageNormalizedUrl = imageNormalizedUrlOpt)`.
+- A `def`/method name never carries `Opt`, even when it returns an `Option` or takes an `Opt`-suffixed parameter — `Opt` marks a value's type, not a method's identity. Name the method after what it produces (`imageNormalizedUrl`, not `imageNormalizedUrlOpt`); only its parameters and result bindings at the call site get the `Opt` suffix.
 - `ID` stays uppercase in types and values (`CustomerID`, `customerID`, `IDGenerator`). Treat other acronyms as words (`Http`, `Jwt`, `Url`) unless an external standard fixes the spelling.
 - Name types for domain concepts, not representations/consumers: `EmailAddress`, not `EmailString`/`EmailColumn`.
 - Test values follow the same concept-first form and start with the complete model/type name in lower camel case. Add every qualifier last: `catalogueItemNameUpdate`, `catalogueRepositoryInvalid`, `organizationIDForeign`, `customerRowIndividual`, `customerID1`; never `nameUpdate`, `invalidRepository`, `foreignOrganizationID`, `individualCustomerRow`, `input`, or `contact`.
@@ -52,6 +54,7 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 - Assert the complete returned model. Project only when the field is the test's entire contract (for example, IDs surviving rollback).
 - Assert order only when contractual; otherwise compare order-insensitively.
 - If distinctness matters, guarantee it during setup and assert `not equal`. With low-cardinality generators, sample twice then modify one value; do not hard-code or sample-and-hope.
+- For an overwrite/update proof, capture the pre-mutation value and assert the post-mutation value both equals the new expected value and `shouldNot equal` the pre-mutation value — an equality check alone can pass without the mutation taking effect if setup happened to converge on the same value.
 - Control time/random/IDs/concurrency. For strict comparisons (`isAfter`, `isBefore`, `>`), exclude an equality-producing random offset when equality can change the expected branch; offset `0` is allowed when every generated value takes the same branch.
 
 ### Arbitraries

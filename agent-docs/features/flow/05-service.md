@@ -20,7 +20,7 @@ File: `gateway/core/.../fun/<Feature>ServiceSpec`. No HTTP, database, or Docker.
 - Structure: `"<Feature>Service" when { "<operation>" should { ... } }`; one block per operation contains success and every owned failure branch.
 - Every test uses a fresh `TestContext`; provide `<Feature>Service.local`, real request/domain validators and validator config, and strict mocks for repositories, clients, `AuthState`, clock/generators, etc. Never use `.live`/`.observed`.
 - Hardcode config copies from `application.conf`; update tests when config changes. Pin time to millisecond precision and respect strict time-boundary assertions.
-- Set expectations before building the service. Use `inSequence` for ordered flows and exact argument values/counts, including default arguments; no wildcards.
+- Set expectations before building the service, with exact argument values/counts, including default arguments; no wildcards. Whenever a test sets expectations on 2+ mocks (same or different dependency), wrap them in `inSequence` — functional tests must prove call order, not just that each mock was called and the final output is correct.
 - Parameterless effects use eta expansion (`(() => authState.get).expects()`).
 - A validation-failure case sets no downstream expectations, proving the repository/client is untouched.
 - Dependency failures propagate the same `ServiceError`. For tolerated/retried failures, count invocations and assert both successful response and `maxRetries + 1`.
@@ -41,3 +41,5 @@ sbt "gateway-core/testOnly io.mesazon.gateway.fun.*"
 Follow [Acceptance testing](../../project/acceptance-testing.md), the single source of truth for acceptance structure, endpoint matrices, middleware cases, naming/layout, harness wiring, clients/codecs, assertions, review, and verification.
 
 The service slice is complete only when every endpoint's applicable acceptance matrix passes against the real gateway and dependencies. Update the feature doc with exact completed and remaining cases; never remove or falsely complete its status.
+
+If the feature added an external dependency, credential, or required env var (a new bucket, third-party API key, etc.), also update terraform in this PR — see [Terraform](../../project/terraform.md).

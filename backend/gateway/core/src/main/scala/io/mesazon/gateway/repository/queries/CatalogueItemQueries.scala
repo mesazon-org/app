@@ -29,9 +29,9 @@ final class CatalogueItemQueries(
         |unit,
         |price_amount,
         |price_currency,
-        |photo_original_bucket_key,
-        |photo_normalized_bucket_key,
-        |photo_original_file_name,
+        |image_original_s3_bucket_key,
+        |image_normalized_s3_bucket_key,
+        |image_original_file_name,
         |status,
         |created_at,
         |updated_at
@@ -45,9 +45,9 @@ final class CatalogueItemQueries(
       fr0"${row.unit}",
       fr0"${row.price.map(_.value.amount)}",
       fr0"${row.price.map(_.value.currency)}",
-      fr0"${row.photo.map(_.value.originalBucketKey)}",
-      fr0"${row.photo.map(_.value.normalizedBucketKey)}",
-      fr0"${row.photo.map(_.value.originalFileName)}",
+      fr0"${row.imageAsset.map(_.value.imageOriginalS3BucketKey)}",
+      fr0"${row.imageAsset.map(_.value.imageNormalizedS3BucketKey)}",
+      fr0"${row.imageAsset.map(_.value.imageOriginalFileName)}",
       fr0"${row.status}::" ++ frCatalogueItemStatusType,
       fr0"${row.createdAt}",
       fr0"${row.updatedAt}",
@@ -61,12 +61,22 @@ final class CatalogueItemQueries(
         |unit,
         |price_amount,
         |price_currency,
-        |photo_original_bucket_key,
-        |photo_normalized_bucket_key,
-        |photo_original_file_name,
+        |image_original_s3_bucket_key,
+        |image_normalized_s3_bucket_key,
+        |image_original_file_name,
         |status::text,
         |created_at,
         |updated_at
+         """.stripMargin
+
+  private val frCatalogueItemSummarySelectFields =
+    fr"""
+        |catalogue_item_id,
+        |name,
+        |image_original_s3_bucket_key,
+        |image_normalized_s3_bucket_key,
+        |image_original_file_name,
+        |status::text
          """.stripMargin
 
   private def insertRowWith(
@@ -115,7 +125,7 @@ final class CatalogueItemQueries(
       nameOptUpdate: Option[CatalogueItemName] = None,
       unitOptUpdate: Option[CatalogueItemUnit] = None,
       priceOptUpdate: Option[CatalogueItemPrice] = None,
-      photoOptUpdate: Option[CatalogueItemPhoto] = None,
+      imageAssetOptUpdate: Option[CatalogueItemImageAsset] = None,
   ): TranzactIO[Option[CatalogueItemRow]] = {
     val updates = NonEmptyList.of(
       fr"updated_at = $updatedAt"
@@ -124,9 +134,9 @@ final class CatalogueItemQueries(
       unitOptUpdate.map(v => fr"unit = $v"),
       priceOptUpdate.map(v => fr"price_amount = ${v.value.amount}"),
       priceOptUpdate.map(v => fr"price_currency = ${v.value.currency}"),
-      photoOptUpdate.map(v => fr"photo_original_bucket_key = ${v.value.originalBucketKey}"),
-      photoOptUpdate.map(v => fr"photo_normalized_bucket_key = ${v.value.normalizedBucketKey}"),
-      photoOptUpdate.map(v => fr"photo_original_file_name = ${v.value.originalFileName}"),
+      imageAssetOptUpdate.map(v => fr"image_original_s3_bucket_key = ${v.value.imageOriginalS3BucketKey}"),
+      imageAssetOptUpdate.map(v => fr"image_normalized_s3_bucket_key = ${v.value.imageNormalizedS3BucketKey}"),
+      imageAssetOptUpdate.map(v => fr"image_original_file_name = ${v.value.imageOriginalFileName}"),
     ).flatten
 
     tzio {
@@ -182,17 +192,17 @@ final class CatalogueItemQueries(
       q.query[CatalogueItemRow].option
     }
 
-  def getActiveCatalogueItemRows(organizationID: OrganizationID): TranzactIO[List[CatalogueItemRow]] =
+  def getCatalogueItemSummaryRowsActive(organizationID: OrganizationID): TranzactIO[List[CatalogueItemSummaryRow]] =
     tzio {
       val q =
-        fr"SELECT" ++ frCatalogueItemSelectFields ++
+        fr"SELECT" ++ frCatalogueItemSummarySelectFields ++
           fr"FROM" ++ frCatalogueItemTable ++
           whereAnd(
             fr"organization_id = $organizationID",
             fr0"status = ${CatalogueItemStatus.Active}::" ++ frCatalogueItemStatusType,
           )
 
-      q.query[CatalogueItemRow].to[List]
+      q.query[CatalogueItemSummaryRow].to[List]
     }
 
   // Testing

@@ -69,7 +69,6 @@ Each feature has its own short design doc — what it does, its endpoints, seque
 | [Tokens](agent-docs/features/user-token-management.md) | Keep sessions alive and revocable |
 | [Organization](agent-docs/features/organization-management.md) | The tenant, its members and roles |
 | [Customer book](agent-docs/features/customer-book.md) | The address book of customers |
-| [Files](agent-docs/features/files-management.md) | Uploads, image processing, storage |
 
 ## Built with
 

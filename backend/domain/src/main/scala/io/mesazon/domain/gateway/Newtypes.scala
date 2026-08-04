@@ -30,14 +30,20 @@ type PriceAmount = PriceAmount.T
 object PriceCurrency extends RefinedType[String, NonEmptyTrimmed]
 type PriceCurrency = PriceCurrency.T
 
-object PhotoOriginalBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
-type PhotoOriginalBucketKey = PhotoOriginalBucketKey.T
+object ImageOriginalS3BucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type ImageOriginalS3BucketKey = ImageOriginalS3BucketKey.T
 
-object PhotoNormalizedBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
-type PhotoNormalizedBucketKey = PhotoNormalizedBucketKey.T
+object ImageNormalizedS3BucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type ImageNormalizedS3BucketKey = ImageNormalizedS3BucketKey.T
 
-object PhotoOriginalFileName extends RefinedType[String, NonEmptyTrimmed]
-type PhotoOriginalFileName = PhotoOriginalFileName.T
+object S3BucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type S3BucketKey = S3BucketKey.T
+
+object S3MediaUrl extends RefinedType[String, NonEmptyTrimmedUnsafe]
+type S3MediaUrl = S3MediaUrl.T
+
+object ImageOriginalFileName extends RefinedType[String, NonEmptyTrimmed]
+type ImageOriginalFileName = ImageOriginalFileName.T
 
 object Password extends RefinedType[String, PasswordPredicate]
 type Password = Password.T
@@ -201,5 +207,5 @@ type CatalogueItemUnit = CatalogueItemUnit.T
 object CatalogueItemPrice extends RefinedType[Price, Pure]
 type CatalogueItemPrice = CatalogueItemPrice.T
 
-object CatalogueItemPhoto extends RefinedType[Photo, Pure]
-type CatalogueItemPhoto = CatalogueItemPhoto.T
+object CatalogueItemImageAsset extends RefinedType[ImageAsset, Pure]
+type CatalogueItemImageAsset = CatalogueItemImageAsset.T

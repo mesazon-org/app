@@ -146,18 +146,18 @@ create type catalogue_item_status as enum ('Active', 'Archived');
 
 create table catalogue_item
 (
-    organization_id             uuid                  not null,
-    catalogue_item_id           uuid                  not null,
-    name                        text                  not null,
-    unit                        text                  not null,
-    price_amount                numeric,
-    price_currency              text,
-    photo_original_bucket_key   text,
-    photo_normalized_bucket_key text,
-    photo_original_file_name    text,
-    status                      catalogue_item_status not null,
-    created_at                  timestamptz           not null,
-    updated_at                  timestamptz           not null,
+    organization_id                uuid                  not null,
+    catalogue_item_id              uuid                  not null,
+    name                           text                  not null,
+    unit                           text                  not null,
+    price_amount                   numeric,
+    price_currency                 text,
+    image_original_s3_bucket_key   text,
+    image_normalized_s3_bucket_key text,
+    image_original_file_name       text,
+    status                         catalogue_item_status not null,
+    created_at                     timestamptz           not null,
+    updated_at                     timestamptz           not null,
     primary key (organization_id, catalogue_item_id)
 );
 
