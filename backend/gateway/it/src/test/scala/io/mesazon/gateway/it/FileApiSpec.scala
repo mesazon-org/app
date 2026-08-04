@@ -418,12 +418,13 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
             .executeQuery(catalogueItemQueries.getCatalogueItemRow(organizationID, catalogueItemID))
             .zioValue
 
-          catalogueItemRowUpdated.isDefined shouldBe true
-          catalogueItemRowUpdated.get.imageAsset.isDefined shouldBe true
-          catalogueItemRowUpdated.get.imageAsset.get.value.imageOriginalFileName shouldBe catalogueItemImageOriginalFileName
-          catalogueItemRowUpdated.get.imageAsset.get.value.imageOriginalS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/original"
-          catalogueItemRowUpdated.get.imageAsset.get.value.imageNormalizedS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/normalized"
-          catalogueItemRowUpdated.get.status shouldBe CatalogueItemStatus.Active
+          val catalogueItemRowUpdatedValue = catalogueItemRowUpdated.value
+          val catalogueItemImageAssetValue = catalogueItemRowUpdatedValue.imageAsset.value.value
+
+          catalogueItemImageAssetValue.imageOriginalFileName shouldBe catalogueItemImageOriginalFileName
+          catalogueItemImageAssetValue.imageOriginalS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/original"
+          catalogueItemImageAssetValue.imageNormalizedS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/normalized"
+          catalogueItemRowUpdatedValue.status shouldBe CatalogueItemStatus.Active
       }
 
       "fail with BadRequest when the catalogue item ID header is missing" in withContext { context =>
@@ -813,7 +814,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           .executeQuery(catalogueItemQueries.getCatalogueItemRow(organizationID, catalogueItemID))
           .zioValue
 
-        catalogueItemRowUpdated.get.imageAsset shouldBe None
+        catalogueItemRowUpdated.value.imageAsset shouldBe None
 
         val expectedBucketKeyPrefix =
           s"$catalogueItemImageBucketPathPrefix/${organizationID.value}/${catalogueItemID.value}"

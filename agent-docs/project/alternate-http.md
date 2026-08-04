@@ -18,6 +18,6 @@ Each endpoint explicitly wires `zServerSecurityLogic(authorizationService.auth(.
 - Error handler mirrors Smithy. Schema names use Smithy `<Structure>ResponseContent`; fallback is `ServerError`. Unknown JSON error code calls `in.decodeError`.
 - Preserve transport error parity described in [Authentication](authentication.md).
 
-`HttpApp` limits Smithy to 5 MB and Tapir to 20 MB. Keep `TapirMaxEntitySize` equal to `file-service.max-upload-bytes`.
+`HttpApp` limits Smithy to 5 MB and Tapir to 20 MB. Keep `TapirMaxEntitySize` equal to `file-service.max-upload-bytes`. For how `FileScanner`/`ImageProcessing` handle the streamed bytes against that limit, see [Streaming uploads](streaming-uploads.md).
 
 Test security/status/error rendering and the streaming side effect end-to-end; update the owning feature doc (`organization-management.md` or `catalogue.md`) when an upload endpoint's rationale or behavior changes.

@@ -182,6 +182,7 @@ Client method requirements:
 ## Assertions
 
 - Assert the exact HTTP status and complete success/error body.
+- Extract `Option`/`Either` values with `OptionValues`/`EitherValues` (`.value`, `.left.value`) instead of a separate `isDefined`/`isRight` check followed by `.get` — one call, and scalatest fails with a readable message instead of a bare `NoSuchElementException`. A bare `isDefined`/`isRight`/`isLeft` boolean assertion is fine on its own when nothing inside is ever unwrapped afterward (e.g. proving an object is absent from S3).
 - Inspect complete database/external state, not only the changed field.
 - After rejection, assert every prohibited DB/email/storage effect is absent.
 - Assert order only when contractual; otherwise compare order-insensitively.

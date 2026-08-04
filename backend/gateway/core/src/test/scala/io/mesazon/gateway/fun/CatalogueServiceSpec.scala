@@ -312,15 +312,16 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         )
         val catalogueItemImageNormalizedUrl = arbitrarySample[S3MediaUrl]
 
-        catalogueRepositoryMock.getCatalogueItem
-          .expects(organizationID, catalogueItemRow.catalogueItemID)
-          .returningZIO(Some(catalogueItemRow))
-          .once()
-
-        s3ClientOrganizationMediaMock.genMediaUrl
-          .expects(catalogueItemRow.imageAsset.value.value.imageNormalizedS3BucketKey.to[S3BucketKey])
-          .returningZIO(catalogueItemImageNormalizedUrl)
-          .once()
+        inSequence(
+          catalogueRepositoryMock.getCatalogueItem
+            .expects(organizationID, catalogueItemRow.catalogueItemID)
+            .returningZIO(Some(catalogueItemRow))
+            .once(),
+          s3ClientOrganizationMediaMock.genMediaUrl
+            .expects(catalogueItemRow.imageAsset.value.value.imageNormalizedS3BucketKey.to[S3BucketKey])
+            .returningZIO(catalogueItemImageNormalizedUrl)
+            .once(),
+        )
 
         buildCatalogueService
           .getCatalogueItemGet(organizationID.value, catalogueItemRow.catalogueItemID.value)
@@ -409,15 +410,16 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
 
         catalogueItemSummaryRow1 should not be catalogueItemSummaryRow2
 
-        catalogueRepositoryMock.getCatalogueItemSummariesActive
-          .expects(organizationID)
-          .returningZIO(List(catalogueItemSummaryRow1, catalogueItemSummaryRow2))
-          .once()
-
-        s3ClientOrganizationMediaMock.genMediaUrl
-          .expects(catalogueItemSummaryRow1.imageAsset.value.value.imageNormalizedS3BucketKey.to[S3BucketKey])
-          .returningZIO(catalogueItemImageNormalizedUrl)
-          .once()
+        inSequence(
+          catalogueRepositoryMock.getCatalogueItemSummariesActive
+            .expects(organizationID)
+            .returningZIO(List(catalogueItemSummaryRow1, catalogueItemSummaryRow2))
+            .once(),
+          s3ClientOrganizationMediaMock.genMediaUrl
+            .expects(catalogueItemSummaryRow1.imageAsset.value.value.imageNormalizedS3BucketKey.to[S3BucketKey])
+            .returningZIO(catalogueItemImageNormalizedUrl)
+            .once(),
+        )
 
         buildCatalogueService
           .getCatalogueItemsGet(organizationID.value)

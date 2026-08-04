@@ -101,7 +101,7 @@ object FileService {
           catalogueItemImageScannedByteStream,
           SupportedMediaTypes.images,
         )
-        uploadedImageResult <-
+        catalogueItemImageUploadedResult <-
           s3ClientOrganizationMedia
             .uploadImage(
               organizationID,
@@ -110,8 +110,8 @@ object FileService {
               catalogueItemImageNormalizedResult.imageNormalizedByteStream,
             )
         imageAsset = ImageAsset(
-          imageOriginalS3BucketKey = uploadedImageResult.imageOriginalS3BucketKey,
-          imageNormalizedS3BucketKey = uploadedImageResult.imageNormalizedS3BucketKey,
+          imageOriginalS3BucketKey = catalogueItemImageUploadedResult.imageOriginalS3BucketKey,
+          imageNormalizedS3BucketKey = catalogueItemImageUploadedResult.imageNormalizedS3BucketKey,
           imageOriginalFileName = catalogueItemImageOriginalFileName,
         )
         catalogueItemImageAsset <- ZIO
@@ -127,7 +127,6 @@ object FileService {
           imageAssetOptUpdate = Some(catalogueItemImageAsset),
         )
       } yield ())
-      .catchAll(err => ZIO.logErrorCause("uploadCatalogueItemImage failed", Cause.fail(err)) *> ZIO.fail(err))
   }
 
   def observed(service: FileService[ServiceTask]): FileService[TapirTask] =

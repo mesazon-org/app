@@ -97,6 +97,13 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
           )
           .zioValue
 
+        val imageOriginalBytesBeforeOverwrite = s3TestClient
+          .getObject(
+            s3ClientOrganizationMediaConfig.bucket,
+            uploadedImageBucketKeys1.imageOriginalS3BucketKey.value,
+          )
+          .zioValue
+
         val uploadedImageBucketKeys2 = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
             _.uploadImage(
@@ -114,27 +121,31 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         uploadedImageBucketKeys1 shouldEqual uploadedImageBucketKeys2
 
-        s3TestClient
+        val imageOriginalBytesAfterOverwrite = s3TestClient
           .getObject(
             s3ClientOrganizationMediaConfig.bucket,
             uploadedImageBucketKeys2.imageOriginalS3BucketKey.value,
           )
-          .zioValue should contain theSameElementsInOrderAs imageOriginalByteStream2.runCollect.zioValue
+          .zioValue
+
+        imageOriginalBytesAfterOverwrite should contain theSameElementsInOrderAs
+          imageOriginalByteStream2.runCollect.zioValue
+        imageOriginalBytesAfterOverwrite shouldNot equal(imageOriginalBytesBeforeOverwrite)
       }
     }
 
     "genMediaUrl" should {
-      "return a presigned URL that serves the original image" in new TestContext {
-        val organizationID          = arbitrarySample[OrganizationID]
-        val catalogueItemID         = arbitrarySample[CatalogueItemID]
-        val imageOriginalByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+      "return a presigned URL that serves the image at the given bucket key" in new TestContext {
+        val organizationID  = arbitrarySample[OrganizationID]
+        val catalogueItemID = arbitrarySample[CatalogueItemID]
+        val imageByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val uploadedImageBucketKeys = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
             _.uploadImage(
               organizationID,
               catalogueItemID,
-              ImageOriginalByteStream(imageOriginalByteStream),
+              ImageOriginalByteStream(imageByteStream),
               ImageNormalizedByteStream(ZStream.fromResource("assets/test-logo-2.webp")),
             )
           )
@@ -144,7 +155,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
           )
           .zioValue
 
-        val imageOriginalPresignedUrl = ZIO
+        val imagePresignedUrl = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
             _.genMediaUrl(uploadedImageBucketKeys.imageOriginalS3BucketKey.to[S3BucketKey])
           )
@@ -155,55 +166,14 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
           .zioValue
 
         val imageBytesFromPresignedUrl = quickRequest
-          .get(uri"$imageOriginalPresignedUrl")
+          .get(uri"$imagePresignedUrl")
           .response(asByteArray)
           .send()
           .body
           .getOrElse(Array.emptyByteArray)
 
         Chunk.from(imageBytesFromPresignedUrl) should contain theSameElementsInOrderAs
-          imageOriginalByteStream.runCollect.zioValue
-      }
-
-      "return a presigned URL that serves the normalized image" in new TestContext {
-        val organizationID            = arbitrarySample[OrganizationID]
-        val catalogueItemID           = arbitrarySample[CatalogueItemID]
-        val imageNormalizedByteStream = ZStream.fromResource("assets/test-logo-2.webp")
-
-        val uploadedImageBucketKeys = ZIO
-          .serviceWithZIO[S3ClientOrganizationMedia](
-            _.uploadImage(
-              organizationID,
-              catalogueItemID,
-              ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg")),
-              ImageNormalizedByteStream(imageNormalizedByteStream),
-            )
-          )
-          .provide(
-            S3ClientOrganizationMedia.live,
-            ZLayer.succeed(s3ClientOrganizationMediaConfig),
-          )
-          .zioValue
-
-        val imageNormalizedPresignedUrl = ZIO
-          .serviceWithZIO[S3ClientOrganizationMedia](
-            _.genMediaUrl(uploadedImageBucketKeys.imageNormalizedS3BucketKey.to[S3BucketKey])
-          )
-          .provide(
-            S3ClientOrganizationMedia.live,
-            ZLayer.succeed(s3ClientOrganizationMediaConfig),
-          )
-          .zioValue
-
-        val imageBytesFromPresignedUrl = quickRequest
-          .get(uri"$imageNormalizedPresignedUrl")
-          .response(asByteArray)
-          .send()
-          .body
-          .getOrElse(Array.emptyByteArray)
-
-        Chunk.from(imageBytesFromPresignedUrl) should contain theSameElementsInOrderAs
-          imageNormalizedByteStream.runCollect.zioValue
+          imageByteStream.runCollect.zioValue
       }
     }
 
