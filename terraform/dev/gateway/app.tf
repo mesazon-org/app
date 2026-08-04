@@ -21,6 +21,20 @@ resource "digitalocean_spaces_key" "organization_logos_bucket" {
   }
 }
 
+data "digitalocean_spaces_bucket" "organization_media_bucket" {
+  name   = local.spaces_organization_media_bucket
+  region = local.region
+}
+
+resource "digitalocean_spaces_key" "organization_media_bucket" {
+  name = "${local.spaces_organization_media_bucket}-key"
+
+  grant {
+    bucket     = data.digitalocean_spaces_bucket.organization_media_bucket.name
+    permission = "readwrite"
+  }
+}
+
 module "gateway_core_app" {
   source = "../../modules/app-service"
 
@@ -52,6 +66,11 @@ module "gateway_core_app" {
     ORGANIZATION_LOGOS_S3_CLIENT_URI      = "https://${data.digitalocean_spaces_bucket.organization_logos_bucket.endpoint}"
     ORGANIZATION_LOGOS_S3_CLIENT_REGION   = data.digitalocean_spaces_bucket.organization_logos_bucket.region
     ORGANIZATION_LOGOS_S3_CLIENT_BUCKET   = data.digitalocean_spaces_bucket.organization_logos_bucket.name
+
+    S3_CLIENT_ORGANIZATION_MEDIA_USE_MOCK = "false"
+    S3_CLIENT_ORGANIZATION_MEDIA_URI      = "https://${data.digitalocean_spaces_bucket.organization_media_bucket.endpoint}"
+    S3_CLIENT_ORGANIZATION_MEDIA_REGION   = data.digitalocean_spaces_bucket.organization_media_bucket.region
+    S3_CLIENT_ORGANIZATION_MEDIA_BUCKET   = data.digitalocean_spaces_bucket.organization_media_bucket.name
 
     # JAVA_TOOL_OPTIONS (not JAVA_OPTS): the image ENTRYPOINT is the bare `java` binary,
     # which reads JAVA_TOOL_OPTIONS natively but ignores the wrapper-script JAVA_OPTS
@@ -87,5 +106,8 @@ module "gateway_core_app" {
 
     ORGANIZATION_LOGOS_S3_CLIENT_ACCESS_KEY_ID     = digitalocean_spaces_key.organization_logos_bucket.access_key
     ORGANIZATION_LOGOS_S3_CLIENT_SECRET_ACCESS_KEY = digitalocean_spaces_key.organization_logos_bucket.secret_key
+
+    S3_CLIENT_ORGANIZATION_MEDIA_ACCESS_KEY_ID     = digitalocean_spaces_key.organization_media_bucket.access_key
+    S3_CLIENT_ORGANIZATION_MEDIA_SECRET_ACCESS_KEY = digitalocean_spaces_key.organization_media_bucket.secret_key
   }
 }

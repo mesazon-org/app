@@ -11,5 +11,7 @@ locals {
   repository_schema_raw                = "gateway_schema"
   repository_schema                    = "${local.repository_schema_raw}_${local.region}_${local.environment}"
   spaces_organization_logos_bucket_raw = "gateway-organization-logos"
+  spaces_organization_media_bucket_raw = "gateway-organization-media"
   spaces_organization_logos_bucket     = "${local.spaces_organization_logos_bucket_raw}-${local.region}-${local.environment}"
+  spaces_organization_media_bucket     = "${local.spaces_organization_media_bucket_raw}-${local.region}-${local.environment}"
 }

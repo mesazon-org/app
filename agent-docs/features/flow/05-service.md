@@ -41,3 +41,5 @@ sbt "gateway-core/testOnly io.mesazon.gateway.fun.*"
 Follow [Acceptance testing](../../project/acceptance-testing.md), the single source of truth for acceptance structure, endpoint matrices, middleware cases, naming/layout, harness wiring, clients/codecs, assertions, review, and verification.
 
 The service slice is complete only when every endpoint's applicable acceptance matrix passes against the real gateway and dependencies. Update the feature doc with exact completed and remaining cases; never remove or falsely complete its status.
+
+If the feature added an external dependency, credential, or required env var (a new bucket, third-party API key, etc.), also update terraform in this PR — see [Terraform](../../project/terraform.md).
