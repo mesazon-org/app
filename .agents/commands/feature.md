@@ -33,7 +33,6 @@ Validate package level/profile:
 | LOW | `lead-engineer-low` |
 | MEDIUM | `lead-engineer-medium` |
 | HIGH | `lead-engineer-high` |
-| EXTREME | `lead-engineer-extreme` |
 
 Spawn exactly that Lead with the full package. Keep session for planning, implementation, and final review.
 

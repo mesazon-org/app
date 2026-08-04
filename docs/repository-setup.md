@@ -109,4 +109,4 @@ Flyway migrations live in `backend/schemas/migrations/V<date>__<name>.sql` and a
 
 ## 7. Agent pipeline (optional)
 
-`/feature "<description>"` runs Product Owner → Engineering Manager → complexity-selected Lead Engineer (`LOW|MEDIUM|HIGH|EXTREME`). Claude routes tiers through each engineer's local [OmniRoute](https://github.com/diegosouzapw/OmniRoute); it is not shared infrastructure. One-time setup: [agent-pipeline-setup.md](../agent-docs/agent-pipeline-setup.md).
+`/feature "<description>"` runs Product Owner → Engineering Manager → complexity-selected Lead Engineer (`LOW|MEDIUM|HIGH`). Claude routes tiers through each engineer's local [OmniRoute](https://github.com/diegosouzapw/OmniRoute); it is not shared infrastructure. One-time setup: [agent-pipeline-setup.md](../agent-docs/agent-pipeline-setup.md).
