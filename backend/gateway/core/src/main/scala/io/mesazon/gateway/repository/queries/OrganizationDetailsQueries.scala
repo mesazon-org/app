@@ -36,9 +36,9 @@ final class OrganizationDetailsQueries(
         |country,
         |company_registration_number,
         |tax_id,
-        |logo_original_bucket_key,
-        |logo_normalized_bucket_key,
-        |logo_original_file_name,
+        |image_original_s3_bucket_key,
+        |image_normalized_s3_bucket_key,
+        |image_original_file_name,
         |created_at,
         |updated_at
          """.stripMargin
@@ -78,9 +78,7 @@ final class OrganizationDetailsQueries(
       countryOptUpdate: Option[OrganizationCountry],
       companyRegistrationNumberOptUpdate: Option[OrganizationCompanyRegistrationNumber] = None,
       taxIDOptUpdate: Option[OrganizationTaxID] = None,
-      logoOriginalBucketKeyOptUpdate: Option[OrganizationLogoOriginalBucketKey] = None,
-      logoNormalizedBucketKeyOptUpdate: Option[OrganizationLogoNormalizedBucketKey] = None,
-      logoOriginalFileNameOptUpdate: Option[OrganizationLogoOriginalFileName] = None,
+      logoImageAssetOptUpdate: Option[OrganizationLogoImageAsset] = None,
   ): TranzactIO[OrganizationDetailsRow] = {
     val updates = NonEmptyList.of(
       fr"updated_at = $updatedAt"
@@ -98,9 +96,9 @@ final class OrganizationDetailsQueries(
       countryOptUpdate.map(v => fr"country = $v"),
       companyRegistrationNumberOptUpdate.map(v => fr"company_registration_number = $v"),
       taxIDOptUpdate.map(v => fr"tax_id = $v"),
-      logoOriginalBucketKeyOptUpdate.map(v => fr"logo_original_bucket_key = $v"),
-      logoNormalizedBucketKeyOptUpdate.map(v => fr"logo_normalized_bucket_key = $v"),
-      logoOriginalFileNameOptUpdate.map(v => fr"logo_original_file_name = $v"),
+      logoImageAssetOptUpdate.map(v => fr"image_original_s3_bucket_key = ${v.value.imageOriginalS3BucketKey}"),
+      logoImageAssetOptUpdate.map(v => fr"image_normalized_s3_bucket_key = ${v.value.imageNormalizedS3BucketKey}"),
+      logoImageAssetOptUpdate.map(v => fr"image_original_file_name = ${v.value.imageOriginalFileName}"),
     ).flatten
 
     tzio {

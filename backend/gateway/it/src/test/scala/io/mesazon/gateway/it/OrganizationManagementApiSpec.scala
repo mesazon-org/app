@@ -69,9 +69,7 @@ class OrganizationManagementApiSpec
           country = createOrganizationPostRequest.country,
           companyRegistrationNumber = createOrganizationPostRequest.companyRegistrationNumber,
           taxID = createOrganizationPostRequest.taxID,
-          logoOriginalBucketKey = None,
-          logoNormalizedBucketKey = None,
-          logoOriginalFileName = None,
+          logoImageAsset = None,
           createdAt = organizationDetailsRowsAll.head.createdAt,
           updatedAt = organizationDetailsRowsAll.head.updatedAt,
         )

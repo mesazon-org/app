@@ -2,7 +2,7 @@ package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
-import io.mesazon.gateway.clients.{OrganizationLogosS3Client, S3ClientOrganizationMedia}
+import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.repository.{CatalogueRepository, OrganizationManagementRepository}
 import io.mesazon.gateway.tapir.TapirTask
@@ -13,15 +13,15 @@ import zio.stream.*
 trait FileService[F[_]] {
   def uploadOrganizationLogo(
       organizationID: OrganizationID,
-      organizationLogoOriginalFileName: OrganizationLogoOriginalFileName,
-      organizationLogoFile: ZStream[Any, Throwable, Byte],
+      organizationLogoImageOriginalFileName: ImageOriginalFileName,
+      organizationLogoImageByteStream: ZStream[Any, Throwable, Byte],
   ): F[Unit]
 
   def uploadCatalogueItemImage(
       organizationID: OrganizationID,
       catalogueItemID: CatalogueItemID,
       catalogueItemImageOriginalFileName: ImageOriginalFileName,
-      catalogueItemImageFile: ZStream[Any, Throwable, Byte],
+      catalogueItemImageByteStream: ZStream[Any, Throwable, Byte],
   ): F[Unit]
 }
 
@@ -33,38 +33,47 @@ object FileService {
       catalogueRepository: CatalogueRepository,
       fileScanner: FileScanner,
       imageProcessing: ImageProcessing,
-      organizationLogosS3Client: OrganizationLogosS3Client,
       s3ClientOrganizationMedia: S3ClientOrganizationMedia,
   ) extends FileService[ServiceTask] {
 
     override def uploadOrganizationLogo(
         organizationID: OrganizationID,
-        organizationLogoOriginalFileName: OrganizationLogoOriginalFileName,
-        organizationLogoByteStream: ZStream[Any, Throwable, Byte],
+        organizationLogoImageOriginalFileName: ImageOriginalFileName,
+        organizationLogoImageByteStream: ZStream[Any, Throwable, Byte],
     ): ServiceTask[Unit] = ZIO.scoped(for {
-      organizationLogoScannedByteStream <- fileScanner.scan(
-        organizationLogoByteStream,
+      organizationLogoImageScannedByteStream <- fileScanner.scan(
+        organizationLogoImageByteStream,
         SupportedMediaTypes.images,
         fileServiceConfig.maxUploadBytes,
       )
-      organizationLogoNormalizedResult <- imageProcessing.normalize(
-        organizationLogoScannedByteStream,
+      organizationLogoImageNormalizedResult <- imageProcessing.normalize(
+        organizationLogoImageScannedByteStream,
         SupportedMediaTypes.images,
       )
-      organizationUploadLogosResult <-
-        organizationLogosS3Client
-          .upload(
+      organizationLogoImageUploadedResult <-
+        s3ClientOrganizationMedia
+          .uploadOrganizationLogo(
             organizationID,
-            organizationLogoNormalizedResult.imageOriginalByteStream,
-            organizationLogoNormalizedResult.imageNormalizedByteStream,
+            organizationLogoImageNormalizedResult.imageOriginalByteStream,
+            organizationLogoImageNormalizedResult.imageNormalizedByteStream,
           )
+      imageAsset = ImageAsset(
+        imageOriginalS3BucketKey = organizationLogoImageUploadedResult.imageOriginalS3BucketKey,
+        imageNormalizedS3BucketKey = organizationLogoImageUploadedResult.imageNormalizedS3BucketKey,
+        imageOriginalFileName = organizationLogoImageOriginalFileName,
+      )
+      organizationLogoImageAsset <- ZIO
+        .fromEither(OrganizationLogoImageAsset.either(imageAsset))
+        .mapError(e =>
+          ServiceError.InternalServerError.UnexpectedError(
+            s"Failed to construct OrganizationLogoImageAsset: [$e]"
+          )
+        )
       _ <- organizationManagementRepository
         .updateOrganization(
           organizationID = organizationID,
           organizationStageOptUpdate = Some(OrganizationStage.LogoProvided),
-          logoOriginalBucketKeyOptUpdate = Some(organizationUploadLogosResult.organizationLogoOriginalBucketKey),
-          logoNormalizedBucketKeyOptUpdate = Some(organizationUploadLogosResult.organizationLogoNormalizedBucketKey),
-          logoOriginalFileNameOptUpdate = Some(organizationLogoOriginalFileName),
+          logoImageAssetOptUpdate = Some(organizationLogoImageAsset),
         )
     } yield ())
 
@@ -133,19 +142,23 @@ object FileService {
     new FileService[TapirTask] {
       override def uploadOrganizationLogo(
           organizationID: OrganizationID,
-          organizationLogoOriginalFileName: OrganizationLogoOriginalFileName,
-          organizationLogoFile: ZStream[Any, Throwable, Byte],
+          organizationLogoImageOriginalFileName: ImageOriginalFileName,
+          organizationLogoImageByteStream: ZStream[Any, Throwable, Byte],
       ): TapirTask[Unit] =
         HttpErrorHandler.errorResponseHandlerTapir(
           service
-            .uploadOrganizationLogo(organizationID, organizationLogoOriginalFileName, organizationLogoFile)
+            .uploadOrganizationLogo(
+              organizationID,
+              organizationLogoImageOriginalFileName,
+              organizationLogoImageByteStream,
+            )
         )
 
       override def uploadCatalogueItemImage(
           organizationID: OrganizationID,
           catalogueItemID: CatalogueItemID,
           catalogueItemImageOriginalFileName: ImageOriginalFileName,
-          catalogueItemImageFile: ZStream[Any, Throwable, Byte],
+          catalogueItemImageByteStream: ZStream[Any, Throwable, Byte],
       ): TapirTask[Unit] =
         HttpErrorHandler.errorResponseHandlerTapir(
           service
@@ -153,7 +166,7 @@ object FileService {
               organizationID,
               catalogueItemID,
               catalogueItemImageOriginalFileName,
-              catalogueItemImageFile,
+              catalogueItemImageByteStream,
             )
         )
     }

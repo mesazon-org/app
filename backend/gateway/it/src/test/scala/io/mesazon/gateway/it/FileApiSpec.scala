@@ -16,12 +16,9 @@ import zio.stream.ZStream
 @DoNotDiscover
 class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryArbitraries, IronRefinedTypeTransformer {
 
-  // Mirrors the gateway container's organization-s3-client config (application.conf)
-  private val organizationLogoBucket           = "organization-logo-bucket"
-  private val organizationLogoBucketPathPrefix = "organization/logos"
-
   // Mirrors the gateway container's s3-client-organization-media config (application.conf)
-  private val catalogueItemImageBucket           = "organization-media"
+  private val organizationMediaBucket            = "organization-media"
+  private val organizationLogoBucketPathPrefix   = "organization/logos"
   private val catalogueItemImageBucketPathPrefix = "catalogue/item-images"
 
   "File Service API" when {
@@ -31,9 +28,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
           .copy(
-            logoOriginalBucketKey = None,
-            logoNormalizedBucketKey = None,
-            logoOriginalFileName = None,
+            logoImageAsset = None
           )
 
         postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow)).zioValue
@@ -54,14 +49,15 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
-        val organizationID                   = organizationDetailsRow.organizationID
-        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationID                        = organizationDetailsRow.organizationID
+        val logoBytes                             =
+          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
           .uploadOrganizationLogoPost[smithy.InternalServerError](
             Some(organizationID),
-            Some(organizationLogoOriginalFileName),
+            Some(organizationLogoImageOriginalFileName),
             logoBytes,
             Some(accessJwt.accessToken),
           )
@@ -74,11 +70,11 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val expectedBucketKeyPrefix = s"$organizationLogoBucketPathPrefix/${organizationID.value}"
 
         val logoOriginalObjectBytes = s3TestClient
-          .getObject(organizationLogoBucket, s"$expectedBucketKeyPrefix/original")
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
           .zioValue
 
         val logoNormalizedObjectBytes = s3TestClient
-          .getObject(organizationLogoBucket, s"$expectedBucketKeyPrefix/normalized")
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
           .zioValue
 
         logoOriginalObjectBytes shouldBe logoBytes
@@ -90,11 +86,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           .head
 
         organizationDetailsRowUpdated.organizationStage shouldBe OrganizationStage.LogoProvided
-        organizationDetailsRowUpdated.logoOriginalFileName shouldBe Some(organizationLogoOriginalFileName)
-        organizationDetailsRowUpdated.logoOriginalBucketKey.map(_.value) shouldBe
-          Some(s"$expectedBucketKeyPrefix/original")
-        organizationDetailsRowUpdated.logoNormalizedBucketKey.map(_.value) shouldBe
-          Some(s"$expectedBucketKeyPrefix/normalized")
+
+        val logoImageAssetValue = organizationDetailsRowUpdated.logoImageAsset.value.value
+
+        logoImageAssetValue.imageOriginalFileName shouldBe organizationLogoImageOriginalFileName
+        logoImageAssetValue.imageOriginalS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/original"
+        logoImageAssetValue.imageNormalizedS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/normalized"
       }
 
       "fail with BadRequest when the file name header is missing" in withContext { context =>
@@ -140,13 +137,14 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
-        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val logoBytes                             =
+          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
           .uploadOrganizationLogoPost[smithy.BadRequest](
             None,
-            Some(organizationLogoOriginalFileName),
+            Some(organizationLogoImageOriginalFileName),
             logoBytes,
             Some(accessJwt.accessToken),
           )
@@ -159,14 +157,15 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
       "fail with Unauthorized when access token is missing" in withContext { context =>
         import context.*
 
-        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
-        val organizationID                   = arbitrarySample[OrganizationID]
-        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationID                        = arbitrarySample[OrganizationID]
+        val logoBytes                             =
+          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
           .uploadOrganizationLogoPost[smithy.Unauthorized](
             Some(organizationID),
-            Some(organizationLogoOriginalFileName),
+            Some(organizationLogoImageOriginalFileName),
             logoBytes,
             None,
           )
@@ -179,14 +178,15 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
       "fail with Unauthorized when access token is invalid" in withContext { context =>
         import context.*
 
-        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
-        val organizationID                   = arbitrarySample[OrganizationID]
-        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationID                        = arbitrarySample[OrganizationID]
+        val logoBytes                             =
+          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
           .uploadOrganizationLogoPost[smithy.Unauthorized](
             Some(organizationID),
-            Some(organizationLogoOriginalFileName),
+            Some(organizationLogoImageOriginalFileName),
             logoBytes,
             Some(AccessToken("invalidtoken")),
           )
@@ -221,13 +221,14 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-          val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
-          val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+          val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+          val logoBytes                             =
+            ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
 
           val uploadOrganizationLogoResponse = gatewayClient
             .uploadOrganizationLogoPost[smithy.Forbidden](
               Some(organizationUserRow.organizationID),
-              Some(organizationLogoOriginalFileName),
+              Some(organizationLogoImageOriginalFileName),
               logoBytes,
               Some(accessJwt.accessToken),
             )
@@ -248,14 +249,15 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
-        val organizationID                   = arbitrarySample[OrganizationID]
-        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationID                        = arbitrarySample[OrganizationID]
+        val logoBytes                             =
+          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
           .uploadOrganizationLogoPost[smithy.Forbidden](
             Some(organizationID),
-            Some(organizationLogoOriginalFileName),
+            Some(organizationLogoImageOriginalFileName),
             logoBytes,
             Some(accessJwt.accessToken),
           )
@@ -275,14 +277,15 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("test-logo-1.jpeg")
-        val organizationID                   = arbitrarySample[OrganizationID]
-        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationID                        = arbitrarySample[OrganizationID]
+        val logoBytes                             =
+          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
           .uploadOrganizationLogoPost[smithy.InternalServerError](
             Some(organizationID),
-            Some(organizationLogoOriginalFileName),
+            Some(organizationLogoImageOriginalFileName),
             logoBytes,
             Some(accessJwt.accessToken),
           )
@@ -297,9 +300,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
           .copy(
-            logoOriginalBucketKey = None,
-            logoNormalizedBucketKey = None,
-            logoOriginalFileName = None,
+            logoImageAsset = None
           )
 
         postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow)).zioValue
@@ -311,14 +312,15 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val organizationLogoOriginalFileName = OrganizationLogoOriginalFileName.assume("malformed.png")
-        val organizationID                   = organizationDetailsRow.organizationID
-        val logoBytes = ZStream.fromResource(s"assets/${organizationLogoOriginalFileName.value}").runCollect.zioValue
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("malformed.png")
+        val organizationID                        = organizationDetailsRow.organizationID
+        val logoBytes                             =
+          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
           .uploadOrganizationLogoPost[smithy.InternalServerError](
             Some(organizationID),
-            Some(organizationLogoOriginalFileName),
+            Some(organizationLogoImageOriginalFileName),
             logoBytes,
             Some(accessJwt.accessToken),
           )
@@ -333,19 +335,17 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           .head
 
         organizationDetailsRowUpdated.organizationStage shouldBe organizationDetailsRowUpdated.organizationStage
-        organizationDetailsRowUpdated.logoOriginalFileName shouldBe None
-        organizationDetailsRowUpdated.logoOriginalBucketKey shouldBe None
-        organizationDetailsRowUpdated.logoNormalizedBucketKey shouldBe None
+        organizationDetailsRowUpdated.logoImageAsset shouldBe None
 
         val expectedBucketKeyPrefix = s"$organizationLogoBucketPathPrefix/${organizationID.value}"
 
         s3TestClient
-          .getObject(organizationLogoBucket, s"$expectedBucketKeyPrefix/original")
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
           .zioEither
           .isLeft shouldBe true
 
         s3TestClient
-          .getObject(organizationLogoBucket, s"$expectedBucketKeyPrefix/normalized")
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
           .zioEither
           .isLeft shouldBe true
       }
@@ -404,11 +404,11 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
             s"$catalogueItemImageBucketPathPrefix/${organizationID.value}/${catalogueItemID.value}"
 
           val imageOriginalObjectBytes = s3TestClient
-            .getObject(catalogueItemImageBucket, s"$expectedBucketKeyPrefix/original")
+            .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
             .zioValue
 
           val imageNormalizedObjectBytes = s3TestClient
-            .getObject(catalogueItemImageBucket, s"$expectedBucketKeyPrefix/normalized")
+            .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
             .zioValue
 
           imageOriginalObjectBytes shouldBe imageBytes
@@ -755,12 +755,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           s"$catalogueItemImageBucketPathPrefix/${catalogueItemRowArchived.organizationID.value}/${catalogueItemRowArchived.catalogueItemID.value}"
 
         s3TestClient
-          .getObject(catalogueItemImageBucket, s"$expectedBucketKeyPrefix/original")
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
           .zioEither
           .isLeft shouldBe true
 
         s3TestClient
-          .getObject(catalogueItemImageBucket, s"$expectedBucketKeyPrefix/normalized")
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
           .zioEither
           .isLeft shouldBe true
       }
@@ -820,12 +820,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           s"$catalogueItemImageBucketPathPrefix/${organizationID.value}/${catalogueItemID.value}"
 
         s3TestClient
-          .getObject(catalogueItemImageBucket, s"$expectedBucketKeyPrefix/original")
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
           .zioEither
           .isLeft shouldBe true
 
         s3TestClient
-          .getObject(catalogueItemImageBucket, s"$expectedBucketKeyPrefix/normalized")
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
           .zioEither
           .isLeft shouldBe true
       }
@@ -880,12 +880,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
             s"$catalogueItemImageBucketPathPrefix/${organizationOrgB.value}/${catalogueItemRowOrgA.catalogueItemID.value}"
 
           s3TestClient
-            .getObject(catalogueItemImageBucket, s"$expectedBucketKeyPrefix/original")
+            .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
             .zioEither
             .isLeft shouldBe true
 
           s3TestClient
-            .getObject(catalogueItemImageBucket, s"$expectedBucketKeyPrefix/normalized")
+            .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
             .zioEither
             .isLeft shouldBe true
       }

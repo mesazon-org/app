@@ -23,6 +23,12 @@ trait S3ClientOrganizationMedia {
       catalogueItemImageNormalizedByteStream: ImageNormalizedByteStream,
   ): IO[ServiceError, UploadedImageResult]
 
+  def uploadOrganizationLogo(
+      organizationID: OrganizationID,
+      organizationLogoImageOriginalByteStream: ImageOriginalByteStream,
+      organizationLogoImageNormalizedByteStream: ImageNormalizedByteStream,
+  ): IO[ServiceError, UploadedImageResult]
+
   def genMediaUrl(
       bucketKey: S3BucketKey
   ): IO[ServiceError, S3MediaUrl]
@@ -109,6 +115,26 @@ object S3ClientOrganizationMedia {
           List(organizationID.value.toString, catalogueItemID.value.toString),
           s3ClientOrganizationMediaConfig.normalizedFileName,
           catalogueItemImageNormalizedByteStream.value,
+        ).map(_.to[ImageNormalizedS3BucketKey])
+      } yield (imageOriginalS3BucketKey, imageNormalizedS3BucketKey)
+
+    override def uploadOrganizationLogo(
+        organizationID: OrganizationID,
+        organizationLogoImageOriginalByteStream: ImageOriginalByteStream,
+        organizationLogoImageNormalizedByteStream: ImageNormalizedByteStream,
+    ): IO[ServiceError, UploadedImageResult] =
+      for {
+        imageOriginalS3BucketKey <- uploadFile(
+          s3ClientOrganizationMediaConfig.organizationLogoBucketPathPrefix,
+          List(organizationID.value.toString),
+          s3ClientOrganizationMediaConfig.originalFileName,
+          organizationLogoImageOriginalByteStream.value,
+        ).map(_.to[ImageOriginalS3BucketKey])
+        imageNormalizedS3BucketKey <- uploadFile(
+          s3ClientOrganizationMediaConfig.organizationLogoBucketPathPrefix,
+          List(organizationID.value.toString),
+          s3ClientOrganizationMediaConfig.normalizedFileName,
+          organizationLogoImageNormalizedByteStream.value,
         ).map(_.to[ImageNormalizedS3BucketKey])
       } yield (imageOriginalS3BucketKey, imageNormalizedS3BucketKey)
 
@@ -244,6 +270,17 @@ object S3ClientOrganizationMedia {
           catalogueItemID,
           catalogueItemImageOriginalByteStream,
           catalogueItemImageNormalizedByteStream,
+        )
+
+      override def uploadOrganizationLogo(
+          organizationID: OrganizationID,
+          organizationLogoImageOriginalByteStream: ImageOriginalByteStream,
+          organizationLogoImageNormalizedByteStream: ImageNormalizedByteStream,
+      ): IO[ServiceError, UploadedImageResult] =
+        s3ClientOrganizationMedia.uploadOrganizationLogo(
+          organizationID,
+          organizationLogoImageOriginalByteStream,
+          organizationLogoImageNormalizedByteStream,
         )
 
       override def genMediaUrl(

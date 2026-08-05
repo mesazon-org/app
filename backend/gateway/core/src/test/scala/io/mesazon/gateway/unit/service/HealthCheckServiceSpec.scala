@@ -1,6 +1,6 @@
 package io.mesazon.gateway.unit.service
 
-import io.mesazon.gateway.clients.OrganizationLogosS3Client
+import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.repository.PingRepository
 import io.mesazon.gateway.service.{HealthCheckService, ServiceTask}
 import io.mesazon.gateway.smithy
@@ -27,7 +27,7 @@ class HealthCheckServiceSpec extends ZWordSpecBase {
           .expects()
           .returningZIOUnit
 
-        (() => organizationLogosS3ClientMock.readiness)
+        (() => s3ClientOrganizationMediaMock.readiness)
           .expects()
           .returningZIOUnit
 
@@ -41,7 +41,7 @@ class HealthCheckServiceSpec extends ZWordSpecBase {
   trait TestContext {
 
     val pingRepositoryMock            = mock[PingRepository]
-    val organizationLogosS3ClientMock = mock[OrganizationLogosS3Client]
+    val s3ClientOrganizationMediaMock = mock[S3ClientOrganizationMedia]
 
     def buildHealthCheckService: smithy.HealthCheckService[ServiceTask] =
       ZIO
@@ -49,7 +49,7 @@ class HealthCheckServiceSpec extends ZWordSpecBase {
         .provide(
           HealthCheckService.local,
           ZLayer.succeed(pingRepositoryMock),
-          ZLayer.succeed(organizationLogosS3ClientMock),
+          ZLayer.succeed(s3ClientOrganizationMediaMock),
         )
         .zioValue
   }

@@ -53,7 +53,7 @@ SBT (Simple Build Tool) is Scala's build tool ([docs](https://www.scala-sbt.org/
 | `gateway` | `local/gateway-core:latest` | 8080/8081/8082/8083 | The actual service. **Not pulled from a registry** — build it first with `sbt "gatewayCore/Docker/publishLocal"`. |
 | `wiremock` | `local/wiremock:latest` | (internal only) | Stubs external HTTP deps. Also built locally, not pulled — same `sbt` step covers it if you run the full `gateway-build`. |
 | `mailhog` | `mailhog/mailhog:v1.0.1` | 1025 (SMTP), 8025 (UI) | Local email catcher — `application.conf` already points email at it by default. |
-| `s3` | `adobe/s3mock:5.0.0` | 9090 | S3-compatible mock; auto-creates `organization-logo-bucket`. `application.conf`'s S3 client defaults to mock mode. |
+| `s3` | `adobe/s3mock:5.0.0` | 9090 | S3-compatible mock; auto-creates `organization-media`. `application.conf`'s S3 client defaults to mock mode. |
 | `waha` | `devlikeapro/waha-plus:gows-arm` | 3000 | Real WhatsApp HTTP API (not a mock/stub). Needs a WhatsApp session (QR scan) to actually send messages; the API key it uses is a fixed dev value already committed in `compose/waha-data/waha-env` — **that file is a committed secret**, don't treat it as sensitive or try to rotate it without checking with the team first. |
 
 Bring up just the DB layer first if you want to run the gateway from sbt directly rather than in Docker:
@@ -92,7 +92,7 @@ docker compose -f compose/compose.yaml up
 No real third-party credentials are needed to boot the gateway locally:
 
 - **Email** → MailHog (`EMAIL_PROVIDER_HOST=mailhog:1025`), dev default already set in `application.conf`.
-- **S3** → `adobe/s3mock`, mock mode on by default (`organization-logos-s3-client.use-mock = true`).
+- **S3** → `adobe/s3mock`, mock mode on by default (`s3-client-organization-media.use-mock = true`).
 - **WhatsApp** → the real `waha` container, using a fixed dev API key — no external account needed, but sending actually requires a scanned WhatsApp session.
 - **Twilio SMS** → **unclear / not mocked**. `application.conf`'s `twilio-client` defaults to `host=localhost, port=8080` with placeholder `account-sid`/`auth-token`, which looks like it's meant to be proxied through `wiremock`, but `wiremock` isn't exposed on a host port in `compose.yaml` and this isn't documented anywhere. If you need SMS locally, confirm the intended setup with the team rather than assuming.
 - **OpenAI** → `open-ai-client.api-key` reads `OPENAI_API_KEY`, empty by default. Only needed for the AI-reply feature; not required to boot.

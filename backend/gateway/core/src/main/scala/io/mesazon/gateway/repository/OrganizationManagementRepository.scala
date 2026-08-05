@@ -46,9 +46,7 @@ trait OrganizationManagementRepository {
       countryOptUpdate: Option[OrganizationCountry] = None,
       companyRegistrationNumberOptUpdate: Option[OrganizationCompanyRegistrationNumber] = None,
       taxIDOptUpdate: Option[OrganizationTaxID] = None,
-      logoOriginalBucketKeyOptUpdate: Option[OrganizationLogoOriginalBucketKey] = None,
-      logoNormalizedBucketKeyOptUpdate: Option[OrganizationLogoNormalizedBucketKey] = None,
-      logoOriginalFileNameOptUpdate: Option[OrganizationLogoOriginalFileName] = None,
+      logoImageAssetOptUpdate: Option[OrganizationLogoImageAsset] = None,
   ): IO[ServiceError, OrganizationDetailsRow]
 
   def isOrganizationSlugExists(
@@ -125,8 +123,6 @@ object OrganizationManagementRepository {
         companyRegistrationNumber,
         taxID,
         None,
-        None,
-        None,
         CreatedAt(instantNow),
         UpdatedAt(instantNow),
       )
@@ -167,9 +163,7 @@ object OrganizationManagementRepository {
         countryOptUpdate: Option[OrganizationCountry],
         companyRegistrationNumberOptUpdate: Option[OrganizationCompanyRegistrationNumber] = None,
         taxIDOptUpdate: Option[OrganizationTaxID] = None,
-        logoOriginalBucketKeyOptUpdate: Option[OrganizationLogoOriginalBucketKey] = None,
-        logoNormalizedBucketKeyOptUpdate: Option[OrganizationLogoNormalizedBucketKey] = None,
-        logoOriginalFileNameOptUpdate: Option[OrganizationLogoOriginalFileName] = None,
+        logoImageAssetOptUpdate: Option[OrganizationLogoImageAsset] = None,
     ): IO[ServiceError, OrganizationDetailsRow] = for {
       instantNow                    <- timeProvider.instantNow
       organizationDetailsRowUpdated <- database
@@ -190,9 +184,7 @@ object OrganizationManagementRepository {
             countryOptUpdate,
             companyRegistrationNumberOptUpdate,
             taxIDOptUpdate,
-            logoOriginalBucketKeyOptUpdate,
-            logoNormalizedBucketKeyOptUpdate,
-            logoOriginalFileNameOptUpdate,
+            logoImageAssetOptUpdate,
           )
         )
         .mapError(e =>

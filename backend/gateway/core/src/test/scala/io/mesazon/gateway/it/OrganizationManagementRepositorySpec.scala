@@ -117,9 +117,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
         organizationDetailsRowsAll should have size 1
         organizationDetailsRowsAll.head shouldBe organizationDetailsRowInsert
         organizationDetailsRowsAll.head shouldBe organizationDetailsRow.copy(
-          logoOriginalBucketKey = None,
-          logoNormalizedBucketKey = None,
-          logoOriginalFileName = None,
+          logoImageAsset = None,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
         )
@@ -223,14 +221,10 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
         )
         organizationDetailsRowsAll should contain theSameElementsAs List(
           organizationDetailsRow1.copy(
-            logoOriginalBucketKey = None,
-            logoNormalizedBucketKey = None,
-            logoOriginalFileName = None,
+            logoImageAsset = None
           ),
           organizationDetailsRow2.copy(
-            logoOriginalBucketKey = None,
-            logoNormalizedBucketKey = None,
-            logoOriginalFileName = None,
+            logoImageAsset = None
           ),
         )
 
@@ -333,9 +327,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
         val countryOptUpdate                   = arbitrarySample[Option[OrganizationCountry]]
         val companyRegistrationNumberOptUpdate = arbitrarySample[Option[OrganizationCompanyRegistrationNumber]]
         val taxIDOptUpdate                     = arbitrarySample[Option[OrganizationTaxID]]
-        val logoOriginalBucketKeyOptUpdate     = arbitrarySample[Option[OrganizationLogoOriginalBucketKey]]
-        val logoNormalizedBucketKeyOptUpdate   = arbitrarySample[Option[OrganizationLogoNormalizedBucketKey]]
-        val logoOriginalFileNameOptUpdate      = arbitrarySample[Option[OrganizationLogoOriginalFileName]]
+        val logoImageAssetOptUpdate            = arbitrarySample[Option[OrganizationLogoImageAsset]]
 
         inSequence(
           (() => timeProviderMock.instantNow)
@@ -360,9 +352,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             countryOptUpdate = countryOptUpdate,
             companyRegistrationNumberOptUpdate = companyRegistrationNumberOptUpdate,
             taxIDOptUpdate = taxIDOptUpdate,
-            logoOriginalBucketKeyOptUpdate = logoOriginalBucketKeyOptUpdate,
-            logoNormalizedBucketKeyOptUpdate = logoNormalizedBucketKeyOptUpdate,
-            logoOriginalFileNameOptUpdate = logoOriginalFileNameOptUpdate,
+            logoImageAssetOptUpdate = logoImageAssetOptUpdate,
           )
           .zioValue
 
@@ -381,10 +371,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           companyRegistrationNumber =
             companyRegistrationNumberOptUpdate.orElse(organizationDetailsRow.companyRegistrationNumber),
           taxID = taxIDOptUpdate.orElse(organizationDetailsRow.taxID),
-          logoOriginalBucketKey = logoOriginalBucketKeyOptUpdate.orElse(organizationDetailsRow.logoOriginalBucketKey),
-          logoNormalizedBucketKey =
-            logoNormalizedBucketKeyOptUpdate.orElse(organizationDetailsRow.logoNormalizedBucketKey),
-          logoOriginalFileName = logoOriginalFileNameOptUpdate.orElse(organizationDetailsRow.logoOriginalFileName),
+          logoImageAsset = logoImageAssetOptUpdate.orElse(organizationDetailsRow.logoImageAsset),
           updatedAt = UpdatedAt(instantNow),
         )
       }
