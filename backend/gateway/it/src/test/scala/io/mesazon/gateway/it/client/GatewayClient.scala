@@ -19,7 +19,9 @@ import scala.util.chaining.scalaUtilChainingOps
 case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]) {
   import config.*
 
-  inline private val OrganizationIDHeader = "X-Organization-ID"
+  inline private val OrganizationIDHeader  = "X-Organization-ID"
+  inline private val FileNameHeader        = "X-File-Name"
+  inline private val CatalogueItemIDHeader = "X-Catalogue-Item-ID"
 
   given JsonValueCodec[smithy.OnboardStage] = new JsonValueCodec[smithy.OnboardStage] {
     override def decodeValue(in: JsonReader, default: smithy.OnboardStage): smithy.OnboardStage =
@@ -339,7 +341,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
 
   def uploadOrganizationLogoPost[E: JsonValueCodec](
       organizationIDOpt: Option[OrganizationID],
-      organizationLogoOriginalFileNameOpt: Option[OrganizationLogoOriginalFileName],
+      organizationLogoImageOriginalFileNameOpt: Option[ImageOriginalFileName],
       logoBytes: Chunk[Byte],
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, Unit]]] =
@@ -351,8 +353,8 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
         )
       )
       .pipe(request =>
-        organizationLogoOriginalFileNameOpt.fold(request)(organizationLogoOriginalFileName =>
-          request.header("X-File-Name", organizationLogoOriginalFileName.value)
+        organizationLogoImageOriginalFileNameOpt.fold(request)(organizationLogoImageOriginalFileName =>
+          request.header(FileNameHeader, organizationLogoImageOriginalFileName.value)
         )
       )
       .pipe(request =>
@@ -381,12 +383,12 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       )
       .pipe(request =>
         catalogueItemIDOpt.fold(request)(catalogueItemID =>
-          request.header("X-Catalogue-Item-ID", catalogueItemID.value.toString)
+          request.header(CatalogueItemIDHeader, catalogueItemID.value.toString)
         )
       )
       .pipe(request =>
         catalogueItemImageOriginalFileNameOpt.fold(request)(catalogueItemImageOriginalFileName =>
-          request.header("X-File-Name", catalogueItemImageOriginalFileName.value)
+          request.header(FileNameHeader, catalogueItemImageOriginalFileName.value)
         )
       )
       .pipe(request =>

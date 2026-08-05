@@ -12,6 +12,7 @@ case class S3ClientOrganizationMediaConfig(
     secretAccessKey: String,
     bucket: String,
     catalogueItemImageBucketPathPrefix: String,
+    organizationLogoBucketPathPrefix: String,
     originalFileName: String,
     normalizedFileName: String,
     urlExpiresAtOffset: Duration,

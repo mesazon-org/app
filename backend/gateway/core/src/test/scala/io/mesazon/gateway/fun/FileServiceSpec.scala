@@ -1,7 +1,7 @@
 package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.clients.{OrganizationLogosS3Client, S3ClientOrganizationMedia}
+import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.domain.*
@@ -16,9 +16,9 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
   "FileService" when {
     "uploadOrganizationLogo" should {
       "successfully scan, normalize, upload and persist the organization logo" in new TestContext {
-        val organizationID                   = arbitrarySample[OrganizationID]
-        val organizationLogoOriginalFileName = arbitrarySample[OrganizationLogoOriginalFileName]
-        val organizationLogoByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val organizationID                        = arbitrarySample[OrganizationID]
+        val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val scannedByteStream    = FileByteStreamScanned(ZStream.fromResource("assets/test-logo-1.jpeg"))
         val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg"))
@@ -26,26 +26,34 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
-        val organizationLogoOriginalBucketKey   = arbitrarySample[OrganizationLogoOriginalBucketKey]
-        val organizationLogoNormalizedBucketKey = arbitrarySample[OrganizationLogoNormalizedBucketKey]
-        val uploadedLogoResult: OrganizationLogosS3Client.UploadedLogoResult =
+        val organizationLogoImageOriginalS3BucketKey   = arbitrarySample[ImageOriginalS3BucketKey]
+        val organizationLogoImageNormalizedS3BucketKey = arbitrarySample[ImageNormalizedS3BucketKey]
+        val uploadedImageResult: S3ClientOrganizationMedia.UploadedImageResult =
           (
-            organizationLogoOriginalBucketKey = organizationLogoOriginalBucketKey,
-            organizationLogoNormalizedBucketKey = organizationLogoNormalizedBucketKey,
+            imageOriginalS3BucketKey = organizationLogoImageOriginalS3BucketKey,
+            imageNormalizedS3BucketKey = organizationLogoImageNormalizedS3BucketKey,
           )
+
+        val organizationLogoImageAsset = OrganizationLogoImageAsset.assume(
+          ImageAsset(
+            imageOriginalS3BucketKey = organizationLogoImageOriginalS3BucketKey,
+            imageNormalizedS3BucketKey = organizationLogoImageNormalizedS3BucketKey,
+            imageOriginalFileName = organizationLogoImageOriginalFileName,
+          )
+        )
 
         inSequence(
           fileScannerMock.scan
-            .expects(organizationLogoByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
+            .expects(organizationLogoImageByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
             .returns(ZIO.succeed(scannedByteStream))
             .once(),
           imageProcessingMock.normalize
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          organizationS3ClientMock.upload
+          s3ClientOrganizationMediaMock.uploadImageOrganizationLogo
             .expects(organizationID, originalByteStream, normalizedByteStream)
-            .returningZIO(uploadedLogoResult)
+            .returningZIO(uploadedImageResult)
             .once(),
           organizationManagementRepositoryMock.updateOrganization
             .expects(
@@ -63,9 +71,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
               None,
               None,
               None,
-              Some(organizationLogoOriginalBucketKey),
-              Some(organizationLogoNormalizedBucketKey),
-              Some(organizationLogoOriginalFileName),
+              Some(organizationLogoImageAsset),
             )
             .returningZIO(arbitrarySample[OrganizationDetailsRow])
             .once(),
@@ -76,8 +82,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val response = fileService
           .uploadOrganizationLogo(
             organizationID = organizationID,
-            organizationLogoOriginalFileName = organizationLogoOriginalFileName,
-            organizationLogoFile = organizationLogoByteStream,
+            organizationLogoImageOriginalFileName = organizationLogoImageOriginalFileName,
+            organizationLogoImageByteStream = organizationLogoImageByteStream,
           )
           .zioEither
 
@@ -85,15 +91,15 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       }
 
       "fail and stop the pipeline when scanning the organization logo fails" in new TestContext {
-        val organizationID                   = arbitrarySample[OrganizationID]
-        val organizationLogoOriginalFileName = arbitrarySample[OrganizationLogoOriginalFileName]
-        val organizationLogoByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val organizationID                        = arbitrarySample[OrganizationID]
+        val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val scanError = ServiceError.InternalServerError.UnexpectedError("Failed to scan organization logo")
 
         inSequence(
           fileScannerMock.scan
-            .expects(organizationLogoByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
+            .expects(organizationLogoImageByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
             .returns(ZIO.fail(scanError))
             .once()
         )
@@ -103,8 +109,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val serviceError = fileService
           .uploadOrganizationLogo(
             organizationID = organizationID,
-            organizationLogoOriginalFileName = organizationLogoOriginalFileName,
-            organizationLogoFile = organizationLogoByteStream,
+            organizationLogoImageOriginalFileName = organizationLogoImageOriginalFileName,
+            organizationLogoImageByteStream = organizationLogoImageByteStream,
           )
           .zioError
 
@@ -112,16 +118,16 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       }
 
       "fail and stop the pipeline when normalizing the organization logo fails" in new TestContext {
-        val organizationID                   = arbitrarySample[OrganizationID]
-        val organizationLogoOriginalFileName = arbitrarySample[OrganizationLogoOriginalFileName]
-        val organizationLogoByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val organizationID                        = arbitrarySample[OrganizationID]
+        val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val scannedByteStream = FileByteStreamScanned(ZStream.fromResource("assets/test-logo-1.jpeg"))
         val normalizeError = ServiceError.InternalServerError.UnexpectedError("Failed to normalize organization logo")
 
         inSequence(
           fileScannerMock.scan
-            .expects(organizationLogoByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
+            .expects(organizationLogoImageByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
             .returns(ZIO.succeed(scannedByteStream))
             .once(),
           imageProcessingMock.normalize
@@ -135,8 +141,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val serviceError = fileService
           .uploadOrganizationLogo(
             organizationID = organizationID,
-            organizationLogoOriginalFileName = organizationLogoOriginalFileName,
-            organizationLogoFile = organizationLogoByteStream,
+            organizationLogoImageOriginalFileName = organizationLogoImageOriginalFileName,
+            organizationLogoImageByteStream = organizationLogoImageByteStream,
           )
           .zioError
 
@@ -144,9 +150,9 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       }
 
       "fail and stop the pipeline when uploading the organization logo to S3 fails" in new TestContext {
-        val organizationID                   = arbitrarySample[OrganizationID]
-        val organizationLogoOriginalFileName = arbitrarySample[OrganizationLogoOriginalFileName]
-        val organizationLogoByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val organizationID                        = arbitrarySample[OrganizationID]
+        val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val scannedByteStream    = FileByteStreamScanned(ZStream.fromResource("assets/test-logo-1.jpeg"))
         val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg"))
@@ -158,14 +164,14 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
         inSequence(
           fileScannerMock.scan
-            .expects(organizationLogoByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
+            .expects(organizationLogoImageByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
             .returns(ZIO.succeed(scannedByteStream))
             .once(),
           imageProcessingMock.normalize
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          organizationS3ClientMock.upload
+          s3ClientOrganizationMediaMock.uploadImageOrganizationLogo
             .expects(organizationID, originalByteStream, normalizedByteStream)
             .failingZIO(uploadError)
             .once(),
@@ -176,8 +182,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val serviceError = fileService
           .uploadOrganizationLogo(
             organizationID = organizationID,
-            organizationLogoOriginalFileName = organizationLogoOriginalFileName,
-            organizationLogoFile = organizationLogoByteStream,
+            organizationLogoImageOriginalFileName = organizationLogoImageOriginalFileName,
+            organizationLogoImageByteStream = organizationLogoImageByteStream,
           )
           .zioError
 
@@ -185,9 +191,9 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       }
 
       "fail when persisting the organization logo details fails" in new TestContext {
-        val organizationID                   = arbitrarySample[OrganizationID]
-        val organizationLogoOriginalFileName = arbitrarySample[OrganizationLogoOriginalFileName]
-        val organizationLogoByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val organizationID                        = arbitrarySample[OrganizationID]
+        val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val scannedByteStream    = FileByteStreamScanned(ZStream.fromResource("assets/test-logo-1.jpeg"))
         val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg"))
@@ -195,28 +201,36 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
-        val organizationLogoOriginalBucketKey   = arbitrarySample[OrganizationLogoOriginalBucketKey]
-        val organizationLogoNormalizedBucketKey = arbitrarySample[OrganizationLogoNormalizedBucketKey]
-        val uploadedLogoResult: OrganizationLogosS3Client.UploadedLogoResult =
+        val organizationLogoImageOriginalS3BucketKey   = arbitrarySample[ImageOriginalS3BucketKey]
+        val organizationLogoImageNormalizedS3BucketKey = arbitrarySample[ImageNormalizedS3BucketKey]
+        val uploadedImageResult: S3ClientOrganizationMedia.UploadedImageResult =
           (
-            organizationLogoOriginalBucketKey = organizationLogoOriginalBucketKey,
-            organizationLogoNormalizedBucketKey = organizationLogoNormalizedBucketKey,
+            imageOriginalS3BucketKey = organizationLogoImageOriginalS3BucketKey,
+            imageNormalizedS3BucketKey = organizationLogoImageNormalizedS3BucketKey,
           )
+
+        val organizationLogoImageAsset = OrganizationLogoImageAsset.assume(
+          ImageAsset(
+            imageOriginalS3BucketKey = organizationLogoImageOriginalS3BucketKey,
+            imageNormalizedS3BucketKey = organizationLogoImageNormalizedS3BucketKey,
+            imageOriginalFileName = organizationLogoImageOriginalFileName,
+          )
+        )
 
         val updateError = ServiceError.InternalServerError.UnexpectedError("Failed to persist organization logo")
 
         inSequence(
           fileScannerMock.scan
-            .expects(organizationLogoByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
+            .expects(organizationLogoImageByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
             .returns(ZIO.succeed(scannedByteStream))
             .once(),
           imageProcessingMock.normalize
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          organizationS3ClientMock.upload
+          s3ClientOrganizationMediaMock.uploadImageOrganizationLogo
             .expects(organizationID, originalByteStream, normalizedByteStream)
-            .returningZIO(uploadedLogoResult)
+            .returningZIO(uploadedImageResult)
             .once(),
           organizationManagementRepositoryMock.updateOrganization
             .expects(
@@ -234,9 +248,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
               None,
               None,
               None,
-              Some(organizationLogoOriginalBucketKey),
-              Some(organizationLogoNormalizedBucketKey),
-              Some(organizationLogoOriginalFileName),
+              Some(organizationLogoImageAsset),
             )
             .failingZIO(updateError)
             .once(),
@@ -247,8 +259,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val serviceError = fileService
           .uploadOrganizationLogo(
             organizationID = organizationID,
-            organizationLogoOriginalFileName = organizationLogoOriginalFileName,
-            organizationLogoFile = organizationLogoByteStream,
+            organizationLogoImageOriginalFileName = organizationLogoImageOriginalFileName,
+            organizationLogoImageByteStream = organizationLogoImageByteStream,
           )
           .zioError
 
@@ -308,7 +320,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          catalogueItemS3ClientMock.uploadImage
+          s3ClientOrganizationMediaMock.uploadImageCatalogueItem
             .expects(organizationID, catalogueItemID, originalByteStream, normalizedByteStream)
             .returningZIO(uploadedImageResult)
             .once(),
@@ -332,7 +344,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             organizationID = organizationID,
             catalogueItemID = catalogueItemID,
             catalogueItemImageOriginalFileName = catalogueItemImageOriginalFileName,
-            catalogueItemImageFile = catalogueItemImageByteStream,
+            catalogueItemImageByteStream = catalogueItemImageByteStream,
           )
           .zioEither
 
@@ -359,7 +371,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             organizationID = organizationID,
             catalogueItemID = catalogueItemID,
             catalogueItemImageOriginalFileName = catalogueItemImageOriginalFileName,
-            catalogueItemImageFile = catalogueItemImageByteStream,
+            catalogueItemImageByteStream = catalogueItemImageByteStream,
           )
           .zioError
 
@@ -392,7 +404,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             organizationID = organizationID,
             catalogueItemID = catalogueItemID,
             catalogueItemImageOriginalFileName = catalogueItemImageOriginalFileName,
-            catalogueItemImageFile = catalogueItemImageByteStream,
+            catalogueItemImageByteStream = catalogueItemImageByteStream,
           )
           .zioError
 
@@ -419,7 +431,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             organizationID = organizationID,
             catalogueItemID = catalogueItemID,
             catalogueItemImageOriginalFileName = catalogueItemImageOriginalFileName,
-            catalogueItemImageFile = catalogueItemImageByteStream,
+            catalogueItemImageByteStream = catalogueItemImageByteStream,
           )
           .zioError
 
@@ -462,7 +474,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             organizationID = organizationID,
             catalogueItemID = catalogueItemID,
             catalogueItemImageOriginalFileName = catalogueItemImageOriginalFileName,
-            catalogueItemImageFile = catalogueItemImageByteStream,
+            catalogueItemImageByteStream = catalogueItemImageByteStream,
           )
           .zioError
 
@@ -511,7 +523,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             organizationID = organizationID,
             catalogueItemID = catalogueItemID,
             catalogueItemImageOriginalFileName = catalogueItemImageOriginalFileName,
-            catalogueItemImageFile = catalogueItemImageByteStream,
+            catalogueItemImageByteStream = catalogueItemImageByteStream,
           )
           .zioError
 
@@ -556,7 +568,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          catalogueItemS3ClientMock.uploadImage
+          s3ClientOrganizationMediaMock.uploadImageCatalogueItem
             .expects(organizationID, catalogueItemID, originalByteStream, normalizedByteStream)
             .failingZIO(uploadError)
             .once(),
@@ -569,7 +581,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             organizationID = organizationID,
             catalogueItemID = catalogueItemID,
             catalogueItemImageOriginalFileName = catalogueItemImageOriginalFileName,
-            catalogueItemImageFile = catalogueItemImageByteStream,
+            catalogueItemImageByteStream = catalogueItemImageByteStream,
           )
           .zioError
 
@@ -629,7 +641,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          catalogueItemS3ClientMock.uploadImage
+          s3ClientOrganizationMediaMock.uploadImageCatalogueItem
             .expects(organizationID, catalogueItemID, originalByteStream, normalizedByteStream)
             .returningZIO(uploadedImageResult)
             .once(),
@@ -653,7 +665,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             organizationID = organizationID,
             catalogueItemID = catalogueItemID,
             catalogueItemImageOriginalFileName = catalogueItemImageOriginalFileName,
-            catalogueItemImageFile = catalogueItemImageByteStream,
+            catalogueItemImageByteStream = catalogueItemImageByteStream,
           )
           .zioError
 
@@ -669,10 +681,9 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
     val fileScannerMock                      = mock[FileScanner]
     val imageProcessingMock                  = mock[ImageProcessing]
-    val organizationS3ClientMock             = mock[OrganizationLogosS3Client]
     val organizationManagementRepositoryMock = mock[OrganizationManagementRepository]
     val catalogueRepositoryMock              = mock[CatalogueRepository]
-    val catalogueItemS3ClientMock            = mock[S3ClientOrganizationMedia]
+    val s3ClientOrganizationMediaMock        = mock[S3ClientOrganizationMedia]
 
     def buildFileService: FileService[ServiceTask] = ZIO
       .service[FileService[ServiceTask]]
@@ -681,10 +692,9 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         ZLayer.succeed(fileServiceConfig),
         ZLayer.succeed(fileScannerMock),
         ZLayer.succeed(imageProcessingMock),
-        ZLayer.succeed(organizationS3ClientMock),
         ZLayer.succeed(organizationManagementRepositoryMock),
         ZLayer.succeed(catalogueRepositoryMock),
-        ZLayer.succeed(catalogueItemS3ClientMock),
+        ZLayer.succeed(s3ClientOrganizationMediaMock),
       )
       .zioValue
   }

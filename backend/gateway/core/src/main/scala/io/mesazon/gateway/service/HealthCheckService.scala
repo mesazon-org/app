@@ -1,7 +1,7 @@
 package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.ServiceError
-import io.mesazon.gateway.clients.OrganizationLogosS3Client
+import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.repository.PingRepository
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import zio.*
@@ -10,13 +10,13 @@ object HealthCheckService {
 
   private final class HealthCheckServiceImpl(
       repository: PingRepository,
-      organizationLogosS3Client: OrganizationLogosS3Client,
+      s3ClientOrganizationMedia: S3ClientOrganizationMedia,
   ) extends smithy.HealthCheckService[ServiceTask] {
 
     private def hardDependencies = repository.ping
 
     private def softDependencies =
-      organizationLogosS3Client.readiness.catchAllCause(cause => ZIO.logWarningCause("Soft dependency failed", cause))
+      s3ClientOrganizationMedia.readiness.catchAllCause(cause => ZIO.logWarningCause("Soft dependency failed", cause))
 
     override def liveness(): IO[ServiceError, Unit] = ZIO.unit
 

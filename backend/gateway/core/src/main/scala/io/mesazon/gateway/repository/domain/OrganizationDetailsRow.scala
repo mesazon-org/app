@@ -17,9 +17,7 @@ case class OrganizationDetailsRow(
     country: Option[OrganizationCountry],
     companyRegistrationNumber: Option[OrganizationCompanyRegistrationNumber],
     taxID: Option[OrganizationTaxID],
-    logoOriginalBucketKey: Option[OrganizationLogoOriginalBucketKey],
-    logoNormalizedBucketKey: Option[OrganizationLogoNormalizedBucketKey],
-    logoOriginalFileName: Option[OrganizationLogoOriginalFileName],
+    logoImageAsset: Option[OrganizationLogoImageAsset],
     createdAt: CreatedAt,
     updatedAt: UpdatedAt,
 )

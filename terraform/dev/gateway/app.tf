@@ -7,20 +7,6 @@ data "digitalocean_database_user" "database_user" {
   name       = local.database_user
 }
 
-data "digitalocean_spaces_bucket" "organization_logos_bucket" {
-  name   = local.spaces_organization_logos_bucket
-  region = local.region
-}
-
-resource "digitalocean_spaces_key" "organization_logos_bucket" {
-  name = "${local.spaces_organization_logos_bucket}-key"
-
-  grant {
-    bucket     = data.digitalocean_spaces_bucket.organization_logos_bucket.name
-    permission = "readwrite"
-  }
-}
-
 data "digitalocean_spaces_bucket" "organization_media_bucket" {
   name   = local.spaces_organization_media_bucket
   region = local.region
@@ -62,11 +48,6 @@ module "gateway_core_app" {
 
     SERVER_ENABLE_DOCS = "true"
 
-    ORGANIZATION_LOGOS_S3_CLIENT_USE_MOCK = "false"
-    ORGANIZATION_LOGOS_S3_CLIENT_URI      = "https://${data.digitalocean_spaces_bucket.organization_logos_bucket.endpoint}"
-    ORGANIZATION_LOGOS_S3_CLIENT_REGION   = data.digitalocean_spaces_bucket.organization_logos_bucket.region
-    ORGANIZATION_LOGOS_S3_CLIENT_BUCKET   = data.digitalocean_spaces_bucket.organization_logos_bucket.name
-
     S3_CLIENT_ORGANIZATION_MEDIA_USE_MOCK = "false"
     S3_CLIENT_ORGANIZATION_MEDIA_URI      = "https://${data.digitalocean_spaces_bucket.organization_media_bucket.endpoint}"
     S3_CLIENT_ORGANIZATION_MEDIA_REGION   = data.digitalocean_spaces_bucket.organization_media_bucket.region
@@ -103,9 +84,6 @@ module "gateway_core_app" {
     TWILIO_CLIENT_AUTH_TOKEN  = var.twilio_client_auth_token
 
     JWT_SECRET_KEY = var.jwt_secret_key
-
-    ORGANIZATION_LOGOS_S3_CLIENT_ACCESS_KEY_ID     = digitalocean_spaces_key.organization_logos_bucket.access_key
-    ORGANIZATION_LOGOS_S3_CLIENT_SECRET_ACCESS_KEY = digitalocean_spaces_key.organization_logos_bucket.secret_key
 
     S3_CLIENT_ORGANIZATION_MEDIA_ACCESS_KEY_ID     = digitalocean_spaces_key.organization_media_bucket.access_key
     S3_CLIENT_ORGANIZATION_MEDIA_SECRET_ACCESS_KEY = digitalocean_spaces_key.organization_media_bucket.secret_key

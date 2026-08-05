@@ -30,7 +30,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
   }
 
   "S3ClientOrganizationMedia" when {
-    "upload" should {
+    "uploadImageCatalogueItem" should {
       "upload the original and normalized images and return their bucket keys" in new TestContext {
         val organizationID            = arbitrarySample[OrganizationID]
         val catalogueItemID           = arbitrarySample[CatalogueItemID]
@@ -39,7 +39,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.uploadImage(
+            _.uploadImageCatalogueItem(
               organizationID,
               catalogueItemID,
               ImageOriginalByteStream(imageOriginalByteStream),
@@ -84,7 +84,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys1 = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.uploadImage(
+            _.uploadImageCatalogueItem(
               organizationID,
               catalogueItemID,
               ImageOriginalByteStream(imageOriginalByteStream1),
@@ -106,9 +106,108 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys2 = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.uploadImage(
+            _.uploadImageCatalogueItem(
               organizationID,
               catalogueItemID,
+              ImageOriginalByteStream(imageOriginalByteStream2),
+              ImageNormalizedByteStream(imageOriginalByteStream1),
+            )
+          )
+          .provide(
+            S3ClientOrganizationMedia.live,
+            ZLayer.succeed(s3ClientOrganizationMediaConfig),
+          )
+          .zioValue
+
+        uploadedImageBucketKeys1 shouldEqual uploadedImageBucketKeys2
+
+        val imageOriginalBytesAfterOverwrite = s3TestClient
+          .getObject(
+            s3ClientOrganizationMediaConfig.bucket,
+            uploadedImageBucketKeys2.imageOriginalS3BucketKey.value,
+          )
+          .zioValue
+
+        imageOriginalBytesAfterOverwrite should contain theSameElementsInOrderAs
+          imageOriginalByteStream2.runCollect.zioValue
+        imageOriginalBytesAfterOverwrite shouldNot equal(imageOriginalBytesBeforeOverwrite)
+      }
+    }
+
+    "uploadImageOrganizationLogo" should {
+      "upload the original and normalized logos and return their bucket keys" in new TestContext {
+        val organizationID            = arbitrarySample[OrganizationID]
+        val imageOriginalByteStream   = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val imageNormalizedByteStream = ZStream.fromResource("assets/test-logo-2.webp")
+
+        val uploadedImageBucketKeys = ZIO
+          .serviceWithZIO[S3ClientOrganizationMedia](
+            _.uploadImageOrganizationLogo(
+              organizationID,
+              ImageOriginalByteStream(imageOriginalByteStream),
+              ImageNormalizedByteStream(imageNormalizedByteStream),
+            )
+          )
+          .provide(
+            S3ClientOrganizationMedia.live,
+            ZLayer.succeed(s3ClientOrganizationMediaConfig),
+          )
+          .zioValue
+
+        val expectedBucketKeyPrefix =
+          s"${s3ClientOrganizationMediaConfig.organizationLogoBucketPathPrefix}/${organizationID.value}"
+
+        uploadedImageBucketKeys.imageOriginalS3BucketKey.value shouldBe
+          s"$expectedBucketKeyPrefix/${s3ClientOrganizationMediaConfig.originalFileName}"
+
+        uploadedImageBucketKeys.imageNormalizedS3BucketKey.value shouldBe
+          s"$expectedBucketKeyPrefix/${s3ClientOrganizationMediaConfig.normalizedFileName}"
+
+        s3TestClient
+          .getObject(
+            s3ClientOrganizationMediaConfig.bucket,
+            uploadedImageBucketKeys.imageOriginalS3BucketKey.value,
+          )
+          .zioValue should contain theSameElementsInOrderAs imageOriginalByteStream.runCollect.zioValue
+
+        s3TestClient
+          .getObject(
+            s3ClientOrganizationMediaConfig.bucket,
+            uploadedImageBucketKeys.imageNormalizedS3BucketKey.value,
+          )
+          .zioValue should contain theSameElementsInOrderAs imageNormalizedByteStream.runCollect.zioValue
+      }
+
+      "overwrite the existing logo when uploading again for the same organization" in new TestContext {
+        val organizationID           = arbitrarySample[OrganizationID]
+        val imageOriginalByteStream1 = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val imageOriginalByteStream2 = ZStream.fromResource("assets/test-logo-2.webp")
+
+        val uploadedImageBucketKeys1 = ZIO
+          .serviceWithZIO[S3ClientOrganizationMedia](
+            _.uploadImageOrganizationLogo(
+              organizationID,
+              ImageOriginalByteStream(imageOriginalByteStream1),
+              ImageNormalizedByteStream(imageOriginalByteStream2),
+            )
+          )
+          .provide(
+            S3ClientOrganizationMedia.live,
+            ZLayer.succeed(s3ClientOrganizationMediaConfig),
+          )
+          .zioValue
+
+        val imageOriginalBytesBeforeOverwrite = s3TestClient
+          .getObject(
+            s3ClientOrganizationMediaConfig.bucket,
+            uploadedImageBucketKeys1.imageOriginalS3BucketKey.value,
+          )
+          .zioValue
+
+        val uploadedImageBucketKeys2 = ZIO
+          .serviceWithZIO[S3ClientOrganizationMedia](
+            _.uploadImageOrganizationLogo(
+              organizationID,
               ImageOriginalByteStream(imageOriginalByteStream2),
               ImageNormalizedByteStream(imageOriginalByteStream1),
             )
@@ -142,7 +241,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.uploadImage(
+            _.uploadImageCatalogueItem(
               organizationID,
               catalogueItemID,
               ImageOriginalByteStream(imageByteStream),
@@ -203,6 +302,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
       secretAccessKey = "secret-access-key",
       bucket = "organization-media",
       catalogueItemImageBucketPathPrefix = "catalogue/item-images",
+      organizationLogoBucketPathPrefix = "organization/logos",
       originalFileName = "original",
       normalizedFileName = "normalized",
       urlExpiresAtOffset = 1.minute,

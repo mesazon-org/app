@@ -19,10 +19,13 @@ object FileServiceEndpoints {
     override def id: smithy4s.ShapeId = smithy4s.ShapeId("io.mesazon.gateway.smithy", "FileService")
   }
 
+  inline private val FileNameHeader        = "X-File-Name"
+  inline private val CatalogueItemIDHeader = "X-Catalogue-Item-ID"
+
   private val uploadOrganizationLogoPostEndpoint =
     securedEndpoint.post
       .in("upload" / "organization" / "logo")
-      .in(header[OrganizationLogoOriginalFileName]("X-File-Name"))
+      .in(header[ImageOriginalFileName](FileNameHeader))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
       .out(statusCode(StatusCode.Ok))
       .errorOut(
@@ -40,8 +43,8 @@ object FileServiceEndpoints {
   private val uploadCatalogueItemImagePostEndpoint =
     securedEndpoint.post
       .in("upload" / "catalogue-item" / "image")
-      .in(header[CatalogueItemID]("X-Catalogue-Item-ID"))
-      .in(header[ImageOriginalFileName]("X-File-Name"))
+      .in(header[CatalogueItemID](CatalogueItemIDHeader))
+      .in(header[ImageOriginalFileName](FileNameHeader))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
       .out(statusCode(StatusCode.Ok))
       .errorOut(
@@ -78,8 +81,14 @@ object FileServiceEndpoints {
             )
             .as(organizationID)
         }
-          .serverLogic(organizationID => { case (organizationLogoOriginalFileName, organizationLogoFile) =>
-            fileService.uploadOrganizationLogo(organizationID, organizationLogoOriginalFileName, organizationLogoFile)
+          .serverLogic(organizationID => {
+            case (organizationLogoImageOriginalFileName, organizationLogoImageByteStream) =>
+              fileService
+                .uploadOrganizationLogo(
+                  organizationID,
+                  organizationLogoImageOriginalFileName,
+                  organizationLogoImageByteStream,
+                )
           }),
         uploadCatalogueItemImagePostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
           authorizationService
@@ -91,13 +100,14 @@ object FileServiceEndpoints {
             )
             .as(organizationID)
         }
-          .serverLogic(organizationID => { case (catalogueItemID, catalogueItemImageFileName, catalogueItemImageFile) =>
-            fileService.uploadCatalogueItemImage(
-              organizationID,
-              catalogueItemID,
-              catalogueItemImageFileName,
-              catalogueItemImageFile,
-            )
+          .serverLogic(organizationID => {
+            case (catalogueItemID, catalogueItemImageOriginalFileName, catalogueItemImageByteStream) =>
+              fileService.uploadCatalogueItemImage(
+                organizationID,
+                catalogueItemID,
+                catalogueItemImageOriginalFileName,
+                catalogueItemImageByteStream,
+              )
           }),
       )
       openApiDocsOpt = Option.when(enableDocs)(

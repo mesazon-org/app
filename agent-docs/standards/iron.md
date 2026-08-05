@@ -11,7 +11,7 @@ Reusable refined-newtype rules. Related: [validation](../features/flow/02-valida
 
 - Form: `{{Owner}}{{Entity}}` when the meaning is owner-specific; owner first. A genuinely reusable value concept uses its semantic name without a feature owner (`PriceAmount`, `PriceCurrency`).
 - An identifier type is named after **the entity it identifies**, suffixed `ID`. Never a context-free identifier type.
-- ✅ `PhoneRegion`, `PhoneNumberE164`, `OrganizationLogoOriginalFileName`, `UserID`, `CustomerID`, `SubscriptionID`
+- ✅ `PhoneRegion`, `PhoneNumberE164`, `OrganizationLogoImageAsset`, `UserID`, `CustomerID`, `SubscriptionID`
 - ❌ `phoneRegion` (not `PascalCase`), `id` (no entity, no owner), `OrgLogoName` (abbreviated), `ID`, `EntityID`, `Identifier`
 - A newtype is always `PascalCase`, never the lower-camelCase spelling used for a *value* of the type — `UserID` the type, `userID: UserID` the value; `organizationID` is never a type name.
 - `ID` stays fully uppercase; every other acronym is treated as a word (`Jwt`, `Http`, `E164` keeps its standard spelling).

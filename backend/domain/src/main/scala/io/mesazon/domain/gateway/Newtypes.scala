@@ -134,20 +134,8 @@ type OrganizationCompanyRegistrationNumber = OrganizationCompanyRegistrationNumb
 object OrganizationTaxID extends RefinedType[String, NonEmptyTrimmed]
 type OrganizationTaxID = OrganizationTaxID.T
 
-object OrganizationLogoOriginalFileName extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationLogoOriginalFileName = OrganizationLogoOriginalFileName.T
-
-object OrganizationLogoOriginalUrl extends RefinedType[String, NonEmptyTrimmedUnsafe]
-type OrganizationLogoOriginalUrl = OrganizationLogoOriginalUrl.T
-
-object OrganizationLogoNormalizedUrl extends RefinedType[String, NonEmptyTrimmedUnsafe]
-type OrganizationLogoNormalizedUrl = OrganizationLogoNormalizedUrl.T
-
-object OrganizationLogoOriginalBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
-type OrganizationLogoOriginalBucketKey = OrganizationLogoOriginalBucketKey.T
-
-object OrganizationLogoNormalizedBucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
-type OrganizationLogoNormalizedBucketKey = OrganizationLogoNormalizedBucketKey.T
+object OrganizationLogoImageAsset extends RefinedType[ImageAsset, Pure]
+type OrganizationLogoImageAsset = OrganizationLogoImageAsset.T
 
 // Customer Book
 
