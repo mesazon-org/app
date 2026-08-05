@@ -51,7 +51,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          s3ClientOrganizationMediaMock.uploadOrganizationLogo
+          s3ClientOrganizationMediaMock.uploadImageOrganizationLogo
             .expects(organizationID, originalByteStream, normalizedByteStream)
             .returningZIO(uploadedImageResult)
             .once(),
@@ -171,7 +171,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          s3ClientOrganizationMediaMock.uploadOrganizationLogo
+          s3ClientOrganizationMediaMock.uploadImageOrganizationLogo
             .expects(organizationID, originalByteStream, normalizedByteStream)
             .failingZIO(uploadError)
             .once(),
@@ -228,7 +228,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          s3ClientOrganizationMediaMock.uploadOrganizationLogo
+          s3ClientOrganizationMediaMock.uploadImageOrganizationLogo
             .expects(organizationID, originalByteStream, normalizedByteStream)
             .returningZIO(uploadedImageResult)
             .once(),
@@ -320,7 +320,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          s3ClientOrganizationMediaMock.uploadImage
+          s3ClientOrganizationMediaMock.uploadImageCatalogueItem
             .expects(organizationID, catalogueItemID, originalByteStream, normalizedByteStream)
             .returningZIO(uploadedImageResult)
             .once(),
@@ -568,7 +568,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          s3ClientOrganizationMediaMock.uploadImage
+          s3ClientOrganizationMediaMock.uploadImageCatalogueItem
             .expects(organizationID, catalogueItemID, originalByteStream, normalizedByteStream)
             .failingZIO(uploadError)
             .once(),
@@ -641,7 +641,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(scannedByteStream, SupportedMediaTypes.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
-          s3ClientOrganizationMediaMock.uploadImage
+          s3ClientOrganizationMediaMock.uploadImageCatalogueItem
             .expects(organizationID, catalogueItemID, originalByteStream, normalizedByteStream)
             .returningZIO(uploadedImageResult)
             .once(),

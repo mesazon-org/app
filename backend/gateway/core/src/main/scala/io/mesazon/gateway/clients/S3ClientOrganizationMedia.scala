@@ -16,14 +16,14 @@ import zio.stream.*
 import scala.util.chaining.scalaUtilChainingOps
 
 trait S3ClientOrganizationMedia {
-  def uploadImage(
+  def uploadImageCatalogueItem(
       organizationID: OrganizationID,
       catalogueItemID: CatalogueItemID,
       catalogueItemImageOriginalByteStream: ImageOriginalByteStream,
       catalogueItemImageNormalizedByteStream: ImageNormalizedByteStream,
   ): IO[ServiceError, UploadedImageResult]
 
-  def uploadOrganizationLogo(
+  def uploadImageOrganizationLogo(
       organizationID: OrganizationID,
       organizationLogoImageOriginalByteStream: ImageOriginalByteStream,
       organizationLogoImageNormalizedByteStream: ImageNormalizedByteStream,
@@ -97,7 +97,7 @@ object S3ClientOrganizationMedia {
         } yield s3BucketKey
       }
 
-    override def uploadImage(
+    override def uploadImageCatalogueItem(
         organizationID: OrganizationID,
         catalogueItemID: CatalogueItemID,
         catalogueItemImageOriginalByteStream: ImageOriginalByteStream,
@@ -118,7 +118,7 @@ object S3ClientOrganizationMedia {
         ).map(_.to[ImageNormalizedS3BucketKey])
       } yield (imageOriginalS3BucketKey, imageNormalizedS3BucketKey)
 
-    override def uploadOrganizationLogo(
+    override def uploadImageOrganizationLogo(
         organizationID: OrganizationID,
         organizationLogoImageOriginalByteStream: ImageOriginalByteStream,
         organizationLogoImageNormalizedByteStream: ImageNormalizedByteStream,
@@ -259,25 +259,25 @@ object S3ClientOrganizationMedia {
 
   private def observed(s3ClientOrganizationMedia: S3ClientOrganizationMedia): S3ClientOrganizationMedia =
     new S3ClientOrganizationMedia {
-      override def uploadImage(
+      override def uploadImageCatalogueItem(
           organizationID: OrganizationID,
           catalogueItemID: CatalogueItemID,
           catalogueItemImageOriginalByteStream: ImageOriginalByteStream,
           catalogueItemImageNormalizedByteStream: ImageNormalizedByteStream,
       ): IO[ServiceError, UploadedImageResult] =
-        s3ClientOrganizationMedia.uploadImage(
+        s3ClientOrganizationMedia.uploadImageCatalogueItem(
           organizationID,
           catalogueItemID,
           catalogueItemImageOriginalByteStream,
           catalogueItemImageNormalizedByteStream,
         )
 
-      override def uploadOrganizationLogo(
+      override def uploadImageOrganizationLogo(
           organizationID: OrganizationID,
           organizationLogoImageOriginalByteStream: ImageOriginalByteStream,
           organizationLogoImageNormalizedByteStream: ImageNormalizedByteStream,
       ): IO[ServiceError, UploadedImageResult] =
-        s3ClientOrganizationMedia.uploadOrganizationLogo(
+        s3ClientOrganizationMedia.uploadImageOrganizationLogo(
           organizationID,
           organizationLogoImageOriginalByteStream,
           organizationLogoImageNormalizedByteStream,

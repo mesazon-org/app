@@ -30,7 +30,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
   }
 
   "S3ClientOrganizationMedia" when {
-    "upload" should {
+    "uploadImageCatalogueItem" should {
       "upload the original and normalized images and return their bucket keys" in new TestContext {
         val organizationID            = arbitrarySample[OrganizationID]
         val catalogueItemID           = arbitrarySample[CatalogueItemID]
@@ -39,7 +39,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.uploadImage(
+            _.uploadImageCatalogueItem(
               organizationID,
               catalogueItemID,
               ImageOriginalByteStream(imageOriginalByteStream),
@@ -84,7 +84,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys1 = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.uploadImage(
+            _.uploadImageCatalogueItem(
               organizationID,
               catalogueItemID,
               ImageOriginalByteStream(imageOriginalByteStream1),
@@ -106,7 +106,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys2 = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.uploadImage(
+            _.uploadImageCatalogueItem(
               organizationID,
               catalogueItemID,
               ImageOriginalByteStream(imageOriginalByteStream2),
@@ -134,7 +134,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
       }
     }
 
-    "uploadOrganizationLogo" should {
+    "uploadImageOrganizationLogo" should {
       "upload the original and normalized logos and return their bucket keys" in new TestContext {
         val organizationID            = arbitrarySample[OrganizationID]
         val imageOriginalByteStream   = ZStream.fromResource("assets/test-logo-1.jpeg")
@@ -142,7 +142,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.uploadOrganizationLogo(
+            _.uploadImageOrganizationLogo(
               organizationID,
               ImageOriginalByteStream(imageOriginalByteStream),
               ImageNormalizedByteStream(imageNormalizedByteStream),
@@ -185,7 +185,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys1 = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.uploadOrganizationLogo(
+            _.uploadImageOrganizationLogo(
               organizationID,
               ImageOriginalByteStream(imageOriginalByteStream1),
               ImageNormalizedByteStream(imageOriginalByteStream2),
@@ -206,7 +206,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys2 = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.uploadOrganizationLogo(
+            _.uploadImageOrganizationLogo(
               organizationID,
               ImageOriginalByteStream(imageOriginalByteStream2),
               ImageNormalizedByteStream(imageOriginalByteStream1),
@@ -241,7 +241,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
         val uploadedImageBucketKeys = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
-            _.uploadImage(
+            _.uploadImageCatalogueItem(
               organizationID,
               catalogueItemID,
               ImageOriginalByteStream(imageByteStream),

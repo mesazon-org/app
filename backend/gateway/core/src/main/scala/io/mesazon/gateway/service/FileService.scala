@@ -52,7 +52,7 @@ object FileService {
       )
       organizationLogoImageUploadedResult <-
         s3ClientOrganizationMedia
-          .uploadOrganizationLogo(
+          .uploadImageOrganizationLogo(
             organizationID,
             organizationLogoImageNormalizedResult.imageOriginalByteStream,
             organizationLogoImageNormalizedResult.imageNormalizedByteStream,
@@ -112,7 +112,7 @@ object FileService {
         )
         catalogueItemImageUploadedResult <-
           s3ClientOrganizationMedia
-            .uploadImage(
+            .uploadImageCatalogueItem(
               organizationID,
               catalogueItemID,
               catalogueItemImageNormalizedResult.imageOriginalByteStream,
