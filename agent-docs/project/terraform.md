@@ -21,6 +21,7 @@ Step 3's env var names must match **exactly** what `application.conf` reads via 
 
 - `pipeline-tf-ci.yml`: any PR/push touching `terraform/**` or `.github/**` runs `job-tf-fmt` (`terraform fmt -check -recursive`) — fails the build on unformatted files.
 - `pipeline-gateway-ci.yml`: every PR/push runs `job-tf-plan` against `terraform/dev/gateway` and posts the plan as a PR comment — this is where an incomplete wiring becomes visible (no planned change for the new env vars). On push to `main`, `job-tf-apply` runs after, applying to the real `dev` DigitalOcean environment automatically — no manual apply step.
+- `pipeline-gateway-destroy-cron.yml` (+ `job-tf-destroy.yml`): scheduled `terraform destroy` against `terraform/dev/gateway`, at 01:00 and 13:00 CET (`cron: '0 0 * * *'` / `'0 12 * * *'`, fixed UTC+1 — drifts 1h during CEST, GitHub Actions cron has no DST support) to stop paying for the dev app outside its ~13:00–01:00 usage window. Destroy-only, no scheduled recreate — the state's two resources (`digitalocean_app.app_service`, `digitalocean_spaces_key.organization_media_bucket`) are stateless and cheap to rebuild, but the Postgres cluster they depend on is only read via a `data` source here and is left untouched. Running it against an already-destroyed state is a safe no-op. Bring the app back up manually: push to `main`, or dispatch `pipeline-gateway-cd.yml`.
 
 Always run `terraform fmt -recursive` from the repo root after editing any `.tf` file, before committing.
 
