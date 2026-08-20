@@ -2,6 +2,8 @@ locals {
   region                               = "fra1"
   environment                          = "dev"
   app_name_raw                         = "gateway-core"
+  dns_zone                             = "mesazon.space"
+  app_domain                           = "${local.environment}-api.${local.dns_zone}"
   database_cluster_name_raw            = "gateway"
   database_cluster_name                = "${local.database_cluster_name_raw}-${local.region}-${local.environment}"
   database_name_raw                    = "gateway_db"

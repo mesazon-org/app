@@ -1,0 +1,62 @@
+name: gateway-destroy
+on:
+  workflow_dispatch:
+  schedule:
+    # 01:00 CET (UTC+1) on Wednesday and Sunday -- fires at 02:00 local during CEST, a known 1h DST
+    # drift, GitHub Actions cron has no timezone support. Twice a week, not twice a day: every
+    # destroy costs a fresh TLS certificate on the next deploy, and Let's Encrypt allows only 5 per
+    # exact name set per 7 days.
+    - cron: '0 0 * * 0'
+    - cron: '0 0 * * 3'
+env:
+  # A scheduled run destroys nothing if the gateway was deployed inside this window -- the app is in
+  # active use and tearing it down would only cost a redeploy and a certificate. Manual dispatch
+  # always destroys.
+  INACTIVITY_HOURS: "48"
+jobs:
+  check-activity:
+    name: check-activity
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      idle: ${{ steps.check.outputs.idle }}
+    steps:
+      - name: Look for a recent successful deploy
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          latest=0
+          for workflow in pipeline-gateway-ci.yml pipeline-gateway-cd.yml; do
+            timestamp="$(gh api "repos/${{ github.repository }}/actions/workflows/$workflow/runs?status=success&per_page=1" --jq '.workflow_runs[0].created_at // empty' 2>/dev/null || true)"
+            if [ -n "$timestamp" ]; then
+              epoch="$(date -u -d "$timestamp" +%s)"
+              if [ "$epoch" -gt "$latest" ]; then
+                latest="$epoch"
+              fi
+            fi
+          done
+          cutoff=$(( $(date -u +%s) - INACTIVITY_HOURS * 3600 ))
+          if [ "$latest" -gt "$cutoff" ]; then
+            echo "Last successful deploy $(date -u -d "@$latest") is inside the ${INACTIVITY_HOURS}h window; keeping the app up."
+            echo "idle=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "No successful deploy in the last ${INACTIVITY_HOURS}h; the app can go."
+            echo "idle=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  gateway-destroy-dev:
+    needs: [ "check-activity" ]
+    if: github.event_name == 'workflow_dispatch' || needs.check-activity.outputs.idle == 'true'
+    uses: ./.github/workflows/job-tf-destroy.yml
+    secrets: inherit # Inherit secrets from the parent workflow
+    with:
+      project-id: "33eee19d-9b81-4846-b24f-c39bf70fe1f5"
+      working-directory: "terraform/dev/gateway"
+      module: "gateway-dev"
+      environment: "dev"
+      docker-image-name: "gateway-core"
+      docker-image-tag: "unused"
+      release-domains: true
