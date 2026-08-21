@@ -72,6 +72,15 @@ resource "digitalocean_app" "app_service" {
       }
     }
 
+    dynamic "domain" {
+      for_each = var.domains
+      content {
+        name = domain.value.name
+        type = domain.value.type
+        zone = domain.value.zone
+      }
+    }
+
     vpc {
       id = data.digitalocean_vpc.vpc.id
     }

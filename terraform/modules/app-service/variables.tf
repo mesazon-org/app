@@ -79,3 +79,13 @@ variable "vpc_name_raw" {
   description = "The raw name for the VPC, which will be combined with the environment and region to create the final name."
   type        = string
 }
+
+variable "domains" {
+  description = "Custom domains for the app. `zone` must name a DigitalOcean-managed DNS zone; App Platform then creates the DNS record and provisions the TLS certificate itself."
+  type = list(object({
+    name = string
+    type = string
+    zone = string
+  }))
+  default = []
+}
