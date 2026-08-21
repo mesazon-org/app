@@ -23,9 +23,7 @@ Step 3's env var names must match **exactly** what `application.conf` reads via 
 
 - `pipeline-tf-ci.yml`: any PR/push touching `terraform/**` or `.github/**` runs `job-tf-fmt` (`terraform fmt -check -recursive`) — fails the build on unformatted files.
 - `pipeline-gateway-ci.yml`: every PR/push runs `job-tf-plan` against `terraform/dev/gateway` and posts the plan as a PR comment — this is where an incomplete wiring becomes visible (no planned change for the new env vars). On push to `main`, `job-tf-apply` runs after, applying to the real `dev` DigitalOcean environment automatically — no manual apply step.
-- `pipeline-gateway-destroy.yml` (+ `job-tf-destroy.yml`): `terraform destroy` against `terraform/dev/gateway`, scheduled 01:00 CET Wednesday and Sunday (`cron: '0 0 * * 3'` / `'0 0 * * 0'`, fixed UTC+1 — drifts 1h during CEST, GitHub Actions cron has no DST support). Twice a week rather than twice a day because each destroy costs a fresh TLS certificate on the next deploy, capped by Let's Encrypt at 5 per exact name set per 7 days (global, no overrides). Two gates:
-  - `check-activity` skips the scheduled destroy when `pipeline-gateway-ci.yml` or `pipeline-gateway-cd.yml` last succeeded inside `INACTIVITY_HOURS` (48h) — an app being deployed against is an app in use. `workflow_dispatch` bypasses the check and always destroys.
-  - `release-domains: true` makes the job re-apply with `custom_domain_enabled=false` before deleting, pinning the already-deployed `image_tag` from the state's output so the release apply changes nothing else. DigitalOcean holds a deleted app's custom domain for up to 24h; removing it from the spec first frees the hostname immediately.
+- `pipeline-gateway-destroy.yml` (+ `job-tf-destroy.yml`): `terraform destroy` against `terraform/dev/gateway`, scheduled 02:00 CET Monday/Wednesday/Friday (`cron: '0 1 * * 1,3,5'`, fixed UTC+1 — drifts 1h during CEST, GitHub Actions cron has no DST support). Three times a week rather than twice a day because each destroy costs a fresh TLS certificate on the next deploy, capped by Let's Encrypt at 5 per exact name set per 7 days (global, no overrides). `release-domains: true` makes the job re-apply with `custom_domain_enabled=false` before deleting, pinning the already-deployed `image_tag` from the state's output so the release apply changes nothing else. DigitalOcean holds a deleted app's custom domain for up to 24h; removing it from the spec first frees the hostname immediately.
 
   Destroy-only, no scheduled recreate — the state's resources are stateless and cheap to rebuild, but the Postgres cluster they depend on is only read via a `data` source here and is left untouched. Running it against an already-destroyed state is a safe no-op. Bring the app back up: push to `main`, or dispatch `pipeline-gateway-cd.yml` — then expect a few minutes of certificate provisioning before HTTPS works.
 - `pipeline-dns-cd.yml`: dispatch-only plan+apply of `terraform/dev/dns` (module `dns-dev`). Passes `"unused"` for `docker-image-name`/`docker-image-tag` because the shared plan/apply jobs require them; Terraform warns about the undeclared `TF_VAR_image_*` and continues. The zone is create-once, so this rarely runs.
@@ -51,7 +49,7 @@ states, and neither writes DNS records directly:
 There is no way to pin a pre-issued certificate: the provider's `domain` block accepts only `name`,
 `type`, `wildcard`, and `zone`, so the certificate's lifecycle is the app's lifecycle. Anything that
 deletes the app therefore costs a reissue on the way back, which is what caps the destroy schedule
-at twice a week and why `custom_domain_enabled=false` is applied before a destroy.
+at three times a week and why `custom_domain_enabled=false` is applied before a destroy.
 
 Do not add CAA records to the zone. If any are ever added they must list both `letsencrypt.org` and
 `pki.goog`, the two CAs App Platform issues from, or certificate provisioning fails.
