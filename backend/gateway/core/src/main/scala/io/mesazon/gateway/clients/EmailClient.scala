@@ -60,7 +60,12 @@ object EmailClient {
             EmailBuilder
               .startingBlank()
               .from(emailConfig.senderEmail)
-              .withRecipients(null, false, RecipientType.TO, email.value)
+              .withRecipients(
+                new RecipientBuilder()
+                  .withAddress(email.value)
+                  .withType(RecipientType.TO)
+                  .build()
+              )
               .withSubject("Mesazon email verification")
               .withHTMLText(
                 EmailVerificationHTML
@@ -84,7 +89,12 @@ object EmailClient {
             EmailBuilder
               .startingBlank()
               .from(emailConfig.senderEmail)
-              .withRecipients(null, false, RecipientType.TO, email.value)
+              .withRecipients(
+                new RecipientBuilder()
+                  .withAddress(email.value)
+                  .withType(RecipientType.TO)
+                  .build()
+              )
               .withSubject("Welcome to Mesazon!")
               .withHTMLText(
                 WelcomeHTML
@@ -104,7 +114,12 @@ object EmailClient {
             EmailBuilder
               .startingBlank()
               .from(emailConfig.senderEmail)
-              .withRecipients(null, false, RecipientType.TO, email.value)
+              .withRecipients(
+                new RecipientBuilder()
+                  .withAddress(email.value)
+                  .withType(RecipientType.TO)
+                  .build()
+              )
               .withSubject("Mesazon password reset")
               .withHTMLText(
                 ForgotPasswordHTML
@@ -126,7 +141,12 @@ object EmailClient {
             EmailBuilder
               .startingBlank()
               .from(emailConfig.senderEmail)
-              .withRecipients(null, false, RecipientType.TO, email.value)
+              .withRecipients(
+                new RecipientBuilder()
+                  .withAddress(email.value)
+                  .withType(RecipientType.TO)
+                  .build()
+              )
               .withSubject("Mesazon password change confirmation")
               .withHTMLText(
                 PasswordChangeConfirmationHTML
