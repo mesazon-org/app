@@ -33,13 +33,16 @@ resource "digitalocean_app" "app_service" {
       }
 
       health_check {
-        http_path             = "/readiness"
-        port                  = var.readiness_port
-        initial_delay_seconds = 5
+        http_path = "/readiness"
+        port      = var.readiness_port
+        # 20 + 10*5 = 70s budget. JVM cold start (JIT/class-loading after the DB pool is up) has been
+        # observed taking ~44s to bind the readiness port; the old 5/10/3 (35s budget) killed the app
+        # as unhealthy before it ever got a chance to answer.
+        initial_delay_seconds = 20
         period_seconds        = 10
         timeout_seconds       = 5
         success_threshold     = 1
-        failure_threshold     = 3
+        failure_threshold     = 5
       }
 
       # Only directly through app platform is available, until new release contains those features
@@ -69,6 +72,15 @@ resource "digitalocean_app" "app_service" {
           value = env.value
           type  = "SECRET"
         }
+      }
+    }
+
+    dynamic "domain" {
+      for_each = var.domains
+      content {
+        name = domain.value.name
+        type = domain.value.type
+        zone = domain.value.zone
       }
     }
 

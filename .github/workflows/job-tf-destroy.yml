@@ -26,6 +26,11 @@ on:
         description: "Docker image tag"
         type: string
         required: true
+      release-domains:
+        description: "Drop custom domains from the app spec before deleting it, so DigitalOcean frees the hostname immediately"
+        type: boolean
+        required: false
+        default: false
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -61,5 +66,22 @@ jobs:
             -backend-config="bucket=${{ secrets.DO_SPACES_BUCKET }}" \
             -backend-config="key=${{ inputs.module }}-tf-state/terraform.tfstate" \
             -backend-config="endpoints={s3=\"https://${{ secrets.DO_SPACES_REGION }}.digitaloceanspaces.com\"}"
+      - name: Release custom domains
+        if: inputs.release-domains
+        run: |
+          set -euo pipefail
+          if ! terraform state list | grep -q 'digitalocean_app'; then
+            echo "No app in state; nothing to release."
+            exit 0
+          fi
+          image_tag="$(terraform output -raw image_tag 2>/dev/null || true)"
+          if [ -z "$image_tag" ]; then
+            echo "No image_tag output in state; skipping release, the domain may be held for up to 24h."
+            exit 0
+          fi
+          echo "Removing the custom domain from the live app before deleting it."
+          terraform apply -auto-approve -input=false \
+            -var="custom_domain_enabled=false" \
+            -var="image_tag=$image_tag"
       - name: Terraform Destroy
         run: terraform destroy -auto-approve -input=false

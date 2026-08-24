@@ -43,6 +43,14 @@ module "gateway_core_app" {
   replicas     = 1
   app_size     = "apps-s-1vcpu-1gb-fixed"
 
+  # `zone` hands DNS record creation and TLS certificate provisioning to App Platform.
+  # The zone itself is owned by the mesazon-tf-do repo, not this one.
+  domains = var.custom_domain_enabled ? [{
+    name = local.app_domain
+    type = "PRIMARY"
+    zone = local.dns_zone
+  }] : []
+
   env_vars = {
     IS_DEV = "true"
 

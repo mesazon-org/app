@@ -11,14 +11,14 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 | Medium | CI, delivery, or a non-critical workflow is repeatedly blocked or unreliable |
 | Low | Harmless noise or a narrow inconvenience with no behavior or delivery impact |
 
-## Customer-business batch closes HTTP connection
+## Customer batch (businesses/individuals) closes HTTP connection
 
-- **Status:** Resolved 2026-07-29
+- **Status:** Resolved 2026-08-24 (recurred on `/insert/customer-individuals` after the 2026-07-29 businesses fix; root cause now fixed at the shared generator)
 - **Severity:** Medium
-- **Signature:** `POST /insert/customer-businesses` fails before any response with `HTTP/1.1 header parser received no bytes` and `EOF reached while reading`. Expected auth errors include missing-organization `BadRequest` and non-member `InternalServerError`. Ignore the dynamic Testcontainers port.
-- **Cause:** `arbInsertCustomerBusinessesPostRequest` used uncapped `Gen.resultOf` for nested lists. A captured request had 94 businesses, 4,564 contacts, 4,810 emails, 4,645 phones, and 2,472,295 JSON bytes, exceeding the former 2 MiB Smithy entity limit.
-- **Fix:** Cap generated batches at 10 businesses; use one minimal valid business for auth-gate tests; increase `HttpApp.SmithyMaxEntitySize` to 5 MiB.
-- **Prevention:** Bound nested collection arbitraries. For middleware tests, generate only fields relevant to the branch. Keep encoded requests comfortably below 5 MiB. Engineering Manager analysis must cover body/resource limits and test-data scale.
+- **Signature:** `POST /insert/customer-businesses` or `POST /insert/customer-individuals` fails before any response with `HTTP/1.1 header parser received no bytes` and `EOF reached while reading`. Expected auth errors include missing-organization `BadRequest` and non-member `InternalServerError`. Ignore the dynamic Testcontainers port.
+- **Cause:** Two layers. (1) `arbInsertCustomerBusinessesPostRequest` originally used uncapped `Gen.resultOf` for nested lists — one captured request had 94 businesses, 4,564 contacts, 4,810 emails, 4,645 phones, 2,472,295 JSON bytes, exceeding the former 2 MiB Smithy entity limit. (2) The 2026-07-29 fix capped the top-level batch count and added per-endpoint minimal-data test helpers, but missed that the shared `genEntriesWithSingleDefault` (emails/phones for both customers and organizations) still used unbounded `Gen.listOf` underneath — so `/insert/customer-individuals`' auth-gate tests, which never got a minimal-data helper, kept generating up to 50 individuals × ~100 emails/phones each and reproduced the same signature.
+- **Fix:** `genEntriesWithSingleDefault` (`GatewayArbitraries.scala`) now caps its list at 0–5 entries — the actual root cause, shared by every email/phone list in the codebase, not just customer-businesses. This alone bounds `/insert/customer-individuals`' auth-gate tests (which never got a per-endpoint minimal-data helper the way businesses did) without needing one. Businesses fix (10-business cap, `SmithyMaxEntitySize` 5 MiB) stays in place.
+- **Prevention:** Bound nested collection arbitraries **at the shared generator**, not just at each call site — a per-endpoint fix can miss siblings using the same underlying generator. Keep encoded requests comfortably below 5 MiB. Engineering Manager analysis must cover body/resource limits and test-data scale.
 - **Verify:** Run `sbt "gateway-core/testOnly *CustomerBookRequestValidatorSpec"`, `sbt "gateway-core/testOnly io.mesazon.gateway.fun.CustomerBookServiceSpec"`, `sbt "gateway-it/test"`, and `sbt "runLint"`. On recurrence, capture request bytes and gateway logs; check for `EntityTooLarge`, HTTP 413, or a close at 5 MiB.
 
 ## Oversized Tapir upload can hang the request instead of failing fast
@@ -80,3 +80,13 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Fix:** Keep the setting local to the verification invocation: `sbt "set backendGatewayCore / Compile / packageDoc / publishArtifact := false; gateway-it/testOnly *GatewayAcceptanceSpec"`. Do not commit a build change solely to hide the compiler-tooling failure.
 - **Prevention:** Use the repository-pinned Temurin runtime/full JDK rather than an older Homebrew Java patch release when possible. If the pinned runtime still reproduces the signature, retain the invocation-scoped workaround.
 - **Verify:** The gateway image builds, the real containers start, and `GatewayAcceptanceSpec` reports a non-zero test count. An sbt success that says `No tests were executed` is not verification.
+
+## DigitalOcean deploy fails readiness with connection refused despite a healthy app
+
+- **Status:** Resolved 2026-08-24
+- **Severity:** Medium
+- **Signature:** A DO App Platform deploy fails with `Readiness probe failed: ... connect: connection refused` on the readiness port (8082). Gateway logs show the JVM starting and Hikari connecting fine, but Ember-Server does not bind 8080/8081/8082 until ~40+ seconds after container start — after the probe already gave up.
+- **Cause:** `health_check` in `terraform/modules/app-service/main.tf` budgeted `initial_delay_seconds=5` + `period_seconds=10` × `failure_threshold=3` = 35s before DO marks the app unhealthy. JVM cold start (JIT/class-loading after the DB pool is ready) has been observed taking ~44s to bind the readiness port, so the probe expires before the app ever gets to answer.
+- **Fix:** Widened the budget to `initial_delay_seconds=20` + `period_seconds=10` × `failure_threshold=5` = 70s.
+- **Prevention:** If startup time regresses again (e.g. from a dependency/JDK bump), widen this window rather than assuming the app itself is broken — check whether Ember actually binds in the logs before treating a readiness failure as a real crash.
+- **Verify:** Redeploy and confirm the app reaches a healthy state; check deploy logs for the Ember bind timestamp relative to container start and confirm it lands inside the new budget.

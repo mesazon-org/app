@@ -77,8 +77,11 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
   )
 
   // A non-empty list must mark exactly one entry as default, so generate non-default entries and promote one at random.
+  // Capped at 5: a real contact realistically has a handful of emails/phone numbers, not ScalaCheck's
+  // unbounded Gen.listOf default (up to ~100), which produced multi-megabyte batch requests that
+  // exceeded the entity size limit and closed the connection mid-write (see known-issues.md).
   protected def genEntriesWithSingleDefault[A](genEntry: Gen[A])(setDefault: A => A): Gen[List[A]] =
-    Gen.listOf(genEntry).flatMap {
+    Gen.choose(0, 5).flatMap(n => Gen.listOfN(n, genEntry)).flatMap {
       case Nil     => Gen.const(Nil)
       case entries =>
         Gen
