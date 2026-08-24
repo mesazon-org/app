@@ -80,3 +80,13 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Fix:** Keep the setting local to the verification invocation: `sbt "set backendGatewayCore / Compile / packageDoc / publishArtifact := false; gateway-it/testOnly *GatewayAcceptanceSpec"`. Do not commit a build change solely to hide the compiler-tooling failure.
 - **Prevention:** Use the repository-pinned Temurin runtime/full JDK rather than an older Homebrew Java patch release when possible. If the pinned runtime still reproduces the signature, retain the invocation-scoped workaround.
 - **Verify:** The gateway image builds, the real containers start, and `GatewayAcceptanceSpec` reports a non-zero test count. An sbt success that says `No tests were executed` is not verification.
+
+## DigitalOcean deploy fails readiness with connection refused despite a healthy app
+
+- **Status:** Resolved 2026-08-24
+- **Severity:** Medium
+- **Signature:** A DO App Platform deploy fails with `Readiness probe failed: ... connect: connection refused` on the readiness port (8082). Gateway logs show the JVM starting and Hikari connecting fine, but Ember-Server does not bind 8080/8081/8082 until ~40+ seconds after container start — after the probe already gave up.
+- **Cause:** `health_check` in `terraform/modules/app-service/main.tf` budgeted `initial_delay_seconds=5` + `period_seconds=10` × `failure_threshold=3` = 35s before DO marks the app unhealthy. JVM cold start (JIT/class-loading after the DB pool is ready) has been observed taking ~44s to bind the readiness port, so the probe expires before the app ever gets to answer.
+- **Fix:** Widened the budget to `initial_delay_seconds=20` + `period_seconds=10` × `failure_threshold=5` = 70s.
+- **Prevention:** If startup time regresses again (e.g. from a dependency/JDK bump), widen this window rather than assuming the app itself is broken — check whether Ember actually binds in the logs before treating a readiness failure as a real crash.
+- **Verify:** Redeploy and confirm the app reaches a healthy state; check deploy logs for the Ember bind timestamp relative to container start and confirm it lands inside the new budget.
