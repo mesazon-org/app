@@ -44,7 +44,7 @@ module "gateway_core_app" {
   app_size     = "apps-s-1vcpu-1gb-fixed"
 
   # `zone` hands DNS record creation and TLS certificate provisioning to App Platform.
-  # The zone itself lives in terraform/dev/dns, which is never destroyed.
+  # The zone itself is owned by the mesazon-tf-do repo, not this one.
   domains = var.custom_domain_enabled ? [{
     name = local.app_domain
     type = "PRIMARY"

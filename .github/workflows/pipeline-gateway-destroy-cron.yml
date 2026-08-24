@@ -1,4 +1,4 @@
-name: gateway-destroy
+name: gateway-destroy-cron
 on:
   workflow_dispatch:
   schedule:
