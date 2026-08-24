@@ -2,9 +2,16 @@
 
 Read when a feature adds/changes an external dependency (S3/Spaces bucket, third-party credential, new env var, new service) and before considering any feature's service slice complete.
 
+## This repo vs. `mesazon-tf-do`
+
+This repo's `terraform/` provisions **this app's own** resources only (the gateway app, its Spaces keys, its Flyway job). Shared/foundational infra — DNS zones, the container registry, database clusters, and anything else multiple services or repos depend on — lives in the separate `mesazon-tf-do` repo instead, so a destroy/rebuild cycle here can never take out infra other things depend on.
+
+If a future ask here would add a resource that outlives or is shared beyond this one app (a new DNS zone, a shared DB cluster, a registry, an org-wide credential), say so before implementing it and suggest `mesazon-tf-do` instead.
+
 ## Layout
 
 - `terraform/dev/<service>/` — one environment config per deployed component (`gateway`, `gateway-flyway`): `locals.tf` (raw + resolved resource names), `variables.tf` (`TF_VAR_*`-fed inputs, secrets marked `sensitive = true`), `providers.tf` (DigitalOcean provider, S3-compatible remote state backend), `app.tf` (data sources for existing infra, resources this config owns, the module call).
+- Naming: build every resolved value, including hostnames, from `local.environment`/`local.region` — never hardcode `dev`. E.g. `app_domain = "${local.environment}-api.${local.dns_zone}"`.
 - `terraform/modules/app-service` (long-running app, e.g. `gateway_core_app`) and `terraform/modules/app-job` (one-shot job, e.g. Flyway) — reusable DigitalOcean App Platform wrappers. Both take `env_vars`/`secret_vars` maps and emit them as `digitalocean_app` `env` blocks (`type = "GENERAL"` vs `"SECRET"`).
 
 ## Adding a new external dependency (e.g. a bucket)
@@ -21,9 +28,21 @@ Step 3's env var names must match **exactly** what `application.conf` reads via 
 
 - `pipeline-tf-ci.yml`: any PR/push touching `terraform/**` or `.github/**` runs `job-tf-fmt` (`terraform fmt -check -recursive`) — fails the build on unformatted files.
 - `pipeline-gateway-ci.yml`: every PR/push runs `job-tf-plan` against `terraform/dev/gateway` and posts the plan as a PR comment — this is where an incomplete wiring becomes visible (no planned change for the new env vars). On push to `main`, `job-tf-apply` runs after, applying to the real `dev` DigitalOcean environment automatically — no manual apply step.
-- `pipeline-gateway-destroy-cron.yml` (+ `job-tf-destroy.yml`): scheduled `terraform destroy` against `terraform/dev/gateway`, at 01:00 and 13:00 CET (`cron: '0 0 * * *'` / `'0 12 * * *'`, fixed UTC+1 — drifts 1h during CEST, GitHub Actions cron has no DST support) to stop paying for the dev app outside its ~13:00–01:00 usage window. Destroy-only, no scheduled recreate — the state's two resources (`digitalocean_app.app_service`, `digitalocean_spaces_key.organization_media_bucket`) are stateless and cheap to rebuild, but the Postgres cluster they depend on is only read via a `data` source here and is left untouched. Running it against an already-destroyed state is a safe no-op. Bring the app back up manually: push to `main`, or dispatch `pipeline-gateway-cd.yml`.
+- `pipeline-gateway-destroy-cron.yml` (+ `job-tf-destroy.yml`): `terraform destroy` against `terraform/dev/gateway`, Mon/Wed/Fri 02:00 CET (`cron: '0 1 * * 1,3,5'`). 3×/week, not daily, because each destroy costs a fresh TLS certificate on redeploy, and Let's Encrypt caps that at 5 per exact name set per 7 days. Before destroying, `release-domains: true` re-applies with `custom_domain_enabled=false` — removing the domain while the app still exists avoids DigitalOcean's 24h hold on a deleted app's hostname. Destroy-only, no auto-recreate: push to `main` or dispatch `pipeline-gateway-cd.yml` to bring it back (expect a few minutes for cert provisioning).
 
 Always run `terraform fmt -recursive` from the repo root after editing any `.tf` file, before committing.
+
+## Custom domains
+
+The `mesazon.space` zone is created and owned in `mesazon-tf-do`, not here. This repo only declares hostnames against it — it never owns a `digitalocean_record`.
+
+1. The zone must already exist in `mesazon-tf-do` — without it DO's nameservers answer REFUSED for `mesazon.space`.
+2. The app declares the hostname via the `app-service` module's `domains` variable with `zone = "mesazon.space"`. That `zone` field makes App Platform create the record *and* the certificate. Never add a matching `digitalocean_record`.
+3. `type = "PRIMARY"` marks the app's one canonical hostname.
+
+No way to pin a pre-issued certificate — the `domain` block has no `certificate` field, so cert lifecycle = app lifecycle. That's why destroys are capped at 3×/week and release the domain first.
+
+Never add CAA records to the zone unless they list both `letsencrypt.org` and `pki.goog`, or cert issuance fails.
 
 ## Feature-completion check
 
