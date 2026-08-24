@@ -34,10 +34,10 @@ Always run `terraform fmt -recursive` from the repo root after editing any `.tf`
 
 ## Custom domains
 
-The `mesazon.space` zone is created and owned in `mesazon-tf-do`, not here. This repo only declares hostnames against it — it never owns a `digitalocean_record`.
+The `mesazon.site` zone is created and owned in `mesazon-tf-do`, not here. This repo only declares hostnames against it — it never owns a `digitalocean_record`.
 
-1. The zone must already exist in `mesazon-tf-do` — without it DO's nameservers answer REFUSED for `mesazon.space`.
-2. The app declares the hostname via the `app-service` module's `domains` variable with `zone = "mesazon.space"`. That `zone` field makes App Platform create the record *and* the certificate. Never add a matching `digitalocean_record`.
+1. The zone must already exist in `mesazon-tf-do` — without it DO's nameservers answer REFUSED for `mesazon.site`.
+2. The app declares the hostname via the `app-service` module's `domains` variable with `zone = "mesazon.site"`. That `zone` field makes App Platform create the record *and* the certificate. Never add a matching `digitalocean_record`.
 3. `type = "PRIMARY"` marks the app's one canonical hostname.
 
 No way to pin a pre-issued certificate — the `domain` block has no `certificate` field, so cert lifecycle = app lifecycle. That's why destroys are capped at 3×/week and release the domain first.
