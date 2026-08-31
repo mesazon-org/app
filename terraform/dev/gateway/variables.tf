@@ -41,9 +41,3 @@ variable "jwt_secret_key" {
   type        = string
   sensitive   = true
 }
-
-variable "custom_domain_enabled" {
-  description = "Whether the app serves its custom hostname. Set false only by the destroy pipeline, which drops the domain before deleting the app so DigitalOcean releases the hostname immediately instead of holding it for up to 24h."
-  type        = bool
-  default     = true
-}

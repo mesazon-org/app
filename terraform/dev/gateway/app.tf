@@ -45,11 +45,11 @@ module "gateway_core_app" {
 
   # `zone` hands DNS record creation and TLS certificate provisioning to App Platform.
   # The zone itself is owned by the mesazon-tf-do repo, not this one.
-  domains = var.custom_domain_enabled ? [{
+  domains = [{
     name = local.app_domain
     type = "PRIMARY"
     zone = local.dns_zone
-  }] : []
+  }]
 
   env_vars = {
     IS_DEV = "true"
