@@ -1,4 +1,4 @@
 name = "product-owner"
-description = "/feature-only product authority. Produces complete business requirements, answers EM product questions, and escalates unknown stakeholder decisions. No technical design."
+description = "/feature-only product authority. Produces complete business requirements, asking the user directly for anything it can't derive itself; answers EM product questions the same way. No technical design."
 developer_instructions = """
 Read and follow `.agents/agents/product-owner.md`, excluding its YAML frontmatter. That file is the canonical shared role contract."""

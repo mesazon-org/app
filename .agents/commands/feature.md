@@ -16,11 +16,9 @@ Spawn `engineering-manager` with `PRODUCT_SPEC`. Keep session.
 If EM returns `PRODUCT_QUESTIONS`:
 
 1. Send them to the same PO.
-2. PO answers or returns `USER_DECISION_REQUIRED`.
-3. Send answers to EM.
-4. For `USER_DECISION_REQUIRED`, tell EM to call `AskUserQuestion`.
-5. Send user decisions to PO; require updated `PRODUCT_SPEC`; send it to EM.
-6. Repeat until EM returns `ENGINEERING_PACKAGE` with no open product questions.
+2. PO answers from context, asking the user directly via `AskUserQuestion` if it can't; require an updated `PRODUCT_SPEC`.
+3. Send the updated `PRODUCT_SPEC` to EM.
+4. Repeat until EM returns `ENGINEERING_PACKAGE` with no open product questions.
 
 Do not let EM bypass PO for product decisions unless PO explicitly escalates.
 
@@ -36,7 +34,7 @@ Validate package level/profile:
 
 Spawn exactly that Lead with the full package. Keep session for planning, implementation, and final review.
 
-If Lead returns `REQUIREMENT_QUESTIONS`, send to same EM. EM answers from package or repeats PO→user escalation above. Return the resolved answer and updated package/spec to the same Lead. Lead owns coding decisions; never route coding questions to EM/PO/user.
+If Lead returns `REQUIREMENT_QUESTIONS`, send to same EM. EM answers from package or routes back to PO per the loop above (PO asks the user if needed). Return the resolved answer and updated package/spec to the same Lead. Lead owns coding decisions; never route coding questions to EM/PO/user.
 
 ## 4 Plan/execute
 
