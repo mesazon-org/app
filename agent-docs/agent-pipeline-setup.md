@@ -83,7 +83,7 @@ Restart every Claude Code process; environment is read at startup. `ANTHROPIC_BA
 
 | Role | Claude | Codex | Ownership |
 |---|---|---|---|
-| Product Owner | `haiku` | parent default | complete product requirements/decisions |
+| Product Owner | `haiku` | parent default | complete product requirements/decisions; asks the user directly for gaps |
 | Engineering Manager | `sonnet` | parent default | edge cases, doc topology, outcome chunks, complexity |
 | Lead LOW | `haiku` | `gpt-5.6-terra`/low | bounded known-pattern work |
 | Lead MEDIUM | `sonnet` | `gpt-5.6-sol`/high | contained new behavior through multi-layer/risky work |
@@ -95,7 +95,7 @@ The Product Owner and Lead LOW roles run on `haiku` (Claude Haiku 4.5) — the c
 
 ## Restrictive Claude permissions
 
-If “don't ask” mode denies tools, add to gitignored `.claude/settings.local.json` `permissions.allow`:
+If “don't ask” mode denies tools, add to gitignored `.claude/settings.local.json` `permissions.allow` (`AskUserQuestion` is used by the Product Owner to interview the user directly):
 
 ```json
 "AskUserQuestion",
@@ -113,7 +113,7 @@ In a fresh Claude Code session:
 /feature "add a health-check endpoint"
 ```
 
-PO owns the final product specification. EM challenges it, asks PO first, escalates unknown stakeholder decisions to the user, maps only required docs/outcome slices, and assigns complexity. The selected expert Lead owns all coding decisions and follows [Feature flow](features/flow/README.md), including same-PR tests/docs.
+PO owns the final product specification, asking the user directly for anything it can't derive itself. EM challenges the spec and routes any remaining product ambiguity back to PO — never asking the user directly — maps only required docs/outcome slices, and assigns complexity. The selected expert Lead owns all coding decisions and follows [Feature flow](features/flow/README.md), including same-PR tests/docs.
 
 ## Troubleshooting
 
