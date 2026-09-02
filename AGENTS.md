@@ -46,6 +46,24 @@ Start with [Feature flow](agent-docs/features/flow/README.md), then read only th
 
 Each slice guide links its technology standards.
 
+### Product epics
+
+`pages/epics/` holds the business-facing spec for each area of the product, published via GitHub Pages. An epic says what a user can do and why; `agent-docs/features/` stays the engineering source of truth for endpoints, types, files, and tests.
+
+| Guide | Read when |
+|---|---|
+| [Epic template](pages/epics/TEMPLATE.md) | Writing a new epic or restructuring an existing one |
+| The epic listed under [Epics](#epics) | Starting any feature request, or changing behavior a user can observe |
+
+Two rules govern every epic:
+
+- **Plain, simple English.** The audience is non-engineers. Short sentences, everyday words, no Scala/type/class/file names, no internal jargon, no unexplained abbreviations. Describe behavior the user can observe, not the implementation that produces it.
+- **Always true of the code.** Stage names, error codes, field shapes, limits, and business rules in an epic must match what the code actually does. Verify against the feature doc and the implementation before publishing — a confidently wrong epic is worse than a missing one.
+
+A mermaid diagram after the overview is optional — add one only when a journey is tangled enough that a picture beats the prose, and keep it small. A diagram that restates steps the reader is about to read costs more space than it earns. Fenced ` ```mermaid ` blocks are rendered by `pages/_layouts/epic.html`, which epics get automatically from the `defaults` in `pages/_config.yml`.
+
+Every epic needs YAML front matter with a `title:` — Jekyll skips files without it, and the page never renders.
+
 ### Exceptional changes
 
 | Guide | Read when |
@@ -87,14 +105,15 @@ Read every standard whose trigger matches the task:
 ## Validation flow (rules, run in order, every change)
 
 1. **Feature doc first** — read the relevant `agent-docs/features/` file before coding. For a new feature, create `agent-docs/features/<feature-name>.md` in PR 1, link it under [Features](#features), and update its status/content in every slice. Never wait until the final PR. Required structure: scope/boundaries; endpoint auth/onboard/roles; flow/security/decisions; key files/config; unit/functional/integration/acceptance tests. See [Feature flow](agent-docs/features/flow/README.md).
-2. **Standards compliance** — read the current slice or exceptional-change guide from the [documentation router](#documentation-router) and its linked technology standards.
-3. **Tests in every PR** — write and pass the current slice's applicable tests; never defer them:
+2. **Epic in sync** — every feature request and every change to observable behavior updates the epic it belongs to in `pages/epics/`, in the same PR. Find the related epic first; if none fits, create one from the [epic template](pages/epics/TEMPLATE.md) and link it under [Epics](#epics). Epics are written in plain, simple English and must always match the code — see [Product epics](#product-epics).
+3. **Standards compliance** — read the current slice or exceptional-change guide from the [documentation router](#documentation-router) and its linked technology standards.
+4. **Tests in every PR** — write and pass the current slice's applicable tests; never defer them:
    - **Unit** `gateway/core/.../unit` — validators, pure helpers.
    - **Functional** `gateway/core/.../fun` — one service, effectful dependencies mocked.
    - **Integration** `gateway/core/.../it` — one repository/client vs a real dependency; no application HTTP.
    - **Acceptance** `gateway/it` — real gateway and dependencies over HTTP.
-4. **Lint** — run `sbt "runLint"` before done. `checkLint` is the read-only CI gate.
-5. **Docs currency** — every task fixes affected stale statements in `agent-docs/` and this file, including renamed errors, types, endpoints, config keys, and files. Document new conventions. A stale doc is worse than no doc.
+5. **Lint** — run `sbt "runLint"` before done. `checkLint` is the read-only CI gate.
+6. **Docs currency** — every task fixes affected stale statements in `agent-docs/`, `pages/`, and this file, including renamed errors, types, endpoints, config keys, and files. Document new conventions. A stale doc is worse than no doc.
 
 ## Project structure
 
@@ -108,13 +127,22 @@ Read every standard whose trigger matches the task:
 - `backend/waha` — WhatsApp service (`core` + own `it` acceptance tests)
 - `compose/` — local dev docker-compose stack
 - `terraform/` — infra as code
-- `docs/` — human-facing setup docs
+- `docs/` — human-facing setup docs and diagram assets; not published
+- `pages/` — the GitHub Pages site: business-facing product epics in `pages/epics/` (template at `pages/epics/TEMPLATE.md`), plus the Jekyll config and homepage
 - `agent-docs/` — concise LLM-facing feature, project, standards, and diagnostic instructions
 - `.agents/{agents,contracts,commands,skills}/` — shared agent sources; `.claude/` holds per-file symlinks plus Claude-specific files/config
 
+## Epics
+
+Business-facing product specs in `pages/epics/`, published via GitHub Pages and written for non-engineers. See [Product epics](#product-epics) for the two rules every epic follows.
+
+New epic → copy the [epic template](pages/epics/TEMPLATE.md), list it here, and add it to `pages/index.md` (both indexes are updated together).
+
+- [1. User Sign Up](pages/epics/1-user-sign-up.md) — sign up, verify email, set a password, add details, verify phone
+
 ## Features
 
-New feature → [Feature flow](agent-docs/features/flow/README.md); create/link its feature doc in PR 1 per [Validation flow §1](#validation-flow-rules-run-in-order-every-change).
+Engineering-facing feature docs. New feature → [Feature flow](agent-docs/features/flow/README.md); create/link its feature doc in PR 1 per [Validation flow §1](#validation-flow-rules-run-in-order-every-change).
 
 - [User Onboarding](agent-docs/features/user-onboarding.md)
 - [User Sign in](agent-docs/features/user-signin.md)

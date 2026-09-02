@@ -9,9 +9,11 @@ Orchestrate **"$ARGUMENTS"**. Do not design/code. Preserve full role outputs; ke
 
 Spawn `product-owner` with the raw request. Keep session. Require `PRODUCT_SPEC`.
 
+PO identifies the epic in `pages/epics/` the request belongs to, asking the user when the fit is unclear, and creates one from the template when none exists. Require the epic written and saved, with `PRODUCT_SPEC` naming it, before moving on — do not let the epic be deferred to EM or the Lead.
+
 ## 2 Engineering
 
-Spawn `engineering-manager` with `PRODUCT_SPEC`. Keep session.
+Spawn `engineering-manager` with `PRODUCT_SPEC`. Keep session. EM reads the named epic in full for the surrounding journey before mapping docs and slices.
 
 If EM returns `PRODUCT_QUESTIONS`:
 
@@ -51,4 +53,4 @@ After tasks, ask same Lead for full-diff review and `IMPLEMENTATION_REPORT`. If 
 
 ## 5 Wrap
 
-Report requirements delivered, docs/status, verification, remaining/N/A work, and complexity/profile used. Confirm feature doc lifecycle and docs currency from `AGENTS.md`.
+Report requirements delivered, docs/status, verification, remaining/N/A work, and complexity/profile used. Confirm feature doc lifecycle and docs currency from `AGENTS.md`, and that the epic matches the behavior actually shipped.

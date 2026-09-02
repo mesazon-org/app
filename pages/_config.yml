@@ -1,0 +1,19 @@
+title: Mesazon Product Epics
+description: What each part of Mesazon does, and why — written for a non-engineering audience.
+theme: minima
+markdown: kramdown
+
+# Jekyll only builds files that carry YAML front matter, so every epic needs at
+# least a `title:` block. These defaults then pick the layout for it.
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+  - scope:
+      path: "epics"
+    values:
+      layout: epic
+
+exclude:
+  - epics/TEMPLATE.md

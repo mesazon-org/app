@@ -1,0 +1,28 @@
+---
+layout: default
+---
+
+{{ content }}
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+  // Kramdown renders ```mermaid as a highlighted code block, not as something
+  // mermaid recognises. Swap each one for the <pre class="mermaid"> it expects,
+  // taking textContent so any syntax-highlighting spans are stripped back out.
+  document
+    .querySelectorAll("div.language-mermaid, pre > code.language-mermaid")
+    .forEach((el) => {
+      const isWrapper = el.tagName === "DIV";
+      const source = isWrapper ? el.querySelector("code") : el;
+      if (!source) return;
+
+      const host = document.createElement("pre");
+      host.className = "mermaid";
+      host.textContent = source.textContent;
+      (isWrapper ? el : el.parentElement).replaceWith(host);
+    });
+
+  mermaid.initialize({ startOnLoad: false });
+  await mermaid.run({ querySelector: "pre.mermaid" });
+</script>
