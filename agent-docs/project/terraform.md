@@ -28,7 +28,6 @@ Step 3's env var names must match **exactly** what `application.conf` reads via 
 
 - `pipeline-tf-ci.yml`: any PR/push touching `terraform/**` or `.github/**` runs `job-tf-fmt` (`terraform fmt -check -recursive`) — fails the build on unformatted files.
 - `pipeline-gateway-ci.yml`: every PR/push runs `job-tf-plan` against `terraform/dev/gateway` and posts the plan as a PR comment — this is where an incomplete wiring becomes visible (no planned change for the new env vars). On push to `main`, `job-tf-apply` runs after, applying to the real `dev` DigitalOcean environment automatically — no manual apply step.
-- `pipeline-gateway-destroy-cron.yml` (+ `job-tf-destroy.yml`): `terraform destroy` against `terraform/dev/gateway`, Mon/Wed/Fri 02:00 CET (`cron: '0 1 * * 1,3,5'`). 3×/week, not daily, because each destroy costs a fresh TLS certificate on redeploy, and Let's Encrypt caps that at 5 per exact name set per 7 days. Before destroying, `release-domains: true` re-applies with `custom_domain_enabled=false` — removing the domain while the app still exists avoids DigitalOcean's 24h hold on a deleted app's hostname. Destroy-only, no auto-recreate: push to `main` or dispatch `pipeline-gateway-cd.yml` to bring it back (expect a few minutes for cert provisioning).
 
 Always run `terraform fmt -recursive` from the repo root after editing any `.tf` file, before committing.
 
@@ -40,7 +39,7 @@ The `mesazon.site` zone is created and owned in `mesazon-tf-do`, not here. This 
 2. The app declares the hostname via the `app-service` module's `domains` variable with `zone = "mesazon.site"`. That `zone` field makes App Platform create the record *and* the certificate. Never add a matching `digitalocean_record`.
 3. `type = "PRIMARY"` marks the app's one canonical hostname.
 
-No way to pin a pre-issued certificate — the `domain` block has no `certificate` field, so cert lifecycle = app lifecycle. That's why destroys are capped at 3×/week and release the domain first.
+No way to pin a pre-issued certificate — the `domain` block has no `certificate` field, so cert lifecycle = app lifecycle.
 
 Never add CAA records to the zone unless they list both `letsencrypt.org` and `pki.goog`, or cert issuance fails.
 
