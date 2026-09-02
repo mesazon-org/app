@@ -18,7 +18,7 @@ Users should be able to sign up and create an account with their own email.
 
 These hold true for the whole of sign up. Requirements that belong to a single step are listed with that step.
 
-Throughout this epic, a **one-time passcode** (OTP) is a short code we send to someone to prove they own an email address or a phone number.
+Throughout this epic, a **one-time passcode** (OTP) is a short code we send to someone to prove they own an email address or a phone number. Hover over any acronym to see what it stands for, or see the [glossary]({% link glossary.md %}).
 
 #### Functional
 
@@ -368,3 +368,5 @@ Several everyday things a person can do return a `500 INTERNAL_SERVER_ERROR`, wh
 Looking up an outstanding phone passcode applies a stricter expiry rule than submitting one does. If the passcode is close enough to expiry to be inside the resend window, the lookup deletes it and reports it as expired — even though submitting that same passcode directly would still have worked.
 
 **To decide:** whether the lookup should ever delete a passcode, or only report how long is left and leave it to the person to use or replace.
+
+{% include abbreviations.md %}

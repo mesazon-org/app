@@ -10,7 +10,11 @@ this start to finish and understand what the product does.
 Write in plain, simple English:
 - Short sentences. Everyday words. Say "wrong code" before "invalid OTP".
 - No Scala/type/class/file names, no endpoint paths, no internal jargon, no unexplained
-  abbreviations. Spell out an acronym the first time you use it.
+  abbreviations. Spell out an acronym the first time you use it, and add it to
+  pages/glossary.md plus pages/_includes/abbreviations.md so every later use gets a hover
+  tooltip. Keep the tooltip and the glossary saying the same thing.
+- Keep the abbreviations include as the last line of the epic. It renders nothing and turns
+  every acronym in the page into a hoverable definition.
 - Describe what a user can see and do, not the implementation that makes it happen.
 - If a sentence only makes sense to someone who has read the code, rewrite it.
 
@@ -180,3 +184,5 @@ Everything above says what the product does today. This section is the opposite:
 One `####` subsection per gap: what happens today, why it matters, then a **To decide:** line naming the question someone has to answer. Number them, and do not reuse the step numbering style — a gap is not a step. Drop the whole section when there is nothing in it; an empty heading is worse than none.
 
 Reviewing an epic against the code is how this section gets filled. Behavior the code has but the epic never described belongs above as a requirement; behavior the epic assumes but the code never implements belongs here.
+
+{% include abbreviations.md %}

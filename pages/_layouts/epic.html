@@ -2,6 +2,17 @@
 layout: default
 ---
 
+<style>
+  /* Acronyms become <abbr> via the kramdown definitions in
+     _includes/abbreviations.md. Browsers style <abbr> almost invisibly, so
+     without this nobody discovers there is a tooltip to hover. */
+  abbr[title] {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+    cursor: help;
+  }
+</style>
+
 {{ content }}
 
 <script type="module">

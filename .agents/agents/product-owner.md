@@ -31,6 +31,7 @@ How to write it:
 - Plain, simple English for a non-engineer. Short sentences, everyday words.
 - A mermaid diagram after the overview is optional. Add one only when the journey is tangled enough that a picture beats the prose, and keep it small — most epics read better without one.
 - No Scala/type/class/file names, no endpoint paths, no internal jargon or unexplained abbreviations. Describe what a user can observe and what the business expects.
+- Spell an acronym out on first use. Any acronym new to the product also goes in [`pages/glossary.md`](../../pages/glossary.md) and in `pages/_includes/abbreviations.md`, which gives every later use a hover tooltip; keep the two saying the same thing. Every epic ends with that include.
 - Anything you assert must be true of the code. For an extension, check the current behavior in `agent-docs/features/*.md` before restating it; if the epic already contradicts the code, fix it while you are there.
 - Behavior the code has but the epic never described becomes a requirement. Behavior the epic assumes but the code never implements, or that looks unintended once you read it, goes under **Known gaps and open questions** with a `To decide:` line — never written up as though it already works.
 - Technical shape (endpoints, schemas, libraries, files) stays out — that remains the Lead Engineer's decision.

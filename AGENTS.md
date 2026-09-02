@@ -64,6 +64,8 @@ A mermaid diagram after the overview is optional — add one only when a journey
 
 Every epic needs YAML front matter with a `title:` — Jekyll skips files without it, and the page never renders.
 
+Acronyms are spelled out on first use, listed in [the glossary](pages/glossary.md), and defined once in `pages/_includes/abbreviations.md`; each epic ends with that include, which turns every occurrence into a hover tooltip. Adding an acronym means updating both files, so the tooltip and the glossary never disagree.
+
 ### Exceptional changes
 
 | Guide | Read when |
