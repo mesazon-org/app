@@ -1,9 +1,18 @@
-title: Mesazon Product Epics
+title: Mesazon
 description: What each part of Mesazon does, and why — written for a non-engineering audience.
-theme: minima
 markdown: kramdown
 
-# Jekyll only builds files that carry YAML front matter, so every epic needs at
+# This is a project site (https://mesazon-org.github.io/app/), not an organisation site,
+# so every absolute link needs the repository name as a prefix. Templates apply it via
+# `relative_url`; markdown body links apply it with {{ site.baseurl }} in front of
+# {% link %}. Without this, links resolve to the domain root and 404.
+#
+# baseurl is the REPOSITORY name, not the organisation. Update it only if the repo is
+# renamed; moving between organisations changes the domain, not this value. Set it to an
+# empty string if the site ever moves to a repo named <org>.github.io.
+baseurl: /app
+
+# Jekyll only builds files that carry YAML front matter, so every page needs at
 # least a `title:` block. These defaults then pick the layout for it.
 defaults:
   - scope:

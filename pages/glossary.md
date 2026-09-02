@@ -20,7 +20,7 @@ Words and short forms used across the epics. Anywhere an acronym appears in an e
 
 | **Term** | **What it means** |
 | --- | --- |
-| Epic | One area of the product, described from the user's side: what a person can do, in what order, and what the business expects to happen. The epics are the pages listed on the [home page]({% link index.md %}). |
+| Epic | One area of the product, described from the user's side: what a person can do, in what order, and what the business expects to happen. The epics are the pages listed on the [home page]({{ site.baseurl }}{% link index.md %}). |
 | Onboard stage | How far through sign up an account has got. Every account has exactly one, and each step only accepts people at the right stage. The stages run `EmailVerification` → `EmailVerified` → `PasswordProvided` → `PhoneVerification` → `PhoneVerified`. |
 | Passcode | See **OTP** above. The epics say "passcode" in prose and "OTP" in the field tables, because that is what the field is called. |
 | Waiting period | The short gap after we send a passcode during which asking for another one sends nothing. The existing passcode is reused instead. Also called the resend cooldown. |

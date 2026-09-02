@@ -3,17 +3,98 @@ layout: default
 ---
 
 <style>
-  /* Acronyms become <abbr> via the kramdown definitions in
-     _includes/abbreviations.md. Browsers style <abbr> almost invisibly, so
-     without this nobody discovers there is a tooltip to hover. */
-  abbr[title] {
+  /* Acronyms become <abbr title="..."> via the kramdown definitions in
+     _includes/abbreviations.md. The script below moves that title onto
+     data-tip and draws the tooltip itself, because the native one is slow to
+     appear and — the real problem — gets clipped by the scrollable table
+     wrappers, which is exactly where most acronyms sit. */
+  /* Both selectors on purpose: title before the script swaps it, data-tip
+     after. With no JavaScript at all the native tooltip still works. */
+  abbr[title],
+  abbr[data-tip] {
     text-decoration: underline dotted;
     text-underline-offset: 0.2em;
     cursor: help;
   }
+
+  .tip {
+    position: fixed;
+    z-index: 50;
+    width: max-content;
+    max-width: min(20rem, 70vw);
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 0.82rem;
+    line-height: 1.35;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+  }
+  .tip.on { opacity: 1; }
+
+  /* Mermaid draws on a canvas of its own; keep it readable in dark mode. */
+  pre.mermaid {
+    background: none;
+    padding: 0;
+    text-align: center;
+  }
 </style>
 
 {{ content }}
+
+<script>
+  (() => {
+    const marks = document.querySelectorAll("abbr[title]");
+    if (!marks.length) return;
+
+    const tip = document.createElement("div");
+    tip.className = "tip";
+    tip.setAttribute("role", "tooltip");
+    document.body.appendChild(tip);
+
+    const show = (el) => {
+      tip.textContent = el.dataset.tip;
+      tip.classList.add("on");
+
+      const anchor = el.getBoundingClientRect();
+      const box = tip.getBoundingClientRect();
+      const gap = 8;
+
+      let left = anchor.left + anchor.width / 2 - box.width / 2;
+      left = Math.max(gap, Math.min(left, window.innerWidth - box.width - gap));
+
+      // Above by default, flipped below when there is no room.
+      let top = anchor.top - box.height - gap;
+      if (top < gap) top = anchor.bottom + gap;
+
+      tip.style.left = `${left}px`;
+      tip.style.top = `${top}px`;
+    };
+
+    const hide = () => tip.classList.remove("on");
+
+    marks.forEach((el) => {
+      const text = el.getAttribute("title");
+      el.dataset.tip = text;
+      // Keep the expansion available to screen readers, then drop title so the
+      // browser's own tooltip doesn't fight with ours.
+      el.setAttribute("aria-label", text);
+      el.removeAttribute("title");
+      el.tabIndex = 0;
+
+      el.addEventListener("mouseenter", () => show(el));
+      el.addEventListener("focus", () => show(el));
+      el.addEventListener("mouseleave", hide);
+      el.addEventListener("blur", hide);
+    });
+
+    addEventListener("scroll", hide, true);
+    addEventListener("keydown", (e) => { if (e.key === "Escape") hide(); });
+  })();
+</script>
 
 <script type="module">
   import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
@@ -34,6 +115,7 @@ layout: default
       (isWrapper ? el : el.parentElement).replaceWith(host);
     });
 
-  mermaid.initialize({ startOnLoad: false });
+  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "default" });
   await mermaid.run({ querySelector: "pre.mermaid" });
 </script>

@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if page.title and page.url != "/" %}{{ page.title }} · {{ site.title }}{% else %}{{ site.title }}{% endif %}</title>
+<meta name="description" content="{{ page.description | default: site.description }}">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📘</text></svg>">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f7f8fa;
+    --bg-inset: #eef0f4;
+    --text: #1c2024;
+    --text-soft: #5b6570;
+    --border: #e2e5ea;
+    --accent: #2f6feb;
+    --accent-soft: #e8f0fe;
+    --sidebar-w: 17rem;
+    --radius: 8px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a;
+      --bg-soft: #1a1e22;
+      --bg-inset: #22272c;
+      --text: #e6e9ec;
+      --text-soft: #9aa4ae;
+      --border: #2b3138;
+      --accent: #6ea3ff;
+      --accent-soft: #1d2a42;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .layout { display: flex; min-height: 100vh; align-items: flex-start; }
+
+  /* ---------- Sidebar ---------- */
+
+  .sidebar {
+    width: var(--sidebar-w);
+    flex: 0 0 var(--sidebar-w);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 1.5rem 1rem;
+    background: var(--bg-soft);
+    border-right: 1px solid var(--border);
+  }
+
+  .brand {
+    display: block;
+    font-size: 1.15rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+  .brand:hover { text-decoration: none; color: var(--accent); }
+
+  .brand-sub {
+    font-size: 0.8rem;
+    color: var(--text-soft);
+    margin-bottom: 1.5rem;
+  }
+
+  .nav { font-size: 0.925rem; }
+
+  .nav a {
+    display: block;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius);
+    color: var(--text);
+  }
+  .nav a:hover { background: var(--bg-inset); text-decoration: none; }
+  .nav a.current { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+  .nav details { margin-bottom: 0.35rem; }
+
+  .nav summary {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    list-style: none;
+    font-weight: 600;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+  }
+  .nav summary::-webkit-details-marker { display: none; }
+  .nav summary:hover { background: var(--bg-inset); }
+
+  /* Disclosure triangle that rotates when the group is open. */
+  .nav summary::before {
+    content: "";
+    width: 0; height: 0;
+    border-left: 4px solid currentColor;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transition: transform 0.15s ease;
+  }
+  .nav details[open] > summary::before { transform: rotate(90deg); }
+
+  .nav details .nav-group { margin-left: 0.55rem; padding-left: 0.55rem; border-left: 1px solid var(--border); }
+
+  /* ---------- Mobile drawer ---------- */
+
+  .menu-btn {
+    display: none;
+    position: fixed;
+    top: 0.75rem; left: 0.75rem;
+    z-index: 30;
+    padding: 0.45rem 0.7rem;
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--text);
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+
+  .scrim { display: none; }
+
+  @media (max-width: 800px) {
+    .menu-btn { display: block; }
+    .sidebar {
+      position: fixed;
+      z-index: 25;
+      left: 0; top: 0;
+      transform: translateX(-100%);
+      transition: transform 0.2s ease;
+    }
+    body.nav-open .sidebar { transform: none; }
+    body.nav-open .scrim {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      background: rgba(0,0,0,0.4);
+    }
+    .content { padding-top: 3.75rem; }
+  }
+
+  /* ---------- Content ---------- */
+
+  .content {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 54rem;
+    padding: 2.5rem 2rem 5rem;
+  }
+
+  .content h1, .content h2, .content h3, .content h4 {
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    margin: 2.2rem 0 0.75rem;
+  }
+  .content h1 { font-size: 2rem; margin-top: 0; }
+  .content h2 { font-size: 1.4rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+  .content h3 { font-size: 1.15rem; }
+  .content h4 { font-size: 1rem; color: var(--text-soft); }
+
+  .content p, .content li { overflow-wrap: break-word; }
+
+  .content code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.875em;
+    background: var(--bg-inset);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+  }
+  .content pre {
+    background: var(--bg-inset);
+    padding: 1rem;
+    border-radius: var(--radius);
+    overflow-x: auto;
+  }
+  .content pre code { background: none; padding: 0; }
+
+  .content blockquote {
+    margin: 1rem 0;
+    padding: 0.1rem 1rem;
+    border-left: 3px solid var(--border);
+    color: var(--text-soft);
+  }
+
+  /* Epic tables are wide; the wrapper below keeps them scrollable
+     instead of forcing the whole page sideways. */
+  .table-scroll { overflow-x: auto; margin: 1rem 0; }
+  .content table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  .content th, .content td {
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.7rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  .content th { background: var(--bg-soft); font-weight: 600; }
+
+  .content hr { border: 0; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+
+  .skip {
+    position: absolute;
+    left: -9999px;
+  }
+  .skip:focus {
+    left: 1rem; top: 1rem;
+    z-index: 40;
+    padding: 0.5rem 0.8rem;
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+  }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+<button class="menu-btn" aria-expanded="false" aria-controls="sidebar">☰ Menu</button>
+<div class="scrim"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+    <div class="brand-sub">Product documentation</div>
+
+    <nav class="nav">
+      <a href="{{ '/' | relative_url }}" {% if page.url == '/' %}class="current"{% endif %}>Home</a>
+
+      {%- assign epics = site.pages | where_exp: "p", "p.path contains 'epics/'" | sort: "path" -%}
+      {%- assign on_epic = false -%}
+      {%- if page.path contains 'epics/' %}{% assign on_epic = true %}{% endif -%}
+
+      <details {% if on_epic %}open{% endif %}>
+        <summary>Epics</summary>
+        <div class="nav-group">
+          {%- for epic in epics %}
+          <a href="{{ epic.url | relative_url }}" {% if epic.url == page.url %}class="current"{% endif %}>{{ epic.title }}</a>
+          {%- endfor %}
+        </div>
+      </details>
+
+      <a href="{{ '/glossary.html' | relative_url }}" {% if page.url contains 'glossary' %}class="current"{% endif %}>Glossary</a>
+    </nav>
+  </aside>
+
+  <main class="content" id="main">
+    {{ content }}
+  </main>
+</div>
+
+<script>
+  // Mobile drawer.
+  const btn = document.querySelector(".menu-btn");
+  const scrim = document.querySelector(".scrim");
+  const setNav = (open) => {
+    document.body.classList.toggle("nav-open", open);
+    btn.setAttribute("aria-expanded", String(open));
+  };
+  btn.addEventListener("click", () => setNav(!document.body.classList.contains("nav-open")));
+  scrim.addEventListener("click", () => setNav(false));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setNav(false); });
+
+  // Wrap tables so a wide one scrolls inside its own box rather than
+  // stretching the page.
+  document.querySelectorAll(".content table").forEach((table) => {
+    const box = document.createElement("div");
+    box.className = "table-scroll";
+    table.replaceWith(box);
+    box.appendChild(table);
+  });
+</script>
+
+</body>
+</html>

@@ -4,6 +4,11 @@ HOW TO WRITE AN EPIC (delete this block in your copy)
 Keep the `---` front matter at the top. Jekyll only builds files that have it; without it
 the page is served as a raw file instead of rendering on the site.
 
+Name the file with a two-digit number in reading order — 01-user-onboarding.md,
+02-organizations.md. The sidebar sorts epics by filename, so the number is what puts them
+in journey order rather than alphabetical order. Keep the number out of the `title:`; it is
+the display name and appears in the sidebar, the browser tab, and the home page.
+
 Audience: non-engineers. Someone who has never opened the codebase should be able to read
 this start to finish and understand what the product does.
 
@@ -27,7 +32,7 @@ Keep it true:
 -->
 
 ---
-title: 1. Epic Title
+title: Epic Title
 ---
 
 # &lt;Epic Title&gt;

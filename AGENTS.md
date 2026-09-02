@@ -140,7 +140,7 @@ Business-facing product specs in `pages/epics/`, published via GitHub Pages and 
 
 New epic → copy the [epic template](pages/epics/TEMPLATE.md), list it here, and add it to `pages/index.md` (both indexes are updated together).
 
-- [1. User Sign Up](pages/epics/1-user-sign-up.md) — sign up, verify email, set a password, add details, verify phone
+- [User Onboarding](pages/epics/01-user-onboarding.md) — sign up, verify email, set a password, add details, verify phone
 
 ## Features
 

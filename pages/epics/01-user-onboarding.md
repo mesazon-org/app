@@ -1,8 +1,8 @@
 ---
-title: 1. User Sign Up
+title: User Onboarding
 ---
 
-# User Sign Up
+# User Onboarding
 
 ### Overview
 
@@ -18,7 +18,7 @@ Users should be able to sign up and create an account with their own email.
 
 These hold true for the whole of sign up. Requirements that belong to a single step are listed with that step.
 
-Throughout this epic, a **one-time passcode** (OTP) is a short code we send to someone to prove they own an email address or a phone number. Hover over any acronym to see what it stands for, or see the [glossary]({% link glossary.md %}).
+Throughout this epic, a **one-time passcode** (OTP) is a short code we send to someone to prove they own an email address or a phone number. Hover over any acronym to see what it stands for, or see the [glossary]({{ site.baseurl }}{% link glossary.md %}).
 
 #### Functional
 
