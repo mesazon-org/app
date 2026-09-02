@@ -21,13 +21,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
+      - uses: actions/checkout@v7
+      # Requires Settings -> Pages -> Source = "GitHub Actions" to be set once, by hand.
+      # The action's `enablement: true` input cannot do it for us: it needs a PAT or App
+      # token, not the default GITHUB_TOKEN.
+      - uses: actions/configure-pages@v6
       - uses: actions/jekyll-build-pages@v1
         with:
           source: ./pages
           destination: ./_site
-      - uses: actions/upload-pages-artifact@v3
+      # v4 stopped bundling hidden files; the Jekyll output has none, so the
+      # default include-hidden-files: false is fine.
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: ./_site
 
@@ -39,4 +44,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

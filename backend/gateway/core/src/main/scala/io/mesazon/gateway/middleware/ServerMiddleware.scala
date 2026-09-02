@@ -10,7 +10,7 @@ import zio.interop.catz.*
 
 object ServerMiddleware {
 
-  // TODO: Test this middleware (issue https://github.com/eak-cy/app/issues/25)
+  // TODO: Test this middleware (issue https://github.com/mesazon-org/app/issues/25)
   private final class ServerMiddlewareImpl(
       authorizationService: AuthorizationService[Task],
       authenticationService: AuthenticationService[Task],
