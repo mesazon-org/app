@@ -32,4 +32,8 @@ Skip N/A slices explicitly. Each task includes requirement IDs, technical outcom
 
 ## Review
 
-After all tasks: inspect full diff against `ENGINEERING_PACKAGE`; verify every requirement/acceptance ID, error/status, auth/role, edge case, docs update, and required test. Fix findings, rerun affected checks, then return `IMPLEMENTATION_REPORT`: requirements satisfied, files/behavior changed, tests/commands, remaining/N/A items, risks.
+After all tasks: inspect full diff against `ENGINEERING_PACKAGE`; verify every requirement/acceptance ID, error/status, auth/role, edge case, docs update, and required test.
+
+Check the package's epic against what you actually built — stage names, error codes, field shapes, limits, and business rules. The Product Owner owns its requirements and scope; you do not add or change those. Correct statements the built code contradicts, keeping the epic's plain English and its non-engineer audience, and report every such correction. If the built behavior differs from what the epic promises the user, that is a requirement conflict: return `REQUIREMENT_QUESTIONS` instead of quietly rewriting the epic to match the code.
+
+Fix findings, rerun affected checks, then return `IMPLEMENTATION_REPORT`: requirements satisfied, files/behavior changed, epic corrections made, tests/commands, remaining/N/A items, risks.
