@@ -34,7 +34,8 @@ Throughout this epic, a **one-time passcode** (OTP) is a short code we send to s
 2. Asking for a new passcode too soon does not send another one. While the previous passcode is still inside its waiting period we reuse it and send nothing, but its expiry is pushed out again, so the person always gets the full window to use the code they were sent.
 3. If a verification email or text fails to send, we try again a few times, waiting a little longer between each attempt. If it still fails, the request fails and the person is told. The welcome email is the exception: if it cannot be sent, the person carries on unaffected.
 4. A fixed passcode can be switched on for local development, so developers do not need a real inbox or phone. It is controlled by an environment setting and must stay switched off in production.
-5. A wrong passcode is counted, separately for each passcode issued. After 5 wrong tries in a row on the same passcode — on either the email step or the phone step — we delete it and reject the next attempt exactly as we would an expired one, so it cannot be guessed by trying repeatedly. Reusing an existing passcode because a resend landed inside its cooldown window does not count against this, and does not reset it either — only being issued a genuinely new passcode starts the count over. The person is not told how many tries they have left.
+5. A wrong passcode is counted, separately for each passcode issued. After 5 wrong tries in a row on the same passcode — on either the email step or the phone step — we delete it and reject the next attempt exactly as we would an expired one, so it cannot be guessed by trying repeatedly. Successfully verifying a passcode clears its wrong-try count too, the same as issuing a genuinely new passcode does. Reusing an existing passcode because a resend landed inside its cooldown window does not count against this, and does not reset it either — only being issued a genuinely new passcode, or verifying one correctly, starts the count over. The person is not told how many tries they have left.
+6. A passcode id we no longer hold is rejected exactly like an expired passcode — same response, and nothing to delete. This covers a stale browser tab, a reused link, an already-used passcode, or asking about phone verification when no passcode is outstanding at all.
 
 ### User flow
 
@@ -122,9 +123,10 @@ This response looks the same whatever the email turns out to be. For an email th
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User received email with OTP and submit it to the form | - User OTP is verified against the one stored - User onboard stage should be updated to `EmailVerified` - All of the user's existing tokens are revoked and a fresh access/refresh token pair is issued - Redirects user to providing password page |
+| 1. User received email with OTP and submit it to the form | - User OTP is verified against the one stored - User onboard stage should be updated to `EmailVerified` - The wrong-attempt count for this passcode is cleared - All of the user's existing tokens are revoked and a fresh access/refresh token pair is issued - Redirects user to providing password page |
 | 2. User provides wrong or expired OTP | - User receives a message about what went wrong |
 | 3. User submits the wrong OTP for the sixth time in a row | - Rejected without the OTP even being checked - The OTP is deleted, exactly as if it had expired - User receives the same message as an expired OTP - Getting a new OTP means signing up again with the same email (see [step 1](#1-user-signs-up)) |
+| 4. User submits a passcode id we hold no record of — an old browser tab, a reused link, or a passcode already used | - Rejected with the same message as an expired passcode - No passcode is deleted, because none was found |
 
 #### Requirements
 
@@ -132,6 +134,8 @@ This response looks the same whatever the email turns out to be. For an email th
 2. Verifying an email starts a fresh session. Any sign-in the person had before is cancelled, so only the newest one keeps working.
 3. We reject the passcode if it is wrong, if it has expired, or if the account is not at a stage where verifying is allowed.
 4. A wrong passcode is counted. After 5 wrong tries in a row, we delete it and reject the next attempt exactly as we would an expired one — so guessing cannot go on forever.
+5. Submitting a passcode id we do not recognise gets the same answer as an expired passcode, not a server error.
+6. Verifying correctly clears the wrong-attempt count for that passcode, so nothing is left behind once sign up moves on.
 
 #### Request / Response / Outcome
 
@@ -154,9 +158,11 @@ This response looks the same whatever the email turns out to be. For an email th
 **Outcome**
 
 - The stage moves to `EmailVerified` and the passcode is deleted, so it cannot be used twice.
+- The wrong-attempt count for this passcode is cleared, the same as when a genuinely new passcode is issued.
 - Every token the person already held is revoked, a fresh access and refresh token are issued, and the refresh token is saved.
 - A wrong passcode changes nothing and leaves the passcode usable. An expired one is deleted before the request is refused.
 - After 5 wrong tries in a row, the passcode is deleted and any further attempt against it is rejected the same way an expired passcode is. The person must sign up again to receive a new one.
+- Submitting a passcode id we hold no record of is rejected the same way an expired passcode is; nothing is deleted because there is nothing to delete.
 
 #### Http Error Responses
 
@@ -164,9 +170,9 @@ This response looks the same whatever the email turns out to be. For an email th
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - Form validation error |
 | 400 | `BAD_REQUEST_ERROR` | - OTP was wrong |
-| 401 | `UNAUTHORIZED_ERROR` | - OTP expired, including after too many wrong attempts |
+| 401 | `UNAUTHORIZED_ERROR` | - OTP expired, including after too many wrong attempts or an unrecognized OTP id |
 | 403 | `FORBIDDEN_ERROR` | - Invalid onboard stage |
-| 500 | `INTERNAL_SERVER_ERROR` | - OTP ID Not found - Unexpected error |
+| 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 
 ### 3. User Provides Password
 
@@ -283,10 +289,12 @@ This response looks the same whatever the email turns out to be. For an email th
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User received SMS with OTP and submit it to the form | - User OTP is verified against the one stored - User onboard stage should be updated to `PhoneVerified` - Redirects user to create Organization page |
+| 1. User received SMS with OTP and submit it to the form | - User OTP is verified against the one stored - User onboard stage should be updated to `PhoneVerified` - The wrong-attempt count for this passcode is cleared - Redirects user to create Organization page |
 | 2. User provides wrong or expired OTP | - User receives a message about what went wrong |
 | 3. User reloads the verify page while a passcode is still outstanding | - Looking up the pending verification returns the OTP ID and how long it stays valid - No new OTP is generated and no SMS is sent - User carries on entering the passcode they already received, without re-submitting their details |
 | 4. User submits the wrong OTP for the sixth time in a row | - Rejected without the OTP even being checked - The OTP is deleted, exactly as if it had expired - User receives the same message as an expired OTP - Getting a new OTP means going back to [providing details](#4-user-provides-details) to trigger a resend |
+| 5. User submits a passcode id we hold no record of — an old browser tab, a reused link, or a passcode already used | - Rejected with the same message as an expired passcode - No passcode is deleted, because none was found - Getting a new OTP means going back to [providing details](#4-user-provides-details) to trigger a resend |
+| 6. User opens the verify-phone page when no passcode is outstanding at all | - Rejected with the same message as an expired passcode - Getting a new OTP means going back to [providing details](#4-user-provides-details) to trigger a resend |
 
 #### Requirements
 
@@ -295,6 +303,9 @@ This response looks the same whatever the email turns out to be. For an email th
 3. We reject the passcode if it is wrong, if it has expired, or if the account is not at a stage where verifying is allowed.
 4. Someone who reloads this page can look up the passcode they are already waiting on, and how long it stays valid, without going back to fill in their details again.
 5. A wrong passcode is counted. After 5 wrong tries in a row, we delete it and reject the next attempt exactly as we would an expired one.
+6. Submitting a passcode id we do not recognise gets the same answer as an expired passcode, not a server error.
+7. Opening this page with no passcode outstanding at all also gets the same answer as an expired passcode.
+8. Verifying correctly clears the wrong-attempt count for that passcode, so nothing is left behind once sign up is finished.
 
 #### Request / Response / Outcome
 
@@ -327,9 +338,11 @@ When looking up a passcode already waiting:
 **Outcome**
 
 - The stage moves to `PhoneVerified` and the passcode is deleted. Sign up is finished and the person can create an organization.
+- The wrong-attempt count for this passcode is cleared, the same as when a genuinely new passcode is issued.
 - A wrong passcode changes nothing and leaves the passcode usable. An expired one is deleted before the request is refused.
 - After 5 wrong tries in a row, the passcode is deleted and any further attempt against it is rejected the same way an expired passcode is. The person must go back to providing details to receive a new one.
-- Looking up a passcode normally changes nothing, but it deletes the passcode when it is close enough to expiry — see [gap 4](#4-opening-the-phone-verification-page-can-destroy-a-usable-passcode).
+- Submitting or looking up a passcode id we hold no record of — including opening this page with nothing outstanding — is rejected the same way an expired passcode is, and nothing is deleted because there is nothing to delete.
+- Looking up a passcode normally changes nothing, but it deletes the passcode when it is close enough to expiry — see [gap 3](#3-opening-the-phone-verification-page-can-destroy-a-usable-passcode).
 
 #### Http Error Responses
 
@@ -337,9 +350,9 @@ When looking up a passcode already waiting:
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - Form validation error |
 | 400 | `BAD_REQUEST_ERROR` | - OTP was wrong |
-| 401 | `UNAUTHORIZED_ERROR` | - OTP expired, including after too many wrong attempts - Invalid token (expired or unverified) |
+| 401 | `UNAUTHORIZED_ERROR` | - OTP expired, including after too many wrong attempts or an unrecognized OTP id, including when none is outstanding - Invalid token (expired or unverified) |
 | 403 | `FORBIDDEN_ERROR` | - Invalid onboard stage |
-| 500 | `INTERNAL_SERVER_ERROR` | - OTP ID Not found - Unexpected error |
+| 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 
 ### Known gaps and open questions
 
@@ -357,17 +370,7 @@ Email is unique across accounts and enforced by the database. Phone number is no
 
 **To decide:** whether a phone number may belong to more than one account. If not, what the second person is told, and what happens to the accounts already sharing a number today.
 
-#### 3. Ordinary situations answer with a server error
-
-Several everyday things a person can do return a `500 INTERNAL_SERVER_ERROR`, which tells them something broke on our side when nothing did:
-
-- Submitting a passcode whose id we no longer hold — an old browser tab, a reused link, or a passcode already used.
-- Submitting an expired passcode twice. The first attempt correctly says it expired and removes it; the second finds nothing and reports a server error.
-- Opening the phone verification page when no passcode is outstanding.
-
-**To decide:** the right answer for each — most look like "this passcode is no longer valid, ask for a new one" rather than a failure.
-
-#### 4. Opening the phone verification page can destroy a usable passcode
+#### 3. Opening the phone verification page can destroy a usable passcode
 
 Looking up an outstanding phone passcode applies a stricter expiry rule than submitting one does. If the passcode is close enough to expiry to be inside the resend window, the lookup deletes it and reports it as expired — even though submitting that same passcode directly would still have worked.
 

@@ -291,6 +291,54 @@ class UserSignUpApiSpec
         userTokenRowsAll.head.tokenType shouldBe TokenType.RefreshToken
       }
 
+      "successfully verify email with valid OTP and delete the wrong-attempt counter" in withContext { context =>
+        import context.*
+
+        val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
+
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+          onboardStage = onboardStage
+        )
+
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+        val userOtpRow = arbitrarySample[UserOtpRow].copy(
+          userID = userDetailsRow.userID,
+          otpType = OtpType.EmailVerification,
+          expiresAt = ExpiresAt.assume(instantNow.plusSeconds(10)),
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+        val userActionAttemptRowEmailVerificationVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
+          userID = userDetailsRow.userID,
+          actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+          attempts = Attempts.assume(1),
+        )
+
+        postgresClient
+          .executeQuery(
+            userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowEmailVerificationVerifyOTP)
+          )
+          .zioValue
+
+        val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest].copy(
+          otpID = userOtpRow.otpID.value,
+          otp = userOtpRow.otp.value,
+        )
+
+        val signUpVerifyEmailPostResponse =
+          gatewayClient.signUpVerifyEmailPost[smithy.InternalServerError](signUpVerifyEmailPostRequest).zioValue
+
+        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Ok
+
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll should have size 0
+      }
+
       "fail with BadRequest ValidationError when request is invalid" in withContext { context =>
         import context.*
 
@@ -484,6 +532,32 @@ class UserSignUpApiSpec
             attempts = Attempts.assume(7), // attempts should be increased by 1
             updatedAt = userActionAttemptRowsAll.head.updatedAt,
           )
+      }
+
+      "fail with Unauthorized when OTP ID is not recognized" in withContext { context =>
+        import context.*
+
+        val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
+
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+          onboardStage = onboardStage
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest]
+
+        val signUpVerifyEmailPostResponse =
+          gatewayClient.signUpVerifyEmailPost[smithy.Unauthorized](signUpVerifyEmailPostRequest).zioValue
+
+        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Unauthorized
+        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.Unauthorized()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
+
+        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+        userOtpRowsAll should have size 0
       }
     }
   }

@@ -153,8 +153,8 @@ object UserOnboardService {
         userOtpRow <- userOtpRepository
           .getUserOtp(onboardVerifyPhoneNumberPostRequest.otpID, authedUser.userID, OtpType.PhoneVerification)
           .someOrFail(
-            ServiceError.InternalServerError
-              .UnexpectedError(s"No OTP found for otpID: [${onboardVerifyPhoneNumberPostRequest.otpID}]")
+            ServiceError.UnauthorizedError
+              .OtpVerificationFailedError(s"No OTP found for otpID: [${onboardVerifyPhoneNumberPostRequest.otpID}]")
           )
         userActionAttemptRow <- userActionAttemptRepository.getAndIncreaseUserActionAttempt(
           userID = authedUser.userID,
@@ -164,8 +164,8 @@ object UserOnboardService {
           if (userActionAttemptRow.attempts.value > userOnboardConfig.otpVerifyAttemptsMaxRetries)
             userOtpRepository
               .deleteUserOtp(userOtpRow.otpID, userOtpRow.userID, userOtpRow.otpType) *> ZIO.fail(
-              ServiceError.UnauthorizedError.OtpExpiredError(
-                s"OTP validation attempts exceeded for otpID: [${userOtpRow.otpID}]"
+              ServiceError.UnauthorizedError.OtpVerificationFailedError(
+                s"OTP validation attempts exceeded for otpID: [${userOtpRow.otpID}]: attempts [${userActionAttemptRow.attempts.value}] reached max [${userOnboardConfig.otpVerifyAttemptsMaxRetries}]"
               )
             )
           else ZIO.unit
@@ -178,7 +178,9 @@ object UserOnboardService {
               userOtpRow.otpType,
             ) *> ZIO.fail(
               ServiceError.UnauthorizedError
-                .OtpExpiredError(s"Expired OTP provided for otpID: [${onboardVerifyPhoneNumberPostRequest.otpID}]")
+                .OtpVerificationFailedError(
+                  s"Expired OTP provided for otpID: [${onboardVerifyPhoneNumberPostRequest.otpID}]"
+                )
             )
           else if (
             userOtpRow.otp == onboardVerifyPhoneNumberPostRequest.otp || verifyOtpInDev(
@@ -189,7 +191,14 @@ object UserOnboardService {
             userDetailsRepository.updateUserDetails(
               authedUser.userID,
               OnboardStage.PhoneVerified,
-            ) *> userOtpRepository.deleteUserOtp(userOtpRow.otpID, userOtpRow.userID, OtpType.PhoneVerification)
+            ) *> userOtpRepository.deleteUserOtp(
+              userOtpRow.otpID,
+              userOtpRow.userID,
+              OtpType.PhoneVerification,
+            ) *> userActionAttemptRepository.deleteUserActionAttempt(
+              authedUser.userID,
+              ActionAttemptType.PhoneVerificationVerifyOTP,
+            )
           else
             ZIO.fail(
               ServiceError.BadRequestError
@@ -219,7 +228,7 @@ object UserOnboardService {
           userOtpRepository
             .getUserOtpByUserID(authedUser.userID, OtpType.PhoneVerification)
             .someOrFail(
-              ServiceError.InternalServerError.UnexpectedError(
+              ServiceError.UnauthorizedError.OtpVerificationFailedError(
                 s"No OTP found for userID: [${authedUser.userID}] and otpType: [${OtpType.PhoneVerification}]"
               )
             )
@@ -232,7 +241,9 @@ object UserOnboardService {
           )
             userOtpRepository
               .deleteUserOtp(userOtpRow.otpID, userDetailsRow.userID, OtpType.PhoneVerification) *> ZIO.fail(
-              ServiceError.UnauthorizedError.OtpExpiredError(s"OTP expired for otpID: [${userOtpRow.otpID}]")
+              ServiceError.UnauthorizedError.OtpVerificationFailedError(
+                s"OTP expired for otpID: [${userOtpRow.otpID}]"
+              )
             )
           else ZIO.unit
       } yield smithy.OnboardVerifyPhoneNumberGetResponse(

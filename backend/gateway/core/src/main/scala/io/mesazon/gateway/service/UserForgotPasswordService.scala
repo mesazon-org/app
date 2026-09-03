@@ -170,7 +170,7 @@ object UserForgotPasswordService {
               userID = userOtpRow.userID,
               otpType = userOtpRow.otpType,
             ) *> ZIO.fail(
-              ServiceError.UnauthorizedError.OtpExpiredError(
+              ServiceError.UnauthorizedError.OtpVerificationFailedError(
                 s"Expired OTP provided for OTP ID [${forgotPasswordVerifyOTPPostRequest.otpID}] and OTP type [${OtpType.ForgotPassword}]"
               )
             )
