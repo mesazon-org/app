@@ -93,25 +93,69 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 
 #### Request / Response / Outcome
 
-**Request** — adding a person
+A customer can be added one at a time, several of one kind at once, or as a mixed batch of both kinds. All five ways carry the same two shapes — the batch forms simply wrap them in lists:
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Full Name | `String` | Required | The person's name |
-| Emails | `Object[]` | Optional, empty by default. Each entry is an address plus whether it is the default | Contact addresses |
-| Phone Numbers | `Object[]` | Optional, empty by default. Each entry is a number plus whether it is the default | Contact numbers |
-| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | Optional | Where they are |
+| **What the user is adding** | **What is sent** |
+| --- | --- |
+| One person | One `CustomerIndividual` |
+| One business | One `CustomerBusiness` |
+| Several people at once | `CustomerIndividual[]` |
+| Several businesses at once | `CustomerBusiness[]` |
+| A mixed batch | `CustomerIndividual[]` and `CustomerBusiness[]` together |
 
-**Request** — adding a business carries the same fields, with `Business Name` in place of `Full Name`, plus:
+The two shapes are separate and neither is a variant of the other. A person has a name and no tax id and no contacts; a business has a business name and may have both.
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Tax ID | `String` | Optional, businesses only | The company's tax reference |
-| Customer Business Contacts | `Object[]` | Optional, empty by default | People inside the business. Each entry holds the fields below |
-| → Full Name | `String` | Required | The contact's name |
-| → Role | `String` | Optional | What they do there |
-| → Email | `String` | Optional, at most one per contact, unique within the business | |
-| → Phone Number | `Object` | Optional, at most one per contact, unique within the business | |
+**Request — CustomerIndividual**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Full Name | `String` | 1–255 characters, trimmed | ✅ | The person's name |
+| Emails | `EmailEntry[]` | Empty by default | ❌ | Contact addresses. See **EmailEntry** below |
+| Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact numbers. See **PhoneNumberEntry** below |
+| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | 1–255 characters, trimmed | ❌ | Where they are |
+
+**Request — CustomerBusiness**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Business Name | `String` | 1–255 characters, trimmed | ✅ | The company's name |
+| Emails | `EmailEntry[]` | Empty by default | ❌ | Contact addresses. See **EmailEntry** below |
+| Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact numbers. See **PhoneNumberEntry** below |
+| Tax ID | `String` | 1–255 characters, trimmed | ❌ | The company's tax reference. A person may never have one |
+| Customer Business Contacts | `BusinessContact[]` | Empty by default | ❌ | People inside the business. See **BusinessContact** below |
+| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | 1–255 characters, trimmed | ❌ | Where they are |
+
+The shapes used above and throughout this epic:
+
+**EmailEntry**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters | ✅ | One contact address |
+| Is Default | `Boolean` | Exactly one entry in the list must be true | ✅ | Marks the address to use by default |
+
+**PhoneNumberEntry**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Phone Number | `PhoneNumber` | — | ✅ | One contact number. See **PhoneNumber** below |
+| Is Default | `Boolean` | Exactly one entry in the list must be true | ✅ | Marks the number to use by default |
+
+**PhoneNumber**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Phone National Number | `String` | 1–255 characters, trimmed; must be a real number for its country | ✅ | The number without its country code |
+| Phone Country Code | `String` | 1–255 characters, trimmed; must be a real country dialling code | ✅ | The country dialling code |
+
+**BusinessContact**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Full Name | `String` | 1–255 characters, trimmed | ✅ | The contact's name |
+| Role | `String` | 1–255 characters, trimmed | ❌ | What they do there |
+| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters; unique within the business | ❌ |  |
+| Phone Number | `PhoneNumber` | Unique within the business | ❌ |  |
 
 **Response**
 
@@ -165,12 +209,17 @@ Request is empty apart from naming the organization. There is nothing to search,
 
 **Response**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Customers | `Object[]` | Every active customer, sorted by name | The book. Each entry holds the fields below |
-| → Customer ID | `UUID` | Canonical 36-character form | Identifies the customer, used to open them |
-| → Name | `String` | | The person's or business's name |
-| → Customer Type | `CustomerType` | `INDIVIDUAL` or `BUSINESS` | Which kind, so the right screen can be opened |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customers | `CustomerSummary[]` | Sorted by name, ignoring capitalisation | ✅ | The book. See **CustomerSummary** below |
+
+**CustomerSummary**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer ID | `UUID` | Canonical 36-character form | ✅ | Identifies the customer, used to open them |
+| Name | `String` | — | ✅ | The person's or business's name |
+| Customer Type | `CustomerType` | `INDIVIDUAL` or `BUSINESS` | ✅ | Which kind, so the right screen can be opened |
 
 **Outcome**
 
@@ -210,21 +259,34 @@ Nothing changes. This step only reads.
 
 **Request**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Customer ID | `UUID` | Canonical 36-character form, in the address | Which customer to open |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer ID | `UUID` | Canonical 36-character form | ✅ | Which customer to open |
 
-**Response** — for a person
+There are two answers, one per kind, and the caller gets whichever they asked for.
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Customer ID | `UUID` | Canonical 36-character form | |
-| Full Name | `String` | | |
-| Emails | `Object[]` | Always present, may be empty | Every recorded address, each marked default or not |
-| Phone Numbers | `Object[]` | Always present, may be empty | Every recorded number, each marked default or not |
-| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | Present only if recorded | |
+**Response — CustomerIndividual**
 
-For a business the answer is the same, with `Business Name` in place of `Full Name` and an optional `Tax ID`.
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer ID | `UUID` | Canonical 36-character form | ✅ | Identifies the customer |
+| Full Name | `String` | — | ✅ | The person's name |
+| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded address, each marked default or not |
+| Phone Numbers | `PhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
+| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | — | ❌ | Present only if recorded |
+
+**Response — CustomerBusiness**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer ID | `UUID` | Canonical 36-character form | ✅ | Identifies the customer |
+| Business Name | `String` | — | ✅ | The company's name |
+| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded address, each marked default or not |
+| Tax ID | `String` | — | ❌ | Present only if recorded |
+| Phone Numbers | `PhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
+| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | — | ❌ | Present only if recorded |
+
+Neither answer includes the business's contacts, and neither says whether the customer is archived. See [gap 3](#3-changes-to-an-archived-customer-are-silently-discarded).
 
 **Outcome**
 
@@ -265,16 +327,30 @@ Nothing changes. This step only reads.
 
 #### Request / Response / Outcome
 
-**Request**
+There are two ways to update, one per kind, and the caller must use the one matching the customer. Updating a person through the business form finds nothing, and changes nothing.
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Customer ID | `UUID` | Required | Which customer to change |
-| Full Name / Business Name | `String` | Optional | Leave out to keep the current name |
-| Emails | `Object[]` | Replaces the whole list | Send the complete set, not just additions |
-| Phone Numbers | `Object[]` | Replaces the whole list | Send the complete set, not just additions |
-| Tax ID | `String` | Optional, businesses only | |
-| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | Optional | Left out means unchanged |
+**Request — updating a CustomerIndividual**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer ID | `UUID` | Canonical 36-character form | ✅ | Which customer to change |
+| Full Name | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current name |
+| Emails | `EmailEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
+| Phone Numbers | `PhoneNumberEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
+| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | 1–255 characters, trimmed | ❌ | Left out means unchanged |
+
+**Request — updating a CustomerBusiness**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer ID | `UUID` | Canonical 36-character form | ✅ | Which customer to change |
+| Business Name | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current name |
+| Emails | `EmailEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
+| Tax ID | `String` | 1–255 characters, trimmed | ❌ | Left out means unchanged |
+| Phone Numbers | `PhoneNumberEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
+| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | 1–255 characters, trimmed | ❌ | Left out means unchanged |
+
+Neither form touches the business's contacts. Those are managed on their own, in [step 5](#5-user-manages-a-businesss-contacts).
 
 **Response**
 
@@ -325,22 +401,23 @@ Response is empty. A successful change answers with nothing but a success status
 
 **Request** — adding contacts
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Customer ID | `UUID` | Required | Which business to add to |
-| Customer Business Contacts | `Object[]` | Empty by default | The people to add. Each entry holds the fields below |
-| → Full Name | `String` | Required | |
-| → Role | `String` | Optional | What they do at the business |
-| → Email | `String` | Optional, unique within the business | |
-| → Phone Number | `Object` | Optional, unique within the business | |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer ID | `UUID` | Canonical 36-character form | ✅ | Which business to add to |
+| Customer Business Contacts | `BusinessContact[]` | Empty by default | ❌ | The people to add. Same shape as when adding a business, [described in step 1](#1-user-adds-a-customer) |
 
 **Request** — removing contacts
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Customer ID | `UUID` | Required | Which business to remove from |
-| Customer Business Contacts | `Object[]` | Empty by default | Each entry names one contact by its identifier |
-| → Customer Business Contact ID | `UUID` | Required | Which contact to delete |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer ID | `UUID` | Canonical 36-character form | ✅ | Which business to remove from |
+| Customer Business Contacts | `ContactReference[]` | Empty by default | ❌ | Which contacts to delete. See **ContactReference** below |
+
+**ContactReference**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer Business Contact ID | `UUID` | Canonical 36-character form | ✅ | Identifies one contact to delete |
 
 **Response**
 
@@ -389,9 +466,9 @@ Response is empty for both adding and removing.
 
 **Request**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Customer ID | `UUID` | Required | Which customer to archive |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer ID | `UUID` | Canonical 36-character form | ✅ | Which customer to archive |
 
 **Response**
 

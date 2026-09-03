@@ -83,16 +83,16 @@ Two counters run behind this flow and are worth knowing about, because several r
 
 **Request**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854) | The email address on the account |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters | ✅ | The email address on the account |
 
 **Response**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| OTP ID | `UUID` | Canonical 36-character form | Identifies the code. Sent back together with the code in the next step. |
-| OTP Expires In Seconds | `Long` | Seconds | How long the code is meant to last. |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| OTP ID | `UUID` | Canonical 36-character form | ✅ | Identifies the code. Sent back together with the code in the next step. |
+| OTP Expires In Seconds | `Long` | Whole seconds | ✅ | How long the code is meant to last. |
 
 This response looks the same whatever the email turns out to be, so nobody can use it to discover whether an address is registered.
 
@@ -139,17 +139,17 @@ This response looks the same whatever the email turns out to be, so nobody can u
 
 **Request**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| OTP ID | `UUID` | Canonical 36-character form | The code id handed back in step 1 |
-| OTP | `String` | - 2-4 Letters - 2-4 Digits - Length 6 | The code from the email |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| OTP ID | `UUID` | Canonical 36-character form | ✅ | The code id handed back in step 1 |
+| OTP | `String` | Exactly 6 characters, uppercase letters and digits only | ✅ | The code from the email |
 
 **Response**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Reset Password Token | `String` | JWT | Authorises exactly one password change. Sent back in step 3. |
-| Reset Password Token Expires In Seconds | `Long` | Seconds | How long that token stays usable. |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Reset Password Token | `String` | JWT | ✅ | Authorises exactly one password change. Sent back in step 3. |
+| Reset Password Token Expires In Seconds | `Long` | Whole seconds | ✅ | How long that token stays usable. |
 
 **Outcome**
 
@@ -195,10 +195,10 @@ This response looks the same whatever the email turns out to be, so nobody can u
 
 **Request**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Reset Password Token | `String` | JWT | The token handed back in step 2 |
-| Password | `String` | - at least 1 lowercase letter - at least 1 uppercase letter - at least 1 digit - at least 1 special char \[`@$!%#*^,?)(&._-`\] - length 8-72 - **no other characters allowed** (the password may only contain letters, digits, and the listed special characters) | The new password |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Reset Password Token | `String` | JWT | ✅ | The token handed back in step 2 |
+| Password | `String` | At least 1 lowercase letter, 1 uppercase letter, 1 digit and 1 special character `@$!%#*^,?)(&._-`; length 8–72; no other characters allowed | ✅ | The new password |
 
 **Response**
 

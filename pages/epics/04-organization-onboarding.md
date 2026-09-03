@@ -86,30 +86,47 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 
 **Request**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Name | `String` | Required | The business name as people should see it |
-| Slug | `String` | Required - lowercase letters, digits and hyphens only - max 63 characters - must be unique product-wide | The short name used in web addresses |
-| Tagline | `String` | Optional | A short line describing the business |
-| Emails | `Object[]` | Optional, empty by default | Contact email addresses. Each entry holds the fields below |
-| → Email | `String` | A valid email address | One contact address |
-| → Is Default | `Boolean` | Exactly one entry must be true | Marks the address to use by default |
-| Phone Numbers | `Object[]` | Optional, empty by default | Contact phone numbers. Each entry holds the fields below |
-| → Phone Number | `Object` | National number and country code | One contact number |
-| → Is Default | `Boolean` | Exactly one entry must be true | Marks the number to use by default |
-| Address Line 1 | `String` | Optional | Street address |
-| Address Line 2 | `String` | Optional | Street address, continued |
-| City | `String` | Optional | |
-| Postal Code | `String` | Optional | |
-| Country | `String` | Optional | |
-| Company Registration Number | `String` | Optional | |
-| Tax ID | `String` | Optional | |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Name | `String` | 1–255 characters, trimmed | ✅ | The business name as people should see it |
+| Slug | `String` | Lowercase letters, digits and hyphens only; max 63 characters; unique product-wide | ✅ | The short name used in web addresses |
+| Tagline | `String` | 1–255 characters, trimmed | ❌ | A short line describing the business |
+| Emails | `EmailEntry[]` | Empty by default | ❌ | Contact email addresses. See **EmailEntry** below |
+| Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact phone numbers. See **PhoneNumberEntry** below |
+| Address Line 1 | `String` | 1–255 characters, trimmed | ❌ | Street address |
+| Address Line 2 | `String` | 1–255 characters, trimmed | ❌ | Street address, continued |
+| City | `String` | 1–255 characters, trimmed | ❌ |  |
+| Postal Code | `String` | 1–255 characters, trimmed | ❌ |  |
+| Country | `String` | 1–255 characters, trimmed | ❌ |  |
+| Company Registration Number | `String` | 1–255 characters, trimmed | ❌ |  |
+| Tax ID | `String` | 1–255 characters, trimmed | ❌ |  |
+
+**EmailEntry**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters | ✅ | One contact address |
+| Is Default | `Boolean` | Exactly one entry in the list must be true | ✅ | Marks the address to use by default |
+
+**PhoneNumberEntry**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Phone Number | `PhoneNumber` | — | ✅ | One contact number. See **PhoneNumber** below |
+| Is Default | `Boolean` | Exactly one entry in the list must be true | ✅ | Marks the number to use by default |
+
+**PhoneNumber**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Phone National Number | `String` | 1–255 characters, trimmed; must be a real number for its country | ✅ | The number without its country code |
+| Phone Country Code | `String` | 1–255 characters, trimmed; must be a real country dialling code | ✅ | The country dialling code |
 
 **Response**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Organization ID | `UUID` | Canonical 36-character form | Identifies the new organization. Sent back in the next step and in every later organization request. |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Organization ID | `UUID` | Canonical 36-character form | ✅ | Identifies the new organization. Sent back in the next step and in every later organization request. |
 
 **Outcome**
 
@@ -161,11 +178,11 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 
 The body is the raw image file. Two values travel in the request's headers instead of the body:
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Organization ID | `UUID` | Canonical 36-character form, sent as the `X-Organization-ID` header | Which organization the logo belongs to |
-| File Name | `String` | Sent as the `X-File-Name` header | The original name of the file, kept alongside the stored image |
-| Image | Binary | PNG, JPEG or WEBP - up to 20 MB | The image itself, sent as the request body |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Organization ID | `UUID` | Canonical 36-character form | ✅ | Which organization the logo belongs to |
+| File Name | `String` | 1–255 characters, trimmed | ✅ | The original name of the file, kept alongside the stored image |
+| Image | Binary | PNG, JPEG or WEBP; up to 20 MB | ✅ | The image itself, sent as the request body |
 
 **Response**
 

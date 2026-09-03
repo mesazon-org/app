@@ -52,13 +52,13 @@ Each slice guide links its technology standards.
 
 | Guide | Read when |
 |---|---|
-| [Epic template](pages/epics/TEMPLATE.md) | Writing a new epic or restructuring an existing one |
+| [Epic standards](pages/epics/EPIC-STANDARDS.md) | Writing a new epic, restructuring one, or reviewing whether one still matches the code |
 | The epic listed under [Epics](#epics) | Starting any feature request, or changing behavior a user can observe |
 
 Two rules govern every epic:
 
 - **Plain, simple English.** The audience is non-engineers. Short sentences, everyday words, no Scala/type/class/file names, no internal jargon, no unexplained abbreviations. Describe behavior the user can observe, not the implementation that produces it.
-- **Always true of the code.** Stage names, error codes, field shapes, limits, and business rules in an epic must match what the code actually does. Verify against the feature doc and the implementation before publishing — a confidently wrong epic is worse than a missing one.
+- **Always true of the code.** Stage names, error codes, field shapes, limits, and business rules in an epic must match what the code actually does. Verify against the feature doc and the implementation before publishing — a confidently wrong epic is worse than a missing one. Field constraints are read out of the validation layer, which enforces rules in two places: the Iron predicates in `backend/domain/.../domain.scala` with the newtypes binding them in `gateway/Newtypes.scala`, **and** the validators in `validation/`, which often add a library check the predicate cannot express (JMail for email, libphonenumber for phone numbers). Read the validator first; the predicate alone is usually the looser half. Never describe what the system generates when the field is an input.
 
 A mermaid diagram after the overview is optional — add one only when a journey is tangled enough that a picture beats the prose, and keep it small. A diagram that restates steps the reader is about to read costs more space than it earns. Fenced ` ```mermaid ` blocks are rendered by `pages/_layouts/epic.html`, which epics get automatically from the `defaults` in `pages/_config.yml`.
 
@@ -108,7 +108,7 @@ Read every standard whose trigger matches the task:
 ## Validation flow (rules, run in order, every change)
 
 1. **Feature doc first** — read the relevant `agent-docs/features/` file before coding. For a new feature, create `agent-docs/features/<feature-name>.md` in PR 1, link it under [Features](#features), and update its status/content in every slice. Never wait until the final PR. Required structure: scope/boundaries; endpoint auth/onboard/roles; flow/security/decisions; key files/config; unit/functional/integration/acceptance tests. See [Feature flow](agent-docs/features/flow/README.md).
-2. **Epic in sync** — every feature request and every change to observable behavior updates the epic it belongs to in `pages/epics/`, in the same PR. Find the related epic first; if none fits, create one from the [epic template](pages/epics/TEMPLATE.md) and link it under [Epics](#epics). Epics are written in plain, simple English and must always match the code — see [Product epics](#product-epics).
+2. **Epic in sync** — every feature request and every change to observable behavior updates the epic it belongs to in `pages/epics/`, in the same PR. Find the related epic first; if none fits, create one from the skeleton in [Epic standards](pages/epics/EPIC-STANDARDS.md) and link it under [Epics](#epics). Epics are written in plain, simple English and must always match the code — see [Product epics](#product-epics).
 3. **Standards compliance** — read the current slice or exceptional-change guide from the [documentation router](#documentation-router) and its linked technology standards.
 4. **Tests in every PR** — write and pass the current slice's applicable tests; never defer them:
    - **Unit** `gateway/core/.../unit` — validators, pure helpers.
@@ -131,7 +131,7 @@ Read every standard whose trigger matches the task:
 - `compose/` — local dev docker-compose stack
 - `terraform/` — infra as code
 - `docs/` — human-facing setup docs and diagram assets; not published
-- `pages/` — the GitHub Pages site: business-facing product epics in `pages/epics/` (template at `pages/epics/TEMPLATE.md`), plus the Jekyll config and homepage
+- `pages/` — the GitHub Pages site: business-facing product epics in `pages/epics/` (standards and skeleton at `pages/epics/EPIC-STANDARDS.md`), plus the Jekyll config and homepage
 - `agent-docs/` — concise LLM-facing feature, project, standards, and diagnostic instructions
 - `.agents/{agents,contracts,commands,skills}/` — shared agent sources; `.claude/` holds per-file symlinks plus Claude-specific files/config
 
@@ -139,7 +139,7 @@ Read every standard whose trigger matches the task:
 
 Business-facing product specs in `pages/epics/`, published via GitHub Pages and written for non-engineers. See [Product epics](#product-epics) for the two rules every epic follows.
 
-New epic → copy the [epic template](pages/epics/TEMPLATE.md), list it here, and add it to `pages/index.md` (both indexes are updated together).
+New epic → follow [Epic standards](pages/epics/EPIC-STANDARDS.md) and copy its skeleton, list it here, and add it to `pages/index.md` (both indexes are updated together).
 
 - [User Onboarding](pages/epics/01-user-onboarding.md) — sign up, verify email, set a password, add details, verify phone
 - [Forgot Password](pages/epics/02-forgot-password.md) — request a code by email, verify it, set a new password
