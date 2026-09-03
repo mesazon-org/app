@@ -218,6 +218,24 @@
 
   .content hr { border: 0; border-top: 1px solid var(--border); margin: 2.5rem 0; }
 
+  /* The draw.io export colours its text with light-dark(), so in a dark scheme the
+     labels turn white — but several shape fills are hardcoded white, which would
+     leave white text on white boxes. Pin the image to its light scheme and give it
+     a light backdrop, so it reads the same in either page theme. */
+  .diagram {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-align: center;
+  }
+  .diagram img {
+    color-scheme: light;
+    max-width: 100%;
+    height: auto;
+  }
+
   .skip {
     position: absolute;
     left: -9999px;
