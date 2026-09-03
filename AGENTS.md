@@ -78,6 +78,7 @@ Acronyms are spelled out on first use, listed in [the glossary](pages/glossary.m
 | [Build](agent-docs/project/build.md) | Changing sbt, dependencies, modules, tasks, Docker packaging, Scala/JDK, or CI |
 | [Feature consolidation](agent-docs/project/feature-consolidation.md) | Moving an old feature to the current layout without behavior changes |
 | [Acceptance testing](agent-docs/project/acceptance-testing.md) | Adding/reviewing real-gateway HTTP acceptance specs, `GatewayClient` test methods/codecs, shared acceptance harness wiring, organization middleware matrices, or rejected-side-effect assertions |
+| [Acceptance test gaps](agent-docs/acceptance-test-gaps.md) | Picking up known-missing acceptance coverage, or touching a feature listed there; delete an entry in the PR that closes it |
 | [Terraform](agent-docs/project/terraform.md) | Changing `terraform/`, or finishing a feature that added an external dependency, credential, or required env var |
 
 ### Diagnostics
@@ -141,6 +142,7 @@ Business-facing product specs in `pages/epics/`, published via GitHub Pages and 
 New epic → copy the [epic template](pages/epics/TEMPLATE.md), list it here, and add it to `pages/index.md` (both indexes are updated together).
 
 - [User Onboarding](pages/epics/01-user-onboarding.md) — sign up, verify email, set a password, add details, verify phone
+- [Forgot Password](pages/epics/02-forgot-password.md) — request a code by email, verify it, set a new password
 
 ## Features
 

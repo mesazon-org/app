@@ -2,6 +2,8 @@
 
 Black-box proof for gateway features. Use with the current feature doc, [Service flow](../features/flow/05-service.md), and [Scala](../standards/scala.md).
 
+Known-missing coverage is tracked in [Acceptance test gaps](../acceptance-test-gaps.md). Check it before adding specs for a feature listed there, and delete the entry in the PR that closes it.
+
 ## Boundary
 
 Acceptance tests exercise the real gateway over HTTP with real PostgreSQL, Flyway, and configured infrastructure containers. Nothing inside the application is mocked. They prove route registration, transport codecs, middleware, validation, orchestration, persistence, and observable external effects together.
