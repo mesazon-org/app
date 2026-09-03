@@ -143,6 +143,7 @@ New epic → copy the [epic template](pages/epics/TEMPLATE.md), list it here, an
 
 - [User Onboarding](pages/epics/01-user-onboarding.md) — sign up, verify email, set a password, add details, verify phone
 - [Forgot Password](pages/epics/02-forgot-password.md) — request a code by email, verify it, set a new password
+- [Sign In](pages/epics/03-sign-in.md) — authenticate with email + password, start a session, resume onboarding if unfinished
 
 ## Features
 

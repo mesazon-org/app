@@ -4,7 +4,7 @@ Known-missing acceptance coverage, found by reading the epics in `pages/epics/` 
 
 This is a backlog, not a guide — write the tests per [Acceptance testing](project/acceptance-testing.md), then delete the entry. An entry left here after its test lands is worse than no list.
 
-Established 2026-09-03 from a review of `01-user-onboarding` and `02-forgot-password`. Areas not covered by that review — Catalogue, Customer Book, Files, Organization, Sign In, Token Refresh — have not been audited and may hold gaps of their own.
+Established 2026-09-03 from a review of `01-user-onboarding`, `02-forgot-password`, and `03-sign-in`. Areas not covered by that review — Catalogue, Customer Book, Files, Organization, Token Refresh — have not been audited and may hold gaps of their own.
 
 ## Blocked on harness work
 
@@ -76,9 +76,29 @@ Same missing second call as gap 5, opposite branch.
 
 **Where:** `UserForgotPasswordApiSpec`, `"POST /forgot/password/reset"`. Needs a way to make MailHog reject a send.
 
+### 8. Signing in with an email address that has no account
+
+**Behaviour:** [Sign In](../pages/epics/03-sign-in.md), step 1, scenario 4 — an unknown address is refused in exactly the same way as a wrong password.
+
+`"fail with Unauthorized when credentials are invalid"` inserts a user and then signs in with `userDetailsRow.email` and a wrong password. It only ever exercises a *known* email. Nothing tries an address with no account behind it.
+
+That is the case the whole anti-enumeration guarantee rests on: the two refusals must be indistinguishable. `HttpErrorHandler` returns a bare `smithy.Unauthorized()` today, so they are — but nothing would catch a change that started returning a distinguishing message or status for an unknown address.
+
+**Where:** `UserSignInApiSpec`, `"POST /signin"`. Assert the response is byte-for-byte the same shape as the wrong-password case, and that no attempt row is written for an account that does not exist.
+
+### 9. Signing in destroys an outstanding password-reset token
+
+**Behaviour:** [Sign In](../pages/epics/03-sign-in.md), step 1 outcome — every token the account held is deleted, including a reset token in flight.
+
+`"successfully sign in ... should delete all users refresh tokens and create a new one"` seeds only `TokenType.RefreshToken` and asserts `all(userTokenRowsAll.map(_.tokenType)) shouldBe TokenType.RefreshToken`. The handler calls `deleteAllUserTokens`, which removes *every* type, but no test seeds a `ResetPasswordToken` to prove it.
+
+This is a cross-feature interaction: someone asks for a password reset, then signs in with their old password while the reset email is still unread. Whether that reset token still works afterwards is a real product question, and nothing pins the answer.
+
+**Where:** `UserSignInApiSpec`, `"POST /signin"`. Seed both token types, then assert only the new refresh token survives.
+
 ## Weak assertion in an existing test
 
-### 8. Re-signup does not prove the code is unchanged
+### 10. Re-signup does not prove the code is unchanged
 
 `UserSignUpApiSpec`, `"successfully re-sign up a user already seen user with stages before completion"`.
 
