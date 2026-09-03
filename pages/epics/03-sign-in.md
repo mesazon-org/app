@@ -80,19 +80,19 @@ One counter sits behind this flow:
 
 Request body is empty. The credentials travel in the request's authorization header as HTTP Basic authentication, which carries the two values below.
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854) | The email address on the account. The user half of the credentials. |
-| Password | `String` | As set on the account | The account's password. The password half of the credentials. |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters | ✅ | The email address on the account. The user half of the credentials. |
+| Password | `String` | As set on the account | ✅ | The account's password. The password half of the credentials. |
 
 **Response**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Access Token | `String` | JWT | Signs the person in for ordinary requests. |
-| Access Token Expires In Seconds | `Long` | Seconds | How long the access token stays usable. |
-| Refresh Token | `String` | JWT | Used to get a new access token once the current one runs out. |
-| Onboard Stage | `OnboardStage` | One of the five stage values | How far through onboarding the account is, so the app knows where to send the person next. |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Access Token | `String` | JWT | ✅ | Signs the person in for ordinary requests. |
+| Access Token Expires In Seconds | `Long` | Whole seconds | ✅ | How long the access token stays usable. |
+| Refresh Token | `String` | JWT | ✅ | Used to get a new access token once the current one runs out. |
+| Onboard Stage | `OnboardStage` | One of the five stage values | ✅ | How far through onboarding the account is, so the app knows where to send the person next. |
 
 **Outcome**
 

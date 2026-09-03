@@ -74,13 +74,7 @@ Binary body; organization in `X-Organization-ID`, catalogue item in `X-Catalogue
 
 ## Status
 
-| Slice | Done | Remaining |
-|---|---|---|
-| Endpoints | six Smithy operations/models plus the Tapir `POST /upload/catalogue-item/image` endpoint; codegen green | — |
-| Validation | request models, shared ISO price validation, domain/Smithy arbitraries, validator, unit specs | — |
-| Schema | enum, table, partial unique index, config | — |
-| Repository | `CatalogueItemRow` (full) and `CatalogueItemSummaryRow` (list projection); Queries, Repository, config; real-Postgres lifecycle proof | — |
-| Service | Smithy service, production wiring, functional spec, and acceptance spec; `FileService.uploadCatalogueItemImage` (scan/normalize/upload/persist); both GET endpoints resolve real presigned URLs via `S3ClientOrganizationMedia` | — |
+Complete: six Smithy operations plus the Tapir `POST /upload/catalogue-item/image` endpoint, request validation and shared ISO price validation, schema/enum/index, full repository (`CatalogueItemRow`/`CatalogueItemSummaryRow`), and service wiring including presigned-URL resolution on both GET endpoints. Unit, functional, integration, and acceptance tests cover every slice; see [Completed proof](#completed-proof) and [Acceptance proof](#acceptance-proof) below.
 
 Details:
 

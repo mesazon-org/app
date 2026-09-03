@@ -25,4 +25,4 @@ defaults:
       layout: epic
 
 exclude:
-  - epics/TEMPLATE.md
+  - epics/EPIC-STANDARDS.md

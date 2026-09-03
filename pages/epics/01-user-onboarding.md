@@ -49,7 +49,7 @@ Before diving in the user flow steps we should first introduce the concept of on
 
 #### Onboard Stages Example:
 
-| **Field Name** | **Type** | **Format** | **Description** |
+| **Field Name** | **Type** | **Values** | **Description** |
 | --- | --- | --- | --- |
 | onboardStage | `OnboardStage` | `EmailVerification` `EmailVerified` `PasswordProvided` `PhoneVerification` `PhoneVerified` | Users onboard stages |
 
@@ -83,16 +83,16 @@ A new user's account is created directly at `EmailVerification` — there is no 
 
 **Request**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Email | `String` | Standardised by  [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 5854](https://www.rfc-editor.org/rfc/rfc6854) | Users email |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters | ✅ | Users email |
 
 **Response**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| OTP ID | `UUID` | Canonical 36-character form | Identifies the passcode we just issued. Sent back together with the passcode to verify the email. |
-| OTP Expires In Seconds | `Long` | Seconds | How long the passcode stays usable. |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| OTP ID | `UUID` | Canonical 36-character form | ✅ | Identifies the passcode we just issued. Sent back together with the passcode to verify the email. |
+| OTP Expires In Seconds | `Long` | Whole seconds | ✅ | How long the passcode stays usable. |
 
 This response looks the same whatever the email turns out to be. For an email that already has a password set, the OTP ID it carries is a fake that will not verify against anything.
 
@@ -134,19 +134,19 @@ This response looks the same whatever the email turns out to be. For an email th
 
 **Request**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| OTP ID | `UUID` | Canonical 36-character form | A random generated UUID assigned to specific OTP |
-| OTP | `String` | - 2-4 Letters  - 2-4 Digits - Length 6 | A random generated String including letters and digits. |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| OTP ID | `UUID` | Canonical 36-character form | ✅ | A random generated UUID assigned to specific OTP |
+| OTP | `String` | Exactly 6 characters, uppercase letters and digits only | ✅ | A random generated String including letters and digits. |
 
 **Response**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Access Token | `String` | JWT | Signs the person in so they can carry on through the remaining steps. |
-| Access Token Expires In Seconds | `Long` | Seconds | How long the access token stays usable. |
-| Refresh Token | `String` | JWT | Used to get a new access token once the current one runs out. |
-| Onboard Stage | `OnboardStage` | `EmailVerified` | The stage the person has moved to. |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Access Token | `String` | JWT | ✅ | Signs the person in so they can carry on through the remaining steps. |
+| Access Token Expires In Seconds | `Long` | Whole seconds | ✅ | How long the access token stays usable. |
+| Refresh Token | `String` | JWT | ✅ | Used to get a new access token once the current one runs out. |
+| Onboard Stage | `OnboardStage` | `EmailVerified` | ✅ | The stage the person has moved to. |
 
 **Outcome**
 
@@ -186,15 +186,15 @@ This response looks the same whatever the email turns out to be. For an email th
 
 **Request**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Password | `String` | - at least 1 lowercase letter - at least 1 uppercase letter - at least 1 digit - at least 1 special char \[`@$!%#*^,?)(&._-`\] - length 8-72 - **no other characters allowed** (the password may only contain letters, digits, and the listed special characters) | The user password |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Password | `String` | At least 1 lowercase letter, 1 uppercase letter, 1 digit and 1 special character `@$!%#*^,?)(&._-`; length 8–72; no other characters allowed | ✅ | The user password |
 
 **Response**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Onboard Stage | `OnboardStage` | `PasswordProvided` | The stage the person has moved to. |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Onboard Stage | `OnboardStage` | `PasswordProvided` | ✅ | The stage the person has moved to. |
 
 **Outcome**
 
@@ -234,20 +234,25 @@ This response looks the same whatever the email turns out to be. For an email th
 
 **Request**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Full Name | `String` | - at least 1 letter | The user full name |
-| Phone Number | `Object` | Holds the two fields below | Groups the parts of the phone number together |
-| → Phone National Number | `String` | - Google library phone number validator | Nested inside `phoneNumber` |
-| → Phone Country Code | `String` | - Google library phone number validator | Nested inside `phoneNumber` |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Full Name | `String` | 1–255 characters, trimmed | ✅ | The user full name |
+| Phone Number | `PhoneNumber` | — | ✅ | The number to send the passcode to. See **PhoneNumber** below |
+
+**PhoneNumber**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Phone National Number | `String` | 1–255 characters, trimmed; must be a real number for its country | ✅ | The number without its country code |
+| Phone Country Code | `String` | 1–255 characters, trimmed; must be a real country dialling code | ✅ | The country dialling code |
 
 **Response**
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Onboard Stage | `OnboardStage` | `PhoneVerification` | The stage the person has moved to. |
-| OTP ID | `UUID` | Canonical 36-character form | Identifies the passcode we texted them. Sent back together with the passcode in the next step. |
-| OTP Expires In Seconds | `Long` | Seconds | How long the passcode stays usable. |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Onboard Stage | `OnboardStage` | `PhoneVerification` | ✅ | The stage the person has moved to. |
+| OTP ID | `UUID` | Canonical 36-character form | ✅ | Identifies the passcode we texted them. Sent back together with the passcode in the next step. |
+| OTP Expires In Seconds | `Long` | Whole seconds | ✅ | How long the passcode stays usable. |
 
 **Outcome**
 
@@ -291,10 +296,10 @@ This response looks the same whatever the email turns out to be. For an email th
 
 Submitting the passcode:
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| OTP ID | `UUID` | Canonical 36-character form | A random generated UUID assigned to specific OTP |
-| OTP | `String` | - 2-4 Letters  - 2-4 Digits - Length 6 | A random generated String including letters and digits. |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| OTP ID | `UUID` | Canonical 36-character form | ✅ | A random generated UUID assigned to specific OTP |
+| OTP | `String` | Exactly 6 characters, uppercase letters and digits only | ✅ | A random generated String including letters and digits. |
 
 Looking up a passcode already waiting: request is empty — the person is identified by their session.
 
@@ -302,16 +307,16 @@ Looking up a passcode already waiting: request is empty — the person is identi
 
 After submitting the passcode:
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| Onboard Stage | `OnboardStage` | `PhoneVerified` | The stage the person has moved to. Sign up is complete. |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Onboard Stage | `OnboardStage` | `PhoneVerified` | ✅ | The stage the person has moved to. Sign up is complete. |
 
 When looking up a passcode already waiting:
 
-| **Field Name** | **Type** | **Format** | **Description** |
-| --- | --- | --- | --- |
-| OTP ID | `UUID` | Canonical 36-character form | Identifies the passcode still outstanding. |
-| OTP Expires In Seconds | `Long` | Seconds | How long that passcode stays usable. |
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| OTP ID | `UUID` | Canonical 36-character form | ✅ | Identifies the passcode still outstanding. |
+| OTP Expires In Seconds | `Long` | Whole seconds | ✅ | How long that passcode stays usable. |
 
 **Outcome**
 
