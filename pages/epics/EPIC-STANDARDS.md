@@ -4,7 +4,7 @@ title: Epic Standards
 
 # Epic standards
 
-How epics are written and how to read one. [Part 2](#part-2--the-skeleton) is the skeleton to copy when starting a new epic.
+How epics are written and how to read one. [Part 2](#part-2-the-skeleton) (below) is the skeleton to copy when starting a new epic.
 
 This file is not published with the site. It is for whoever writes or reviews an epic.
 
@@ -119,7 +119,7 @@ Writing a new epic is a good moment to do that audit, because the scenarios have
 
 ---
 
-## Part 2 — The skeleton
+## Part 2: The skeleton
 
 Copy everything below into `pages/epics/<NN>-<name>.md` and fill it in. Delete the guidance comments as you go.
 

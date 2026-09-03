@@ -146,6 +146,7 @@ New epic → follow [Epic standards](pages/epics/EPIC-STANDARDS.md) and copy its
 - [Sign In](pages/epics/03-sign-in.md) — authenticate with email + password, start a session, resume onboarding if unfinished
 - [Organization Onboarding](pages/epics/04-organization-onboarding.md) — create the organization and its owner membership, then upload a logo
 - [Customer Book](pages/epics/05-customer-book.md) — add, browse, open, update, and archive customers; manage a business's contacts
+- [Catalogue](pages/epics/06-catalogue.md) — add, browse, open, update, and archive items; upload an item's image
 
 ## Features
 
@@ -158,7 +159,7 @@ Engineering-facing feature docs. New feature → [Feature flow](agent-docs/featu
 - [User Token Management](agent-docs/features/user-token-management.md)
 - [Organization Management](agent-docs/features/organization-management.md)
 - [Customer Book](agent-docs/features/customer-book.md)
-- [Catalogue](agent-docs/features/catalogue.md) — in progress; see its five-slice status
+- [Catalogue](agent-docs/features/catalogue.md)
 
 ## Commands
 

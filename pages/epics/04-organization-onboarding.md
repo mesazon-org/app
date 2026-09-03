@@ -157,7 +157,7 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 | --- | --- |
 | 1. Owner uploads a valid image | - The file is confirmed to be a PNG, JPEG or WEBP by inspecting its contents - The original is stored as sent - A normalised copy is stored, bounded to 640×640 - The organization moves to stage `LogoProvided` |
 | 2. User uploads a file that is not a supported image | - Rejected and nothing is stored - Today this is reported as a server error rather than "that file type is not supported" — see [gap 2](#2-choosing-the-wrong-file-is-reported-as-a-server-error) |
-| 3. User uploads a file larger than the limit | - Rejected - The whole body is still read and discarded, so the sender gets a clean answer rather than a broken connection |
+| 3. User uploads a file larger than the limit | - The upload should be rejected with a clear answer - Today it is not: the request stalls instead, and the sender only finds out something went wrong when their own connection eventually gives up — see [gap 6](#6-an-oversized-upload-does-not-fail-it-stalls) |
 | 4. A member with the ordinary user role tries to upload | - Rejected. Only owners and admins may change the logo |
 | 5. A signed-in person who does not belong to the organization tries to upload | - Rejected - Today this is reported as a server error — see [gap 3](#3-not-belonging-to-an-organization-is-reported-as-a-server-error) |
 | 6. The organization id or file name is missing from the request | - Rejected as an invalid request |
@@ -246,5 +246,13 @@ So either the logo is genuinely optional, in which case the stage records someth
 Nothing limits how many organizations one account may create, and nothing lists the ones an account already belongs to. Since creating an organization is the step immediately after personal onboarding, someone who repeats it simply accumulates organizations they own.
 
 **To decide:** whether an account may hold more than one organization, and if so how they choose between them.
+
+#### 6. An oversized upload does not fail, it stalls
+
+Choosing a file over the 20 MB limit should end quickly with a clear rejection. It does not. The upload sits with no visible progress and no answer at all, until the person's own device eventually gives up and reports a timeout — the person is left not knowing whether the upload is still working or already lost.
+
+This is a known engineering fault, not a decision that has not been made — it needs a fix rather than a product answer. It is listed here because the epic must say what happens today, and today an oversized upload does not behave the way the rest of this step does.
+
+**To decide:** nothing product-facing; this is tracked as an engineering defect to be root-caused and fixed.
 
 {% include abbreviations.md %}

@@ -4,7 +4,7 @@ Known-missing acceptance coverage, found by reading the epics in `pages/epics/` 
 
 This is a backlog, not a guide — write the tests per [Acceptance testing](project/acceptance-testing.md), then delete the entry. An entry left here after its test lands is worse than no list.
 
-Established 2026-09-03 from a review of `01-user-onboarding`, `02-forgot-password`, `03-sign-in`, `04-organization-onboarding`, and `05-customer-book`. Areas not covered by that review — Catalogue, Token Refresh, and the catalogue-item half of Files — have not been audited and may hold gaps of their own.
+Established 2026-09-03 from a review of `01-user-onboarding`, `02-forgot-password`, `03-sign-in`, `04-organization-onboarding`, `05-customer-book`, and `06-catalogue`. All six of Catalogue's Smithy endpoints have acceptance blocks in `CatalogueApiSpec`, so that review turned up no new entry. Token Refresh has not been audited and may hold gaps of its own.
 
 ## Blocked on harness work
 
@@ -108,15 +108,13 @@ The "exactly one default" rule is deliberately *not* listed here — `Organizati
 
 **Where:** `OrganizationManagementApiSpec`, `"POST /create/organization"`. Send a request carrying only name and slug and assert it succeeds with empty contact lists stored.
 
-### 11. A logo upload larger than the cap, over real HTTP
+### 11. ~~A logo upload larger than the cap, over real HTTP~~ — do not write this test
 
-**Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 2, scenario 3 — a file over 20 MB is refused, and the body is drained rather than abandoned part-way.
+**Correction, 2026-09-03:** this entry originally asked for an acceptance test sending an oversized body to `/upload/organization/logo` over real HTTP. Do not write that test. [Known issues](known-issues.md#oversized-tapir-upload-can-hang-the-request-instead-of-failing-fast) already documents that exact request as a reproduction of an open hang: it explicitly says not to add a real end-to-end acceptance test past the entity limit, because it destabilizes the rest of the acceptance suite.
 
-`FileScannerSpec` proves the cap directly against `FileScanner.scan`, including the one-byte-over boundary — but that runs independently of HTTP transport. No acceptance test sends an oversized body at all.
+`FileScannerSpec` already proves the byte cap directly against `FileScanner.scan`, including the one-byte-over boundary, independent of HTTP transport — that is deliberate, per the known issue's own prevention note, and is the right level for this. `[Organization Onboarding](../pages/epics/04-organization-onboarding.md)` step 2 now describes the real behaviour (a stall, not a clean rejection) as its own gap rather than as untested-but-working behaviour.
 
-So the cap is proven, and its wiring is not. The limit reaches the request through `HttpApp`'s Tapir entity limit, which is meant to stay equal to `file-service.max-upload-bytes`. If those two drifted apart, or the limit were applied to the wrong route, every existing test would still pass.
-
-**Where:** `FileApiSpec`, `"/upload/organization/logo"`. The catalogue-item image upload shares the same pipeline and limit, so whatever is written here should cover both.
+Leaving this entry in place, struck through, so nobody re-adds it believing it was simply overlooked.
 
 ## Endpoints with no acceptance coverage at all
 
