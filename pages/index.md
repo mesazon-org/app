@@ -32,6 +32,8 @@ An **epic** covers one area of the product end to end: the steps a person goes t
 | [User Onboarding]({{ site.baseurl }}{% link epics/01-user-onboarding.md %}) | Signing up with an email, verifying it, setting a password, adding a name and phone number, and verifying the phone. Everything up to the point where someone can create an organization. |
 | [Forgot Password]({{ site.baseurl }}{% link epics/02-forgot-password.md %}) | Getting back into an account after forgetting the password: asking for a code by email, entering it, and setting a new password. |
 | [Sign In]({{ site.baseurl }}{% link epics/03-sign-in.md %}) | Getting back into an account with an email address and password, and being sent on to the right place afterwards. |
+| [Organization Onboarding]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}) | Setting up the business itself: its name, contact details and short web name, then its logo. |
+| [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}) | The organization's address book of the people and companies it trades with: adding, browsing, updating, and archiving them. |
 
 Each epic also closes with **Known gaps and open questions** — the decisions that have not been made yet, kept separate from what the product does today so the two are never confused.
 
