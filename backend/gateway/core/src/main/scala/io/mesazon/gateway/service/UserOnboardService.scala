@@ -19,6 +19,7 @@ object UserOnboardService {
       userCredentialsRepository: UserCredentialsRepository,
       userDetailsRepository: UserDetailsRepository,
       userOtpRepository: UserOtpRepository,
+      userActionAttemptRepository: UserActionAttemptRepository,
       emailClient: EmailClient,
       twilioClient: TwilioClient,
       timeProvider: TimeProvider,
@@ -102,6 +103,10 @@ object UserOnboardService {
                 otp,
                 ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds)),
               )
+              _ <- userActionAttemptRepository.deleteUserActionAttempt(
+                authedUser.userID,
+                ActionAttemptType.PhoneVerificationVerifyOTP,
+              )
               _ <- userDetailsRepository
                 .updateUserDetails(
                   authedUser.userID,
@@ -151,6 +156,19 @@ object UserOnboardService {
             ServiceError.InternalServerError
               .UnexpectedError(s"No OTP found for otpID: [${onboardVerifyPhoneNumberPostRequest.otpID}]")
           )
+        userActionAttemptRow <- userActionAttemptRepository.getAndIncreaseUserActionAttempt(
+          userID = authedUser.userID,
+          actionAttemptType = ActionAttemptType.PhoneVerificationVerifyOTP,
+        )
+        _ <-
+          if (userActionAttemptRow.attempts.value > userOnboardConfig.otpVerifyAttemptsMaxRetries)
+            userOtpRepository
+              .deleteUserOtp(userOtpRow.otpID, userOtpRow.userID, userOtpRow.otpType) *> ZIO.fail(
+              ServiceError.UnauthorizedError.OtpExpiredError(
+                s"OTP validation attempts exceeded for otpID: [${userOtpRow.otpID}]"
+              )
+            )
+          else ZIO.unit
         instantNow <- timeProvider.instantNow
         _          <-
           if (userOtpRow.expiresAt.value.isBefore(instantNow))

@@ -46,7 +46,7 @@ Step 1 tests cover three branches: no code at all, a fresh code that gets extend
 
 `UserOnboardApiSpec` covers this for phone verification (`"fail with InternalServerError when OTP is missing"`), but `UserSignUpApiSpec` has no equivalent for email verification. The `smithy.InternalServerError` occurrences in that file are the client call's error type parameter, not assertions.
 
-Purely asymmetric coverage of the same shape of bug. Note this is also [gap 4 in the epic](../pages/epics/01-user-onboarding.md#4-ordinary-situations-answer-with-a-server-error) — the 500 is itself questionable, so whoever changes that status should write this test alongside it.
+Purely asymmetric coverage of the same shape of bug. Note this is also [gap 3 in the epic](../pages/epics/01-user-onboarding.md#3-ordinary-situations-answer-with-a-server-error) — the 500 is itself questionable, so whoever changes that status should write this test alongside it.
 
 **Where:** `UserSignUpApiSpec`, `"POST /signup/verify/email"`.
 

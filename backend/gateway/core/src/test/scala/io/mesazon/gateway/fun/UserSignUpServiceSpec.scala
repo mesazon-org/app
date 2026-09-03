@@ -194,6 +194,10 @@ class UserSignUpServiceSpec
             .expects(userDetailsRow.userID, OtpType.EmailVerification, userOtpRow.otp, userOtpRow.expiresAt)
             .returningZIO(userOtpRow)
             .once(),
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.EmailVerificationVerifyOTP)
+            .returnsZIOUnit
+            .once(),
           emailClientMock.sendEmailVerificationEmail.expects(userDetailsRow.email, userOtpRow.otp).returnsZIOUnit.once(),
         )
 
@@ -270,6 +274,10 @@ class UserSignUpServiceSpec
               userOtpRowUpdated.expiresAt,
             )
             .returningZIO(userOtpRowUpdated)
+            .once(),
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.EmailVerificationVerifyOTP)
+            .returnsZIOUnit
             .once(),
           emailClientMock.sendEmailVerificationEmail
             .expects(userDetailsRow.email, userOtpRowUpdated.otp)
@@ -397,6 +405,10 @@ class UserSignUpServiceSpec
             .expects(userDetailsRow.userID, OtpType.EmailVerification, userOtpRow.otp, userOtpRow.expiresAt)
             .returningZIO(userOtpRow)
             .once(),
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(userDetailsRow.userID, ActionAttemptType.EmailVerificationVerifyOTP)
+            .returnsZIOUnit
+            .once(),
           emailClientMock.sendEmailVerificationEmail
             .expects(userDetailsRow.email, userOtpRow.otp)
             .returns(
@@ -494,12 +506,23 @@ class UserSignUpServiceSpec
         val refreshJwt = arbitrarySample[RefreshJwt]
         val accessJwt  = arbitrarySample[AccessJwt]
 
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = userOtpRow.userID,
+            actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+            attempts = Attempts.assume(1),
+          )
+
         inSequence(
           userOtpRepositoryMock.getUserOtpByOtpID
             .expects(userOtpRow.otpID, OtpType.EmailVerification)
             .returningZIO(Some(userOtpRow))
             .once(),
           userDetailsRepositoryMock.getUserDetails.expects(userOtpRow.userID).returningZIO(Some(userDetailsRow)).once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userOtpRow.userID, ActionAttemptType.EmailVerificationVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userDetailsRepositoryMock.updateUserDetails
             .expects(userOtpRow.userID, OnboardStage.EmailVerified, None, None)
@@ -555,12 +578,23 @@ class UserSignUpServiceSpec
         val refreshJwt = arbitrarySample[RefreshJwt]
         val accessJwt  = arbitrarySample[AccessJwt]
 
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = userOtpRow.userID,
+            actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+            attempts = Attempts.assume(1),
+          )
+
         inSequence(
           userOtpRepositoryMock.getUserOtpByOtpID
             .expects(userOtpRow.otpID, OtpType.EmailVerification)
             .returningZIO(Some(userOtpRow))
             .once(),
           userDetailsRepositoryMock.getUserDetails.expects(userOtpRow.userID).returningZIO(Some(userDetailsRow)).once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userOtpRow.userID, ActionAttemptType.EmailVerificationVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userDetailsRepositoryMock.updateUserDetails
             .expects(userOtpRow.userID, OnboardStage.EmailVerified, None, None)
@@ -695,12 +729,23 @@ class UserSignUpServiceSpec
             expiresAt = ExpiresAt(instantNow.minusSeconds(10)),
           )
 
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = userOtpRow.userID,
+            actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+            attempts = Attempts.assume(1),
+          )
+
         inSequence(
           userOtpRepositoryMock.getUserOtpByOtpID
             .expects(userOtpRow.otpID, OtpType.EmailVerification)
             .returningZIO(Some(userOtpRow))
             .once(),
           userDetailsRepositoryMock.getUserDetails.expects(userOtpRow.userID).returningZIO(Some(userDetailsRow)).once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userOtpRow.userID, ActionAttemptType.EmailVerificationVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userOtpRepositoryMock.deleteUserOtp
             .expects(userOtpRow.otpID, userDetailsRow.userID, OtpType.EmailVerification)
@@ -733,12 +778,23 @@ class UserSignUpServiceSpec
             expiresAt = ExpiresAt(instantNow.plusSeconds(10)),
           )
 
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = userOtpRow.userID,
+            actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+            attempts = Attempts.assume(1),
+          )
+
         inSequence(
           userOtpRepositoryMock.getUserOtpByOtpID
             .expects(userOtpRow.otpID, OtpType.EmailVerification)
             .returningZIO(Some(userOtpRow))
             .once(),
           userDetailsRepositoryMock.getUserDetails.expects(userOtpRow.userID).returningZIO(Some(userDetailsRow)).once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userOtpRow.userID, ActionAttemptType.EmailVerificationVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
         )
 
@@ -754,6 +810,100 @@ class UserSignUpServiceSpec
           .asInstanceOf[ServiceError.BadRequestError.OtpVerifyError] shouldBe ServiceError.BadRequestError
           .OtpVerifyError(s"Wrong OTP provided for otpID: [${userOtpRow.otpID}]")
       }
+
+      "fail with OtpVerifyError when wrong otp is submitted on the 5th attempt, at the limit but not exceeding it" in new TestContext {
+        val onboardStage   = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
+          .copy(
+            userID = userDetailsRow.userID,
+            otpType = OtpType.EmailVerification,
+            expiresAt = ExpiresAt(instantNow.plusSeconds(10)),
+          )
+
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = userOtpRow.userID,
+            actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+            attempts = Attempts.assume(userSignUpConfig.otpVerifyAttemptsMaxRetries),
+          )
+
+        inSequence(
+          userOtpRepositoryMock.getUserOtpByOtpID
+            .expects(userOtpRow.otpID, OtpType.EmailVerification)
+            .returningZIO(Some(userOtpRow))
+            .once(),
+          userDetailsRepositoryMock.getUserDetails.expects(userOtpRow.userID).returningZIO(Some(userDetailsRow)).once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userOtpRow.userID, ActionAttemptType.EmailVerificationVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+        )
+
+        val userSignUpService = buildUserSignUpServiceLive()
+
+        val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest]
+          .copy(otpID = userOtpRow.otpID.value, otp = "123ABC")
+
+        val serviceError = userSignUpService.signUpVerifyEmailPost(signUpVerifyEmailPostRequest).zioError
+
+        serviceError shouldBe a[ServiceError.BadRequestError.OtpVerifyError]
+        serviceError
+          .asInstanceOf[ServiceError.BadRequestError.OtpVerifyError] shouldBe ServiceError.BadRequestError
+          .OtpVerifyError(s"Wrong OTP provided for otpID: [${userOtpRow.otpID}]")
+      }
+
+      "fail with OtpExpiredError when verify attempts has reached the limit" in new TestContext {
+        val onboardStage   = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+
+        val userOtpRow = arbitrarySample[UserOtpRow]
+          .copy(
+            userID = userDetailsRow.userID,
+            otpType = OtpType.EmailVerification,
+            expiresAt = ExpiresAt(instantNow.plusSeconds(10)),
+          )
+
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = userOtpRow.userID,
+            actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+            attempts = Attempts.assume(userSignUpConfig.otpVerifyAttemptsMaxRetries + 1),
+          )
+
+        inSequence(
+          userOtpRepositoryMock.getUserOtpByOtpID
+            .expects(userOtpRow.otpID, OtpType.EmailVerification)
+            .returningZIO(Some(userOtpRow))
+            .once(),
+          userDetailsRepositoryMock.getUserDetails.expects(userOtpRow.userID).returningZIO(Some(userDetailsRow)).once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(userOtpRow.userID, ActionAttemptType.EmailVerificationVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          userOtpRepositoryMock.deleteUserOtp
+            .expects(userOtpRow.otpID, userOtpRow.userID, OtpType.EmailVerification)
+            .returnsZIOUnit
+            .once(),
+        )
+
+        val userSignUpService = buildUserSignUpServiceLive()
+
+        // Actually-correct OTP submitted as the 6th call must still be rejected without being checked
+        val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest]
+          .copy(otpID = userOtpRow.otpID.value, otp = userOtpRow.otp.value)
+
+        val serviceError = userSignUpService.signUpVerifyEmailPost(signUpVerifyEmailPostRequest).zioError
+
+        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpExpiredError]
+        serviceError
+          .asInstanceOf[ServiceError.UnauthorizedError.OtpExpiredError] shouldBe ServiceError.UnauthorizedError
+          .OtpExpiredError(s"OTP validation attempts exceeded for otpID: [${userOtpRow.otpID}]")
+      }
     }
   }
 
@@ -766,16 +916,18 @@ class UserSignUpServiceSpec
       otpEmailVerificationResendCooldown = 5.seconds,
       sendEmailVerificationEmailMaxRetries = 3,
       sendEmailVerificationEmailRetryDelay = 1.millisecond,
+      otpVerifyAttemptsMaxRetries = 5,
     )
 
-    val userDetailsRepositoryMock = mock[UserDetailsRepository]
-    val userTokenRepositoryMock   = mock[UserTokenRepository]
-    val userOtpRepositoryMock     = mock[UserOtpRepository]
-    val jwtServiceMock            = mock[JwtService]
-    val emailClientMock           = mock[EmailClient]
-    val idGeneratorMock           = mock[IDGenerator]
-    val otpGeneratorMock          = mock[OtpGenerator]
-    val timeProviderMock          = mock[TimeProvider]
+    val userDetailsRepositoryMock       = mock[UserDetailsRepository]
+    val userTokenRepositoryMock         = mock[UserTokenRepository]
+    val userOtpRepositoryMock           = mock[UserOtpRepository]
+    val userActionAttemptRepositoryMock = mock[UserActionAttemptRepository]
+    val jwtServiceMock                  = mock[JwtService]
+    val emailClientMock                 = mock[EmailClient]
+    val idGeneratorMock                 = mock[IDGenerator]
+    val otpGeneratorMock                = mock[OtpGenerator]
+    val timeProviderMock                = mock[TimeProvider]
 
     def buildUserSignUpServiceLive(isDev: Boolean = false): smithy.UserSignUpService[ServiceTask] =
       ZIO
@@ -788,6 +940,7 @@ class UserSignUpServiceSpec
           ZLayer.succeed(userDetailsRepositoryMock),
           ZLayer.succeed(userTokenRepositoryMock),
           ZLayer.succeed(userOtpRepositoryMock),
+          ZLayer.succeed(userActionAttemptRepositoryMock),
           ZLayer.succeed(jwtServiceMock),
           ZLayer.succeed(emailClientMock),
           ZLayer.succeed(idGeneratorMock),

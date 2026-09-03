@@ -19,16 +19,17 @@ Defined in `backend/gateway/core/src/main/smithy/UserSignupService.smithy`.
 1. Validate email (`UserSignUpRequestValidator.validatedSignUpEmailPostRequest`).
 2. Look up user by email, then look up an existing `EmailVerification` OTP:
    - **New user** — insert `UserDetailsRow` at stage `EmailVerification`, generate OTP, upsert it with expiry `now + otpEmailVerificationExpiresAtOffset`, send verification email.
-   - **Existing user still in a sign-up stage** (`OnboardStage.signUpEmailStages` = `EmailVerification`, `EmailVerified`) — resend path: the user's stage is reset to `EmailVerification` (an `EmailVerified` user re-signing up must verify again), then if the current OTP is missing/expired/inside the resend-cooldown window a new OTP is generated and emailed; otherwise the existing OTP is reused and **no email is sent** (resend throttling).
+   - **Existing user still in a sign-up stage** (`OnboardStage.signUpEmailStages` = `EmailVerification`, `EmailVerified`) — resend path: the user's stage is reset to `EmailVerification` (an `EmailVerified` user re-signing up must verify again), then if the current OTP is missing/expired/inside the resend-cooldown window a new OTP is generated, the `EmailVerificationVerifyOTP` wrong-attempt counter is reset (deleted), and the OTP is emailed; otherwise the existing OTP is reused, the counter is left untouched, and **no email is sent** (resend throttling).
    - **Existing user past sign-up stages** — anti-enumeration: returns a *fake* freshly generated `otpID` with the normal response shape, sends nothing, writes nothing. Callers cannot detect whether an email is registered.
 3. Response: `otpID` + `otpExpiresInSeconds`.
 
 ### POST /signup/verify/email
 1. Validate, load OTP by `otpID` (type `EmailVerification`), load user details.
 2. Stage must be in `OnboardStage.signUpVerifyEmailStages` (= `EmailVerification`), else `ForbiddenError.InvalidOnboardStage` (`403`).
-3. OTP expired → delete OTP row and fail `UnauthorizedError.OtpExpiredError`. Wrong OTP → `BadRequestError.OtpVerifyError`. Correct → stage set to `EmailVerified`, OTP deleted.
+3. **Wrong-attempt limit**: increase the `EmailVerificationVerifyOTP` counter (`UserActionAttemptRepository`, shared generic mechanism also used by Forgot Password); over `otpVerifyAttemptsMaxRetries` (5) → delete the OTP row and fail `UnauthorizedError.OtpExpiredError` **without checking the submitted code** — same response as a naturally expired OTP, no new error shape, remaining-attempts never disclosed. The counter is only reset by a genuinely-new OTP issued from `/signup/email` (step above); reusing an OTP inside its resend cooldown does not reset it.
+4. OTP expired → delete OTP row and fail `UnauthorizedError.OtpExpiredError`. Wrong OTP → `BadRequestError.OtpVerifyError`. Correct → stage set to `EmailVerified`, OTP deleted.
    - **Dev mode**: when `user-sign-up.is-dev` is true (`IS_DEV` env var), the fixed OTP `123QWE` (`DevOtp` / `verifyOtpInDev` in `service/service.scala`) is also accepted. Must stay off in production.
-4. All existing user tokens are deleted, then a fresh access JWT + refresh JWT are issued and the refresh token is persisted (`user_token` table). Response returns both tokens, expiry, and the new `onboardStage`.
+5. All existing user tokens are deleted, then a fresh access JWT + refresh JWT are issued and the refresh token is persisted (`user_token` table). Response returns both tokens, expiry, and the new `onboardStage`.
 
 Email sends are retried with `Schedule.recurs(maxRetries) && Schedule.exponential(delay)`; on this flow a final failure fails the request.
 
@@ -38,13 +39,13 @@ Email sends are retried with `Schedule.recurs(maxRetries) && Schedule.exponentia
 - Validator: `validation/service/UserSignUpRequestValidator.scala` (one `validated<Request>` per fallible request; email goes through the generic `EmailValidator`)
 - Arbitraries: `testkit/base/UserSignUpDomainArbitraries.scala`, `gateway/utils/UserSignUpSmithyArbitraries.scala`
 - Service: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/UserSignUpService.scala`
-- Repositories: `UserDetailsRepository`, `UserOtpRepository`, `UserTokenRepository`
+- Repositories: `UserDetailsRepository`, `UserOtpRepository`, `UserTokenRepository`, `UserActionAttemptRepository` (wrong-attempt counter for `/signup/verify/email`, type `ActionAttemptType.EmailVerificationVerifyOTP`; shared generic mechanism, no schema change)
 - Stage lists: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OnboardStage.scala`
-- Config: `UserSignUpConfig` (`otpEmailVerificationExpiresAtOffset`, `otpEmailVerificationResendCooldown`, `sendEmailVerificationEmailMaxRetries`, `sendEmailVerificationEmailRetryDelay`)
+- Config: `UserSignUpConfig` (`otpEmailVerificationExpiresAtOffset`, `otpEmailVerificationResendCooldown`, `sendEmailVerificationEmailMaxRetries`, `sendEmailVerificationEmailRetryDelay`, `otpVerifyAttemptsMaxRetries`)
 
 ## Tests
 
-- Acceptance (black-box HTTP against the running gateway, see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserSignUpApiSpec.scala` — happy paths for new/re-sign-up, anti-enumeration path, plus the standard error matrix (validation, wrong/expired OTP, disallowed stage)
+- Acceptance (black-box HTTP against the running gateway, see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserSignUpApiSpec.scala` — happy paths for new/re-sign-up, anti-enumeration path, the verify-attempt-limit case (seeded near/at the limit, asserting the OTP-deleted/expired-response state), the counter reset (genuinely-new OTP) and non-reset (cooldown-reused OTP) cases on `/signup/email`, plus the standard error matrix (validation, wrong/expired OTP, disallowed stage)
 - Functional (mocked repos/clients): `src/test/scala/io/mesazon/gateway/fun/UserSignUpServiceSpec.scala`
 - Integration (Postgres via docker compose): `it/UserOtpRepositorySpec.scala`, `it/UserDetailsRepositorySpec.scala`, `it/UserTokenRepositorySpec.scala`
 - Validator units: `unit/validation/service/UserSignUpRequestValidatorSpec.scala`

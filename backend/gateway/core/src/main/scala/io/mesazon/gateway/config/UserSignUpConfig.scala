@@ -8,6 +8,7 @@ case class UserSignUpConfig(
     otpEmailVerificationResendCooldown: Duration,
     sendEmailVerificationEmailMaxRetries: Int,
     sendEmailVerificationEmailRetryDelay: Duration,
+    otpVerifyAttemptsMaxRetries: Int,
 )
 
 object UserSignUpConfig {

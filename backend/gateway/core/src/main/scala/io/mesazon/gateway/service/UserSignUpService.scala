@@ -18,6 +18,7 @@ object UserSignUpService {
       userOtpRepository: UserOtpRepository,
       userTokenRepository: UserTokenRepository,
       userDetailsRepository: UserDetailsRepository,
+      userActionAttemptRepository: UserActionAttemptRepository,
       jwtService: JwtService,
       timeProvider: TimeProvider,
       emailClient: EmailClient,
@@ -70,6 +71,12 @@ object UserSignUpService {
                 OtpType.EmailVerification,
                 otpNew,
                 expiresAtNew,
+              )
+              _ <- ZIO.whenDiscard(isEmptyOrExpiredOrExpiringSoon)(
+                userActionAttemptRepository.deleteUserActionAttempt(
+                  userDetailsRowUpdated.userID,
+                  ActionAttemptType.EmailVerificationVerifyOTP,
+                )
               )
               _ <- ZIO.whenDiscard(isEmptyOrExpiredOrExpiringSoon)(
                 emailClient
@@ -136,6 +143,19 @@ object UserSignUpService {
           onboardStageUser = userDetailsRow.onboardStage,
           onboardStagesAllowed = OnboardStage.signUpVerifyEmailStages,
         )
+        userActionAttemptRow <- userActionAttemptRepository.getAndIncreaseUserActionAttempt(
+          userID = userOtpRow.userID,
+          actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+        )
+        _ <-
+          if (userActionAttemptRow.attempts.value > userSignUpConfig.otpVerifyAttemptsMaxRetries)
+            userOtpRepository
+              .deleteUserOtp(userOtpRow.otpID, userOtpRow.userID, userOtpRow.otpType) *> ZIO.fail(
+              ServiceError.UnauthorizedError.OtpExpiredError(
+                s"OTP validation attempts exceeded for otpID: [${userOtpRow.otpID}]"
+              )
+            )
+          else ZIO.unit
         instantNow <- timeProvider.instantNow
         _          <-
           if (userOtpRow.expiresAt.value.isBefore(instantNow))

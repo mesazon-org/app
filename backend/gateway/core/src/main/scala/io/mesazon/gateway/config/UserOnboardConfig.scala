@@ -10,6 +10,7 @@ case class UserOnboardConfig(
     sendWelcomeEmailRetryDelay: Duration,
     sendPhoneVerificationOtpMaxRetries: Int,
     sendPhoneVerificationOtpRetryDelay: Duration,
+    otpVerifyAttemptsMaxRetries: Int,
 )
 
 object UserOnboardConfig {
