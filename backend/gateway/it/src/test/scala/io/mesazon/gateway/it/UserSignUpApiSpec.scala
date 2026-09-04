@@ -396,7 +396,7 @@ class UserSignUpApiSpec
         userOtpRowsAll should contain theSameElementsAs List(userOtpRow)
       }
 
-      "fail with UnauthorizedOtp when OTP is expired" in withContext { context =>
+      "fail with BadRequest when OTP is expired" in withContext { context =>
         import context.*
 
         val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
@@ -422,15 +422,19 @@ class UserSignUpApiSpec
         )
 
         val signUpVerifyEmailPostResponse =
-          gatewayClient.signUpVerifyEmailPost[smithy.UnauthorizedOtp](signUpVerifyEmailPostRequest).zioValue
+          gatewayClient.signUpVerifyEmailPost[smithy.BadRequest](signUpVerifyEmailPostRequest).zioValue
 
-        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Unauthorized
-        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.UnauthorizedOtp()
+        signUpVerifyEmailPostResponse.code shouldBe StatusCode.BadRequest
+        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.BadRequest()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
+
+        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+        userOtpRowsAll should have size 0
       }
 
-      "fail with UnauthorizedOtp when verify attempts has reached the limit, even with the actually-correct OTP" in withContext {
+      "fail with BadRequest when verify attempts has reached the limit, even with the actually-correct OTP" in withContext {
         context =>
           import context.*
 
@@ -473,10 +477,10 @@ class UserSignUpApiSpec
           )
 
           val signUpVerifyEmailPostResponse =
-            gatewayClient.signUpVerifyEmailPost[smithy.UnauthorizedOtp](signUpVerifyEmailPostRequest).zioValue
+            gatewayClient.signUpVerifyEmailPost[smithy.BadRequest](signUpVerifyEmailPostRequest).zioValue
 
-          signUpVerifyEmailPostResponse.code shouldBe StatusCode.Unauthorized
-          signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.UnauthorizedOtp()
+          signUpVerifyEmailPostResponse.code shouldBe StatusCode.BadRequest
+          signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.BadRequest()
 
           mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -499,7 +503,7 @@ class UserSignUpApiSpec
           )
       }
 
-      "fail with UnauthorizedOtp when OTP ID is not recognized" in withContext { context =>
+      "fail with BadRequest when OTP ID is not recognized" in withContext { context =>
         import context.*
 
         val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
@@ -513,10 +517,10 @@ class UserSignUpApiSpec
         val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest]
 
         val signUpVerifyEmailPostResponse =
-          gatewayClient.signUpVerifyEmailPost[smithy.UnauthorizedOtp](signUpVerifyEmailPostRequest).zioValue
+          gatewayClient.signUpVerifyEmailPost[smithy.BadRequest](signUpVerifyEmailPostRequest).zioValue
 
-        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Unauthorized
-        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.UnauthorizedOtp()
+        signUpVerifyEmailPostResponse.code shouldBe StatusCode.BadRequest
+        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.BadRequest()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 

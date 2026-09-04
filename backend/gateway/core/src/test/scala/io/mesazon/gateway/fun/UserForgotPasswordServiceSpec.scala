@@ -628,7 +628,7 @@ class UserForgotPasswordServiceSpec
           )
       }
 
-      "fail with UnexpectedError when user otp is missing" in new TestContext {
+      "fail with OtpVerifyError when OTP ID is not recognized" in new TestContext {
         val otpID = arbitrarySample[OtpID]
         val otp   = arbitrarySample[Otp]
 
@@ -649,10 +649,10 @@ class UserForgotPasswordServiceSpec
         val serviceError =
           userForgotPasswordService.forgotPasswordVerifyOTPPost(forgotPasswordVerifyOTPPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError shouldBe a[ServiceError.BadRequestError.OtpVerifyError]
         serviceError
-          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
-          .UnexpectedError(
+          .asInstanceOf[ServiceError.BadRequestError.OtpVerifyError] shouldBe ServiceError.BadRequestError
+          .OtpVerifyError(
             s"No OTP found for OTP ID [${otpID.value}] and OTP type [${OtpType.ForgotPassword}]"
           )
       }
@@ -780,7 +780,7 @@ class UserForgotPasswordServiceSpec
           )
       }
 
-      "fail with OtpVerificationFailedError when expired OTP provided" in new TestContext {
+      "fail with OtpVerifyError when expired OTP provided" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -827,17 +827,15 @@ class UserForgotPasswordServiceSpec
         val serviceError =
           userForgotPasswordService.forgotPasswordVerifyOTPPost(forgotPasswordVerifyOTPPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpVerificationFailedError]
+        serviceError shouldBe a[ServiceError.BadRequestError.OtpVerifyError]
         serviceError
-          .asInstanceOf[
-            ServiceError.UnauthorizedError.OtpVerificationFailedError
-          ] shouldBe ServiceError.UnauthorizedError
-          .OtpVerificationFailedError(
+          .asInstanceOf[ServiceError.BadRequestError.OtpVerifyError] shouldBe ServiceError.BadRequestError
+          .OtpVerifyError(
             s"Expired OTP provided for OTP ID [${forgotPasswordVerifyOTPPostRequest.otpID}] and OTP type [${OtpType.ForgotPassword}]"
           )
       }
 
-      "fail with OtpVerifyError when verify action attempts has reached the limit" in new TestContext {
+      "fail with OtpVerifyError when verify attempts has reached the limit" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -866,6 +864,10 @@ class UserForgotPasswordServiceSpec
           userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
             .expects(userOtpRow.userID, ActionAttemptType.ForgotPasswordVerifyOTP)
             .returningZIO(userActionAttemptRow)
+            .once(),
+          userOtpRepositoryMock.deleteUserOtp
+            .expects(userOtpRow.otpID, userOtpRow.userID, OtpType.ForgotPassword)
+            .returningZIOUnit
             .once(),
         )
 

@@ -667,7 +667,7 @@ class UserSignUpServiceSpec
           )
       }
 
-      "fail with OtpVerificationFailedError when verify email with non-existing otp" in new TestContext {
+      "fail with OtpVerifyError when verify email with non-existing otp" in new TestContext {
         val otpID = arbitrarySample[OtpID]
 
         inSequence(
@@ -683,12 +683,12 @@ class UserSignUpServiceSpec
 
         val serviceError = userSignUpService.signUpVerifyEmailPost(signUpVerifyEmailPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpVerificationFailedError]
+        serviceError shouldBe a[ServiceError.BadRequestError.OtpVerifyError]
         serviceError
           .asInstanceOf[
-            ServiceError.UnauthorizedError.OtpVerificationFailedError
-          ] shouldBe ServiceError.UnauthorizedError
-          .OtpVerificationFailedError(
+            ServiceError.BadRequestError.OtpVerifyError
+          ] shouldBe ServiceError.BadRequestError
+          .OtpVerifyError(
             s"No otp found for otpID: [${signUpVerifyEmailPostRequest.otpID}] and otpType: [${OtpType.EmailVerification}]"
           )
       }
@@ -727,7 +727,7 @@ class UserSignUpServiceSpec
           )
       }
 
-      "fail with OtpVerificationFailedError when verify email with expired otp" in new TestContext {
+      "fail with OtpVerifyError when verify email with expired otp" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -770,12 +770,12 @@ class UserSignUpServiceSpec
 
         val serviceError = userSignUpService.signUpVerifyEmailPost(signUpVerifyEmailPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpVerificationFailedError]
+        serviceError shouldBe a[ServiceError.BadRequestError.OtpVerifyError]
         serviceError
           .asInstanceOf[
-            ServiceError.UnauthorizedError.OtpVerificationFailedError
-          ] shouldBe ServiceError.UnauthorizedError
-          .OtpVerificationFailedError(s"Expired OTP provided for otpID: [${userOtpRow.otpID}]")
+            ServiceError.BadRequestError.OtpVerifyError
+          ] shouldBe ServiceError.BadRequestError
+          .OtpVerifyError(s"Expired OTP provided for otpID: [${userOtpRow.otpID}]")
       }
 
       "fail with OtpVerifyError when verify email with wrong otp" in new TestContext {
@@ -868,7 +868,7 @@ class UserSignUpServiceSpec
           .OtpVerifyError(s"Wrong OTP provided for otpID: [${userOtpRow.otpID}]")
       }
 
-      "fail with OtpVerificationFailedError when verify attempts has reached the limit" in new TestContext {
+      "fail with OtpVerifyError when verify attempts has reached the limit" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -911,12 +911,12 @@ class UserSignUpServiceSpec
 
         val serviceError = userSignUpService.signUpVerifyEmailPost(signUpVerifyEmailPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpVerificationFailedError]
+        serviceError shouldBe a[ServiceError.BadRequestError.OtpVerifyError]
         serviceError
           .asInstanceOf[
-            ServiceError.UnauthorizedError.OtpVerificationFailedError
-          ] shouldBe ServiceError.UnauthorizedError
-          .OtpVerificationFailedError(
+            ServiceError.BadRequestError.OtpVerifyError
+          ] shouldBe ServiceError.BadRequestError
+          .OtpVerifyError(
             s"OTP validation attempts exceeded for otpID: [${userOtpRow.otpID}]: attempts [${userActionAttemptRow.attempts.value}] reached max [${userSignUpConfig.otpVerifyAttemptsMaxRetries}]"
           )
       }

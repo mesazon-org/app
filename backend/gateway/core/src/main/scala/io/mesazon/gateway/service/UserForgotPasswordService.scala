@@ -134,7 +134,7 @@ object UserForgotPasswordService {
             OtpType.ForgotPassword,
           )
           .someOrFail(
-            ServiceError.InternalServerError.UnexpectedError(
+            ServiceError.BadRequestError.OtpVerifyError(
               s"No OTP found for OTP ID [${forgotPasswordVerifyOTPPostRequest.otpID}] and OTP type [${OtpType.ForgotPassword}]"
             )
           )
@@ -156,7 +156,11 @@ object UserForgotPasswordService {
         )
         _ <-
           if (userActionAttemptsRow.attempts.value > userForgotPasswordConfig.otpVerifyAttemptsMaxRetries)
-            ZIO.fail(
+            userOtpRepository.deleteUserOtp(
+              otpID = userOtpRow.otpID,
+              userID = userOtpRow.userID,
+              otpType = userOtpRow.otpType,
+            ) *> ZIO.fail(
               ServiceError.BadRequestError.OtpVerifyError(
                 s"OTP validation attempts exceeded for OTP ID [${forgotPasswordVerifyOTPPostRequest.otpID}] and OTP type [${OtpType.ForgotPassword}]"
               )
@@ -170,7 +174,7 @@ object UserForgotPasswordService {
               userID = userOtpRow.userID,
               otpType = userOtpRow.otpType,
             ) *> ZIO.fail(
-              ServiceError.UnauthorizedError.OtpVerificationFailedError(
+              ServiceError.BadRequestError.OtpVerifyError(
                 s"Expired OTP provided for OTP ID [${forgotPasswordVerifyOTPPostRequest.otpID}] and OTP type [${OtpType.ForgotPassword}]"
               )
             )

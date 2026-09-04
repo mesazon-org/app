@@ -125,17 +125,18 @@ This response looks the same whatever the email turns out to be. For an email th
 | **Scenarios** | **Requirements** |
 | --- | --- |
 | 1. User received email with OTP and submit it to the form | - User OTP is verified against the one stored - User onboard stage should be updated to `EmailVerified` - The wrong-attempt count for this passcode is cleared - All of the user's existing tokens are revoked and a fresh access/refresh token pair is issued - Redirects user to providing password page |
-| 2. User provides wrong or expired OTP | - User receives a message about what went wrong |
-| 3. User submits the wrong OTP for the sixth time in a row | - Rejected without the OTP even being checked - The OTP is deleted, exactly as if it had expired - User receives the same message as an expired OTP - Getting a new OTP means signing up again with the same email (see [step 1](#1-user-signs-up)) |
-| 4. User submits a passcode id we hold no record of — an old browser tab, a reused link, or a passcode already used | - Rejected with the same message as an expired passcode - No passcode is deleted, because none was found |
+| 2. User provides a wrong OTP, still under the attempt limit | - User receives a plain bad request response, with no detail about why - The passcode is not deleted and remains usable |
+| 3. User provides an expired OTP | - The OTP is deleted - User receives the same plain bad request response as any other rejection here |
+| 4. User submits the wrong OTP for the sixth time in a row | - Rejected without the OTP even being checked - The OTP is deleted, exactly as if it had expired - User receives the same plain bad request response as any other rejection here - Getting a new OTP means signing up again with the same email (see [step 1](#1-user-signs-up)) |
+| 5. User submits a passcode id we hold no record of — an old browser tab, a reused link, a passcode already used, or the fake id handed back when signing up with an email that already has a password (see [step 1, scenario 5](#1-user-signs-up)) | - Rejected with the same plain bad request response as any other rejection here - No passcode is deleted, because none was found |
 
 #### Requirements
 
 1. When someone enters the correct passcode, we mark their email as verified and move them to `EmailVerified`.
 2. Verifying an email starts a fresh session. Any sign-in the person had before is cancelled, so only the newest one keeps working.
-3. We reject the passcode if it is wrong, if it has expired, or if the account is not at a stage where verifying is allowed.
-4. A wrong passcode is counted. After 5 wrong tries in a row, we delete it and reject the next attempt exactly as we would an expired one — so guessing cannot go on forever.
-5. Submitting a passcode id we do not recognise gets the same answer as an expired passcode, not a server error.
+3. Every way this step can go wrong — a wrong passcode, an expired one, too many wrong tries in a row, or a passcode id we don't recognise — gets back exactly the same plain bad-request response, with no detail about which of these happened. This keeps the guarantee from [step 1, scenario 5](#1-user-signs-up): the fake passcode id handed back for an email that already has a password must fail here in a way nobody can tell apart from a real, active passcode being guessed wrong, or sign up would leak whether an email is already registered.
+4. A wrong passcode is counted. After 5 wrong tries in a row, we delete it — the same as when it expires — so guessing cannot go on forever.
+5. Submitting a passcode id we do not recognise is rejected the same way, and nothing is deleted because there is nothing to delete.
 6. Verifying correctly clears the wrong-attempt count for that passcode, so nothing is left behind once sign up moves on.
 
 #### Request / Response / Outcome
@@ -161,17 +162,17 @@ This response looks the same whatever the email turns out to be. For an email th
 - The stage moves to `EmailVerified` and the passcode is deleted, so it cannot be used twice.
 - The wrong-attempt count for this passcode is cleared, the same as when a genuinely new passcode is issued.
 - Every token the person already held is revoked, a fresh access and refresh token are issued, and the refresh token is saved.
-- A wrong passcode changes nothing and leaves the passcode usable. An expired one is deleted before the request is refused.
-- After 5 wrong tries in a row, the passcode is deleted and any further attempt against it is rejected the same way an expired passcode is. The person must sign up again to receive a new one.
-- Submitting a passcode id we hold no record of is rejected the same way an expired passcode is; nothing is deleted because there is nothing to delete.
+- A wrong passcode changes nothing and leaves the passcode usable; the response is the same plain bad request used for every other rejection reason here.
+- An expired passcode is deleted, then the same plain bad request response is returned.
+- After 5 wrong tries in a row, the passcode is deleted and any further attempt against it gets the same plain bad request response. The person must sign up again to receive a new one.
+- Submitting a passcode id we hold no record of gets the same plain bad request response; nothing is deleted because there is nothing to delete.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - Form validation error |
-| 400 | `BAD_REQUEST_ERROR` | - OTP was wrong |
-| 401 | `UNAUTHORIZED_OTP_ERROR` | - OTP expired - Too many wrong attempts - OTP id not recognized |
+| 400 | `BAD_REQUEST_ERROR` | - OTP was wrong - OTP expired - Too many wrong attempts - OTP id not recognized |
 | 403 | `FORBIDDEN_ERROR` | - Invalid onboard stage |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 
