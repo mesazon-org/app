@@ -33,6 +33,9 @@ object HttpErrorHandler {
       case error: ServiceError.BadRequestError =>
         logWarning(error)
           .as(smithy.BadRequest())
+      case error: ServiceError.UnauthorizedError.OtpVerificationFailedError =>
+        logError(error)
+          .as(smithy.UnauthorizedOtp())
       case error: ServiceError.UnauthorizedError =>
         logError(error)
           .as(smithy.Unauthorized())

@@ -27,11 +27,12 @@ The organization is set up in two steps, and both need a signed-in person who ha
 
 #### Non-functional
 
-1. Both steps need a valid session. The logo step additionally requires the person to be an owner or an admin of the organization they name.
+1. Both steps need a valid access token. The logo step additionally requires the person to be an owner or an admin of the organization they name.
 2. An uploaded image is judged by looking inside the file, never by its extension or by what the upload claims it is. Only PNG, JPEG and WEBP are accepted.
 3. An upload is capped at 20 MB. A larger body is read to the end and discarded rather than abandoned part-way, so the sender always gets a clean answer instead of a broken connection.
 4. Every logo is kept twice: exactly as uploaded, and as a normalised copy bounded to 640×640. Logos are served straight from file storage, never through the product itself.
 5. The email confirming an organization was created is best-effort. If it cannot be sent, the organization still exists and the person is not held up.
+6. A missing, invalid, or expired access token is refused with the same error code used everywhere else in the product for a rejected access token.
 
 ### User flow
 
@@ -139,7 +140,7 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - Form validation error - Short name has the wrong shape - A contact list has no default, or more than one |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
 | 500 | `INTERNAL_SERVER_ERROR` | - The short name is already taken - Unexpected error |
 
@@ -199,7 +200,7 @@ Response is empty. A successful upload answers with nothing but a success status
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - The organization id header is missing - The file name header is missing |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role in the organization does not allow it |
 | 500 | `INTERNAL_SERVER_ERROR` | - The file is not a supported image - The person does not belong to the organization - Unexpected error |
 

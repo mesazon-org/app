@@ -24,7 +24,7 @@ Defined in `backend/gateway/core/src/main/smithy/UserForgotPasswordService.smith
 ### POST /forgot/password/verify-otp
 1. Load OTP by `otpID` (type `ForgotPassword`), load user, check stage.
 2. **Verify attempt limiting**: increase `ForgotPasswordVerifyOTP` attempts; over `otpVerifyAttemptsMaxRetries` → `BadRequestError.OtpVerifyError` (blocks OTP guessing).
-3. Expired OTP → delete + `UnauthorizedError.OtpVerificationFailedError`. Wrong OTP → `BadRequestError.OtpVerifyError`. Correct → delete the OTP and both attempt counters.
+3. Expired OTP → delete + `UnauthorizedError.OtpVerificationFailedError` (HTTP: `401 UNAUTHORIZED_OTP_ERROR`). Wrong OTP → `BadRequestError.OtpVerifyError`. Correct → delete the OTP and both attempt counters.
    - **Dev mode**: when `user-forgot-password.is-dev` is true (`IS_DEV` env var), the fixed OTP `123QWE` (`DevOtp` / `verifyOtpInDev` in `service/service.scala`) is also accepted. Must stay off in production.
 4. Issue a reset-password JWT (`JwtService.generateResetPasswordToken`, audience `auth:reset_password`) and persist it in `user_token` (type `ResetPasswordToken`). Response: token + expiry.
 

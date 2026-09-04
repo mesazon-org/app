@@ -27,6 +27,7 @@ Throughout this epic, a **one-time passcode** (OTP) is a short code we send to s
 3. Every passcode has its own id. To use a passcode the person sends back both the id and the code they received.
 4. Someone who leaves partway through keeps their progress. Once they have set a password they come back by signing in; before that, they sign up again with the same email and carry on.
 5. An email address belongs to one account only. Before we do anything with an email we strip surrounding spaces and lower-case it, so `Sam@Example.com ` and `sam@example.com` are the same person and cannot become two accounts.
+6. A rejected passcode is reported with its own error code. Any other reason a step here refuses someone — a missing, invalid, or expired access token — gets the same error code used everywhere else in the product for a rejected access token.
 
 #### Non-functional
 
@@ -170,7 +171,7 @@ This response looks the same whatever the email turns out to be. For an email th
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - Form validation error |
 | 400 | `BAD_REQUEST_ERROR` | - OTP was wrong |
-| 401 | `UNAUTHORIZED_ERROR` | - OTP expired, including after too many wrong attempts or an unrecognized OTP id |
+| 401 | `UNAUTHORIZED_OTP_ERROR` | - OTP expired - Too many wrong attempts - OTP id not recognized |
 | 403 | `FORBIDDEN_ERROR` | - Invalid onboard stage |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 
@@ -217,7 +218,7 @@ This response looks the same whatever the email turns out to be. For an email th
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - Form validation error |
-| 401 | `UNAUTHORIZED_ERROR` | - Invalid token (expired or unverified) |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Invalid onboard stage |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 
@@ -274,7 +275,7 @@ This response looks the same whatever the email turns out to be. For an email th
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - Form validation error |
-| 401 | `UNAUTHORIZED_ERROR` | - Invalid token (expired or unverified) |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Invalid onboard stage |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 
@@ -350,7 +351,8 @@ When looking up a passcode already waiting:
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - Form validation error |
 | 400 | `BAD_REQUEST_ERROR` | - OTP was wrong |
-| 401 | `UNAUTHORIZED_ERROR` | - OTP expired, including after too many wrong attempts or an unrecognized OTP id, including when none is outstanding - Invalid token (expired or unverified) |
+| 401 | `UNAUTHORIZED_OTP_ERROR` | - OTP expired - Too many wrong attempts - OTP id not recognized - No OTP outstanding |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Invalid onboard stage |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 

@@ -27,6 +27,7 @@ A **one-time passcode** (OTP) here is the same kind of short code used elsewhere
 2. Only someone who has already set a password can recover one. Anyone still earlier in [onboarding]({{ site.baseurl }}{% link epics/01-user-onboarding.md %}) has nothing to recover.
 3. None of the three steps requires being signed in. Identity is proved by the code we email, and then by the single-use token that entering the code hands back.
 4. The code and the reset token are each good for one use. Using one destroys it.
+5. A rejected code and a rejected reset token are reported with different error codes. A code failure means the person can ask for a new code without leaving this flow; a token failure means their reset token has lapsed and they need to start over by asking to recover their password again.
 
 #### Non-functional
 
@@ -163,7 +164,7 @@ This response looks the same whatever the email turns out to be, so nobody can u
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - Form validation error |
 | 400 | `BAD_REQUEST_ERROR` | - The code was wrong - Too many wrong attempts |
-| 401 | `UNAUTHORIZED_ERROR` | - The code has expired |
+| 401 | `UNAUTHORIZED_OTP_ERROR` | - The code has expired |
 | 403 | `FORBIDDEN_ERROR` | - The account has not set a password yet |
 | 500 | `INTERNAL_SERVER_ERROR` | - Code id not found - Unexpected error |
 

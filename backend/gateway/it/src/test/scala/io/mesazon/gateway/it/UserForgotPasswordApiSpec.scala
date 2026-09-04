@@ -663,7 +663,7 @@ class UserForgotPasswordApiSpec
         userCredentialsRowsAll.head shouldBe userCredentialsRow
       }
 
-      "fail with Unauthorized when OTP is expired" in withContext { context =>
+      "fail with UnauthorizedOtp when OTP is expired" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
@@ -698,14 +698,14 @@ class UserForgotPasswordApiSpec
 
         val forgotPasswordVerifyOTPPostResponse =
           gatewayClient
-            .forgotPasswordVerifyOTPPost[smithy.Unauthorized](
+            .forgotPasswordVerifyOTPPost[smithy.UnauthorizedOtp](
               userOtpRow.otpID,
               userOtpRow.otp,
             )
             .zioValue
 
         forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.Unauthorized
-        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.UnauthorizedOtp()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 

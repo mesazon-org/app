@@ -396,7 +396,7 @@ class UserSignUpApiSpec
         userOtpRowsAll should contain theSameElementsAs List(userOtpRow)
       }
 
-      "fail with Unauthorized when OTP is expired" in withContext { context =>
+      "fail with UnauthorizedOtp when OTP is expired" in withContext { context =>
         import context.*
 
         val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
@@ -422,50 +422,15 @@ class UserSignUpApiSpec
         )
 
         val signUpVerifyEmailPostResponse =
-          gatewayClient.signUpVerifyEmailPost[smithy.Unauthorized](signUpVerifyEmailPostRequest).zioValue
+          gatewayClient.signUpVerifyEmailPost[smithy.UnauthorizedOtp](signUpVerifyEmailPostRequest).zioValue
 
         signUpVerifyEmailPostResponse.code shouldBe StatusCode.Unauthorized
-        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.UnauthorizedOtp()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
-      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
-        import context.*
-
-        val onboardStageInvalid =
-          Random.shuffle(OnboardStage.values.toList diff OnboardStage.signUpVerifyEmailStages).zioValue.head
-
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
-          onboardStage = onboardStageInvalid
-        )
-
-        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-
-        val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          userID = userDetailsRow.userID,
-          otpType = OtpType.EmailVerification,
-          expiresAt = ExpiresAt.assume(instantNow.plusSeconds(10)),
-        )
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
-
-        val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest].copy(
-          otpID = userOtpRow.otpID.value,
-          otp = userOtpRow.otp.value,
-        )
-
-        val signUpVerifyEmailPostResponse =
-          gatewayClient.signUpVerifyEmailPost[smithy.Forbidden](signUpVerifyEmailPostRequest).zioValue
-
-        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Forbidden
-        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.Forbidden()
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-      }
-
-      "fail with Unauthorized when verify attempts has reached the limit, even with the actually-correct OTP" in withContext {
+      "fail with UnauthorizedOtp when verify attempts has reached the limit, even with the actually-correct OTP" in withContext {
         context =>
           import context.*
 
@@ -508,10 +473,10 @@ class UserSignUpApiSpec
           )
 
           val signUpVerifyEmailPostResponse =
-            gatewayClient.signUpVerifyEmailPost[smithy.Unauthorized](signUpVerifyEmailPostRequest).zioValue
+            gatewayClient.signUpVerifyEmailPost[smithy.UnauthorizedOtp](signUpVerifyEmailPostRequest).zioValue
 
           signUpVerifyEmailPostResponse.code shouldBe StatusCode.Unauthorized
-          signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.Unauthorized()
+          signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.UnauthorizedOtp()
 
           mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -534,7 +499,7 @@ class UserSignUpApiSpec
           )
       }
 
-      "fail with Unauthorized when OTP ID is not recognized" in withContext { context =>
+      "fail with UnauthorizedOtp when OTP ID is not recognized" in withContext { context =>
         import context.*
 
         val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
@@ -548,16 +513,51 @@ class UserSignUpApiSpec
         val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest]
 
         val signUpVerifyEmailPostResponse =
-          gatewayClient.signUpVerifyEmailPost[smithy.Unauthorized](signUpVerifyEmailPostRequest).zioValue
+          gatewayClient.signUpVerifyEmailPost[smithy.UnauthorizedOtp](signUpVerifyEmailPostRequest).zioValue
 
         signUpVerifyEmailPostResponse.code shouldBe StatusCode.Unauthorized
-        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.UnauthorizedOtp()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
         val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll should have size 0
+      }
+
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
+        import context.*
+
+        val onboardStageInvalid =
+          Random.shuffle(OnboardStage.values.toList diff OnboardStage.signUpVerifyEmailStages).zioValue.head
+
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+          onboardStage = onboardStageInvalid
+        )
+
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+        val userOtpRow = arbitrarySample[UserOtpRow].copy(
+          userID = userDetailsRow.userID,
+          otpType = OtpType.EmailVerification,
+          expiresAt = ExpiresAt.assume(instantNow.plusSeconds(10)),
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+        val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest].copy(
+          otpID = userOtpRow.otpID.value,
+          otp = userOtpRow.otp.value,
+        )
+
+        val signUpVerifyEmailPostResponse =
+          gatewayClient.signUpVerifyEmailPost[smithy.Forbidden](signUpVerifyEmailPostRequest).zioValue
+
+        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Forbidden
+        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.Forbidden()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
       }
     }
   }
