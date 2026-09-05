@@ -4,7 +4,7 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient
 import io.mesazon.gateway.it.client.GatewayClient.given
 import io.mesazon.gateway.it.harness.GatewayAcceptanceTest
-import io.mesazon.gateway.repository.domain.{UserDetailsRow, UserOtpRow}
+import io.mesazon.gateway.repository.domain.{UserActionAttemptRow, UserDetailsRow, UserOtpRow}
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.{RepositoryArbitraries, SmithyArbitraries, UserOnboardSmithyArbitraries}
 import io.mesazon.testkit.base.IronRefinedTypeTransformer
@@ -176,6 +176,18 @@ class UserOnboardApiSpec
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
+        // Should reset this action attempt when a genuinely new OTP is issued
+        val userActionAttemptRowPhoneVerificationVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
+          userID = userDetailsRow.userID,
+          actionAttemptType = ActionAttemptType.PhoneVerificationVerifyOTP,
+        )
+
+        postgresClient
+          .executeQuery(
+            userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowPhoneVerificationVerifyOTP)
+          )
+          .zioValue
+
         val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
 
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
@@ -213,6 +225,77 @@ class UserOnboardApiSpec
             ),
           )
         )
+
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll should have size 0
+      }
+
+      "successfully re-submit onboard details within the OTP cooldown and not reset the verify attempts counter" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage = Random.shuffle(OnboardStage.onboardDetailsStages).zioValue.head
+
+          val fullName       = arbitrarySample[FullName]
+          val phoneNumber    = arbitrarySample[PhoneNumber]
+          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+            onboardStage = onboardStage,
+            phoneNumber = Some(phoneNumber),
+            fullName = Some(fullName),
+          )
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+          // Still well within the resend cooldown (45s expiry, 15s cooldown), forcing the reuse branch
+          val userOtpRow = arbitrarySample[UserOtpRow].copy(
+            userID = userDetailsRow.userID,
+            otpType = OtpType.PhoneVerification,
+            expiresAt = ExpiresAt(Instant.now.truncatedTo(ChronoUnit.MILLIS).plusSeconds(100)),
+          )
+
+          postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+          // Should not reset this action attempt when the OTP is reused within its resend cooldown
+          val userActionAttemptRowPhoneVerificationVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.PhoneVerificationVerifyOTP,
+          )
+
+          postgresClient
+            .executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowPhoneVerificationVerifyOTP)
+            )
+            .zioValue
+
+          val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
+
+          val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
+
+          val onboardDetailsPostResponse = gatewayClient
+            .onboardDetailsPost[smithy.InternalServerError](
+              onboardDetailsPostRequest,
+              Some(accessToken),
+            )
+            .zioValue
+
+          onboardDetailsPostResponse.code shouldBe StatusCode.Ok
+          onboardDetailsPostResponse.body.value.onboardStage.name shouldBe "PHONE_VERIFICATION"
+          onboardDetailsPostResponse.body.value.otpID shouldBe userOtpRow.otpID.value
+
+          mailHogClient.readInbox().zioValue.total shouldBe 0
+
+          val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+          userOtpRowsAll should have size 1
+          userOtpRowsAll.head shouldBe userOtpRow
+
+          val userActionAttemptRowsAll =
+            postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+          userActionAttemptRowsAll should have size 1
+          userActionAttemptRowsAll.head shouldBe userActionAttemptRowPhoneVerificationVerifyOTP
       }
 
       "fail with BadRequest ValidationError when request is invalid" in withContext { context =>
@@ -378,6 +461,66 @@ class UserOnboardApiSpec
         userOtpRowsAll should have size 0
       }
 
+      "successfully verify phone number and delete the wrong-attempt counter" in withContext { context =>
+        import context.*
+
+        val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+
+        val fullName       = arbitrarySample[FullName]
+        val phoneNumber    = arbitrarySample[PhoneNumber]
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+          onboardStage = onboardStage,
+          fullName = Some(fullName),
+          phoneNumber = Some(phoneNumber),
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+        val userOtpRow = arbitrarySample[UserOtpRow].copy(
+          expiresAt = ExpiresAt(instantNow.plusSeconds(10)),
+          userID = userDetailsRow.userID,
+          otpType = OtpType.PhoneVerification,
+        )
+
+        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+        val userActionAttemptRowPhoneVerificationVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
+          userID = userDetailsRow.userID,
+          actionAttemptType = ActionAttemptType.PhoneVerificationVerifyOTP,
+          attempts = Attempts.assume(1),
+        )
+
+        postgresClient
+          .executeQuery(
+            userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowPhoneVerificationVerifyOTP)
+          )
+          .zioValue
+
+        val onboardVerifyPhoneNumberPostRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest]
+          .copy(
+            otpID = userOtpRow.otpID.value,
+            otp = userOtpRow.otp.value,
+          )
+
+        val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
+
+        val onboardVerifyPhoneNumberResponse = gatewayClient
+          .onboardVerifyPhoneNumberPost[smithy.InternalServerError](
+            onboardVerifyPhoneNumberPostRequest,
+            Some(accessToken),
+          )
+          .zioValue
+
+        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Ok
+
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll should have size 0
+      }
+
       "fail with BadRequest when OTP is wrong" in withContext { context =>
         import context.*
 
@@ -469,7 +612,7 @@ class UserOnboardApiSpec
         mailHogClient.readInbox().zioValue.total shouldBe 0
       }
 
-      "fail with Unauthorized when OTP is expired" in withContext { context =>
+      "fail with UnauthorizedOtp when OTP is expired" in withContext { context =>
         import context.*
 
         val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
@@ -503,14 +646,14 @@ class UserOnboardApiSpec
         val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
 
         val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumberPost[smithy.Unauthorized](
+          .onboardVerifyPhoneNumberPost[smithy.UnauthorizedOtp](
             onboardVerifyPhoneNumberPostRequest,
             Some(accessToken),
           )
           .zioValue
 
         onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
-        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.Unauthorized()
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.UnauthorizedOtp()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -524,6 +667,132 @@ class UserOnboardApiSpec
           postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
         userOtpRowsAll should have size 0
+      }
+
+      "fail with UnauthorizedOtp when OTP is missing" in withContext { context =>
+        import context.*
+
+        val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+
+        val fullName       = arbitrarySample[FullName]
+        val phoneNumber    = arbitrarySample[PhoneNumber]
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+          onboardStage = onboardStage,
+          fullName = Some(fullName),
+          phoneNumber = Some(phoneNumber),
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
+
+        val onboardVerifyPhoneNumberPostRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest]
+
+        val onboardVerifyPhoneNumberResponse = gatewayClient
+          .onboardVerifyPhoneNumberPost[smithy.UnauthorizedOtp](
+            onboardVerifyPhoneNumberPostRequest,
+            Some(accessToken),
+          )
+          .zioValue
+
+        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
+        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.UnauthorizedOtp()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
+
+        val userDetailsRowsAll =
+          postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+
+        userDetailsRowsAll should have size 1
+        userDetailsRowsAll.head shouldBe userDetailsRow
+
+        val userOtpRowsAll =
+          postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+        userOtpRowsAll should have size 0
+      }
+
+      "fail with UnauthorizedOtp when verify attempts has reached the limit, even with the actually-correct OTP" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+
+          val fullName       = arbitrarySample[FullName]
+          val phoneNumber    = arbitrarySample[PhoneNumber]
+          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+            onboardStage = onboardStage,
+            fullName = Some(fullName),
+            phoneNumber = Some(phoneNumber),
+          )
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+          val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+          val userOtpRow = arbitrarySample[UserOtpRow].copy(
+            expiresAt = ExpiresAt(instantNow.plusSeconds(100)),
+            userID = userDetailsRow.userID,
+            otpType = OtpType.PhoneVerification,
+          )
+
+          postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+          // getAndIncreaseUserActionAttempt returns the pre-existing row as-is (see UserActionAttemptRepositorySpec),
+          // so seeding one above the limit (6, application.conf otp-verify-attempts-max-retries = 5) is what makes
+          // this call the one that exceeds it
+          val userActionAttemptRowPhoneVerificationVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.PhoneVerificationVerifyOTP,
+            attempts = Attempts.assume(6),
+          )
+
+          postgresClient
+            .executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowPhoneVerificationVerifyOTP)
+            )
+            .zioValue
+
+          // The actually-correct OTP is submitted as the 6th call and must still be rejected without being checked
+          val onboardVerifyPhoneNumberPostRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest]
+            .copy(
+              otpID = userOtpRow.otpID.value,
+              otp = userOtpRow.otp.value,
+            )
+
+          val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
+
+          val onboardVerifyPhoneNumberResponse = gatewayClient
+            .onboardVerifyPhoneNumberPost[smithy.UnauthorizedOtp](
+              onboardVerifyPhoneNumberPostRequest,
+              Some(accessToken),
+            )
+            .zioValue
+
+          onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Unauthorized
+          onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.UnauthorizedOtp()
+
+          mailHogClient.readInbox().zioValue.total shouldBe 0
+
+          val userDetailsRowsAll =
+            postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+
+          userDetailsRowsAll should have size 1
+          userDetailsRowsAll.head shouldBe userDetailsRow
+
+          val userOtpRowsAll =
+            postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+          userOtpRowsAll should have size 0
+
+          val userActionAttemptRowsAll =
+            postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+          userActionAttemptRowsAll should have size 1
+          userActionAttemptRowsAll.head shouldBe userActionAttemptRowPhoneVerificationVerifyOTP.copy(
+            attempts = Attempts.assume(7), // attempts should be increased by 1
+            updatedAt = userActionAttemptRowsAll.head.updatedAt,
+          )
       }
 
       "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
@@ -582,49 +851,6 @@ class UserOnboardApiSpec
         userOtpRowsAll should have size 1
         userOtpRowsAll.head shouldBe userOtpRow
       }
-
-      "fail with InternalServerError when OTP is missing" in withContext { context =>
-        import context.*
-
-        val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
-
-        val fullName       = arbitrarySample[FullName]
-        val phoneNumber    = arbitrarySample[PhoneNumber]
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
-          onboardStage = onboardStage,
-          fullName = Some(fullName),
-          phoneNumber = Some(phoneNumber),
-        )
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
-
-        val onboardVerifyPhoneNumberPostRequest = arbitrarySample[smithy.OnboardVerifyPhoneNumberPostRequest]
-
-        val onboardVerifyPhoneNumberResponse = gatewayClient
-          .onboardVerifyPhoneNumberPost[smithy.InternalServerError](
-            onboardVerifyPhoneNumberPostRequest,
-            Some(accessToken),
-          )
-          .zioValue
-
-        onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.InternalServerError
-        onboardVerifyPhoneNumberResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-
-        val userDetailsRowsAll =
-          postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
-
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
-
-        val userOtpRowsAll =
-          postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowsAll should have size 0
-      }
     }
 
     "GET /onboard/verify/phone-number" should {
@@ -680,54 +906,6 @@ class UserOnboardApiSpec
         userOtpRowsAll.head shouldBe userOtpRow
       }
 
-      "fail with Unauthorized when OTP is expired for user" in withContext { context =>
-        import context.*
-
-        val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
-
-        val fullName       = arbitrarySample[FullName]
-        val phoneNumber    = arbitrarySample[PhoneNumber]
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
-          onboardStage = onboardStage,
-          fullName = Some(fullName),
-          phoneNumber = Some(phoneNumber),
-        )
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          userID = userDetailsRow.userID,
-          otpType = OtpType.PhoneVerification,
-          expiresAt = ExpiresAt(Instant.now()),
-        )
-
-        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
-
-        val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
-
-        val onboardVerifyPhoneNumberGetResponse = gatewayClient
-          .onboardVerifyPhoneNumberGet[smithy.Unauthorized](
-            Some(accessToken)
-          )
-          .zioValue
-
-        onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.Unauthorized
-        onboardVerifyPhoneNumberGetResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-
-        val userDetailsRowsAll =
-          postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
-
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
-
-        val userOtpRowsAll =
-          postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowsAll should have size 0
-      }
-
       "fail with Unauthorized when access token is missing" in withContext { context =>
         import context.*
 
@@ -774,6 +952,94 @@ class UserOnboardApiSpec
         userOtpRowsAll should have size 0
       }
 
+      "fail with UnauthorizedOtp when OTP is expired for user" in withContext { context =>
+        import context.*
+
+        val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+
+        val fullName       = arbitrarySample[FullName]
+        val phoneNumber    = arbitrarySample[PhoneNumber]
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+          onboardStage = onboardStage,
+          fullName = Some(fullName),
+          phoneNumber = Some(phoneNumber),
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val userOtpRow = arbitrarySample[UserOtpRow].copy(
+          userID = userDetailsRow.userID,
+          otpType = OtpType.PhoneVerification,
+          expiresAt = ExpiresAt(Instant.now()),
+        )
+
+        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+        val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
+
+        val onboardVerifyPhoneNumberGetResponse = gatewayClient
+          .onboardVerifyPhoneNumberGet[smithy.UnauthorizedOtp](
+            Some(accessToken)
+          )
+          .zioValue
+
+        onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.Unauthorized
+        onboardVerifyPhoneNumberGetResponse.body.left.value shouldBe smithy.UnauthorizedOtp()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
+
+        val userDetailsRowsAll =
+          postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+
+        userDetailsRowsAll should have size 1
+        userDetailsRowsAll.head shouldBe userDetailsRow
+
+        val userOtpRowsAll =
+          postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+        userOtpRowsAll should have size 0
+      }
+
+      "fail with UnauthorizedOtp when OTP is missing for user" in withContext { context =>
+        import context.*
+
+        val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+
+        val fullName       = arbitrarySample[FullName]
+        val phoneNumber    = arbitrarySample[PhoneNumber]
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+          onboardStage = onboardStage,
+          fullName = Some(fullName),
+          phoneNumber = Some(phoneNumber),
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
+
+        val onboardVerifyPhoneNumberGetResponse = gatewayClient
+          .onboardVerifyPhoneNumberGet[smithy.UnauthorizedOtp](
+            Some(accessToken)
+          )
+          .zioValue
+
+        onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.Unauthorized
+        onboardVerifyPhoneNumberGetResponse.body.left.value shouldBe smithy.UnauthorizedOtp()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
+
+        val userDetailsRowsAll =
+          postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+
+        userDetailsRowsAll should have size 1
+        userDetailsRowsAll.head shouldBe userDetailsRow
+
+        val userOtpRowsAll =
+          postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+        userOtpRowsAll should have size 0
+      }
+
       "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
         import context.*
 
@@ -798,46 +1064,6 @@ class UserOnboardApiSpec
 
         onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.Forbidden
         onboardVerifyPhoneNumberGetResponse.body.left.value shouldBe smithy.Forbidden()
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-
-        val userDetailsRowsAll =
-          postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
-
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
-
-        val userOtpRowsAll =
-          postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowsAll should have size 0
-      }
-
-      "fail with InternalServerError when OTP is missing for user" in withContext { context =>
-        import context.*
-
-        val onboardStage = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
-
-        val fullName       = arbitrarySample[FullName]
-        val phoneNumber    = arbitrarySample[PhoneNumber]
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
-          onboardStage = onboardStage,
-          fullName = Some(fullName),
-          phoneNumber = Some(phoneNumber),
-        )
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val accessToken = jwtService.generateAccessToken(userDetailsRow.userID).zioValue.accessToken
-
-        val onboardVerifyPhoneNumberGetResponse = gatewayClient
-          .onboardVerifyPhoneNumberGet[smithy.InternalServerError](
-            Some(accessToken)
-          )
-          .zioValue
-
-        onboardVerifyPhoneNumberGetResponse.code shouldBe StatusCode.InternalServerError
-        onboardVerifyPhoneNumberGetResponse.body.left.value shouldBe smithy.InternalServerError()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 

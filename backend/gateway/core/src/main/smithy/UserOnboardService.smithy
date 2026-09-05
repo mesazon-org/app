@@ -44,12 +44,12 @@ operation OnboardVerifyPhoneNumberPost {
         request: OnboardVerifyPhoneNumberPostRequest
     }
     output: OnboardVerifyPhoneNumberPostResponse
-    errors: [BadRequest, ValidationError, Unauthorized, Forbidden, InternalServerError]
+    errors: [BadRequest, ValidationError, Unauthorized, UnauthorizedOtp, Forbidden, InternalServerError]
 }
 
 /// **Required Onboard Stage:** [`PHONE_VERIFICATION`]
 @http(method: "GET", uri: "/onboard/verify/phone-number", code: 200)
 operation OnboardVerifyPhoneNumberGet {
     output: OnboardVerifyPhoneNumberGetResponse
-    errors: [Unauthorized, Forbidden, InternalServerError]
+    errors: [Unauthorized, UnauthorizedOtp, Forbidden, InternalServerError]
 }

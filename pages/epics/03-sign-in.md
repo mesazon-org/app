@@ -31,6 +31,7 @@ Signing in is a single action, but two things happen behind it: the credentials 
 2. A refusal never says *why*. A wrong password, an unknown email address, and a locked account all come back the same way, so sign in cannot be used to discover which addresses have accounts.
 3. Repeated failures are counted per account. Past a limit the account stops accepting sign in for a while, even with the right password.
 4. The password itself is never stored, and never compared as text. Only a scrambled form of it is kept, and the check happens against that.
+5. A refused sign in is reported with the same error code every other endpoint in the product uses for a missing, invalid, or expired access token — there is no error code specific to bad credentials, even though signing in itself checks credentials, not a token.
 
 ### User flow
 

@@ -33,6 +33,7 @@ Every request in this epic names the organization it applies to, and only touche
 2. Reading is open to any member. Adding, changing, archiving and managing contacts are limited to owners and admins.
 3. When a request contains several problems at once, all of them are reported together rather than one at a time, and each is tied to the exact entry that caused it â€” including the position of a contact inside a business.
 4. Adding several customers at once is all-or-nothing. If any one of them fails, none of them are stored.
+5. A missing, invalid, or expired access token is refused with the same error code used everywhere else in the product for a rejected access token.
 
 ### User flow
 
@@ -174,7 +175,7 @@ Response is empty. A successful add answers with nothing but a success status â€
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the entry each belongs to |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - A customer of this kind already has that name - A contact at this business already has that email address - A contact at this business already has that phone number |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
@@ -230,7 +231,7 @@ Nothing changes. This step only reads.
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person does not belong to the organization |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 
@@ -297,7 +298,7 @@ Nothing changes. This step only reads.
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person does not belong to the organization |
 | 500 | `INTERNAL_SERVER_ERROR` | - No customer of that kind with that identifier - Unexpected error |
 
@@ -367,7 +368,7 @@ Response is empty. A successful change answers with nothing but a success status
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - One or more fields are invalid |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - An active customer of this kind already has that name |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
@@ -435,7 +436,7 @@ Response is empty for both adding and removing.
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - One or more contacts are invalid (adding only) |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - A contact at this business already has that email address or phone number (adding only) |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
@@ -485,7 +486,7 @@ Response is empty, whether the customer was archived just now, was already archi
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 

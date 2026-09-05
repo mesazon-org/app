@@ -38,6 +38,12 @@ Use one explicit section per endpoint:
 - One test invokes one endpoint. Arrange state directly through production Queries; never call another public endpoint as setup.
 - `CustomerBookApiSpec` is the canonical in-repository example. Match its explicit arrangement and assertion style; do not invent a feature-local abstraction for authentication, organization setup, endpoint iteration, or rejected-state checks.
 
+### Error shape changes: titles and order
+
+When a PR changes an operation's declared error shapes (adds, removes, or renames an error shape, or changes which concrete error-type a scenario now returns), the corresponding acceptance test titles **and their physical ordering must be updated in the same PR**. A test's title must always name the concrete error type it currently asserts; test ordering must reflect the Smithy operation's own `errors: [...]` list order (ascending HTTP status, alphabetically within ties — mirroring the Smithy standard).
+
+This rule applies to **all test suites** that name error types in their descriptions: unit specs (per `error tests named by ServiceError subtype`), functional specs, and acceptance specs. A failing title is a clear signal that the test and the contract have drifted. A title like `"fail with Unauthorized"` on a test asserting `smithy.UnauthorizedOtp()` is a source of future confusion and must be corrected when the error type changes. When a feature PR introduces a new error shape, the lead engineer reading this guide (via the [documentation router](../../CLAUDE.md#documentation-router)'s "Adding/reviewing real-gateway HTTP acceptance specs" trigger) must verify that test titles and order track error-shape changes and leave no title mismatching its assertion.
+
 ### Exact endpoint checklist
 
 Build the cases for each endpoint before writing code. Cross out only cases that are structurally impossible or not declared by the contract, and record non-obvious omissions in the feature doc.

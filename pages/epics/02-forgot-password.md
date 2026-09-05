@@ -27,6 +27,7 @@ A **one-time passcode** (OTP) here is the same kind of short code used elsewhere
 2. Only someone who has already set a password can recover one. Anyone still earlier in [onboarding]({{ site.baseurl }}{% link epics/01-user-onboarding.md %}) has nothing to recover.
 3. None of the three steps requires being signed in. Identity is proved by the code we email, and then by the single-use token that entering the code hands back.
 4. The code and the reset token are each good for one use. Using one destroys it.
+5. Every way entering a code can be rejected — wrong, expired, too many wrong attempts, or a code id we don't recognise — gives back the exact same answer, so nobody can tell which of these happened. A rejected reset token uses a different error code and means the person needs to start over by asking to recover their password again.
 
 #### Non-functional
 
@@ -124,16 +125,19 @@ This response looks the same whatever the email turns out to be, so nobody can u
 | **Scenarios** | **Requirements** |
 | --- | --- |
 | 1. User enters the correct code | - The code is checked against the stored one - The code is deleted so it cannot be reused - Both counters are cleared - A single-use reset token is issued and stored - Redirects user to the new-password page |
-| 2. User enters a wrong code | - Rejected - The wrong attempt is counted - The code stays usable, so a mistyped code can be corrected |
-| 3. User enters a wrong code too many times | - Rejected without the code even being checked - Recovering means going back to step 1 for a new code |
-| 4. User enters a code that has expired | - The code is deleted - Rejected, and the user is told the code has expired |
+| 2. User enters a wrong code, still with attempts left | - Rejected with the same plain bad request response as any other rejection here - The wrong attempt is counted - The code stays usable, so a mistyped code can be corrected |
+| 3. User enters a wrong code too many times | - The code is deleted - Rejected with the same plain bad request response as any other rejection here, without the code being checked again - Recovering means going back to step 1 for a new code |
+| 4. User enters a code that has expired | - The code is deleted - Rejected with the same plain bad request response as any other rejection here |
+| 5. User submits a code id we hold no record of — an old email, a stale browser tab, a code already used, or the made-up code id handed back for an unregistered email (see [step 1, scenario 5](#1-user-requests-a-reset-code-by-email)) | - Rejected with the same plain bad request response as any other rejection here - Nothing is deleted, because nothing was found |
 
 #### Requirements
 
 1. Entering the correct code proves the person reads that mailbox, and earns them one chance to set a new password.
 2. A wrong code is counted and rejected, but does not destroy the code — a typo should not force a restart.
-3. Past a small number of wrong attempts the code stops being accepted at all, so it cannot be guessed by brute force.
+3. Past a small number of wrong attempts the code stops being accepted at all and is thrown away, so it cannot be guessed by brute force.
 4. An expired code is thrown away rather than left lying around.
+5. Every way this step can go wrong — a wrong code, one that has expired, too many wrong attempts, or a code id we don't recognise — gets back exactly the same plain bad-request response, with no detail about which of these happened. This keeps the guarantee from [step 1, scenario 5](#1-user-requests-a-reset-code-by-email): the made-up code id handed back for an unregistered email must fail here in a way nobody can tell apart from a real, active code being guessed wrong or having run out — otherwise asking to recover a password would leak whether an email is registered.
+6. Submitting a code id we do not recognise is rejected the same way, and nothing is deleted because there is nothing to delete.
 
 #### Request / Response / Outcome
 
@@ -154,18 +158,18 @@ This response looks the same whatever the email turns out to be, so nobody can u
 **Outcome**
 
 - On the correct code: the code is deleted, both counters are cleared, and a reset token is issued and saved so it can be checked and revoked later.
-- On a wrong code: only the wrong-attempt count changes. The code survives.
-- On an expired code: the code is deleted and nothing is issued.
+- On a wrong code, with attempts left: only the wrong-attempt count changes. The code survives; the response is the same plain bad request used for every other rejection reason here.
+- On a wrong code past the limit, or an expired code: the code is deleted and nothing is issued; the same plain bad request response is returned.
+- On a code id we hold no record of: nothing is deleted, because nothing was found; the same plain bad request response is returned.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - Form validation error |
-| 400 | `BAD_REQUEST_ERROR` | - The code was wrong - Too many wrong attempts |
-| 401 | `UNAUTHORIZED_ERROR` | - The code has expired |
+| 400 | `BAD_REQUEST_ERROR` | - The code was wrong - The code has expired - Too many wrong attempts - Code id not recognized |
 | 403 | `FORBIDDEN_ERROR` | - The account has not set a password yet |
-| 500 | `INTERNAL_SERVER_ERROR` | - Code id not found - Unexpected error |
+| 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 
 ### 3. User Sets a New Password
 
@@ -248,14 +252,11 @@ A page showing that countdown tells the person they have far longer than they re
 
 **To decide:** whether the answer should report the code's real remaining time rather than the configured maximum.
 
-#### 4. Ordinary situations answer with a server error
+#### 4. Submitting a used reset token answers with a server error
 
-Several everyday things return a `500 INTERNAL_SERVER_ERROR`, which says something broke on our side when nothing did:
+Submitting a reset token that has already been used returns a `500 INTERNAL_SERVER_ERROR`, which says something broke on our side when nothing did. This is the ordinary double-submit: a second click, or a refreshed page after a successful reset.
 
-- Entering a code id we no longer hold — an old email, a stale browser tab, or a code already used.
-- Submitting a reset token that has already been used. This is the ordinary double-submit: a second click, or a refreshed page after a successful reset.
-
-**To decide:** the right answer for each. Both look like "this is no longer valid, please start again" rather than a failure.
+**To decide:** the right answer here. It looks like "this is no longer valid, please start again" rather than a failure.
 
 #### 5. The request counter never resets except on success
 

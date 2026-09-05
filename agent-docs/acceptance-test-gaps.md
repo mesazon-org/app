@@ -40,16 +40,6 @@ Step 1 tests cover three branches: no code at all, a fresh code that gets extend
 
 **Where:** `UserForgotPasswordApiSpec`, `"POST /forgot/password"`. Assert a *new* code replaces the old one and a second email is sent.
 
-### 4. Verifying an email with a code id we no longer hold
-
-**Behaviour:** `500 INTERNAL_SERVER_ERROR` on code id not found — [User Onboarding](../pages/epics/01-user-onboarding.md), step 2.
-
-`UserOnboardApiSpec` covers this for phone verification (`"fail with InternalServerError when OTP is missing"`), but `UserSignUpApiSpec` has no equivalent for email verification. The `smithy.InternalServerError` occurrences in that file are the client call's error type parameter, not assertions.
-
-Purely asymmetric coverage of the same shape of bug. Note this is also [gap 4 in the epic](../pages/epics/01-user-onboarding.md#4-ordinary-situations-answer-with-a-server-error) — the 500 is itself questionable, so whoever changes that status should write this test alongside it.
-
-**Where:** `UserSignUpApiSpec`, `"POST /signup/verify/email"`.
-
 ### 5. Re-submitting details while the code is still inside its waiting period
 
 **Behaviour:** [User Onboarding](../pages/epics/01-user-onboarding.md), step 4, scenario 2 — details are saved again, the existing code is reused, and no new text is sent.

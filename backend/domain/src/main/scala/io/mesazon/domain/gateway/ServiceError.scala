@@ -80,7 +80,7 @@ object ServiceError {
     case class FailedToVerifyJwt(error: String, throwable: Option[Throwable] = None)
         extends UnauthorizedError(error, throwable)
 
-    case class OtpExpiredError(error: String) extends UnauthorizedError(error)
+    case class OtpVerificationFailedError(error: String) extends UnauthorizedError(error)
 
     case class AuthenticationTooManySignInAttempts(
         userID: UserID,

@@ -799,6 +799,7 @@ object GatewayClient {
   given JsonValueCodec[smithy.ValidationError]     = JsonCodecMaker.make[smithy.ValidationError]
   given JsonValueCodec[smithy.BadRequest]          = JsonCodecMaker.make[smithy.BadRequest]
   given JsonValueCodec[smithy.Unauthorized]        = JsonCodecMaker.make[smithy.Unauthorized]
+  given JsonValueCodec[smithy.UnauthorizedOtp]     = JsonCodecMaker.make[smithy.UnauthorizedOtp]
   given JsonValueCodec[smithy.Forbidden]           = JsonCodecMaker.make[smithy.Forbidden]
   given JsonValueCodec[smithy.Conflict]            = JsonCodecMaker.make[smithy.Conflict]
   given JsonValueCodec[smithy.InternalServerError] = JsonCodecMaker.make[smithy.InternalServerError]

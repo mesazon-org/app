@@ -27,15 +27,15 @@ Defined in `backend/gateway/core/src/main/smithy/UserOnboardService.smithy`. Bea
 Hash the password with Argon2 (`PasswordService`), insert `UserCredentialsRow`, move stage to `PasswordProvided`, then send a welcome email. The welcome email is **best-effort**: retried, but a final failure is only logged (`catchAllCause`), never fails the request.
 
 ### POST /onboard/details
-Stores `fullName` + `phoneNumber` on user details, moves stage to `PhoneVerification`, generates a `PhoneVerification` OTP and sends it via SMS (`TwilioClient`, with retries). Resend throttling: if an existing OTP is still outside the resend-cooldown window it is reused and no SMS is sent — the response returns its remaining `otpExpiresInSeconds`. Can be called again from `PhoneVerification` to change the number / resend.
+Stores `fullName` + `phoneNumber` on user details, moves stage to `PhoneVerification`, generates a `PhoneVerification` OTP and sends it via SMS (`TwilioClient`, with retries); when a genuinely new OTP is generated, the `PhoneVerificationVerifyOTP` wrong-attempt counter is also reset (deleted). Resend throttling: if an existing OTP is still outside the resend-cooldown window it is reused, no SMS is sent, and the counter is left untouched — the response returns its remaining `otpExpiresInSeconds`. Can be called again from `PhoneVerification` to change the number / resend.
 
 ### POST /onboard/verify/phone-number
-Loads the OTP by (`otpID`, `userID`, type `PhoneVerification`). Expired → OTP deleted + `UnauthorizedError.OtpExpiredError`. Wrong OTP → `BadRequestError.OtpVerifyError`. Correct → stage `PhoneVerified` and the OTP is deleted. `PhoneVerified` is the only member of `OnboardStage.completedStages` — it unlocks endpoints marked `@completedOnboardStage` (e.g. organization management).
+Loads the OTP by (`otpID`, `userID`, type `PhoneVerification`). **Wrong-attempt limit**: increases the `PhoneVerificationVerifyOTP` counter (`UserActionAttemptRepository`, shared generic mechanism also used by Forgot Password and Sign Up); over `otpVerifyAttemptsMaxRetries` (5) → delete the OTP row and fail `UnauthorizedError.OtpVerificationFailedError` **without checking the submitted code** (HTTP: `401 UNAUTHORIZED_OTP_ERROR`) — same response as a naturally expired OTP, remaining-attempts never disclosed. The internal log message for this branch states both the attempt count reached and the configured max, distinguishing it from the not-found and naturally-expired branches, which log their own distinct causes. The counter is only reset by a genuinely-new OTP issued from `/onboard/details` (above); reusing an OTP inside its resend cooldown does not reset it. Expired → OTP deleted + `UnauthorizedError.OtpVerificationFailedError` (HTTP: `401 UNAUTHORIZED_OTP_ERROR`). Wrong OTP → `BadRequestError.OtpVerifyError`. Correct → stage `PhoneVerified`, the OTP is deleted, and the `PhoneVerificationVerifyOTP` wrong-attempt counter is deleted. `PhoneVerified` is the only member of `OnboardStage.completedStages` — it unlocks endpoints marked `@completedOnboardStage` (e.g. organization management). Access token failure returns the standard `401 UNAUTHORIZED_ERROR`.
 
 **Dev mode**: when `user-onboard.is-dev` is true (`IS_DEV` env var), `/onboard/details` skips the Twilio SMS entirely, and `/onboard/verify/phone-number` also accepts the fixed OTP `123QWE` (`DevOtp` / `verifyOtpInDev` in `service/service.scala`). Must stay off in production.
 
 ### GET /onboard/verify/phone-number
-Returns the pending OTP's `otpID` and remaining seconds so the client can restore the verify screen. If the OTP is inside the resend-cooldown window of its expiry it is deleted and the call fails with `OtpExpiredError` (client should re-trigger `/onboard/details`).
+Returns the pending OTP's `otpID` and remaining seconds so the client can restore the verify screen. If the OTP is inside the resend-cooldown window of its expiry it is deleted and the call fails with `OtpVerificationFailedError` (HTTP: `401 UNAUTHORIZED_OTP_ERROR`; client should re-trigger `/onboard/details`). Access token failure returns the standard `401 UNAUTHORIZED_ERROR`.
 
 ## Key files
 
@@ -45,11 +45,12 @@ Returns the pending OTP's `otpID` and remaining seconds so the client can restor
 - Service: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/UserOnboardService.scala`
 - Password hashing: `service/PasswordService.scala` (Argon2, `PasswordConfig`)
 - SMS: `clients/TwilioClient.scala`; Email: `clients/EmailClient.scala`
-- Config: `UserOnboardConfig` (OTP expiry offset, resend cooldown, SMS/email retry settings)
+- Repository: `UserActionAttemptRepository` (wrong-attempt counter for `/onboard/verify/phone-number`, type `ActionAttemptType.PhoneVerificationVerifyOTP`; shared generic mechanism, no schema change)
+- Config: `UserOnboardConfig` (OTP expiry offset, resend cooldown, SMS/email retry settings, `otpVerifyAttemptsMaxRetries`)
 
 ## Tests
 
-- Acceptance (see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserOnboardApiSpec.scala` — all four endpoints, each with happy path + the standard error matrix (missing/invalid access token, disallowed stage, validation, wrong/expired/missing OTP)
+- Acceptance (see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserOnboardApiSpec.scala` — all four endpoints, each with happy path + the standard error matrix (missing/invalid access token, disallowed stage, validation, wrong/expired/missing OTP), plus the verify-attempt-limit case on `/onboard/verify/phone-number`, the counter reset (genuinely-new OTP) / non-reset (cooldown-reused OTP) cases on `/onboard/details`, and a case on `/onboard/verify/phone-number` proving a successful verify deletes the `PhoneVerificationVerifyOTP` wrong-attempt counter
 - Functional: `fun/UserOnboardServiceSpec.scala`
 - Units: `unit/service/PasswordServiceSpec.scala`, `unit/validation/service/UserOnboardRequestValidatorSpec.scala`
 - Integration: `it/UserCredentialsRepositorySpec.scala`, `it/UserOtpRepositorySpec.scala`, `it/TwilioClientSpec.scala`
