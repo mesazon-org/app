@@ -6,4 +6,5 @@ enum ActionAttemptType {
   case ForgotPasswordVerifyOTP
   case EmailVerificationVerifyOTP
   case PhoneVerificationVerifyOTP
+  case EmailVerificationOtpLifetime
 }

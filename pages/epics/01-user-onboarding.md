@@ -72,15 +72,17 @@ A new user's account is created directly at `EmailVerification` — there is no 
 | 1. User sign's up for the first time | - No account exists yet - Generate new OTP (One Time Passcode) with expiration time - User should receive an email containing the new generated OTP - Frontend receives the new OTP ID - Users should provide the OTP contained in email and alongside OTP ID provided to fronted should request backend to verify Users email - Redirects user to verify OTP page |
 | 2. User signs up with an email they already verified, but have not set a password for | - Allowed onboardStages (EmailVerification, EmailVerified) - Onboard stage is reset to EmailVerification (must verify again) - Generate new OTP (One Time Passcode) with expiration time - User should receive an email containing the new generated OTP - Frontend receives the new OTP ID - Users should provide the OTP contained in email and alongside OTP ID provided to fronted should request backend to verify Users email - Redirects user to verify OTP page |
 | 3. User signs up with an email that already been requested to sign up with OTP expired | - Allowed onboardStages (EmailVerification, EmailVerified) - Generate an OTP (One Time Passcode) with expiration time - User should receive an email containing the generated OTP - Frontend receives the new OTP ID - Users should provide the OTP contained in email and alongside OTP ID provided to fronted should request backend to verify Users email - Redirects user to verify OTP page |
-| 4. User signs up with an email that already been requested to sign up while still inside the resend-cooldown window | - Allowed onboardStages (EmailVerification, EmailVerified) - Use existing generated OTP - User should **not** receive an email (already sent, cooldown still active) - Expiration time of the existing OTP is extended (prevents email scanning attacks) - Frontend receives the existing OTP ID - Redirects user to verify OTP page |
-| 5. User signs up with an email that already has a password set | - Users with onboard stage other than (EmailVerification, EmailVerified) — i.e. PasswordProvided onwards - Onboard stage is **not** changed and the email cannot be re-verified this way - Users should not be notified that email already exists in database, instead they should redirect to validate OTP page but no email will be sent. (This prevents email scanning attacks) - Frontend receives a fake OTP ID - Redirects user to verify OTP page |
+| 4. User signs up with an email that already been requested to sign up while still inside the resend-cooldown window | - Allowed onboardStages (EmailVerification, EmailVerified) - Reuses the existing passcode value - User should **not** receive an email (already sent, cooldown still active) - Expiration time of the existing OTP is extended (prevents email scanning attacks) - Frontend receives a new OTP ID even though the passcode itself is unchanged (a fresh id is issued every time it is reused this way) - Redirects user to verify OTP page |
+| 5. User signs up again with an email whose existing passcode is still live and not yet close to expiring, and this is the sixth such sign-up request in a row for that same passcode | - Allowed onboardStages (EmailVerification, EmailVerified) - The existing OTP is treated as expired even though it is still live, and is deleted - A brand-new OTP (One Time Passcode) is generated with a fresh expiration time - User should receive an email containing the new passcode - The wrong-attempt count from the old passcode is cleared, the same as for any genuinely new passcode - Frontend receives the new OTP ID - Redirects user to verify OTP page |
+| 6. User signs up with an email that already has a password set | - Users with onboard stage other than (EmailVerification, EmailVerified) — i.e. PasswordProvided onwards - Onboard stage is **not** changed and the email cannot be re-verified this way - Users should not be notified that email already exists in database, instead they should redirect to validate OTP page but no email will be sent. (This prevents email scanning attacks) - Frontend receives a fake OTP ID - Redirects user to verify OTP page |
 
 #### Requirements
 
 1. When someone signs up with an email for the first time, we create their account, generate a passcode, and email it to them.
-2. Someone who has not finished verifying their email can ask us to send the passcode again.
+2. Someone who has not finished verifying their email can ask us to send the passcode again. While the passcode is still inside its resend-cooldown window we do not send another email and the passcode itself does not change, but a new id is issued for it every time it is reused this way.
 3. If someone verified their email but has not set a password yet, signing up again with that email starts verification over. Their onboard stage goes back to `EmailVerification` and they verify once more.
 4. Once someone has set a password, signing up again with their email does nothing at all. They cannot re-verify this way, and they cannot be sent back to an earlier step. We reply exactly as we would for a brand-new email, but send no email and save nothing, so sign up can never be used to find out whether an email is registered.
+5. A passcode that is still live and not yet close to expiring can only be silently kept alive by resending, through repeat sign-up requests, up to 5 times. Each such sign-up request while the passcode is still comfortably live counts as one reuse. On the 6th reuse in a row, the next sign-up request treats the passcode as expired — even though it is still live — deletes it, and issues a genuinely new one, emailed the same as any other new passcode. This is a limit on how many times one passcode can be silently reused, by request count, not by how long it has been alive — there is no separate real-time ceiling.
 
 #### Request / Response / Outcome
 
@@ -102,7 +104,7 @@ This response looks the same whatever the email turns out to be. For an email th
 **Outcome**
 
 - A brand-new email gets an account created at `EmailVerification`, a new passcode saved against it, and a verification email sent.
-- An email already part-way through sign up has its stage reset to `EmailVerification`. The existing passcode is reused if it is still inside its waiting period, or replaced and emailed if not. Either way its expiry is pushed out to a full fresh window.
+- An email already part-way through sign up has its stage reset to `EmailVerification`. The existing passcode is reused, with its expiry pushed out to a full fresh window, if it is still live and not yet close to expiring **and** has not already been reused this way 5 times in a row. If the passcode has expired outright, is close enough to expiring to be inside its resend-cooldown window, or has already been reused 5 times in a row, it is deleted and a brand-new passcode is generated and emailed instead, restarting its expiry window and its reuse count.
 - An email that already has a password set changes nothing: nothing saved, nothing sent, stage untouched.
 
 #### Http Error Responses
@@ -344,7 +346,7 @@ When looking up a passcode already waiting:
 - A wrong passcode changes nothing and leaves the passcode usable. An expired one is deleted before the request is refused.
 - After 5 wrong tries in a row, the passcode is deleted and any further attempt against it is rejected the same way an expired passcode is. The person must go back to providing details to receive a new one.
 - Submitting or looking up a passcode id we hold no record of — including opening this page with nothing outstanding — is rejected the same way an expired passcode is, and nothing is deleted because there is nothing to delete.
-- Looking up a passcode normally changes nothing, but it deletes the passcode when it is close enough to expiry — see [gap 3](#3-opening-the-phone-verification-page-can-destroy-a-usable-passcode).
+- Looking up a passcode normally changes nothing, but it deletes the passcode when it is close enough to expiry — see [gap 2](#2-opening-the-phone-verification-page-can-destroy-a-usable-passcode).
 
 #### Http Error Responses
 
@@ -361,19 +363,13 @@ When looking up a passcode already waiting:
 
 Decisions this epic has not made yet. Everything above describes what the product does today; everything here does **not** exist and needs a product answer before it can be built.
 
-#### 1. A passcode's life can be extended without limit
-
-Every sign-up request pushes the passcode's expiry out to a full fresh window, including the requests that reuse the existing passcode rather than sending a new one. Nothing caps the total. Someone calling sign up on a loop keeps the same passcode alive indefinitely, which combined with the now-limited guesses per passcode still gives an attacker unbounded fresh passcodes to try against, just not unbounded tries against any single one.
-
-**To decide:** a hard ceiling on how long one passcode can live no matter how often it is renewed, and whether a renewal past that point should issue a fresh passcode instead.
-
-#### 2. Two accounts can verify the same phone number
+#### 1. Two accounts can verify the same phone number
 
 Email is unique across accounts and enforced by the database. Phone number is not — nothing stops two accounts completing sign up on the same number. Customer records in the address book *do* have a phone uniqueness rule, so this reads more like an oversight than a decision.
 
 **To decide:** whether a phone number may belong to more than one account. If not, what the second person is told, and what happens to the accounts already sharing a number today.
 
-#### 3. Opening the phone verification page can destroy a usable passcode
+#### 2. Opening the phone verification page can destroy a usable passcode
 
 Looking up an outstanding phone passcode applies a stricter expiry rule than submitting one does. If the passcode is close enough to expiry to be inside the resend window, the lookup deletes it and reports it as expired — even though submitting that same passcode directly would still have worked.
 
