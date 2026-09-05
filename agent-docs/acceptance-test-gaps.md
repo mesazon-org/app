@@ -129,15 +129,3 @@ Worth noting what the shape of the gap implies: **every mutation except insert a
 The repository and functional layers do cover these, so this is about transport, role gating, and the org-scoping header — the things only an acceptance test sees.
 
 **Where:** `CustomerBookApiSpec`. Follow the matrix the eight existing blocks already use.
-
-## Weak assertion in an existing test
-
-### 13. Re-signup does not prove the code is unchanged
-
-`UserSignUpApiSpec`, `"successfully re-sign up a user already seen user with stages before completion"`.
-
-The test proves no second email is sent (`mailHogClient.readInbox().total shouldBe 1`) and that the expiry moved out (`assert(userOtpRowsAll1.head.expiresAt.value.isBefore(userOtpRowsAll2.head.expiresAt.value))`). But it builds its expected row from `userOtpRowsAll2.head.otp` — the value it is checking — so it cannot detect the code changing.
-
-If a change made the code regenerate while still suppressing the email, the user would be left holding a code that can never work, and this test would stay green. Capture the first code and assert equality instead.
-
-**Fix in place; no new test needed.**
