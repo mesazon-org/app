@@ -6,6 +6,7 @@ import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import fs2.io.net.Network
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
+import io.mesazon.gateway.json.tapir.given
 import io.mesazon.gateway.smithy
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
@@ -409,6 +410,28 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .body(imageBytes.toArray)
       .contentType(MediaType.ApplicationOctetStream)
       .response(asJsonErrorUnit[E])
+      .send(sttpBackend)
+
+  def extractCustomersFromPhotoPost[E: JsonValueCodec](
+      organizationIDOpt: Option[OrganizationID],
+      customerBookPhotoBytes: Chunk[Byte],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, ExtractCustomersResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("extract", "customer-book-photo"))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .body(customerBookPhotoBytes.toArray)
+      .contentType(MediaType.ApplicationOctetStream)
+      .response(asJsonEitherOrFail[E, ExtractCustomersResponse])
       .send(sttpBackend)
 
   def insertCustomerIndividualPost[E: JsonValueCodec](

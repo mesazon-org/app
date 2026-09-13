@@ -2,6 +2,7 @@ package io.mesazon.gateway.tapir
 
 import io.circe.syntax.*
 import io.mesazon.domain.gateway.*
+import io.mesazon.gateway.json.tapir.given
 import io.mesazon.gateway.service.*
 import sttp.apispec.openapi.Info
 import sttp.apispec.openapi.circe.*
@@ -10,6 +11,7 @@ import sttp.model.StatusCode
 import sttp.tapir.CodecFormat
 import sttp.tapir.codec.iron.given
 import sttp.tapir.docs.openapi.*
+import sttp.tapir.json.jsoniter.jsonBody
 import sttp.tapir.ztapir.*
 import zio.*
 
@@ -47,6 +49,23 @@ object FileServiceEndpoints {
       .in(header[ImageOriginalFileName](FileNameHeader))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
       .out(statusCode(StatusCode.Ok))
+      .errorOut(
+        tapirServerErrorOut(
+          NonEmptyChunk(
+            TapirServerError.UnauthorizedError,
+            TapirServerError.ForbiddenError,
+            TapirServerError.BadRequestError,
+            TapirServerError.InternalServerError,
+          )
+        )
+      )
+      .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
+
+  private val extractCustomersFromPhotoPostEndpoint =
+    securedEndpoint.post
+      .in("extract" / "customer-book-photo")
+      .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
+      .out(jsonBody[ExtractCustomersResponse])
       .errorOut(
         tapirServerErrorOut(
           NonEmptyChunk(
@@ -109,11 +128,28 @@ object FileServiceEndpoints {
                 catalogueItemImageByteStream,
               )
           }),
+        extractCustomersFromPhotoPostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
+          authorizationService
+            .auth(
+              accessToken = accessToken,
+              requiresCompletedOnboardStage = true,
+              organizationIDOpt = Some(organizationID),
+              organizationUserRolesAllowedOpt = Some(OrganizationUserRole.adminRoles),
+            )
+            .as(organizationID)
+        }
+          .serverLogic(organizationID => { case customerBookPhotoByteStream =>
+            fileService.extractCustomersFromPhoto(organizationID, customerBookPhotoByteStream)
+          }),
       )
       openApiDocsOpt = Option.when(enableDocs)(
         OpenAPIDocsInterpreter()
           .toOpenAPI(
-            List(uploadOrganizationLogoPostEndpoint, uploadCatalogueItemImagePostEndpoint),
+            List(
+              uploadOrganizationLogoPostEndpoint,
+              uploadCatalogueItemImagePostEndpoint,
+              extractCustomersFromPhotoPostEndpoint,
+            ),
             Info(
               title = "FileService",
               version = "1.0",
