@@ -5,6 +5,7 @@ import io.mesazon.gateway.HttpErrorHandler
 import io.mesazon.gateway.clients.{AIClient, S3ClientOrganizationMedia}
 import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.json.ai.given
+import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
 import io.mesazon.gateway.repository.{CatalogueRepository, OrganizationManagementRepository}
 import io.mesazon.gateway.tapir.TapirTask
 import io.mesazon.gateway.utils.*

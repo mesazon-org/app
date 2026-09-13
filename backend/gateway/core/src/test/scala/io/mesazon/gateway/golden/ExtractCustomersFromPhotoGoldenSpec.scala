@@ -3,7 +3,8 @@ package io.mesazon.gateway.golden
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClient
 import io.mesazon.gateway.config.AIClientConfig
-import io.mesazon.gateway.json.given
+import io.mesazon.gateway.json.ai.given
+import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
 import io.mesazon.gateway.service.FileService
 import io.mesazon.gateway.utils.FileByteStreamScanned
 import io.mesazon.testkit.base.ZWordSpecBase
@@ -16,21 +17,31 @@ import zio.stream.ZStream
   * golden response for that photo across different languages, column namings, and source types.
   *
   * Never calls out for real in CI: `apiKey` ships empty, so every case is canceled rather than hitting the real API
-  * with a blank key. To run for real, fill in a real key below and invoke
-  * this spec directly:
+  * with a blank key. To run for real, fill in a real key below and invoke this spec directly:
   * {{{
   * sbt "gateway-core/testOnly io.mesazon.gateway.golden.ExtractCustomersFromPhotoGoldenSpec"
   * }}}
   */
 class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
 
-  private val apiKey = ""
+  private val apiKey =
+    ""
 
   private def buildAIClient: AIClient = ZIO
     .service[AIClient]
     .provide(
       AIClient.live,
-      ZLayer.succeed(AIClientConfig(scheme = "https", host = "api.openai.com", port = 443, apiKey = apiKey)),
+      ZLayer.succeed(
+        AIClientConfig(
+          scheme = "https",
+          host = "api.openai.com",
+          port = 443,
+          apiKey = apiKey,
+          requestTimeout = Duration.fromSeconds(60),
+          sendMaxRetries = 2,
+          sendRetryDelay = Duration.fromSeconds(1),
+        )
+      ),
       HttpClientZioBackend.layer(),
     )
     .zioValue

@@ -15,7 +15,7 @@ object ai {
 
   private lazy val assistantResponseCodecValue: JsonValueCodec[AssistantResponse] =
     JsonCodecMaker.make[AssistantResponse]
-    
+
   given assistantResponseSchema: Schema[AssistantResponse] = assistantResponseSchemaValue
 
   given assistantResponseCodec: JsonValueCodec[AssistantResponse] = assistantResponseCodecValue

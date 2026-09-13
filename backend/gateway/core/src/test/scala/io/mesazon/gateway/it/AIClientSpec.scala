@@ -7,6 +7,7 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClient
 import io.mesazon.gateway.config.AIClientConfig
 import io.mesazon.gateway.json.ai.given
+import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
 import io.mesazon.gateway.json.{ai, OpenAIJsonSchema}
 import io.mesazon.gateway.utils.FileByteStreamScanned
 import io.mesazon.testkit.base.*
@@ -102,14 +103,14 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
 
         extractedTestResult shouldBe ExtractedTestResult("extracted-value")
 
-        val requestMappings =
+        val extractFromImageRequestMappings =
           wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
 
-        requestMappings.size shouldBe 1
+        extractFromImageRequestMappings.size shouldBe 1
 
-        requestMappings(0).mapping.method shouldBe "POST"
-        requestMappings(0).mapping.url shouldBe "/v1/chat/completions"
-        requestMappings(0).count shouldBe 1
+        extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
+        extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+        extractFromImageRequestMappings(0).count shouldBe 1
       }
 
       "successfully decode a candidate marked as a duplicate with populated extraction notes" in withContext {
@@ -268,7 +269,8 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         }
       }
 
-      "fail once with an UnexpectedError when the AI service rejects the request" in withContext { context =>
+      "fail with an UnexpectedError when the AI service rejects the request after one attempt" in withContext {
+        context =>
         import context.*
 
         val aiClient = ZIO
@@ -298,7 +300,8 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         extractFromImageRequestMappings(0).count shouldBe 1
       }
 
-      "fail after three attempts with an UnexpectedError when the AI connection resets" in withContext { context =>
+      "fail with an UnexpectedError when the AI connection resets after three attempts" in withContext {
+        context =>
         import context.*
 
         val aiClient = ZIO
@@ -317,6 +320,85 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
             imageByteStream,
             SupportedMediaType.JPEG,
             "AI_CLIENT_SPEC_CONNECTION_RESET",
+          )
+          .zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError.message shouldBe "Unable to send message to AI"
+
+        val extractFromImageRequestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+        extractFromImageRequestMappings.size shouldBe 3
+        extractFromImageRequestMappings.foreach { extractFromImageRequestMapping =>
+          extractFromImageRequestMapping.mapping.method shouldBe "POST"
+          extractFromImageRequestMapping.mapping.url shouldBe "/v1/chat/completions"
+          extractFromImageRequestMapping.count shouldBe 3
+        }
+      }
+
+      "retry a rate-limited request and eventually decode the response while reading the image once" in withContext {
+        context =>
+          import context.*
+
+          val aiClient = ZIO
+            .service[AIClient]
+            .provide(
+              AIClient.live,
+              ZLayer.succeed(aiClientConfig),
+              HttpClientZioBackend.layer(),
+            )
+            .zioValue
+
+          val imageReadCountRef = Ref.make(0).zioValue
+          val imageByteStream   = FileByteStreamScanned(
+            ZStream
+              .fromZIO(imageReadCountRef.updateAndGet(_ + 1))
+              .flatMap(_ => ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
+          )
+
+          val extractedTestResult = aiClient
+            .extractFromImage[ExtractedTestResult](
+              imageByteStream,
+              SupportedMediaType.JPEG,
+              "AI_CLIENT_SPEC_RETRY_SUCCESS",
+            )
+            .zioValue
+
+          extractedTestResult shouldBe ExtractedTestResult("retried-value")
+          imageReadCountRef.refValue shouldBe 1
+
+          val extractFromImageRequestMappings =
+            wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+          extractFromImageRequestMappings.size shouldBe 3
+          extractFromImageRequestMappings.foreach { extractFromImageRequestMapping =>
+            extractFromImageRequestMapping.mapping.method shouldBe "POST"
+            extractFromImageRequestMapping.mapping.url shouldBe "/v1/chat/completions"
+            extractFromImageRequestMapping.count shouldBe 3
+          }
+      }
+
+      "fail with an UnexpectedError when each response times out after three attempts" in withContext {
+        context =>
+        import context.*
+
+        val aiClient = ZIO
+          .service[AIClient]
+          .provide(
+            AIClient.live,
+            ZLayer.succeed(aiClientConfig),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
+
+        val serviceError = aiClient
+          .extractFromImage[ExtractedTestResult](
+            imageByteStream,
+            SupportedMediaType.JPEG,
+            "AI_CLIENT_SPEC_TIMEOUT",
           )
           .zioError
 
