@@ -237,107 +237,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         )
       }
 
-      "fail with an UnexpectedError when the AI service returns an error" in withContext { context =>
-        import context.*
-
-        val aiClient = ZIO
-          .service[AIClient]
-          .provide(
-            AIClient.live,
-            ZLayer.succeed(aiClientConfig),
-            HttpClientZioBackend.layer(),
-          )
-          .zioValue
-
-        val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-
-        val serviceError = aiClient
-          .extractFromImage[ExtractedTestResult](imageByteStream, SupportedMediaType.JPEG, "AI_CLIENT_SPEC_ERROR")
-          .zioError
-
-        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
-        serviceError.message shouldBe "Unable to send message to AI"
-
-        val extractFromImageRequestMappings =
-          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
-
-        extractFromImageRequestMappings.size shouldBe 3
-        extractFromImageRequestMappings.foreach { extractFromImageRequestMapping =>
-          extractFromImageRequestMapping.mapping.method shouldBe "POST"
-          extractFromImageRequestMapping.mapping.url shouldBe "/v1/chat/completions"
-          extractFromImageRequestMapping.count shouldBe 3
-        }
-      }
-
-      "fail with an UnexpectedError when the AI service rejects the request after one attempt" in withContext {
-        context =>
-        import context.*
-
-        val aiClient = ZIO
-          .service[AIClient]
-          .provide(
-            AIClient.live,
-            ZLayer.succeed(aiClientConfig),
-            HttpClientZioBackend.layer(),
-          )
-          .zioValue
-
-        val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-
-        val serviceError = aiClient
-          .extractFromImage[ExtractedTestResult](imageByteStream, SupportedMediaType.JPEG, "AI_CLIENT_SPEC_BAD_REQUEST")
-          .zioError
-
-        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
-        serviceError.message shouldBe "Unable to send message to AI"
-
-        val extractFromImageRequestMappings =
-          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
-
-        extractFromImageRequestMappings.size shouldBe 1
-        extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
-        extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
-        extractFromImageRequestMappings(0).count shouldBe 1
-      }
-
-      "fail with an UnexpectedError when the AI connection resets after three attempts" in withContext {
-        context =>
-        import context.*
-
-        val aiClient = ZIO
-          .service[AIClient]
-          .provide(
-            AIClient.live,
-            ZLayer.succeed(aiClientConfig),
-            HttpClientZioBackend.layer(),
-          )
-          .zioValue
-
-        val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-
-        val serviceError = aiClient
-          .extractFromImage[ExtractedTestResult](
-            imageByteStream,
-            SupportedMediaType.JPEG,
-            "AI_CLIENT_SPEC_CONNECTION_RESET",
-          )
-          .zioError
-
-        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
-        serviceError.message shouldBe "Unable to send message to AI"
-
-        val extractFromImageRequestMappings =
-          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
-
-        extractFromImageRequestMappings.size shouldBe 3
-        extractFromImageRequestMappings.foreach { extractFromImageRequestMapping =>
-          extractFromImageRequestMapping.mapping.method shouldBe "POST"
-          extractFromImageRequestMapping.mapping.url shouldBe "/v1/chat/completions"
-          extractFromImageRequestMapping.count shouldBe 3
-        }
-      }
-
-      "retry a rate-limited request and eventually decode the response while reading the image once" in withContext {
+      "successfully retry a rate-limited request and eventually decode the response while reading the image once" in withContext {
         context =>
           import context.*
 
@@ -379,8 +279,140 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           }
       }
 
-      "fail with an UnexpectedError when each response times out after three attempts" in withContext {
+      "fail with an UnexpectedError when the image stream cannot be read before sending" in withContext { context =>
+        import context.*
+
+        val aiClient = ZIO
+          .service[AIClient]
+          .provide(
+            AIClient.live,
+            ZLayer.succeed(aiClientConfig),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val imageByteStream = FileByteStreamScanned(ZStream.fail(new RuntimeException("image read failed")))
+
+        val serviceError = aiClient
+          .extractFromImage[ExtractedTestResult](
+            imageByteStream,
+            SupportedMediaType.JPEG,
+            "AI_CLIENT_SPEC_STREAM_READ_FAILURE",
+          )
+          .zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError.message shouldBe "Failed to read image for AI extraction"
+
+        val extractFromImageRequestMappings = wiremockClient.requestsDetails.zioValue
+
+        extractFromImageRequestMappings shouldBe Seq.empty
+      }
+
+      "fail with an UnexpectedError when the AI service returns an error" in withContext { context =>
+        import context.*
+
+        val aiClient = ZIO
+          .service[AIClient]
+          .provide(
+            AIClient.live,
+            ZLayer.succeed(aiClientConfig),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
+
+        val serviceError = aiClient
+          .extractFromImage[ExtractedTestResult](imageByteStream, SupportedMediaType.JPEG, "AI_CLIENT_SPEC_ERROR")
+          .zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError.message shouldBe "Unable to send message to AI"
+
+        val extractFromImageRequestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+        extractFromImageRequestMappings.size shouldBe 3
+        extractFromImageRequestMappings.foreach { extractFromImageRequestMapping =>
+          extractFromImageRequestMapping.mapping.method shouldBe "POST"
+          extractFromImageRequestMapping.mapping.url shouldBe "/v1/chat/completions"
+          extractFromImageRequestMapping.count shouldBe 3
+        }
+      }
+
+      "fail with an UnexpectedError when the AI service rejects the request after one attempt" in withContext {
         context =>
+          import context.*
+
+          val aiClient = ZIO
+            .service[AIClient]
+            .provide(
+              AIClient.live,
+              ZLayer.succeed(aiClientConfig),
+              HttpClientZioBackend.layer(),
+            )
+            .zioValue
+
+          val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
+
+          val serviceError = aiClient
+            .extractFromImage[ExtractedTestResult](
+              imageByteStream,
+              SupportedMediaType.JPEG,
+              "AI_CLIENT_SPEC_BAD_REQUEST",
+            )
+            .zioError
+
+          serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+          serviceError.message shouldBe "Unable to send message to AI"
+
+          val extractFromImageRequestMappings =
+            wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+          extractFromImageRequestMappings.size shouldBe 1
+          extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
+          extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+          extractFromImageRequestMappings(0).count shouldBe 1
+      }
+
+      "fail with an UnexpectedError when the AI connection resets after three attempts" in withContext { context =>
+        import context.*
+
+        val aiClient = ZIO
+          .service[AIClient]
+          .provide(
+            AIClient.live,
+            ZLayer.succeed(aiClientConfig),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
+
+        val serviceError = aiClient
+          .extractFromImage[ExtractedTestResult](
+            imageByteStream,
+            SupportedMediaType.JPEG,
+            "AI_CLIENT_SPEC_CONNECTION_RESET",
+          )
+          .zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError.message shouldBe "Unable to send message to AI"
+
+        val extractFromImageRequestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+        extractFromImageRequestMappings.size shouldBe 3
+        extractFromImageRequestMappings.foreach { extractFromImageRequestMapping =>
+          extractFromImageRequestMapping.mapping.method shouldBe "POST"
+          extractFromImageRequestMapping.mapping.url shouldBe "/v1/chat/completions"
+          extractFromImageRequestMapping.count shouldBe 3
+        }
+      }
+
+      "fail with an UnexpectedError when each response times out after three attempts" in withContext { context =>
         import context.*
 
         val aiClient = ZIO
