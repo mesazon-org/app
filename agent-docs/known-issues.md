@@ -11,6 +11,16 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 | Medium | CI, delivery, or a non-critical workflow is repeatedly blocked or unreliable |
 | Low | Harmless noise or a narrow inconvenience with no behavior or delivery impact |
 
+## Scala 3.9.0 bump makes Smithy4s-generated sources fail the build on a fatal warning
+
+- **Status:** Resolved 2026-09-14
+- **Severity:** Medium
+- **Signature:** After bumping `scalaVersion` to `3.9.0` (and `smithy4s-sbt-codegen` to `0.19.12`), compilation of `backendGatewayCore` fails on a warning-turned-error inside Smithy4s-generated sources under `src_managed`, diagnostic id `E230`. The same code compiled warning-free on the prior Scala/Smithy4s versions; no hand-written source is implicated.
+- **Cause:** `project/Settings.scala`'s `ScalaCompiler` settings apply `-Wunused:all` (via `tpolecatScalacOptions`) to every backend module, including the one with `Smithy4sCodegenPlugin` enabled, so Smithy4s's generated code is compiled under the same strict flags as hand-written code. `sbt-tpolecat` escalates warnings to fatal errors in its CI-detected mode. Scala 3.9.0 newly raises the `E230` diagnostic against Smithy4s's generated output, and being fatal, it breaks the build.
+- **Fix:** Added a narrowly-scoped suppression to `project/Settings.scala`'s main `tpolecatScalacOptions`, matching Smithy4s's own guidance for this warning: `-Wconf:id=E230&src=.*/src_managed/.*:s`. Scoped to `src_managed` only — it does not weaken `-Wunused:all` or fatal-warnings for hand-written code.
+- **Prevention:** After a Scala or Smithy4s version bump, if a fatal warning appears only in generated (`src_managed`) sources, suppress the specific diagnostic id scoped to `src_managed`, rather than relaxing `-Wunused:all` or tpolecat's fatal-warnings mode globally.
+- **Verify:** `sbt "clean; compile"` succeeds with no `E230` failure; `sbt "runLint"` passes; `sbt "gateway-build"` (or `checkLint; testFull` on the affected aggregate) reproduces the CI-equivalent fatal-warnings path and passes.
+
 ## Customer batch (businesses/individuals) closes HTTP connection
 
 - **Status:** Resolved 2026-08-24 (recurred on `/insert/customer-individuals` after the 2026-07-29 businesses fix; root cause now fixed at the shared generator)

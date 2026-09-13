@@ -56,6 +56,17 @@ object Settings {
   private val discardNonUnitAssertion =
     ScalacOptions.other("-Wconf:msg=discarded non-Unit value of type:s")
 
+  /** Twirl-generated `.template.scala` sources import things they don't end up using. */
+  private val ignoreTwirlUnusedImport =
+    ScalacOptions.other("-Wconf:src=.*html&msg=unused import:s")
+
+  /** Silence a Scala 3.9 diagnostic that now fires on Smithy4s-generated code (src_managed): the generated `$ordinal`
+    * members trip "identifier should not contain `$`". Scoped to generated sources only — do not broaden to
+    * hand-written code or to -Wunused:all itself.
+    */
+  private val ignoreGeneratedCodeWarnings =
+    ScalacOptions.other("-Wconf:id=E230&src=.*/src_managed/.*:s")
+
   lazy val ScalaCompiler = Def.settings(
     tpolecatScalacOptions ++= Set(
       ScalacOptions.other("-no-indent"),
@@ -63,7 +74,8 @@ object Settings {
       ScalacOptions.other("--preview"),
       ScalacOptions.other("-old-syntax"),
       ScalacOptions.other("-Wunused:all"),
-      ScalacOptions.other("-Wconf:src=.*html&msg=unused import:s"),
+      ignoreTwirlUnusedImport,
+      ignoreGeneratedCodeWarnings,
     ),
     Test / tpolecatScalacOptions ++= Set(
       ignoreNotUsedAssertion,
