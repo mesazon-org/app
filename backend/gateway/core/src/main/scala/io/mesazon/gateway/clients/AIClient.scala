@@ -3,80 +3,56 @@ package io.mesazon.gateway.clients
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import io.mesazon.domain.gateway.{ServiceError, SupportedMediaType}
 import io.mesazon.gateway.config.AIClientConfig
+import io.mesazon.gateway.json.OpenAIJsonSchema
 import io.mesazon.gateway.utils.FileByteStreamScanned
 import sttp.ai.openai.OpenAI
+import sttp.ai.openai.OpenAIExceptions.OpenAIException
 import sttp.ai.openai.requests.completions.chat.ChatRequestBody.{ChatBody, ChatCompletionModel, ResponseFormat}
 import sttp.ai.openai.requests.completions.chat.message.*
-import sttp.apispec.{AnySchema, Schema as ApiSchema, SchemaLike, SchemaType}
-import sttp.client4.Backend
-import sttp.tapir.Schema
-import sttp.tapir.docs.apispec.schema.TapirSchemaToJsonSchema
+import sttp.client4.{Backend, ResponseException, SttpClientException}
+import sttp.model.StatusCode
 import zio.*
 
 import java.util.Base64
+import scala.jdk.DurationConverters.JavaDurationOps
 
 trait AIClient {
   def extractFromImage[A](
       imageByteStream: FileByteStreamScanned,
       supportedMediaType: SupportedMediaType,
       instructions: String,
-  )(using Schema[A], JsonValueCodec[A]): IO[ServiceError, A]
+  )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
 }
 
 object AIClient {
 
-  private[clients] def responseSchema[A](using schema: Schema[A]): ApiSchema =
-    normalizeSchema(
-      TapirSchemaToJsonSchema(
-        schema,
-        markOptionsAsNullable = true,
-      )
-    )
-
-  private def normalizeSchemaLike(schemaLike: SchemaLike): SchemaLike = schemaLike match {
-    case schema: ApiSchema    => normalizeSchema(schema)
-    case anySchema: AnySchema => anySchema
-  }
-
-  private def normalizeSchema(schema: ApiSchema): ApiSchema = {
-    val isObject = schema.`type`.exists(_.contains(SchemaType.Object))
-
-    schema.copy(
-      $schema = None,
-      $defs = schema.$defs.map(_.map((name, nested) => name -> normalizeSchemaLike(nested))),
-      default = None,
-      allOf = schema.allOf.map(normalizeSchemaLike),
-      anyOf = schema.anyOf.map(normalizeSchemaLike),
-      oneOf = schema.oneOf.map(normalizeSchemaLike),
-      not = schema.not.map(normalizeSchemaLike),
-      `if` = schema.`if`.map(normalizeSchemaLike),
-      `then` = schema.`then`.map(normalizeSchemaLike),
-      `else` = schema.`else`.map(normalizeSchemaLike),
-      dependentSchemas = schema.dependentSchemas.map((name, nested) => name -> normalizeSchemaLike(nested)),
-      prefixItems = schema.prefixItems.map(_.map(normalizeSchemaLike)),
-      items = schema.items.map(normalizeSchemaLike),
-      contains = schema.contains.map(normalizeSchemaLike),
-      unevaluatedItems = schema.unevaluatedItems.map(normalizeSchemaLike),
-      required = if (isObject) schema.properties.keys.toList else schema.required,
-      properties = schema.properties.map((name, nested) => name -> normalizeSchemaLike(nested)),
-      patternProperties = schema.patternProperties.map((pattern, nested) => pattern -> normalizeSchemaLike(nested)),
-      additionalProperties =
-        if (isObject) Some(AnySchema.Nothing) else schema.additionalProperties.map(normalizeSchemaLike),
-      propertyNames = schema.propertyNames.map(normalizeSchemaLike),
-      unevaluatedProperties = schema.unevaluatedProperties.map(normalizeSchemaLike),
-    )
-  }
-
   private final class AIClientImpl(
       openAI: OpenAI,
       backend: Backend[Task],
+      aiClientConfig: AIClientConfig,
   ) extends AIClient {
 
-    private def responseFormat[A](using schema: Schema[A]): ResponseFormat.JsonSchema =
+    private def isRetryableSendError(error: Throwable): Boolean = error match {
+      case _: SttpClientException.ResponseHandlingException[?] => false
+      case _: SttpClientException.ConnectException             => true
+      case _: SttpClientException.TimeoutException             => true
+      case _: SttpClientException.ReadException                => true
+      case openAIException: OpenAIException                    =>
+        isRetryableSendError(openAIException.cause)
+      case unexpectedStatusCode: ResponseException.UnexpectedStatusCode[?] =>
+        unexpectedStatusCode.response.code match {
+          case StatusCode.RequestTimeout | StatusCode.Conflict | StatusCode.TooManyRequests => true
+          case statusCode if statusCode.code >= 500 && statusCode.code < 600                => true
+          case _                                                                            => false
+        }
+      case _ => false
+    }
+
+    private def responseFormat[A](using schema: OpenAIJsonSchema[A]): ResponseFormat.JsonSchema =
       ResponseFormat.JsonSchema(
         name = "ai_client_response",
         strict = Some(true),
-        schema = Some(responseSchema[A]),
+        schema = Some(schema.schema),
         description = None,
       )
 
@@ -84,7 +60,7 @@ object AIClient {
         imageByteStream: FileByteStreamScanned,
         supportedMediaType: SupportedMediaType,
         instructions: String,
-    )(using Schema[A], JsonValueCodec[A]): IO[ServiceError, A] =
+    )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
       for {
         imageBytes <- imageByteStream.value.runCollect
           .map(_.toArray)
@@ -111,9 +87,15 @@ object AIClient {
               responseFormat = Some(responseFormat),
             )
           )
+          .readTimeout(aiClientConfig.requestTimeout.toScala)
           .send(backend)
           .map(_.body)
           .absolve
+          .retry(
+            Schedule.recurWhile[Throwable](isRetryableSendError) &&
+              Schedule.recurs(aiClientConfig.sendMaxRetries) &&
+              Schedule.exponential(aiClientConfig.sendRetryDelay)
+          )
           .mapError(error =>
             ServiceError.InternalServerError.UnexpectedError("Unable to send message to AI", Some(error))
           )
@@ -126,9 +108,14 @@ object AIClient {
       } yield result
   }
 
-  private def observed(client: AIClient): AIClient = client
+  val live = ZLayer {
+    for {
+      aiClientConfig <- ZIO.service[AIClientConfig]
+      backend        <- ZIO.service[Backend[Task]]
+    } yield observed(
+      new AIClientImpl(new OpenAI(aiClientConfig.apiKey, aiClientConfig.baseUri), backend, aiClientConfig)
+    )
+  }
 
-  val live = ZLayer(
-    ZIO.service[AIClientConfig].map(aiClientConfig => new OpenAI(aiClientConfig.apiKey, aiClientConfig.baseUri))
-  ) >>> ZLayer.derive[AIClientImpl] >>> ZLayer.fromFunction(observed)
+  private def observed(client: AIClient): AIClient = client
 }

@@ -6,7 +6,7 @@ import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import fs2.io.net.Network
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
-import io.mesazon.gateway.json.given
+import io.mesazon.gateway.json.tapir.given
 import io.mesazon.gateway.smithy
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
