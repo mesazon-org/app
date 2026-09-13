@@ -1,6 +1,6 @@
 package io.mesazon.gateway.unit.utils
 
-import io.mesazon.domain.gateway.{ServiceError, SupportedMediaTypes}
+import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.utils.{FileByteStreamScanned, ImageProcessing}
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
@@ -34,7 +34,7 @@ class ImageProcessingSpec extends ZWordSpecBase {
           .scoped(for {
             normalizeResult <- imageProcessing.normalize(
               FileByteStreamScanned(logoOriginalByteStream),
-              SupportedMediaTypes.images,
+              SupportedMediaType.images,
             )
           } yield {
             val logoOriginalBytes   = normalizeResult.imageOriginalByteStream.value.runCollect.zioValue
@@ -58,7 +58,7 @@ class ImageProcessingSpec extends ZWordSpecBase {
           .scoped(for {
             normalizeResult <- imageProcessing.normalize(
               FileByteStreamScanned(logoOriginalByteStream),
-              SupportedMediaTypes.images,
+              SupportedMediaType.images,
             )
           } yield {
             val logoOriginalBytes   = normalizeResult.imageOriginalByteStream.value.runCollect.zioValue
@@ -82,7 +82,7 @@ class ImageProcessingSpec extends ZWordSpecBase {
           .scoped(for {
             normalizeResult <- imageProcessing.normalize(
               FileByteStreamScanned(logoOriginalByteStream),
-              SupportedMediaTypes.images,
+              SupportedMediaType.images,
             )
           } yield {
             val logoOriginalBytes   = normalizeResult.imageOriginalByteStream.value.runCollect.zioValue
@@ -104,7 +104,7 @@ class ImageProcessingSpec extends ZWordSpecBase {
           .scoped(
             imageProcessing.normalize(
               FileByteStreamScanned(ZStream.fromResource("assets/malformed.png")),
-              SupportedMediaTypes.images,
+              SupportedMediaType.images,
             )
           )
           .zioEither

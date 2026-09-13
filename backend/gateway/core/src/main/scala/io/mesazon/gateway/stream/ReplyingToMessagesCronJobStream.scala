@@ -5,7 +5,7 @@ import io.mesazon.domain.gateway.{AssistantResponse, ServiceError}
 import io.mesazon.domain.waha
 import io.mesazon.gateway.clients.OpenAIClient
 import io.mesazon.gateway.config.ReplyingToMessagesCronJobConfig
-import io.mesazon.gateway.json.given
+import io.mesazon.gateway.json.ai.given
 import io.mesazon.gateway.repository.WahaRepository
 import io.mesazon.waha.WahaClient
 import sttp.ai.openai.requests.completions.chat.message.{Content, Message}

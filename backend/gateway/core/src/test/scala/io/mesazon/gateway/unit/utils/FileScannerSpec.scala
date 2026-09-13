@@ -1,6 +1,6 @@
 package io.mesazon.gateway.unit.utils
 
-import io.mesazon.domain.gateway.{ServiceError, SupportedMediaTypes}
+import io.mesazon.domain.gateway.{FileBytesSize, ServiceError, SupportedMediaType}
 import io.mesazon.gateway.utils.FileScanner
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
@@ -10,24 +10,36 @@ class FileScannerSpec extends ZWordSpecBase {
 
   "FileScanner" when {
     "scan" should {
-      "return a stream of the file bytes when it is a supported type within the size limit" in {
+      "return a stream of the file bytes, the detected mime type, and the file size when it is a supported type within the size limit" in {
         val fileScanner = ZIO
           .service[FileScanner]
           .provide(FileScanner.live)
           .zioValue
 
-        val maxByteSize5Mb = 5 * 1024 * 1024L
-        val fileByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val maxByteSize5Mb        = 5 * 1024 * 1024L
+        val fileByteStream        = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val fileBytesSizeExpected = FileBytesSize.assume(fileByteStream.runCount.zioValue)
 
-        val scannedFileBytes = ZIO
+        val scanTestResult = ZIO
           .scoped(
             fileScanner
-              .scan(fileByteStream, SupportedMediaTypes.images, maxByteSize5Mb)
-              .flatMap(_.value.runCollect)
+              .scan(fileByteStream, SupportedMediaType.images, maxByteSize5Mb)
+              .flatMap { fileScannerScanOutput =>
+                fileScannerScanOutput.fileByteStreamScanned.value.runCollect
+                  .map(scannedFileBytes =>
+                    (
+                      supportedMediaType = fileScannerScanOutput.supportedMediaType,
+                      fileBytesSize = fileScannerScanOutput.fileBytesSize,
+                      scannedFileBytes = scannedFileBytes,
+                    )
+                  )
+              }
           )
           .zioValue
 
-        scannedFileBytes shouldBe fileByteStream.runCollect.zioValue
+        scanTestResult.supportedMediaType shouldBe SupportedMediaType.JPEG
+        scanTestResult.fileBytesSize shouldBe fileBytesSizeExpected
+        scanTestResult.scannedFileBytes shouldBe fileByteStream.runCollect.zioValue
       }
 
       "fail when the file size exceeds the maximum bytes allowed" in {
@@ -40,7 +52,7 @@ class FileScannerSpec extends ZWordSpecBase {
         val fileByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
 
         val serviceError = ZIO
-          .scoped(fileScanner.scan(fileByteStream, SupportedMediaTypes.images, maxByteSize1kb))
+          .scoped(fileScanner.scan(fileByteStream, SupportedMediaType.images, maxByteSize1kb))
           .zioError
 
         serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
@@ -58,7 +70,7 @@ class FileScannerSpec extends ZWordSpecBase {
         val maxByteSize    = fileByteStream.runCount.zioValue - 1
 
         val serviceError = ZIO
-          .scoped(fileScanner.scan(fileByteStream, SupportedMediaTypes.images, maxByteSize))
+          .scoped(fileScanner.scan(fileByteStream, SupportedMediaType.images, maxByteSize))
           .zioError
 
         serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
@@ -76,7 +88,7 @@ class FileScannerSpec extends ZWordSpecBase {
         val fileByteStream = ZStream.fromResource("compose/s3.yaml")
 
         val serviceError = ZIO
-          .scoped(fileScanner.scan(fileByteStream, SupportedMediaTypes.images, maxByteSize5Mb))
+          .scoped(fileScanner.scan(fileByteStream, SupportedMediaType.images, maxByteSize5Mb))
           .zioError
 
         serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
@@ -94,7 +106,7 @@ class FileScannerSpec extends ZWordSpecBase {
         val fileByteStream = ZStream.fromResource("assets/malformed.png")
 
         val serviceError = ZIO
-          .scoped(fileScanner.scan(fileByteStream, SupportedMediaTypes.images, maxByteSize5Mb))
+          .scoped(fileScanner.scan(fileByteStream, SupportedMediaType.images, maxByteSize5Mb))
           .zioError
 
         serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
@@ -112,7 +124,7 @@ class FileScannerSpec extends ZWordSpecBase {
         val fileByteStream = ZStream.fromResource("compose/s3.yaml")
 
         val serviceError = ZIO
-          .scoped(fileScanner.scan(fileByteStream, SupportedMediaTypes.images, maxByteSize1b))
+          .scoped(fileScanner.scan(fileByteStream, SupportedMediaType.images, maxByteSize1b))
           .zioError
 
         serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(

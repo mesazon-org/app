@@ -185,7 +185,12 @@ Client method requirements:
 - unit responses use `asJsonErrorUnit`;
 - value responses use `asJsonEitherOrFail`;
 - request and response codecs live beside the other `GatewayClient` codecs;
-- every success and error body used by the spec has a codec.
+- every success and error body used by the spec has a codec;
+- a response type that is the same domain type the production server encodes (not a separate generated Smithy transport type) reuses the production `given` codec directly instead of a duplicate hand-rolled one.
+
+## Acceptance-level stubs for an external dependency the test can't fully control
+
+An endpoint that calls out to an external/AI client with server-owned request content (a fixed prompt, for example) can't be driven the same way its own client-level integration spec (see [External client](external-client.md)) is: the acceptance test has no parameter to plant a per-scenario marker in that content. When the dependency's stub mechanism has no dynamic per-test configuration (e.g. WireMock's static mapping files), add one additional, marker-independent stub matching only on the substrings every real request of that shape carries, at a lower priority (WireMock: a higher priority number) than the client spec's marker-specific stubs, so it only ever matches the real, server-generated request and never competes with the client spec's own scenarios sharing the same backing container/image.
 
 ## Assertions
 
@@ -193,6 +198,7 @@ Client method requirements:
 - Extract `Option`/`Either` values with `OptionValues`/`EitherValues` (`.value`, `.left.value`) instead of a separate `isDefined`/`isRight` check followed by `.get` — one call, and scalatest fails with a readable message instead of a bare `NoSuchElementException`. A bare `isDefined`/`isRight`/`isLeft` boolean assertion is fine on its own when nothing inside is ever unwrapped afterward (e.g. proving an object is absent from S3).
 - Inspect complete database/external state, not only the changed field.
 - After rejection, assert every prohibited DB/email/storage effect is absent.
+- For an endpoint whose entire contract is "nothing is stored" (a read-only extraction/preview step, for example), assert the storage state explicitly in the happy-path test too, not only in the rejection cases — the success path is the one that actually exercises real returned data flowing through the stack, so it is the most meaningful place to prove none of it leaked into persistence.
 - Assert order only when contractual; otherwise compare order-insensitively.
 - Control IDs/times when their values or ordering matter.
 - Missing referenced rows follow the feature's documented policy; assert the exact status and resulting state.
@@ -232,3 +238,5 @@ sbt "runLint"
 ```
 
 When build tooling fails before the tests start, match the signature and workaround in [Known issues](../known-issues.md). A packaging failure is not an acceptance-test result; rerun until the intended suite reports a non-zero test count.
+
+For a focused nested spec, use the standalone-runner selection and invocation-only working-directory setting in [Known issues](../known-issues.md#focused-nested-acceptance-selection-executes-no-tests). A `testOnly` parent with `-z` can select zero tests; the verified nested file-suite selection runs all 30 file API cases, including photo extraction.

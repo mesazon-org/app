@@ -29,6 +29,10 @@ Reusable rules for routes Smithy cannot express. Related: [Smithy](smithy.md), [
 - Separate fallback schema for unknown-at-definition-time paths such as decode failure.
 - Codec round-trips by stable code, not display/schema name; unknown code fails.
 
+## Success-body schema derivation
+
+`Schema.derived[T]` on a deeply nested `T` (a response type whose fields are themselves case classes several levels deep, e.g. for structured AI output) can fail to resolve an inner collection member (`Could not find Schema for type List[Inner]`) even when every leaf type has an Iron/tapir codec. Add explicit `Schema.derived[_]` givens bottom-up — leaf case classes first, then each wrapping type, then the top-level response — rather than assuming one top-level derivation call will walk the whole tree; this is a macro-resolution-order issue, not a missing codec.
+
 ## Entity limits
 
 - Configure its entity-size limit separately from the primary transport; keep the route constant and config value synchronized.

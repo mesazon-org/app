@@ -1,8 +1,9 @@
 package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.clients.S3ClientOrganizationMedia
+import io.mesazon.gateway.clients.{AIClient, S3ClientOrganizationMedia}
 import io.mesazon.gateway.config.FileServiceConfig
+import io.mesazon.gateway.mock.Mocks
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.*
@@ -44,11 +45,19 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
         inSequence(
           fileScannerMock.scan
-            .expects(organizationLogoImageByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
-            .returns(ZIO.succeed(scannedByteStream))
+            .expects(organizationLogoImageByteStream, SupportedMediaType.images, fileServiceConfig.maxUploadBytes)
+            .returns(
+              ZIO.succeed(
+                (
+                  fileByteStreamScanned = scannedByteStream,
+                  supportedMediaType = SupportedMediaType.JPEG,
+                  fileBytesSize = FileBytesSize.assume(1L),
+                )
+              )
+            )
             .once(),
           imageProcessingMock.normalize
-            .expects(scannedByteStream, SupportedMediaTypes.images)
+            .expects(scannedByteStream, SupportedMediaType.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
           s3ClientOrganizationMediaMock.uploadImageOrganizationLogo
@@ -77,7 +86,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .once(),
         )
 
-        val fileService = buildFileService
+        val fileService = buildFileService(aiClientMock)
 
         val response = fileService
           .uploadOrganizationLogo(
@@ -99,12 +108,12 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
         inSequence(
           fileScannerMock.scan
-            .expects(organizationLogoImageByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
+            .expects(organizationLogoImageByteStream, SupportedMediaType.images, fileServiceConfig.maxUploadBytes)
             .returns(ZIO.fail(scanError))
             .once()
         )
 
-        val fileService = buildFileService
+        val fileService = buildFileService(aiClientMock)
 
         val serviceError = fileService
           .uploadOrganizationLogo(
@@ -127,16 +136,24 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
         inSequence(
           fileScannerMock.scan
-            .expects(organizationLogoImageByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
-            .returns(ZIO.succeed(scannedByteStream))
+            .expects(organizationLogoImageByteStream, SupportedMediaType.images, fileServiceConfig.maxUploadBytes)
+            .returns(
+              ZIO.succeed(
+                (
+                  fileByteStreamScanned = scannedByteStream,
+                  supportedMediaType = SupportedMediaType.JPEG,
+                  fileBytesSize = FileBytesSize.assume(1L),
+                )
+              )
+            )
             .once(),
           imageProcessingMock.normalize
-            .expects(scannedByteStream, SupportedMediaTypes.images)
+            .expects(scannedByteStream, SupportedMediaType.images)
             .returns(ZIO.fail(normalizeError))
             .once(),
         )
 
-        val fileService = buildFileService
+        val fileService = buildFileService(aiClientMock)
 
         val serviceError = fileService
           .uploadOrganizationLogo(
@@ -164,11 +181,19 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
         inSequence(
           fileScannerMock.scan
-            .expects(organizationLogoImageByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
-            .returns(ZIO.succeed(scannedByteStream))
+            .expects(organizationLogoImageByteStream, SupportedMediaType.images, fileServiceConfig.maxUploadBytes)
+            .returns(
+              ZIO.succeed(
+                (
+                  fileByteStreamScanned = scannedByteStream,
+                  supportedMediaType = SupportedMediaType.JPEG,
+                  fileBytesSize = FileBytesSize.assume(1L),
+                )
+              )
+            )
             .once(),
           imageProcessingMock.normalize
-            .expects(scannedByteStream, SupportedMediaTypes.images)
+            .expects(scannedByteStream, SupportedMediaType.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
           s3ClientOrganizationMediaMock.uploadImageOrganizationLogo
@@ -177,7 +202,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .once(),
         )
 
-        val fileService = buildFileService
+        val fileService = buildFileService(aiClientMock)
 
         val serviceError = fileService
           .uploadOrganizationLogo(
@@ -221,11 +246,19 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
         inSequence(
           fileScannerMock.scan
-            .expects(organizationLogoImageByteStream, SupportedMediaTypes.images, fileServiceConfig.maxUploadBytes)
-            .returns(ZIO.succeed(scannedByteStream))
+            .expects(organizationLogoImageByteStream, SupportedMediaType.images, fileServiceConfig.maxUploadBytes)
+            .returns(
+              ZIO.succeed(
+                (
+                  fileByteStreamScanned = scannedByteStream,
+                  supportedMediaType = SupportedMediaType.JPEG,
+                  fileBytesSize = FileBytesSize.assume(1L),
+                )
+              )
+            )
             .once(),
           imageProcessingMock.normalize
-            .expects(scannedByteStream, SupportedMediaTypes.images)
+            .expects(scannedByteStream, SupportedMediaType.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
           s3ClientOrganizationMediaMock.uploadImageOrganizationLogo
@@ -254,7 +287,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .once(),
         )
 
-        val fileService = buildFileService
+        val fileService = buildFileService(aiClientMock)
 
         val serviceError = fileService
           .uploadOrganizationLogo(
@@ -311,13 +344,21 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
-              SupportedMediaTypes.images,
+              SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
-            .returns(ZIO.succeed(scannedByteStream))
+            .returns(
+              ZIO.succeed(
+                (
+                  fileByteStreamScanned = scannedByteStream,
+                  supportedMediaType = SupportedMediaType.JPEG,
+                  fileBytesSize = FileBytesSize.assume(1L),
+                )
+              )
+            )
             .once(),
           imageProcessingMock.normalize
-            .expects(scannedByteStream, SupportedMediaTypes.images)
+            .expects(scannedByteStream, SupportedMediaType.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
           s3ClientOrganizationMediaMock.uploadImageCatalogueItem
@@ -337,7 +378,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .once(),
         )
 
-        val fileService = buildFileService
+        val fileService = buildFileService(aiClientMock)
 
         val response = fileService
           .uploadCatalogueItemImage(
@@ -364,7 +405,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .once()
         )
 
-        val fileService = buildFileService
+        val fileService = buildFileService(aiClientMock)
 
         val serviceError = fileService
           .uploadCatalogueItemImage(
@@ -397,7 +438,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .once()
         )
 
-        val fileService = buildFileService
+        val fileService = buildFileService(aiClientMock)
 
         val serviceError = fileService
           .uploadCatalogueItemImage(
@@ -424,7 +465,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .once()
         )
 
-        val fileService = buildFileService
+        val fileService = buildFileService(aiClientMock)
 
         val serviceError = fileService
           .uploadCatalogueItemImage(
@@ -460,14 +501,14 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
-              SupportedMediaTypes.images,
+              SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
             .returns(ZIO.fail(scanError))
             .once(),
         )
 
-        val fileService = buildFileService
+        val fileService = buildFileService(aiClientMock)
 
         val serviceError = fileService
           .uploadCatalogueItemImage(
@@ -505,18 +546,26 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
-              SupportedMediaTypes.images,
+              SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
-            .returns(ZIO.succeed(scannedByteStream))
+            .returns(
+              ZIO.succeed(
+                (
+                  fileByteStreamScanned = scannedByteStream,
+                  supportedMediaType = SupportedMediaType.JPEG,
+                  fileBytesSize = FileBytesSize.assume(1L),
+                )
+              )
+            )
             .once(),
           imageProcessingMock.normalize
-            .expects(scannedByteStream, SupportedMediaTypes.images)
+            .expects(scannedByteStream, SupportedMediaType.images)
             .returns(ZIO.fail(normalizeError))
             .once(),
         )
 
-        val fileService = buildFileService
+        val fileService = buildFileService(aiClientMock)
 
         val serviceError = fileService
           .uploadCatalogueItemImage(
@@ -559,13 +608,21 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
-              SupportedMediaTypes.images,
+              SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
-            .returns(ZIO.succeed(scannedByteStream))
+            .returns(
+              ZIO.succeed(
+                (
+                  fileByteStreamScanned = scannedByteStream,
+                  supportedMediaType = SupportedMediaType.JPEG,
+                  fileBytesSize = FileBytesSize.assume(1L),
+                )
+              )
+            )
             .once(),
           imageProcessingMock.normalize
-            .expects(scannedByteStream, SupportedMediaTypes.images)
+            .expects(scannedByteStream, SupportedMediaType.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
           s3ClientOrganizationMediaMock.uploadImageCatalogueItem
@@ -574,7 +631,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .once(),
         )
 
-        val fileService = buildFileService
+        val fileService = buildFileService(aiClientMock)
 
         val serviceError = fileService
           .uploadCatalogueItemImage(
@@ -632,13 +689,21 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
-              SupportedMediaTypes.images,
+              SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
-            .returns(ZIO.succeed(scannedByteStream))
+            .returns(
+              ZIO.succeed(
+                (
+                  fileByteStreamScanned = scannedByteStream,
+                  supportedMediaType = SupportedMediaType.JPEG,
+                  fileBytesSize = FileBytesSize.assume(1L),
+                )
+              )
+            )
             .once(),
           imageProcessingMock.normalize
-            .expects(scannedByteStream, SupportedMediaTypes.images)
+            .expects(scannedByteStream, SupportedMediaType.images)
             .returns(ZIO.succeed(normalizeResult))
             .once(),
           s3ClientOrganizationMediaMock.uploadImageCatalogueItem
@@ -658,7 +723,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .once(),
         )
 
-        val fileService = buildFileService
+        val fileService = buildFileService(aiClientMock)
 
         val serviceError = fileService
           .uploadCatalogueItemImage(
@@ -670,6 +735,204 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           .zioError
 
         serviceError shouldBe updateError
+      }
+    }
+
+    "extractCustomersFromPhoto" should {
+      "return the AI's extracted candidates for a scanned photo" in new TestContext {
+        val organizationID              = arbitrarySample[OrganizationID]
+        val customerBookPhotoByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+
+        val customerBookPhotoScanOutput: FileScannerScanOutput = (
+          fileByteStreamScanned = FileByteStreamScanned(ZStream.fromResource("assets/test-logo-1.jpeg")),
+          supportedMediaType = SupportedMediaType.JPEG,
+          fileBytesSize = FileBytesSize.assume(1L),
+        )
+
+        val extractCustomerPhoneNumberIndividual = ExtractCustomerPhoneNumber(
+          phoneNationalNumber = arbitrarySample[PhoneNationalNumber],
+          phoneCountryCode = arbitrarySample[PhoneCountryCode],
+        )
+        val extractCustomerIndividual = ExtractCustomerIndividual(
+          fullName = arbitrarySample[CustomerFullName],
+          emails = List(
+            ExtractCustomerEmailEntry(
+              email = arbitrarySample[CustomerEmail],
+              isDefault = true,
+            )
+          ),
+          phoneNumbers = List(
+            ExtractCustomerPhoneNumberEntry(
+              phoneNumber = extractCustomerPhoneNumberIndividual,
+              isDefault = true,
+            )
+          ),
+          addressLine1 = None,
+          addressLine2 = None,
+          city = None,
+          postalCode = None,
+          country = None,
+        )
+        val extractCustomerIndividualData = ExtractCustomerIndividualData(
+          candidate = extractCustomerIndividual,
+          isDuplicate = false,
+          extractionNotes = None,
+        )
+
+        val extractCustomerPhoneNumberBusiness = ExtractCustomerPhoneNumber(
+          phoneNationalNumber = arbitrarySample[PhoneNationalNumber],
+          phoneCountryCode = arbitrarySample[PhoneCountryCode],
+        )
+        val extractCustomerBusiness = ExtractCustomerBusiness(
+          businessName = arbitrarySample[CustomerBusinessName],
+          emails = List(
+            ExtractCustomerEmailEntry(
+              email = arbitrarySample[CustomerEmail],
+              isDefault = true,
+            )
+          ),
+          taxID = None,
+          phoneNumbers = List(
+            ExtractCustomerPhoneNumberEntry(
+              phoneNumber = extractCustomerPhoneNumberBusiness,
+              isDefault = true,
+            )
+          ),
+          addressLine1 = None,
+          addressLine2 = None,
+          city = None,
+          postalCode = None,
+          country = None,
+          customerBusinessContacts = List(
+            ExtractCustomerBusinessContact(
+              fullName = arbitrarySample[CustomerFullName],
+              role = Some(arbitrarySample[CustomerBusinessContactRole]),
+              email = Some(arbitrarySample[CustomerEmail]),
+              phoneNumber = Some(extractCustomerPhoneNumberBusiness),
+            )
+          ),
+        )
+        val extractCustomerBusinessData = ExtractCustomerBusinessData(
+          candidate = extractCustomerBusiness,
+          isDuplicate = false,
+          extractionNotes = None,
+        )
+
+        val extractCustomersResponse = ExtractCustomersResponse(
+          entriesIdentified = 2L,
+          entriesProcessed = 2L,
+          customerIndividualCandidates = List(extractCustomerIndividualData),
+          customerBusinessCandidates = List(extractCustomerBusinessData),
+          unidentifiedEntriesSummary = None,
+        )
+
+        fileScannerMock.scan
+          .expects(customerBookPhotoByteStream, SupportedMediaType.images, fileServiceConfig.maxUploadBytes)
+          .returns(ZIO.succeed(customerBookPhotoScanOutput))
+          .once()
+
+        val extractFromImageCallsRef =
+          Ref.make(List.empty[(FileByteStreamScanned, SupportedMediaType, String)]).zioValue
+        val aiClient = new Mocks.AIClientMock(ZIO.succeed(extractCustomersResponse), extractFromImageCallsRef)
+
+        val fileService = buildFileService(aiClient)
+
+        val response = fileService
+          .extractCustomersFromPhoto(organizationID, customerBookPhotoByteStream)
+          .zioValue
+
+        response shouldBe extractCustomersResponse
+
+        extractFromImageCallsRef.refValue shouldBe List(
+          (
+            customerBookPhotoScanOutput.fileByteStreamScanned,
+            customerBookPhotoScanOutput.supportedMediaType,
+            FileService.extractCustomersFromPhotoInstructions,
+          )
+        )
+
+        val extractCustomersFromPhotoInstructionsNormalized =
+          extractFromImageCallsRef.refValue.head._3.replaceAll("\\s+", " ")
+
+        List(
+          "best-effort attempt to provide a valid phone pair",
+          "phoneNationalNumber must contain only the national number, without the country code",
+          "{\"phoneNationalNumber\":\"99123456\",\"phoneCountryCode\":\"+357\"}",
+          "{\"phoneNationalNumber\":\"4155550123\",\"phoneCountryCode\":\"+1\"}",
+          "Email and phone lists may be empty",
+          "Whenever either list is non-empty, mark exactly one entry in that list with isDefault=true",
+          "If you cannot make out any name for an entry, do not return it as a candidate",
+          "only include a business contact if you can make out that contact's name",
+        ).foreach(instruction => extractCustomersFromPhotoInstructionsNormalized.contains(instruction) shouldBe true)
+      }
+
+      "propagate the error when the photo fails FileScanner's scan (unsupported type or too large)" in new TestContext {
+        val organizationID              = arbitrarySample[OrganizationID]
+        val customerBookPhotoByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+
+        val scanError = ServiceError.InternalServerError.UnexpectedError(
+          "Unsupported file type: [text/plain]. Supported file types are: [image/png, image/jpeg, image/webp]"
+        )
+
+        fileScannerMock.scan
+          .expects(customerBookPhotoByteStream, SupportedMediaType.images, fileServiceConfig.maxUploadBytes)
+          .returns(ZIO.fail(scanError))
+          .once()
+
+        val extractFromImageCallsRef =
+          Ref.make(List.empty[(FileByteStreamScanned, SupportedMediaType, String)]).zioValue
+        val aiClient = new Mocks.AIClientMock(
+          ZIO.die(new NotImplementedError("AIClient.extractFromImage should not be called")),
+          extractFromImageCallsRef,
+        )
+
+        val fileService = buildFileService(aiClient)
+
+        val serviceError = fileService
+          .extractCustomersFromPhoto(organizationID, customerBookPhotoByteStream)
+          .zioError
+
+        serviceError shouldBe scanError
+
+        extractFromImageCallsRef.refValue shouldBe List.empty
+      }
+
+      "propagate the error when AIClient.extractFromImage fails" in new TestContext {
+        val organizationID              = arbitrarySample[OrganizationID]
+        val customerBookPhotoByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+
+        val customerBookPhotoScanOutput: FileScannerScanOutput = (
+          fileByteStreamScanned = FileByteStreamScanned(ZStream.fromResource("assets/test-logo-1.jpeg")),
+          supportedMediaType = SupportedMediaType.JPEG,
+          fileBytesSize = FileBytesSize.assume(1L),
+        )
+
+        val aiClientError = ServiceError.InternalServerError.UnexpectedError("Unable to send message to AI")
+
+        fileScannerMock.scan
+          .expects(customerBookPhotoByteStream, SupportedMediaType.images, fileServiceConfig.maxUploadBytes)
+          .returns(ZIO.succeed(customerBookPhotoScanOutput))
+          .once()
+
+        val extractFromImageCallsRef =
+          Ref.make(List.empty[(FileByteStreamScanned, SupportedMediaType, String)]).zioValue
+        val aiClient = new Mocks.AIClientMock(ZIO.fail(aiClientError), extractFromImageCallsRef)
+
+        val fileService = buildFileService(aiClient)
+
+        val serviceError = fileService
+          .extractCustomersFromPhoto(organizationID, customerBookPhotoByteStream)
+          .zioError
+
+        serviceError shouldBe aiClientError
+
+        extractFromImageCallsRef.refValue shouldBe List(
+          (
+            customerBookPhotoScanOutput.fileByteStreamScanned,
+            customerBookPhotoScanOutput.supportedMediaType,
+            FileService.extractCustomersFromPhotoInstructions,
+          )
+        )
       }
     }
   }
@@ -684,8 +947,9 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
     val organizationManagementRepositoryMock = mock[OrganizationManagementRepository]
     val catalogueRepositoryMock              = mock[CatalogueRepository]
     val s3ClientOrganizationMediaMock        = mock[S3ClientOrganizationMedia]
+    val aiClientMock                         = mock[AIClient]
 
-    def buildFileService: FileService[ServiceTask] = ZIO
+    def buildFileService(aiClient: AIClient): FileService[ServiceTask] = ZIO
       .service[FileService[ServiceTask]]
       .provide(
         FileService.local,
@@ -694,6 +958,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         ZLayer.succeed(imageProcessingMock),
         ZLayer.succeed(organizationManagementRepositoryMock),
         ZLayer.succeed(catalogueRepositoryMock),
+        ZLayer.succeed(aiClient),
         ZLayer.succeed(s3ClientOrganizationMediaMock),
       )
       .zioValue
