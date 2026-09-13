@@ -50,7 +50,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
       host = wiremockClientConfig.host,
       port = wiremockClientConfig.port,
       apiKey = "test-api-key",
-      requestTimeout = Duration.fromMillis(100),
+      requestTimeout = Duration.fromSeconds(60),
       sendMaxRetries = 2,
       sendRetryDelay = Duration.fromMillis(10),
     )
@@ -415,11 +415,13 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
       "fail with an UnexpectedError when each response times out after three attempts" in withContext { context =>
         import context.*
 
+        val aiClientConfigTimeout = aiClientConfig.copy(requestTimeout = Duration.fromMillis(100))
+
         val aiClient = ZIO
           .service[AIClient]
           .provide(
             AIClient.live,
-            ZLayer.succeed(aiClientConfig),
+            ZLayer.succeed(aiClientConfigTimeout),
             HttpClientZioBackend.layer(),
           )
           .zioValue
