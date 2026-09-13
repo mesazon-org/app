@@ -2,8 +2,8 @@ import sbt.*
 
 object Dependencies {
 
-  lazy val http4sV              = "0.23.36"
-  lazy val smithy4sV            = "0.19.11"
+  lazy val http4sV              = "0.23.37"
+  lazy val smithy4sV            = "0.19.12"
   lazy val zioV                 = "2.1.26"
   lazy val zioConfigV           = "4.0.8"
   lazy val zioInteropCatsV      = "23.1.0.13"
@@ -24,23 +24,23 @@ object Dependencies {
   lazy val postgresqlV          = "42.7.3"
   lazy val hikariCPV            = "7.1.0"
   lazy val doobieTranzactioV    = "6.0.0"
-  lazy val libphonenumberV      = "9.0.38"
+  lazy val libphonenumberV      = "9.0.39"
   lazy val circeV               = "0.14.16"
   lazy val sttpV                = "4.0.26"
   lazy val tapirV               = "1.13.31"
   lazy val jsoniterV            = "2.40.1"
   lazy val sttpAIV              = "0.11.0"
   lazy val jmailV               = "2.2.2"
-  lazy val simplejavamailV      = "9.3.3"
+  lazy val simplejavamailV      = "9.3.4"
   lazy val jjwtV                = "0.13.0"
   lazy val springSecurityV      = "7.1.1"
   lazy val springCoreV          = "7.0.9"
-  lazy val bouncyCastleV        = "1.85.2"
+  lazy val bouncyCastleV        = "1.86"
   lazy val uuidCreatorV         = "6.1.1"
   lazy val scalamockV           = "7.5.5"
   lazy val scrimageV            = "4.6.7"
   lazy val tikaV                = "4.0.0"
-  lazy val awssdkV              = "2.54.13"
+  lazy val awssdkV              = "2.54.17"
   lazy val zioS3V               = "0.4.4"
 
   // Http4s
