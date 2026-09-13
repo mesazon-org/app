@@ -15,6 +15,8 @@ Consequences for `FileScanner.scan`:
 
 `FileScanner.scan` folds `fileByteStream.chunks` in one pass (`runFoldZIO`): pulls to true EOF (drains the connection fully) but writes at most `maxFileBytes + 1` bytes to the temp file. Bytes beyond the cap are counted, never buffered or written — disk usage stays bounded regardless of actual body size, while the connection still gets fully drained.
 
+`scan` returns `FileScannerScanOutput` (`utils/utils.scala`), not just the scanned stream: the matched `SupportedMediaType` member and the real byte count as `fileBytesSize: FileBytesSize` (`domain/gateway/Newtypes.scala`, `RefinedType[Long, Positive]`, built with `FileBytesSize.either(bytesWritten)` — `bytesWritten` at the point of successful return, never the `+1` overflow-probe value) it already computes for its own cap/type checks. Callers that need that information (the customer-book photo-extraction endpoint, which passes the media type through to `AIClient`) read it off the tuple instead of re-detecting it; callers that don't (the logo/catalogue-item uploads) destructure and use only `fileByteStreamScanned`.
+
 Fold over `.chunks` (`Chunk[Byte]`), not the raw `Byte` stream (`mapZIO`/`runForeach` per element): each element on ZIO's effect interpreter costs a suspension. Chunking keeps blocking I/O (`ZIO.attemptBlocking`) and array writes at one call per chunk (~KBs), not one per byte.
 
 ## `ImageProcessing` doesn't need this

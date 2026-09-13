@@ -1,0 +1,18 @@
+{
+  "priority": 1,
+  "scenarioName": "AI client retry success",
+  "requiredScenarioState": "Started",
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      { "contains": "AI_CLIENT_SPEC_RETRY_SUCCESS" }
+    ]
+  },
+  "response": {
+    "status": 429,
+    "headers": { "Content-Type": "application/json" },
+    "body": "{\"error\":{\"message\":\"Try again\",\"type\":\"rate_limit_error\"}}"
+  },
+  "newScenarioState": "Second attempt"
+}

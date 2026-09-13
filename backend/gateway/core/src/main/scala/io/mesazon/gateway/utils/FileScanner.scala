@@ -1,6 +1,6 @@
 package io.mesazon.gateway.utils
 
-import io.mesazon.domain.gateway.{ServiceError, SupportedMediaTypes}
+import io.mesazon.domain.gateway.{FileBytesSize, ServiceError, SupportedMediaType}
 import org.apache.tika.Tika
 import zio.*
 import zio.stream.*
@@ -11,9 +11,9 @@ import java.nio.file.Files
 trait FileScanner {
   def scan(
       fileByteStream: ZStream[Any, Throwable, Byte],
-      supportedMediaTypes: List[SupportedMediaTypes],
+      supportedMediaTypes: List[SupportedMediaType],
       maxFileBytes: Long,
-  ): ZIO[Scope, ServiceError, FileByteStreamScanned]
+  ): ZIO[Scope, ServiceError, FileScannerScanOutput]
 }
 
 object FileScanner {
@@ -25,9 +25,9 @@ object FileScanner {
 
     override def scan(
         fileByteStream: ZStream[Any, Throwable, Byte],
-        supportedMediaTypes: List[SupportedMediaTypes],
+        supportedMediaTypes: List[SupportedMediaType],
         maxFileBytes: Long,
-    ): ZIO[Scope, ServiceError, FileByteStreamScanned] =
+    ): ZIO[Scope, ServiceError, FileScannerScanOutput] =
       for {
         tempFile <- TempFile.createScoped("file-")
         // Drain the whole incoming stream even once the byte cap is hit instead of stopping early:
@@ -66,15 +66,21 @@ object FileScanner {
         mimeTypeDetected <- ZIO
           .attemptBlocking(tika.detect(tempFile))
           .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to detect file type", Some(e)))
-        _ <-
-          ZIO.unless(supportedMediaTypes.exists(_.mime == mimeTypeDetected))(
-            ZIO.fail(
-              ServiceError.InternalServerError.UnexpectedError(
-                s"Unsupported file type: [$mimeTypeDetected]. Supported file types are: [${supportedMediaTypes.map(_.mime).mkString(", ")}]"
-              )
+        supportedMediaType <- ZIO
+          .fromOption(supportedMediaTypes.find(_.mime == mimeTypeDetected))
+          .orElseFail(
+            ServiceError.InternalServerError.UnexpectedError(
+              s"Unsupported file type: [$mimeTypeDetected]. Supported file types are: [${supportedMediaTypes.map(_.mime).mkString(", ")}]"
             )
           )
-      } yield FileByteStreamScanned(ZStream.fromPath(tempFile))
+        fileBytesSize <- ZIO
+          .fromEither(FileBytesSize.either(bytesWritten))
+          .mapError(e => ServiceError.InternalServerError.UnexpectedError(s"Failed to construct FileBytesSize: [$e]"))
+      } yield (
+        fileByteStreamScanned = FileByteStreamScanned(ZStream.fromPath(tempFile)),
+        supportedMediaType = supportedMediaType,
+        fileBytesSize = fileBytesSize,
+      )
   }
 
   val live = ZLayer.derive[FileScannerImpl].project[FileScanner](identity)

@@ -52,6 +52,8 @@ The same holds for choices inside the agreed scope: when the code allows several
 
 EM talks directly to the user. A subagent without a user-question tool returns `USER_QUESTION` with the decision needed, its recommendation, and the blocked work; EM asks the user verbatim in substance and resumes the same subagent with the answer. EM never answers a product question on the user's behalf and never approves a gate on the user's behalf. Pause only dependent work; silence is not agreement.
 
+On some hosts the user can message a subagent directly, bypassing EM. That message still carries full user authority — but a request that reopens a decision already settled at an earlier gate (an approach, a vendor, an architecture choice) is a plan change, not a slice detail: report the concrete finding and its consequences to EM the same way as any other material change, and wait, even when the request came from the user directly and even mid-slice. The subagent does not decide alone that a previously-settled decision should reopen just because the person asking has final authority — EM and PO hold context (cost, data-processing, product consequences) the subagent's slice-local view does not.
+
 ## User approval gates
 
 Four gates are mandatory and belong to the user, not to EM:
@@ -76,6 +78,8 @@ The user commits by hand at every step: after PO updates `pages/`, after EM upda
 - The step report says exactly which files changed, so the user can read the diff and commit without reconstructing what happened.
 
 Wait for the user's commit and approval before starting the next step. If the tree already holds uncommitted changes you did not make, stop and say so rather than building on top of them.
+
+A message that says to proceed — from any source, including the user directly — is not proof the previous step was committed. Check (`git status`/`git log`) before starting the next step; if the previous step's files still show as uncommitted, say so and ask for confirmation rather than assuming the message implies it happened.
 
 ## Small steps
 

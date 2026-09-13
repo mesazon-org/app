@@ -100,3 +100,71 @@ case class InsertCustomersPostRequest(
     customerBusinesses: List[InsertCustomerBusinessPostRequest],
     customerIndividuals: List[InsertCustomerIndividualPostRequest],
 )
+
+// Photo extraction
+
+case class ExtractCustomerEmailEntry(
+    email: CustomerEmail,
+    isDefault: Boolean,
+)
+
+case class ExtractCustomerPhoneNumber(
+    phoneNationalNumber: PhoneNationalNumber,
+    phoneCountryCode: PhoneCountryCode,
+)
+
+case class ExtractCustomerPhoneNumberEntry(
+    phoneNumber: ExtractCustomerPhoneNumber,
+    isDefault: Boolean,
+)
+
+case class ExtractCustomerIndividual(
+    fullName: CustomerFullName,
+    emails: List[ExtractCustomerEmailEntry],
+    phoneNumbers: List[ExtractCustomerPhoneNumberEntry],
+    addressLine1: Option[CustomerAddressLine1],
+    addressLine2: Option[CustomerAddressLine2],
+    city: Option[CustomerCity],
+    postalCode: Option[CustomerPostalCode],
+    country: Option[CustomerCountry],
+)
+
+case class ExtractCustomerBusinessContact(
+    fullName: CustomerFullName,
+    role: Option[CustomerBusinessContactRole],
+    email: Option[CustomerEmail],
+    phoneNumber: Option[ExtractCustomerPhoneNumber],
+)
+
+case class ExtractCustomerBusiness(
+    businessName: CustomerBusinessName,
+    emails: List[ExtractCustomerEmailEntry],
+    taxID: Option[CustomerTaxID],
+    phoneNumbers: List[ExtractCustomerPhoneNumberEntry],
+    addressLine1: Option[CustomerAddressLine1],
+    addressLine2: Option[CustomerAddressLine2],
+    city: Option[CustomerCity],
+    postalCode: Option[CustomerPostalCode],
+    country: Option[CustomerCountry],
+    customerBusinessContacts: List[ExtractCustomerBusinessContact],
+)
+
+case class ExtractCustomerIndividualData(
+    candidate: ExtractCustomerIndividual,
+    isDuplicate: Boolean,
+    extractionNotes: Option[String],
+)
+
+case class ExtractCustomerBusinessData(
+    candidate: ExtractCustomerBusiness,
+    isDuplicate: Boolean,
+    extractionNotes: Option[String],
+)
+
+case class ExtractCustomersResponse(
+    entriesIdentified: Long,
+    entriesProcessed: Long,
+    customerIndividualCandidates: List[ExtractCustomerIndividualData],
+    customerBusinessCandidates: List[ExtractCustomerBusinessData],
+    unidentifiedEntriesSummary: Option[String],
+)

@@ -3,7 +3,7 @@ import smithy4s.codegen.Smithy4sCodegenPlugin
 
 val enableScalaLint = sys.env.getOrElse("ENABLE_SCALA_LINT_ON_COMPILE", "true").toBoolean
 
-scalaVersion      := "3.8.4"
+scalaVersion      := "3.9.0"
 version           := "latest"
 organization      := "io.mesazon"
 organizationName  := "Mesazon"
