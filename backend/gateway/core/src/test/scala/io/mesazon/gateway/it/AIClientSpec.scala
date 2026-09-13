@@ -6,7 +6,8 @@ import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClient
 import io.mesazon.gateway.config.AIClientConfig
-import io.mesazon.gateway.json.given
+import io.mesazon.gateway.json.ai.given
+import io.mesazon.gateway.json.{ai, OpenAIJsonSchema}
 import io.mesazon.gateway.utils.FileByteStreamScanned
 import io.mesazon.testkit.base.*
 import io.mesazon.wiremock.WiremockClient
@@ -23,12 +24,14 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
 
   override def exposedServices: Set[ExposedService] = WiremockClient.ExposedServices
 
+  private lazy val extractedTestResultSchema: Schema[ExtractedTestResult] = Schema.derived[ExtractedTestResult]
+
   case class ExtractedTestResult(value: String)
-
-  given Schema[ExtractedTestResult]         = Schema.derived[ExtractedTestResult]
-  given JsonValueCodec[ExtractedTestResult] = JsonCodecMaker.make[ExtractedTestResult]
-
   case class Context(aiClientConfig: AIClientConfig, wiremockClient: WiremockClient)
+
+  given extractedTestResultOpenAIJsonSchema: OpenAIJsonSchema[ExtractedTestResult] =
+    ai.fromTapir(extractedTestResultSchema)
+  given JsonValueCodec[ExtractedTestResult] = JsonCodecMaker.make[ExtractedTestResult]
 
   def withContext[A](f: Context => A): A = withContainers { container =>
     val wiremockClientConfig = WiremockClientConfig.from(container)
@@ -46,6 +49,9 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
       host = wiremockClientConfig.host,
       port = wiremockClientConfig.port,
       apiKey = "test-api-key",
+      requestTimeout = Duration.fromMillis(100),
+      sendMaxRetries = 2,
+      sendRetryDelay = Duration.fromMillis(10),
     )
 
     f(Context(aiClientConfig, wiremockClient))

@@ -1,15 +1,16 @@
 package io.mesazon.gateway.config
 
 import sttp.model.Uri
+import zio.*
 
 final case class AIClientConfig(
     scheme: String,
     host: String,
     port: Int,
     apiKey: String,
-    requestTimeout: zio.Duration,
+    requestTimeout: Duration,
     sendMaxRetries: Int,
-    sendRetryDelay: zio.Duration,
+    sendRetryDelay: Duration,
 ) {
   val baseUri: Uri = Uri.unsafeApply(scheme, host, port).addPath("v1")
 }

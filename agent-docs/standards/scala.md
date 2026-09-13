@@ -5,7 +5,8 @@ Reusable Scala code/name/test rules. Boundaries: [Iron](iron.md), [Smithy](smith
 ## Code
 
 - Prefer precise domain types, sealed alternatives, `Option`, and `Either` over nulls, sentinels, string flags, or ambiguous booleans.
-- Order members by declaration kind first: `given`, then `val` (including `lazy val`), then `def`. Within each kind, put private members before public members. Visibility must not move a private `def` ahead of a public `given` or `val`. Apply this order to objects, classes, traits, and package-level declarations; preserve safe initialization dependencies within each group.
+- Put all private non-method members first, including private types, givens, vals, and lazy vals; private vals precede public givens. Then order public members as `given`, `val` (including `lazy val`), and `def`, with private defs immediately before public defs. A private def does not move ahead of public givens or vals. Apply this order to objects, classes, traits, and package-level declarations, preserving safe initialization dependencies; test environment-selection overrides retain the exception below.
+- For ZIO durations, add `import zio.*` and use `Duration`; never write `zio.Duration` in type declarations or expressions.
 - Derive a schema once per model in its owning schema registry. Other registrations, including consumer-specific adapters such as OpenAI schemas, reuse that schema instead of calling `Schema.derived` again. Compatibility delegates must reuse the original registration, not create another derivation.
 - Never use Scala 3 `export` clauses. Reuse another object's members through explicit references or delegates; shared schema/codec givens delegate to the owning registration without deriving another instance.
 - Model coupled optional fields as one `Option` around a composite value whose members are mandatory. Use reusable component and composite names without a feature prefix (`Price`, `ImageAsset`), then add a `Pure` newtype named for the owning entity when the same shape has distinct domain meanings (`CatalogueItemPrice`, `CatalogueItemImageAsset`). Never represent joint presence with parallel `Option` fields.
@@ -47,6 +48,7 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 
 ### Structure and names
 
+- Add a blank line immediately after a test-class declaration. Environment-selection overrides (such as `dockerComposeFile` and `exposedServices`) stay at the top of the test class, before models, givens, vals, and helper defs; this is an explicit exception to the general member-ordering rule. Lifecycle hooks such as `beforeAll` and `afterEach` may follow the context helper as in existing integration specs.
 - Each test owns its data/state and runs alone; no shared test-data fixtures. Share only stable SUT infrastructure or repetition whose inlining is materially worse.
 - Exactly one `should` section per public operation, named after that operation. Put all successes (including no-ops) first, then failures. Never split one operation across scenario sections or combine operations. A genuine cross-operation invariant may have its own section.
 - One test exercises one operation. Arrange preconditions directly rather than calling another public operation.
@@ -54,6 +56,7 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 
 ### Data and assertions
 
+- Use ScalaTest's infix assertion syntax: `actual shouldBe expected`, never `actual.shouldBe(expected)`. Keep the infix form for multiline expected models as well.
 - Name bindings after their exact models; qualifiers follow the model name.
 - Treat `arbitrarySample` as real work, especially for nested/list generators. If a test replaces a wrapper's entire generated collection, do not sample and discard that collection: sample the element model, derive related cases with `.copy(...)`, and directly construct the wrapper from the controlled elements. Sample the complete wrapper only when its generator or full round-trip is part of the proof.
 - Repository integration tests sample complete inputs/Rows with `arbitrarySample[ExactType]` and use `.copy(...)` only to force scenario fields. Keep `TestContext` free of helper methods and repeat arrangement, dependency expectations, and database reads locally; test isolation/readability takes precedence over removing duplication.

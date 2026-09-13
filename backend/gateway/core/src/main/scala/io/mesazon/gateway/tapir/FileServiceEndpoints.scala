@@ -2,7 +2,7 @@ package io.mesazon.gateway.tapir
 
 import io.circe.syntax.*
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.json.given
+import io.mesazon.gateway.json.tapir.given
 import io.mesazon.gateway.service.*
 import sttp.apispec.openapi.Info
 import sttp.apispec.openapi.circe.*
