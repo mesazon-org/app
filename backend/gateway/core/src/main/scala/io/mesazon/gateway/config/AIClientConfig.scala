@@ -7,6 +7,9 @@ final case class AIClientConfig(
     host: String,
     port: Int,
     apiKey: String,
+    requestTimeout: zio.Duration,
+    sendMaxRetries: Int,
+    sendRetryDelay: zio.Duration,
 ) {
   val baseUri: Uri = Uri.unsafeApply(scheme, host, port).addPath("v1")
 }
