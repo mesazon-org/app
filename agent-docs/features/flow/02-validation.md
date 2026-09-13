@@ -1,4 +1,4 @@
-# PR 2 — Validation
+# Slice 2 — Validation
 
 Use after the endpoint contract/models exist. Add validated request domain models, newtypes, feature arbitraries, validators, and validator unit tests. Read [Iron](../../standards/iron.md), [Scala tests](../../standards/scala.md#tests), and the chosen transport standard: [Smithy names](../../standards/smithy.md#names) or [Tapir](../../standards/tapir.md).
 
@@ -9,7 +9,7 @@ Validation is the only boundary where untrusted transport primitives become refi
 - Request/entry case classes: `backend/domain/.../gateway/<Feature>.scala`, named after the transport request structure (exact Smithy request name on Smithy routes).
 - Every refined newtype lives in shared `Newtypes.scala` and is imported through `io.mesazon.domain.gateway.*`; reusable concepts stay in the common section and feature-owned concepts are grouped under `// <Feature>`. Never create a per-feature newtype file.
 - A case class, enum, or model used beyond one request gets its own type-named file.
-- Add here any newtype/model needed by validation, including one later shared with the repository. PR 4 adds only persistence-specific Row/input/projection types.
+- Add here any newtype/model needed by validation, including one later shared with the repository. Slice 4 adds only persistence-specific Row/input/projection types.
 
 ## Domain modeling
 
@@ -58,7 +58,7 @@ File: `validation/service/<Feature>RequestValidator.scala`.
 - For an optional composite, validate mandatory inner members in declaration order, accumulate their errors under the outer field, then wrap the valid case class in its contextual newtype.
 - Monetary validation uses `PriceDomainValidator` with JDK `Currency`: normalize trim/uppercase ISO codes, reject unsupported or no-fixed-fraction currencies, and require non-negative amounts with at most 12 integer digits (equivalent to `[0, 1,000,000,000,000)`) and supplied scale no greater than the currency fraction digits. For non-zero amounts, check the integer-digit bound with widened `precision - scale` arithmetic before normalization so compact extreme-exponent inputs cannot cause unbounded allocation; zero bypasses that representation-derived bound because its exponent does not change its value. Normalize valid lower-scale amounts upward to the exact currency scale by appending zeros; never round or remove supplied precision.
 - Pure fields use required/optional helpers with `.either`; effectful fields use domain validators.
-- Expose `val live = ZLayer.derive[...]`; PR 5 wires it into the service graph.
+- Expose `val live = ZLayer.derive[...]`; Slice 5 wires it into the service graph.
 
 ## Required proof: two tests per public function
 

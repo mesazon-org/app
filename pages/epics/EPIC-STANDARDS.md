@@ -24,6 +24,8 @@ The audience is **non-engineers**. Someone who has never opened the codebase sho
 
 **Always true of the code.** Every stage name, error code, field rule, limit and business rule must match what the code actually does today. Check against the matching `agent-docs/features/*.md` doc and, where that does not settle it, the code itself. Update the epic whenever the feature changes, in the same change, not later. A confidently wrong epic is worse than a missing one.
 
+For field constraints, check validators first, then the Iron predicates in `backend/domain/.../domain.scala` and newtype bindings in `gateway/Newtypes.scala`. Validators may add library checks (such as email or phone validation) that predicates alone do not express. Never describe a user input as system-generated.
+
 ### File, name and front matter
 
 Name the file with a two-digit number in reading order: `01-user-onboarding.md`, `02-forgot-password.md`. The sidebar sorts epics by filename, so the number is what puts them in journey order rather than alphabetical order.

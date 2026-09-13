@@ -1,56 +1,23 @@
 ---
-description: Product Owner → Engineering Manager → complexity-selected Lead Engineer
-argument-hint: <feature description>
+description: PO clarification → user approval → EM assessment and plan → TDD implementation in reviewed slices → EM technical review → PO completeness review
+argument-hint: <feature, bug, or issue description>
 ---
 
-Orchestrate **"$ARGUMENTS"**. Do not design/code. Preserve full role outputs; keep sessions alive; show handoffs/progress. Never commit/push.
+Handle "$ARGUMENTS". The main conversation acts as EM: read `.agents/agents/engineering-manager.md` (ignore YAML) and follow `.agents/contracts/workflow.md`. Do not spawn an EM just to relay messages.
 
-## 1 Product
+Every role, at every stage: read `AGENTS.md` and the `agent-docs/` guides it routes to before acting, ask about every assumption up front instead of deciding, take no initiative beyond what was agreed, and never commit, push, or stage — the user reviews and commits each step by hand.
 
-Spawn `product-owner` with the raw request. Keep session. Require `PRODUCT_SPEC`.
+New features and changes to features that already ship run the same stages and gates. For an existing feature, every stage starts from the epic, the feature doc, and the code that exists, and works as a delta: state it as "today X, after this Y", update the existing epic and feature doc in place instead of creating new ones, and slice the work by kind of edit — update the docs, adapt or add the test, add the new function, change the existing function, migrate the data. Existing tests are adapted only because the user agreed the behavior changes, never to reach green.
 
-PO identifies the epic in `pages/epics/` the request belongs to, asking the user when the fit is unclear, and creates one from the template when none exists. Require the epic written and saved, with `PRODUCT_SPEC` naming it, before moving on — do not let the epic be deferred to EM or the Lead.
+1. **Product clarification.** For any new, changed, or unclear product requirement, ask `product-owner` for a `PRODUCT_BRIEF`; relay its `USER_QUESTION` rounds to the user until nothing material is open. PO updates the affected epic and any other `pages/` documentation. Use the user's own requirements directly only when the story and its acceptance are already unambiguous.
+2. **Gate 1 — user approval and commit.** Put the `PRODUCT_BRIEF` and PO's `pages/` diff to the user for manual review. The user approves and commits the `pages/` change by hand. Do not begin technical work before that.
+3. **Technical assessment.** Read the affected feature docs and the real code path, then raise your technical concerns with recommendations — new library or dependency, refactor blast radius, approach choice, contradictions with existing behavior, risk to permissions/validation/data integrity/compatibility/test infrastructure. Ask rather than assume; get the user's answers.
+4. **Plan and complexity.** Update the engineering docs you own, then propose the plan: approach, paths, pitfalls, ordered slices of at most 3 files each (first slice = interfaces and failing tests), required checks, and `MEDIUM` or `HIGH` per `.agents/contracts/complexity.md` with a one-line reason.
+5. **Gate 2 — user approval and commit.** The user agrees the plan and the tier, then commits the engineering-doc change by hand, before any code is written.
+6. **Dispatch.** Send one `ENGINEERING_HANDOFF` to `lead-engineer-medium` or `lead-engineer-high` with the approved brief, plan, slice order, pitfalls, checks, and tier. If no agent is available, do the same work in the main conversation, keep the same gates and slice sizes, and disclose that the review is a self-review.
+7. **Slice loop.** The Lead first returns its open assumptions and questions; answer them or put them to the user before it writes anything. It then returns the skeleton slice (interfaces, signatures, failing tests, real red evidence) and stops. Review the diff, present it to the user with your assessment, and resume the same Lead only after the user approves and commits that slice. Repeat for every implementation slice: at most 3 hand-written files, real check results, stop, review, user approval, user commit, resume. Never let the Lead run ahead, never approve a slice yourself, and never commit for the user.
+8. **Technical completion review.** The Lead's final `IMPLEMENTATION_REPORT` maps each delivered outcome to an agreed requirement, lists the docs it kept current, and gives real check results. Review the cumulative diff, the docs, and that evidence against acceptance and standards; return concrete findings to the same Lead until nothing material is open. Fix trivial factual docs yourself.
+9. **Product completion review.** Resume `product-owner` with what was delivered, the documentation changes, and the tests with the use case or business rule each covers. It returns `PRODUCT_ACCEPTANCE` — complete, or the gaps. Route gaps to their owner: missing behavior or coverage to the same Lead as another approved slice, docs or technical debt to yourself, an uncaptured requirement back to the user as a new round.
+10. **Close.** Report delivered behavior, checks actually run, docs updated, PO's acceptance, and any gap or verification left open.
 
-## 2 Engineering
-
-Spawn `engineering-manager` with `PRODUCT_SPEC`. Keep session. EM reads the named epic in full for the surrounding journey before mapping docs and slices.
-
-If EM returns `PRODUCT_QUESTIONS`:
-
-1. Send them to the same PO.
-2. PO answers from context, asking the user directly via `AskUserQuestion` if it can't; require an updated `PRODUCT_SPEC`.
-3. Send the updated `PRODUCT_SPEC` to EM.
-4. Repeat until EM returns `ENGINEERING_PACKAGE` with no open product questions.
-
-Do not let EM bypass PO for product decisions unless PO explicitly escalates.
-
-## 3 Complexity route
-
-Validate package level/profile:
-
-| Level | Agent |
-|---|---|
-| LOW | `lead-engineer-low` |
-| MEDIUM | `lead-engineer-medium` |
-| HIGH | `lead-engineer-high` |
-
-Spawn exactly that Lead with the full package. Keep session for planning, implementation, and final review.
-
-If Lead returns `REQUIREMENT_QUESTIONS`, send to same EM. EM answers from package or routes back to PO per the loop above (PO asks the user if needed). Return the resolved answer and updated package/spec to the same Lead. Lead owns coding decisions; never route coding questions to EM/PO/user.
-
-## 4 Plan/execute
-
-Require `IMPLEMENTATION_PLAN`. Register tasks with `TaskCreate`.
-
-For each task in order:
-
-1. `TaskUpdate` → `in_progress`.
-2. Send full task + package to same Lead and request implementation/verification.
-3. If requirement uncertainty appears, use step 3 escalation; resume same Lead.
-4. Require command evidence; `TaskUpdate` → `completed`.
-
-After tasks, ask same Lead for full-diff review and `IMPLEMENTATION_REPORT`. If it finds issues, track/fix/recheck before completion.
-
-## 5 Wrap
-
-Report requirements delivered, docs/status, verification, remaining/N/A work, and complexity/profile used. Confirm feature doc lifecycle and docs currency from `AGENTS.md`, and that the epic matches the behavior actually shipped.
+Answer Lead technical questions yourself; put preferences to the user. Use task tracking when the slice list is long. The EM custom-agent profile stays available for an explicitly requested separate review, not as a required stage.

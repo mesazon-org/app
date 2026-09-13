@@ -4,7 +4,7 @@ import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import io.github.iltotore.iron.constraint.all.Trimmed
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.json.{tapirServerErrorSchemas, given}
+import io.mesazon.gateway.json.tapir.{tapirServerErrorSchemas, given}
 import io.mesazon.gateway.service.AuthorizationService
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.StatusCode

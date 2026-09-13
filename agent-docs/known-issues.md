@@ -77,9 +77,22 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Severity:** Medium
 - **Signature:** `gatewayCore / Docker / publishLocal` or a dependent `gateway-it` test fails before containers start with `RuntimeException: InvocationTargetException`, caused by a `NullPointerException` in `dotty.tools.scaladoc.translators.SignatureBuilder`.
 - **Cause:** Local Scala 3.8.4 documentation generation can crash while Native Packager resolves the gateway documentation artifact. Application/test compilation is already successful; the failure is in an unused Docker documentation artifact.
-- **Fix:** Keep the setting local to the verification invocation: `sbt "set backendGatewayCore / Compile / packageDoc / publishArtifact := false; gateway-it/testOnly *GatewayAcceptanceSpec"`. Do not commit a build change solely to hide the compiler-tooling failure.
+- **Fix:** Keep the setting local to the verification invocation: `sbt "set backendGatewayCore / Compile / packageDoc / publishArtifact := false; gateway-it/testOnly *GatewayAcceptanceSpec"`. Do not commit a build change solely to hide the compiler-tooling failure. Confirmed 2026-09-09: the same crash can recur on a different module's `Compile / doc` on the next run (seen on `domain`, then `waha-core`) once the first module's artifact is disabled — the failure isn't pinned to one module. Disabling `packageDoc` per-module one at a time is whack-a-mole; use the project-wide form instead: `sbt "set every Compile / packageDoc / publishArtifact := false; gateway-it/testOnly *GatewayAcceptanceSpec"`.
 - **Prevention:** Use the repository-pinned Temurin runtime/full JDK rather than an older Homebrew Java patch release when possible. If the pinned runtime still reproduces the signature, retain the invocation-scoped workaround.
 - **Verify:** The gateway image builds, the real containers start, and `GatewayAcceptanceSpec` reports a non-zero test count. An sbt success that says `No tests were executed` is not verification.
+
+## Focused nested acceptance selection executes no tests
+
+- **Status:** Mitigated 2026-09-13
+- **Severity:** Medium
+- **Signature:** `gateway-it/testOnly *GatewayAcceptanceSpec -- -z /extract/customer-book-photo` builds the images and reports success, but executes zero tests. Running `FileApiSpec` directly instead bypasses the parent context initialization. Running ScalaTest's standalone runner from the repository root can also abort with `Unable to parse YAML file` / missing `compose.yaml` before starting tests.
+- **Cause:** sbt's ScalaTest wildcard test selector targets the selected parent's own test names, not its nested specs. The compose harness also depends on the gateway-it working directory. Nested suite selection is supported by the standalone [ScalaTest runner](https://www.scalatest.org/user_guide/using_the_runner), not sbt's suite-argument parser.
+- **Fix:** After publishing the current gateway and WireMock images, select the nested file suite through its parent and set the forked runner's working directory for this invocation only:
+  ```sh
+  sbt "set backendGatewayIt / Test / run / forkOptions := Def.uncached((backendGatewayIt / Test / run / forkOptions).value.withWorkingDirectory(Some((backendGatewayIt / baseDirectory).value))); gateway-it/Test/runMain org.scalatest.tools.Runner -o -s io.mesazon.gateway.it.harness.GatewayAcceptanceSpec -i io.mesazon.gateway.it.FileApiSpec"
+  ```
+- **Prevention:** `Test/runMain` does not invoke the build's test-entrypoint Docker publish hooks; publish fresh images first. Do not count a successful zero-test command as proof, run a child without its parent, or assume adding `-z` to this nested selection narrows the suite: the verified invocation with `-z` still ran the entire file suite.
+- **Verify:** The shared stack starts and the runner reports 30 passing `FileApiSpec` tests, including all eight photo-extraction cases. No shared harness/build changes are required.
 
 ## DigitalOcean deploy fails readiness with connection refused despite a healthy app
 

@@ -1,6 +1,6 @@
-# PR 1 — Endpoints and transport models
+# Slice 1 — Endpoints and transport models
 
-Declare endpoints and transport models before implementation. Default: [Smithy](../../standards/smithy.md). Use [Tapir](../../standards/tapir.md) + [Mesazon alternate HTTP](../../project/alternate-http.md) only when Smithy cannot express the transport (currently streaming upload). Exclude validation, schema, repository, and service behavior.
+Declare endpoints and transport models before implementation. Default: [Smithy](../../standards/smithy.md). Use [Tapir](../../standards/tapir.md) + [Mesazon alternate HTTP](../../project/alternate-http.md) only when Smithy cannot express the transport (currently streaming upload). This slice covers the contract; validation, schema, repository, and service work belong to their subsequent slices, which may share one PR.
 
 ## Smithy files
 
@@ -9,7 +9,7 @@ Declare endpoints and transport models before implementation. Default: [Smithy](
 - Service file `$version: "2"`; domain file `$version: "2.0"`.
 - Domain↔Smithy enum mappers belong in `service/service.scala` when implementation lands.
 
-For Tapir, define the typed endpoint inputs/outputs/errors and OpenAPI metadata in the feature endpoint file following [Alternate HTTP](../../project/alternate-http.md). The endpoint remains unwired until PR 5.
+For Tapir, define the typed endpoint inputs/outputs/errors and OpenAPI metadata in the feature endpoint file following [Alternate HTTP](../../project/alternate-http.md). The endpoint remains unwired until Slice 5.
 
 ## Smithy contract values
 
@@ -56,6 +56,6 @@ Tapir endpoints use the project `TapirServerError` model and parity rules from [
 1. Create/update the mandatory [feature doc](README.md#feature-doc-mandatory-in-pr-1), including endpoint/auth/stage/role table and slice status.
 2. Smithy: run `sbt smithy4sCodegen`; Tapir: compile the typed endpoint and generated OpenAPI/docs definition.
 3. Run the affected module compile.
-4. Confirm every transport model needed by validation exists, generated Smithy types are qualified, and contract/domain names can remain identical in PR 2.
+4. Confirm every transport model needed by validation exists, generated Smithy types are qualified, and contract/domain names can remain identical in Slice 2.
 
-No acceptance test is required yet: there is no runnable handler. Acceptance coverage is mandatory in [PR 5](05-service.md).
+No acceptance test is required yet: there is no runnable handler. Acceptance coverage is mandatory in [Slice 5](05-service.md).

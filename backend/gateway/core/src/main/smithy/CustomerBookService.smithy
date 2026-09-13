@@ -38,61 +38,66 @@ service CustomerBookService {
 
 /// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
 @organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
-@http(method: "POST", uri: "/insert/customer-individual", code: 204)
+@http(method: "POST", uri: "/insert/customer-individual", code: 200)
 operation InsertCustomerIndividualPost {
     input := with [OrganizationScopedInput] {
         @required
         @httpPayload
         request: InsertCustomerIndividualPostRequest
     }
+    output: InsertCustomerIndividualPostResponse
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
 @organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
-@http(method: "POST", uri: "/insert/customer-individuals", code: 204)
+@http(method: "POST", uri: "/insert/customer-individuals", code: 200)
 operation InsertCustomerIndividualsPost {
     input := with [OrganizationScopedInput] {
         @required
         @httpPayload
         request: InsertCustomerIndividualsPostRequest
     }
+    output: InsertCustomerIndividualsPostResponse
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
 @organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
-@http(method: "POST", uri: "/insert/customer-business", code: 204)
+@http(method: "POST", uri: "/insert/customer-business", code: 200)
 operation InsertCustomerBusinessPost {
     input := with [OrganizationScopedInput] {
         @required
         @httpPayload
         request: InsertCustomerBusinessPostRequest
     }
+    output: InsertCustomerBusinessPostResponse
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
 @organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
-@http(method: "POST", uri: "/insert/customer-businesses", code: 204)
+@http(method: "POST", uri: "/insert/customer-businesses", code: 200)
 operation InsertCustomerBusinessesPost {
     input := with [OrganizationScopedInput] {
         @required
         @httpPayload
         request: InsertCustomerBusinessesPostRequest
     }
+    output: InsertCustomerBusinessesPostResponse
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
 @organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
-@http(method: "POST", uri: "/insert/customers", code: 204)
+@http(method: "POST", uri: "/insert/customers", code: 200)
 operation InsertCustomersPost {
     input := with [OrganizationScopedInput] {
         @required
         @httpPayload
         request: InsertCustomersPostRequest
     }
+    output: InsertCustomersPostResponse
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 

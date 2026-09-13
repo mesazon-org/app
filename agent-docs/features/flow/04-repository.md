@@ -1,4 +1,4 @@
-# PR 4 — Repository
+# Slice 4 — Repository
 
 Use after schema migration. Add persistence-only domain types, Row/Queries/Repository code, codecs, config, layer definitions, and real-Postgres tests. Read [PostgreSQL](../../standards/postgres.md), [Doobie](../../standards/doobie.md), and [Scala](../../standards/scala.md).
 
@@ -64,10 +64,11 @@ When changing the transactor, pool, SQL logging, or database test-client runtime
 - Generate UUIDv7 IDs and timestamps in the repository, never with DB defaults. Use one `instantNow` per operation for insert `CreatedAt`/`UpdatedAt` and mutation `UpdatedAt`.
 - Refine generated IDs and fail with `UnexpectedError` if construction fails.
 - For batches, pair each generated ID with its input inside one `ZIO.foreach` using a named tuple. Derive rows/results from those pairs; never generate an ID list then `zip`, and do not access pair positions.
-- Map every `DbException` through one `toServiceError(operationMessage)` function. Default: `InternalServerError.RepositoryError(message, underlying)`.
-- A `PSQLException` with state `23505`/`UNIQUE_VIOLATION` maps by constraint name to `ConflictError.UniqueConstraintViolation` (409), retaining the underlying exception. Never race-prone pre-check a uniqueness constraint.
+- For methods that structurally cannot trigger a unique-constraint violation (pure SELECTs, DELETEs, and status-only UPDATEs), map `DbException` directly to `InternalServerError.RepositoryError(message, underlying)`.
+- For methods that can trigger a unique constraint (INSERTs, and UPDATEs of a field backed by a real or partial unique constraint), map errors through the shared `catchUniqueConstraintViolation` helper. A `PSQLException` with state `23505`/`UNIQUE_VIOLATION` maps by constraint name to `ConflictError.UniqueConstraintViolation` (409), retaining the underlying exception. Never race-prone pre-check a uniqueness constraint.
 - Ensure the Smithy operation declares `Conflict`; otherwise the conflict may render as 500.
-- Repository layer: `ZLayer.derive[FooRepositoryImpl].project[FooRepository](identity)`. Repository specs provide Queries/repository with the transactor, clock, and ID generator; PR 5 adds them to the full application graph.
+- The constraint-name walk and generic-to-`ServiceError` mapping are shared, not per-repository: `repository/repository.scala` (mirrors the existing `service/service.scala` package-level-helpers file) owns `findUniqueConstraintViolated` (recursive `PSQLException`/`23505` cause-chain walker) and `catchUniqueConstraintViolation(errorMessage: String, uniqueConstraintViolationMessage: PartialFunction[String, String])(throwable: Throwable): ServiceError`, which applies the one shared generic-fallback message (`"A unique constraint was violated: [$constraint]"`) via `.applyOrElse` for any constraint name the caller's partial function doesn't cover. A repository with named unique constraints defines only its own `PartialFunction[String, String]` literal (named-constraint cases, no wildcard) mapping to its friendly messages, and calls the shared `catchUniqueConstraintViolation` — it never redefines the walker, the dispatcher, or the fallback text locally.
+- Repository layer: `ZLayer.derive[FooRepositoryImpl].project[FooRepository](identity)`. Repository specs provide Queries/repository with the transactor, clock, and ID generator; Slice 5 adds them to the full application graph.
 - Table config stays in lockstep: `RepositoryConfig` field + `allTableNames`, core `application.conf`, gateway-it `application.conf`, migration, Row, Queries, Repository, and layer graph.
 
 ## Required proof: real PostgreSQL

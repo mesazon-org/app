@@ -1,13 +1,10 @@
 # Complexity contract
 
-Classify after product unknowns resolve. Evaluate reasoning/novelty, affected layers/systems, risk/reversibility, data/compatibility, security/consistency, and blast radius—not LOC or typing time. Use the highest material trigger; ties choose higher and explain. Scope change ⇒ reclassify.
+Two Leads exist: `lead-engineer-medium` and `lead-engineer-high`. EM classifies every issue as `MEDIUM` or `HIGH` from concrete implementation risk — not document length, not diff size, not a hypothetical worst case — and states the classification at stage 3's gate with a one-line reason.
 
-- `LOW`: bounded known-pattern change; one concern; no new contract/schema/state/security; low risk/blast radius.
-- `MEDIUM`: contained new behavior through multi-layer feature; established architecture through new contract + persistence/orchestration; limited migration/integration through auth/roles, transactions, external client, or broad cross-module impact; moderate edge cases.
-- `HIGH`: security/auth architecture; destructive/large data migration; financial/audit/history correctness; concurrency/distributed consistency; breaking/public contract; multi-service redesign; exceptional ambiguity or blast radius.
+- `MEDIUM`: contained work on established patterns. Bounded behavior corrections, a feature inside known layers, new config or test infrastructure, routine schema work, ordinary auth/transaction/integration edge cases.
+- `HIGH`: security architecture, destructive or irreversible data migration, financial/audit correctness, difficult concurrency or distributed consistency, broad breaking changes, or work whose blast radius EM cannot bound from the code it read.
 
-These are defaults, not exhaustive. Add stable examples/rules here as the taxonomy evolves.
+Use the highest material trigger present. When the tier is genuinely borderline, choose `HIGH` and say why in one line; unclear user intent is resolved with the user, never absorbed as risk. Reassess only when new evidence materially changes the risk, and tell the user before switching Lead.
 
-## Stable examples
-
-- **New external client instance, even one that mirrors an existing client's code 1:1** (e.g., a second S3 client for a new entity, modeled on an existing S3 client) → `MEDIUM`, not `LOW`. The "external client" trigger is about the client *instance* (its own config, DI wiring, credentials, and required test-infrastructure provisioning — a new mock bucket/stub), not about code novelty. Mirrored source is not proof the client works: a missing mock-bucket registration, missing env var, or missing DI layer only fails at acceptance-test runtime against real/mocked infra, never at compile time or in a functional (mocked-dependency) test. Do not downgrade because "it's just like the existing one" — that similarity reduces design risk, not integration risk.
+Tier changes the model and the depth of reasoning, never the process. Both tiers run every stage and every user gate in `workflow.md`, keep slices at three files or fewer, and start from the skeleton-and-failing-tests slice. `HIGH` additionally records explicit risk and rollback reasoning in the plan and gets deeper review of the touched boundary.

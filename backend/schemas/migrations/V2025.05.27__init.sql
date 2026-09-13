@@ -20,7 +20,8 @@ create table user_details
     created_at            timestamptz not null,
     updated_at            timestamptz not null,
     primary key (user_id),
-    unique (email)
+    unique (email),
+    constraint uq_user_details_phone_number unique (phone_number_e164)
 );
 
 create table user_action_attempt

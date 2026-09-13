@@ -44,7 +44,7 @@ Binary body; organization in the `X-Organization-ID` header, original file name 
 
 `FileService.uploadOrganizationLogo` runs inside one `ZIO.scoped` block; every intermediate file is a `TempFile.createScoped` (auto-deleted on scope close, even on failure):
 
-1. `FileScanner.scan` spools the incoming `ZStream[Byte]` to a temp file, draining the entire input even past the byte cap (writing at most `maxFileBytes + 1` bytes, discarding the rest) so an oversized request body isn't abandoned mid-read (rationale: [Streaming uploads](../project/streaming-uploads.md)). Detects the actual MIME type with Apache Tika (content sniffing, never the client's declared content type) and rejects anything outside `SupportedMediaTypes.images` (`PNG`, `JPEG`, `WEBP`).
+1. `FileScanner.scan` spools the incoming `ZStream[Byte]` to a temp file, draining the entire input even past the byte cap (writing at most `maxFileBytes + 1` bytes, discarding the rest) so an oversized request body isn't abandoned mid-read (rationale: [Streaming uploads](../project/streaming-uploads.md)). Detects the actual MIME type with Apache Tika (content sniffing, never the client's declared content type) and rejects anything outside `SupportedMediaType.images` (`PNG`, `JPEG`, `WEBP`).
 2. `ImageProcessing.normalize` re-detects the format with scrimage's `FormatDetector`, decodes, bounds to 640×640 px (`MaxDimensionPixels`), and re-encodes as lossless WebP. Yields the untouched original stream and the normalized variant.
 3. `S3ClientOrganizationMedia.uploadOrganizationLogo` stores both variants at `{organizationLogoBucketPathPrefix}/{organizationID}/{originalFileName|normalizedFileName}` in bucket `organization-media`, returning both bucket keys as an `UploadedImageResult` (`imageOriginalS3BucketKey`/`imageNormalizedS3BucketKey`), from which the service builds an `OrganizationLogoImageAsset` (composite `ImageAsset` newtype: original bucket key, normalized bucket key, original file name). `genMediaUrl` takes a single `S3BucketKey` and returns a presigned GET URL (`urlExpiresAtOffset`) as `S3MediaUrl`; logos are never served through the gateway. `readiness` does a `HeadBucket` check for the health endpoint.
 4. `OrganizationManagementRepository.updateOrganization`'s `logoImageAssetOptUpdate` persists the `OrganizationLogoImageAsset` and moves the organization to `OrganizationStage.LogoProvided` — unlike the catalogue-item image upload, this endpoint always transitions the owning row's lifecycle state.
@@ -55,7 +55,7 @@ Binary body; organization in the `X-Organization-ID` header, original file name 
 - Pipeline utils (shared): `utils/FileScanner.scala`, `utils/ImageProcessing.scala`, `utils/TempFile.scala`
 - Transport (shared): `tapir/FileServiceEndpoints.scala`, `tapir/tapir.scala`; wiring + entity limits: `HttpApp.scala`
 - S3 (shared): `clients/S3ClientOrganizationMedia.scala` (+ `S3ClientOrganizationMediaConfig`)
-- Domain (shared): `backend/domain/src/main/scala/io/mesazon/domain/gateway/SupportedMediaTypes.scala`
+- Domain (shared): `backend/domain/src/main/scala/io/mesazon/domain/gateway/SupportedMediaType.scala`
 - Config: `FileServiceConfig` (`file-service.max-upload-bytes`, shared with catalogue item image upload)
 
 ### Tests (logo upload)

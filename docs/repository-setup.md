@@ -109,4 +109,4 @@ Flyway migrations live in `backend/schemas/migrations/V<date>__<name>.sql` and a
 
 ## 7. Agent pipeline (optional)
 
-`/feature "<description>"` runs Product Owner → Engineering Manager → complexity-selected Lead Engineer (`LOW|MEDIUM|HIGH`). Claude routes tiers through each engineer's local [OmniRoute](https://github.com/diegosouzapw/OmniRoute); it is not shared infrastructure. One-time setup: [agent-pipeline-setup.md](../agent-docs/agent-pipeline-setup.md).
+The shared feature workflow uses the main conversation as EM, consults PO for new/unclear requirements, gets user agreement to a brief plan, and sends one Lead to implement code/tests/docs before EM review. Claude Code uses `/feature "<description>"`; in Codex ask to “use the feature workflow” with the description. Both read `.agents/commands/feature.md`. Claude can optionally route through each engineer's local OmniRoute; Codex uses its native configured provider. One-time setup: [agent-pipeline-setup.md](../agent-docs/agent-pipeline-setup.md).

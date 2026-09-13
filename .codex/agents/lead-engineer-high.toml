@@ -1,6 +1,7 @@
 name = "lead-engineer-high"
-description = "/feature Lead Engineer for EM-classified HIGH work."
+description = "Implementation for EM-selected HIGH work."
 model = "gpt-5.6-sol"
-model_reasoning_effort = "xhigh"
+model_reasoning_effort = "high"
 developer_instructions = """
-Read and follow `.agents/contracts/lead-engineer.md`. Accept only `HIGH` packages; otherwise request EM reclassification."""
+Read and follow `.agents/agents/lead-engineer-high.md`, excluding its YAML frontmatter. That file is the canonical shared role contract.
+"""

@@ -1,6 +1,6 @@
-# PR 3 — Database schema
+# Slice 3 — Database schema
 
-Read [PostgreSQL](../../standards/postgres.md). This PR owns DDL/config only; Row/Queries/Repository land in PR 4.
+Read [PostgreSQL](../../standards/postgres.md). This slice owns DDL/config; Row/Queries/Repository belong to Slice 4, which may share the same PR.
 
 ## Mesazon schema
 
@@ -48,5 +48,5 @@ Both configs use the `repository` block and `<entity>-table = "..."`. The accept
 
 - Start the real repository Postgres/Flyway compose stack; migration must finish successfully.
 - Add a schema smoke assertion using `PostgreSQLTestClient.checkIfTableExists` for every new table. If the PR introduces a named constraint/index whose exact definition is critical, assert it via `pg_catalog`/`information_schema`.
-- No query tests belong here because no query exists yet; every query and constraint behavior is tested in [PR 4](04-repository.md).
+- No query tests belong here because no query exists yet; every query and constraint behavior is tested in [Slice 4](04-repository.md).
 - Update the feature doc's schema status, tables, constraints, lifecycle, config, and remaining work.

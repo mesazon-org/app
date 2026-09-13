@@ -82,12 +82,11 @@ object UserDetailsRepository {
             phoneNumberOptUpdate,
           )
         )
-        .mapError(e =>
-          ServiceError.InternalServerError
-            .RepositoryError(
-              s"Failed to updateUserDetails: [$userID], [$onboardStageUpdate], [$fullNameOptUpdate], [$phoneNumberOptUpdate]",
-              e,
-            )
+        .mapError(
+          catchUniqueConstraintViolation(
+            s"Failed to updateUserDetails: [$userID], [$onboardStageUpdate], [$fullNameOptUpdate], [$phoneNumberOptUpdate]",
+            uniqueConstraintViolationMessage,
+          )
         )
     } yield userDetailsRow
 
@@ -108,6 +107,11 @@ object UserDetailsRepository {
         .mapError(e =>
           ServiceError.InternalServerError.RepositoryError(s"Failed to getUserDetailsByEmail: [$email]", e)
         )
+
+    private val uniqueConstraintViolationMessage: PartialFunction[String, String] = {
+      case "uq_user_details_phone_number" =>
+        "The phone number given already belongs to a different account"
+    }
   }
 
   private def observed(repository: UserDetailsRepository): UserDetailsRepository = repository

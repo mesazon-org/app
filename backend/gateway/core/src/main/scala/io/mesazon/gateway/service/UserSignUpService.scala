@@ -18,6 +18,7 @@ object UserSignUpService {
       userOtpRepository: UserOtpRepository,
       userTokenRepository: UserTokenRepository,
       userDetailsRepository: UserDetailsRepository,
+      userActionAttemptRepository: UserActionAttemptRepository,
       jwtService: JwtService,
       timeProvider: TimeProvider,
       emailClient: EmailClient,
@@ -54,12 +55,43 @@ object UserSignUpService {
                   .minusSeconds(userSignUpConfig.otpEmailVerificationResendCooldown.toSeconds)
                   .isBefore(instantNow)
               )
+              userActionAttemptRowOpt <-
+                if (isEmptyOrExpiredOrExpiringSoon)
+                  userActionAttemptRepository
+                    .deleteUserActionAttempt(
+                      userDetailsRowExisting.userID,
+                      ActionAttemptType.EmailVerificationOtpLifetime,
+                    )
+                    .as(Option.empty)
+                else
+                  userActionAttemptRepository
+                    .getAndIncreaseUserActionAttempt(
+                      userDetailsRowExisting.userID,
+                      ActionAttemptType.EmailVerificationOtpLifetime,
+                    )
+                    .map(Option.apply)
+              isOtpResendAttemptsExceeded = userActionAttemptRowOpt.exists(
+                _.attempts.value > userSignUpConfig.otpEmailVerificationResendAttemptsMaxRetries
+              )
+              _ <- ZIO.whenDiscard(isOtpResendAttemptsExceeded)(
+                userActionAttemptRepository.deleteUserActionAttempt(
+                  userDetailsRowExisting.userID,
+                  ActionAttemptType.EmailVerificationOtpLifetime,
+                )
+              )
+              treatAsGenuinelyNewOtp = isEmptyOrExpiredOrExpiringSoon || isOtpResendAttemptsExceeded
+              _ <- ZIO.whenDiscard(treatAsGenuinelyNewOtp)(
+                userActionAttemptRepository.deleteUserActionAttempt(
+                  userDetailsRowExisting.userID,
+                  ActionAttemptType.EmailVerificationVerifyOTP,
+                )
+              )
               userDetailsRowUpdated <- userDetailsRepository.updateUserDetails(
                 userDetailsRowExisting.userID,
                 OnboardStage.EmailVerification,
               )
               otpNew <-
-                if (isEmptyOrExpiredOrExpiringSoon) otpGenerator.generateOtp
+                if (treatAsGenuinelyNewOtp) otpGenerator.generateOtp
                 else userOtpRowOpt.map(_.otp).fold(otpGenerator.generateOtp)(ZIO.succeed(_))
               expiresAtNew <-
                 timeProvider.instantNow
@@ -71,9 +103,9 @@ object UserSignUpService {
                 otpNew,
                 expiresAtNew,
               )
-              _ <- ZIO.whenDiscard(isEmptyOrExpiredOrExpiringSoon)(
+              _ <- ZIO.whenDiscard(treatAsGenuinelyNewOtp)(
                 emailClient
-                  .sendEmailVerificationEmail(userDetailsRowUpdated.email, otpNew)
+                  .sendEmailVerificationEmail(userDetailsRowUpdated.email, userOtpRowNew.otp)
                   .retry(
                     Schedule.recurs(userSignUpConfig.sendEmailVerificationEmailMaxRetries) && Schedule
                       .exponential(userSignUpConfig.sendEmailVerificationEmailRetryDelay)
@@ -120,7 +152,7 @@ object UserSignUpService {
         userOtpRow <- userOtpRepository
           .getUserOtpByOtpID(signUpVerifyEmailPostRequest.otpID, OtpType.EmailVerification)
           .someOrFail(
-            ServiceError.InternalServerError.UnexpectedError(
+            ServiceError.BadRequestError.OtpVerifyError(
               s"No otp found for otpID: [${signUpVerifyEmailPostRequest.otpID}] and otpType: [${OtpType.EmailVerification}]"
             )
           )
@@ -136,6 +168,19 @@ object UserSignUpService {
           onboardStageUser = userDetailsRow.onboardStage,
           onboardStagesAllowed = OnboardStage.signUpVerifyEmailStages,
         )
+        userActionAttemptRow <- userActionAttemptRepository.getAndIncreaseUserActionAttempt(
+          userID = userOtpRow.userID,
+          actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+        )
+        _ <-
+          if (userActionAttemptRow.attempts.value > userSignUpConfig.otpVerifyAttemptsMaxRetries)
+            userOtpRepository
+              .deleteUserOtp(userOtpRow.otpID, userOtpRow.userID, userOtpRow.otpType) *> ZIO.fail(
+              ServiceError.BadRequestError.OtpVerifyError(
+                s"OTP validation attempts exceeded for otpID: [${userOtpRow.otpID}]: attempts [${userActionAttemptRow.attempts.value}] reached max [${userSignUpConfig.otpVerifyAttemptsMaxRetries}]"
+              )
+            )
+          else ZIO.unit
         instantNow <- timeProvider.instantNow
         _          <-
           if (userOtpRow.expiresAt.value.isBefore(instantNow))
@@ -145,7 +190,7 @@ object UserSignUpService {
                 userOtpRow.userID,
                 userOtpRow.otpType,
               ) *> ZIO.fail(
-              ServiceError.UnauthorizedError.OtpExpiredError(
+              ServiceError.BadRequestError.OtpVerifyError(
                 s"Expired OTP provided for otpID: [${userOtpRow.otpID}]"
               )
             )
@@ -163,6 +208,9 @@ object UserSignUpService {
               userOtpRow.otpID,
               userDetailsRow.userID,
               userOtpRow.otpType,
+            ) *> userActionAttemptRepository.deleteUserActionAttempt(
+              userDetailsRow.userID,
+              ActionAttemptType.EmailVerificationVerifyOTP,
             )
           else
             ZIO.fail(

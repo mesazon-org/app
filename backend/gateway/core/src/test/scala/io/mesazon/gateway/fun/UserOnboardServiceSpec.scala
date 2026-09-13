@@ -5,8 +5,8 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.gateway.clients.{EmailClient, TwilioClient}
 import io.mesazon.gateway.config.*
+import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.domain.*
-import io.mesazon.gateway.repository.{UserCredentialsRepository, UserDetailsRepository, UserOtpRepository}
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.state.AuthState
@@ -242,6 +242,15 @@ class UserOnboardServiceSpec
             .expects(authedUser.userID)
             .returningZIO(Some(userDetailsRow))
             .once(),
+          userDetailsRepositoryMock.updateUserDetails
+            .expects(
+              authedUser.userID,
+              OnboardStage.PhoneVerification,
+              Some(fullName),
+              Some(phoneNumber),
+            )
+            .returningZIO(userDetailsRow)
+            .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userOtpRepositoryMock.getUserOtpByUserID
             .expects(authedUser.userID, OtpType.PhoneVerification)
@@ -252,14 +261,9 @@ class UserOnboardServiceSpec
             .expects(authedUser.userID, OtpType.PhoneVerification, userOtpRow.otp, userOtpRow.expiresAt)
             .returningZIO(userOtpRow)
             .once(),
-          userDetailsRepositoryMock.updateUserDetails
-            .expects(
-              authedUser.userID,
-              OnboardStage.PhoneVerification,
-              Some(fullName),
-              Some(phoneNumber),
-            )
-            .returningZIO(userDetailsRow)
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(authedUser.userID, ActionAttemptType.PhoneVerificationVerifyOTP)
+            .returnsZIOUnit
             .once(),
           twilioClientMock.sendOtpSms
             .expects(
@@ -316,6 +320,15 @@ class UserOnboardServiceSpec
             .expects(authedUser.userID)
             .returningZIO(Some(userDetailsRow))
             .once(),
+          userDetailsRepositoryMock.updateUserDetails
+            .expects(
+              authedUser.userID,
+              OnboardStage.PhoneVerification,
+              Some(fullName),
+              Some(phoneNumber),
+            )
+            .returningZIO(userDetailsRow)
+            .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userOtpRepositoryMock.getUserOtpByUserID
             .expects(authedUser.userID, OtpType.PhoneVerification)
@@ -326,14 +339,9 @@ class UserOnboardServiceSpec
             .expects(authedUser.userID, OtpType.PhoneVerification, userOtpRow.otp, userOtpRow.expiresAt)
             .returningZIO(userOtpRow)
             .once(),
-          userDetailsRepositoryMock.updateUserDetails
-            .expects(
-              authedUser.userID,
-              OnboardStage.PhoneVerification,
-              Some(fullName),
-              Some(phoneNumber),
-            )
-            .returningZIO(userDetailsRow)
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(authedUser.userID, ActionAttemptType.PhoneVerificationVerifyOTP)
+            .returnsZIOUnit
             .once(),
         )
 
@@ -366,11 +374,32 @@ class UserOnboardServiceSpec
             expiresAt = expiresAt,
           )
 
+        val fullName    = arbitrarySample[FullName]
+        val phoneNumber = arbitrarySample[PhoneNumber]
+
+        val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
+          .copy(
+            fullName = fullName.value,
+            phoneNumber = smithy.PhoneNumberRequest(
+              phoneNumber.phoneNationalNumber.value,
+              phoneNumber.phoneCountryCode.value,
+            ),
+          )
+
         inSequence(
           (() => authStateMock.get).expects().returningZIO(authedUser).once(),
           userDetailsRepositoryMock.getUserDetails
             .expects(authedUser.userID)
             .returningZIO(Some(userDetailsRow))
+            .once(),
+          userDetailsRepositoryMock.updateUserDetails
+            .expects(
+              authedUser.userID,
+              OnboardStage.PhoneVerification,
+              Some(fullName),
+              Some(phoneNumber),
+            )
+            .returningZIO(userDetailsRow)
             .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userOtpRepositoryMock.getUserOtpByUserID
@@ -380,8 +409,6 @@ class UserOnboardServiceSpec
         )
 
         val userOnboardService = buildUserOnboardServiceLive()
-
-        val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
 
         val onboardDetailsPostResponse =
           userOnboardService.onboardDetailsPost(onboardDetailsPostRequest).zioValue
@@ -419,6 +446,15 @@ class UserOnboardServiceSpec
             .expects(authedUser.userID)
             .returningZIO(Some(userDetailsRow))
             .once(),
+          userDetailsRepositoryMock.updateUserDetails
+            .expects(
+              authedUser.userID,
+              OnboardStage.PhoneVerification,
+              Some(fullName),
+              Some(phoneNumber),
+            )
+            .returningZIO(userDetailsRow)
+            .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userOtpRepositoryMock.getUserOtpByUserID
             .expects(authedUser.userID, OtpType.PhoneVerification)
@@ -434,14 +470,9 @@ class UserOnboardServiceSpec
             )
             .returningZIO(userOtpRow)
             .once(),
-          userDetailsRepositoryMock.updateUserDetails
-            .expects(
-              authedUser.userID,
-              OnboardStage.PhoneVerification,
-              Some(fullName),
-              Some(phoneNumber),
-            )
-            .returningZIO(userDetailsRow)
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(authedUser.userID, ActionAttemptType.PhoneVerificationVerifyOTP)
+            .returnsZIOUnit
             .once(),
           twilioClientMock.sendOtpSms
             .expects(
@@ -581,6 +612,15 @@ class UserOnboardServiceSpec
             .expects(authedUser.userID)
             .returningZIO(Some(userDetailsRow))
             .once(),
+          userDetailsRepositoryMock.updateUserDetails
+            .expects(
+              authedUser.userID,
+              OnboardStage.PhoneVerification,
+              Some(fullName),
+              Some(phoneNumber),
+            )
+            .returningZIO(userDetailsRow)
+            .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userOtpRepositoryMock.getUserOtpByUserID
             .expects(authedUser.userID, OtpType.PhoneVerification)
@@ -591,14 +631,9 @@ class UserOnboardServiceSpec
             .expects(authedUser.userID, OtpType.PhoneVerification, userOtpRow.otp, userOtpRow.expiresAt)
             .returningZIO(userOtpRow)
             .once(),
-          userDetailsRepositoryMock.updateUserDetails
-            .expects(
-              authedUser.userID,
-              OnboardStage.PhoneVerification,
-              Some(fullName),
-              Some(phoneNumber),
-            )
-            .returningZIO(userDetailsRow)
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(authedUser.userID, ActionAttemptType.PhoneVerificationVerifyOTP)
+            .returnsZIOUnit
             .once(),
           twilioClientMock.sendOtpSms
             .expects(
@@ -633,6 +668,56 @@ class UserOnboardServiceSpec
 
         sendOtpSmsCounter.get.zioValue shouldBe userOnboardConfig.sendPhoneVerificationOtpMaxRetries + 1
       }
+
+      "fail with ConflictError when the phone number belongs to a different account" in new TestContext {
+        val authedUser   = arbitrarySample[AuthedUser]
+        val onboardStage = Random.shuffle(OnboardStage.onboardDetailsStages).zioValue.head
+
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
+
+        val fullName    = arbitrarySample[FullName]
+        val phoneNumber = arbitrarySample[PhoneNumber]
+
+        val onboardDetailsPostRequest = arbitrarySample[smithy.OnboardDetailsPostRequest]
+          .copy(
+            fullName = fullName.value,
+            phoneNumber = smithy.PhoneNumberRequest(
+              phoneNumber.phoneNationalNumber.value,
+              phoneNumber.phoneCountryCode.value,
+            ),
+          )
+
+        val serviceErrorConflict = ServiceError.ConflictError.UniqueConstraintViolation(
+          "The phone number given already belongs to a different account",
+          new RuntimeException("unique violation"),
+        )
+
+        // No OTP/SMS mock: the constraint violation must reject before any of it is even reached.
+        inSequence(
+          (() => authStateMock.get).expects().returningZIO(authedUser).once(),
+          userDetailsRepositoryMock.getUserDetails
+            .expects(authedUser.userID)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userDetailsRepositoryMock.updateUserDetails
+            .expects(
+              authedUser.userID,
+              OnboardStage.PhoneVerification,
+              Some(fullName),
+              Some(phoneNumber),
+            )
+            .returns(ZIO.fail(serviceErrorConflict))
+            .once(),
+        )
+
+        val userOnboardService = buildUserOnboardServiceLive()
+
+        val serviceError = userOnboardService.onboardDetailsPost(onboardDetailsPostRequest).zioError
+
+        serviceError shouldBe a[ServiceError.ConflictError.UniqueConstraintViolation]
+        serviceError.asInstanceOf[ServiceError.ConflictError.UniqueConstraintViolation] shouldBe serviceErrorConflict
+      }
     }
 
     "onboardVerifyPhoneNumberPost" should {
@@ -652,6 +737,13 @@ class UserOnboardServiceSpec
             ),
           )
 
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = authedUser.userID,
+            actionAttemptType = ActionAttemptType.PhoneVerificationVerifyOTP,
+            attempts = Attempts.assume(1),
+          )
+
         inSequence(
           (() => authStateMock.get).expects().returningZIO(authedUser).once(),
           userDetailsRepositoryMock.getUserDetails
@@ -662,6 +754,10 @@ class UserOnboardServiceSpec
             .expects(userOtpRow.otpID, authedUser.userID, OtpType.PhoneVerification)
             .returningZIO(Some(userOtpRow))
             .once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(authedUser.userID, ActionAttemptType.PhoneVerificationVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userDetailsRepositoryMock.updateUserDetails
             .expects(authedUser.userID, OnboardStage.PhoneVerified, None, None)
@@ -669,6 +765,10 @@ class UserOnboardServiceSpec
             .once(),
           userOtpRepositoryMock.deleteUserOtp
             .expects(userOtpRow.otpID, authedUser.userID, OtpType.PhoneVerification)
+            .returningZIOUnit
+            .once(),
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(authedUser.userID, ActionAttemptType.PhoneVerificationVerifyOTP)
             .returningZIOUnit
             .once(),
         )
@@ -704,6 +804,13 @@ class UserOnboardServiceSpec
             ),
           )
 
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = authedUser.userID,
+            actionAttemptType = ActionAttemptType.PhoneVerificationVerifyOTP,
+            attempts = Attempts.assume(1),
+          )
+
         inSequence(
           (() => authStateMock.get).expects().returningZIO(authedUser).once(),
           userDetailsRepositoryMock.getUserDetails
@@ -714,6 +821,10 @@ class UserOnboardServiceSpec
             .expects(userOtpRow.otpID, authedUser.userID, OtpType.PhoneVerification)
             .returningZIO(Some(userOtpRow))
             .once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(authedUser.userID, ActionAttemptType.PhoneVerificationVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userDetailsRepositoryMock.updateUserDetails
             .expects(authedUser.userID, OnboardStage.PhoneVerified, None, None)
@@ -721,6 +832,10 @@ class UserOnboardServiceSpec
             .once(),
           userOtpRepositoryMock.deleteUserOtp
             .expects(userOtpRow.otpID, authedUser.userID, OtpType.PhoneVerification)
+            .returningZIOUnit
+            .once(),
+          userActionAttemptRepositoryMock.deleteUserActionAttempt
+            .expects(authedUser.userID, ActionAttemptType.PhoneVerificationVerifyOTP)
             .returningZIOUnit
             .once(),
         )
@@ -797,7 +912,7 @@ class UserOnboardServiceSpec
           )
       }
 
-      "fail with OtpExpiredError when otp is expired" in new TestContext {
+      "fail with OtpVerificationFailedError when otp is expired" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -811,6 +926,13 @@ class UserOnboardServiceSpec
             expiresAt = ExpiresAt(instantNow.minusSeconds(expiresAtbuffer)),
           )
 
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = authedUser.userID,
+            actionAttemptType = ActionAttemptType.PhoneVerificationVerifyOTP,
+            attempts = Attempts.assume(1),
+          )
+
         inSequence(
           (() => authStateMock.get).expects().returningZIO(authedUser).once(),
           userDetailsRepositoryMock.getUserDetails
@@ -820,6 +942,10 @@ class UserOnboardServiceSpec
           userOtpRepositoryMock.getUserOtp
             .expects(userOtpRow.otpID, authedUser.userID, OtpType.PhoneVerification)
             .returningZIO(Some(userOtpRow))
+            .once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(authedUser.userID, ActionAttemptType.PhoneVerificationVerifyOTP)
+            .returningZIO(userActionAttemptRow)
             .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
           userOtpRepositoryMock.deleteUserOtp
@@ -838,15 +964,17 @@ class UserOnboardServiceSpec
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpExpiredError]
+        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpVerificationFailedError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpExpiredError] shouldBe ServiceError.UnauthorizedError
-          .OtpExpiredError(
+          .asInstanceOf[
+            ServiceError.UnauthorizedError.OtpVerificationFailedError
+          ] shouldBe ServiceError.UnauthorizedError
+          .OtpVerificationFailedError(
             s"Expired OTP provided for otpID: [${userOtpRow.otpID}]"
           )
       }
 
-      "fail with UnexpectedError when otp does not exist" in new TestContext {
+      "fail with OtpVerificationFailedError when otp does not exist" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -874,10 +1002,12 @@ class UserOnboardServiceSpec
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequest).zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpVerificationFailedError]
         serviceError
-          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
-          .UnexpectedError(
+          .asInstanceOf[
+            ServiceError.UnauthorizedError.OtpVerificationFailedError
+          ] shouldBe ServiceError.UnauthorizedError
+          .OtpVerificationFailedError(
             s"No OTP found for otpID: [${onboardVerifyPhoneNumberPostRequest.otpID}]"
           )
       }
@@ -898,6 +1028,13 @@ class UserOnboardServiceSpec
             ),
           )
 
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = authedUser.userID,
+            actionAttemptType = ActionAttemptType.PhoneVerificationVerifyOTP,
+            attempts = Attempts.assume(1),
+          )
+
         inSequence(
           (() => authStateMock.get).expects().returningZIO(authedUser).once(),
           userDetailsRepositoryMock.getUserDetails
@@ -907,6 +1044,10 @@ class UserOnboardServiceSpec
           userOtpRepositoryMock.getUserOtp
             .expects(userOtpRow.otpID, authedUser.userID, OtpType.PhoneVerification)
             .returningZIO(Some(userOtpRow))
+            .once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(authedUser.userID, ActionAttemptType.PhoneVerificationVerifyOTP)
+            .returningZIO(userActionAttemptRow)
             .once(),
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
         )
@@ -926,6 +1067,128 @@ class UserOnboardServiceSpec
           .asInstanceOf[ServiceError.BadRequestError.OtpVerifyError] shouldBe ServiceError.BadRequestError
           .OtpVerifyError(
             s"Wrong OTP provided for otpID: [${userOtpRow.otpID}]"
+          )
+      }
+
+      "fail with OtpVerifyError when wrong otp is submitted on the 5th attempt, at the limit but not exceeding it" in new TestContext {
+        val authedUser     = arbitrarySample[AuthedUser]
+        val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
+
+        val expiresAtBuffer = Random.nextIntBetween(1, 300).zioValue
+        val userOtpRow      = arbitrarySample[UserOtpRow]
+          .copy(
+            userID = authedUser.userID,
+            otpType = OtpType.PhoneVerification,
+            expiresAt = ExpiresAt(
+              instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds + expiresAtBuffer)
+            ),
+          )
+
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = authedUser.userID,
+            actionAttemptType = ActionAttemptType.PhoneVerificationVerifyOTP,
+            attempts = Attempts.assume(userOnboardConfig.otpVerifyAttemptsMaxRetries),
+          )
+
+        inSequence(
+          (() => authStateMock.get).expects().returningZIO(authedUser).once(),
+          userDetailsRepositoryMock.getUserDetails
+            .expects(authedUser.userID)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userOtpRepositoryMock.getUserOtp
+            .expects(userOtpRow.otpID, authedUser.userID, OtpType.PhoneVerification)
+            .returningZIO(Some(userOtpRow))
+            .once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(authedUser.userID, ActionAttemptType.PhoneVerificationVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+        )
+
+        val userOnboardService = buildUserOnboardServiceLive()
+
+        val onboardVerifyPhoneNumberPostRequest = smithy.OnboardVerifyPhoneNumberPostRequest(
+          userOtpRow.otpID.value,
+          "123ABC",
+        )
+
+        val serviceError =
+          userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequest).zioError
+
+        serviceError shouldBe a[ServiceError.BadRequestError.OtpVerifyError]
+        serviceError
+          .asInstanceOf[ServiceError.BadRequestError.OtpVerifyError] shouldBe ServiceError.BadRequestError
+          .OtpVerifyError(
+            s"Wrong OTP provided for otpID: [${userOtpRow.otpID}]"
+          )
+      }
+
+      "fail with OtpVerificationFailedError when verify attempts has reached the limit" in new TestContext {
+        val authedUser     = arbitrarySample[AuthedUser]
+        val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(userID = authedUser.userID, onboardStage = onboardStage)
+
+        val expiresAtBuffer = Random.nextIntBetween(1, 300).zioValue
+        val userOtpRow      = arbitrarySample[UserOtpRow]
+          .copy(
+            userID = authedUser.userID,
+            otpType = OtpType.PhoneVerification,
+            expiresAt = ExpiresAt(
+              instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationResendCooldown.toSeconds + expiresAtBuffer)
+            ),
+          )
+
+        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
+          .copy(
+            userID = authedUser.userID,
+            actionAttemptType = ActionAttemptType.PhoneVerificationVerifyOTP,
+            attempts = Attempts.assume(userOnboardConfig.otpVerifyAttemptsMaxRetries + 1),
+          )
+
+        inSequence(
+          (() => authStateMock.get).expects().returningZIO(authedUser).once(),
+          userDetailsRepositoryMock.getUserDetails
+            .expects(authedUser.userID)
+            .returningZIO(Some(userDetailsRow))
+            .once(),
+          userOtpRepositoryMock.getUserOtp
+            .expects(userOtpRow.otpID, authedUser.userID, OtpType.PhoneVerification)
+            .returningZIO(Some(userOtpRow))
+            .once(),
+          userActionAttemptRepositoryMock.getAndIncreaseUserActionAttempt
+            .expects(authedUser.userID, ActionAttemptType.PhoneVerificationVerifyOTP)
+            .returningZIO(userActionAttemptRow)
+            .once(),
+          userOtpRepositoryMock.deleteUserOtp
+            .expects(userOtpRow.otpID, authedUser.userID, OtpType.PhoneVerification)
+            .returningZIOUnit
+            .once(),
+        )
+
+        val userOnboardService = buildUserOnboardServiceLive()
+
+        // Actually-correct OTP submitted as the 6th call must still be rejected without being checked
+        val onboardVerifyPhoneNumberPostRequest = smithy.OnboardVerifyPhoneNumberPostRequest(
+          userOtpRow.otpID.value,
+          userOtpRow.otp.value,
+        )
+
+        val serviceError =
+          userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequest).zioError
+
+        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpVerificationFailedError]
+        serviceError
+          .asInstanceOf[
+            ServiceError.UnauthorizedError.OtpVerificationFailedError
+          ] shouldBe ServiceError.UnauthorizedError
+          .OtpVerificationFailedError(
+            s"OTP validation attempts exceeded for otpID: [${userOtpRow.otpID}]: attempts [${userActionAttemptRow.attempts.value}] reached max [${userOnboardConfig.otpVerifyAttemptsMaxRetries}]"
           )
       }
 
@@ -996,7 +1259,7 @@ class UserOnboardServiceSpec
         )
       }
 
-      "fail with UnexpectedError when otp does not exist for user" in new TestContext {
+      "fail with OtpVerificationFailedError when otp does not exist for user" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -1019,15 +1282,17 @@ class UserOnboardServiceSpec
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberGet().zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpVerificationFailedError]
         serviceError
-          .asInstanceOf[ServiceError.InternalServerError.UnexpectedError] shouldBe ServiceError.InternalServerError
-          .UnexpectedError(
+          .asInstanceOf[
+            ServiceError.UnauthorizedError.OtpVerificationFailedError
+          ] shouldBe ServiceError.UnauthorizedError
+          .OtpVerificationFailedError(
             s"No OTP found for userID: [${authedUser.userID}] and otpType: [${OtpType.PhoneVerification}]"
           )
       }
 
-      "fail with OtpExpiredError when otp is expired for user" in new TestContext {
+      "fail with OtpVerificationFailedError when otp is expired for user" in new TestContext {
         val authedUser     = arbitrarySample[AuthedUser]
         val onboardStage   = Random.shuffle(OnboardStage.onboardVerifyPhoneNumberStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
@@ -1063,10 +1328,12 @@ class UserOnboardServiceSpec
         val serviceError =
           userOnboardService.onboardVerifyPhoneNumberGet().zioError
 
-        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpExpiredError]
+        serviceError shouldBe a[ServiceError.UnauthorizedError.OtpVerificationFailedError]
         serviceError
-          .asInstanceOf[ServiceError.UnauthorizedError.OtpExpiredError] shouldBe ServiceError.UnauthorizedError
-          .OtpExpiredError(
+          .asInstanceOf[
+            ServiceError.UnauthorizedError.OtpVerificationFailedError
+          ] shouldBe ServiceError.UnauthorizedError
+          .OtpVerificationFailedError(
             s"OTP expired for otpID: [${userOtpRow.otpID}]"
           )
       }
@@ -1115,17 +1382,19 @@ class UserOnboardServiceSpec
       sendWelcomeEmailRetryDelay = 1.millisecond,
       sendPhoneVerificationOtpMaxRetries = 5,
       sendPhoneVerificationOtpRetryDelay = 1.millisecond,
+      otpVerifyAttemptsMaxRetries = 5,
     )
 
-    val otpGeneratorMock              = mock[OtpGenerator]
-    val timeProviderMock              = mock[TimeProvider]
-    val twilioClientMock              = mock[TwilioClient]
-    val passwordServiceMock           = mock[PasswordService]
-    val authStateMock                 = mock[AuthState]
-    val userDetailsRepositoryMock     = mock[UserDetailsRepository]
-    val userOtpRepositoryMock         = mock[UserOtpRepository]
-    val userCredentialsRepositoryMock = mock[UserCredentialsRepository]
-    val emailClientMock               = mock[EmailClient]
+    val otpGeneratorMock                = mock[OtpGenerator]
+    val timeProviderMock                = mock[TimeProvider]
+    val twilioClientMock                = mock[TwilioClient]
+    val passwordServiceMock             = mock[PasswordService]
+    val authStateMock                   = mock[AuthState]
+    val userDetailsRepositoryMock       = mock[UserDetailsRepository]
+    val userOtpRepositoryMock           = mock[UserOtpRepository]
+    val userActionAttemptRepositoryMock = mock[UserActionAttemptRepository]
+    val userCredentialsRepositoryMock   = mock[UserCredentialsRepository]
+    val emailClientMock                 = mock[EmailClient]
 
     def buildUserOnboardServiceLive(isDev: Boolean = false): smithy.UserOnboardService[ServiceTask] =
       ZIO
@@ -1148,6 +1417,7 @@ class UserOnboardServiceSpec
           ZLayer.succeed(authStateMock),
           ZLayer.succeed(userDetailsRepositoryMock),
           ZLayer.succeed(userOtpRepositoryMock),
+          ZLayer.succeed(userActionAttemptRepositoryMock),
           ZLayer.succeed(userCredentialsRepositoryMock),
           ZLayer.succeed(emailClientMock),
         )

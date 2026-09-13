@@ -215,3 +215,67 @@ structure GetCustomersGetResponse {
     @required
     customers: GetCustomers
 }
+
+structure InsertCustomerIndividualPostResponse {
+    @required
+    customerID: UUID
+    @required
+    fullName: String
+    @required
+    emails: CustomerEmailEntryRequests
+    @required
+    phoneNumbers: CustomerPhoneNumberEntryRequests
+    addressLine1: String
+    addressLine2: String
+    city: String
+    postalCode: String
+    country: String
+}
+
+structure InsertCustomerIndividualsPostResponse {
+    @required
+    customerIndividuals: GetCustomers
+}
+
+structure InsertCustomerBusinessContactResponse {
+    @required
+    customerBusinessContactID: UUID
+    @required
+    fullName: String
+    role: String
+    email: String
+    phoneNumber: PhoneNumberRequest
+}
+
+list InsertCustomerBusinessContactsResponse {
+    member: InsertCustomerBusinessContactResponse
+}
+
+structure InsertCustomerBusinessPostResponse {
+    @required
+    customerID: UUID
+    @required
+    businessName: String
+    @required
+    emails: CustomerEmailEntryRequests
+    taxID: String
+    @required
+    phoneNumbers: CustomerPhoneNumberEntryRequests
+    addressLine1: String
+    addressLine2: String
+    city: String
+    postalCode: String
+    country: String
+    @required
+    customerBusinessContacts: InsertCustomerBusinessContactsResponse
+}
+
+structure InsertCustomerBusinessesPostResponse {
+    @required
+    customerBusinesses: GetCustomers
+}
+
+structure InsertCustomersPostResponse {
+    @required
+    customers: GetCustomers
+}

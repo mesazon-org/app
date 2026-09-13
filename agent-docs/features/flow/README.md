@@ -2,9 +2,11 @@
 
 For a new feature/endpoint, read its feature doc, current slice guide, and linked technology standards only. Every PR is independently reviewable and contains its applicable tests.
 
-## PR sequence
+Follow [Development practices](../../standards/development-practices.md): agree concrete behavior examples (BDD), model the business rules within existing feature boundaries (DDD), and implement behavior through focused red/green/refactor cycles (TDD). These fit within the existing plan and slices, without additional handoffs.
 
-| PR | Guide | Output | Required proof |
+## Implementation slices
+
+| Slice | Guide | Output | Required proof |
 |---|---|---|---|
 | 1 | [Endpoints](01-endpoints.md) | Smithy (default) or Tapir endpoint contract plus transport models; feature doc created | codegen/compile and contract docs |
 | 2 | [Validation](02-validation.md) | validated domain models, newtypes, arbitraries, validator | success + accumulated-error unit tests per validator function |
@@ -12,14 +14,14 @@ For a new feature/endpoint, read its feature doc, current slice guide, and linke
 | 4 | [Repository](04-repository.md) | persistence types, Row, Queries, Repository, codecs, layer definitions | real-Postgres tests for every query/repository method and DB constraint |
 | 5 | [Service](05-service.md) | orchestration and full endpoint implementation/wiring | functional branches + acceptance happy/error matrix per endpoint |
 
-Skip an inapplicable slice (e.g. read-only/no schema) and record `N/A` in the feature doc. Do not combine slices merely to reduce PR count; combine only when a slice would otherwise be non-functional noise.
+Use the slices as dependency order, not mandatory PR boundaries. Default to one complete, reviewable PR for a small feature. Split larger work when review size, migration/deployment safety, or independent delivery warrants it. Combined slices retain all applicable checks in that PR, run once at the appropriate boundary. Skip inapplicable slices without a separate checklist; record N/A only when the feature status table would otherwise be misleading.
 
 Domain types are not a separate PR. Add each type in the earliest slice whose code needs it:
 
-- transport request/response/error models: endpoint PR;
-- validated request models/newtypes and types shared with the repository: validation PR;
-- persistence-only Row/input/projection types: repository PR;
-- schema PR contains DDL/config only, no Scala persistence layer.
+- transport request/response/error models: endpoint slice;
+- validated request models/newtypes and types shared with the repository: validation slice;
+- persistence-only Row/input/projection types: repository slice;
+- schema slice contains DDL/config; a combined PR may also contain the subsequent persistence layer.
 
 Keep code grouped by feature and concern: one class/trait per file except the intentional `<Feature>.scala` request-model group. Use feature validators/arbitrary traits; do not grow generic kitchen-sink validators or arbitrary traits.
 
@@ -75,4 +77,4 @@ Keep `Status` until every slice is shipped and tested; then replace it with a co
 1. Apply the current slice guide and linked technology standards.
 2. Add/update the slice's tests in the same PR.
 3. Update the feature doc status, files, config, decisions, and tests.
-4. Run `sbt "runLint"` then the slice-specific command.
+4. Apply AGENTS.md's change-specific verification. Run applicable slice checks once for combined work; docs-only updates need doc checks, not sbt.

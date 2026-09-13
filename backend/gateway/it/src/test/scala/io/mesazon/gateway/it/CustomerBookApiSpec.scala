@@ -55,7 +55,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             )
             .zioValue
 
-        insertCustomerIndividualPostResponse.code shouldBe StatusCode.NoContent
+        insertCustomerIndividualPostResponse.code shouldBe StatusCode.Ok
 
         val customerIndividualDetailsRowsAll =
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
@@ -79,6 +79,27 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           status = CustomerStatus.Active,
           createdAt = customerIndividualDetailsRowsAll.head.createdAt,
           updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
+        )
+        insertCustomerIndividualPostResponse.body.value shouldBe smithy.InsertCustomerIndividualPostResponse(
+          customerID = customerIndividualDetailsRowsAll.head.customerID.value,
+          fullName = insertCustomerIndividualPostRequest.fullName.value,
+          emails = insertCustomerIndividualPostRequest.emails.map(entry =>
+            smithy.CustomerEmailEntryRequest(entry.email.value, entry.isDefault)
+          ),
+          phoneNumbers = insertCustomerIndividualPostRequest.phoneNumbers.map(entry =>
+            smithy.CustomerPhoneNumberEntryRequest(
+              smithy.PhoneNumberRequest(
+                entry.phoneNumber.value.phoneNationalNumber.value,
+                entry.phoneNumber.value.phoneCountryCode.value,
+              ),
+              entry.isDefault,
+            )
+          ),
+          addressLine1 = insertCustomerIndividualPostRequest.addressLine1.map(_.value),
+          addressLine2 = insertCustomerIndividualPostRequest.addressLine2.map(_.value),
+          city = insertCustomerIndividualPostRequest.city.map(_.value),
+          postalCode = insertCustomerIndividualPostRequest.postalCode.map(_.value),
+          country = insertCustomerIndividualPostRequest.country.map(_.value),
         )
       }
 
@@ -390,7 +411,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             )
             .zioValue
 
-        insertCustomerIndividualsPostResponse.code shouldBe StatusCode.NoContent
+        insertCustomerIndividualsPostResponse.code shouldBe StatusCode.Ok
 
         val customerIndividualDetailsRowsAll =
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
@@ -422,6 +443,21 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               updatedAt = customerIndividualDetailsRow.updatedAt,
             )
         }
+
+        insertCustomerIndividualsPostResponse.body.value shouldBe smithy.InsertCustomerIndividualsPostResponse(
+          customerIndividuals = List(insertCustomerIndividualPostRequest1, insertCustomerIndividualPostRequest2).map(
+            insertCustomerIndividualPostRequest =>
+              smithy.GetCustomer(
+                customerID = customerIndividualDetailsRowsAll
+                  .find(_.fullName == insertCustomerIndividualPostRequest.fullName)
+                  .value
+                  .customerID
+                  .value,
+                name = insertCustomerIndividualPostRequest.fullName.value,
+                customerType = smithy.CustomerType.INDIVIDUAL,
+              )
+          )
+        )
       }
 
       "fail with a ValidationError when a customer individual in the batch is invalid" in withContext { context =>
@@ -737,7 +773,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             )
             .zioValue
 
-        insertCustomerBusinessPostResponse.code shouldBe StatusCode.NoContent
+        insertCustomerBusinessPostResponse.code shouldBe StatusCode.Ok
 
         val customerBusinessDetailsRowsAll =
           postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
@@ -777,6 +813,43 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           phoneNumber = insertCustomerBusinessContact.phoneNumber,
           createdAt = customerBusinessContactRowsAll.head.createdAt,
           updatedAt = customerBusinessContactRowsAll.head.updatedAt,
+        )
+
+        insertCustomerBusinessPostResponse.body.value shouldBe smithy.InsertCustomerBusinessPostResponse(
+          customerID = customerBusinessDetailsRowsAll.head.customerID.value,
+          businessName = insertCustomerBusinessPostRequest.businessName.value,
+          emails = insertCustomerBusinessPostRequest.emails.map(entry =>
+            smithy.CustomerEmailEntryRequest(entry.email.value, entry.isDefault)
+          ),
+          taxID = insertCustomerBusinessPostRequest.taxID.map(_.value),
+          phoneNumbers = insertCustomerBusinessPostRequest.phoneNumbers.map(entry =>
+            smithy.CustomerPhoneNumberEntryRequest(
+              smithy.PhoneNumberRequest(
+                entry.phoneNumber.value.phoneNationalNumber.value,
+                entry.phoneNumber.value.phoneCountryCode.value,
+              ),
+              entry.isDefault,
+            )
+          ),
+          addressLine1 = insertCustomerBusinessPostRequest.addressLine1.map(_.value),
+          addressLine2 = insertCustomerBusinessPostRequest.addressLine2.map(_.value),
+          city = insertCustomerBusinessPostRequest.city.map(_.value),
+          postalCode = insertCustomerBusinessPostRequest.postalCode.map(_.value),
+          country = insertCustomerBusinessPostRequest.country.map(_.value),
+          customerBusinessContacts = List(
+            smithy.InsertCustomerBusinessContactResponse(
+              customerBusinessContactID = customerBusinessContactRowsAll.head.customerBusinessContactID.value,
+              fullName = insertCustomerBusinessContact.fullName.value,
+              role = insertCustomerBusinessContact.role.map(_.value),
+              email = insertCustomerBusinessContact.email.map(_.value),
+              phoneNumber = insertCustomerBusinessContact.phoneNumber.map(phoneNumber =>
+                smithy.PhoneNumberRequest(
+                  phoneNumber.value.phoneNationalNumber.value,
+                  phoneNumber.value.phoneCountryCode.value,
+                )
+              ),
+            )
+          ),
         )
       }
 
@@ -1173,7 +1246,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             )
             .zioValue
 
-        insertCustomerBusinessesPostResponse.code shouldBe StatusCode.NoContent
+        insertCustomerBusinessesPostResponse.code shouldBe StatusCode.Ok
 
         val customerBusinessDetailsRowsAll =
           postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
@@ -1206,6 +1279,21 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               updatedAt = customerBusinessDetailsRow.updatedAt,
             )
         }
+
+        insertCustomerBusinessesPostResponse.body.value shouldBe smithy.InsertCustomerBusinessesPostResponse(
+          customerBusinesses = List(insertCustomerBusinessPostRequest1, insertCustomerBusinessPostRequest2).map(
+            insertCustomerBusinessPostRequest =>
+              smithy.GetCustomer(
+                customerID = customerBusinessDetailsRowsAll
+                  .find(_.businessName == insertCustomerBusinessPostRequest.businessName)
+                  .value
+                  .customerID
+                  .value,
+                name = insertCustomerBusinessPostRequest.businessName.value,
+                customerType = smithy.CustomerType.BUSINESS,
+              )
+          )
+        )
       }
 
       "fail with a ValidationError when a customer business in the batch is invalid" in withContext { context =>

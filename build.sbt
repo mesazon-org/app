@@ -182,6 +182,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.jclToSlf4j,
     Dependencies.logback,
     Dependencies.chimney,
+    Dependencies.ironChimney,
     Dependencies.doobieCore,
     Dependencies.doobieHikari,
     Dependencies.doobiePostgres,

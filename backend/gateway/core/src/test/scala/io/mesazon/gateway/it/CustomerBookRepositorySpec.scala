@@ -61,27 +61,27 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           (() => idGeneratorMock.generateID).expects().returningZIO(customerID.value).once(),
         )
 
+        val customerIndividualDetailsRowExpected = CustomerIndividualDetailsRow(
+          organizationID,
+          customerID,
+          insertCustomerIndividualInput.fullName,
+          insertCustomerIndividualInput.emails,
+          insertCustomerIndividualInput.phoneNumbers,
+          insertCustomerIndividualInput.addressLine1,
+          insertCustomerIndividualInput.addressLine2,
+          insertCustomerIndividualInput.city,
+          insertCustomerIndividualInput.postalCode,
+          insertCustomerIndividualInput.country,
+          CustomerStatus.Active,
+          CreatedAt(instantNow),
+          UpdatedAt(instantNow),
+        )
+
         customerBookRepository.insertCustomerIndividual(organizationID, insertCustomerIndividualInput).zioValue shouldBe
-          customerID
+          customerIndividualDetailsRowExpected
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue shouldBe
-          List(
-            CustomerIndividualDetailsRow(
-              organizationID,
-              customerID,
-              insertCustomerIndividualInput.fullName,
-              insertCustomerIndividualInput.emails,
-              insertCustomerIndividualInput.phoneNumbers,
-              insertCustomerIndividualInput.addressLine1,
-              insertCustomerIndividualInput.addressLine2,
-              insertCustomerIndividualInput.city,
-              insertCustomerIndividualInput.postalCode,
-              insertCustomerIndividualInput.country,
-              CustomerStatus.Active,
-              CreatedAt(instantNow),
-              UpdatedAt(instantNow),
-            )
-          )
+          List(customerIndividualDetailsRowExpected)
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 1
       }
@@ -132,46 +132,46 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           (() => idGeneratorMock.generateID).expects().returningZIO(customerID2.value).once(),
         )
 
+        val customerIndividualDetailsRow1Expected = CustomerIndividualDetailsRow(
+          organizationID,
+          customerID1,
+          insertCustomerIndividualInput1.fullName,
+          insertCustomerIndividualInput1.emails,
+          insertCustomerIndividualInput1.phoneNumbers,
+          insertCustomerIndividualInput1.addressLine1,
+          insertCustomerIndividualInput1.addressLine2,
+          insertCustomerIndividualInput1.city,
+          insertCustomerIndividualInput1.postalCode,
+          insertCustomerIndividualInput1.country,
+          CustomerStatus.Active,
+          CreatedAt(instantNow),
+          UpdatedAt(instantNow),
+        )
+        val customerIndividualDetailsRow2Expected = CustomerIndividualDetailsRow(
+          organizationID,
+          customerID2,
+          insertCustomerIndividualInput2.fullName,
+          insertCustomerIndividualInput2.emails,
+          insertCustomerIndividualInput2.phoneNumbers,
+          insertCustomerIndividualInput2.addressLine1,
+          insertCustomerIndividualInput2.addressLine2,
+          insertCustomerIndividualInput2.city,
+          insertCustomerIndividualInput2.postalCode,
+          insertCustomerIndividualInput2.country,
+          CustomerStatus.Active,
+          CreatedAt(instantNow),
+          UpdatedAt(instantNow),
+        )
+
         customerBookRepository
           .insertCustomerIndividuals(
             organizationID,
             List(insertCustomerIndividualInput1, insertCustomerIndividualInput2),
           )
-          .zioValue shouldBe List(customerID1, customerID2)
+          .zioValue shouldBe List(customerIndividualDetailsRow1Expected, customerIndividualDetailsRow2Expected)
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue should
-          contain theSameElementsAs List(
-            CustomerIndividualDetailsRow(
-              organizationID,
-              customerID1,
-              insertCustomerIndividualInput1.fullName,
-              insertCustomerIndividualInput1.emails,
-              insertCustomerIndividualInput1.phoneNumbers,
-              insertCustomerIndividualInput1.addressLine1,
-              insertCustomerIndividualInput1.addressLine2,
-              insertCustomerIndividualInput1.city,
-              insertCustomerIndividualInput1.postalCode,
-              insertCustomerIndividualInput1.country,
-              CustomerStatus.Active,
-              CreatedAt(instantNow),
-              UpdatedAt(instantNow),
-            ),
-            CustomerIndividualDetailsRow(
-              organizationID,
-              customerID2,
-              insertCustomerIndividualInput2.fullName,
-              insertCustomerIndividualInput2.emails,
-              insertCustomerIndividualInput2.phoneNumbers,
-              insertCustomerIndividualInput2.addressLine1,
-              insertCustomerIndividualInput2.addressLine2,
-              insertCustomerIndividualInput2.city,
-              insertCustomerIndividualInput2.postalCode,
-              insertCustomerIndividualInput2.country,
-              CustomerStatus.Active,
-              CreatedAt(instantNow),
-              UpdatedAt(instantNow),
-            ),
-          )
+          contain theSameElementsAs List(customerIndividualDetailsRow1Expected, customerIndividualDetailsRow2Expected)
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 2
       }
@@ -194,47 +194,50 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           (() => idGeneratorMock.generateID).expects().returningZIO(customerBusinessContactID.value).once(),
         )
 
+        val customerBusinessDetailsRowExpected = CustomerBusinessDetailsRow(
+          organizationID,
+          customerID,
+          insertCustomerBusinessInput.businessName,
+          insertCustomerBusinessInput.taxID,
+          insertCustomerBusinessInput.emails,
+          insertCustomerBusinessInput.phoneNumbers,
+          insertCustomerBusinessInput.addressLine1,
+          insertCustomerBusinessInput.addressLine2,
+          insertCustomerBusinessInput.city,
+          insertCustomerBusinessInput.postalCode,
+          insertCustomerBusinessInput.country,
+          CustomerStatus.Active,
+          CreatedAt(instantNow),
+          UpdatedAt(instantNow),
+        )
+        val customerBusinessContactRowExpected = CustomerBusinessContactRow(
+          organizationID,
+          customerID,
+          customerBusinessContactID,
+          customerBusinessContactInput.fullName,
+          customerBusinessContactInput.role,
+          customerBusinessContactInput.email,
+          customerBusinessContactInput.phoneNumber,
+          CreatedAt(instantNow),
+          UpdatedAt(instantNow),
+        )
+        val customerBusinessInsertRowExpected: CustomerBusinessInsertRow = (
+          customerBusinessDetailsRow = customerBusinessDetailsRowExpected,
+          customerBusinessContactRows = List(customerBusinessContactRowExpected),
+        )
+
         customerBookRepository.insertCustomerBusiness(organizationID, insertCustomerBusinessInput).zioValue shouldBe
-          customerID
+          customerBusinessInsertRowExpected
 
         postgresClient
           .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue shouldBe List(
-          CustomerBusinessDetailsRow(
-            organizationID,
-            customerID,
-            insertCustomerBusinessInput.businessName,
-            insertCustomerBusinessInput.taxID,
-            insertCustomerBusinessInput.emails,
-            insertCustomerBusinessInput.phoneNumbers,
-            insertCustomerBusinessInput.addressLine1,
-            insertCustomerBusinessInput.addressLine2,
-            insertCustomerBusinessInput.city,
-            insertCustomerBusinessInput.postalCode,
-            insertCustomerBusinessInput.country,
-            CustomerStatus.Active,
-            CreatedAt(instantNow),
-            UpdatedAt(instantNow),
-          )
-        )
+          .zioValue shouldBe List(customerBusinessDetailsRowExpected)
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 1
 
         postgresClient
           .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue shouldBe List(
-          CustomerBusinessContactRow(
-            organizationID,
-            customerID,
-            customerBusinessContactID,
-            customerBusinessContactInput.fullName,
-            customerBusinessContactInput.role,
-            customerBusinessContactInput.email,
-            customerBusinessContactInput.phoneNumber,
-            CreatedAt(instantNow),
-            UpdatedAt(instantNow),
-          )
-        )
+          .zioValue shouldBe List(customerBusinessContactRowExpected)
       }
 
       "fail with a UniqueConstraintViolation when the business name already exists, rolling back the customer row" in new TestContext {
@@ -283,50 +286,59 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           (() => idGeneratorMock.generateID).expects().returningZIO(customerIDBusiness.value).once(),
         )
 
+        val customerIndividualDetailsRowExpected = CustomerIndividualDetailsRow(
+          organizationID,
+          customerIDIndividual,
+          insertCustomerIndividualInput.fullName,
+          insertCustomerIndividualInput.emails,
+          insertCustomerIndividualInput.phoneNumbers,
+          insertCustomerIndividualInput.addressLine1,
+          insertCustomerIndividualInput.addressLine2,
+          insertCustomerIndividualInput.city,
+          insertCustomerIndividualInput.postalCode,
+          insertCustomerIndividualInput.country,
+          CustomerStatus.Active,
+          CreatedAt(instantNow),
+          UpdatedAt(instantNow),
+        )
+        val customerBusinessDetailsRowExpected = CustomerBusinessDetailsRow(
+          organizationID,
+          customerIDBusiness,
+          insertCustomerBusinessInput.businessName,
+          insertCustomerBusinessInput.taxID,
+          insertCustomerBusinessInput.emails,
+          insertCustomerBusinessInput.phoneNumbers,
+          insertCustomerBusinessInput.addressLine1,
+          insertCustomerBusinessInput.addressLine2,
+          insertCustomerBusinessInput.city,
+          insertCustomerBusinessInput.postalCode,
+          insertCustomerBusinessInput.country,
+          CustomerStatus.Active,
+          CreatedAt(instantNow),
+          UpdatedAt(instantNow),
+        )
+
+        val insertCustomersResultExpected: InsertCustomersResult = (
+          customerIndividualDetailsRows = List(customerIndividualDetailsRowExpected),
+          customerBusinessInsertRows = List(
+            (
+              customerBusinessDetailsRow = customerBusinessDetailsRowExpected,
+              customerBusinessContactRows = List.empty,
+            )
+          ),
+        )
+
         customerBookRepository
           .insertCustomers(organizationID, List(insertCustomerIndividualInput), List(insertCustomerBusinessInput))
-          .zioValue shouldBe List(customerIDIndividual, customerIDBusiness)
+          .zioValue shouldBe insertCustomersResultExpected
 
         postgresClient
           .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe List(
-          CustomerIndividualDetailsRow(
-            organizationID,
-            customerIDIndividual,
-            insertCustomerIndividualInput.fullName,
-            insertCustomerIndividualInput.emails,
-            insertCustomerIndividualInput.phoneNumbers,
-            insertCustomerIndividualInput.addressLine1,
-            insertCustomerIndividualInput.addressLine2,
-            insertCustomerIndividualInput.city,
-            insertCustomerIndividualInput.postalCode,
-            insertCustomerIndividualInput.country,
-            CustomerStatus.Active,
-            CreatedAt(instantNow),
-            UpdatedAt(instantNow),
-          )
-        )
+          .zioValue shouldBe List(customerIndividualDetailsRowExpected)
 
         postgresClient
           .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue shouldBe List(
-          CustomerBusinessDetailsRow(
-            organizationID,
-            customerIDBusiness,
-            insertCustomerBusinessInput.businessName,
-            insertCustomerBusinessInput.taxID,
-            insertCustomerBusinessInput.emails,
-            insertCustomerBusinessInput.phoneNumbers,
-            insertCustomerBusinessInput.addressLine1,
-            insertCustomerBusinessInput.addressLine2,
-            insertCustomerBusinessInput.city,
-            insertCustomerBusinessInput.postalCode,
-            insertCustomerBusinessInput.country,
-            CustomerStatus.Active,
-            CreatedAt(instantNow),
-            UpdatedAt(instantNow),
-          )
-        )
+          .zioValue shouldBe List(customerBusinessDetailsRowExpected)
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 2
 

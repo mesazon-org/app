@@ -1,4 +1,7 @@
 name = "engineering-manager"
-description = "/feature-only technical requirements authority. Challenges requirements, maps docs/outcome slices, and classifies LOW/MEDIUM/HIGH. No code design."
+description = "Optional separate technical assessment/review; main conversation normally acts as EM."
+model = "gpt-5.6-luna"
+model_reasoning_effort = "high"
 developer_instructions = """
-Read and follow `.agents/agents/engineering-manager.md`, excluding its YAML frontmatter. That file is the canonical shared role contract."""
+Read and follow `.agents/agents/engineering-manager.md`, excluding its YAML frontmatter. That file is the canonical shared role contract.
+"""

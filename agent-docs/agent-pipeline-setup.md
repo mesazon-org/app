@@ -1,10 +1,54 @@
 # Agent pipeline setup
 
-`/feature "<description>"` runs Product Owner → Engineering Manager → one complexity-selected Lead Engineer through local [OmniRoute](https://github.com/diegosouzapw/OmniRoute).
+Both hosts use the [shared workflow](../.agents/commands/feature.md). Every issue, bug, and feature runs the same stages in order, each behind a user gate where one is defined, and the finished work walks back up the same chain it came down:
 
-Shared sources are `.agents/{agents,contracts,commands,skills}/`; matching `.claude/` files are relative symlinks. Edit `.agents/`. Claude-only config/files remain real files in `.claude/`; diverge one shared file by replacing only its symlink. `.codex/agents/` contains thin Codex profiles that reuse the shared contracts and pin native Codex model/effort tiers.
+1. PO clarifies the product until nothing material is unanswered and updates `pages/`.
+2. **User approves** the `PRODUCT_BRIEF` and the `pages/` diff.
+3. EM reads the code, raises technical concerns (new dependency, refactor blast radius, approach, contradictions, risk), gets the user's answers, updates the engineering docs, and proposes a plan with ordered ≤3-file slices and a `MEDIUM`/`HIGH` classification.
+4. **User approves** the plan, docs, and tier.
+5. The selected Lead delivers the skeleton slice (interfaces and failing tests), then implements slice by slice, keeping docs current inside each slice and stopping for approval each time.
+6. EM reviews the real diff, docs, and evidence for technical completeness against the plan.
+7. PO reviews the delivered behavior and the tests against the brief and the epic for product completeness, returning `PRODUCT_ACCEPTANCE` or gaps.
+8. EM routes any gap to its owner and closes with the user.
 
-OmniRoute is per-engineer local infrastructure. Never commit its admin password, API key, or provider keys.
+The main conversation is EM and never approves a gate on the user's behalf. No separate orchestrator.
+
+New features and changes to features that already ship run the same stages and the same gates. For an existing feature each stage starts from the existing epic, feature doc, and code and works as a delta — stated as "today X, after this Y", with those documents updated in place rather than replaced, and the work sliced by kind of edit: update the docs, adapt or add the test, add the new function, change the existing function, migrate the data. Existing tests are adapted only because the user agreed the behavior changes, never to make a slice pass.
+
+Three rules bind every role at every tier, small work included:
+
+- **Read the repository's own instructions first.** `AGENTS.md` (served to Claude as `CLAUDE.md`) is the entry point; its documentation router names the `agent-docs/` feature docs, flow slices, standards, and project guides a change triggers, and its validation flow names the required checks. Those standards are requirements — deviating needs the user's decision, not a quiet exception.
+- **Ask, do not assume, and take no initiative.** Every role opens its stage by listing its open questions and would-be assumptions with recommendations, and waits. Nothing outside the agreed scope gets added, improved, or refactored on an agent's own judgement.
+- **The user commits, always.** No agent runs `git commit`, `git push`, or stages files. The user reviews and commits by hand after PO's `pages/` update, after EM's engineering-doc update, and after every Lead slice, so each step is left commit-ready and self-contained.
+
+## Shared sources and hosts
+
+`AGENTS.md` is shared through `CLAUDE.md`'s relative symlink. `.agents/` owns roles, contracts, commands, and skills; matching `.claude/` files are symlinks. `.codex/agents/*.toml` holds native metadata/model settings and references the same role Markdown, excluding Claude YAML. Both hosts read the same product and engineering docs. Keep credentials and local settings gitignored.
+
+Codex uses the [native TOML format](https://learn.chatgpt.com/docs/agent-configuration/subagents); Claude uses [Markdown subagents](https://code.claude.com/docs/en/sub-agents). Open a fresh session after profile changes. Claude: `/feature "<description>"`. Codex: `Use the feature workflow for <description>`; AGENTS.md routes the request without requiring a native slash-menu entry.
+
+EM speaks directly to the user and handles agent dispatch. If a subagent cannot ask the user directly, it returns `USER_QUESTION` to EM. Use the same workflow sequentially if agents are unavailable and disclose self-review. Ordinary ChatGPT without repository/tools access cannot automatically load this setup. Codex uses its configured provider; OmniRoute below is optional Claude infrastructure.
+
+## Roles and effort
+
+| Role | Claude profile | Codex profile | Use |
+|---|---|---|---|
+| PO | `sonnet` | `gpt-5.6-luna`/high | clarify the product by asking, never assuming; accountable for `pages/`; final product-completeness review |
+| EM | main session; optional separate profile `sonnet` | main session; optional separate profile `gpt-5.6-luna`/high | technical concerns, plan, complexity, dispatch, approval relay, technical-completion review, close |
+| Lead MEDIUM | `sonnet` | `gpt-5.6-luna`/high | contained feature/integration work |
+| Lead HIGH | `opus` | `gpt-5.6-sol`/high | high-risk implementation |
+
+Only two Leads exist — the medium and the strongest model of each provider. The [complexity contract](../.agents/contracts/complexity.md) decides between them; it does not change the process, since both tiers run every gate and keep slices at three hand-written files or fewer. Model availability depends on the account/host. Main EM uses the user's selected session model; the optional EM profile does not change it.
+
+Documentation ownership is accountability, not a write restriction. PO finishes `pages/` before gate 1 and EM finishes `agent-docs/` before gate 2; the Lead updates reference docs beside the code it changes. All roles may make verified factual edits within agreed scope. One writer per file. EM's review covers code and docs together; PO is consulted again for product ambiguity and always for the completion review that closes the loop.
+
+The [shared contract](../.agents/contracts/workflow.md) owns the stages, the user gates, the question protocol, and the slice size limit. AGENTS.md owns change-specific verification: docs/config-only edits use relevant structural checks, while application changes retain applicable tests and lint. A slice is a review increment, not a PR — one PR normally carries several approved, dependency-ordered slices. No unrelated tests or repeated passing checks.
+
+To evaluate changes over several comparable tasks, record available time-to-first-code-edit, total time, token usage, and material rework. Use host-reported metrics when available; do not add monitoring agents or invent missing counters. Compare similar risk levels before changing more settings.
+
+## Optional Claude OmniRoute setup
+
+Never commit OmniRoute's admin password, API key, or provider keys. The following records the tested local setup; verify provider IDs against your installation.
 
 ## Requirements
 
@@ -79,41 +123,9 @@ OMNIROUTE_API_KEY=<key> omniroute chat "reply with exactly: pong" --model cc/cla
 
 Restart every Claude Code process; environment is read at startup. `ANTHROPIC_BASE_URL` must not end in `/v1`.
 
-## Checked-in roles/routing
+## User questions and permissions
 
-| Role | Claude | Codex | Ownership |
-|---|---|---|---|
-| Product Owner | `haiku` | parent default | complete product requirements/decisions; asks the user directly for gaps |
-| Engineering Manager | `sonnet` | parent default | edge cases, doc topology, outcome chunks, complexity |
-| Lead LOW | `haiku` | `gpt-5.6-terra`/low | bounded known-pattern work |
-| Lead MEDIUM | `sonnet` | `gpt-5.6-sol`/high | contained new behavior through multi-layer/risky work |
-| Lead HIGH | `opus` | `gpt-5.6-sol`/xhigh | highest-risk/system-wide work |
-
-EM classifies the whole request by `.agents/contracts/complexity.md`'s highest material trigger. One matching Lead session plans, implements, and reviews the full request; scope changes force reclassification. Shared execution rules live in `.agents/contracts/lead-engineer.md`.
-
-The Product Owner and Lead LOW roles run on `haiku` (Claude Haiku 4.5) — the cheapest capable Claude tier — so the whole pipeline runs on Anthropic models without depending on external free routes. If you instead route through OmniRoute free IDs, verify each with `omniroute chat` before use, as availability changes and some return 401/anti-abuse failures.
-
-## Restrictive Claude permissions
-
-If “don't ask” mode denies tools, add to gitignored `.claude/settings.local.json` `permissions.allow` (`AskUserQuestion` is used by the Product Owner to interview the user directly):
-
-```json
-"AskUserQuestion",
-"WebFetch",
-"WebSearch"
-```
-
-This does not bypass Claude Code's separate, non-configurable auto-mode classifier.
-
-## Run
-
-In a fresh Claude Code session:
-
-```text
-/feature "add a health-check endpoint"
-```
-
-PO owns the final product specification, asking the user directly for anything it can't derive itself. EM challenges the spec and routes any remaining product ambiguity back to PO — never asking the user directly — maps only required docs/outcome slices, and assigns complexity. The selected expert Lead owns all coding decisions and follows [Feature flow](features/flow/README.md), including same-PR tests/docs.
+Run the main conversation in a mode that allows user interaction. Claude's `dontAsk` mode denies `AskUserQuestion` even if allowlisted; use a normal interactive mode or relay the question as plain text. A tool permission denial is not a user answer. Do not change local permissions or bypass host approval controls automatically.
 
 ## Troubleshooting
 

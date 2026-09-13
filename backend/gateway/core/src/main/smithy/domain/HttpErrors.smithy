@@ -35,6 +35,15 @@ structure Unauthorized {
 }
 
 @error("client")
+@httpError(401)
+structure UnauthorizedOtp {
+    @required
+    code: String = "UNAUTHORIZED_OTP_ERROR"
+    @required
+    message: String = "Unauthorized OTP verification"
+}
+
+@error("client")
 @httpError(403)
 structure Forbidden {
     @required

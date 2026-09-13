@@ -33,6 +33,7 @@ Every request in this epic names the organization it applies to, and only touche
 3. Money is never approximated. An amount is kept to the exact precision it was given, then padded out to the currency's standard number of decimal places — never rounded.
 4. When a request contains several problems at once, all of them are reported together, and each is tied to the exact item that caused it.
 5. Adding several items at once is all-or-nothing. If any one of them fails, none of them are stored.
+6. A missing, invalid, or expired access token is refused with the same error code used everywhere else in the product for a rejected access token.
 
 ### User flow
 
@@ -128,7 +129,7 @@ Response is empty. A successful add answers with nothing but a success status �
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the item each belongs to |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - An active item already has that name |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
@@ -188,7 +189,7 @@ Response is empty. A successful upload answers with nothing but a success status
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - The organization id header is missing - The item id header is missing - The file name header is missing |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow it |
 | 500 | `INTERNAL_SERVER_ERROR` | - The item does not exist, belongs to another organization, or is archived - The file is not a supported image - Unexpected error |
 
@@ -204,7 +205,7 @@ Response is empty. A successful upload answers with nothing but a success status
 | --- | --- |
 | 1. User opens the catalogue | - Every active item in the organization is returned, each with its name, status, and a picture if it has one |
 | 2. An item has no image | - It appears in the list with nothing in place of a picture |
-| 3. The organization has archived items | - They do not appear, and there is no way to list them again — the same gap as [Customer Book gap 4]({{ site.baseurl }}{% link epics/05-customer-book.md %}#4-archiving-is-final-and-archived-customers-cannot-be-found-again) |
+| 3. The organization has archived items | - They do not appear, and there is no way to list them again — the same gap as [Customer Book gap 3]({{ site.baseurl }}{% link epics/05-customer-book.md %}#3-archiving-is-final-and-archived-customers-cannot-be-found-again) |
 | 4. The organization has no items yet | - An empty list is returned |
 
 #### Requirements
@@ -243,7 +244,7 @@ Nothing changes. This step only reads.
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person does not belong to the organization |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 
@@ -259,7 +260,7 @@ Nothing changes. This step only reads.
 | --- | --- |
 | 1. User opens an item that exists | - Its name, unit, price if any, and picture if any are returned |
 | 2. User opens an item that has been archived | - Its details are still returned. Archiving hides an item from the list, not from a direct look-up |
-| 3. User opens an item that does not exist | - Reported as a server error rather than "not found" — the same gap as [Customer Book gap 2]({{ site.baseurl }}{% link epics/05-customer-book.md %}#2-looking-up-a-customer-that-is-not-there-is-reported-as-a-server-error) |
+| 3. User opens an item that does not exist | - Reported as a server error rather than "not found" — the same gap as [Customer Book gap 1]({{ site.baseurl }}{% link epics/05-customer-book.md %}#1-looking-up-a-customer-that-is-not-there-is-reported-as-a-server-error) |
 
 #### Requirements
 
@@ -296,7 +297,7 @@ Nothing changes. This step only reads.
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person does not belong to the organization |
 | 500 | `INTERNAL_SERVER_ERROR` | - No item with that identifier - Unexpected error |
 
@@ -312,7 +313,7 @@ Nothing changes. This step only reads.
 | --- | --- |
 | 1. User changes an active item's details | - The change is saved - Fields left out of the request are left as they were |
 | 2. User renames an item to a name another active item already has | - Rejected as a conflict |
-| 3. User changes an item that has been archived, or does not exist | - Nothing happens, and it is reported as successful — the same gap as [Customer Book gap 3]({{ site.baseurl }}{% link epics/05-customer-book.md %}#3-changes-to-an-archived-customer-are-silently-discarded) |
+| 3. User changes an item that has been archived, or does not exist | - Nothing happens, and it is reported as successful — the same gap as [Customer Book gap 2]({{ site.baseurl }}{% link epics/05-customer-book.md %}#2-changes-to-an-archived-customer-are-silently-discarded) |
 | 4. A member with the ordinary user role tries to make a change | - Rejected |
 
 #### Requirements
@@ -347,7 +348,7 @@ Response is empty. A successful change answers with nothing but a success status
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - One or more fields are invalid |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - An active item already has that name |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
@@ -364,7 +365,7 @@ Response is empty. A successful change answers with nothing but a success status
 | --- | --- |
 | 1. User archives an active item | - The item becomes archived and leaves the catalogue - Its name becomes free for a new active item to use - Its image, if any, is kept |
 | 2. User archives an item that is already archived, or does not exist | - Nothing happens, and it is reported as successful |
-| 3. User wants an archived item back | - Not possible. There is no way to reverse archiving — the same gap as [Customer Book gap 4]({{ site.baseurl }}{% link epics/05-customer-book.md %}#4-archiving-is-final-and-archived-customers-cannot-be-found-again) |
+| 3. User wants an archived item back | - Not possible. There is no way to reverse archiving — the same gap as [Customer Book gap 3]({{ site.baseurl }}{% link epics/05-customer-book.md %}#3-archiving-is-final-and-archived-customers-cannot-be-found-again) |
 
 #### Requirements
 
@@ -395,7 +396,7 @@ Response is empty, whether the item was archived just now, was already archived,
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - Session is missing or invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 

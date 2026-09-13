@@ -36,6 +36,12 @@ variable "twilio_client_auth_token" {
   sensitive   = true
 }
 
+variable "ai_client_api_key" {
+  description = "AI Client API Key for extracting customers from a photo."
+  type        = string
+  sensitive   = true
+}
+
 variable "jwt_secret_key" {
   description = "Secret key for signing JWT tokens."
   type        = string

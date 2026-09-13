@@ -1,0 +1,15 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      { "contains": "AI_CLIENT_SPEC_BAD_REQUEST" }
+    ]
+  },
+  "response": {
+    "status": 400,
+    "headers": { "Content-Type": "application/json" },
+    "body": "{\"error\":{\"message\":\"Invalid request\",\"type\":\"invalid_request_error\"}}"
+  }
+}

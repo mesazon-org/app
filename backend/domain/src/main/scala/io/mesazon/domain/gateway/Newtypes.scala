@@ -93,6 +93,9 @@ type AccessToken = AccessToken.T
 object Attempts extends RefinedType[Int, Positive]
 type Attempts = Attempts.T
 
+object FileBytesSize extends RefinedType[Long, Positive]
+type FileBytesSize = FileBytesSize.T
+
 // Organization Management
 
 object OrganizationID extends RefinedTypeUUID

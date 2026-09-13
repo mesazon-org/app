@@ -183,6 +183,81 @@ class UserDetailsRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Do
         serviceError.underlying.value shouldBe a[DbException]
         serviceError.message shouldBe s"Failed to updateUserDetails: [$userID], [$onboardStageUpdate], [$fullNameOptUpdate], [$phoneNumberOptUpdate]"
       }
+
+      "fail with ConflictError when the phone number given already belongs to a different account, even when that account was never phone-verified" in new TestContext {
+        val phoneNumberExisting = arbitrarySample[PhoneNumber]
+
+        val onboardStageExistingNotVerified =
+          Random.shuffle(OnboardStage.values.toList diff List(OnboardStage.PhoneVerified)).zioValue.head
+
+        val userDetailsRowExisting = arbitrarySample[UserDetailsRow]
+          .copy(phoneNumber = Some(phoneNumberExisting), onboardStage = onboardStageExistingNotVerified)
+        val userDetailsRowTarget = arbitrarySample[UserDetailsRow]
+          .copy(phoneNumber = None)
+
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once()
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRowExisting)).zioValue
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRowTarget)).zioValue
+
+        val serviceError = userDetailsRepository
+          .updateUserDetails(
+            userID = userDetailsRowTarget.userID,
+            onboardStageUpdate = userDetailsRowTarget.onboardStage,
+            phoneNumberOptUpdate = Some(phoneNumberExisting),
+          )
+          .zioError
+
+        serviceError shouldBe a[ServiceError.ConflictError.UniqueConstraintViolation]
+        serviceError.message shouldBe "The phone number given already belongs to a different account"
+        serviceError.underlying.value shouldBe a[DbException]
+
+        val userDetailsRowsAll =
+          postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+
+        userDetailsRowsAll should contain theSameElementsAs List(userDetailsRowExisting, userDetailsRowTarget)
+      }
+
+      "succeed when updating a user to the phone number it already holds" in new TestContext {
+        val phoneNumberOwn = arbitrarySample[PhoneNumber]
+
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(
+            createdAt = CreatedAt(instantNow),
+            updatedAt = UpdatedAt(instantNow),
+            phoneNumber = Some(phoneNumberOwn),
+          )
+
+        val instantNowUpdated = instantNow.plusSeconds(10)
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNowUpdated)
+            .once()
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val userDetailsRowUpdate = userDetailsRepository
+          .updateUserDetails(
+            userID = userDetailsRow.userID,
+            onboardStageUpdate = userDetailsRow.onboardStage,
+            phoneNumberOptUpdate = Some(phoneNumberOwn),
+          )
+          .zioValue
+
+        val userDetailsRowsAll =
+          postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+
+        userDetailsRowsAll should have size 1
+        userDetailsRowsAll.head shouldBe userDetailsRowUpdate
+        userDetailsRowsAll.head shouldBe userDetailsRow.copy(updatedAt = UpdatedAt(instantNowUpdated))
+      }
     }
 
     "getUserDetails" should {

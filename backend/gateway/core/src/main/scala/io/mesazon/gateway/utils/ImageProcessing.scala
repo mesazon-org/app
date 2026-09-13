@@ -13,7 +13,7 @@ import scala.jdk.OptionConverters.*
 trait ImageProcessing {
   def normalize(
       imageByteStream: FileByteStreamScanned,
-      supportedMediaTypes: List[SupportedMediaTypes],
+      supportedMediaTypes: List[SupportedMediaType],
   ): ZIO[Scope, ServiceError, NormalizeResult]
 }
 
@@ -25,13 +25,13 @@ object ImageProcessing {
 
     private def isSupportedFormat(
         imageFormat: Format,
-        supportedMediaTypes: List[SupportedMediaTypes],
+        supportedMediaTypes: List[SupportedMediaType],
     ): Boolean =
       supportedMediaTypes.exists(mt => imageFormat.toString.equalsIgnoreCase(mt.toString))
 
     override def normalize(
         imageByteStream: FileByteStreamScanned,
-        supportedMediaTypes: List[SupportedMediaTypes],
+        supportedMediaTypes: List[SupportedMediaType],
     ): ZIO[Scope, ServiceError, NormalizeResult] =
       for {
         imagePath <- TempFile.createScoped("image-")

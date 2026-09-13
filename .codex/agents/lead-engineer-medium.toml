@@ -1,6 +1,7 @@
 name = "lead-engineer-medium"
-description = "/feature Lead Engineer for EM-classified MEDIUM work."
-model = "gpt-5.6-sol"
+description = "Implementation for EM-selected MEDIUM work."
+model = "gpt-5.6-luna"
 model_reasoning_effort = "high"
 developer_instructions = """
-Read and follow `.agents/contracts/lead-engineer.md`. Accept only `MEDIUM` packages; otherwise request EM reclassification."""
+Read and follow `.agents/agents/lead-engineer-medium.md`, excluding its YAML frontmatter. That file is the canonical shared role contract.
+"""

@@ -85,14 +85,27 @@ class UserSignUpApiSpec
 
         val userOtpRowsAll1 = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
 
+        // Should not reset this action attempt when the OTP is reused within its resend cooldown
+        val userActionAttemptRowEmailVerificationVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
+          userID = userOtpRowsAll1.head.userID,
+          actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+        )
+
+        postgresClient
+          .executeQuery(
+            userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowEmailVerificationVerifyOTP)
+          )
+          .zioValue
+
+        mailHogClient.readInbox().zioValue.total shouldBe 1
+
         val signUpEmailPostResponse2 =
           gatewayClient.signUpEmailPost[smithy.InternalServerError](signUpEmailPostRequest).zioValue
 
         signUpEmailPostResponse2.code shouldBe StatusCode.Ok
         signUpEmailPostResponse2.body.value.otpExpiresInSeconds shouldBe 45 // application.conf
 
-        mailHogClient.readInbox().zioValue.total shouldBe 1
-
+        // Reuse always issues a fresh id via upsertUserOtp, even though the code itself is unchanged.
         signUpEmailPostResponse2.body.value.otpID should not be signUpEmailPostResponse1.body.value.otpID
 
         val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
@@ -117,17 +130,228 @@ class UserSignUpApiSpec
 
         assert(userOtpRowsAll1.head.expiresAt.value.isBefore(userOtpRowsAll2.head.expiresAt.value))
 
+        // Reusing an OTP inside its cooldown and under its resend-attempts limit keeps the code unchanged, but
+        // upsertUserOtp always issues a fresh id and createdAt, even on reuse.
+        userOtpRowsAll2.head.otpID should not be userOtpRowsAll1.head.otpID
+        userOtpRowsAll2.head.createdAt should not be userOtpRowsAll1.head.createdAt
         userOtpRowsAll2 should contain theSameElementsAs List(
           UserOtpRow(
-            otpID = OtpID.assume(signUpEmailPostResponse2.body.value.otpID),
+            otpID = userOtpRowsAll2.head.otpID,
             userID = userDetailsRowsAll.head.userID,
-            otp = userOtpRowsAll2.head.otp,
+            otp = userOtpRowsAll1.head.otp,
             otpType = OtpType.EmailVerification,
             createdAt = userOtpRowsAll2.head.createdAt,
             updatedAt = userOtpRowsAll2.head.updatedAt,
             expiresAt = userOtpRowsAll2.head.expiresAt,
           )
         )
+
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        // The pre-seeded verify-attempts counter survives untouched, plus a fresh resend-attempts counter
+        // (EmailVerificationOtpLifetime) is created at 1 for this, its first-ever resend.
+        userActionAttemptRowsAll should have size 2
+        userActionAttemptRowsAll should contain(userActionAttemptRowEmailVerificationVerifyOTP)
+
+        val userActionAttemptRowEmailVerificationOtpLifetime =
+          userActionAttemptRowsAll.filterNot(_ == userActionAttemptRowEmailVerificationVerifyOTP).head
+
+        userActionAttemptRowEmailVerificationOtpLifetime shouldBe UserActionAttemptRow(
+          actionAttemptID = userActionAttemptRowEmailVerificationOtpLifetime.actionAttemptID,
+          userID = userDetailsRowsAll.head.userID,
+          actionAttemptType = ActionAttemptType.EmailVerificationOtpLifetime,
+          attempts = Attempts.assume(1),
+          createdAt = userActionAttemptRowEmailVerificationOtpLifetime.createdAt,
+          updatedAt = userActionAttemptRowEmailVerificationOtpLifetime.updatedAt,
+        )
+      }
+
+      "successfully re-sign up a user and reset the verify attempts counter when a genuinely new OTP is issued" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage   = Random.shuffle(OnboardStage.signUpEmailStages).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+          // Already inside the resend cooldown window (45s expiry, 15s cooldown), forcing the genuinely-new-OTP branch
+          val userOtpRow = arbitrarySample[UserOtpRow].copy(
+            userID = userDetailsRow.userID,
+            otpType = OtpType.EmailVerification,
+            expiresAt = ExpiresAt(Instant.now.truncatedTo(ChronoUnit.MILLIS).plusSeconds(5)),
+          )
+
+          postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+          val userActionAttemptRowEmailVerificationVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+          )
+
+          postgresClient
+            .executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowEmailVerificationVerifyOTP)
+            )
+            .zioValue
+
+          val signUpEmailPostRequest =
+            arbitrarySample[smithy.SignUpEmailPostRequest].copy(email = userDetailsRow.email.value)
+
+          val signUpEmailPostResponse =
+            gatewayClient.signUpEmailPost[smithy.InternalServerError](signUpEmailPostRequest).zioValue
+
+          signUpEmailPostResponse.code shouldBe StatusCode.Ok
+          signUpEmailPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf
+
+          mailHogClient.readInbox().zioValue.total shouldBe 1
+
+          val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+          userOtpRowsAll should have size 1
+          userOtpRowsAll.head.otp should not be userOtpRow.otp
+          userOtpRowsAll.head.otpID.value shouldBe signUpEmailPostResponse.body.value.otpID
+
+          val userActionAttemptRowsAll =
+            postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+          userActionAttemptRowsAll should have size 0
+      }
+
+      "successfully re-sign up a user reusing the OTP when resend attempts are at the limit but not exceeding it" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage   = Random.shuffle(OnboardStage.signUpEmailStages).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+          // Not expiring soon (45s expiry, 15s cooldown, well over 25s left) - only the resend-attempts count
+          // decides this case.
+          val userOtpRow = arbitrarySample[UserOtpRow].copy(
+            userID = userDetailsRow.userID,
+            otpType = OtpType.EmailVerification,
+            expiresAt = ExpiresAt(Instant.now.truncatedTo(ChronoUnit.MILLIS).plusSeconds(40)),
+          )
+
+          postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+          // getAndIncreaseUserActionAttempt returns the pre-existing row as-is (see UserActionAttemptRepositorySpec),
+          // so seeding exactly at the limit (5, application.conf otp-email-verification-resend-attempts-max-retries)
+          // proves the boundary is inclusive: still a reuse, not yet genuinely new.
+          val userActionAttemptRowEmailVerificationOtpLifetime = arbitrarySample[UserActionAttemptRow].copy(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.EmailVerificationOtpLifetime,
+            attempts = Attempts.assume(5),
+          )
+
+          postgresClient
+            .executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowEmailVerificationOtpLifetime)
+            )
+            .zioValue
+
+          val signUpEmailPostRequest =
+            arbitrarySample[smithy.SignUpEmailPostRequest].copy(email = userDetailsRow.email.value)
+
+          val signUpEmailPostResponse =
+            gatewayClient.signUpEmailPost[smithy.InternalServerError](signUpEmailPostRequest).zioValue
+
+          signUpEmailPostResponse.code shouldBe StatusCode.Ok
+          signUpEmailPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf
+
+          mailHogClient.readInbox().zioValue.total shouldBe 0 // reused, cooldown still active, nothing sent
+
+          val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+          userOtpRowsAll should have size 1
+          userOtpRowsAll.head.otpID should not be userOtpRow.otpID
+          userOtpRowsAll.head.otp shouldBe userOtpRow.otp
+          userOtpRowsAll.head.otpID.value shouldBe signUpEmailPostResponse.body.value.otpID
+
+          val userActionAttemptRowsAll =
+            postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+          userActionAttemptRowsAll should have size 1
+          userActionAttemptRowsAll.head shouldBe userActionAttemptRowEmailVerificationOtpLifetime.copy(
+            attempts = Attempts.assume(6), // increased by 1 via getAndIncreaseUserActionAttempt's own upsert
+            updatedAt = userActionAttemptRowsAll.head.updatedAt,
+          )
+      }
+
+      "successfully re-sign up a user with a genuinely new OTP when the resend-attempts limit is exceeded, even while still inside its resend cooldown" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage   = Random.shuffle(OnboardStage.signUpEmailStages).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+          // Not expiring soon (45s expiry, 15s cooldown, well over 25s left) - the reuse-only logic would have
+          // reused this OTP. But its resend-attempts counter is already past the limit, so it must now be
+          // treated exactly as an expired OTP. createdAt is pinned safely in the past so the freshly-issued
+          // row's real createdAt can never collide with it at millisecond resolution.
+          val userOtpRow = arbitrarySample[UserOtpRow].copy(
+            userID = userDetailsRow.userID,
+            otpType = OtpType.EmailVerification,
+            createdAt = CreatedAt(Instant.now.truncatedTo(ChronoUnit.MILLIS).minusSeconds(1)),
+            expiresAt = ExpiresAt(Instant.now.truncatedTo(ChronoUnit.MILLIS).plusSeconds(40)),
+          )
+
+          postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+          val userActionAttemptRowEmailVerificationVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+          )
+
+          postgresClient
+            .executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowEmailVerificationVerifyOTP)
+            )
+            .zioValue
+
+          // getAndIncreaseUserActionAttempt returns the pre-existing row as-is (see UserActionAttemptRepositorySpec),
+          // so seeding one above the limit (6, application.conf otp-email-verification-resend-attempts-max-retries
+          // = 5) is what makes this call the one that treats the OTP as genuinely new.
+          val userActionAttemptRowEmailVerificationOtpLifetime = arbitrarySample[UserActionAttemptRow].copy(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.EmailVerificationOtpLifetime,
+            attempts = Attempts.assume(6),
+          )
+
+          postgresClient
+            .executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowEmailVerificationOtpLifetime)
+            )
+            .zioValue
+
+          val signUpEmailPostRequest =
+            arbitrarySample[smithy.SignUpEmailPostRequest].copy(email = userDetailsRow.email.value)
+
+          val signUpEmailPostResponse =
+            gatewayClient.signUpEmailPost[smithy.InternalServerError](signUpEmailPostRequest).zioValue
+
+          signUpEmailPostResponse.code shouldBe StatusCode.Ok
+          signUpEmailPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf
+
+          mailHogClient.readInbox().zioValue.total shouldBe 1
+
+          val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+          userOtpRowsAll should have size 1
+          userOtpRowsAll.head.otpID should not be userOtpRow.otpID
+          userOtpRowsAll.head.otp should not be userOtpRow.otp
+          userOtpRowsAll.head.createdAt should not be userOtpRow.createdAt
+          userOtpRowsAll.head.otpID.value shouldBe signUpEmailPostResponse.body.value.otpID
+
+          val userActionAttemptRowsAll =
+            postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+          userActionAttemptRowsAll should have size 0
       }
 
       "successfully not re sign up a user with not sign up email stages" in withContext { context =>
@@ -221,6 +445,54 @@ class UserSignUpApiSpec
         userTokenRowsAll.head.tokenType shouldBe TokenType.RefreshToken
       }
 
+      "successfully verify email with valid OTP and delete the wrong-attempt counter" in withContext { context =>
+        import context.*
+
+        val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
+
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+          onboardStage = onboardStage
+        )
+
+        val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+        val userOtpRow = arbitrarySample[UserOtpRow].copy(
+          userID = userDetailsRow.userID,
+          otpType = OtpType.EmailVerification,
+          expiresAt = ExpiresAt.assume(instantNow.plusSeconds(10)),
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+        val userActionAttemptRowEmailVerificationVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
+          userID = userDetailsRow.userID,
+          actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+          attempts = Attempts.assume(1),
+        )
+
+        postgresClient
+          .executeQuery(
+            userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowEmailVerificationVerifyOTP)
+          )
+          .zioValue
+
+        val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest].copy(
+          otpID = userOtpRow.otpID.value,
+          otp = userOtpRow.otp.value,
+        )
+
+        val signUpVerifyEmailPostResponse =
+          gatewayClient.signUpVerifyEmailPost[smithy.InternalServerError](signUpVerifyEmailPostRequest).zioValue
+
+        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Ok
+
+        val userActionAttemptRowsAll =
+          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+        userActionAttemptRowsAll should have size 0
+      }
+
       "fail with BadRequest ValidationError when request is invalid" in withContext { context =>
         import context.*
 
@@ -278,7 +550,7 @@ class UserSignUpApiSpec
         userOtpRowsAll should contain theSameElementsAs List(userOtpRow)
       }
 
-      "fail with Unauthorized when OTP is expired" in withContext { context =>
+      "fail with BadRequest when OTP is expired" in withContext { context =>
         import context.*
 
         val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
@@ -304,12 +576,111 @@ class UserSignUpApiSpec
         )
 
         val signUpVerifyEmailPostResponse =
-          gatewayClient.signUpVerifyEmailPost[smithy.Unauthorized](signUpVerifyEmailPostRequest).zioValue
+          gatewayClient.signUpVerifyEmailPost[smithy.BadRequest](signUpVerifyEmailPostRequest).zioValue
 
-        signUpVerifyEmailPostResponse.code shouldBe StatusCode.Unauthorized
-        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.Unauthorized()
+        signUpVerifyEmailPostResponse.code shouldBe StatusCode.BadRequest
+        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.BadRequest()
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
+
+        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+        userOtpRowsAll should have size 0
+      }
+
+      "fail with BadRequest when verify attempts has reached the limit, even with the actually-correct OTP" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
+
+          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+            onboardStage = onboardStage
+          )
+
+          val instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+          val userOtpRow = arbitrarySample[UserOtpRow].copy(
+            userID = userDetailsRow.userID,
+            otpType = OtpType.EmailVerification,
+            expiresAt = ExpiresAt.assume(instantNow.plusSeconds(100)),
+          )
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+
+          // getAndIncreaseUserActionAttempt returns the pre-existing row as-is (see UserActionAttemptRepositorySpec),
+          // so seeding one above the limit (6, application.conf otp-verify-attempts-max-retries = 5) is what makes
+          // this call the one that exceeds it
+          val userActionAttemptRowEmailVerificationVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.EmailVerificationVerifyOTP,
+            attempts = Attempts.assume(6),
+          )
+
+          postgresClient
+            .executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowEmailVerificationVerifyOTP)
+            )
+            .zioValue
+
+          // The actually-correct OTP is submitted as the 6th call and must still be rejected without being checked
+          val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest].copy(
+            otpID = userOtpRow.otpID.value,
+            otp = userOtpRow.otp.value,
+          )
+
+          val signUpVerifyEmailPostResponse =
+            gatewayClient.signUpVerifyEmailPost[smithy.BadRequest](signUpVerifyEmailPostRequest).zioValue
+
+          signUpVerifyEmailPostResponse.code shouldBe StatusCode.BadRequest
+          signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.BadRequest()
+
+          mailHogClient.readInbox().zioValue.total shouldBe 0
+
+          val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+
+          userDetailsRowsAll should have size 1
+          userDetailsRowsAll.head shouldBe userDetailsRow
+
+          val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+          userOtpRowsAll should have size 0
+
+          val userActionAttemptRowsAll =
+            postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+
+          userActionAttemptRowsAll should have size 1
+          userActionAttemptRowsAll.head shouldBe userActionAttemptRowEmailVerificationVerifyOTP.copy(
+            attempts = Attempts.assume(7), // attempts should be increased by 1
+            updatedAt = userActionAttemptRowsAll.head.updatedAt,
+          )
+      }
+
+      "fail with BadRequest when OTP ID is not recognized" in withContext { context =>
+        import context.*
+
+        val onboardStage = Random.shuffle(OnboardStage.signUpVerifyEmailStages).zioValue.head
+
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(
+          onboardStage = onboardStage
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val signUpVerifyEmailPostRequest = arbitrarySample[smithy.SignUpVerifyEmailPostRequest]
+
+        val signUpVerifyEmailPostResponse =
+          gatewayClient.signUpVerifyEmailPost[smithy.BadRequest](signUpVerifyEmailPostRequest).zioValue
+
+        signUpVerifyEmailPostResponse.code shouldBe StatusCode.BadRequest
+        signUpVerifyEmailPostResponse.body.left.value shouldBe smithy.BadRequest()
+
+        mailHogClient.readInbox().zioValue.total shouldBe 0
+
+        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+
+        userOtpRowsAll should have size 0
       }
 
       "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>

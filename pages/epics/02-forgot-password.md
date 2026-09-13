@@ -27,6 +27,7 @@ A **one-time passcode** (OTP) here is the same kind of short code used elsewhere
 2. Only someone who has already set a password can recover one. Anyone still earlier in [onboarding]({{ site.baseurl }}{% link epics/01-user-onboarding.md %}) has nothing to recover.
 3. None of the three steps requires being signed in. Identity is proved by the code we email, and then by the single-use token that entering the code hands back.
 4. The code and the reset token are each good for one use. Using one destroys it.
+5. Every way entering a code can be rejected — wrong, expired, too many wrong attempts, or a code id we don't recognise — gives back the exact same answer, so nobody can tell which of these happened. A rejected reset token uses a different error code and means the person needs to start over by asking to recover their password again.
 
 #### Non-functional
 
@@ -70,7 +71,7 @@ Two counters run behind this flow and are worth knowing about, because several r
 | 3. User asks again while their code is still fresh, having asked only a few times | - The existing code is reused - **No** email is sent, because one was already sent - The code's expiry is extended - Frontend receives the same code id |
 | 4. User asks again while their code is still fresh, having already asked too many times | - The existing code is reused - No email is sent - The expiry is **not** extended - Frontend receives the same code id and cannot tell this happened |
 | 5. User asks for a code for an email with no account | - Nothing is saved and no email is sent - Frontend receives a made-up code id - The page moves on exactly as it would for a real account (this prevents email scanning attacks) |
-| 6. User asks for a code for an account that has not set a password yet | - Rejected, because there is no password to recover - See [gap 2](#2-a-registered-email-can-be-told-apart-from-an-unregistered-one) |
+| 6. User asks for a code for an account that has not set a password yet | - Rejected, because there is no password to recover - See [gap 1](#1-a-registered-email-can-be-told-apart-from-an-unregistered-one) |
 
 #### Requirements
 
@@ -100,7 +101,7 @@ This response looks the same whatever the email turns out to be, so nobody can u
 
 - With no code outstanding, or a stale one: a new code is saved and emailed, and the wrong-attempt counter is cleared.
 - With a fresh code and few requests so far: the code's expiry is pushed out. Nothing is sent.
-- With a fresh code and too many requests already: nothing changes at all beyond the request count. The code keeps its original expiry even though the answer says otherwise — see [gap 3](#3-the-countdown-we-hand-back-can-be-wrong).
+- With a fresh code and too many requests already: nothing changes at all beyond the request count. The code keeps its original expiry even though the answer says otherwise — see [gap 2](#2-the-countdown-we-hand-back-can-be-wrong).
 - For an unregistered email: nothing is saved and nothing is sent.
 
 #### Http Error Responses
@@ -123,17 +124,21 @@ This response looks the same whatever the email turns out to be, so nobody can u
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User enters the correct code | - The code is checked against the stored one - The code is deleted so it cannot be reused - Both counters are cleared - A single-use reset token is issued and stored - Redirects user to the new-password page |
-| 2. User enters a wrong code | - Rejected - The wrong attempt is counted - The code stays usable, so a mistyped code can be corrected |
-| 3. User enters a wrong code too many times | - Rejected without the code even being checked - Recovering means going back to step 1 for a new code |
-| 4. User enters a code that has expired | - The code is deleted - Rejected, and the user is told the code has expired |
+| 1. User enters the correct code | - The code is checked against the stored one - The code is deleted so it cannot be reused - Both counters are cleared - Every other session on the account is signed out immediately - A single-use reset token is issued and stored - Redirects user to the new-password page |
+| 2. User enters a wrong code, still with attempts left | - Rejected with the same plain bad request response as any other rejection here - The wrong attempt is counted - The code stays usable, so a mistyped code can be corrected |
+| 3. User enters a wrong code too many times | - The code is deleted - Rejected with the same plain bad request response as any other rejection here, without the code being checked again - Recovering means going back to step 1 for a new code |
+| 4. User enters a code that has expired | - The code is deleted - Rejected with the same plain bad request response as any other rejection here |
+| 5. User submits a code id we hold no record of — an old email, a stale browser tab, a code already used, or the made-up code id handed back for an unregistered email (see [step 1, scenario 5](#1-user-requests-a-reset-code-by-email)) | - Rejected with the same plain bad request response as any other rejection here - Nothing is deleted, because nothing was found |
 
 #### Requirements
 
 1. Entering the correct code proves the person reads that mailbox, and earns them one chance to set a new password.
 2. A wrong code is counted and rejected, but does not destroy the code — a typo should not force a restart.
-3. Past a small number of wrong attempts the code stops being accepted at all, so it cannot be guessed by brute force.
+3. Past a small number of wrong attempts the code stops being accepted at all and is thrown away, so it cannot be guessed by brute force.
 4. An expired code is thrown away rather than left lying around.
+5. Every way this step can go wrong — a wrong code, one that has expired, too many wrong attempts, or a code id we don't recognise — gets back exactly the same plain bad-request response, with no detail about which of these happened. This keeps the guarantee from [step 1, scenario 5](#1-user-requests-a-reset-code-by-email): the made-up code id handed back for an unregistered email must fail here in a way nobody can tell apart from a real, active code being guessed wrong or having run out — otherwise asking to recover a password would leak whether an email is registered.
+6. Submitting a code id we do not recognise is rejected the same way, and nothing is deleted because there is nothing to delete.
+7. Proving you read the code also signs every other session on the account out immediately, not just once the new password is actually set in step 3 — because someone recovering from a suspected break-in should not have to wait that long to lock an intruder out.
 
 #### Request / Response / Outcome
 
@@ -153,19 +158,19 @@ This response looks the same whatever the email turns out to be, so nobody can u
 
 **Outcome**
 
-- On the correct code: the code is deleted, both counters are cleared, and a reset token is issued and saved so it can be checked and revoked later.
-- On a wrong code: only the wrong-attempt count changes. The code survives.
-- On an expired code: the code is deleted and nothing is issued.
+- On the correct code: the code is deleted, both counters are cleared, every token the account already held is deleted (ending any session on another device, right away rather than waiting for step 3), and a reset token is issued and saved so it can be checked and revoked later. Someone already holding a valid sign-in from before this moment can keep using it for a little longer, until it runs out naturally, but cannot renew it — so they are locked out shortly afterwards rather than instantly.
+- On a wrong code, with attempts left: only the wrong-attempt count changes. The code survives; the response is the same plain bad request used for every other rejection reason here.
+- On a wrong code past the limit, or an expired code: the code is deleted and nothing is issued; the same plain bad request response is returned.
+- On a code id we hold no record of: nothing is deleted, because nothing was found; the same plain bad request response is returned.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - Form validation error |
-| 400 | `BAD_REQUEST_ERROR` | - The code was wrong - Too many wrong attempts |
-| 401 | `UNAUTHORIZED_ERROR` | - The code has expired |
+| 400 | `BAD_REQUEST_ERROR` | - The code was wrong - The code has expired - Too many wrong attempts - Code id not recognized |
 | 403 | `FORBIDDEN_ERROR` | - The account has not set a password yet |
-| 500 | `INTERNAL_SERVER_ERROR` | - Code id not found - Unexpected error |
+| 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 
 ### 3. User Sets a New Password
 
@@ -209,7 +214,7 @@ Response is empty. A successful reset answers with nothing but a success status.
 - The new password is scrambled and saved over the old one.
 - The reset token is deleted, so the same token cannot change the password twice.
 - A confirmation email is sent to the account's address. If it cannot be sent, the reset still stands and the failure is only recorded.
-- Sessions already signed in elsewhere keep working — see [gap 1](#1-resetting-a-password-does-not-sign-anyone-else-out).
+- Sessions already signed in elsewhere were signed out back in [step 2](#2-user-verifies-the-reset-code), the moment the code was verified — this step does not repeat it.
 
 #### Http Error Responses
 
@@ -224,15 +229,7 @@ Response is empty. A successful reset answers with nothing but a success status.
 
 Everything above describes what the product does today. Nothing in this section exists yet; each one needs a product answer before it can be built.
 
-#### 1. Resetting a password does not sign anyone else out
-
-Changing the password leaves every existing session working. Someone who signed in on another device — including someone who should not have — stays signed in afterwards. Those sessions are only cleared the next time the real owner signs in.
-
-This matters because forgetting a password and *suspecting a break-in* look identical from our side, and recovery is exactly what someone reaches for after a break-in. Today it does not lock the intruder out.
-
-**To decide:** whether a reset should end every other session immediately, and whether the person should be told that is what happened.
-
-#### 2. A registered email can be told apart from an unregistered one
+#### 1. A registered email can be told apart from an unregistered one
 
 Asking to recover an **unknown** email answers normally with a made-up code id, which is what hides whether an address is registered. But asking for an email that *is* registered and has not set a password yet is rejected outright instead.
 
@@ -240,7 +237,7 @@ The two answers differ, so anyone can sort addresses into "has an account here" 
 
 **To decide:** whether the not-yet-onboarded case should answer normally too, exactly like an unknown address.
 
-#### 3. The countdown we hand back can be wrong
+#### 2. The countdown we hand back can be wrong
 
 The answer to step 1 always states the full code lifetime. In the case where someone has asked too many times, the code's real expiry is deliberately not extended — but the answer still reports a full fresh lifetime.
 
@@ -248,16 +245,13 @@ A page showing that countdown tells the person they have far longer than they re
 
 **To decide:** whether the answer should report the code's real remaining time rather than the configured maximum.
 
-#### 4. Ordinary situations answer with a server error
+#### 3. Submitting a used reset token answers with a server error
 
-Several everyday things return a `500 INTERNAL_SERVER_ERROR`, which says something broke on our side when nothing did:
+Submitting a reset token that has already been used returns a `500 INTERNAL_SERVER_ERROR`, which says something broke on our side when nothing did. This is the ordinary double-submit: a second click, or a refreshed page after a successful reset.
 
-- Entering a code id we no longer hold — an old email, a stale browser tab, or a code already used.
-- Submitting a reset token that has already been used. This is the ordinary double-submit: a second click, or a refreshed page after a successful reset.
+**To decide:** the right answer here. It looks like "this is no longer valid, please start again" rather than a failure.
 
-**To decide:** the right answer for each. Both look like "this is no longer valid, please start again" rather than a failure.
-
-#### 5. The request counter never resets except on success
+#### 4. The request counter never resets except on success
 
 The counter limiting how often someone can ask for a code is cleared only when a code is finally entered correctly. Generating a brand-new code does not clear it.
 
@@ -265,11 +259,11 @@ So the limit is not really "requests per code" but "requests ever, until a succe
 
 **To decide:** whether this counter should reset whenever a new code is issued, the way the wrong-attempt counter already does.
 
-#### 6. The code may not live long enough to be usable
+#### 5. The code may not live long enough to be usable
 
 The code lifetime defaults to **45 seconds**, with the resend cooldown at 15. That has to cover the email being sent, delivered, noticed, opened, and the code typed in.
 
-For most people that is not long enough, and email delivery alone can exceed it. A code that routinely expires before it arrives pushes people into asking repeatedly, which is exactly what the request limit in gap 5 then penalises.
+For most people that is not long enough, and email delivery alone can exceed it. A code that routinely expires before it arrives pushes people into asking repeatedly, which is exactly what the request limit in gap 4 then penalises.
 
 **To decide:** what the code lifetime should be for an emailed code, given that the phone and email verification codes elsewhere in the product may want different values.
 

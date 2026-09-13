@@ -19,6 +19,7 @@ object UserOnboardService {
       userCredentialsRepository: UserCredentialsRepository,
       userDetailsRepository: UserDetailsRepository,
       userOtpRepository: UserOtpRepository,
+      userActionAttemptRepository: UserActionAttemptRepository,
       emailClient: EmailClient,
       twilioClient: TwilioClient,
       timeProvider: TimeProvider,
@@ -84,6 +85,17 @@ object UserOnboardService {
           onboardStageUser = userDetailsRow.onboardStage,
           onboardStagesAllowed = OnboardStage.onboardDetailsStages,
         )
+        // Runs unconditionally, before the OTP branch, so a colliding phone number is rejected via the
+        // uq_user_details_phone_number constraint before anything else on this request happens - regardless of
+        // whether the OTP below ends up reused or freshly generated. The unique-constraint check is otherwise
+        // never race-safe to pre-check separately, so this real write both persists the details and doubles as
+        // the conflict check.
+        _ <- userDetailsRepository.updateUserDetails(
+          authedUser.userID,
+          OnboardStage.PhoneVerification,
+          Some(onboardDetailsPostRequest.fullName),
+          Some(onboardDetailsPostRequest.phoneNumber),
+        )
         instantNow    <- timeProvider.instantNow
         userOtpRowOpt <- userOtpRepository.getUserOtpByUserID(authedUser.userID, OtpType.PhoneVerification)
         (userOtpRowNew, otpExpiresInSeconds) <- userOtpRowOpt match {
@@ -102,13 +114,10 @@ object UserOnboardService {
                 otp,
                 ExpiresAt(instantNow.plusSeconds(userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds)),
               )
-              _ <- userDetailsRepository
-                .updateUserDetails(
-                  authedUser.userID,
-                  OnboardStage.PhoneVerification,
-                  Some(onboardDetailsPostRequest.fullName),
-                  Some(onboardDetailsPostRequest.phoneNumber),
-                )
+              _ <- userActionAttemptRepository.deleteUserActionAttempt(
+                authedUser.userID,
+                ActionAttemptType.PhoneVerificationVerifyOTP,
+              )
               _ <- ZIO.unlessDiscard(userOnboardConfig.isDev)(
                 twilioClient
                   .sendOtpSms(onboardDetailsPostRequest.phoneNumber.phoneNumberE164, userOtpRow.otp)
@@ -148,9 +157,22 @@ object UserOnboardService {
         userOtpRow <- userOtpRepository
           .getUserOtp(onboardVerifyPhoneNumberPostRequest.otpID, authedUser.userID, OtpType.PhoneVerification)
           .someOrFail(
-            ServiceError.InternalServerError
-              .UnexpectedError(s"No OTP found for otpID: [${onboardVerifyPhoneNumberPostRequest.otpID}]")
+            ServiceError.UnauthorizedError
+              .OtpVerificationFailedError(s"No OTP found for otpID: [${onboardVerifyPhoneNumberPostRequest.otpID}]")
           )
+        userActionAttemptRow <- userActionAttemptRepository.getAndIncreaseUserActionAttempt(
+          userID = authedUser.userID,
+          actionAttemptType = ActionAttemptType.PhoneVerificationVerifyOTP,
+        )
+        _ <-
+          if (userActionAttemptRow.attempts.value > userOnboardConfig.otpVerifyAttemptsMaxRetries)
+            userOtpRepository
+              .deleteUserOtp(userOtpRow.otpID, userOtpRow.userID, userOtpRow.otpType) *> ZIO.fail(
+              ServiceError.UnauthorizedError.OtpVerificationFailedError(
+                s"OTP validation attempts exceeded for otpID: [${userOtpRow.otpID}]: attempts [${userActionAttemptRow.attempts.value}] reached max [${userOnboardConfig.otpVerifyAttemptsMaxRetries}]"
+              )
+            )
+          else ZIO.unit
         instantNow <- timeProvider.instantNow
         _          <-
           if (userOtpRow.expiresAt.value.isBefore(instantNow))
@@ -160,7 +182,9 @@ object UserOnboardService {
               userOtpRow.otpType,
             ) *> ZIO.fail(
               ServiceError.UnauthorizedError
-                .OtpExpiredError(s"Expired OTP provided for otpID: [${onboardVerifyPhoneNumberPostRequest.otpID}]")
+                .OtpVerificationFailedError(
+                  s"Expired OTP provided for otpID: [${onboardVerifyPhoneNumberPostRequest.otpID}]"
+                )
             )
           else if (
             userOtpRow.otp == onboardVerifyPhoneNumberPostRequest.otp || verifyOtpInDev(
@@ -171,7 +195,14 @@ object UserOnboardService {
             userDetailsRepository.updateUserDetails(
               authedUser.userID,
               OnboardStage.PhoneVerified,
-            ) *> userOtpRepository.deleteUserOtp(userOtpRow.otpID, userOtpRow.userID, OtpType.PhoneVerification)
+            ) *> userOtpRepository.deleteUserOtp(
+              userOtpRow.otpID,
+              userOtpRow.userID,
+              OtpType.PhoneVerification,
+            ) *> userActionAttemptRepository.deleteUserActionAttempt(
+              authedUser.userID,
+              ActionAttemptType.PhoneVerificationVerifyOTP,
+            )
           else
             ZIO.fail(
               ServiceError.BadRequestError
@@ -201,7 +232,7 @@ object UserOnboardService {
           userOtpRepository
             .getUserOtpByUserID(authedUser.userID, OtpType.PhoneVerification)
             .someOrFail(
-              ServiceError.InternalServerError.UnexpectedError(
+              ServiceError.UnauthorizedError.OtpVerificationFailedError(
                 s"No OTP found for userID: [${authedUser.userID}] and otpType: [${OtpType.PhoneVerification}]"
               )
             )
@@ -214,7 +245,9 @@ object UserOnboardService {
           )
             userOtpRepository
               .deleteUserOtp(userOtpRow.otpID, userDetailsRow.userID, OtpType.PhoneVerification) *> ZIO.fail(
-              ServiceError.UnauthorizedError.OtpExpiredError(s"OTP expired for otpID: [${userOtpRow.otpID}]")
+              ServiceError.UnauthorizedError.OtpVerificationFailedError(
+                s"OTP expired for otpID: [${userOtpRow.otpID}]"
+              )
             )
           else ZIO.unit
       } yield smithy.OnboardVerifyPhoneNumberGetResponse(

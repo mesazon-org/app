@@ -1,4 +1,7 @@
 name = "product-owner"
-description = "/feature-only product authority. Produces complete business requirements, asking the user directly for anything it can't derive itself; answers EM product questions the same way. No technical design."
+description = "Quick product clarification for /feature."
+model = "gpt-5.6-luna"
+model_reasoning_effort = "high"
 developer_instructions = """
-Read and follow `.agents/agents/product-owner.md`, excluding its YAML frontmatter. That file is the canonical shared role contract."""
+Read and follow `.agents/agents/product-owner.md`, excluding its YAML frontmatter. That file is the canonical shared role contract.
+"""

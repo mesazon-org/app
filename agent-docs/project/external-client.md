@@ -30,3 +30,9 @@ sbt "gateway-core/testOnly *<Client>ClientSpec"
 ```
 
 If endpoint-visible behavior changes, also update the service functional and acceptance tests plus feature doc.
+
+## Mockability of the client's own trait
+
+`AIClient` requires explicit `OpenAIJsonSchema[A]` registrations from `io.mesazon.gateway.json.ai`; ordinary transport callers import `io.mesazon.gateway.json.tapir`. `ai.fromTapir` adapts an existing ordinary schema once for each registered AI response. Do not derive the same model again, normalize schemas inside `AIClient`, or introduce a blanket conversion from every `Schema[A]`. The legacy `OpenAIClient` remains unchanged with its ordinary `Schema[A]` contract; `ai` also supplies its AssistantResponse schema/codec.
+
+Before assuming the service functional spec can `mock[Client]` this trait, check whether any of its methods pairs a type parameter with a typeclass `using` bound (e.g. `def m[A](...)(using OpenAIJsonSchema[A], JsonValueCodec[A]): F[A]`, as `AIClient` does (`OpenAIClient` has the same generic-method shape with ordinary `Schema[A]`)). ScalaMock's `mock[T]` macro cannot correctly mock that shape — see [Functional testing](functional-testing.md)'s "Known limitation" section for the confirmed root cause and the hand-written-double resolution. Check for this before writing the client, not after the functional spec fails to compile.
