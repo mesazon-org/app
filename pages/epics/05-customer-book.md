@@ -12,7 +12,7 @@ Every organization keeps a book of the people and companies it trades with. It i
 
 - **Related** — [Organization Onboarding]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}). An organization must exist first, and every request here names which organization it is for.
 - **Out of scope** — Who may belong to an organization and what each role means. That is set up with the organization itself.
-- **Out of scope** — Checking a photo's candidates against customers already stored in the book. The only duplicate check made when reading a photo is between candidates found within that same photo.
+- **Out of scope** — Checking an image's or file's candidates against customers already stored in the book. The only duplicate check made when reading an image, CSV file, or Excel file is between candidates found within that same image or file.
 - **Not built yet** — Orders. The customer book exists so that orders can point at a customer later, but nothing places or records an order yet.
 - **Not built yet** — Search, filtering and paging. The list returns every active customer in one go, sorted by name.
 
@@ -46,7 +46,7 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 4. [User Updates a Customer](#4-user-updates-a-customer)
 5. [User Manages a Business's Contacts](#5-user-manages-a-businesss-contacts)
 6. [User Archives a Customer](#6-user-archives-a-customer)
-7. [User Extracts Customers from a Photo](#7-user-extracts-customers-from-a-photo)
+7. [User Extracts Customers from an Image or File](#7-user-extracts-customers-from-an-image-or-file)
 
 ### Prerequisites
 
@@ -530,66 +530,88 @@ Response is empty, whether the customer was archived just now, was already archi
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 
-### 7. User Extracts Customers from a Photo
+### 7. User Extracts Customers from an Image or File
 
 **Who can reach this step: an owner or admin of the organization.**
 
-- User photographs something they already have on paper — a business card, a printed spreadsheet or grid, or a handwritten note from their own notebook listing customers — instead of typing every entry in by hand.
-- The photo is sent to an AI model to read.
+- User already has a customer list somewhere else — on paper, or in a spreadsheet — and wants it in the customer book without retyping every entry by hand.
+- There are three ways in: capturing an image of something on paper (a business card, a printed spreadsheet or grid, or a handwritten note from their own notebook), uploading a CSV file, or uploading an Excel file (either the older `.xls` format or the newer `.xlsx`).
+- Whichever way is used, the image or file is sent to an AI model to read.
 - The user gets back a list of candidate people and candidate businesses to look over, how many entries were found versus actually turned into candidates, and, if some were missed, a short note on what to look at again.
 - Nothing is stored yet. Whichever candidates the user wants to keep are added afterwards the normal way, in [step 1](#1-user-adds-a-customer).
 
-This step exists to help a business move its existing customer book into this product quickly, with as little retyping as possible.
+This step exists to help a business move its existing customer book into this product quickly, however that list exists today, with as little retyping as possible.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User photographs a page with several clear entries | - Each is returned as a candidate person or a candidate business, whichever the AI judges it to be - Nothing forces a business card or a grid row into one kind or the other |
-| 2. An entry has a name but something else about it is unclear or missing (a smudged phone number, no visible email) | - Still returned as a candidate, with a short, plain note on that candidate saying what was missing or unclear - Any detail that is returned still follows the same field rules as adding a customer |
-| 3. An entry has no name the AI could make out at all | - Not returned as a candidate - Reflected only in the counts and in a short summary message describing what could not be read and where in the photo to look |
-| 4. Two entries in the same photo are the same kind and share a name, ignoring capitalisation | - Both are returned, and each is marked as a possible duplicate of the other |
+| 1. User captures an image of a page, or uploads a CSV or Excel file, with several clear entries | - Each is returned as a candidate person or a candidate business, whichever the AI judges it to be - Nothing forces a business card, a grid row, or a spreadsheet row into one kind or the other |
+| 2. An entry has a name but something else about it is unclear or missing (a smudged phone number, no visible email, a blank spreadsheet cell) | - Still returned as a candidate, with a short, plain note on that candidate saying what was missing or unclear - Any detail that is returned still follows the same field rules as adding a customer |
+| 3. An entry has no name the AI could make out at all | - Not returned as a candidate - Reflected in the counts. For a CSV or Excel file, its row number is added to the Unidentified Entry Rows list. An image has no row numbers, so this is only reflected in the counts, plus a note if there is something worth flagging |
+| 4. Two entries in the same image or the same file are the same kind and share a name, ignoring capitalisation | - Both are returned, and each is marked as a possible duplicate of the other |
 | 5. Two entries share a name but are different kinds — one looks like a person, the other a business | - Neither is marked as a duplicate. Only matching kinds count |
-| 6. The photo has more entries than could be turned into candidates | - The response says how many entries were identified in total and how many were actually turned into candidates, so the user can tell, for example, that 3 of them could not be processed |
-| 7. The photo has nothing recognizable as a customer at all | - An empty result is returned, with both counts at zero - This is not treated as an error |
-| 8. The photo is not a supported image, or is larger than the limit | - Rejected, the same as any other image upload in this product |
-| 9. The AI service has a temporary connection, reading, timeout, busy or service failure | - The photo is tried again up to two times after the first attempt - If all three attempts fail, the person receives a server error and no candidates |
+| 6. The image or file has more entries than could be turned into candidates | - The response says how many entries were identified in total and how many were actually turned into candidates, so the user can tell, for example, that 3 of them could not be processed |
+| 7. The image or file has nothing recognizable as a customer at all | - An empty result is returned, with both counts at zero - This is not treated as an error |
+| 8. The image is not a supported image, or the uploaded file is not genuinely readable as a CSV or Excel file, or either is larger than the limit | - Rejected, the same as any other image upload in this product |
+| 9. The AI service has a temporary connection, reading, timeout, busy or service failure | - The image or file is tried again up to two times after the first attempt - If all three attempts fail, the person receives a server error and no candidates |
 | 10. The AI service rejects the request or returns a response that cannot be decoded | - Not retried - Reported as a server error |
 | 11. A member with the ordinary user role tries to use this step | - Rejected. This step is limited the same way as adding a customer |
-| 12. User asks for the same photo to be read again | - Reading a photo never stores anything, so this can be repeated freely with no effect on the customer book |
+| 12. User asks for the same image or file to be read again | - Reading an image or file never stores anything, so this can be repeated freely with no effect on the customer book |
+| 13. A row in a CSV or Excel file has enough information for the AI to identify a contact person for that business, for example an extra column with a name in it | - The business candidate may include that contact, following the same field rules as a contact added by hand - This is best-effort only: it is never guaranteed, and no particular column or layout is required for it to happen |
+| 14. User uploads an Excel workbook that has more than one sheet | - Only the first sheet is read - The other sheets are not looked at, and are never mentioned in the response |
+| 15. User uploads a legacy `.xls` file rather than `.xlsx` | - Read the same way as `.xlsx`; both are accepted |
+| 16. A row in a CSV or Excel file is completely blank | - Not counted and not identified as an entry - Its row number is still added to the Empty Entry Rows list, so a person can find it in their own file |
+| 17. User uploads a CSV or Excel file with a very large number of rows | - All of them are processed in groups of up to 50 data rows - Up to 3 groups are read at the same time - There is no limit on how many entries a CSV or Excel file may contain - If any group cannot be read, the whole request fails and no partial candidates are returned - Row numbers added to the Empty Entry Rows and Unidentified Entry Rows lists always refer to the row's position in the original file, matching what the person sees in their own spreadsheet, never a position within one internal group - If several groups each have something worth flagging, the person gets one combined, friendly message rather than one per group; if that combining step itself does not work, they still get their candidates back along with a short plain message instead |
+| 18. User sends a supported image, CSV, or Excel file with the required filename matching it | - The file is accepted and read - Filename matching ignores capitalisation |
+| 19. User leaves out the required filename | - Rejected with `400 BAD_REQUEST_ERROR` - The file is not read and no candidates are returned |
+| 20. The filename is malformed or has no supported extension | - Rejected with `400 BAD_REQUEST_ERROR` - A filename must be 1–255 trimmed characters and end in `.png`, `.jpg`, `.jpeg`, `.webp`, `.csv`, `.xls`, or `.xlsx` |
+| 21. The filename extension disagrees with the actual file | - Rejected with `400 BAD_REQUEST_ERROR` - The filename extension must match the actual supported format |
 
 #### Requirements
 
-1. Every candidate is shaped exactly like adding a person or a business in [step 1](#1-user-adds-a-customer) — the same fields, the same two kinds. The AI decides which kind each entry looks like; nothing here fixes a rule for what a business card or a grid row must become.
-2. A candidate's name — and a business contact's name, when a candidate business includes one — must not be empty. Every other value that is returned must satisfy its own field rule: names and other text are trimmed and non-empty when present, email values follow the email field's format and length rule, and each phone component follows its own format and length rule. The phone shown in a candidate has exactly two parts — its national number and its country dialling code — and does not expose a regional label or an international-format number. The photo reader is asked for a best-effort real-looking pair, for example national number `5551234567` with country code `+1`, but this step does not prove that the pair is a real number for that country; that check happens when the candidate is actually added. An empty email or phone list is allowed. The instructions given to the photo reader require exactly one entry to be marked as the default whenever either list is non-empty. If the AI returns a value that fails one of the field-level rules, the response cannot be used and the photo read reports a server error rather than returning a partly invalid candidate; the default-count rule is not independently checked at this stage.
-3. An entry the photo seemed to contain but that could not be given any name at all is never returned as a candidate.
-4. The response always states how many entries were identified in total and how many were actually turned into candidates, so the person can tell at a glance that, for example, 3 entries could not be processed. When some were missed, a short summary message says what could not be read and where in the photo to look, without listing each one separately.
-5. Two candidates of the same kind found in the same photo, whose names match once capitalisation is ignored, are each marked as a possible duplicate of the other. This only ever compares candidates found within that one photo — it never looks at customers already stored in the book.
-6. The photo itself is judged the same way as any other image upload in this product: by looking inside the file, accepting only PNG, JPEG and WEBP, capped at 20 MB.
-7. Unlike the logo and catalogue item image uploads, the photo is never kept. There is no original copy and no resized copy — nothing about it is written to file storage.
-8. Nothing is stored in the customer book by this step, however it turns out. A candidate only becomes a real customer once it is sent through [Adding a customer](#1-user-adds-a-customer).
-9. Each AI attempt may take up to one minute. Temporary connection, reading, timeout, busy and service failures are tried again twice, after waits of one second and two seconds. Request rejections, image-reading failures and responses that cannot be decoded are not retried. If all three attempts fail, the photo read reports a server error and returns no candidates. A retry may send the photo to the outside AI service more than once and may therefore create more than one charge, even when an earlier attempt generated an answer but its response could not be received.
+1. Every candidate is shaped exactly like adding a person or a business in [step 1](#1-user-adds-a-customer) — the same fields, the same two kinds — whether the source was an image, a CSV file, or an Excel file. The AI decides which kind each entry looks like; nothing here fixes a rule for what a business card, a grid row, or a spreadsheet row must become.
+2. A candidate's name — and a business contact's name, when a candidate business includes one — must not be empty. Every other value that is returned must satisfy its own field rule: names and other text are trimmed and non-empty when present, email values follow the email field's format and length rule, and each phone component follows its own format and length rule. The phone shown in a candidate has exactly two parts — its national number and its country dialling code — and does not expose a regional label or an international-format number. The reader is asked for a best-effort real-looking pair, for example national number `5551234567` with country code `+1`, but this step does not prove that the pair is a real number for that country; that check happens when the candidate is actually added. An empty email or phone list is allowed. The instructions given to the reader require exactly one entry to be marked as the default whenever either list is non-empty. If the AI returns a value that fails one of the field-level rules, the response cannot be used and the read reports a server error rather than returning a partly invalid candidate; the default-count rule is not independently checked at this stage.
+3. An entry the image or file seemed to contain but that could not be given any name at all is never returned as a candidate.
+4. The response always states how many entries were identified in total and how many were actually turned into candidates, so the person can tell at a glance that, for example, 3 entries could not be processed. When some were missed, for a CSV or Excel file the specific row numbers land in the Empty Entry Rows or Unidentified Entry Rows list, using the same row numbers the person sees in their own spreadsheet (the header is row 1, so the first data row is row 2) — not a position within an internal processing group — so they can find and fix them directly. An image has no row numbers, so any extra detail about what could not be read goes in the free-text Unidentified Entries Notes instead.
+5. Two candidates of the same kind found in the same image or the same file, whose names match once capitalisation is ignored, are each marked as a possible duplicate of the other. This comparison covers the whole uploaded file even when a large spreadsheet is read in several groups, so matching candidates in different groups are still marked. It never looks at customers already stored in the book.
+6. What is sent in is judged for whether it can be used at all before it is read: an image is judged the same way as any other image upload in this product — by looking inside the file, accepting only PNG, JPEG and WEBP; an uploaded file must be genuinely readable as a CSV file, or as an Excel file (`.xls` or `.xlsx`) — a file merely named or labelled as one of these formats is not enough. All three are capped at 20 MB. There is no limit on how many rows a CSV or Excel file may contain.
+7. The filename declaration is a required header. It is 1–255 trimmed characters and must use a supported extension. A missing or malformed filename is rejected with `400 BAD_REQUEST_ERROR` before the file is read. The filename is used as a format-detection hint and is never stored. Client-supplied content type and size are not required or validated; the server detects the format, counts the received bytes, and enforces the 20 MB limit itself.
+8. The filename extension must match the actual supported format, ignoring capitalisation. `.jpg` and `.jpeg` both mean JPEG; `.csv` means CSV whether the actual CSV detection is `text/csv` or `text/plain`; `.xls` and `.xlsx` remain distinct Excel formats. A missing, unsupported, or mismatched extension is rejected with `400 BAD_REQUEST_ERROR`.
+9. Unlike the logo and catalogue item image uploads, none of the three — the image, the CSV file, or the Excel file — is ever kept. There is no original copy and no resized or re-saved copy of any of them; nothing about any of them is written to file storage.
+10. Nothing is stored in the customer book by this step, however it turns out, whichever of the three was used. A candidate only becomes a real customer once it is sent through [Adding a customer](#1-user-adds-a-customer).
+11. A business candidate extracted from an image, a CSV file, or an Excel file may include one or more business contacts, when the source gives the reader enough to identify a contact person for that business. This is the same optional possibility that already applies to a business card or grid entry read from an image, now extended to spreadsheet rows. It is never guaranteed, and no particular column, header, or layout is required for it to happen.
+12. When an Excel workbook has more than one sheet, only the first sheet is read. The other sheets are not read and are never referred to in the response. This does not apply to a CSV file, which has no sheets.
+13. A row in a CSV or Excel file that is completely blank is not treated as an entry at all: it is never counted and never identified. Its row number is still added to the Empty Entry Rows list, so the person can see exactly which rows in their file were empty. This is different from a row that has some data but no name the AI could make out, which follows requirement 3 above and has its row number added to the Unidentified Entry Rows list instead.
+14. Each AI attempt may take up to one minute. Temporary connection, reading, timeout, busy and service failures are tried again twice, after waits of one second and two seconds. Request rejections, file-reading failures and responses that cannot be decoded are not retried. Large spreadsheets are read in groups of at most 50 data rows, with no more than 3 groups being read at once; each group follows this attempt and retry policy independently. If any group still fails, the whole read reports a server error and returns no partial candidates. A retry may send an image or spreadsheet group to the outside AI service more than once and may therefore create more than one charge, even when an earlier attempt generated an answer but its response could not be received.
+15. Spreadsheet groups preserve their order when combined. Their identified and processed counts are added, their Empty Entry Rows and Unidentified Entry Rows lists are combined in group order — each already naming rows by their real position in the original file, not a position within its own group — and duplicate flags are recalculated across the complete combined candidate list so group boundaries are not visible in the response. When there is anything across the whole file worth flagging, the separate groups' notes are combined into one short, friendly message in the reader's own words, rather than shown group by group or stitched together; when there is nothing worth flagging, no message is returned at all.
+16. Combining a large spreadsheet's groups into one message never fails the whole read by itself. If that combining step cannot be completed, the response still includes every candidate already found, with a short, plain message built only from the identified/processed counts and the blank/unidentified row numbers, in place of the combined one.
 
 #### Request / Response / Outcome
 
+Images and files use one upload entry point that carries whichever of the three the user has — an image, a CSV file, or an Excel file. The same request shape is used for all three; the server determines which one it was sent, using the same "genuinely readable" check as before.
+
 **Request**
 
-The body is the photo itself. The organization it is for travels in the request's header, since the body carries the image:
+The body is the image or file itself, exactly as with every other upload in this product. The organization it is for travels in the request's header, since the body carries the file. The file's name is a required header. Its extension must match the actual supported format; it is used as a detection hint and is never stored. Client-supplied content type and size are not part of this contract because the server determines the format and counts the actual uploaded bytes.
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Organization ID | `UUID` | Canonical 36-character form | ✅ | Which organization's book this photo is for |
-| Image | Binary | PNG, JPEG or WEBP; up to 20 MB | ✅ | The photo to read, sent as the request body |
+| Organization ID | `UUID` | Canonical 36-character form | ✅ | Which organization's book this is for. Travels in the request's header |
+| File | Binary | PNG, JPEG or WEBP; or genuinely readable as CSV or Excel (`.xls` or `.xlsx`); up to 20 MB | ✅ | The image or file to read, sent as the request body |
+| File Name | `String` | 1–255 characters, trimmed; supported extension matching the actual format | ✅ | The file's name, sent as a header and required to identify the declared format. It is never stored |
 
-**Response — `ExtractCustomersResponse`**
+**Response — `ExtractCustomersPostResponse`**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Entries Identified | `Long` | Whole number, zero or more | ✅ | How many entries the photo seemed to contain in total, including ones that could not be turned into a candidate |
+| Entries Identified | `Long` | Whole number, zero or more | ✅ | How many entries the source seemed to contain in total, including ones that could not be turned into a candidate |
 | Entries Processed | `Long` | Whole number, zero or more | ✅ | How many of those were actually turned into a candidate person or business. This, like everything else in the response, is the AI's own reported figure and is not independently checked |
-| Customer Individual Candidates | `ExtractCustomerIndividualData[]` | May be empty | ✅ | Recognized people, in whatever order the photo listed them |
-| Customer Business Candidates | `ExtractCustomerBusinessData[]` | May be empty | ✅ | Recognized businesses, in whatever order the photo listed them |
-| Unidentified Entries Summary | `String` | Concise, plain text | ❌ | Present only when Entries Processed is less than Entries Identified. A short message pointing at what could not be turned into a candidate — for example, "could not read the last 3 entries" or "could not process entries 2, 5 and 6" |
+| Customer Individual Candidates | `ExtractCustomerIndividualData[]` | May be empty | ✅ | Recognized people, in whatever order the source listed them |
+| Customer Business Candidates | `ExtractCustomerBusinessData[]` | May be empty | ✅ | Recognized businesses, in whatever order the source listed them |
+| Empty Entry Rows | `Long[]` | May be empty | ✅ | Row numbers of rows that were completely blank and were never counted as an entry, using the same row numbers visible in the person's own spreadsheet (header is row 1). Always empty for an image |
+| Unidentified Entry Rows | `Long[]` | May be empty | ✅ | Row numbers of rows that had content but no name the AI could make out, so no candidate was returned for them, using the same row numbers visible in the person's own spreadsheet (header is row 1). Always empty for an image |
+| Unidentified Entries Notes | `String` | Concise, plain text | ❌ | Free text for anything not covered by the two row lists above. For an image, this is the only way an unread entry is reported at all, since an image has no row numbers. For a CSV or Excel file read in several groups, this is one combined, friendly message rather than each group's own note shown separately — or, if combining them did not work, a short plain message built from the counts and row lists instead |
 
 **ExtractCustomerIndividualData**
 
@@ -611,19 +633,20 @@ The response keeps a `candidate` part alongside the extraction metadata. That `c
 
 **Outcome**
 
-- Nothing is stored: no customer, no contact, and no copy of the photo, anywhere.
-- The photo is sent to an outside AI service so it can be read, and is not kept afterwards, by us or in file storage.
+- Nothing is stored: no customer, no contact, and no copy of the image, CSV file, or Excel file, anywhere.
+- The filename header is required. If it is missing, malformed, or disagrees with the actual upload, the file is not sent to the reader or stored and the request returns `400 BAD_REQUEST_ERROR`.
+- Whichever of the three was sent is sent to an outside AI service so it can be read, and is not kept afterwards, by us or in file storage.
 - Nothing in the response is remembered anywhere once it is sent. Using a candidate means sending it through [Adding a customer](#1-user-adds-a-customer), the same as anything typed in by hand.
-- Entries Identified and Entries Processed together are how a reader sees that some were missed — for example, four entries identified but only three processed — and, when that happens, the summary message says what could not be read and where to look.
+- Entries Identified and Entries Processed together are how a reader sees that some were missed — for example, four entries identified but only three processed — and, when that happens, for a CSV or Excel file the real row numbers involved appear in the Empty Entry Rows or Unidentified Entry Rows list, so the person can go straight to them in their own file; for an image, any extra detail is in Unidentified Entries Notes instead.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `BAD_REQUEST_ERROR` | - The organization id header is missing |
+| 400 | `BAD_REQUEST_ERROR` | - The organization id header is missing - The required file name header is missing or malformed - The filename extension is missing, unsupported, or does not match the actual file |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow this |
-| 500 | `INTERNAL_SERVER_ERROR` | - The file is not a supported image - The AI service could not be reached, or sent back something that could not be used - Unexpected error |
+| 500 | `INTERNAL_SERVER_ERROR` | - The file is not a supported image, or is not genuinely readable as a CSV or Excel file - The AI service could not be reached, or sent back something that could not be used - Unexpected error |
 
 ### Known gaps and open questions
 
@@ -665,9 +688,9 @@ Nothing today creates such a record. But nothing would stop a future change, or 
 
 **To decide:** whether the rule should be enforced where the data is kept, rather than only in the code path that happens to write it.
 
-#### 5. Nothing limits how often a photo can be read
+#### 5. Nothing limits how often an image or file can be read
 
-[Extracting customers from a photo](#7-user-extracts-customers-from-a-photo) can be called as often as an owner or admin likes, with no limit per person, per organization, or overall. Each call is sent to an outside AI service, which is not free to run.
+[Extracting customers from an image or file](#7-user-extracts-customers-from-an-image-or-file) can be called as often as an owner or admin likes, with no limit per person, per organization, or overall, whichever of the three ways in is used. Each call is sent to an outside AI service, which is not free to run.
 
 Nothing today would stop this being called far more than the migration task it is meant for would ever need.
 

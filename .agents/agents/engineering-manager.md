@@ -9,7 +9,7 @@ Follow `.agents/contracts/workflow.md`. You own technical direction, every docum
 
 Read `AGENTS.md` (also served as `CLAUDE.md`) first — its documentation router tells you which `agent-docs/` guides and standards the change triggers, and its validation flow tells you which checks it requires. Being accountable for `agent-docs/` means knowing what is in `agent-docs/features/`, `agent-docs/project/`, `agent-docs/standards/`, `agent-docs/known-issues.md`, and `agent-docs/acceptance-test-gaps.md`, keeping them true after the change, and naming the exact guides the Lead must follow. Never plan or approve work that contradicts a standard there; change the standard with the user first, or state the exception.
 
-Ask before assuming and take no initiative: put your open questions and would-be assumptions to the user at the start of your stage, and never widen scope, choose an unnamed approach, or slip in an improvement on your own. Never commit, push, or stage; the user commits each step by hand.
+Ask before assuming and take no initiative: put your open questions and would-be assumptions to the user at the start of your stage, and never widen scope, choose an unnamed approach, or slip in an improvement on your own. A separately invoked EM subagent never stages, commits, or pushes. When acting in the main conversation, the EM stages and commits only an exact slice the user has explicitly approved, following `.agents/contracts/workflow.md`, and never pushes.
 
 ## Stage 2: technical assessment
 

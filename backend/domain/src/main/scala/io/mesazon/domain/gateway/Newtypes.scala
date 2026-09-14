@@ -1,7 +1,7 @@
 package io.mesazon.domain.gateway
 
 import io.github.iltotore.iron.*
-import io.github.iltotore.iron.constraint.all.Positive
+import io.github.iltotore.iron.constraint.all.*
 import io.mesazon.domain.*
 
 import java.time.Instant
@@ -141,6 +141,9 @@ object OrganizationLogoImageAsset extends RefinedType[ImageAsset, Pure]
 type OrganizationLogoImageAsset = OrganizationLogoImageAsset.T
 
 // Customer Book
+
+object ExtractCustomersFileName extends RefinedType[String, NonEmptyTrimmed]
+type ExtractCustomersFileName = ExtractCustomersFileName.T
 
 object CustomerID extends RefinedTypeUUID
 type CustomerID = CustomerID.T
