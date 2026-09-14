@@ -12,7 +12,7 @@ object Dependencies {
   lazy val logbackV             = "1.6.3"
   lazy val julToSlf4jV          = "2.0.19"
   lazy val jclToSlf4jV          = "2.0.19"
-  lazy val log4jToSlf4jV        = "2.23.1"
+  lazy val log4jToSlf4jV        = "2.26.1"
   lazy val pureconfigV          = "0.17.10"
   lazy val scalaTestV           = "3.2.20"
   lazy val scalaTestPlusCheckV  = "3.2.11.0"

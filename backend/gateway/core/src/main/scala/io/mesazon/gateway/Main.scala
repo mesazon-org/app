@@ -44,8 +44,7 @@ object Main extends ZIOAppDefault {
       OtpGenerator.live,
       FileScanner.live,
       ImageProcessing.live,
-      ExcelToCsvConverter.live,
-      CsvValidator.live,
+      SpreadsheetTool.live,
 
       // Services
       AuthenticationService.live,

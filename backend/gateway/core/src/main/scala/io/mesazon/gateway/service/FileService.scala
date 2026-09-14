@@ -110,8 +110,7 @@ object FileService {
       catalogueRepository: CatalogueRepository,
       fileScanner: FileScanner,
       imageProcessing: ImageProcessing,
-      excelToCsvConverter: ExcelToCsvConverter,
-      csvValidator: CsvValidator,
+      spreadsheetTool: SpreadsheetTool,
       s3ClientOrganizationMedia: S3ClientOrganizationMedia,
       aiClient: AIClient,
   ) extends FileService[ServiceTask] {
@@ -226,7 +225,7 @@ object FileService {
         SupportedMediaType.images,
         fileServiceConfig.maxUploadBytes,
       )
-      extractCustomersResponse <- aiClient.extract[ExtractCustomersResponse](
+      extractCustomersResponse <- aiClient.extractFromImage[ExtractCustomersResponse](
         customerBookPhotoScanOutput.fileByteStreamScanned,
         customerBookPhotoScanOutput.supportedMediaType,
         extractCustomersFromPhotoInstructions,
@@ -242,22 +241,12 @@ object FileService {
         SupportedMediaType.spreadsheets,
         fileServiceConfig.maxUploadBytes,
       )
-      customerBookFileCsvByteStream <- customerBookFileScanOutput.supportedMediaType match {
-        case SupportedMediaType.XLS | SupportedMediaType.XLSX =>
-          excelToCsvConverter.convert(customerBookFileScanOutput.fileByteStreamScanned)
-        case SupportedMediaType.CSV | SupportedMediaType.PLAINTEXT_CSV =>
-          csvValidator
-            .validate(customerBookFileScanOutput.fileByteStreamScanned)
-            .as(customerBookFileScanOutput.fileByteStreamScanned)
-        case unexpected =>
-          ZIO.fail(
-            ServiceError.InternalServerError
-              .UnexpectedError(s"Unsupported media type for CSV/Excel extraction: [$unexpected]")
-          )
-      }
-      extractCustomersResponse <- aiClient.extract[ExtractCustomersResponse](
-        customerBookFileCsvByteStream,
-        SupportedMediaType.CSV,
+      customerBookFileValidatedCsv <- spreadsheetTool.convertValidateCsv(
+        customerBookFileScanOutput.fileByteStreamScanned,
+        customerBookFileScanOutput.supportedMediaType,
+      )
+      extractCustomersResponse <- aiClient.extractFromCsv[ExtractCustomersResponse](
+        customerBookFileValidatedCsv,
         extractCustomersFromFileInstructions,
       )
     } yield extractCustomersResponse)

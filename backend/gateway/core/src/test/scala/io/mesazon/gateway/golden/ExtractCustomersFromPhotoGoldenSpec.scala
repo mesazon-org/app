@@ -1037,7 +1037,7 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
             FileByteStreamScanned(ZStream.fromResource(s"assets/contact-book-test-photo-$photoNumber.png"))
 
           val extractCustomersResponse = aiClient
-            .extract[ExtractCustomersResponse](
+            .extractFromImage[ExtractCustomersResponse](
               customerBookPhotoByteStreamScanned,
               SupportedMediaType.PNG,
               FileService.extractCustomersFromPhotoInstructions,
