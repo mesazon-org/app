@@ -13,4 +13,5 @@ enum SupportedMediaType(val ext: String, val mime: String) {
 object SupportedMediaType {
   val images: List[SupportedMediaType]       = List(PNG, JPEG, WEBP)
   val spreadsheets: List[SupportedMediaType] = List(CSV, PLAINTEXT_CSV, XLS, XLSX)
+  val excel: List[SupportedMediaType]        = List(XLS, XLSX)
 }
