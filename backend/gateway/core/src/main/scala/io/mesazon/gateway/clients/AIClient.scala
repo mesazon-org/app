@@ -4,7 +4,7 @@ import com.github.plokhotnyuk.jsoniter_scala.core.*
 import io.mesazon.domain.gateway.{ServiceError, SupportedMediaType}
 import io.mesazon.gateway.config.AIClientConfig
 import io.mesazon.gateway.json.OpenAIJsonSchema
-import io.mesazon.gateway.utils.FileByteStreamScanned
+import io.mesazon.gateway.utils.{FileByteStreamScanned, ValidatedCsvByteStream}
 import sttp.ai.openai.OpenAI
 import sttp.ai.openai.OpenAIExceptions.OpenAIException
 import sttp.ai.openai.requests.completions.chat.ChatRequestBody.{ChatBody, ChatCompletionModel, ResponseFormat}
@@ -18,9 +18,14 @@ import java.util.Base64
 import scala.jdk.DurationConverters.JavaDurationOps
 
 trait AIClient {
-  def extract[A](
-      contentByteStream: FileByteStreamScanned,
+  def extractFromImage[A](
+      imageByteStream: FileByteStreamScanned,
       supportedMediaType: SupportedMediaType,
+      instructions: String,
+  )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
+
+  def extractFromCsv[A](
+      csvByteStream: ValidatedCsvByteStream,
       instructions: String,
   )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
 }
@@ -93,48 +98,44 @@ object AIClient {
           )
       } yield result
 
-    override def extract[A](
-        contentByteStream: FileByteStreamScanned,
+    override def extractFromImage[A](
+        imageByteStream: FileByteStreamScanned,
         supportedMediaType: SupportedMediaType,
         instructions: String,
     )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
-      supportedMediaType match {
-        case mediaType if SupportedMediaType.images.contains(mediaType) =>
-          for {
-            contentBytes <- contentByteStream.value.runCollect
-              .map(_.toArray)
-              .mapError(error =>
-                ServiceError.InternalServerError.UnexpectedError("Failed to read image for AI extraction", Some(error))
-              )
-            contentBase64 = Base64.getEncoder.encodeToString(contentBytes)
-            result <- sendAndDecode[A](
-              instructions,
-              Content.ArrayContent(
-                Seq(
-                  Content.ContentPart.ImageUrl(
-                    Content.ImageUrlDetails(url = s"data:${supportedMediaType.mime};base64,$contentBase64")
-                  )
-                )
-              ),
-            )
-          } yield result
-        case mediaType if SupportedMediaType.spreadsheets.contains(mediaType) =>
-          for {
-            contentBytes <- contentByteStream.value.runCollect
-              .map(_.toArray)
-              .mapError(error =>
-                ServiceError.InternalServerError
-                  .UnexpectedError("Failed to read file content for AI extraction", Some(error))
-              )
-            contentText = new String(contentBytes, StandardCharsets.UTF_8)
-            result <- sendAndDecode[A](instructions, Content.TextContent(contentText))
-          } yield result
-        case unexpected =>
-          ZIO.fail(
-            ServiceError.InternalServerError
-              .UnexpectedError(s"Unsupported media type for AI extraction: [$unexpected]")
+      for {
+        imageBytes <- imageByteStream.value.runCollect
+          .map(_.toArray)
+          .mapError(error =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to read image for AI extraction", Some(error))
           )
-      }
+        imageBase64 = Base64.getEncoder.encodeToString(imageBytes)
+        result <- sendAndDecode[A](
+          instructions,
+          Content.ArrayContent(
+            Seq(
+              Content.ContentPart.ImageUrl(
+                Content.ImageUrlDetails(url = s"data:${supportedMediaType.mime};base64,$imageBase64")
+              )
+            )
+          ),
+        )
+      } yield result
+
+    override def extractFromCsv[A](
+        csvByteStream: ValidatedCsvByteStream,
+        instructions: String,
+    )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
+      for {
+        csvBytes <- csvByteStream.value.runCollect
+          .map(_.toArray)
+          .mapError(error =>
+            ServiceError.InternalServerError
+              .UnexpectedError("Failed to read file content for AI extraction", Some(error))
+          )
+        csvText = new String(csvBytes, StandardCharsets.UTF_8)
+        result <- sendAndDecode[A](instructions, Content.TextContent(csvText))
+      } yield result
   }
 
   val live = ZLayer {
