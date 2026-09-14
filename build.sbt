@@ -180,6 +180,7 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.pureconfigCatsEffect,
     Dependencies.julToSlf4j,
     Dependencies.jclToSlf4j,
+    Dependencies.log4jToSlf4j,
     Dependencies.logback,
     Dependencies.chimney,
     Dependencies.ironChimney,

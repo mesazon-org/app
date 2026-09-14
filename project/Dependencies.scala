@@ -12,6 +12,7 @@ object Dependencies {
   lazy val logbackV             = "1.6.3"
   lazy val julToSlf4jV          = "2.0.19"
   lazy val jclToSlf4jV          = "2.0.19"
+  lazy val log4jToSlf4jV        = "2.23.1"
   lazy val pureconfigV          = "0.17.10"
   lazy val scalaTestV           = "3.2.20"
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
@@ -83,9 +84,10 @@ object Dependencies {
   lazy val circeParser  = "io.circe" %% "circe-parser"  % circeV
 
   // Logging
-  lazy val logback    = "ch.qos.logback" % "logback-classic" % logbackV
-  lazy val julToSlf4j = "org.slf4j"      % "jul-to-slf4j"    % julToSlf4jV
-  lazy val jclToSlf4j = "org.slf4j"      % "jcl-over-slf4j"  % jclToSlf4jV
+  lazy val logback      = "ch.qos.logback"           % "logback-classic" % logbackV
+  lazy val julToSlf4j   = "org.slf4j"                % "jul-to-slf4j"    % julToSlf4jV
+  lazy val jclToSlf4j   = "org.slf4j"                % "jcl-over-slf4j"  % jclToSlf4jV
+  lazy val log4jToSlf4j = "org.apache.logging.log4j" % "log4j-to-slf4j"  % log4jToSlf4jV
 
   // Test
   lazy val scalaTest                    = "org.scalatest"     %% "scalatest"                      % scalaTestV
