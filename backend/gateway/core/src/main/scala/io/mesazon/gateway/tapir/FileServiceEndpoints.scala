@@ -78,6 +78,23 @@ object FileServiceEndpoints {
       )
       .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
 
+  private val extractCustomersFromFilePostEndpoint =
+    securedEndpoint.post
+      .in("extract" / "customer-book-file")
+      .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
+      .out(jsonBody[ExtractCustomersResponse])
+      .errorOut(
+        tapirServerErrorOut(
+          NonEmptyChunk(
+            TapirServerError.UnauthorizedError,
+            TapirServerError.ForbiddenError,
+            TapirServerError.BadRequestError,
+            TapirServerError.InternalServerError,
+          )
+        )
+      )
+      .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
+
   private val docsEndpoint =
     endpoint.get
       .in("docs" / "specs" / s"${smithy4sDocsID.id.namespace}.${smithy4sDocsID.id.name}.json")
@@ -141,6 +158,19 @@ object FileServiceEndpoints {
           .serverLogic(organizationID => { case customerBookPhotoByteStream =>
             fileService.extractCustomersFromPhoto(organizationID, customerBookPhotoByteStream)
           }),
+        extractCustomersFromFilePostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
+          authorizationService
+            .auth(
+              accessToken = accessToken,
+              requiresCompletedOnboardStage = true,
+              organizationIDOpt = Some(organizationID),
+              organizationUserRolesAllowedOpt = Some(OrganizationUserRole.adminRoles),
+            )
+            .as(organizationID)
+        }
+          .serverLogic(organizationID => { case customerBookFileByteStream =>
+            fileService.extractCustomersFromFile(organizationID, customerBookFileByteStream)
+          }),
       )
       openApiDocsOpt = Option.when(enableDocs)(
         OpenAPIDocsInterpreter()
@@ -149,6 +179,7 @@ object FileServiceEndpoints {
               uploadOrganizationLogoPostEndpoint,
               uploadCatalogueItemImagePostEndpoint,
               extractCustomersFromPhotoPostEndpoint,
+              extractCustomersFromFilePostEndpoint,
             ),
             Info(
               title = "FileService",
