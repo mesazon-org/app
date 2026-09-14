@@ -941,67 +941,271 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
     "extractCustomersFromFile" should {
       "return the AI's extracted candidates for a scanned CSV file" in new TestContext {
         val organizationID             = arbitrarySample[OrganizationID]
-        val customerBookFileByteStream = ZStream.fromIterable("Full Name,Email".getBytes(StandardCharsets.UTF_8))
+        val customerBookFileByteStream =
+          ZStream.fromIterable(
+            "Full Name,Email\r\nJohn Smith,john.smith@example.com\r\n".getBytes(StandardCharsets.UTF_8)
+          )
 
-        val fileService = buildFileService(aiClientMock)
+        val customerBookFileScanOutput: FileScannerScanOutput = (
+          fileByteStreamScanned = FileByteStreamScanned(
+            ZStream.fromIterable(
+              "Full Name,Email\r\nJohn Smith,john.smith@example.com\r\n".getBytes(StandardCharsets.UTF_8)
+            )
+          ),
+          supportedMediaType = SupportedMediaType.CSV,
+          fileBytesSize = FileBytesSize.assume(1L),
+        )
 
-        val cause = fileService
+        val extractCustomersResponse = ExtractCustomersResponse(
+          entriesIdentified = 1L,
+          entriesProcessed = 1L,
+          customerIndividualCandidates = List(
+            ExtractCustomerIndividualData(
+              candidate = ExtractCustomerIndividual(
+                fullName = arbitrarySample[CustomerFullName],
+                emails = List(
+                  ExtractCustomerEmailEntry(email = arbitrarySample[CustomerEmail], isDefault = true)
+                ),
+                phoneNumbers = List.empty,
+                addressLine1 = None,
+                addressLine2 = None,
+                city = None,
+                postalCode = None,
+                country = None,
+              ),
+              isDuplicate = false,
+              extractionNotes = None,
+            )
+          ),
+          customerBusinessCandidates = List.empty,
+          unidentifiedEntriesSummary = None,
+        )
+
+        inSequence(
+          fileScannerMock.scan
+            .expects(customerBookFileByteStream, SupportedMediaType.spreadsheets, fileServiceConfig.maxUploadBytes)
+            .returns(ZIO.succeed(customerBookFileScanOutput))
+            .once(),
+          csvValidatorMock.validate
+            .expects(customerBookFileScanOutput.fileByteStreamScanned)
+            .returns(ZIO.succeed(()))
+            .once(),
+        )
+
+        val extractFromFileCallsRef =
+          Ref.make(List.empty[(FileByteStreamScanned, SupportedMediaType, String)]).zioValue
+        val aiClient = new Mocks.AIClientMock(ZIO.succeed(extractCustomersResponse), extractFromFileCallsRef)
+
+        val fileService = buildFileService(aiClient)
+
+        val response = fileService
           .extractCustomersFromFile(organizationID, customerBookFileByteStream)
-          .zioCause
+          .zioValue
 
-        cause.dieOption.value shouldBe a[NotImplementedError]
+        response shouldBe extractCustomersResponse
+
+        extractFromFileCallsRef.refValue shouldBe List(
+          (
+            customerBookFileScanOutput.fileByteStreamScanned,
+            SupportedMediaType.CSV,
+            FileService.extractCustomersFromFileInstructions,
+          )
+        )
+
+        val extractCustomersFromFileInstructionsNormalized =
+          extractFromFileCallsRef.refValue.head._3.replaceAll("\\s+", " ")
+
+        List(
+          "There is no fixed column layout",
+          "any column you don't recognize is simply ignored",
+          "a completely blank row is not an entry at all",
+          "only include a business contact if you can make out that contact's name",
+        ).foreach(instruction => extractCustomersFromFileInstructionsNormalized.contains(instruction) shouldBe true)
       }
 
       "return the AI's extracted candidates for a scanned Excel file via the converter" in new TestContext {
         val organizationID             = arbitrarySample[OrganizationID]
         val customerBookFileByteStream = ZStream.fromResource("assets/test-customers.xlsx")
 
-        val fileService = buildFileService(aiClientMock)
+        val customerBookFileScanOutput: FileScannerScanOutput = (
+          fileByteStreamScanned = FileByteStreamScanned(ZStream.fromResource("assets/test-customers.xlsx")),
+          supportedMediaType = SupportedMediaType.XLSX,
+          fileBytesSize = FileBytesSize.assume(1L),
+        )
 
-        val cause = fileService
+        val convertedCsvByteStream = FileByteStreamScanned(
+          ZStream.fromIterable("Full Name,Email\r\nJane Doe,jane.doe@example.com\r\n".getBytes(StandardCharsets.UTF_8))
+        )
+
+        val extractCustomersResponse = ExtractCustomersResponse(
+          entriesIdentified = 1L,
+          entriesProcessed = 1L,
+          customerIndividualCandidates = List(
+            ExtractCustomerIndividualData(
+              candidate = ExtractCustomerIndividual(
+                fullName = arbitrarySample[CustomerFullName],
+                emails = List(
+                  ExtractCustomerEmailEntry(email = arbitrarySample[CustomerEmail], isDefault = true)
+                ),
+                phoneNumbers = List.empty,
+                addressLine1 = None,
+                addressLine2 = None,
+                city = None,
+                postalCode = None,
+                country = None,
+              ),
+              isDuplicate = false,
+              extractionNotes = None,
+            )
+          ),
+          customerBusinessCandidates = List.empty,
+          unidentifiedEntriesSummary = None,
+        )
+
+        inSequence(
+          fileScannerMock.scan
+            .expects(customerBookFileByteStream, SupportedMediaType.spreadsheets, fileServiceConfig.maxUploadBytes)
+            .returns(ZIO.succeed(customerBookFileScanOutput))
+            .once(),
+          excelToCsvConverterMock.convert
+            .expects(customerBookFileScanOutput.fileByteStreamScanned)
+            .returns(ZIO.succeed(convertedCsvByteStream))
+            .once(),
+        )
+
+        val extractFromFileCallsRef =
+          Ref.make(List.empty[(FileByteStreamScanned, SupportedMediaType, String)]).zioValue
+        val aiClient = new Mocks.AIClientMock(ZIO.succeed(extractCustomersResponse), extractFromFileCallsRef)
+
+        val fileService = buildFileService(aiClient)
+
+        val response = fileService
           .extractCustomersFromFile(organizationID, customerBookFileByteStream)
-          .zioCause
+          .zioValue
 
-        cause.dieOption.value shouldBe a[NotImplementedError]
+        response shouldBe extractCustomersResponse
+
+        extractFromFileCallsRef.refValue shouldBe List(
+          (convertedCsvByteStream, SupportedMediaType.CSV, FileService.extractCustomersFromFileInstructions)
+        )
       }
 
       "propagate the error when the file fails FileScanner's scan (unsupported type or too large)" in new TestContext {
         val organizationID             = arbitrarySample[OrganizationID]
         val customerBookFileByteStream = ZStream.fromIterable("Full Name,Email".getBytes(StandardCharsets.UTF_8))
 
-        val fileService = buildFileService(aiClientMock)
+        val scanError = ServiceError.InternalServerError.UnexpectedError(
+          "Unsupported file type: [text/plain]. Supported file types are: [text/csv, text/plain, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet]"
+        )
 
-        val cause = fileService
+        fileScannerMock.scan
+          .expects(customerBookFileByteStream, SupportedMediaType.spreadsheets, fileServiceConfig.maxUploadBytes)
+          .returns(ZIO.fail(scanError))
+          .once()
+
+        val extractFromFileCallsRef =
+          Ref.make(List.empty[(FileByteStreamScanned, SupportedMediaType, String)]).zioValue
+        val aiClient = new Mocks.AIClientMock(
+          ZIO.die(new NotImplementedError("AIClient.extract should not be called")),
+          extractFromFileCallsRef,
+        )
+
+        val fileService = buildFileService(aiClient)
+
+        val serviceError = fileService
           .extractCustomersFromFile(organizationID, customerBookFileByteStream)
-          .zioCause
+          .zioError
 
-        cause.dieOption.value shouldBe a[NotImplementedError]
+        serviceError shouldBe scanError
+
+        extractFromFileCallsRef.refValue shouldBe List.empty
       }
 
       "propagate the error when the CSV validity gate rejects a structurally invalid CSV file" in new TestContext {
         val organizationID             = arbitrarySample[OrganizationID]
         val customerBookFileByteStream = ZStream.fromIterable("Full Name,Email".getBytes(StandardCharsets.UTF_8))
 
-        val fileService = buildFileService(aiClientMock)
+        val customerBookFileScanOutput: FileScannerScanOutput = (
+          fileByteStreamScanned =
+            FileByteStreamScanned(ZStream.fromIterable("Full Name,Email".getBytes(StandardCharsets.UTF_8))),
+          supportedMediaType = SupportedMediaType.CSV,
+          fileBytesSize = FileBytesSize.assume(1L),
+        )
 
-        val cause = fileService
+        val csvValidityError = ServiceError.InternalServerError.UnexpectedError("File is not valid CSV")
+
+        inSequence(
+          fileScannerMock.scan
+            .expects(customerBookFileByteStream, SupportedMediaType.spreadsheets, fileServiceConfig.maxUploadBytes)
+            .returns(ZIO.succeed(customerBookFileScanOutput))
+            .once(),
+          csvValidatorMock.validate
+            .expects(customerBookFileScanOutput.fileByteStreamScanned)
+            .returns(ZIO.fail(csvValidityError))
+            .once(),
+        )
+
+        val extractFromFileCallsRef =
+          Ref.make(List.empty[(FileByteStreamScanned, SupportedMediaType, String)]).zioValue
+        val aiClient = new Mocks.AIClientMock(
+          ZIO.die(new NotImplementedError("AIClient.extract should not be called")),
+          extractFromFileCallsRef,
+        )
+
+        val fileService = buildFileService(aiClient)
+
+        val serviceError = fileService
           .extractCustomersFromFile(organizationID, customerBookFileByteStream)
-          .zioCause
+          .zioError
 
-        cause.dieOption.value shouldBe a[NotImplementedError]
+        serviceError shouldBe csvValidityError
+
+        extractFromFileCallsRef.refValue shouldBe List.empty
       }
 
       "propagate the error when AIClient.extract fails" in new TestContext {
         val organizationID             = arbitrarySample[OrganizationID]
         val customerBookFileByteStream = ZStream.fromIterable("Full Name,Email".getBytes(StandardCharsets.UTF_8))
 
-        val fileService = buildFileService(aiClientMock)
+        val customerBookFileScanOutput: FileScannerScanOutput = (
+          fileByteStreamScanned =
+            FileByteStreamScanned(ZStream.fromIterable("Full Name,Email".getBytes(StandardCharsets.UTF_8))),
+          supportedMediaType = SupportedMediaType.CSV,
+          fileBytesSize = FileBytesSize.assume(1L),
+        )
 
-        val cause = fileService
+        val aiClientError = ServiceError.InternalServerError.UnexpectedError("Unable to send message to AI")
+
+        inSequence(
+          fileScannerMock.scan
+            .expects(customerBookFileByteStream, SupportedMediaType.spreadsheets, fileServiceConfig.maxUploadBytes)
+            .returns(ZIO.succeed(customerBookFileScanOutput))
+            .once(),
+          csvValidatorMock.validate
+            .expects(customerBookFileScanOutput.fileByteStreamScanned)
+            .returns(ZIO.succeed(()))
+            .once(),
+        )
+
+        val extractFromFileCallsRef =
+          Ref.make(List.empty[(FileByteStreamScanned, SupportedMediaType, String)]).zioValue
+        val aiClient = new Mocks.AIClientMock(ZIO.fail(aiClientError), extractFromFileCallsRef)
+
+        val fileService = buildFileService(aiClient)
+
+        val serviceError = fileService
           .extractCustomersFromFile(organizationID, customerBookFileByteStream)
-          .zioCause
+          .zioError
 
-        cause.dieOption.value shouldBe a[NotImplementedError]
+        serviceError shouldBe aiClientError
+
+        extractFromFileCallsRef.refValue shouldBe List(
+          (
+            customerBookFileScanOutput.fileByteStreamScanned,
+            SupportedMediaType.CSV,
+            FileService.extractCustomersFromFileInstructions,
+          )
+        )
       }
     }
   }
@@ -1013,6 +1217,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
     val fileScannerMock                      = mock[FileScanner]
     val imageProcessingMock                  = mock[ImageProcessing]
+    val excelToCsvConverterMock              = mock[ExcelToCsvConverter]
+    val csvValidatorMock                     = mock[CsvValidator]
     val organizationManagementRepositoryMock = mock[OrganizationManagementRepository]
     val catalogueRepositoryMock              = mock[CatalogueRepository]
     val s3ClientOrganizationMediaMock        = mock[S3ClientOrganizationMedia]
@@ -1025,6 +1231,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         ZLayer.succeed(fileServiceConfig),
         ZLayer.succeed(fileScannerMock),
         ZLayer.succeed(imageProcessingMock),
+        ZLayer.succeed(excelToCsvConverterMock),
+        ZLayer.succeed(csvValidatorMock),
         ZLayer.succeed(organizationManagementRepositoryMock),
         ZLayer.succeed(catalogueRepositoryMock),
         ZLayer.succeed(aiClient),

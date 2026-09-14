@@ -110,6 +110,8 @@ object FileService {
       catalogueRepository: CatalogueRepository,
       fileScanner: FileScanner,
       imageProcessing: ImageProcessing,
+      excelToCsvConverter: ExcelToCsvConverter,
+      csvValidator: CsvValidator,
       s3ClientOrganizationMedia: S3ClientOrganizationMedia,
       aiClient: AIClient,
   ) extends FileService[ServiceTask] {
@@ -234,8 +236,31 @@ object FileService {
     override def extractCustomersFromFile(
         organizationID: OrganizationID,
         customerBookFileByteStream: ZStream[Any, Throwable, Byte],
-    ): ServiceTask[ExtractCustomersResponse] =
-      ZIO.die(new NotImplementedError("FileService.extractCustomersFromFile is not implemented yet"))
+    ): ServiceTask[ExtractCustomersResponse] = ZIO.scoped(for {
+      customerBookFileScanOutput <- fileScanner.scan(
+        customerBookFileByteStream,
+        SupportedMediaType.spreadsheets,
+        fileServiceConfig.maxUploadBytes,
+      )
+      customerBookFileCsvByteStream <- customerBookFileScanOutput.supportedMediaType match {
+        case SupportedMediaType.XLS | SupportedMediaType.XLSX =>
+          excelToCsvConverter.convert(customerBookFileScanOutput.fileByteStreamScanned)
+        case SupportedMediaType.CSV | SupportedMediaType.PLAINTEXT_CSV =>
+          csvValidator
+            .validate(customerBookFileScanOutput.fileByteStreamScanned)
+            .as(customerBookFileScanOutput.fileByteStreamScanned)
+        case unexpected =>
+          ZIO.fail(
+            ServiceError.InternalServerError
+              .UnexpectedError(s"Unsupported media type for CSV/Excel extraction: [$unexpected]")
+          )
+      }
+      extractCustomersResponse <- aiClient.extract[ExtractCustomersResponse](
+        customerBookFileCsvByteStream,
+        SupportedMediaType.CSV,
+        extractCustomersFromFileInstructions,
+      )
+    } yield extractCustomersResponse)
   }
 
   def observed(service: FileService[ServiceTask]): FileService[TapirTask] =
