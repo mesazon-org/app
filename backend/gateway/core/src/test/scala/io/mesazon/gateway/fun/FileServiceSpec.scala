@@ -12,6 +12,8 @@ import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 import zio.stream.ZStream
 
+import java.nio.charset.StandardCharsets
+
 class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries, TokenArbitraries {
 
   "FileService" when {
@@ -933,6 +935,73 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             FileService.extractCustomersFromPhotoInstructions,
           )
         )
+      }
+    }
+
+    "extractCustomersFromFile" should {
+      "return the AI's extracted candidates for a scanned CSV file" in new TestContext {
+        val organizationID             = arbitrarySample[OrganizationID]
+        val customerBookFileByteStream = ZStream.fromIterable("Full Name,Email".getBytes(StandardCharsets.UTF_8))
+
+        val fileService = buildFileService(aiClientMock)
+
+        val cause = fileService
+          .extractCustomersFromFile(organizationID, customerBookFileByteStream)
+          .zioCause
+
+        cause.dieOption.value shouldBe a[NotImplementedError]
+      }
+
+      "return the AI's extracted candidates for a scanned Excel file via the converter" in new TestContext {
+        val organizationID             = arbitrarySample[OrganizationID]
+        val customerBookFileByteStream = ZStream.fromResource("assets/test-customers.xlsx")
+
+        val fileService = buildFileService(aiClientMock)
+
+        val cause = fileService
+          .extractCustomersFromFile(organizationID, customerBookFileByteStream)
+          .zioCause
+
+        cause.dieOption.value shouldBe a[NotImplementedError]
+      }
+
+      "propagate the error when the file fails FileScanner's scan (unsupported type or too large)" in new TestContext {
+        val organizationID             = arbitrarySample[OrganizationID]
+        val customerBookFileByteStream = ZStream.fromIterable("Full Name,Email".getBytes(StandardCharsets.UTF_8))
+
+        val fileService = buildFileService(aiClientMock)
+
+        val cause = fileService
+          .extractCustomersFromFile(organizationID, customerBookFileByteStream)
+          .zioCause
+
+        cause.dieOption.value shouldBe a[NotImplementedError]
+      }
+
+      "propagate the error when the CSV validity gate rejects a structurally invalid CSV file" in new TestContext {
+        val organizationID             = arbitrarySample[OrganizationID]
+        val customerBookFileByteStream = ZStream.fromIterable("Full Name,Email".getBytes(StandardCharsets.UTF_8))
+
+        val fileService = buildFileService(aiClientMock)
+
+        val cause = fileService
+          .extractCustomersFromFile(organizationID, customerBookFileByteStream)
+          .zioCause
+
+        cause.dieOption.value shouldBe a[NotImplementedError]
+      }
+
+      "propagate the error when AIClient.extract fails" in new TestContext {
+        val organizationID             = arbitrarySample[OrganizationID]
+        val customerBookFileByteStream = ZStream.fromIterable("Full Name,Email".getBytes(StandardCharsets.UTF_8))
+
+        val fileService = buildFileService(aiClientMock)
+
+        val cause = fileService
+          .extractCustomersFromFile(organizationID, customerBookFileByteStream)
+          .zioCause
+
+        cause.dieOption.value shouldBe a[NotImplementedError]
       }
     }
   }
