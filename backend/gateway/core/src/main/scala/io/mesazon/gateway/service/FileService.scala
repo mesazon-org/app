@@ -184,7 +184,7 @@ object FileService {
         SupportedMediaType.images,
         fileServiceConfig.maxUploadBytes,
       )
-      extractCustomersResponse <- aiClient.extractFromImage[ExtractCustomersResponse](
+      extractCustomersResponse <- aiClient.extract[ExtractCustomersResponse](
         customerBookPhotoScanOutput.fileByteStreamScanned,
         customerBookPhotoScanOutput.supportedMediaType,
         extractCustomersFromPhotoInstructions,

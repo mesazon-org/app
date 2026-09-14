@@ -10,15 +10,15 @@ import zio.*
 object Mocks {
 
   final class AIClientMock[A](
-      extractFromImageResult: IO[ServiceError, A],
-      val extractFromImageCallsRef: Ref[List[(FileByteStreamScanned, SupportedMediaType, String)]],
+      extractResult: IO[ServiceError, A],
+      val extractCallsRef: Ref[List[(FileByteStreamScanned, SupportedMediaType, String)]],
   ) extends AIClient {
-    override def extractFromImage[B](
-        imageByteStream: FileByteStreamScanned,
+    override def extract[B](
+        contentByteStream: FileByteStreamScanned,
         supportedMediaType: SupportedMediaType,
         instructions: String,
     )(using OpenAIJsonSchema[B], JsonValueCodec[B]): IO[ServiceError, B] =
-      extractFromImageCallsRef.update(_ :+ (imageByteStream, supportedMediaType, instructions)) *>
-        extractFromImageResult.map(_.asInstanceOf[B])
+      extractCallsRef.update(_ :+ (contentByteStream, supportedMediaType, instructions)) *>
+        extractResult.map(_.asInstanceOf[B])
   }
 }

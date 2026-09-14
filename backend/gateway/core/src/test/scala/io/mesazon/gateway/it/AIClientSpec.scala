@@ -19,6 +19,8 @@ import sttp.tapir.Schema
 import zio.*
 import zio.stream.*
 
+import java.nio.charset.StandardCharsets
+
 class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
 
   override def dockerComposeFile: String = "./src/test/resources/compose/wiremock.yaml"
@@ -82,7 +84,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
   }
 
   "AIClient" when {
-    "extractFromImage" should {
+    "extract" should {
       "successfully extract a structured response from a photo" in withContext { context =>
         import context.*
 
@@ -98,7 +100,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
 
         val extractedTestResult = aiClient
-          .extractFromImage[ExtractedTestResult](imageByteStream, SupportedMediaType.JPEG, "AI_CLIENT_SPEC_SUCCESS")
+          .extract[ExtractedTestResult](imageByteStream, SupportedMediaType.JPEG, "AI_CLIENT_SPEC_SUCCESS")
           .zioValue
 
         extractedTestResult shouldBe ExtractedTestResult("extracted-value")
@@ -111,6 +113,41 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
         extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
         extractFromImageRequestMappings(0).count shouldBe 1
+      }
+
+      "successfully extract a structured response from spreadsheet-shaped text content" in withContext { context =>
+        import context.*
+
+        val aiClient = ZIO
+          .service[AIClient]
+          .provide(
+            AIClient.live,
+            ZLayer.succeed(aiClientConfig),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val spreadsheetMediaType = Random.shuffle(SupportedMediaType.spreadsheets).zioValue.head
+
+        val csvByteStream = FileByteStreamScanned(
+          ZStream.fromIterable(
+            "Full Name,Email\nJohn Smith,john.smith@example.com\n".getBytes(StandardCharsets.UTF_8)
+          )
+        )
+
+        val extractedTestResult = aiClient
+          .extract[ExtractedTestResult](csvByteStream, spreadsheetMediaType, "AI_CLIENT_SPEC_TEXT_SUCCESS")
+          .zioValue
+
+        extractedTestResult shouldBe ExtractedTestResult("extracted-text-value")
+
+        val extractRequestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+        extractRequestMappings.size shouldBe 1
+        extractRequestMappings(0).mapping.method shouldBe "POST"
+        extractRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+        extractRequestMappings(0).count shouldBe 1
       }
 
       "successfully decode a candidate marked as a duplicate with populated extraction notes" in withContext {
@@ -129,7 +166,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
 
           val extractCustomersResponse = aiClient
-            .extractFromImage[ExtractCustomersResponse](
+            .extract[ExtractCustomersResponse](
               imageByteStream,
               SupportedMediaType.JPEG,
               "AI_CLIENT_SPEC_DUPLICATE_NOTES",
@@ -175,7 +212,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
 
         val extractCustomersResponse = aiClient
-          .extractFromImage[ExtractCustomersResponse](
+          .extract[ExtractCustomersResponse](
             imageByteStream,
             SupportedMediaType.JPEG,
             "AI_CLIENT_SPEC_UNIDENTIFIED_SUMMARY",
@@ -221,7 +258,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
 
         val extractCustomersResponse = aiClient
-          .extractFromImage[ExtractCustomersResponse](
+          .extract[ExtractCustomersResponse](
             imageByteStream,
             SupportedMediaType.JPEG,
             "AI_CLIENT_SPEC_EMPTY_RESULT",
@@ -258,7 +295,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           )
 
           val extractedTestResult = aiClient
-            .extractFromImage[ExtractedTestResult](
+            .extract[ExtractedTestResult](
               imageByteStream,
               SupportedMediaType.JPEG,
               "AI_CLIENT_SPEC_RETRY_SUCCESS",
@@ -294,7 +331,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         val imageByteStream = FileByteStreamScanned(ZStream.fail(new RuntimeException("image read failed")))
 
         val serviceError = aiClient
-          .extractFromImage[ExtractedTestResult](
+          .extract[ExtractedTestResult](
             imageByteStream,
             SupportedMediaType.JPEG,
             "AI_CLIENT_SPEC_STREAM_READ_FAILURE",
@@ -324,7 +361,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
 
         val serviceError = aiClient
-          .extractFromImage[ExtractedTestResult](imageByteStream, SupportedMediaType.JPEG, "AI_CLIENT_SPEC_ERROR")
+          .extract[ExtractedTestResult](imageByteStream, SupportedMediaType.JPEG, "AI_CLIENT_SPEC_ERROR")
           .zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
@@ -357,7 +394,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
 
           val serviceError = aiClient
-            .extractFromImage[ExtractedTestResult](
+            .extract[ExtractedTestResult](
               imageByteStream,
               SupportedMediaType.JPEG,
               "AI_CLIENT_SPEC_BAD_REQUEST",
@@ -391,7 +428,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
 
         val serviceError = aiClient
-          .extractFromImage[ExtractedTestResult](
+          .extract[ExtractedTestResult](
             imageByteStream,
             SupportedMediaType.JPEG,
             "AI_CLIENT_SPEC_CONNECTION_RESET",
@@ -429,7 +466,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
 
         val serviceError = aiClient
-          .extractFromImage[ExtractedTestResult](
+          .extract[ExtractedTestResult](
             imageByteStream,
             SupportedMediaType.JPEG,
             "AI_CLIENT_SPEC_TIMEOUT",
@@ -466,7 +503,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
 
           val serviceError = aiClient
-            .extractFromImage[ExtractedTestResult](
+            .extract[ExtractedTestResult](
               imageByteStream,
               SupportedMediaType.JPEG,
               "AI_CLIENT_SPEC_MALFORMED",
@@ -501,7 +538,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
 
           val serviceError = aiClient
-            .extractFromImage[ExtractCustomersResponse](
+            .extract[ExtractCustomersResponse](
               imageByteStream,
               SupportedMediaType.JPEG,
               "AI_CLIENT_SPEC_INVALID_REFINED",

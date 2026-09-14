@@ -17,8 +17,8 @@ import java.util.Base64
 import scala.jdk.DurationConverters.JavaDurationOps
 
 trait AIClient {
-  def extractFromImage[A](
-      imageByteStream: FileByteStreamScanned,
+  def extract[A](
+      contentByteStream: FileByteStreamScanned,
       supportedMediaType: SupportedMediaType,
       instructions: String,
   )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
@@ -56,56 +56,61 @@ object AIClient {
         description = None,
       )
 
-    override def extractFromImage[A](
-        imageByteStream: FileByteStreamScanned,
+    override def extract[A](
+        contentByteStream: FileByteStreamScanned,
         supportedMediaType: SupportedMediaType,
         instructions: String,
     )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
-      for {
-        imageBytes <- imageByteStream.value.runCollect
-          .map(_.toArray)
-          .mapError(error =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to read image for AI extraction", Some(error))
-          )
-        imageBase64 = Base64.getEncoder.encodeToString(imageBytes)
-        response <- openAI
-          .createChatCompletion(
-            ChatBody(
-              model = ChatCompletionModel.GPT56Sol,
-              messages = Seq(
-                Message.System(instructions),
-                Message.User(
-                  Content.ArrayContent(
-                    Seq(
-                      Content.ContentPart.ImageUrl(
-                        Content.ImageUrlDetails(url = s"data:${supportedMediaType.mime};base64,$imageBase64")
+      supportedMediaType match {
+        case mediaType if SupportedMediaType.images.contains(mediaType) =>
+          for {
+            contentBytes <- contentByteStream.value.runCollect
+              .map(_.toArray)
+              .mapError(error =>
+                ServiceError.InternalServerError.UnexpectedError("Failed to read image for AI extraction", Some(error))
+              )
+            contentBase64 = Base64.getEncoder.encodeToString(contentBytes)
+            response <- openAI
+              .createChatCompletion(
+                ChatBody(
+                  model = ChatCompletionModel.GPT56Sol,
+                  messages = Seq(
+                    Message.System(instructions),
+                    Message.User(
+                      Content.ArrayContent(
+                        Seq(
+                          Content.ContentPart.ImageUrl(
+                            Content.ImageUrlDetails(url = s"data:${supportedMediaType.mime};base64,$contentBase64")
+                          )
+                        )
                       )
-                    )
-                  )
-                ),
-              ),
-              responseFormat = Some(responseFormat),
-            )
-          )
-          .readTimeout(aiClientConfig.requestTimeout.toScala)
-          .send(backend)
-          .map(_.body)
-          .absolve
-          .retry(
-            Schedule.recurWhile[Throwable](isRetryableSendError) &&
-              Schedule.recurs(aiClientConfig.sendMaxRetries) &&
-              Schedule.exponential(aiClientConfig.sendRetryDelay)
-          )
-          .mapError(error =>
-            ServiceError.InternalServerError.UnexpectedError("Unable to send message to AI", Some(error))
-          )
-        result <- ZIO
-          .attempt(readFromString[A](response.choices.head.message.content))
-          .mapError(error =>
-            ServiceError.InternalServerError
-              .UnexpectedError(s"Failed to parse AI response ${response.choices.mkString("\n")}", Some(error))
-          )
-      } yield result
+                    ),
+                  ),
+                  responseFormat = Some(responseFormat),
+                )
+              )
+              .readTimeout(aiClientConfig.requestTimeout.toScala)
+              .send(backend)
+              .map(_.body)
+              .absolve
+              .retry(
+                Schedule.recurWhile[Throwable](isRetryableSendError) &&
+                  Schedule.recurs(aiClientConfig.sendMaxRetries) &&
+                  Schedule.exponential(aiClientConfig.sendRetryDelay)
+              )
+              .mapError(error =>
+                ServiceError.InternalServerError.UnexpectedError("Unable to send message to AI", Some(error))
+              )
+            result <- ZIO
+              .attempt(readFromString[A](response.choices.head.message.content))
+              .mapError(error =>
+                ServiceError.InternalServerError
+                  .UnexpectedError(s"Failed to parse AI response ${response.choices.mkString("\n")}", Some(error))
+              )
+          } yield result
+        case _ =>
+          ZIO.die(new NotImplementedError("AIClient.extract text-content branch is not implemented yet"))
+      }
   }
 
   val live = ZLayer {
