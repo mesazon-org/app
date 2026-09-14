@@ -42,6 +42,8 @@ object Dependencies {
   lazy val tikaV                = "4.0.0"
   lazy val awssdkV              = "2.54.17"
   lazy val zioS3V               = "0.4.4"
+  lazy val poiV                 = "5.3.0"
+  lazy val commonsCsvV          = "1.12.0"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -157,6 +159,13 @@ object Dependencies {
   lazy val scrimageCore = "com.sksamuel.scrimage" % "scrimage-core" % scrimageV
   lazy val scrimageWebp = "com.sksamuel.scrimage" % "scrimage-webp" % scrimageV
   lazy val tikaCore     = "org.apache.tika"       % "tika-core"     % tikaV
+
+  // Apache POI
+  lazy val poi      = "org.apache.poi" % "poi"       % poiV
+  lazy val poiOoxml = "org.apache.poi" % "poi-ooxml" % poiV
+
+  // Apache Commons CSV
+  lazy val commonsCsv = "org.apache.commons" % "commons-csv" % commonsCsvV
 
   // AWS SDK
   val awssdkS3 = "software.amazon.awssdk" % "s3" % awssdkV
