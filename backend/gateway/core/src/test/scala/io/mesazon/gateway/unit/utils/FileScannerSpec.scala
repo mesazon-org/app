@@ -6,6 +6,8 @@ import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
 import zio.stream.ZStream
 
+import java.nio.charset.StandardCharsets
+
 class FileScannerSpec extends ZWordSpecBase {
 
   "FileScanner" when {
@@ -40,6 +42,58 @@ class FileScannerSpec extends ZWordSpecBase {
         scanTestResult.supportedMediaType shouldBe SupportedMediaType.JPEG
         scanTestResult.fileBytesSize shouldBe fileBytesSizeExpected
         scanTestResult.scannedFileBytes shouldBe fileByteStream.runCollect.zioValue
+      }
+
+      "correctly detect a genuine CSV file via magic-only detection, with no hinted retry needed" in {
+        val fileScanner = ZIO
+          .service[FileScanner]
+          .provide(FileScanner.live)
+          .zioValue
+
+        val maxByteSize5Mb = 5 * 1024 * 1024L
+        val csvText        = "Full Name,Email\r\nJohn Smith,john.smith@example.com\r\nJane Doe,jane.doe@example.com\r\n"
+        val fileByteStream = ZStream.fromIterable(csvText.getBytes(StandardCharsets.UTF_8))
+
+        val supportedMediaType = ZIO
+          .scoped(fileScanner.scan(fileByteStream, SupportedMediaType.spreadsheets, maxByteSize5Mb))
+          .zioValue
+          .supportedMediaType
+
+        supportedMediaType shouldBe SupportedMediaType.PLAINTEXT_CSV
+      }
+
+      "correctly detect a genuine .xlsx file with no real file name to hint with" in {
+        val fileScanner = ZIO
+          .service[FileScanner]
+          .provide(FileScanner.live)
+          .zioValue
+
+        val maxByteSize5Mb = 5 * 1024 * 1024L
+        val fileByteStream = ZStream.fromResource("assets/test-customers.xlsx")
+
+        val supportedMediaType = ZIO
+          .scoped(fileScanner.scan(fileByteStream, SupportedMediaType.spreadsheets, maxByteSize5Mb))
+          .zioValue
+          .supportedMediaType
+
+        supportedMediaType shouldBe SupportedMediaType.XLSX
+      }
+
+      "correctly detect a genuine legacy .xls file with no real file name to hint with" in {
+        val fileScanner = ZIO
+          .service[FileScanner]
+          .provide(FileScanner.live)
+          .zioValue
+
+        val maxByteSize5Mb = 5 * 1024 * 1024L
+        val fileByteStream = ZStream.fromResource("assets/test-customers.xls")
+
+        val supportedMediaType = ZIO
+          .scoped(fileScanner.scan(fileByteStream, SupportedMediaType.spreadsheets, maxByteSize5Mb))
+          .zioValue
+          .supportedMediaType
+
+        supportedMediaType shouldBe SupportedMediaType.XLS
       }
 
       "fail when the file size exceeds the maximum bytes allowed" in {

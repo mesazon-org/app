@@ -6,7 +6,7 @@ import zio.*
 import zio.stream.*
 
 import java.io.BufferedOutputStream
-import java.nio.file.Files
+import java.nio.file.{Files, Path}
 
 trait FileScanner {
   def scan(
@@ -22,6 +22,32 @@ object FileScanner {
 
     private val ExtraBytesToRead = 1L // Read one extra byte to check if the file exceeds the max size
     private val tika             = new Tika()
+
+    inline private val SyntheticUploadFileNamePrefix = "upload."
+
+    private def detectMediaType(tempFile: Path, supportedMediaTypes: List[SupportedMediaType]): Task[String] =
+      ZIO.attemptBlocking(tika.detect(tempFile)).flatMap { mimeTypeDetectedMagicOnly =>
+        if (supportedMediaTypes.exists(_.mime == mimeTypeDetectedMagicOnly)) {
+          ZIO.succeed(mimeTypeDetectedMagicOnly)
+        } else {
+          ZIO
+            .foldLeft(supportedMediaTypes)(Option.empty[String]) { (mimeTypeDetectedHintedOpt, candidate) =>
+              mimeTypeDetectedHintedOpt match {
+                case alreadyMatched @ Some(_) => ZIO.succeed(alreadyMatched)
+                case None                     =>
+                  ZIO.attemptBlocking {
+                    val inputStream = Files.newInputStream(tempFile)
+                    try tika.detect(inputStream, s"$SyntheticUploadFileNamePrefix${candidate.ext}")
+                    finally inputStream.close()
+                  }
+                    .map(mimeTypeDetectedHinted =>
+                      Option.when(mimeTypeDetectedHinted == candidate.mime)(mimeTypeDetectedHinted)
+                    )
+              }
+            }
+            .map(_.getOrElse(mimeTypeDetectedMagicOnly))
+        }
+      }
 
     override def scan(
         fileByteStream: ZStream[Any, Throwable, Byte],
@@ -63,8 +89,7 @@ object FileScanner {
               )
             )
           )
-        mimeTypeDetected <- ZIO
-          .attemptBlocking(tika.detect(tempFile))
+        mimeTypeDetected <- detectMediaType(tempFile, supportedMediaTypes)
           .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to detect file type", Some(e)))
         supportedMediaType <- ZIO
           .fromOption(supportedMediaTypes.find(_.mime == mimeTypeDetected))

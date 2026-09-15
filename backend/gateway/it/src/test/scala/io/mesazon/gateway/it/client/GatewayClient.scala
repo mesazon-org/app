@@ -434,6 +434,28 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .response(asJsonEitherOrFail[E, ExtractCustomersResponse])
       .send(sttpBackend)
 
+  def extractCustomersFromFilePost[E: JsonValueCodec](
+      organizationIDOpt: Option[OrganizationID],
+      customerBookFileBytes: Chunk[Byte],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, ExtractCustomersResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("extract", "customer-book-file"))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .body(customerBookFileBytes.toArray)
+      .contentType(MediaType.ApplicationOctetStream)
+      .response(asJsonEitherOrFail[E, ExtractCustomersResponse])
+      .send(sttpBackend)
+
   def insertCustomerIndividualPost[E: JsonValueCodec](
       insertCustomerIndividualPostRequest: smithy.InsertCustomerIndividualPostRequest,
       organizationIDOpt: Option[OrganizationID],
