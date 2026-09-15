@@ -4,14 +4,15 @@ import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import io.mesazon.domain.gateway.{ServiceError, SupportedMediaType}
 import io.mesazon.gateway.clients.AIClient
 import io.mesazon.gateway.json.OpenAIJsonSchema
-import io.mesazon.gateway.utils.FileByteStreamScanned
+import io.mesazon.gateway.utils.{FileByteStreamScanned, ValidatedCsvByteStream}
 import zio.*
 
 object Mocks {
 
   final class AIClientMock[A](
-      extractFromImageResult: IO[ServiceError, A],
+      extractResult: IO[ServiceError, A],
       val extractFromImageCallsRef: Ref[List[(FileByteStreamScanned, SupportedMediaType, String)]],
+      val extractFromCsvCallsRef: Ref[List[(ValidatedCsvByteStream, String)]],
   ) extends AIClient {
     override def extractFromImage[B](
         imageByteStream: FileByteStreamScanned,
@@ -19,6 +20,13 @@ object Mocks {
         instructions: String,
     )(using OpenAIJsonSchema[B], JsonValueCodec[B]): IO[ServiceError, B] =
       extractFromImageCallsRef.update(_ :+ (imageByteStream, supportedMediaType, instructions)) *>
-        extractFromImageResult.map(_.asInstanceOf[B])
+        extractResult.map(_.asInstanceOf[B])
+
+    override def extractFromCsv[B](
+        csvByteStream: ValidatedCsvByteStream,
+        instructions: String,
+    )(using OpenAIJsonSchema[B], JsonValueCodec[B]): IO[ServiceError, B] =
+      extractFromCsvCallsRef.update(_ :+ (csvByteStream, instructions)) *>
+        extractResult.map(_.asInstanceOf[B])
   }
 }

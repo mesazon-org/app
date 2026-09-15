@@ -9,7 +9,7 @@ import io.mesazon.gateway.config.AIClientConfig
 import io.mesazon.gateway.json.ai.given
 import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
 import io.mesazon.gateway.json.{ai, OpenAIJsonSchema}
-import io.mesazon.gateway.utils.FileByteStreamScanned
+import io.mesazon.gateway.utils.{FileByteStreamScanned, ValidatedCsvByteStream}
 import io.mesazon.testkit.base.*
 import io.mesazon.wiremock.WiremockClient
 import io.mesazon.wiremock.WiremockClient.WiremockClientConfig
@@ -18,6 +18,8 @@ import sttp.model.StatusCode
 import sttp.tapir.Schema
 import zio.*
 import zio.stream.*
+
+import java.nio.charset.StandardCharsets
 
 class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
 
@@ -518,6 +520,41 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
           extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
           extractFromImageRequestMappings(0).count shouldBe 1
+      }
+    }
+
+    "extractFromCsv" should {
+      "successfully extract a structured response from validated CSV-shaped text content" in withContext { context =>
+        import context.*
+
+        val aiClient = ZIO
+          .service[AIClient]
+          .provide(
+            AIClient.live,
+            ZLayer.succeed(aiClientConfig),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val csvByteStream = ValidatedCsvByteStream(
+          ZStream.fromIterable(
+            "Full Name,Email\nJohn Smith,john.smith@example.com\n".getBytes(StandardCharsets.UTF_8)
+          )
+        )
+
+        val extractedTestResult = aiClient
+          .extractFromCsv[ExtractedTestResult](csvByteStream, "AI_CLIENT_SPEC_TEXT_SUCCESS")
+          .zioValue
+
+        extractedTestResult shouldBe ExtractedTestResult("extracted-text-value")
+
+        val extractFromCsvRequestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+        extractFromCsvRequestMappings.size shouldBe 1
+        extractFromCsvRequestMappings(0).mapping.method shouldBe "POST"
+        extractFromCsvRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+        extractFromCsvRequestMappings(0).count shouldBe 1
       }
     }
   }

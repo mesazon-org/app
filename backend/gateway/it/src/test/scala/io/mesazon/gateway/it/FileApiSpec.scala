@@ -1149,5 +1149,346 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
       }
     }
+
+    "/extract/customer-book-file" should {
+      "extract customer candidates from a CSV file" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
+          userID = userDetailsRow.userID,
+          userRole = organizationUserRoleAllowed,
+        )
+
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+
+        val extractCustomersResponse = gatewayClient
+          .extractCustomersFromFilePost[smithy.InternalServerError](
+            Some(organizationUserRow.organizationID),
+            customerBookFileBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        extractCustomersResponse.code shouldBe StatusCode.Ok
+
+        val extractCustomerIndividualDataExpected = ExtractCustomerIndividualData(
+          candidate = ExtractCustomerIndividual(
+            fullName = CustomerFullName.assume("John Smith"),
+            emails = List(
+              ExtractCustomerEmailEntry(email = CustomerEmail.assume("john.smith@example.com"), isDefault = true)
+            ),
+            phoneNumbers = List.empty,
+            addressLine1 = None,
+            addressLine2 = None,
+            city = None,
+            postalCode = None,
+            country = None,
+          ),
+          isDuplicate = false,
+          extractionNotes = None,
+        )
+
+        extractCustomersResponse.body shouldBe Right(
+          ExtractCustomersResponse(
+            entriesIdentified = 1L,
+            entriesProcessed = 1L,
+            customerIndividualCandidates = List(extractCustomerIndividualDataExpected),
+            customerBusinessCandidates = List.empty,
+            unidentifiedEntriesSummary = None,
+          )
+        )
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+      }
+
+      "extract customer candidates from an Excel file" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
+          userID = userDetailsRow.userID,
+          userRole = organizationUserRoleAllowed,
+        )
+
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.xlsx").runCollect.zioValue
+
+        val extractCustomersResponse = gatewayClient
+          .extractCustomersFromFilePost[smithy.InternalServerError](
+            Some(organizationUserRow.organizationID),
+            customerBookFileBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        extractCustomersResponse.code shouldBe StatusCode.Ok
+
+        val extractCustomerIndividualDataExpected = ExtractCustomerIndividualData(
+          candidate = ExtractCustomerIndividual(
+            fullName = CustomerFullName.assume("John Smith"),
+            emails = List(
+              ExtractCustomerEmailEntry(email = CustomerEmail.assume("john.smith@example.com"), isDefault = true)
+            ),
+            phoneNumbers = List.empty,
+            addressLine1 = None,
+            addressLine2 = None,
+            city = None,
+            postalCode = None,
+            country = None,
+          ),
+          isDuplicate = false,
+          extractionNotes = None,
+        )
+
+        extractCustomersResponse.body shouldBe Right(
+          ExtractCustomersResponse(
+            entriesIdentified = 1L,
+            entriesProcessed = 1L,
+            customerIndividualCandidates = List(extractCustomerIndividualDataExpected),
+            customerBusinessCandidates = List.empty,
+            unidentifiedEntriesSummary = None,
+          )
+        )
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+      }
+
+      "fail with BadRequest when the organization id header is missing" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+
+        val extractCustomersResponse = gatewayClient
+          .extractCustomersFromFilePost[smithy.BadRequest](
+            None,
+            customerBookFileBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        extractCustomersResponse.code shouldBe StatusCode.BadRequest
+        extractCustomersResponse.body.left.value shouldBe smithy.BadRequest()
+      }
+
+      "fail with Unauthorized when access token is missing" in withContext { context =>
+        import context.*
+
+        val organizationID        = arbitrarySample[OrganizationID]
+        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+
+        val extractCustomersResponse = gatewayClient
+          .extractCustomersFromFilePost[smithy.Unauthorized](
+            Some(organizationID),
+            customerBookFileBytes,
+            None,
+          )
+          .zioValue
+
+        extractCustomersResponse.code shouldBe StatusCode.Unauthorized
+        extractCustomersResponse.body.left.value shouldBe smithy.Unauthorized()
+      }
+
+      "fail with Unauthorized when access token is invalid" in withContext { context =>
+        import context.*
+
+        val organizationID        = arbitrarySample[OrganizationID]
+        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+
+        val extractCustomersResponse = gatewayClient
+          .extractCustomersFromFilePost[smithy.Unauthorized](
+            Some(organizationID),
+            customerBookFileBytes,
+            Some(AccessToken("invalidtoken")),
+          )
+          .zioValue
+
+        extractCustomersResponse.code shouldBe StatusCode.Unauthorized
+        extractCustomersResponse.body.left.value shouldBe smithy.Unauthorized()
+      }
+
+      "fail with Forbidden when the user is assigned to the organization with a disallowed role" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+          val organizationUserRoleDisallowed = Random
+            .shuffle(
+              OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles
+            )
+            .zioValue
+            .head
+
+          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleDisallowed,
+          )
+
+          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+          val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+
+          val extractCustomersResponse = gatewayClient
+            .extractCustomersFromFilePost[smithy.Forbidden](
+              Some(organizationUserRow.organizationID),
+              customerBookFileBytes,
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+          extractCustomersResponse.code shouldBe StatusCode.Forbidden
+          extractCustomersResponse.body.left.value shouldBe smithy.Forbidden()
+      }
+
+      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
+        import context.*
+
+        val onboardStageInvalid =
+          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val organizationID        = arbitrarySample[OrganizationID]
+        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+
+        val extractCustomersResponse = gatewayClient
+          .extractCustomersFromFilePost[smithy.Forbidden](
+            Some(organizationID),
+            customerBookFileBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        extractCustomersResponse.code shouldBe StatusCode.Forbidden
+        extractCustomersResponse.body.left.value shouldBe smithy.Forbidden()
+      }
+
+      "fail with InternalServerError when the user is not assigned to the organization" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val organizationID        = arbitrarySample[OrganizationID]
+        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+
+        val extractCustomersResponse = gatewayClient
+          .extractCustomersFromFilePost[smithy.InternalServerError](
+            Some(organizationID),
+            customerBookFileBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        extractCustomersResponse.code shouldBe StatusCode.InternalServerError
+        extractCustomersResponse.body.left.value shouldBe smithy.InternalServerError()
+      }
+
+      "fail with InternalServerError when the uploaded file is not a supported type" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
+          userID = userDetailsRow.userID,
+          userRole = organizationUserRoleAllowed,
+        )
+
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val customerBookFileBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
+
+        val extractCustomersResponse = gatewayClient
+          .extractCustomersFromFilePost[smithy.InternalServerError](
+            Some(organizationUserRow.organizationID),
+            customerBookFileBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        extractCustomersResponse.code shouldBe StatusCode.InternalServerError
+        extractCustomersResponse.body.left.value shouldBe smithy.InternalServerError()
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+      }
+
+      "fail with InternalServerError when the uploaded file is a plain zip file accepted as a plausible Excel candidate but not genuinely a workbook" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+          val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+          val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleAllowed,
+          )
+
+          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+          val customerBookFileBytes = ZStream.fromResource("assets/test-plain.zip").runCollect.zioValue
+
+          val extractCustomersResponse = gatewayClient
+            .extractCustomersFromFilePost[smithy.InternalServerError](
+              Some(organizationUserRow.organizationID),
+              customerBookFileBytes,
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+          extractCustomersResponse.code shouldBe StatusCode.InternalServerError
+          extractCustomersResponse.body.left.value shouldBe smithy.InternalServerError()
+
+          postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+      }
+    }
   }
 }

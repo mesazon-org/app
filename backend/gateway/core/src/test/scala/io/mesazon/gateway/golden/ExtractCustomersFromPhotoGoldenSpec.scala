@@ -1023,7 +1023,7 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
   )
 
   "AIClient" when {
-    "extractFromImage" should {
+    "extract" should {
       (1 to 10).foreach { photoNumber =>
         s"extract customers from contact-book-test-photo-$photoNumber.png" in {
           assume(

@@ -13,6 +13,9 @@ type ImageNormalizedByteStream = ImageNormalizedByteStream.T
 object ImageOriginalByteStream extends RefinedType[ZStream[Any, Throwable, Byte], Pure]
 type ImageOriginalByteStream = ImageOriginalByteStream.T
 
+object ValidatedCsvByteStream extends RefinedType[ZStream[Any, Throwable, Byte], Pure]
+type ValidatedCsvByteStream = ValidatedCsvByteStream.T
+
 type FileScannerScanOutput =
   (fileByteStreamScanned: FileByteStreamScanned, supportedMediaType: SupportedMediaType, fileBytesSize: FileBytesSize)
 

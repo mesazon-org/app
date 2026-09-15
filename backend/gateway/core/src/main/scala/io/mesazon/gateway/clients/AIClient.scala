@@ -4,7 +4,7 @@ import com.github.plokhotnyuk.jsoniter_scala.core.*
 import io.mesazon.domain.gateway.{ServiceError, SupportedMediaType}
 import io.mesazon.gateway.config.AIClientConfig
 import io.mesazon.gateway.json.OpenAIJsonSchema
-import io.mesazon.gateway.utils.FileByteStreamScanned
+import io.mesazon.gateway.utils.{FileByteStreamScanned, ValidatedCsvByteStream}
 import sttp.ai.openai.OpenAI
 import sttp.ai.openai.OpenAIExceptions.OpenAIException
 import sttp.ai.openai.requests.completions.chat.ChatRequestBody.{ChatBody, ChatCompletionModel, ResponseFormat}
@@ -13,6 +13,7 @@ import sttp.client4.{Backend, ResponseException, SttpClientException}
 import sttp.model.StatusCode
 import zio.*
 
+import java.nio.charset.StandardCharsets
 import java.util.Base64
 import scala.jdk.DurationConverters.JavaDurationOps
 
@@ -20,6 +21,11 @@ trait AIClient {
   def extractFromImage[A](
       imageByteStream: FileByteStreamScanned,
       supportedMediaType: SupportedMediaType,
+      instructions: String,
+  )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
+
+  def extractFromCsv[A](
+      csvByteStream: ValidatedCsvByteStream,
       instructions: String,
   )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
 }
@@ -56,33 +62,18 @@ object AIClient {
         description = None,
       )
 
-    override def extractFromImage[A](
-        imageByteStream: FileByteStreamScanned,
-        supportedMediaType: SupportedMediaType,
+    private def sendAndDecode[A](
         instructions: String,
+        content: Content,
     )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
       for {
-        imageBytes <- imageByteStream.value.runCollect
-          .map(_.toArray)
-          .mapError(error =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to read image for AI extraction", Some(error))
-          )
-        imageBase64 = Base64.getEncoder.encodeToString(imageBytes)
         response <- openAI
           .createChatCompletion(
             ChatBody(
               model = ChatCompletionModel.GPT56Sol,
               messages = Seq(
                 Message.System(instructions),
-                Message.User(
-                  Content.ArrayContent(
-                    Seq(
-                      Content.ContentPart.ImageUrl(
-                        Content.ImageUrlDetails(url = s"data:${supportedMediaType.mime};base64,$imageBase64")
-                      )
-                    )
-                  )
-                ),
+                Message.User(content),
               ),
               responseFormat = Some(responseFormat),
             )
@@ -105,6 +96,45 @@ object AIClient {
             ServiceError.InternalServerError
               .UnexpectedError(s"Failed to parse AI response ${response.choices.mkString("\n")}", Some(error))
           )
+      } yield result
+
+    override def extractFromImage[A](
+        imageByteStream: FileByteStreamScanned,
+        supportedMediaType: SupportedMediaType,
+        instructions: String,
+    )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
+      for {
+        imageBytes <- imageByteStream.value.runCollect
+          .map(_.toArray)
+          .mapError(error =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to read image for AI extraction", Some(error))
+          )
+        imageBase64 = Base64.getEncoder.encodeToString(imageBytes)
+        result <- sendAndDecode[A](
+          instructions,
+          Content.ArrayContent(
+            Seq(
+              Content.ContentPart.ImageUrl(
+                Content.ImageUrlDetails(url = s"data:${supportedMediaType.mime};base64,$imageBase64")
+              )
+            )
+          ),
+        )
+      } yield result
+
+    override def extractFromCsv[A](
+        csvByteStream: ValidatedCsvByteStream,
+        instructions: String,
+    )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
+      for {
+        csvBytes <- csvByteStream.value.runCollect
+          .map(_.toArray)
+          .mapError(error =>
+            ServiceError.InternalServerError
+              .UnexpectedError("Failed to read file content for AI extraction", Some(error))
+          )
+        csvText = new String(csvBytes, StandardCharsets.UTF_8)
+        result <- sendAndDecode[A](instructions, Content.TextContent(csvText))
       } yield result
   }
 

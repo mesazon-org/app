@@ -12,6 +12,7 @@ object Dependencies {
   lazy val logbackV             = "1.6.3"
   lazy val julToSlf4jV          = "2.0.19"
   lazy val jclToSlf4jV          = "2.0.19"
+  lazy val log4jToSlf4jV        = "2.26.1"
   lazy val pureconfigV          = "0.17.10"
   lazy val scalaTestV           = "3.2.20"
   lazy val scalaTestPlusCheckV  = "3.2.11.0"
@@ -42,6 +43,8 @@ object Dependencies {
   lazy val tikaV                = "4.0.0"
   lazy val awssdkV              = "2.54.17"
   lazy val zioS3V               = "0.4.4"
+  lazy val poiV                 = "5.3.0"
+  lazy val commonsCsvV          = "1.12.0"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -81,9 +84,10 @@ object Dependencies {
   lazy val circeParser  = "io.circe" %% "circe-parser"  % circeV
 
   // Logging
-  lazy val logback    = "ch.qos.logback" % "logback-classic" % logbackV
-  lazy val julToSlf4j = "org.slf4j"      % "jul-to-slf4j"    % julToSlf4jV
-  lazy val jclToSlf4j = "org.slf4j"      % "jcl-over-slf4j"  % jclToSlf4jV
+  lazy val logback      = "ch.qos.logback"           % "logback-classic" % logbackV
+  lazy val julToSlf4j   = "org.slf4j"                % "jul-to-slf4j"    % julToSlf4jV
+  lazy val jclToSlf4j   = "org.slf4j"                % "jcl-over-slf4j"  % jclToSlf4jV
+  lazy val log4jToSlf4j = "org.apache.logging.log4j" % "log4j-to-slf4j"  % log4jToSlf4jV
 
   // Test
   lazy val scalaTest                    = "org.scalatest"     %% "scalatest"                      % scalaTestV
@@ -157,6 +161,13 @@ object Dependencies {
   lazy val scrimageCore = "com.sksamuel.scrimage" % "scrimage-core" % scrimageV
   lazy val scrimageWebp = "com.sksamuel.scrimage" % "scrimage-webp" % scrimageV
   lazy val tikaCore     = "org.apache.tika"       % "tika-core"     % tikaV
+
+  // Apache POI
+  lazy val poi      = "org.apache.poi" % "poi"       % poiV
+  lazy val poiOoxml = "org.apache.poi" % "poi-ooxml" % poiV
+
+  // Apache Commons CSV
+  lazy val commonsCsv = "org.apache.commons" % "commons-csv" % commonsCsvV
 
   // AWS SDK
   val awssdkS3 = "software.amazon.awssdk" % "s3" % awssdkV
