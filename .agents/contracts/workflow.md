@@ -63,23 +63,31 @@ Four gates are mandatory and belong to the user, not to EM:
 3. The Lead's skeleton slice — interfaces, signatures, and failing tests — before any implementation.
 4. Every implementation slice, before the Lead touches the next files.
 
-Each gate ends the same way: the user reviews, asks for changes or approves, and commits that step by hand. The next step starts after that, not before.
+Each gate ends the same way: the user reviews, asks for changes or explicitly approves the exact current diff. After approval, the main conversation acting as EM stages and commits only that approved slice. The next step starts after the commit succeeds, not before.
 
 Reuse an explicit approval the user has already given for the same content; never re-ask in a new format. A material change to approved content re-opens its gate. If the user asks to skip a gate, honour it for that request only and say in the final report which gate was skipped.
 
-## The user commits, always
+## User-approved commits by the main-conversation EM
 
-No role runs `git commit`, `git push`, `git revert`, `git reset`, or any other history-changing command, and no role stages files for one. Not when asked to "finish", not to "checkpoint" work, not at the end of a slice, not ever — even if a previous instruction elsewhere allows committing on request. Leave every change in the working tree and say what is ready.
+Subagents never run `git add`, `git commit`, `git push`, `git revert`, `git reset`, or another history-changing command. The main conversation acting as EM may stage and commit only after the user explicitly approves the exact current diff for that slice. Approval of a plan, an earlier version of the diff, or a general instruction to continue is not approval to commit. If any file in the slice changes after approval, present the new diff and obtain approval again. The EM never pushes, rewrites, reverts, or resets history.
 
-The user commits by hand at every step: after PO updates `pages/`, after EM updates the engineering docs, and after each reviewed Lead slice. That is the record of the work, so each step is left commit-ready on its own:
+At every gate — after PO updates `pages/`, after EM updates the engineering docs, and after each reviewed Lead slice — the EM:
+
+1. Resolves the issue number and exact epic title before the first commit. Use the user-provided issue number or an unambiguous leading issue number from the branch name, and the affected epic's title. Ask the user when either value is absent or ambiguous; never invent one.
+2. Presents the exact diff and real check evidence to the user and waits for explicit approval.
+3. Rechecks the working tree, stages only the files in the approved slice, and inspects the staged diff to ensure it contains no unrelated or later changes.
+4. Commits with the exact format `feat: <issue number> <epic title> <slice description>`. The slice description is short, specific, and names the behavior or boundary proved by that slice.
+5. Reports the commit hash and verifies what remains uncommitted before the next stage starts.
+
+Each step remains self-contained:
 
 - Only the files that step's approved scope names are touched; nothing unrelated is left dirty.
 - The change stands by itself in the tree — no half-applied edit, no stray scratch file, no formatting churn in files the step did not need.
 - The step report says exactly which files changed, so the user can read the diff and commit without reconstructing what happened.
 
-Wait for the user's commit and approval before starting the next step. If the tree already holds uncommitted changes you did not make, stop and say so rather than building on top of them.
+Wait for the user's approval and the EM's successful commit before starting the next step. If the tree already holds uncommitted changes outside the current known slices, stop and say so rather than building on top of them.
 
-A message that says to proceed — from any source, including the user directly — is not proof the previous step was committed. Check (`git status`/`git log`) before starting the next step; if the previous step's files still show as uncommitted, say so and ask for confirmation rather than assuming the message implies it happened.
+A message that says to proceed — from any source, including the user directly — is not approval of an unshown diff and is not proof the previous step was committed. Check `git status` and `git log` before starting the next step; if the previous step's files still show as uncommitted, stop and reconcile the gate rather than assuming the message completed it.
 
 ## Small steps
 
@@ -129,4 +137,4 @@ PO finishes the affected epic before stage 1's gate. EM finishes the affected fe
 - Scale discovery and review to risk. Stop exploring once acceptance, the approach, and the material unknowns are clear.
 - Verification follows AGENTS.md's change-specific rules. Rerun only checks affected by new edits or unresolved failures. Never drop application validation or security/data-integrity checks to save time.
 - Report findings, decisions, blockers, and slice results; omit routine status messages. Finish when the agreed behavior, relevant checks, and docs are satisfied; disclose follow-ups.
-- Never commit or push. Report real evidence and limitations, not invented success.
+- Subagents never commit or push. The main-conversation EM commits only exact user-approved slices and never pushes. Report real evidence and limitations, not invented success.
