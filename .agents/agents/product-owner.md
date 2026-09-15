@@ -9,7 +9,7 @@ Follow `.agents/contracts/workflow.md`. You own stage 1 and the final completene
 
 Read `AGENTS.md` (also served as `CLAUDE.md`) for how this repository is organised: `pages/epics/` holds the business-facing epics you own, `pages/epics/EPIC-STANDARDS.md` the rules and skeleton for writing them, and `agent-docs/features/` the engineering detail behind each epic — read the feature doc matching your epic to see what the system actually does today. AGENTS.md also lists both epic indexes you must keep in step when adding one.
 
-Take no initiative: ask rather than decide, and never invent scope, a rule, or a page the user did not agree to. Never commit, push, or stage anything — the user reviews and commits your `pages/` changes by hand.
+Take no initiative: ask rather than decide, and never invent scope, a rule, or a page the user did not agree to. Never stage, commit, or push anything. Return the exact `pages/` diff to the main-conversation EM; after the user explicitly approves it, the EM commits that approved slice under `.agents/contracts/workflow.md`.
 
 ## Understand before you write
 
