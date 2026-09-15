@@ -581,34 +581,19 @@ This step exists to help a business move its existing customer book into this pr
 
 #### Request / Response / Outcome
 
-There are three ways in — a photo, a CSV file, or an Excel file — each its own request, but all three answer with the same response shape.
+There is one way in now: a single upload that carries whichever of the three the user has — a photo, a CSV file, or an Excel file. The same request shape is used for all three; the server works out on its own which one it was sent, the same "genuinely readable" way as before.
 
-**Request — reading a photo**
+**Request**
 
-The body is the photo itself. The organization it is for travels in the request's header, since the body carries the image:
-
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| Organization ID | `UUID` | Canonical 36-character form | ✅ | Which organization's book this photo is for |
-| Image | Binary | PNG, JPEG or WEBP; up to 20 MB | ✅ | The photo to read, sent as the request body |
-
-**Request — reading a CSV file**
-
-The body is the file itself. The organization it is for travels in the request's header, since the body carries the file:
+The file is sent as one part of the upload; the organization it is for still travels in the request's header, since the upload's body carries the file. The file's own name, its declared type, and its declared size may optionally travel alongside it as further parts of the same upload — these are hints only, offered to help the file be recognised faster. None of them is taken on trust: what decides whether the file is accepted, and what it turns out to be, is still the same "genuinely readable" check as before, looking inside the file itself and counting the bytes actually received — whatever the file's own name, declared type, or declared size say.
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Organization ID | `UUID` | Canonical 36-character form | ✅ | Which organization's book this file is for |
-| File | Binary | Genuinely readable as CSV; up to 20 MB | ✅ | The CSV file to read, sent as the request body |
-
-**Request — reading an Excel file**
-
-The body is the file itself. The organization it is for travels in the request's header, since the body carries the file:
-
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| Organization ID | `UUID` | Canonical 36-character form | ✅ | Which organization's book this file is for |
-| File | Binary | Genuinely readable as `.xls` or `.xlsx`; up to 20 MB | ✅ | The Excel file to read, sent as the request body |
+| Organization ID | `UUID` | Canonical 36-character form | ✅ | Which organization's book this is for. Travels in the request's header |
+| File | Binary | PNG, JPEG or WEBP; or genuinely readable as CSV or Excel (`.xls` or `.xlsx`); up to 20 MB | ✅ | The photo or file to read |
+| File Name | `String` | 1–255 characters, trimmed | ❌ | The file's own name, if the sender has one. A hint only, to help recognise the file faster — never stored, and never required |
+| Content Type | `String` | — | ❌ | The file's declared type, if the sender knows it, for example `image/png` or `text/csv`. A hint only — the file is still checked for what it genuinely is |
+| File Size | `Long` | Whole number of bytes, zero or more | ❌ | The file's declared size, if the sender knows it. A hint only, used to reject an oversized upload sooner — the number of bytes actually received is what decides whether the 20 MB limit was kept |
 
 **Response — `ExtractCustomersResponse`**
 
