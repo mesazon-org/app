@@ -1,6 +1,6 @@
 package io.mesazon.gateway.utils
 
-import io.mesazon.domain.gateway.{FileBytesSize, ServiceError, SupportedMediaType}
+import io.mesazon.domain.gateway.*
 import org.apache.tika.Tika
 import zio.*
 import zio.stream.*
@@ -11,6 +11,15 @@ import java.nio.file.{Files, Path}
 trait FileScanner {
   def scan(
       fileByteStream: ZStream[Any, Throwable, Byte],
+      supportedMediaTypes: List[SupportedMediaType],
+      maxFileBytes: Long,
+  ): ZIO[Scope, ServiceError, FileScannerScanOutput]
+
+  def scanV1(
+      fileByteStream: ZStream[Any, Throwable, Byte],
+      fileNameDeclared: FileNameDeclared,
+      contentTypeDeclared: ContentTypeDeclared,
+      fileSizeDeclared: FileSizeDeclared,
       supportedMediaTypes: List[SupportedMediaType],
       maxFileBytes: Long,
   ): ZIO[Scope, ServiceError, FileScannerScanOutput]
@@ -106,6 +115,16 @@ object FileScanner {
         supportedMediaType = supportedMediaType,
         fileBytesSize = fileBytesSize,
       )
+
+    override def scanV1(
+        fileByteStream: ZStream[Any, Throwable, Byte],
+        fileNameDeclared: FileNameDeclared,
+        contentTypeDeclared: ContentTypeDeclared,
+        fileSizeDeclared: FileSizeDeclared,
+        supportedMediaTypes: List[SupportedMediaType],
+        maxFileBytes: Long,
+    ): ZIO[Scope, ServiceError, FileScannerScanOutput] =
+      ZIO.die(new NotImplementedError("FileScanner.scanV1 is not implemented"))
   }
 
   val live = ZLayer.derive[FileScannerImpl].project[FileScanner](identity)
