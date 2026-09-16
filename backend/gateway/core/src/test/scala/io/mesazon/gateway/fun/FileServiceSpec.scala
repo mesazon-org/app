@@ -767,7 +767,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           .expects(
             customerBookByteStream,
             fileNameDeclared,
-            SupportedMediaType.images ++ SupportedMediaType.spreadsheets,
+            SupportedMediaType.extractData,
             fileServiceConfig.maxUploadBytes,
           )
           .returns(ZIO.succeed(fileScannerScanV1Output))
@@ -797,7 +797,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "return the AI's extracted candidates for a spreadsheet after CSV conversion" in new TestContext {
         val organizationID         = arbitrarySample[OrganizationID]
         val fileNameDeclared       = FileNameDeclared.assume("customers.csv")
-        val customerBookByteStream = ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv")
+        val customerBookCsvBytes   = "Full Name,Email".getBytes(StandardCharsets.UTF_8)
+        val customerBookByteStream = ZStream.fromIterable(customerBookCsvBytes)
         val fileScannedPath        = FileScannedPath(Files.createTempFile("file-service-spec-", ".csv"))
         fileScannedPath.value.toFile.deleteOnExit()
         val fileScannerScanV1Output: FileScannerScanV1Output = (
@@ -805,9 +806,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           supportedMediaType = SupportedMediaType.CSV,
           fileBytesSize = FileBytesSize.assume(1L),
         )
-        val fileByteStreamScanned        = FileByteStreamScanned(ZStream.fromPath(fileScannedPath.value))
         val customerBookFileValidatedCsv = ValidatedCsvByteStream(
-          ZStream.fromIterable("Full Name,Email".getBytes(StandardCharsets.UTF_8))
+          ZStream.fromIterable(customerBookCsvBytes)
         )
         val entriesIdentified        = 0L
         val entriesProcessed         = 0L
@@ -824,13 +824,13 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(
               customerBookByteStream,
               fileNameDeclared,
-              SupportedMediaType.images ++ SupportedMediaType.spreadsheets,
+              SupportedMediaType.extractData,
               fileServiceConfig.maxUploadBytes,
             )
             .returns(ZIO.succeed(fileScannerScanV1Output))
             .once(),
           spreadsheetToolMock.convertValidateCsv
-            .expects(fileByteStreamScanned, SupportedMediaType.CSV)
+            .expects(*, SupportedMediaType.CSV)
             .returns(ZIO.succeed(customerBookFileValidatedCsv))
             .once(),
         )
@@ -874,7 +874,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           .expects(
             customerBookByteStream,
             fileNameDeclared,
-            SupportedMediaType.images ++ SupportedMediaType.spreadsheets,
+            SupportedMediaType.extractData,
             fileServiceConfig.maxUploadBytes,
           )
           .returns(ZIO.fail(scanError))

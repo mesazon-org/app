@@ -226,8 +226,40 @@ object FileService {
         organizationID: OrganizationID,
         fileNameDeclared: FileNameDeclared,
         customerBookByteStream: ZStream[Any, Throwable, Byte],
-    ): ServiceTask[ExtractCustomersResponse] =
-      ZIO.die(new NotImplementedError("FileService.extractCustomers is not implemented"))
+    ): ServiceTask[ExtractCustomersResponse] = ZIO.scoped(for {
+      customerBookScanOutput <- fileScanner.scanV1(
+        customerBookByteStream,
+        fileNameDeclared,
+        SupportedMediaType.extractData,
+        fileServiceConfig.maxUploadBytes,
+      )
+      customerBookFileByteStreamScanned = FileByteStreamScanned(
+        ZStream.fromPath(customerBookScanOutput.fileScannedPath.value)
+      )
+      extractCustomersResponse <- customerBookScanOutput.supportedMediaType match {
+        case supportedMediaType if SupportedMediaType.images.contains(supportedMediaType) =>
+          aiClient.extractFromImage[ExtractCustomersResponse](
+            customerBookFileByteStreamScanned,
+            supportedMediaType,
+            extractCustomersFromPhotoInstructions,
+          )
+        case supportedMediaType if SupportedMediaType.spreadsheets.contains(supportedMediaType) =>
+          spreadsheetTool
+            .convertValidateCsv(customerBookFileByteStreamScanned, supportedMediaType)
+            .flatMap(customerBookFileValidatedCsv =>
+              aiClient.extractFromCsv[ExtractCustomersResponse](
+                customerBookFileValidatedCsv,
+                extractCustomersFromFileInstructions,
+              )
+            )
+        case supportedMediaTypeUnexpected =>
+          ZIO.fail(
+            ServiceError.InternalServerError.UnexpectedError(
+              s"Unexpected supported media type: [$supportedMediaTypeUnexpected]"
+            )
+          )
+      }
+    } yield extractCustomersResponse)
 
     override def extractCustomersFromPhoto(
         organizationID: OrganizationID,
