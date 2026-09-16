@@ -243,9 +243,9 @@ object FileService {
         case supportedMediaType if SupportedMediaType.spreadsheets.contains(supportedMediaType) =>
           spreadsheetTool
             .validateAndConvertToCsv(customerBookScanOutput.fileScannedPath, supportedMediaType)
-            .flatMap(customerBookFileValidatedCsv =>
+            .flatMap(csvValidatedPath =>
               aiClient.extractFromCsv[ExtractCustomersResponse](
-                customerBookFileValidatedCsv,
+                ValidatedCsvByteStream(ZStream.fromPath(csvValidatedPath.value)),
                 extractCustomersFromFileInstructions,
               )
             )

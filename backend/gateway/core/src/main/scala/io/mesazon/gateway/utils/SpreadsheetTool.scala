@@ -15,7 +15,7 @@ trait SpreadsheetTool {
   def validateAndConvertToCsv(
       fileScannedPath: FileScannedPath,
       supportedMediaType: SupportedMediaType,
-  ): ZIO[Scope, ServiceError, ValidatedCsvByteStream]
+  ): ZIO[Scope, ServiceError, CsvValidatedPath]
 
   def convertValidateCsv(
       fileByteStreamScanned: FileByteStreamScanned,
@@ -100,18 +100,18 @@ object SpreadsheetTool {
         }
         .unit
 
-    private def validateAndWrap(csvTempFile: Path): ZIO[Scope, ServiceError, ValidatedCsvByteStream] =
-      validateCsvFile(csvTempFile).as(ValidatedCsvByteStream(ZStream.fromPath(csvTempFile)))
+    private def validateAndRefine(csvPath: Path): ZIO[Scope, ServiceError, CsvValidatedPath] =
+      validateCsvFile(csvPath).as(CsvValidatedPath(csvPath))
 
     override def validateAndConvertToCsv(
         fileScannedPath: FileScannedPath,
         supportedMediaType: SupportedMediaType,
-    ): ZIO[Scope, ServiceError, ValidatedCsvByteStream] =
+    ): ZIO[Scope, ServiceError, CsvValidatedPath] =
       supportedMediaType match {
         case mediaType if SupportedMediaType.excel.contains(mediaType) =>
-          convertExcelToCsvFile(fileScannedPath).flatMap(validateAndWrap)
+          convertExcelToCsvFile(fileScannedPath).flatMap(validateAndRefine)
         case mediaType if SupportedMediaType.csv.contains(mediaType) =>
-          validateAndWrap(fileScannedPath.value)
+          validateAndRefine(fileScannedPath.value)
         case unexpected =>
           ZIO.fail(
             ServiceError.InternalServerError
@@ -125,6 +125,7 @@ object SpreadsheetTool {
     ): ZIO[Scope, ServiceError, ValidatedCsvByteStream] =
       spoolToTempFile(fileByteStreamScanned)
         .flatMap(fileTempFile => validateAndConvertToCsv(FileScannedPath(fileTempFile), supportedMediaType))
+        .map(csvValidatedPath => ValidatedCsvByteStream(ZStream.fromPath(csvValidatedPath.value)))
   }
 
   val live = ZLayer.derive[SpreadsheetToolImpl].project[SpreadsheetTool](identity)
