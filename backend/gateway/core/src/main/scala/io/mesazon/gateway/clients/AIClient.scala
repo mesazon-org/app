@@ -110,12 +110,13 @@ object AIClient {
             ServiceError.InternalServerError.UnexpectedError("Failed to read image for AI extraction", Some(error))
           )
         imageBase64 = Base64.getEncoder.encodeToString(imageBytes)
+        imageMime   = supportedMediaType.mimes.head
         result <- sendAndDecode[A](
           instructions,
           Content.ArrayContent(
             Seq(
               Content.ContentPart.ImageUrl(
-                Content.ImageUrlDetails(url = s"data:${supportedMediaType.mime};base64,$imageBase64")
+                Content.ImageUrlDetails(url = s"data:$imageMime;base64,$imageBase64")
               )
             )
           ),

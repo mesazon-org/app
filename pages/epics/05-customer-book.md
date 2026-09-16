@@ -563,10 +563,10 @@ This step exists to help a business move its existing customer book into this pr
 | 15. User uploads a legacy `.xls` file rather than `.xlsx` | - Read the same way as `.xlsx`; both are accepted |
 | 16. A row in a CSV or Excel file is completely blank | - Treated as if it were not in the file at all: not identified, not counted, and never mentioned in the summary |
 | 17. User uploads a CSV or Excel file with a very large number of rows | - All of them are processed - There is no limit on how many entries a CSV or Excel file may contain |
-| 18. User sends a supported photo, CSV, or Excel file with all three required declarations matching it | - The file is accepted and read - Filename matching ignores capitalisation - Content-type matching ignores capitalisation and parameters such as `charset=utf-8` - `text/csv` and `text/plain` are treated as equivalent CSV declarations |
-| 19. User leaves out a required filename, content type, or file size declaration | - Rejected with `400 BAD_REQUEST_ERROR` - The file is not read and no candidates are returned |
-| 20. A required declaration is malformed, or the filename has no supported extension | - Rejected with `400 BAD_REQUEST_ERROR` - A filename must be 1–255 trimmed characters and end in `.png`, `.jpg`, `.jpeg`, `.webp`, `.csv`, `.xls`, or `.xlsx` - A file size must be a whole number of zero or more bytes - A content type must be a valid media type declaration |
-| 21. A declaration disagrees with the actual file | - Rejected with `400 BAD_REQUEST_ERROR` - The filename extension must match the actual supported format - The normalized content type must match the actual supported format - The declared size must equal the number of bytes actually received, exactly |
+| 18. User sends a supported photo, CSV, or Excel file with the required filename matching it | - The file is accepted and read - Filename matching ignores capitalisation |
+| 19. User leaves out the required filename | - Rejected with `400 BAD_REQUEST_ERROR` - The file is not read and no candidates are returned |
+| 20. The filename is malformed or has no supported extension | - Rejected with `400 BAD_REQUEST_ERROR` - A filename must be 1–255 trimmed characters and end in `.png`, `.jpg`, `.jpeg`, `.webp`, `.csv`, `.xls`, or `.xlsx` |
+| 21. The filename extension disagrees with the actual file | - Rejected with `400 BAD_REQUEST_ERROR` - The filename extension must match the actual supported format |
 
 #### Requirements
 
@@ -576,16 +576,14 @@ This step exists to help a business move its existing customer book into this pr
 4. The response always states how many entries were identified in total and how many were actually turned into candidates, so the person can tell at a glance that, for example, 3 entries could not be processed. When some were missed, a short summary message says what could not be read and where to look, without listing each one separately.
 5. Two candidates of the same kind found in the same photo or the same file, whose names match once capitalisation is ignored, are each marked as a possible duplicate of the other. This only ever compares candidates found within that one photo or file — it never looks at customers already stored in the book.
 6. What is sent in is judged for whether it can be used at all before it is read: a photo is judged the same way as any other image upload in this product — by looking inside the file, accepting only PNG, JPEG and WEBP; an uploaded file must be genuinely readable as a CSV file, or as an Excel file (`.xls` or `.xlsx`) — a file merely named or labelled as one of these formats is not enough. All three are capped at 20 MB. There is no limit on how many rows a CSV or Excel file may contain.
-7. The filename, content type, and file size declarations are all required headers. The filename is 1–255 trimmed characters and must use a supported extension. The content type must be a valid media type declaration. The file size must be a whole number of zero or more bytes. Missing or malformed declarations are rejected with `400 BAD_REQUEST_ERROR` before the file is read.
+7. The filename declaration is a required header. It is 1–255 trimmed characters and must use a supported extension. A missing or malformed filename is rejected with `400 BAD_REQUEST_ERROR` before the file is read. The filename is used as a format-detection hint and is never stored. Client-supplied content type and size are not required or validated; the server detects the format, counts the received bytes, and enforces the 20 MB limit itself.
 8. The filename extension must match the actual supported format, ignoring capitalisation. `.jpg` and `.jpeg` both mean JPEG; `.csv` means CSV whether the actual CSV detection is `text/csv` or `text/plain`; `.xls` and `.xlsx` remain distinct Excel formats. A missing, unsupported, or mismatched extension is rejected with `400 BAD_REQUEST_ERROR`.
-9. The declared content type must match the actual supported format after normalization. Matching ignores capitalisation and parameters such as `charset=utf-8`; `text/csv` and `text/plain` are equivalent CSV declarations. A disagreement is rejected with `400 BAD_REQUEST_ERROR`.
-10. The declared file size must equal the number of bytes actually received, exactly. A disagreement is rejected with `400 BAD_REQUEST_ERROR`, and an actual upload larger than 20 MB is still rejected by the existing size limit.
-11. Unlike the logo and catalogue item image uploads, none of the three — the photo, the CSV file, or the Excel file — is ever kept. There is no original copy and no resized or re-saved copy of any of them; nothing about any of them is written to file storage.
-12. Nothing is stored in the customer book by this step, however it turns out, whichever of the three was used. A candidate only becomes a real customer once it is sent through [Adding a customer](#1-user-adds-a-customer).
-13. A business candidate extracted from a photo, a CSV file, or an Excel file may include one or more business contacts, when the source gives the reader enough to identify a contact person for that business. This is the same optional possibility that already applies to a business card or grid entry read from a photo, now extended to spreadsheet rows. It is never guaranteed, and no particular column, header, or layout is required for it to happen.
-14. When an Excel workbook has more than one sheet, only the first sheet is read. The other sheets are not read and are never referred to in the response. This does not apply to a CSV file, which has no sheets.
-15. A row in a CSV or Excel file that is completely blank is not treated as an entry at all: it is never counted, never identified, and never mentioned in the summary. This is different from a row that has some data but no name the AI could make out, which follows requirement 3 above.
-16. Each AI attempt may take up to one minute. Temporary connection, reading, timeout, busy and service failures are tried again twice, after waits of one second and two seconds. Request rejections, file-reading failures and responses that cannot be decoded are not retried. If all three attempts fail, the read reports a server error and returns no candidates. A retry may send the photo or file to the outside AI service more than once and may therefore create more than one charge, even when an earlier attempt generated an answer but its response could not be received. This applies the same way whichever of the three is being read.
+9. Unlike the logo and catalogue item image uploads, none of the three — the photo, the CSV file, or the Excel file — is ever kept. There is no original copy and no resized or re-saved copy of any of them; nothing about any of them is written to file storage.
+10. Nothing is stored in the customer book by this step, however it turns out, whichever of the three was used. A candidate only becomes a real customer once it is sent through [Adding a customer](#1-user-adds-a-customer).
+11. A business candidate extracted from a photo, a CSV file, or an Excel file may include one or more business contacts, when the source gives the reader enough to identify a contact person for that business. This is the same optional possibility that already applies to a business card or grid entry read from a photo, now extended to spreadsheet rows. It is never guaranteed, and no particular column, header, or layout is required for it to happen.
+12. When an Excel workbook has more than one sheet, only the first sheet is read. The other sheets are not read and are never referred to in the response. This does not apply to a CSV file, which has no sheets.
+13. A row in a CSV or Excel file that is completely blank is not treated as an entry at all: it is never counted, never identified, and never mentioned in the summary. This is different from a row that has some data but no name the AI could make out, which follows requirement 3 above.
+14. Each AI attempt may take up to one minute. Temporary connection, reading, timeout, busy and service failures are tried again twice, after waits of one second and two seconds. Request rejections, file-reading failures and responses that cannot be decoded are not retried. If all three attempts fail, the read reports a server error and returns no candidates. A retry may send the photo or file to the outside AI service more than once and may therefore create more than one charge, even when an earlier attempt generated an answer but its response could not be received. This applies the same way whichever of the three is being read.
 
 #### Request / Response / Outcome
 
@@ -593,15 +591,13 @@ Today, photos and files use separate upload entry points and carry no file metad
 
 **Request**
 
-The body is the photo or file itself, exactly as with every other upload in this product. The organization it is for travels in the request's header, since the body carries the file. The file's name, declared type, and declared size are required headers. They must describe the upload consistently: the filename extension and normalized content type must match the actual supported format, and the declared size must equal the bytes actually received. They are not stored.
+The body is the photo or file itself, exactly as with every other upload in this product. The organization it is for travels in the request's header, since the body carries the file. The file's name is a required header. Its extension must match the actual supported format; it is used as a detection hint and is never stored. Client-supplied content type and size are not part of this contract because the server determines the format and counts the actual uploaded bytes.
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Organization ID | `UUID` | Canonical 36-character form | ✅ | Which organization's book this is for. Travels in the request's header |
 | File | Binary | PNG, JPEG or WEBP; or genuinely readable as CSV or Excel (`.xls` or `.xlsx`); up to 20 MB | ✅ | The photo or file to read, sent as the request body |
 | File Name | `String` | 1–255 characters, trimmed; supported extension matching the actual format | ✅ | The file's name, sent as a header and required to identify the declared format. It is never stored |
-| Content Type | `String` | Valid media type; normalized comparison with the actual format | ✅ | The file's declared media type, sent as a header. Case and parameters such as `charset=utf-8` are ignored for comparison; it is never stored |
-| File Size | `Long` | Whole number of zero or more bytes; exactly equal to bytes received | ✅ | The file's declared size, sent as a header. It is checked against the actual upload size and never stored |
 
 **Response — `ExtractCustomersResponse`**
 
@@ -634,7 +630,7 @@ The response keeps a `candidate` part alongside the extraction metadata. That `c
 **Outcome**
 
 - Nothing is stored: no customer, no contact, and no copy of the photo, CSV file, or Excel file, anywhere.
-- All three metadata headers are required. If one is missing, malformed, or disagrees with the actual upload, the file is not sent to the reader or stored and the request returns `400 BAD_REQUEST_ERROR`.
+- The filename header is required. If it is missing, malformed, or disagrees with the actual upload, the file is not sent to the reader or stored and the request returns `400 BAD_REQUEST_ERROR`.
 - Whichever of the three was sent is sent to an outside AI service so it can be read, and is not kept afterwards, by us or in file storage.
 - Nothing in the response is remembered anywhere once it is sent. Using a candidate means sending it through [Adding a customer](#1-user-adds-a-customer), the same as anything typed in by hand.
 - Entries Identified and Entries Processed together are how a reader sees that some were missed — for example, four entries identified but only three processed — and, when that happens, the summary message says what could not be read and where to look.
@@ -643,7 +639,7 @@ The response keeps a `candidate` part alongside the extraction metadata. That `c
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `BAD_REQUEST_ERROR` | - The organization id header is missing - A required file name, content type, or file size header is missing or malformed - The filename extension is missing, unsupported, or does not match the actual file - The normalized content type does not match the actual file - The declared file size does not equal the bytes actually received |
+| 400 | `BAD_REQUEST_ERROR` | - The organization id header is missing - The required file name header is missing or malformed - The filename extension is missing, unsupported, or does not match the actual file |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow this |
 | 500 | `INTERNAL_SERVER_ERROR` | - The file is not a supported image, or is not genuinely readable as a CSV or Excel file - The AI service could not be reached, or sent back something that could not be used - Unexpected error |

@@ -1,7 +1,7 @@
 package io.mesazon.domain.gateway
 
 import io.github.iltotore.iron.*
-import io.github.iltotore.iron.constraint.all.{Positive, Positive0}
+import io.github.iltotore.iron.constraint.all.*
 import io.mesazon.domain.*
 
 import java.time.Instant
@@ -144,12 +144,6 @@ type OrganizationLogoImageAsset = OrganizationLogoImageAsset.T
 
 object FileNameDeclared extends RefinedType[String, NonEmptyTrimmed]
 type FileNameDeclared = FileNameDeclared.T
-
-object ContentTypeDeclared extends RefinedType[String, NonEmptyTrimmed]
-type ContentTypeDeclared = ContentTypeDeclared.T
-
-object FileSizeDeclared extends RefinedType[Long, Positive0]
-type FileSizeDeclared = FileSizeDeclared.T
 
 object CustomerID extends RefinedTypeUUID
 type CustomerID = CustomerID.T
