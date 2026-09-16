@@ -7,6 +7,7 @@ import zio.*
 import zio.stream.{ZSink, ZStream}
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 
 class SpreadsheetToolSpec extends ZWordSpecBase {
 
@@ -36,14 +37,13 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
 
         val convertedCsvText = ZIO
           .scoped(for {
-            excelFileScannedPath   <- fileScannedPath(ZStream.fromResource("assets/test-customers.xlsx"))
-            validatedCsvByteStream <- spreadsheetTool.validateAndConvertToCsv(
+            excelFileScannedPath <- fileScannedPath(ZStream.fromResource("assets/test-customers.xlsx"))
+            csvValidatedPath     <- spreadsheetTool.validateAndConvertToCsv(
               excelFileScannedPath,
               SupportedMediaType.XLSX,
             )
-            csvBytes <- validatedCsvByteStream.value.runCollect
-          } yield csvBytes)
-          .map(bytes => new String(bytes.toArray, StandardCharsets.UTF_8))
+            csvText <- ZIO.attemptBlocking(Files.readString(csvValidatedPath.value)).orDie
+          } yield csvText)
           .zioValue
 
         convertedCsvText shouldBe wellFormedCsvText
@@ -57,14 +57,13 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
 
         val convertedCsvText = ZIO
           .scoped(for {
-            excelFileScannedPath   <- fileScannedPath(ZStream.fromResource("assets/test-customers.xls"))
-            validatedCsvByteStream <- spreadsheetTool.validateAndConvertToCsv(
+            excelFileScannedPath <- fileScannedPath(ZStream.fromResource("assets/test-customers.xls"))
+            csvValidatedPath     <- spreadsheetTool.validateAndConvertToCsv(
               excelFileScannedPath,
               SupportedMediaType.XLS,
             )
-            csvBytes <- validatedCsvByteStream.value.runCollect
-          } yield csvBytes)
-          .map(bytes => new String(bytes.toArray, StandardCharsets.UTF_8))
+            csvText <- ZIO.attemptBlocking(Files.readString(csvValidatedPath.value)).orDie
+          } yield csvText)
           .zioValue
 
         convertedCsvText shouldBe wellFormedCsvText
@@ -81,13 +80,12 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
             csvFileScannedPath <- fileScannedPath(
               ZStream.fromIterable(wellFormedCsvText.getBytes(StandardCharsets.UTF_8))
             )
-            validatedCsvByteStream <- spreadsheetTool.validateAndConvertToCsv(
+            csvValidatedPath <- spreadsheetTool.validateAndConvertToCsv(
               csvFileScannedPath,
               SupportedMediaType.CSV,
             )
-            csvBytes <- validatedCsvByteStream.value.runCollect
-          } yield csvBytes)
-          .map(bytes => new String(bytes.toArray, StandardCharsets.UTF_8))
+            csvText <- ZIO.attemptBlocking(Files.readString(csvValidatedPath.value)).orDie
+          } yield csvText)
           .zioValue
 
         validatedCsvText shouldBe wellFormedCsvText

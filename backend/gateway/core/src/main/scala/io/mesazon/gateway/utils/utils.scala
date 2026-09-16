@@ -12,6 +12,9 @@ type FileByteStreamScanned = FileByteStreamScanned.T
 object FileScannedPath extends RefinedType[Path, Pure]
 type FileScannedPath = FileScannedPath.T
 
+object CsvValidatedPath extends RefinedType[Path, Pure]
+type CsvValidatedPath = CsvValidatedPath.T
+
 object ImageNormalizedByteStream extends RefinedType[ZStream[Any, Throwable, Byte], Pure]
 type ImageNormalizedByteStream = ImageNormalizedByteStream.T
 

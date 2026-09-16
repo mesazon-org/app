@@ -806,9 +806,10 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           supportedMediaType = SupportedMediaType.CSV,
           fileBytesSize = FileBytesSize.assume(1L),
         )
-        val customerBookFileValidatedCsv = ValidatedCsvByteStream(
-          ZStream.fromIterable(customerBookCsvBytes)
-        )
+        val customerBookCsvPath = Files.createTempFile("file-service-spec-validated-", ".csv")
+        Files.write(customerBookCsvPath, customerBookCsvBytes)
+        customerBookCsvPath.toFile.deleteOnExit()
+        val csvValidatedPath         = CsvValidatedPath(customerBookCsvPath)
         val entriesIdentified        = 0L
         val entriesProcessed         = 0L
         val extractCustomersResponse = ExtractCustomersResponse(
@@ -831,7 +832,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .once(),
           spreadsheetToolMock.validateAndConvertToCsv
             .expects(fileScannedPath, SupportedMediaType.CSV)
-            .returns(ZIO.succeed(customerBookFileValidatedCsv))
+            .returns(ZIO.succeed(csvValidatedPath))
             .once(),
         )
 
@@ -851,9 +852,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
         response shouldBe extractCustomersResponse
         extractFromImageCallsRef.refValue shouldBe List.empty
-        extractFromCsvCallsRef.refValue shouldBe List(
-          (customerBookFileValidatedCsv, FileService.extractCustomersFromFileInstructions)
-        )
+        extractFromCsvCallsRef.refValue.map(_._2) shouldBe List(FileService.extractCustomersFromFileInstructions)
       }
 
       "propagate the validation error without calling AI when the scanner rejects the declared filename" in new TestContext {
