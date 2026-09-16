@@ -1,14 +1,16 @@
 package io.mesazon.gateway.unit.utils
 
 import io.mesazon.domain.gateway.{ServiceError, SupportedMediaType}
-import io.mesazon.gateway.utils.{FileByteStreamScanned, SpreadsheetTool}
+import io.mesazon.gateway.utils.{FileScannedPath, SpreadsheetTool, TempFile}
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
-import zio.stream.ZStream
+import zio.stream.{ZSink, ZStream}
 
 import java.nio.charset.StandardCharsets
 
 class SpreadsheetToolSpec extends ZWordSpecBase {
+
+  inline private val fileTempPrefix = "spreadsheet-tool-spec-"
 
   private val wellFormedCsvText =
     "Full Name,Email\r\nJohn Smith,john.smith@example.com\r\nJane Doe,jane.doe@example.com\r\n"
@@ -16,22 +18,31 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
   private val malformedCsvText =
     "Full Name,Email\r\n\"John Smith,john.smith@example.com\r\n"
 
+  private def fileScannedPath(
+      fileByteStream: ZStream[Any, Throwable, Byte]
+  ): ZIO[Scope, ServiceError, FileScannedPath] =
+    for {
+      fileTempPath <- TempFile.createScoped(fileTempPrefix)
+      _            <- fileByteStream.run(ZSink.fromPath(fileTempPath)).orDie
+    } yield FileScannedPath(fileTempPath)
+
   "SpreadsheetTool" when {
-    "convertValidateCsv" should {
+    "validateAndConvertToCsv" should {
       "convert only the first sheet of a multi-sheet .xlsx workbook to validated CSV-shaped text, ignoring the other sheets" in {
         val spreadsheetTool = ZIO
           .service[SpreadsheetTool]
           .provide(SpreadsheetTool.live)
           .zioValue
 
-        val excelByteStream = FileByteStreamScanned(ZStream.fromResource("assets/test-customers.xlsx"))
-
         val convertedCsvText = ZIO
-          .scoped(
-            spreadsheetTool
-              .convertValidateCsv(excelByteStream, SupportedMediaType.XLSX)
-              .flatMap(_.value.runCollect)
-          )
+          .scoped(for {
+            excelFileScannedPath   <- fileScannedPath(ZStream.fromResource("assets/test-customers.xlsx"))
+            validatedCsvByteStream <- spreadsheetTool.validateAndConvertToCsv(
+              excelFileScannedPath,
+              SupportedMediaType.XLSX,
+            )
+            csvBytes <- validatedCsvByteStream.value.runCollect
+          } yield csvBytes)
           .map(bytes => new String(bytes.toArray, StandardCharsets.UTF_8))
           .zioValue
 
@@ -44,14 +55,15 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
           .provide(SpreadsheetTool.live)
           .zioValue
 
-        val excelByteStream = FileByteStreamScanned(ZStream.fromResource("assets/test-customers.xls"))
-
         val convertedCsvText = ZIO
-          .scoped(
-            spreadsheetTool
-              .convertValidateCsv(excelByteStream, SupportedMediaType.XLS)
-              .flatMap(_.value.runCollect)
-          )
+          .scoped(for {
+            excelFileScannedPath   <- fileScannedPath(ZStream.fromResource("assets/test-customers.xls"))
+            validatedCsvByteStream <- spreadsheetTool.validateAndConvertToCsv(
+              excelFileScannedPath,
+              SupportedMediaType.XLS,
+            )
+            csvBytes <- validatedCsvByteStream.value.runCollect
+          } yield csvBytes)
           .map(bytes => new String(bytes.toArray, StandardCharsets.UTF_8))
           .zioValue
 
@@ -64,15 +76,17 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
           .provide(SpreadsheetTool.live)
           .zioValue
 
-        val csvByteStream =
-          FileByteStreamScanned(ZStream.fromIterable(wellFormedCsvText.getBytes(StandardCharsets.UTF_8)))
-
         val validatedCsvText = ZIO
-          .scoped(
-            spreadsheetTool
-              .convertValidateCsv(csvByteStream, SupportedMediaType.CSV)
-              .flatMap(_.value.runCollect)
-          )
+          .scoped(for {
+            csvFileScannedPath <- fileScannedPath(
+              ZStream.fromIterable(wellFormedCsvText.getBytes(StandardCharsets.UTF_8))
+            )
+            validatedCsvByteStream <- spreadsheetTool.validateAndConvertToCsv(
+              csvFileScannedPath,
+              SupportedMediaType.CSV,
+            )
+            csvBytes <- validatedCsvByteStream.value.runCollect
+          } yield csvBytes)
           .map(bytes => new String(bytes.toArray, StandardCharsets.UTF_8))
           .zioValue
 
@@ -85,11 +99,16 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
           .provide(SpreadsheetTool.live)
           .zioValue
 
-        val csvByteStream =
-          FileByteStreamScanned(ZStream.fromIterable(malformedCsvText.getBytes(StandardCharsets.UTF_8)))
-
         val serviceError = ZIO
-          .scoped(spreadsheetTool.convertValidateCsv(csvByteStream, SupportedMediaType.CSV))
+          .scoped(for {
+            csvFileScannedPath <- fileScannedPath(
+              ZStream.fromIterable(malformedCsvText.getBytes(StandardCharsets.UTF_8))
+            )
+            validatedCsvByteStream <- spreadsheetTool.validateAndConvertToCsv(
+              csvFileScannedPath,
+              SupportedMediaType.CSV,
+            )
+          } yield validatedCsvByteStream)
           .zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]

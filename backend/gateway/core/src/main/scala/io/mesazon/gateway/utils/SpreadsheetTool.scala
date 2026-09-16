@@ -12,6 +12,11 @@ import java.nio.file.{Files, Path}
 import scala.jdk.CollectionConverters.*
 
 trait SpreadsheetTool {
+  def validateAndConvertToCsv(
+      fileScannedPath: FileScannedPath,
+      supportedMediaType: SupportedMediaType,
+  ): ZIO[Scope, ServiceError, ValidatedCsvByteStream]
+
   def convertValidateCsv(
       fileByteStreamScanned: FileByteStreamScanned,
       supportedMediaType: SupportedMediaType,
@@ -21,7 +26,7 @@ trait SpreadsheetTool {
 object SpreadsheetTool {
 
   private final class SpreadsheetToolImpl extends SpreadsheetTool {
-    inline private val excelTempFilePrefix     = "excel-"
+    inline private val fileTempFilePrefix      = "file-"
     inline private val csvTempFilePrefix       = "csv-"
     inline private val noCellsLastCellNumBound = 0
     inline private val firstCellIndex          = 0
@@ -37,19 +42,13 @@ object SpreadsheetTool {
     }
 
     private def convertExcelToCsvFile(
-        excelByteStreamScanned: FileByteStreamScanned
+        excelFileScannedPath: FileScannedPath
     ): ZIO[Scope, ServiceError, Path] =
       for {
-        excelTempFile <- TempFile.createScoped(excelTempFilePrefix)
-        _             <- excelByteStreamScanned.value
-          .run(ZSink.fromPath(excelTempFile))
-          .mapError(e =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to write Excel file to temp file", Some(e))
-          )
         csvTempFile <- TempFile.createScoped(csvTempFilePrefix)
         _           <- ZIO.acquireReleaseWith(
           ZIO
-            .attemptBlocking(WorkbookFactory.create(excelTempFile.toFile))
+            .attemptBlocking(WorkbookFactory.create(excelFileScannedPath.value.toFile))
             .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to open Excel workbook", Some(e)))
         )(workbook => ZIO.attemptBlocking(workbook.close()).ignoreLogged) { workbook =>
           ZIO.acquireReleaseWith(
@@ -78,17 +77,13 @@ object SpreadsheetTool {
         }
       } yield csvTempFile
 
-    private def spoolCsvToTempFile(
-        csvByteStreamScanned: FileByteStreamScanned
-    ): ZIO[Scope, ServiceError, Path] =
+    private def spoolToTempFile(fileByteStreamScanned: FileByteStreamScanned): ZIO[Scope, ServiceError, Path] =
       for {
-        csvTempFile <- TempFile.createScoped(csvTempFilePrefix)
-        _           <- csvByteStreamScanned.value
-          .run(ZSink.fromPath(csvTempFile))
-          .mapError(e =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to write CSV file to temp file", Some(e))
-          )
-      } yield csvTempFile
+        fileTempFile <- TempFile.createScoped(fileTempFilePrefix)
+        _            <- fileByteStreamScanned.value
+          .run(ZSink.fromPath(fileTempFile))
+          .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to write file to temp file", Some(e)))
+      } yield fileTempFile
 
     private def validateCsvFile(csvTempFile: Path): ZIO[Scope, ServiceError, Unit] =
       ZIO
@@ -108,21 +103,28 @@ object SpreadsheetTool {
     private def validateAndWrap(csvTempFile: Path): ZIO[Scope, ServiceError, ValidatedCsvByteStream] =
       validateCsvFile(csvTempFile).as(ValidatedCsvByteStream(ZStream.fromPath(csvTempFile)))
 
-    override def convertValidateCsv(
-        fileByteStreamScanned: FileByteStreamScanned,
+    override def validateAndConvertToCsv(
+        fileScannedPath: FileScannedPath,
         supportedMediaType: SupportedMediaType,
     ): ZIO[Scope, ServiceError, ValidatedCsvByteStream] =
       supportedMediaType match {
         case mediaType if SupportedMediaType.excel.contains(mediaType) =>
-          convertExcelToCsvFile(fileByteStreamScanned).flatMap(validateAndWrap)
+          convertExcelToCsvFile(fileScannedPath).flatMap(validateAndWrap)
         case mediaType if SupportedMediaType.csv.contains(mediaType) =>
-          spoolCsvToTempFile(fileByteStreamScanned).flatMap(validateAndWrap)
+          validateAndWrap(fileScannedPath.value)
         case unexpected =>
           ZIO.fail(
             ServiceError.InternalServerError
               .UnexpectedError(s"Unsupported media type for CSV/Excel conversion: [$unexpected]")
           )
       }
+
+    override def convertValidateCsv(
+        fileByteStreamScanned: FileByteStreamScanned,
+        supportedMediaType: SupportedMediaType,
+    ): ZIO[Scope, ServiceError, ValidatedCsvByteStream] =
+      spoolToTempFile(fileByteStreamScanned)
+        .flatMap(fileTempFile => validateAndConvertToCsv(FileScannedPath(fileTempFile), supportedMediaType))
   }
 
   val live = ZLayer.derive[SpreadsheetToolImpl].project[SpreadsheetTool](identity)
