@@ -2,11 +2,11 @@ package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
-import io.mesazon.gateway.clients.{AIClient, S3ClientOrganizationMedia}
+import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.json.ai.given
 import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
-import io.mesazon.gateway.repository.{CatalogueRepository, OrganizationManagementRepository}
+import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.tapir.TapirTask
 import io.mesazon.gateway.utils.*
 import zio.*
@@ -236,7 +236,7 @@ object FileService {
       extractCustomersResponse <- customerBookScanOutput.supportedMediaType match {
         case supportedMediaType if SupportedMediaType.images.contains(supportedMediaType) =>
           aiClient.extractFromImage[ExtractCustomersResponse](
-            FileByteStreamScanned(ZStream.fromPath(customerBookScanOutput.fileScannedPath.value)),
+            customerBookScanOutput.fileScannedPath,
             supportedMediaType,
             extractCustomersFromPhotoInstructions,
           )
@@ -245,7 +245,7 @@ object FileService {
             .validateAndConvertToCsv(customerBookScanOutput.fileScannedPath, supportedMediaType)
             .flatMap(csvValidatedPath =>
               aiClient.extractFromCsv[ExtractCustomersResponse](
-                ValidatedCsvByteStream(ZStream.fromPath(csvValidatedPath.value)),
+                csvValidatedPath,
                 extractCustomersFromFileInstructions,
               )
             )

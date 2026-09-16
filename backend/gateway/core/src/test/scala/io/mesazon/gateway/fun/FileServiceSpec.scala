@@ -1,7 +1,7 @@
 package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.clients.{AIClient, S3ClientOrganizationMedia}
+import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.mock.Mocks
 import io.mesazon.gateway.repository.*
@@ -774,9 +774,9 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           .once()
 
         val extractFromImageCallsRef =
-          Ref.make(List.empty[(FileByteStreamScanned, SupportedMediaType, String)]).zioValue
-        val extractFromCsvCallsRef = Ref.make(List.empty[(ValidatedCsvByteStream, String)]).zioValue
-        val aiClient               = new Mocks.AIClientMock(
+          Ref.make(List.empty[(FileScannedPath, SupportedMediaType, String)]).zioValue
+        val extractFromCsvCallsRef = Ref.make(List.empty[(CsvValidatedPath, String)]).zioValue
+        val aiClient               = new Mocks.AIClientPathMock(
           ZIO.succeed(extractCustomersResponse),
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
@@ -788,9 +788,9 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           .zioValue
 
         response shouldBe extractCustomersResponse
-        extractFromImageCallsRef.refValue.map { case (_, supportedMediaType, instructions) =>
-          (supportedMediaType, instructions)
-        } shouldBe List((SupportedMediaType.JPEG, FileService.extractCustomersFromPhotoInstructions))
+        extractFromImageCallsRef.refValue shouldBe List(
+          (fileScannedPath, SupportedMediaType.JPEG, FileService.extractCustomersFromPhotoInstructions)
+        )
         extractFromCsvCallsRef.refValue shouldBe List.empty
       }
 
@@ -837,9 +837,9 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         )
 
         val extractFromImageCallsRef =
-          Ref.make(List.empty[(FileByteStreamScanned, SupportedMediaType, String)]).zioValue
-        val extractFromCsvCallsRef = Ref.make(List.empty[(ValidatedCsvByteStream, String)]).zioValue
-        val aiClient               = new Mocks.AIClientMock(
+          Ref.make(List.empty[(FileScannedPath, SupportedMediaType, String)]).zioValue
+        val extractFromCsvCallsRef = Ref.make(List.empty[(CsvValidatedPath, String)]).zioValue
+        val aiClient               = new Mocks.AIClientPathMock(
           ZIO.succeed(extractCustomersResponse),
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
@@ -852,7 +852,9 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
         response shouldBe extractCustomersResponse
         extractFromImageCallsRef.refValue shouldBe List.empty
-        extractFromCsvCallsRef.refValue.map(_._2) shouldBe List(FileService.extractCustomersFromFileInstructions)
+        extractFromCsvCallsRef.refValue shouldBe List(
+          (csvValidatedPath, FileService.extractCustomersFromFileInstructions)
+        )
       }
 
       "propagate the validation error without calling AI when the scanner rejects the declared filename" in new TestContext {
