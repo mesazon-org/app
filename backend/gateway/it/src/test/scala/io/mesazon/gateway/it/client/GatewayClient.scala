@@ -414,8 +414,8 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
 
   def extractCustomersPost[E: JsonValueCodec](
       organizationIDOpt: Option[OrganizationID],
-      fileNameDeclaredOpt: Option[FileNameDeclared],
-      customerBookBytes: Chunk[Byte],
+      extractCustomersFileNameOpt: Option[ExtractCustomersFileName],
+      extractCustomersFileBytes: Chunk[Byte],
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, ExtractCustomersResponse]]] =
     basicRequest
@@ -426,14 +426,16 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
         )
       )
       .pipe(request =>
-        fileNameDeclaredOpt.fold(request)(fileNameDeclared => request.header(FileNameHeader, fileNameDeclared.value))
+        extractCustomersFileNameOpt.fold(request)(extractCustomersFileName =>
+          request.header(FileNameHeader, extractCustomersFileName.value)
+        )
       )
       .pipe(request =>
         accessTokenOpt.fold(request)(accessToken =>
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .body(customerBookBytes.toArray)
+      .body(extractCustomersFileBytes.toArray)
       .contentType(MediaType.ApplicationOctetStream)
       .response(asJsonEitherOrFail[E, ExtractCustomersResponse])
       .send(sttpBackend)

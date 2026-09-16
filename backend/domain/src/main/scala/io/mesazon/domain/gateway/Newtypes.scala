@@ -142,8 +142,8 @@ type OrganizationLogoImageAsset = OrganizationLogoImageAsset.T
 
 // Customer Book
 
-object FileNameDeclared extends RefinedType[String, NonEmptyTrimmed]
-type FileNameDeclared = FileNameDeclared.T
+object ExtractCustomersFileName extends RefinedType[String, NonEmptyTrimmed]
+type ExtractCustomersFileName = ExtractCustomersFileName.T
 
 object CustomerID extends RefinedTypeUUID
 type CustomerID = CustomerID.T

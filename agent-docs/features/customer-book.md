@@ -97,21 +97,21 @@ The epic documents this as one merged step ([step 7](../../pages/epics/05-custom
 - **Transport stays the raw `streamBinaryBody`** the two endpoints already use — not multipart and not Smithy4s. sttp-tapir 1.13.31 has no streaming multipart part type, while http4s multipart decoding and this project's Smithy4s 0.19.12 http4s interpreter buffer the body in JVM heap before application code can apply `FileScanner`'s disk-backed cap. The raw Tapir stream preserves the bounded-write/full-drain behavior required by [Streaming uploads](../project/streaming-uploads.md).
 - The raw body is accompanied by the required existing `X-File-Name` header. It is validated, used as a Tika detection hint, compared with the scanned file, and never stored. A missing or malformed header decodes to the existing generic `400 BAD_REQUEST_ERROR`; mismatch details use the same public error and remain visible only in server logs. Client-supplied content type and size are not part of the contract: mobile and cloud providers may report unreliable media types, standard HTTP framing already carries length when known, and the scanner independently determines the media type and actual byte count.
 - The new domain newtype in `Newtypes.scala` is `FileNameDeclared` (`String` with `NonEmptyTrimmed`). The endpoint requires it; it is not an `Option`.
-- `FileScanner` exposes only `scanV1(fileByteStream, fileNameDeclared, supportedMediaTypes, maxFileBytes)`. Every `FileService` upload uses it. It performs the bounded disk write, uses the declared filename as a Tika hint, detects the media type, and validates it against the type selected by the filename extension. Supported filename extensions are compared case-insensitively (`jpg` and `jpeg` both map to JPEG). A malformed declaration, unsupported detected content, or mismatch fails with `ServiceError.BadRequestError`; an unreadable stream and actual content over 20 MB keep the existing `ServiceError.InternalServerError`, and the network stream is still fully drained and counted.
-- `FileService.extractCustomers(organizationID, fileNameDeclared, customerBookByteStream)` calls `scanV1` once with `SupportedMediaType.extractData`, then dispatches on the detected type: images pass the `FileScannedPath` to `AIClient.extractFromImage`; spreadsheets pass it through `SpreadsheetTool.validateAndConvertToCsv`, then pass the returned `CsvValidatedPath` to `AIClient.extractFromCsv`. Filename rejection happens before either AI method. Nothing is persisted.
+- `FileScanner` exposes only `scan(fileByteStream, fileNameDeclared, supportedMediaTypes, maxFileBytes)`. Every `FileService` upload uses it. It performs the bounded disk write, uses the declared filename as a Tika hint, detects the media type, and validates it against the type selected by the filename extension. Supported filename extensions are compared case-insensitively (`jpg` and `jpeg` both map to JPEG). A malformed declaration, unsupported detected content, or mismatch fails with `ServiceError.BadRequestError`; an unreadable stream and actual content over 20 MB keep the existing `ServiceError.InternalServerError`, and the network stream is still fully drained and counted.
+- `FileService.extractCustomerBook(organizationID, fileNameDeclared, customerBookByteStream)` calls `scan` once with `SupportedMediaType.extractData`, then dispatches on the detected type: images pass the `FileScannedPath` to `AIClient.extractFromImage`; spreadsheets pass it through `SpreadsheetTool.validateAndConvertToCsv`, then pass the returned `CsvValidatedPath` to `AIClient.extractFromCsv`. Filename rejection happens before either AI method. Nothing is persisted.
 - Tests consolidate onto the one endpoint: `GatewayClient` gains one raw-body method whose filename argument is optional only so a rejection test can omit the otherwise-required HTTP header; `FileApiSpec` collapses to one `/extract/customer-book` block, proving the middleware matrix once, image/CSV/Excel success, missing/malformed/mismatched filename, and existing unsupported/plain-zip backstops. `FileScannerSpec` owns filename matching, mismatch, stream draining, and actual-size enforcement. `FileServiceSpec` collapses its two extraction blocks into one and proves image/spreadsheet dispatch plus no AI call after scanner rejection.
 
 #### Implementation history
 
 The refactor was delivered incrementally through these completed areas:
 
-1. Required filename metadata and independent `scanV1` validation.
+1. Required filename metadata and independent `scan` validation.
 2. Unified service orchestration and image/spreadsheet dispatch.
 3. Path-based `SpreadsheetTool` and `AIClient` contracts.
 4. One raw streaming endpoint and one acceptance-test client method.
 5. Removal of the superseded endpoints, methods, stream overloads, and tests.
 
-**Implementation status (2026-09-16):** the unified endpoint, orchestration, path-based spreadsheet and AI clients, and shared `scanV1` upload pipeline are implemented. The old two endpoints, service methods, stream client overloads, legacy scanner method, and their tests are removed.
+**Implementation status (2026-09-16):** the unified endpoint, orchestration, path-based spreadsheet and AI clients, and shared `scan` upload pipeline are implemented. The old two endpoints, service methods, stream client overloads, legacy scanner method, and their tests are removed.
 
 Required proof across the slices: focused `FileScannerSpec`, focused `FileServiceSpec`, gateway core/test compile, the real nested `FileApiSpec` selection with a non-zero executed count, `sbt "runLint"`, and diff/doc-link checks. Do not add an actual over-20-MB HTTP acceptance case because the known `EntityLimiter`/Ember hang remains open; prove that boundary directly in `FileScannerSpec`.
 
@@ -123,17 +123,17 @@ Required proof across the slices: focused `FileScannerSpec`, focused `FileServic
 
 #### `FileScanner` content-sniffing and filename agreement
 
-Plain magic-byte detection cannot tell apart same-container formats: every OOXML type (`.xlsx`, `.docx`, `.pptx`) is a ZIP archive, and every legacy MS Office type (`.xls`, `.doc`, `.ppt`) is an OLE2 compound file. `scanV1` therefore selects the declared supported type from `X-File-Name`, writes the body to a scoped temp path, and calls Tika with that filename as its detection hint. The detected MIME must belong to the declared type's non-empty MIME set.
+Plain magic-byte detection cannot tell apart same-container formats: every OOXML type (`.xlsx`, `.docx`, `.pptx`) is a ZIP archive, and every legacy MS Office type (`.xls`, `.doc`, `.ppt`) is an OLE2 compound file. `scan` therefore selects the declared supported type from `X-File-Name`, writes the body to a scoped temp path, and calls Tika with that filename as its detection hint. The detected MIME must belong to the declared type's non-empty MIME set.
 
 Extension selection happens before the body is consumed, so unsupported declarations fail fast. Size enforcement happens while the body is consumed, and media agreement is checked after the temp file is complete. The filename comparison is case-insensitive and only the final extension is used.
 
 **Accepted trade-off:** Tika can classify a generic ZIP container as the declared OOXML subtype when given an `.xlsx` hint. `SpreadsheetTool.validateAndConvertToCsv` remains the structural backstop: Apache POI rejects a plain ZIP that is not a genuine workbook. The equivalent legacy-container ambiguity is also resolved by POI's workbook parse.
 
-### `FileService.extractCustomers`
+### `FileService.extractCustomerBook`
 
 Runs inside one `ZIO.scoped` block:
 
-1. `FileScanner.scanV1` spools the stream to a scoped temp file, validates it against `SupportedMediaType.extractData`, and enforces the same `fileServiceConfig.maxUploadBytes` cap (20 MB) as every other upload.
+1. `FileScanner.scan` spools the stream to a scoped temp file, validates it against `SupportedMediaType.extractData`, and enforces the same `fileServiceConfig.maxUploadBytes` cap (20 MB) as every other upload.
 2. Images pass the returned `FileScannedPath` and detected media type to `AIClient.extractFromImage`.
 3. Spreadsheets pass the same path and media type to `SpreadsheetTool.validateAndConvertToCsv`; its `CsvValidatedPath` output then goes to `AIClient.extractFromCsv`.
 4. No `ImageProcessing.normalize` step and no `S3Client` call, matching the photo: nothing from either new source is ever written to file storage.
@@ -200,7 +200,7 @@ Each OpenAI send attempt has a one-minute read timeout. `AIClient` makes at most
 
 ### Key files (photo, CSV, Excel extraction)
 
-- Orchestration: `service/FileService.scala` (all uploads call `scanV1`; unified `extractCustomers` dispatches the scanned path to the image or spreadsheet branch)
+- Orchestration: `service/FileService.scala` (all uploads call `scan`; unified `extractCustomerBook` dispatches the scanned path to the image or spreadsheet branch)
 - AI client: `clients/AIClient.scala` (split `extractFromImage`/`extractFromCsv`, no media-type dispatch inside `AIClient`; registered OpenAI schema, per-attempt timeout, and selective retry policy unchanged), `config/AIClientConfig.scala`; the legacy `clients/OpenAIClient.scala` and its configuration remain unchanged
 - Conversion and validation: `utils/SpreadsheetTool.scala` (merges what were originally `ExcelToCsvConverter` and `CsvValidator`, both deleted; Apache POI + Apache Commons CSV, disk-backed throughout)
 - Pipeline utils (shared): `utils/FileScanner.scala`
@@ -219,7 +219,7 @@ Client test timing: ordinary `AIClientSpec` cases use a one-minute read timeout.
 Target coverage, ground each case in the epic's own [Business Scenarios table](../../pages/epics/05-customer-book.md#7-user-extracts-customers-from-a-photo-or-file) rather than a generic success/failure pair — every numbered scenario there is a candidate test case once its orchestration lands, including the CSV/Excel-specific scenarios 13–17 (best-effort file contacts, multi-sheet Excel, legacy `.xls`, blank rows, unlimited rows) alongside the original photo scenarios:
 
 - Acceptance: `FileApiSpec` has one `/extract/customer-book` block. It proves image, CSV, and Excel success; the middleware matrix once; missing `X-File-Name`; filename/content mismatch as `400`; and the plain-ZIP/Excel structural backstop as `500`.
-- Functional: `FileServiceSpec` has one `extractCustomers` block proving image and spreadsheet dispatch from `FileScannedPath`, converted `CsvValidatedPath` forwarding, and no downstream call after scanner rejection. `Mocks.AIClientMock` records path-native generic calls because ScalaMock cannot mock those method shapes directly.
+- Functional: `FileServiceSpec` has one `extractCustomerBook` block proving image and spreadsheet dispatch from `FileScannedPath`, converted `CsvValidatedPath` forwarding, and no downstream call after scanner rejection. `Mocks.AIClientMock` records path-native generic calls because ScalaMock cannot mock those method shapes directly.
 - Integration: `it/AIClientSpec.scala` (mirrors `TwilioClientSpec`) against `src/test/resources/compose/wiremock.yaml` and `backend/wiremock/mappings/ai-client-chat-completions*.json` stubs — `extractFromImage`: success decode, HTTP/server and connection-reset retry exhaustion with attempt counts, delayed-response timeout exhaustion, eventual success after rate limiting while reading the image once, image-stream read failure with no outbound requests, non-retryable request rejection, and structured-response JSON/Iron decode failures. `extractFromCsv`: one success case against a stub matching a request body carrying text content rather than `image_url`, proving the outbound request is text-shaped; retry/timeout/decode-failure cases are not re-proven for `extractFromCsv`, already covered generically by `extractFromImage`'s cases since both share `sendAndDecode`.
 - Unit: `FileScannerSpec` has one successful table covering every supported media type and focused failures for extension, detected-content mismatch, read failure, and actual byte-cap enforcement. `SpreadsheetToolSpec` covers first-sheet-only `.xlsx`, legacy `.xls`, valid CSV reuse, and malformed CSV rejection.
 - Golden: `ExtractCustomersFromPhotoGoldenSpec` is manual-only and sends each of the ten sample photos to the real OpenAI API. Every photo has its own complete `ExtractCustomersResponse` baseline, and the test asserts full equality for counts, ordered customers, contact details, phone pairs, duplicate flags, extraction notes, and the unidentified-entry summary. Its empty checked-in API key cancels all ten cases unless a person deliberately supplies a key for a real run. Out of scope for CSV/Excel — no equivalent golden suite is requested for this delta.
@@ -228,9 +228,9 @@ Target coverage, ground each case in the epic's own [Business Scenarios table](.
 
 `SupportedMediaType` carries `CSV`/`XLS`/`XLSX` plus the image and spreadsheet grouping lists and the combined `extractData` list. `SpreadsheetTool.validateAndConvertToCsv` consumes a `FileScannedPath` and returns a `CsvValidatedPath`. `AIClient.extractFromImage` and `extractFromCsv` consume their corresponding paths. Apache POI, Apache Commons CSV, and the Log4j-to-SLF4J bridge remain the spreadsheet dependencies.
 
-`FileService.extractCustomers` scans once, dispatches images directly to the AI client, and validates/converts spreadsheets before the AI call. `Main.scala` wires `SpreadsheetTool.live`; the former `ExcelToCsvConverter` and `CsvValidator` components remain deleted.
+`FileService.extractCustomerBook` scans once, dispatches images directly to the AI client, and validates/converts spreadsheets before the AI call. `Main.scala` wires `SpreadsheetTool.live`; the former `ExcelToCsvConverter` and `CsvValidator` components remain deleted.
 
-`FileScanner.scanV1` is the sole scanner contract. It validates the declared extension, drains and caps the upload into a scoped path, uses the filename as Tika's hint, and requires the detected MIME to agree. The acceptance-layer plain-ZIP case proves that `SpreadsheetTool`'s POI parse remains the structural backstop for hinted OOXML containers.
+`FileScanner.scan` is the sole scanner contract. It validates the declared extension, drains and caps the upload into a scoped path, uses the filename as Tika's hint, and requires the detected MIME to agree. The acceptance-layer plain-ZIP case proves that `SpreadsheetTool`'s POI parse remains the structural backstop for hinted OOXML containers.
 
 Acceptance coverage is consolidated under `/extract/customer-book`; verification evidence is reported with the implementing change rather than preserved as stale pass counts here.
 

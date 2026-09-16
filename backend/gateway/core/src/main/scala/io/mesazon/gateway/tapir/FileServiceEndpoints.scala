@@ -64,7 +64,7 @@ object FileServiceEndpoints {
   private val extractCustomersPostEndpoint =
     securedEndpoint.post
       .in("extract" / "customer-book")
-      .in(header[FileNameDeclared](FileNameHeader))
+      .in(header[ExtractCustomersFileName](FileNameHeader))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
       .out(jsonBody[ExtractCustomersResponse])
       .errorOut(
@@ -139,8 +139,12 @@ object FileServiceEndpoints {
             )
             .as(organizationID)
         }
-          .serverLogic(organizationID => { case (fileNameDeclared, customerBookByteStream) =>
-            fileService.extractCustomers(organizationID, fileNameDeclared, customerBookByteStream)
+          .serverLogic(organizationID => { case (extractCustomersFileName, extractCustomersFileByteStream) =>
+            fileService.extractCustomerBook(
+              organizationID,
+              extractCustomersFileName,
+              extractCustomersFileByteStream,
+            )
           }),
       )
       openApiDocsOpt = Option.when(enableDocs)(

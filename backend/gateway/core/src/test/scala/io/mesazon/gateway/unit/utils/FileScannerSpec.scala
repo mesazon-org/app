@@ -12,51 +12,51 @@ import java.nio.file.Files
 class FileScannerSpec extends ZWordSpecBase {
 
   "FileScanner" when {
-    "scanV1" should {
+    "scan" should {
       "return the complete scanned output for every supported file whose declarations match after normalization" in {
         val fileScanner = ZIO
           .service[FileScanner]
           .provide(FileScanner.live)
           .zioValue
 
-        final case class ScanV1SuccessCase(
+        final case class ScanSuccessCase(
             fileResourcePath: String,
             fileNameDeclared: FileNameDeclared,
             supportedMediaTypeExpected: SupportedMediaType,
         )
 
-        val scanV1SuccessCases = List(
-          ScanV1SuccessCase(
+        val scanSuccessCases = List(
+          ScanSuccessCase(
             fileResourcePath = "assets/test-logo-3.png",
             fileNameDeclared = FileNameDeclared.assume("contact-book.PNG"),
             supportedMediaTypeExpected = SupportedMediaType.PNG,
           ),
-          ScanV1SuccessCase(
+          ScanSuccessCase(
             fileResourcePath = "assets/test-logo-1.jpeg",
             fileNameDeclared = FileNameDeclared.assume("contact-book.JPG"),
             supportedMediaTypeExpected = SupportedMediaType.JPEG,
           ),
-          ScanV1SuccessCase(
+          ScanSuccessCase(
             fileResourcePath = "assets/test-logo-1.jpeg",
             fileNameDeclared = FileNameDeclared.assume("contact-book.jpeg"),
             supportedMediaTypeExpected = SupportedMediaType.JPEG,
           ),
-          ScanV1SuccessCase(
+          ScanSuccessCase(
             fileResourcePath = "assets/test-logo-2.webp",
             fileNameDeclared = FileNameDeclared.assume("contact-book.WEBP"),
             supportedMediaTypeExpected = SupportedMediaType.WEBP,
           ),
-          ScanV1SuccessCase(
+          ScanSuccessCase(
             fileResourcePath = "assets/contact-book-test-spreadsheet-1.csv",
             fileNameDeclared = FileNameDeclared.assume("customers.CSV"),
             supportedMediaTypeExpected = SupportedMediaType.CSV,
           ),
-          ScanV1SuccessCase(
+          ScanSuccessCase(
             fileResourcePath = "assets/test-customers.xls",
             fileNameDeclared = FileNameDeclared.assume("customers.XLS"),
             supportedMediaTypeExpected = SupportedMediaType.XLS,
           ),
-          ScanV1SuccessCase(
+          ScanSuccessCase(
             fileResourcePath = "assets/test-customers.xlsx",
             fileNameDeclared = FileNameDeclared.assume("customers.XLSX"),
             supportedMediaTypeExpected = SupportedMediaType.XLSX,
@@ -65,17 +65,17 @@ class FileScannerSpec extends ZWordSpecBase {
         val maxByteSize5Mb      = 5 * 1024 * 1024L
         val supportedMediaTypes = SupportedMediaType.images ++ SupportedMediaType.spreadsheets
 
-        scanV1SuccessCases.foreach { scanV1SuccessCase =>
-          withClue(s"scanV1 success case [$scanV1SuccessCase]") {
-            val fileByteStream        = ZStream.fromResource(scanV1SuccessCase.fileResourcePath)
+        scanSuccessCases.foreach { scanSuccessCase =>
+          withClue(s"scan success case [$scanSuccessCase]") {
+            val fileByteStream        = ZStream.fromResource(scanSuccessCase.fileResourcePath)
             val fileBytesSizeExpected = FileBytesSize.assume(fileByteStream.runCount.zioValue)
 
             val scanTestResult = ZIO
               .scoped(
                 fileScanner
-                  .scanV1(
+                  .scan(
                     fileByteStream,
-                    scanV1SuccessCase.fileNameDeclared,
+                    scanSuccessCase.fileNameDeclared,
                     supportedMediaTypes,
                     maxByteSize5Mb,
                   )
@@ -93,7 +93,7 @@ class FileScannerSpec extends ZWordSpecBase {
               )
               .zioValue
 
-            scanTestResult.supportedMediaType shouldBe scanV1SuccessCase.supportedMediaTypeExpected
+            scanTestResult.supportedMediaType shouldBe scanSuccessCase.supportedMediaTypeExpected
             scanTestResult.fileBytesSize shouldBe fileBytesSizeExpected
             scanTestResult.scannedFileBytes shouldBe fileByteStream.runCollect.zioValue
           }
@@ -113,7 +113,7 @@ class FileScannerSpec extends ZWordSpecBase {
 
         val serviceError = ZIO
           .scoped(
-            fileScanner.scanV1(
+            fileScanner.scan(
               fileByteStream,
               fileNameDeclared,
               supportedMediaTypes,
@@ -142,7 +142,7 @@ class FileScannerSpec extends ZWordSpecBase {
 
         val serviceError = ZIO
           .scoped(
-            fileScanner.scanV1(
+            fileScanner.scan(
               fileByteStream,
               fileNameDeclared,
               supportedMediaTypes,
@@ -171,7 +171,7 @@ class FileScannerSpec extends ZWordSpecBase {
 
         val serviceError = ZIO
           .scoped(
-            fileScanner.scanV1(
+            fileScanner.scan(
               fileByteStream,
               fileNameDeclared,
               supportedMediaTypes,
@@ -200,7 +200,7 @@ class FileScannerSpec extends ZWordSpecBase {
 
         val serviceError = ZIO
           .scoped(
-            fileScanner.scanV1(
+            fileScanner.scan(
               fileByteStream,
               fileNameDeclared,
               supportedMediaTypes,
@@ -230,7 +230,7 @@ class FileScannerSpec extends ZWordSpecBase {
 
         val serviceError = ZIO
           .scoped(
-            fileScanner.scanV1(
+            fileScanner.scan(
               fileByteStream,
               fileNameDeclared,
               supportedMediaTypes,
@@ -260,7 +260,7 @@ class FileScannerSpec extends ZWordSpecBase {
 
         val serviceError = ZIO
           .scoped(
-            fileScanner.scanV1(
+            fileScanner.scan(
               fileByteStream,
               fileNameDeclared,
               supportedMediaTypes,
@@ -292,7 +292,7 @@ class FileScannerSpec extends ZWordSpecBase {
 
         val serviceError = ZIO
           .scoped(
-            fileScanner.scanV1(
+            fileScanner.scan(
               fileByteStream,
               fileNameDeclared,
               supportedMediaTypes,

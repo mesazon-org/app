@@ -26,10 +26,10 @@ trait FileService[F[_]] {
       catalogueItemImageByteStream: ZStream[Any, Throwable, Byte],
   ): F[Unit]
 
-  def extractCustomers(
+  def extractCustomerBook(
       organizationID: OrganizationID,
-      fileNameDeclared: FileNameDeclared,
-      customerBookByteStream: ZStream[Any, Throwable, Byte],
+      extractCustomersFileName: ExtractCustomersFileName,
+      extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
   ): F[ExtractCustomersResponse]
 }
 
@@ -116,9 +116,9 @@ object FileService {
         organizationLogoImageOriginalFileName: ImageOriginalFileName,
         organizationLogoImageByteStream: ZStream[Any, Throwable, Byte],
     ): ServiceTask[Unit] = ZIO.scoped(for {
-      organizationLogoImageScanOutput <- fileScanner.scanV1(
+      organizationLogoImageScanOutput <- fileScanner.scan(
         organizationLogoImageByteStream,
-        FileNameDeclared.assume(organizationLogoImageOriginalFileName.value),
+        organizationLogoImageOriginalFileName.value,
         SupportedMediaType.images,
         fileServiceConfig.maxUploadBytes,
       )
@@ -177,9 +177,9 @@ object FileService {
           } else {
             ZIO.unit
           }
-        catalogueItemImageScanOutput <- fileScanner.scanV1(
+        catalogueItemImageScanOutput <- fileScanner.scan(
           catalogueItemImageByteStream,
-          FileNameDeclared.assume(catalogueItemImageOriginalFileName.value),
+          catalogueItemImageOriginalFileName.value,
           SupportedMediaType.images,
           fileServiceConfig.maxUploadBytes,
         )
@@ -214,14 +214,14 @@ object FileService {
         )
       } yield ())
 
-    override def extractCustomers(
+    override def extractCustomerBook(
         organizationID: OrganizationID,
-        fileNameDeclared: FileNameDeclared,
-        customerBookByteStream: ZStream[Any, Throwable, Byte],
+        extractCustomersFileName: ExtractCustomersFileName,
+        extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
     ): ServiceTask[ExtractCustomersResponse] = ZIO.scoped(for {
-      customerBookScanOutput <- fileScanner.scanV1(
-        customerBookByteStream,
-        fileNameDeclared,
+      customerBookScanOutput <- fileScanner.scan(
+        extractCustomersFileByteStream,
+        extractCustomersFileName.value,
         SupportedMediaType.extractData,
         fileServiceConfig.maxUploadBytes,
       )
@@ -284,13 +284,17 @@ object FileService {
             )
         )
 
-      override def extractCustomers(
+      override def extractCustomerBook(
           organizationID: OrganizationID,
-          fileNameDeclared: FileNameDeclared,
-          customerBookByteStream: ZStream[Any, Throwable, Byte],
+          extractCustomersFileName: ExtractCustomersFileName,
+          extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
       ): TapirTask[ExtractCustomersResponse] =
         HttpErrorHandler.errorResponseHandlerTapir(
-          service.extractCustomers(organizationID, fileNameDeclared, customerBookByteStream)
+          service.extractCustomerBook(
+            organizationID,
+            extractCustomersFileName,
+            extractCustomersFileByteStream,
+          )
         )
 
     }

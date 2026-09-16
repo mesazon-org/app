@@ -46,7 +46,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         )
 
         inSequence(
-          fileScannerMock.scanV1
+          fileScannerMock.scan
             .expects(
               organizationLogoImageByteStream,
               FileNameDeclared.assume(organizationLogoImageOriginalFileName.value),
@@ -114,7 +114,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val scanError = ServiceError.InternalServerError.UnexpectedError("Failed to scan organization logo")
 
         inSequence(
-          fileScannerMock.scanV1
+          fileScannerMock.scan
             .expects(
               organizationLogoImageByteStream,
               FileNameDeclared.assume(organizationLogoImageOriginalFileName.value),
@@ -146,7 +146,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val normalizeError = ServiceError.InternalServerError.UnexpectedError("Failed to normalize organization logo")
 
         inSequence(
-          fileScannerMock.scanV1
+          fileScannerMock.scan
             .expects(
               organizationLogoImageByteStream,
               FileNameDeclared.assume(organizationLogoImageOriginalFileName.value),
@@ -195,7 +195,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val uploadError = ServiceError.InternalServerError.UnexpectedError("Failed to upload organization logo to S3")
 
         inSequence(
-          fileScannerMock.scanV1
+          fileScannerMock.scan
             .expects(
               organizationLogoImageByteStream,
               FileNameDeclared.assume(organizationLogoImageOriginalFileName.value),
@@ -264,7 +264,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val updateError = ServiceError.InternalServerError.UnexpectedError("Failed to persist organization logo")
 
         inSequence(
-          fileScannerMock.scanV1
+          fileScannerMock.scan
             .expects(
               organizationLogoImageByteStream,
               FileNameDeclared.assume(organizationLogoImageOriginalFileName.value),
@@ -364,7 +364,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(organizationID, catalogueItemID)
             .returningZIO(Some(catalogueItemRowActive))
             .once(),
-          fileScannerMock.scanV1
+          fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
               FileNameDeclared.assume(catalogueItemImageOriginalFileName.value),
@@ -522,7 +522,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(organizationID, catalogueItemID)
             .returningZIO(Some(catalogueItemRowActive))
             .once(),
-          fileScannerMock.scanV1
+          fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
               FileNameDeclared.assume(catalogueItemImageOriginalFileName.value),
@@ -567,7 +567,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(organizationID, catalogueItemID)
             .returningZIO(Some(catalogueItemRowActive))
             .once(),
-          fileScannerMock.scanV1
+          fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
               FileNameDeclared.assume(catalogueItemImageOriginalFileName.value),
@@ -629,7 +629,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(organizationID, catalogueItemID)
             .returningZIO(Some(catalogueItemRowActive))
             .once(),
-          fileScannerMock.scanV1
+          fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
               FileNameDeclared.assume(catalogueItemImageOriginalFileName.value),
@@ -710,7 +710,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             .expects(organizationID, catalogueItemID)
             .returningZIO(Some(catalogueItemRowActive))
             .once(),
-          fileScannerMock.scanV1
+          fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
               FileNameDeclared.assume(catalogueItemImageOriginalFileName.value),
@@ -763,14 +763,14 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       }
     }
 
-    "extractCustomers" should {
+    "extractCustomerBook" should {
       "return the AI's extracted candidates for an image" in new TestContext {
         val organizationID         = arbitrarySample[OrganizationID]
         val fileNameDeclared       = FileNameDeclared.assume("customers.jpeg")
         val customerBookByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
         val fileScannedPath        = FileScannedPath(Files.createTempFile("file-service-spec-", ".jpeg"))
         fileScannedPath.value.toFile.deleteOnExit()
-        val fileScannerScanV1Output: FileScannerScanV1Output = (
+        val fileScannerScanOutput: FileScannerScanOutput = (
           fileScannedPath = fileScannedPath,
           supportedMediaType = SupportedMediaType.JPEG,
           fileBytesSize = FileBytesSize.assume(1L),
@@ -785,14 +785,14 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           unidentifiedEntriesSummary = None,
         )
 
-        fileScannerMock.scanV1
+        fileScannerMock.scan
           .expects(
             customerBookByteStream,
             fileNameDeclared,
             SupportedMediaType.extractData,
             fileServiceConfig.maxUploadBytes,
           )
-          .returns(ZIO.succeed(fileScannerScanV1Output))
+          .returns(ZIO.succeed(fileScannerScanOutput))
           .once()
 
         val extractFromImageCallsRef =
@@ -806,7 +806,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val fileService = buildFileService(aiClient)
 
         val response = fileService
-          .extractCustomers(organizationID, fileNameDeclared, customerBookByteStream)
+          .extractCustomerBook(organizationID, fileNameDeclared, customerBookByteStream)
           .zioValue
 
         response shouldBe extractCustomersResponse
@@ -823,7 +823,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val customerBookByteStream = ZStream.fromIterable(customerBookCsvBytes)
         val fileScannedPath        = FileScannedPath(Files.createTempFile("file-service-spec-", ".csv"))
         fileScannedPath.value.toFile.deleteOnExit()
-        val fileScannerScanV1Output: FileScannerScanV1Output = (
+        val fileScannerScanOutput: FileScannerScanOutput = (
           fileScannedPath = fileScannedPath,
           supportedMediaType = SupportedMediaType.CSV,
           fileBytesSize = FileBytesSize.assume(1L),
@@ -843,14 +843,14 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         )
 
         inSequence(
-          fileScannerMock.scanV1
+          fileScannerMock.scan
             .expects(
               customerBookByteStream,
               fileNameDeclared,
               SupportedMediaType.extractData,
               fileServiceConfig.maxUploadBytes,
             )
-            .returns(ZIO.succeed(fileScannerScanV1Output))
+            .returns(ZIO.succeed(fileScannerScanOutput))
             .once(),
           spreadsheetToolMock.validateAndConvertToCsv
             .expects(fileScannedPath, SupportedMediaType.CSV)
@@ -869,7 +869,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val fileService = buildFileService(aiClient)
 
         val response = fileService
-          .extractCustomers(organizationID, fileNameDeclared, customerBookByteStream)
+          .extractCustomerBook(organizationID, fileNameDeclared, customerBookByteStream)
           .zioValue
 
         response shouldBe extractCustomersResponse
@@ -893,7 +893,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           )
         )
 
-        fileScannerMock.scanV1
+        fileScannerMock.scan
           .expects(
             customerBookByteStream,
             fileNameDeclared,
@@ -914,7 +914,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val fileService = buildFileService(aiClient)
 
         val serviceError = fileService
-          .extractCustomers(organizationID, fileNameDeclared, customerBookByteStream)
+          .extractCustomerBook(organizationID, fileNameDeclared, customerBookByteStream)
           .zioError
 
         serviceError shouldBe scanError

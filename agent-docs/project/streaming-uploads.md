@@ -1,21 +1,21 @@
 # Streaming upload byte handling
 
-Read when changing `FileScanner.scanV1`, `ImageProcessing.normalize`, upload byte-cap enforcement, or their interaction with `EntityLimiter`. Companion to [Alternate HTTP](alternate-http.md) (transport/entity-limit wiring) and [Known issues](../known-issues.md#oversized-tapir-upload-can-hang-the-request-instead-of-failing-fast) (open upstream hang).
+Read when changing `FileScanner.scan`, `ImageProcessing.normalize`, upload byte-cap enforcement, or their interaction with `EntityLimiter`. Companion to [Alternate HTTP](alternate-http.md) (transport/entity-limit wiring) and [Known issues](../known-issues.md#oversized-tapir-upload-can-hang-the-request-instead-of-failing-fast) (open upstream hang).
 
 ## `EntityLimiter` is not a hard cap
 
 `org.http4s.server.middleware.EntityLimiter` wraps the Tapir routes (`HttpApp.scala`, `TapirMaxEntitySize` = `file-service.max-upload-bytes` = 20 MB, kept in sync manually — not enforced structurally). It does not truncate the body. Its `takeLimited(n)`: take `n` bytes; if more remain, echo **all** the remainder to the downstream reader (unbounded — as much as the client sends), then raise `EntityTooLarge` only once that remainder hits real EOF. It guarantees eventual failure, never a bounded amount of data delivered before failure.
 
-Consequences for `FileScanner.scanV1`:
+Consequences for `FileScanner.scan`:
 
 - Cannot stop reading once its own cap is hit. Stopping early (old: `.take(cap+1).run(sink)`) leaves `EntityLimiter`'s echoed remainder undrained on the connection — the socket is never fully read, which can stall it. (Necessary, not proven sufficient: draining fully did not fix the reproduced hang in known issues — root cause is upstream, in Ember/Tapir interop.)
 - Cannot write every received byte and check size after. `EntityLimiter` echoes an arbitrarily large body before failing, so "write everything, check after" is an unbounded disk write.
 
 ## Current design
 
-`FileScanner.scanV1` folds `fileByteStream.chunks` in one pass (`runFoldZIO`): pulls to true EOF (drains the connection fully) but writes at most `maxFileBytes + 1` bytes to the temp file. Bytes beyond the cap are counted, never buffered or written — disk usage stays bounded regardless of actual body size, while the connection still gets fully drained.
+`FileScanner.scan` folds `fileByteStream.chunks` in one pass (`runFoldZIO`): pulls to true EOF (drains the connection fully) but writes at most `maxFileBytes + 1` bytes to the temp file. Bytes beyond the cap are counted, never buffered or written — disk usage stays bounded regardless of actual body size, while the connection still gets fully drained.
 
-`scanV1` requires the declared filename, validates its extension against the caller's allowed media types before reading the body, writes to a scoped temp file, asks Tika to detect the content using that filename as its hint, and rejects a declared/detected mismatch with `BadRequest`. It returns `FileScannerScanV1Output`: the scoped `FileScannedPath`, matched `SupportedMediaType`, and actual `FileBytesSize`. Every `FileService` upload uses this method. Customer extraction passes the path directly to the AI or spreadsheet client; logo and catalogue uploads rebuild a `FileByteStreamScanned` from the already capped local path for `ImageProcessing`.
+`scan` requires the declared filename, validates its extension against the caller's allowed media types before reading the body, writes to a scoped temp file, asks Tika to detect the content using that filename as its hint, and rejects a declared/detected mismatch with `BadRequest`. It returns `FileScannerScanOutput`: the scoped `FileScannedPath`, matched `SupportedMediaType`, and actual `FileBytesSize`. Every `FileService` upload uses this method. Customer extraction passes the path directly to the AI or spreadsheet client; logo and catalogue uploads rebuild a `FileByteStreamScanned` from the already capped local path for `ImageProcessing`.
 
 Fold over `.chunks` (`Chunk[Byte]`), not the raw `Byte` stream (`mapZIO`/`runForeach` per element): each element on ZIO's effect interpreter costs a suspension. Chunking keeps blocking I/O (`ZIO.attemptBlocking`) and array writes at one call per chunk (~KBs), not one per byte.
 

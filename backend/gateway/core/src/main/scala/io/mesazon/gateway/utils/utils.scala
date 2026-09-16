@@ -21,7 +21,7 @@ type ImageNormalizedByteStream = ImageNormalizedByteStream.T
 object ImageOriginalByteStream extends RefinedType[ZStream[Any, Throwable, Byte], Pure]
 type ImageOriginalByteStream = ImageOriginalByteStream.T
 
-type FileScannerScanV1Output =
+type FileScannerScanOutput =
   (fileScannedPath: FileScannedPath, supportedMediaType: SupportedMediaType, fileBytesSize: FileBytesSize)
 
 type NormalizeResult =

@@ -10,12 +10,12 @@ import java.nio.file.{Files, Path}
 import java.util.Locale
 
 trait FileScanner {
-  def scanV1(
+  def scan(
       fileByteStream: ZStream[Any, Throwable, Byte],
-      fileNameDeclared: FileNameDeclared,
+      fileNameDeclared: String,
       supportedMediaTypes: List[SupportedMediaType],
       maxFileBytes: Long,
-  ): ZIO[Scope, ServiceError, FileScannerScanV1Output]
+  ): ZIO[Scope, ServiceError, FileScannerScanOutput]
 }
 
 object FileScanner {
@@ -28,11 +28,11 @@ object FileScanner {
     inline private val FileNameDeclaredField = "fileNameDeclared"
 
     private def validateFileExtension(
-        fileNameDeclared: FileNameDeclared,
+        fileNameDeclared: String,
         supportedMediaTypes: List[SupportedMediaType],
     ): ZIO[Any, ServiceError, SupportedMediaType] =
       for {
-        fileName                = fileNameDeclared.value
+        fileName                = fileNameDeclared
         fileExtensionStartIndex = fileName.lastIndexOf('.')
         fileExtension <- ZIO
           .fromOption(
@@ -109,14 +109,14 @@ object FileScanner {
 
     private def validateMediaType(
         fileTempPath: Path,
-        fileNameDeclared: FileNameDeclared,
+        fileNameDeclared: String,
         supportedMediaType: SupportedMediaType,
     ): ZIO[Any, ServiceError, Unit] =
       for {
         mimeTypeDetected <- ZIO
           .acquireReleaseWith(ZIO.attemptBlocking(Files.newInputStream(fileTempPath)))(inputStream =>
             ZIO.attemptBlocking(inputStream.close()).ignoreLogged
-          )(inputStream => ZIO.attemptBlocking(tika.detect(inputStream, fileNameDeclared.value)))
+          )(inputStream => ZIO.attemptBlocking(tika.detect(inputStream, fileNameDeclared)))
           .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to detect file type", Some(e)))
         _ <- ZIO.unlessDiscard(supportedMediaType.mimes.contains(mimeTypeDetected))(
           ZIO.fail(
@@ -125,7 +125,7 @@ object FileScanner {
                 ServiceError.BadRequestError.InvalidFieldError(
                   FileNameDeclaredField,
                   s"File name declaration does not match detected media type [$mimeTypeDetected]",
-                  fileNameDeclared.value,
+                  fileNameDeclared,
                 )
               )
             )
@@ -133,12 +133,12 @@ object FileScanner {
         )
       } yield ()
 
-    override def scanV1(
+    override def scan(
         fileByteStream: ZStream[Any, Throwable, Byte],
-        fileNameDeclared: FileNameDeclared,
+        fileNameDeclared: String,
         supportedMediaTypes: List[SupportedMediaType],
         fileBytesMax: Long,
-    ): ZIO[Scope, ServiceError, FileScannerScanV1Output] =
+    ): ZIO[Scope, ServiceError, FileScannerScanOutput] =
       for {
         supportedMediaType            <- validateFileExtension(fileNameDeclared, supportedMediaTypes)
         (fileTempPath, fileBytesSize) <- validateFileBytesSize(fileByteStream, fileBytesMax)
