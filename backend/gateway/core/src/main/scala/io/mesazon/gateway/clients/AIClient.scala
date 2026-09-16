@@ -4,7 +4,7 @@ import com.github.plokhotnyuk.jsoniter_scala.core.*
 import io.mesazon.domain.gateway.{ServiceError, SupportedMediaType}
 import io.mesazon.gateway.config.AIClientConfig
 import io.mesazon.gateway.json.OpenAIJsonSchema
-import io.mesazon.gateway.utils.{FileByteStreamScanned, ValidatedCsvByteStream}
+import io.mesazon.gateway.utils.{CsvValidatedPath, FileByteStreamScanned, FileScannedPath, ValidatedCsvByteStream}
 import sttp.ai.openai.OpenAI
 import sttp.ai.openai.OpenAIExceptions.OpenAIException
 import sttp.ai.openai.requests.completions.chat.ChatRequestBody.{ChatBody, ChatCompletionModel, ResponseFormat}
@@ -12,17 +12,36 @@ import sttp.ai.openai.requests.completions.chat.message.*
 import sttp.client4.{Backend, ResponseException, SttpClientException}
 import sttp.model.StatusCode
 import zio.*
+import zio.stream.ZStream
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.util.Base64
 import scala.jdk.DurationConverters.JavaDurationOps
 
 trait AIClient {
   def extractFromImage[A](
+      imageScannedPath: FileScannedPath,
+      supportedMediaType: SupportedMediaType,
+      instructions: String,
+  )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
+    extractFromImage(
+      FileByteStreamScanned(ZStream.fromPath(imageScannedPath.value)),
+      supportedMediaType,
+      instructions,
+    )
+
+  def extractFromImage[A](
       imageByteStream: FileByteStreamScanned,
       supportedMediaType: SupportedMediaType,
       instructions: String,
   )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
+
+  def extractFromCsv[A](
+      csvValidatedPath: CsvValidatedPath,
+      instructions: String,
+  )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
+    extractFromCsv(ValidatedCsvByteStream(ZStream.fromPath(csvValidatedPath.value)), instructions)
 
   def extractFromCsv[A](
       csvByteStream: ValidatedCsvByteStream,
@@ -98,30 +117,60 @@ object AIClient {
           )
       } yield result
 
+    private def extractFromImageBytes[A](
+        imageBytes: Array[Byte],
+        supportedMediaType: SupportedMediaType,
+        instructions: String,
+    )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] = {
+      val imageBase64 = Base64.getEncoder.encodeToString(imageBytes)
+      val imageMime   = supportedMediaType.mimes.head
+      sendAndDecode[A](
+        instructions,
+        Content.ArrayContent(
+          Seq(
+            Content.ContentPart.ImageUrl(
+              Content.ImageUrlDetails(url = s"data:$imageMime;base64,$imageBase64")
+            )
+          )
+        ),
+      )
+    }
+
+    override def extractFromImage[A](
+        imageScannedPath: FileScannedPath,
+        supportedMediaType: SupportedMediaType,
+        instructions: String,
+    )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
+      ZIO
+        .attemptBlocking(Files.readAllBytes(imageScannedPath.value))
+        .mapError(error =>
+          ServiceError.InternalServerError.UnexpectedError("Failed to read image for AI extraction", Some(error))
+        )
+        .flatMap(extractFromImageBytes[A](_, supportedMediaType, instructions))
+
     override def extractFromImage[A](
         imageByteStream: FileByteStreamScanned,
         supportedMediaType: SupportedMediaType,
         instructions: String,
     )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
-      for {
-        imageBytes <- imageByteStream.value.runCollect
-          .map(_.toArray)
-          .mapError(error =>
-            ServiceError.InternalServerError.UnexpectedError("Failed to read image for AI extraction", Some(error))
-          )
-        imageBase64 = Base64.getEncoder.encodeToString(imageBytes)
-        imageMime   = supportedMediaType.mimes.head
-        result <- sendAndDecode[A](
-          instructions,
-          Content.ArrayContent(
-            Seq(
-              Content.ContentPart.ImageUrl(
-                Content.ImageUrlDetails(url = s"data:$imageMime;base64,$imageBase64")
-              )
-            )
-          ),
+      imageByteStream.value.runCollect
+        .map(_.toArray)
+        .mapError(error =>
+          ServiceError.InternalServerError.UnexpectedError("Failed to read image for AI extraction", Some(error))
         )
-      } yield result
+        .flatMap(extractFromImageBytes[A](_, supportedMediaType, instructions))
+
+    override def extractFromCsv[A](
+        csvValidatedPath: CsvValidatedPath,
+        instructions: String,
+    )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
+      ZIO
+        .attemptBlocking(Files.readString(csvValidatedPath.value, StandardCharsets.UTF_8))
+        .mapError(error =>
+          ServiceError.InternalServerError
+            .UnexpectedError("Failed to read file content for AI extraction", Some(error))
+        )
+        .flatMap(csvText => sendAndDecode[A](instructions, Content.TextContent(csvText)))
 
     override def extractFromCsv[A](
         csvByteStream: ValidatedCsvByteStream,

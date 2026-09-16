@@ -9,7 +9,7 @@ import io.mesazon.gateway.config.AIClientConfig
 import io.mesazon.gateway.json.ai.given
 import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
 import io.mesazon.gateway.json.{ai, OpenAIJsonSchema}
-import io.mesazon.gateway.utils.{FileByteStreamScanned, ValidatedCsvByteStream}
+import io.mesazon.gateway.utils.{CsvValidatedPath, FileScannedPath}
 import io.mesazon.testkit.base.*
 import io.mesazon.wiremock.WiremockClient
 import io.mesazon.wiremock.WiremockClient.WiremockClientConfig
@@ -17,11 +17,27 @@ import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.model.StatusCode
 import sttp.tapir.Schema
 import zio.*
-import zio.stream.*
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 
 class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
+
+  private val imageBytes = Array[Byte](1, 2, 3, 4, 5)
+
+  private def imageScannedPath(): FileScannedPath = {
+    val path = Files.createTempFile("ai-client-spec-image-", ".jpg")
+    Files.write(path, imageBytes)
+    path.toFile.deleteOnExit()
+    FileScannedPath(path)
+  }
+
+  private def csvValidatedPath(csvText: String): CsvValidatedPath = {
+    val path = Files.createTempFile("ai-client-spec-csv-", ".csv")
+    Files.writeString(path, csvText, StandardCharsets.UTF_8)
+    path.toFile.deleteOnExit()
+    CsvValidatedPath(path)
+  }
 
   override def dockerComposeFile: String = "./src/test/resources/compose/wiremock.yaml"
 
@@ -97,10 +113,12 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           )
           .zioValue
 
-        val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-
         val extractedTestResult = aiClient
-          .extractFromImage[ExtractedTestResult](imageByteStream, SupportedMediaType.JPEG, "AI_CLIENT_SPEC_SUCCESS")
+          .extractFromImage[ExtractedTestResult](
+            imageScannedPath(),
+            SupportedMediaType.JPEG,
+            "AI_CLIENT_SPEC_SUCCESS",
+          )
           .zioValue
 
         extractedTestResult shouldBe ExtractedTestResult("extracted-value")
@@ -128,11 +146,9 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
             )
             .zioValue
 
-          val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-
           val extractCustomersResponse = aiClient
             .extractFromImage[ExtractCustomersResponse](
-              imageByteStream,
+              imageScannedPath(),
               SupportedMediaType.JPEG,
               "AI_CLIENT_SPEC_DUPLICATE_NOTES",
             )
@@ -174,11 +190,9 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           )
           .zioValue
 
-        val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-
         val extractCustomersResponse = aiClient
           .extractFromImage[ExtractCustomersResponse](
-            imageByteStream,
+            imageScannedPath(),
             SupportedMediaType.JPEG,
             "AI_CLIENT_SPEC_UNIDENTIFIED_SUMMARY",
           )
@@ -220,11 +234,9 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           )
           .zioValue
 
-        val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-
         val extractCustomersResponse = aiClient
           .extractFromImage[ExtractCustomersResponse](
-            imageByteStream,
+            imageScannedPath(),
             SupportedMediaType.JPEG,
             "AI_CLIENT_SPEC_EMPTY_RESULT",
           )
@@ -239,49 +251,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         )
       }
 
-      "successfully retry a rate-limited request and eventually decode the response while reading the image once" in withContext {
-        context =>
-          import context.*
-
-          val aiClient = ZIO
-            .service[AIClient]
-            .provide(
-              AIClient.live,
-              ZLayer.succeed(aiClientConfig),
-              HttpClientZioBackend.layer(),
-            )
-            .zioValue
-
-          val imageReadCountRef = Ref.make(0).zioValue
-          val imageByteStream   = FileByteStreamScanned(
-            ZStream
-              .fromZIO(imageReadCountRef.updateAndGet(_ + 1))
-              .flatMap(_ => ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-          )
-
-          val extractedTestResult = aiClient
-            .extractFromImage[ExtractedTestResult](
-              imageByteStream,
-              SupportedMediaType.JPEG,
-              "AI_CLIENT_SPEC_RETRY_SUCCESS",
-            )
-            .zioValue
-
-          extractedTestResult shouldBe ExtractedTestResult("retried-value")
-          imageReadCountRef.refValue shouldBe 1
-
-          val extractFromImageRequestMappings =
-            wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
-
-          extractFromImageRequestMappings.size shouldBe 3
-          extractFromImageRequestMappings.foreach { extractFromImageRequestMapping =>
-            extractFromImageRequestMapping.mapping.method shouldBe "POST"
-            extractFromImageRequestMapping.mapping.url shouldBe "/v1/chat/completions"
-            extractFromImageRequestMapping.count shouldBe 3
-          }
-      }
-
-      "fail with an UnexpectedError when the image stream cannot be read before sending" in withContext { context =>
+      "successfully retry a rate-limited request and eventually decode the response" in withContext { context =>
         import context.*
 
         val aiClient = ZIO
@@ -293,13 +263,46 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           )
           .zioValue
 
-        val imageByteStream = FileByteStreamScanned(ZStream.fail(new RuntimeException("image read failed")))
+        val extractedTestResult = aiClient
+          .extractFromImage[ExtractedTestResult](
+            imageScannedPath(),
+            SupportedMediaType.JPEG,
+            "AI_CLIENT_SPEC_RETRY_SUCCESS",
+          )
+          .zioValue
+
+        extractedTestResult shouldBe ExtractedTestResult("retried-value")
+
+        val extractFromImageRequestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+        extractFromImageRequestMappings.size shouldBe 3
+        extractFromImageRequestMappings.foreach { extractFromImageRequestMapping =>
+          extractFromImageRequestMapping.mapping.method shouldBe "POST"
+          extractFromImageRequestMapping.mapping.url shouldBe "/v1/chat/completions"
+          extractFromImageRequestMapping.count shouldBe 3
+        }
+      }
+
+      "fail with an UnexpectedError when the image path cannot be read before sending" in withContext { context =>
+        import context.*
+
+        val aiClient = ZIO
+          .service[AIClient]
+          .provide(
+            AIClient.live,
+            ZLayer.succeed(aiClientConfig),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val unreadableImagePath = FileScannedPath(Files.createTempDirectory("ai-client-spec-missing-image-"))
 
         val serviceError = aiClient
           .extractFromImage[ExtractedTestResult](
-            imageByteStream,
+            unreadableImagePath,
             SupportedMediaType.JPEG,
-            "AI_CLIENT_SPEC_STREAM_READ_FAILURE",
+            "AI_CLIENT_SPEC_PATH_READ_FAILURE",
           )
           .zioError
 
@@ -323,10 +326,12 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           )
           .zioValue
 
-        val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-
         val serviceError = aiClient
-          .extractFromImage[ExtractedTestResult](imageByteStream, SupportedMediaType.JPEG, "AI_CLIENT_SPEC_ERROR")
+          .extractFromImage[ExtractedTestResult](
+            imageScannedPath(),
+            SupportedMediaType.JPEG,
+            "AI_CLIENT_SPEC_ERROR",
+          )
           .zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
@@ -356,11 +361,9 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
             )
             .zioValue
 
-          val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-
           val serviceError = aiClient
             .extractFromImage[ExtractedTestResult](
-              imageByteStream,
+              imageScannedPath(),
               SupportedMediaType.JPEG,
               "AI_CLIENT_SPEC_BAD_REQUEST",
             )
@@ -390,11 +393,9 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           )
           .zioValue
 
-        val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-
         val serviceError = aiClient
           .extractFromImage[ExtractedTestResult](
-            imageByteStream,
+            imageScannedPath(),
             SupportedMediaType.JPEG,
             "AI_CLIENT_SPEC_CONNECTION_RESET",
           )
@@ -428,11 +429,9 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           )
           .zioValue
 
-        val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-
         val serviceError = aiClient
           .extractFromImage[ExtractedTestResult](
-            imageByteStream,
+            imageScannedPath(),
             SupportedMediaType.JPEG,
             "AI_CLIENT_SPEC_TIMEOUT",
           )
@@ -465,11 +464,9 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
             )
             .zioValue
 
-          val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-
           val serviceError = aiClient
             .extractFromImage[ExtractedTestResult](
-              imageByteStream,
+              imageScannedPath(),
               SupportedMediaType.JPEG,
               "AI_CLIENT_SPEC_MALFORMED",
             )
@@ -500,11 +497,9 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
             )
             .zioValue
 
-          val imageByteStream = FileByteStreamScanned(ZStream.fromIterable(Array[Byte](1, 2, 3, 4, 5)))
-
           val serviceError = aiClient
             .extractFromImage[ExtractCustomersResponse](
-              imageByteStream,
+              imageScannedPath(),
               SupportedMediaType.JPEG,
               "AI_CLIENT_SPEC_INVALID_REFINED",
             )
@@ -536,14 +531,10 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           )
           .zioValue
 
-        val csvByteStream = ValidatedCsvByteStream(
-          ZStream.fromIterable(
-            "Full Name,Email\nJohn Smith,john.smith@example.com\n".getBytes(StandardCharsets.UTF_8)
-          )
-        )
+        val csvPath = csvValidatedPath("Full Name,Email\nJohn Smith,john.smith@example.com\n")
 
         val extractedTestResult = aiClient
-          .extractFromCsv[ExtractedTestResult](csvByteStream, "AI_CLIENT_SPEC_TEXT_SUCCESS")
+          .extractFromCsv[ExtractedTestResult](csvPath, "AI_CLIENT_SPEC_TEXT_SUCCESS")
           .zioValue
 
         extractedTestResult shouldBe ExtractedTestResult("extracted-text-value")
@@ -555,6 +546,30 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         extractFromCsvRequestMappings(0).mapping.method shouldBe "POST"
         extractFromCsvRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
         extractFromCsvRequestMappings(0).count shouldBe 1
+      }
+
+      "fail with an UnexpectedError when the CSV path cannot be read before sending" in withContext { context =>
+        import context.*
+
+        val aiClient = ZIO
+          .service[AIClient]
+          .provide(
+            AIClient.live,
+            ZLayer.succeed(aiClientConfig),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val unreadableCsvPath = CsvValidatedPath(Files.createTempDirectory("ai-client-spec-missing-csv-"))
+
+        val serviceError = aiClient
+          .extractFromCsv[ExtractedTestResult](unreadableCsvPath, "AI_CLIENT_SPEC_TEXT_SUCCESS")
+          .zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError.message shouldBe "Failed to read file content for AI extraction"
+
+        wiremockClient.requestsDetails.zioValue shouldBe Seq.empty
       }
     }
   }
