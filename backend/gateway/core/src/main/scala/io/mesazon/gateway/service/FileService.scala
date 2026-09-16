@@ -26,6 +26,12 @@ trait FileService[F[_]] {
       catalogueItemImageByteStream: ZStream[Any, Throwable, Byte],
   ): F[Unit]
 
+  def extractCustomers(
+      organizationID: OrganizationID,
+      fileNameDeclared: FileNameDeclared,
+      customerBookByteStream: ZStream[Any, Throwable, Byte],
+  ): F[ExtractCustomersResponse]
+
   def extractCustomersFromPhoto(
       organizationID: OrganizationID,
       customerBookPhotoByteStream: ZStream[Any, Throwable, Byte],
@@ -216,6 +222,13 @@ object FileService {
         )
       } yield ())
 
+    override def extractCustomers(
+        organizationID: OrganizationID,
+        fileNameDeclared: FileNameDeclared,
+        customerBookByteStream: ZStream[Any, Throwable, Byte],
+    ): ServiceTask[ExtractCustomersResponse] =
+      ZIO.die(new NotImplementedError("FileService.extractCustomers is not implemented"))
+
     override def extractCustomersFromPhoto(
         organizationID: OrganizationID,
         customerBookPhotoByteStream: ZStream[Any, Throwable, Byte],
@@ -282,6 +295,15 @@ object FileService {
               catalogueItemImageOriginalFileName,
               catalogueItemImageByteStream,
             )
+        )
+
+      override def extractCustomers(
+          organizationID: OrganizationID,
+          fileNameDeclared: FileNameDeclared,
+          customerBookByteStream: ZStream[Any, Throwable, Byte],
+      ): TapirTask[ExtractCustomersResponse] =
+        HttpErrorHandler.errorResponseHandlerTapir(
+          service.extractCustomers(organizationID, fileNameDeclared, customerBookByteStream)
         )
 
       override def extractCustomersFromPhoto(

@@ -13,6 +13,7 @@ import zio.*
 import zio.stream.ZStream
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 
 class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries, TokenArbitraries {
 
@@ -737,6 +738,165 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           .zioError
 
         serviceError shouldBe updateError
+      }
+    }
+
+    "extractCustomers" should {
+      "return the AI's extracted candidates for an image" in new TestContext {
+        val organizationID         = arbitrarySample[OrganizationID]
+        val fileNameDeclared       = FileNameDeclared.assume("customers.jpeg")
+        val customerBookByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val fileScannedPath        = FileScannedPath(Files.createTempFile("file-service-spec-", ".jpeg"))
+        fileScannedPath.value.toFile.deleteOnExit()
+        val fileScannerScanV1Output: FileScannerScanV1Output = (
+          fileScannedPath = fileScannedPath,
+          supportedMediaType = SupportedMediaType.JPEG,
+          fileBytesSize = FileBytesSize.assume(1L),
+        )
+        val entriesIdentified        = 0L
+        val entriesProcessed         = 0L
+        val extractCustomersResponse = ExtractCustomersResponse(
+          entriesIdentified = entriesIdentified,
+          entriesProcessed = entriesProcessed,
+          customerIndividualCandidates = List.empty,
+          customerBusinessCandidates = List.empty,
+          unidentifiedEntriesSummary = None,
+        )
+
+        fileScannerMock.scanV1
+          .expects(
+            customerBookByteStream,
+            fileNameDeclared,
+            SupportedMediaType.images ++ SupportedMediaType.spreadsheets,
+            fileServiceConfig.maxUploadBytes,
+          )
+          .returns(ZIO.succeed(fileScannerScanV1Output))
+          .once()
+
+        val extractFromImageCallsRef =
+          Ref.make(List.empty[(FileByteStreamScanned, SupportedMediaType, String)]).zioValue
+        val extractFromCsvCallsRef = Ref.make(List.empty[(ValidatedCsvByteStream, String)]).zioValue
+        val aiClient               = new Mocks.AIClientMock(
+          ZIO.succeed(extractCustomersResponse),
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+        )
+        val fileService = buildFileService(aiClient)
+
+        val response = fileService
+          .extractCustomers(organizationID, fileNameDeclared, customerBookByteStream)
+          .zioValue
+
+        response shouldBe extractCustomersResponse
+        extractFromImageCallsRef.refValue.map { case (_, supportedMediaType, instructions) =>
+          (supportedMediaType, instructions)
+        } shouldBe List((SupportedMediaType.JPEG, FileService.extractCustomersFromPhotoInstructions))
+        extractFromCsvCallsRef.refValue shouldBe List.empty
+      }
+
+      "return the AI's extracted candidates for a spreadsheet after CSV conversion" in new TestContext {
+        val organizationID         = arbitrarySample[OrganizationID]
+        val fileNameDeclared       = FileNameDeclared.assume("customers.csv")
+        val customerBookByteStream = ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv")
+        val fileScannedPath        = FileScannedPath(Files.createTempFile("file-service-spec-", ".csv"))
+        fileScannedPath.value.toFile.deleteOnExit()
+        val fileScannerScanV1Output: FileScannerScanV1Output = (
+          fileScannedPath = fileScannedPath,
+          supportedMediaType = SupportedMediaType.CSV,
+          fileBytesSize = FileBytesSize.assume(1L),
+        )
+        val fileByteStreamScanned        = FileByteStreamScanned(ZStream.fromPath(fileScannedPath.value))
+        val customerBookFileValidatedCsv = ValidatedCsvByteStream(
+          ZStream.fromIterable("Full Name,Email".getBytes(StandardCharsets.UTF_8))
+        )
+        val entriesIdentified        = 0L
+        val entriesProcessed         = 0L
+        val extractCustomersResponse = ExtractCustomersResponse(
+          entriesIdentified = entriesIdentified,
+          entriesProcessed = entriesProcessed,
+          customerIndividualCandidates = List.empty,
+          customerBusinessCandidates = List.empty,
+          unidentifiedEntriesSummary = None,
+        )
+
+        inSequence(
+          fileScannerMock.scanV1
+            .expects(
+              customerBookByteStream,
+              fileNameDeclared,
+              SupportedMediaType.images ++ SupportedMediaType.spreadsheets,
+              fileServiceConfig.maxUploadBytes,
+            )
+            .returns(ZIO.succeed(fileScannerScanV1Output))
+            .once(),
+          spreadsheetToolMock.convertValidateCsv
+            .expects(fileByteStreamScanned, SupportedMediaType.CSV)
+            .returns(ZIO.succeed(customerBookFileValidatedCsv))
+            .once(),
+        )
+
+        val extractFromImageCallsRef =
+          Ref.make(List.empty[(FileByteStreamScanned, SupportedMediaType, String)]).zioValue
+        val extractFromCsvCallsRef = Ref.make(List.empty[(ValidatedCsvByteStream, String)]).zioValue
+        val aiClient               = new Mocks.AIClientMock(
+          ZIO.succeed(extractCustomersResponse),
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+        )
+        val fileService = buildFileService(aiClient)
+
+        val response = fileService
+          .extractCustomers(organizationID, fileNameDeclared, customerBookByteStream)
+          .zioValue
+
+        response shouldBe extractCustomersResponse
+        extractFromImageCallsRef.refValue shouldBe List.empty
+        extractFromCsvCallsRef.refValue shouldBe List(
+          (customerBookFileValidatedCsv, FileService.extractCustomersFromFileInstructions)
+        )
+      }
+
+      "propagate the validation error without calling AI when the scanner rejects the declared filename" in new TestContext {
+        val organizationID         = arbitrarySample[OrganizationID]
+        val fileNameDeclared       = FileNameDeclared.assume("customers.png")
+        val customerBookByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val scanError              = ServiceError.BadRequestError.ValidationError(
+          Seq(
+            ServiceError.BadRequestError.InvalidFieldError(
+              "fileNameDeclared",
+              "File name declaration does not match detected media type [image/jpeg]",
+              fileNameDeclared.value,
+            )
+          )
+        )
+
+        fileScannerMock.scanV1
+          .expects(
+            customerBookByteStream,
+            fileNameDeclared,
+            SupportedMediaType.images ++ SupportedMediaType.spreadsheets,
+            fileServiceConfig.maxUploadBytes,
+          )
+          .returns(ZIO.fail(scanError))
+          .once()
+
+        val extractFromImageCallsRef =
+          Ref.make(List.empty[(FileByteStreamScanned, SupportedMediaType, String)]).zioValue
+        val extractFromCsvCallsRef = Ref.make(List.empty[(ValidatedCsvByteStream, String)]).zioValue
+        val aiClient               = new Mocks.AIClientMock(
+          ZIO.die(new NotImplementedError("AIClient extraction should not be called")),
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+        )
+        val fileService = buildFileService(aiClient)
+
+        val serviceError = fileService
+          .extractCustomers(organizationID, fileNameDeclared, customerBookByteStream)
+          .zioError
+
+        serviceError shouldBe scanError
+        extractFromImageCallsRef.refValue shouldBe List.empty
+        extractFromCsvCallsRef.refValue shouldBe List.empty
       }
     }
 
