@@ -4,7 +4,6 @@ import io.mesazon.domain.gateway.{ServiceError, SupportedMediaType}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVPrinter}
 import org.apache.poi.ss.usermodel.*
 import zio.*
-import zio.stream.*
 
 import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
@@ -17,16 +16,11 @@ trait SpreadsheetTool {
       supportedMediaType: SupportedMediaType,
   ): ZIO[Scope, ServiceError, CsvValidatedPath]
 
-  def convertValidateCsv(
-      fileByteStreamScanned: FileByteStreamScanned,
-      supportedMediaType: SupportedMediaType,
-  ): ZIO[Scope, ServiceError, ValidatedCsvByteStream]
 }
 
 object SpreadsheetTool {
 
   private final class SpreadsheetToolImpl extends SpreadsheetTool {
-    inline private val fileTempFilePrefix      = "file-"
     inline private val csvTempFilePrefix       = "csv-"
     inline private val noCellsLastCellNumBound = 0
     inline private val firstCellIndex          = 0
@@ -77,14 +71,6 @@ object SpreadsheetTool {
         }
       } yield csvTempFile
 
-    private def spoolToTempFile(fileByteStreamScanned: FileByteStreamScanned): ZIO[Scope, ServiceError, Path] =
-      for {
-        fileTempFile <- TempFile.createScoped(fileTempFilePrefix)
-        _            <- fileByteStreamScanned.value
-          .run(ZSink.fromPath(fileTempFile))
-          .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to write file to temp file", Some(e)))
-      } yield fileTempFile
-
     private def validateCsvFile(csvTempFile: Path): ZIO[Scope, ServiceError, Unit] =
       ZIO
         .acquireReleaseWith(
@@ -119,13 +105,6 @@ object SpreadsheetTool {
           )
       }
 
-    override def convertValidateCsv(
-        fileByteStreamScanned: FileByteStreamScanned,
-        supportedMediaType: SupportedMediaType,
-    ): ZIO[Scope, ServiceError, ValidatedCsvByteStream] =
-      spoolToTempFile(fileByteStreamScanned)
-        .flatMap(fileTempFile => validateAndConvertToCsv(FileScannedPath(fileTempFile), supportedMediaType))
-        .map(csvValidatedPath => ValidatedCsvByteStream(ZStream.fromPath(csvValidatedPath.value)))
   }
 
   val live = ZLayer.derive[SpreadsheetToolImpl].project[SpreadsheetTool](identity)

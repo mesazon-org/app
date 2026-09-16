@@ -36,8 +36,8 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Status:** Open 2026-08-01
 - **Severity:** Medium
 - **Signature:** A real HTTP client uploading a file past `HttpApp.TapirMaxEntitySize` (20 MB) to a Tapir streaming upload endpoint (`/upload/organization/logo`, `/upload/catalogue-item/image`) never receives a response; the client eventually raises its own read-timeout (`java.net.http.HttpTimeoutException: request timed out`). The gateway logs show no activity for that request at all — not even `FileScanner`/`FileService` log lines — so the request never reaches application code. Leaving such a connection open can also delay unrelated requests on the same gateway instance.
-- **Cause:** Not yet root-caused. `HttpApp.scala` wraps the Tapir routes in `org.http4s.server.middleware.EntityLimiter` at 20 MB; the hang appears to originate in that middleware (or its interop with `ZHttp4sServerInterpreter`'s streaming body) before `FileScanner.scan` is ever invoked, independent of `FileScanner`'s own size handling.
-- **Fix:** None yet. `FileScanner.scan` was hardened to fully drain its input stream (instead of stopping the moment the byte cap is hit) so it does not itself abandon a request body mid-read (design: [Streaming uploads](project/streaming-uploads.md)), but this did not change the reproduction above — the hang happens upstream of `FileScanner` entirely.
+- **Cause:** Not yet root-caused. `HttpApp.scala` wraps the Tapir routes in `org.http4s.server.middleware.EntityLimiter` at 20 MB; the hang appears to originate in that middleware (or its interop with `ZHttp4sServerInterpreter`'s streaming body) before `FileScanner.scanV1` is ever invoked, independent of `FileScanner`'s own size handling.
+- **Fix:** None yet. `FileScanner.scanV1` fully drains its input stream (instead of stopping the moment the byte cap is hit) so it does not itself abandon a request body mid-read (design: [Streaming uploads](project/streaming-uploads.md)), but this did not change the reproduction above — the hang happens upstream of `FileScanner` entirely.
 - **Prevention:** Do not add a real end-to-end acceptance test that uploads a file past the entity limit over live HTTP; it reproduces this hang and can destabilize the rest of the acceptance suite. Cover oversized-file rejection at the unit level (`FileScannerSpec`) and functional level (`FileServiceSpec`, mocked `FileScanner`) instead, as both upload endpoints already do.
 - **Verify:** N/A until root-caused. To reproduce: send a real HTTP POST with a body > 20 MB to either upload endpoint with valid auth/headers and observe the hang.
 
@@ -85,7 +85,7 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 
 - **Status:** Mitigated 2026-07-30
 - **Severity:** Medium
-- **Signature:** `gatewayCore / Docker / publishLocal` or a dependent `gateway-it` test fails before containers start with `RuntimeException: InvocationTargetException`, caused by a `NullPointerException` in `dotty.tools.scaladoc.translators.SignatureBuilder`.
+- **Signature:** `gateway-core / Docker / publishLocal` or a dependent `gateway-it` test fails before containers start with `RuntimeException: InvocationTargetException`, caused by a `NullPointerException` in `dotty.tools.scaladoc.translators.SignatureBuilder`.
 - **Cause:** Local Scala 3.8.4 documentation generation can crash while Native Packager resolves the gateway documentation artifact. Application/test compilation is already successful; the failure is in an unused Docker documentation artifact.
 - **Fix:** Keep the setting local to the verification invocation: `sbt "set backendGatewayCore / Compile / packageDoc / publishArtifact := false; gateway-it/testOnly *GatewayAcceptanceSpec"`. Do not commit a build change solely to hide the compiler-tooling failure. Confirmed 2026-09-09: the same crash can recur on a different module's `Compile / doc` on the next run (seen on `domain`, then `waha-core`) once the first module's artifact is disabled — the failure isn't pinned to one module. Disabling `packageDoc` per-module one at a time is whack-a-mole; use the project-wide form instead: `sbt "set every Compile / packageDoc / publishArtifact := false; gateway-it/testOnly *GatewayAcceptanceSpec"`.
 - **Prevention:** Use the repository-pinned Temurin runtime/full JDK rather than an older Homebrew Java patch release when possible. If the pinned runtime still reproduces the signature, retain the invocation-scoped workaround.
@@ -95,14 +95,14 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 
 - **Status:** Mitigated 2026-09-13
 - **Severity:** Medium
-- **Signature:** `gateway-it/testOnly *GatewayAcceptanceSpec -- -z /extract/customer-book-photo` builds the images and reports success, but executes zero tests. Running `FileApiSpec` directly instead bypasses the parent context initialization. Running ScalaTest's standalone runner from the repository root can also abort with `Unable to parse YAML file` / missing `compose.yaml` before starting tests.
+- **Signature:** `gateway-it/testOnly *GatewayAcceptanceSpec -- -z /extract/customer-book` builds the images and reports success, but executes zero tests. Running `FileApiSpec` directly instead bypasses the parent context initialization. Running ScalaTest's standalone runner from the repository root can also abort with `Unable to parse YAML file` / missing `compose.yaml` before starting tests.
 - **Cause:** sbt's ScalaTest wildcard test selector targets the selected parent's own test names, not its nested specs. The compose harness also depends on the gateway-it working directory. Nested suite selection is supported by the standalone [ScalaTest runner](https://www.scalatest.org/user_guide/using_the_runner), not sbt's suite-argument parser.
 - **Fix:** After publishing the current gateway and WireMock images, select the nested file suite through its parent and set the forked runner's working directory for this invocation only:
   ```sh
   sbt "set backendGatewayIt / Test / run / forkOptions := Def.uncached((backendGatewayIt / Test / run / forkOptions).value.withWorkingDirectory(Some((backendGatewayIt / baseDirectory).value))); gateway-it/Test/runMain org.scalatest.tools.Runner -o -s io.mesazon.gateway.it.harness.GatewayAcceptanceSpec -i io.mesazon.gateway.it.FileApiSpec"
   ```
 - **Prevention:** `Test/runMain` does not invoke the build's test-entrypoint Docker publish hooks; publish fresh images first. Do not count a successful zero-test command as proof, run a child without its parent, or assume adding `-z` to this nested selection narrows the suite: the verified invocation with `-z` still ran the entire file suite.
-- **Verify:** The shared stack starts and the runner reports 30 passing `FileApiSpec` tests, including all eight photo-extraction cases. No shared harness/build changes are required.
+- **Verify:** The shared stack starts and the runner reports 34 passing `FileApiSpec` tests, including all twelve unified customer-extraction cases. No shared harness/build changes are required.
 
 ## DigitalOcean deploy fails readiness with connection refused despite a healthy app
 

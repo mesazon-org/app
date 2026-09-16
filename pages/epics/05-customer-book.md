@@ -587,7 +587,7 @@ This step exists to help a business move its existing customer book into this pr
 
 #### Request / Response / Outcome
 
-Today, photos and files use separate upload entry points and carry no file metadata declarations. After this change, there will be one upload entry point that carries whichever of the three the user has — a photo, a CSV file, or an Excel file. The same request shape will be used for all three; the server will determine which one it was sent, using the same "genuinely readable" check as before.
+Photos and files use one upload entry point that carries whichever of the three the user has — a photo, a CSV file, or an Excel file. The same request shape is used for all three; the server determines which one it was sent, using the same "genuinely readable" check as before.
 
 **Request**
 

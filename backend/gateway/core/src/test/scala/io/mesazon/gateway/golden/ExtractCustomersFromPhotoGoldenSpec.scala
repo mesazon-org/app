@@ -6,11 +6,12 @@ import io.mesazon.gateway.config.AIClientConfig
 import io.mesazon.gateway.json.ai.given
 import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
 import io.mesazon.gateway.service.FileService
-import io.mesazon.gateway.utils.FileByteStreamScanned
+import io.mesazon.gateway.utils.FileScannedPath
 import io.mesazon.testkit.base.ZWordSpecBase
 import sttp.client4.httpclient.zio.HttpClientZioBackend
 import zio.*
-import zio.stream.ZStream
+
+import java.nio.file.Path
 
 /** Manual-only check against the real OpenAI API: sends each sample photo in
   * `assets/contact-book-test-photo-1.png`..`-10.png` through the real `AIClient` and asserts the complete captured
@@ -1033,12 +1034,13 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
 
           val aiClient = buildAIClient
 
-          val customerBookPhotoByteStreamScanned =
-            FileByteStreamScanned(ZStream.fromResource(s"assets/contact-book-test-photo-$photoNumber.png"))
+          val customerBookPhotoScannedPath = FileScannedPath(
+            Path.of(getClass.getResource(s"/assets/contact-book-test-photo-$photoNumber.png").toURI)
+          )
 
           val extractCustomersResponse = aiClient
             .extractFromImage[ExtractCustomersResponse](
-              customerBookPhotoByteStreamScanned,
+              customerBookPhotoScannedPath,
               SupportedMediaType.PNG,
               FileService.extractCustomersFromPhotoInstructions,
             )

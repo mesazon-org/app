@@ -61,26 +61,10 @@ object FileServiceEndpoints {
       )
       .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
 
-  private val extractCustomersFromPhotoPostEndpoint =
+  private val extractCustomersPostEndpoint =
     securedEndpoint.post
-      .in("extract" / "customer-book-photo")
-      .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
-      .out(jsonBody[ExtractCustomersResponse])
-      .errorOut(
-        tapirServerErrorOut(
-          NonEmptyChunk(
-            TapirServerError.UnauthorizedError,
-            TapirServerError.ForbiddenError,
-            TapirServerError.BadRequestError,
-            TapirServerError.InternalServerError,
-          )
-        )
-      )
-      .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
-
-  private val extractCustomersFromFilePostEndpoint =
-    securedEndpoint.post
-      .in("extract" / "customer-book-file")
+      .in("extract" / "customer-book")
+      .in(header[FileNameDeclared](FileNameHeader))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
       .out(jsonBody[ExtractCustomersResponse])
       .errorOut(
@@ -145,7 +129,7 @@ object FileServiceEndpoints {
                 catalogueItemImageByteStream,
               )
           }),
-        extractCustomersFromPhotoPostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
+        extractCustomersPostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
           authorizationService
             .auth(
               accessToken = accessToken,
@@ -155,21 +139,8 @@ object FileServiceEndpoints {
             )
             .as(organizationID)
         }
-          .serverLogic(organizationID => { case customerBookPhotoByteStream =>
-            fileService.extractCustomersFromPhoto(organizationID, customerBookPhotoByteStream)
-          }),
-        extractCustomersFromFilePostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
-          authorizationService
-            .auth(
-              accessToken = accessToken,
-              requiresCompletedOnboardStage = true,
-              organizationIDOpt = Some(organizationID),
-              organizationUserRolesAllowedOpt = Some(OrganizationUserRole.adminRoles),
-            )
-            .as(organizationID)
-        }
-          .serverLogic(organizationID => { case customerBookFileByteStream =>
-            fileService.extractCustomersFromFile(organizationID, customerBookFileByteStream)
+          .serverLogic(organizationID => { case (fileNameDeclared, customerBookByteStream) =>
+            fileService.extractCustomers(organizationID, fileNameDeclared, customerBookByteStream)
           }),
       )
       openApiDocsOpt = Option.when(enableDocs)(
@@ -178,8 +149,7 @@ object FileServiceEndpoints {
             List(
               uploadOrganizationLogoPostEndpoint,
               uploadCatalogueItemImagePostEndpoint,
-              extractCustomersFromPhotoPostEndpoint,
-              extractCustomersFromFilePostEndpoint,
+              extractCustomersPostEndpoint,
             ),
             Info(
               title = "FileService",

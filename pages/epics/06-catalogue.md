@@ -148,14 +148,14 @@ Response is empty. A successful add answers with nothing but a success status �
 | 1. Owner uploads a valid image for an active item | - The file is confirmed to be a PNG, JPEG or WEBP by inspecting its contents - The original is stored as sent - A normalised copy is stored, bounded to 640×640 |
 | 2. Owner uploads a second image later | - The new files replace the old ones |
 | 3. User uploads an image for an item that is archived, or does not exist | - Rejected - Today this is reported as a server error — see [gap 1](#1-uploading-for-a-missing-or-archived-item-is-reported-as-a-server-error) |
-| 4. User uploads a file that is not a supported image | - Rejected and nothing is stored - Today this is reported as a server error, the same as [gap 2 in Organization Onboarding]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}#2-choosing-the-wrong-file-is-reported-as-a-server-error) |
+| 4. User uploads a file whose filename extension does not match its detected image format | - Rejected as an invalid request and nothing is stored |
 | 5. User uploads a file larger than the limit | - Should be rejected cleanly - Today it is not: the same stall affects this upload as the organization logo upload — see [gap 6 in Organization Onboarding]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}#6-an-oversized-upload-does-not-fail-it-stalls) |
 | 6. A member with the ordinary user role tries to upload | - Rejected. Only owners and admins may change an item's image |
 | 7. The organization id, item id, or file name is missing from the request | - Rejected as an invalid request |
 
 #### Requirements
 
-1. Only PNG, JPEG and WEBP files are accepted, decided by inspecting the file's contents rather than its name or declared type.
+1. Only PNG, JPEG and WEBP files are accepted. The filename extension and the format detected from the file must agree.
 2. A file may be up to 20 MB.
 3. An item may hold one image. Uploading again replaces both the original and the normalised copy.
 4. Only an active item can receive an image.
@@ -188,10 +188,10 @@ Response is empty. A successful upload answers with nothing but a success status
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - The organization id header is missing - The item id header is missing - The file name header is missing |
+| 400 | `VALIDATION_ERROR` | - The organization id header is missing - The item id header is missing - The file name header is missing or unsupported - The filename extension does not match the detected image format |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow it |
-| 500 | `INTERNAL_SERVER_ERROR` | - The item does not exist, belongs to another organization, or is archived - The file is not a supported image - Unexpected error |
+| 500 | `INTERNAL_SERVER_ERROR` | - The item does not exist, belongs to another organization, or is archived - Image decoding or processing fails unexpectedly - Unexpected error |
 
 ### 3. User Browses the Catalogue
 

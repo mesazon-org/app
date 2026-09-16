@@ -31,16 +31,6 @@ trait FileService[F[_]] {
       fileNameDeclared: FileNameDeclared,
       customerBookByteStream: ZStream[Any, Throwable, Byte],
   ): F[ExtractCustomersResponse]
-
-  def extractCustomersFromPhoto(
-      organizationID: OrganizationID,
-      customerBookPhotoByteStream: ZStream[Any, Throwable, Byte],
-  ): F[ExtractCustomersResponse]
-
-  def extractCustomersFromFile(
-      organizationID: OrganizationID,
-      customerBookFileByteStream: ZStream[Any, Throwable, Byte],
-  ): F[ExtractCustomersResponse]
 }
 
 object FileService {
@@ -126,13 +116,14 @@ object FileService {
         organizationLogoImageOriginalFileName: ImageOriginalFileName,
         organizationLogoImageByteStream: ZStream[Any, Throwable, Byte],
     ): ServiceTask[Unit] = ZIO.scoped(for {
-      organizationLogoImageScanOutput <- fileScanner.scan(
+      organizationLogoImageScanOutput <- fileScanner.scanV1(
         organizationLogoImageByteStream,
+        FileNameDeclared.assume(organizationLogoImageOriginalFileName.value),
         SupportedMediaType.images,
         fileServiceConfig.maxUploadBytes,
       )
       organizationLogoImageNormalizedResult <- imageProcessing.normalize(
-        organizationLogoImageScanOutput.fileByteStreamScanned,
+        FileByteStreamScanned(ZStream.fromPath(organizationLogoImageScanOutput.fileScannedPath.value)),
         SupportedMediaType.images,
       )
       organizationLogoImageUploadedResult <-
@@ -186,13 +177,14 @@ object FileService {
           } else {
             ZIO.unit
           }
-        catalogueItemImageScanOutput <- fileScanner.scan(
+        catalogueItemImageScanOutput <- fileScanner.scanV1(
           catalogueItemImageByteStream,
+          FileNameDeclared.assume(catalogueItemImageOriginalFileName.value),
           SupportedMediaType.images,
           fileServiceConfig.maxUploadBytes,
         )
         catalogueItemImageNormalizedResult <- imageProcessing.normalize(
-          catalogueItemImageScanOutput.fileByteStreamScanned,
+          FileByteStreamScanned(ZStream.fromPath(catalogueItemImageScanOutput.fileScannedPath.value)),
           SupportedMediaType.images,
         )
         catalogueItemImageUploadedResult <-
@@ -258,40 +250,6 @@ object FileService {
       }
     } yield extractCustomersResponse)
 
-    override def extractCustomersFromPhoto(
-        organizationID: OrganizationID,
-        customerBookPhotoByteStream: ZStream[Any, Throwable, Byte],
-    ): ServiceTask[ExtractCustomersResponse] = ZIO.scoped(for {
-      customerBookPhotoScanOutput <- fileScanner.scan(
-        customerBookPhotoByteStream,
-        SupportedMediaType.images,
-        fileServiceConfig.maxUploadBytes,
-      )
-      extractCustomersResponse <- aiClient.extractFromImage[ExtractCustomersResponse](
-        customerBookPhotoScanOutput.fileByteStreamScanned,
-        customerBookPhotoScanOutput.supportedMediaType,
-        extractCustomersFromPhotoInstructions,
-      )
-    } yield extractCustomersResponse)
-
-    override def extractCustomersFromFile(
-        organizationID: OrganizationID,
-        customerBookFileByteStream: ZStream[Any, Throwable, Byte],
-    ): ServiceTask[ExtractCustomersResponse] = ZIO.scoped(for {
-      customerBookFileScanOutput <- fileScanner.scan(
-        customerBookFileByteStream,
-        SupportedMediaType.spreadsheets,
-        fileServiceConfig.maxUploadBytes,
-      )
-      customerBookFileValidatedCsv <- spreadsheetTool.convertValidateCsv(
-        customerBookFileScanOutput.fileByteStreamScanned,
-        customerBookFileScanOutput.supportedMediaType,
-      )
-      extractCustomersResponse <- aiClient.extractFromCsv[ExtractCustomersResponse](
-        customerBookFileValidatedCsv,
-        extractCustomersFromFileInstructions,
-      )
-    } yield extractCustomersResponse)
   }
 
   def observed(service: FileService[ServiceTask]): FileService[TapirTask] =
@@ -335,21 +293,6 @@ object FileService {
           service.extractCustomers(organizationID, fileNameDeclared, customerBookByteStream)
         )
 
-      override def extractCustomersFromPhoto(
-          organizationID: OrganizationID,
-          customerBookPhotoByteStream: ZStream[Any, Throwable, Byte],
-      ): TapirTask[ExtractCustomersResponse] =
-        HttpErrorHandler.errorResponseHandlerTapir(
-          service.extractCustomersFromPhoto(organizationID, customerBookPhotoByteStream)
-        )
-
-      override def extractCustomersFromFile(
-          organizationID: OrganizationID,
-          customerBookFileByteStream: ZStream[Any, Throwable, Byte],
-      ): TapirTask[ExtractCustomersResponse] =
-        HttpErrorHandler.errorResponseHandlerTapir(
-          service.extractCustomersFromFile(organizationID, customerBookFileByteStream)
-        )
     }
 
   val local = ZLayer

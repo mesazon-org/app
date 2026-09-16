@@ -159,7 +159,7 @@ sbt "gateway-build"                                     # CI alias: clean -> bac
 sbt "gateway-core/testOnly io.mesazon.gateway.fun.*"    # functional tests only, no containers
 sbt "gateway-it/test"                                   # acceptance tests, needs Docker
 
-sbt "gatewayCore/Docker/publishLocal"                   # build gateway image
+sbt "gateway-core/Docker/publishLocal"                  # build gateway image
 docker compose -f compose/compose.yaml up -d            # local stack: postgres, flyway, gateway, mocks
 ```
 
