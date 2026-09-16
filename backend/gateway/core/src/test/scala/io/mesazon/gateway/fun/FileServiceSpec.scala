@@ -829,8 +829,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             )
             .returns(ZIO.succeed(fileScannerScanV1Output))
             .once(),
-          spreadsheetToolMock.convertValidateCsv
-            .expects(*, SupportedMediaType.CSV)
+          spreadsheetToolMock.validateAndConvertToCsv
+            .expects(fileScannedPath, SupportedMediaType.CSV)
             .returns(ZIO.succeed(customerBookFileValidatedCsv))
             .once(),
         )

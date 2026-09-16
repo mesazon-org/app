@@ -233,19 +233,16 @@ object FileService {
         SupportedMediaType.extractData,
         fileServiceConfig.maxUploadBytes,
       )
-      customerBookFileByteStreamScanned = FileByteStreamScanned(
-        ZStream.fromPath(customerBookScanOutput.fileScannedPath.value)
-      )
       extractCustomersResponse <- customerBookScanOutput.supportedMediaType match {
         case supportedMediaType if SupportedMediaType.images.contains(supportedMediaType) =>
           aiClient.extractFromImage[ExtractCustomersResponse](
-            customerBookFileByteStreamScanned,
+            FileByteStreamScanned(ZStream.fromPath(customerBookScanOutput.fileScannedPath.value)),
             supportedMediaType,
             extractCustomersFromPhotoInstructions,
           )
         case supportedMediaType if SupportedMediaType.spreadsheets.contains(supportedMediaType) =>
           spreadsheetTool
-            .convertValidateCsv(customerBookFileByteStreamScanned, supportedMediaType)
+            .validateAndConvertToCsv(customerBookScanOutput.fileScannedPath, supportedMediaType)
             .flatMap(customerBookFileValidatedCsv =>
               aiClient.extractFromCsv[ExtractCustomersResponse](
                 customerBookFileValidatedCsv,
