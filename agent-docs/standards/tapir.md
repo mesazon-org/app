@@ -40,3 +40,4 @@ Reusable rules for routes Smithy cannot express. Related: [Smithy](smithy.md), [
 ## Naming
 
 - Error case: `PascalCase` + `Error`; wire code: `SCREAMING_SNAKE_CASE`.
+- Success case: an endpoint's declared output body type is named `<Operation><Method>Response` (e.g. `ExtractCustomersPostResponse`), always — even when the endpoint's own orchestration returns a different type (e.g. a shared domain type used elsewhere). Map the orchestration's return value into the endpoint-owned response type via Chimney, inline at the endpoint's `serverLogic` wiring — never inside the service, per [Scala](scala.md)'s no-private-mapping-helpers rule.

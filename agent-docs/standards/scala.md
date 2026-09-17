@@ -54,6 +54,7 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 - Exactly one `should` section per public operation, named after that operation. Put all successes (including no-ops) first, then failures. Never split one operation across scenario sections or combine operations. A genuine cross-operation invariant may have its own section.
 - One test exercises one operation. Arrange preconditions directly rather than calling another public operation.
 - Success test name = observable success. Failure test name starts `fail with a[n] <concrete error>` then states the condition/side-effect proof.
+- A test description never embeds a concrete config value or a model/provider identifier (a row-count limit, a batch size, a specific model name) — describe only observable behavior, and assert the concrete value in the test body instead, so the description stays accurate if the value later changes.
 
 ### Data and assertions
 
