@@ -521,7 +521,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
     }
 
     "extractFromCsv" should {
-      "split CSV text into 50-row Luna requests and merge their structured responses" in withContext { context =>
+      "split CSV text into configured batches and merge their structured responses" in withContext { context =>
         import context.*
 
         val aiClient = ZIO
