@@ -40,6 +40,8 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
           requestTimeout = Duration.fromSeconds(120),
           sendMaxRetries = 2,
           sendRetryDelay = Duration.fromSeconds(1),
+          csvBatchMaxDataRows = 50,
+          csvBatchParallelism = 3,
         )
       ),
       HttpClientZioBackend.layer(),

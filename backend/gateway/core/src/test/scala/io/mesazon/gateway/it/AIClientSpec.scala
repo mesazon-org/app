@@ -71,6 +71,8 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
       requestTimeout = Duration.fromSeconds(60),
       sendMaxRetries = 2,
       sendRetryDelay = Duration.fromMillis(10),
+      csvBatchMaxDataRows = 50,
+      csvBatchParallelism = 3,
     )
 
     f(Context(aiClientConfig, wiremockClient))
@@ -534,6 +536,60 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         val csvText =
           "Full Name,Email\n" +
             (1 to 101).map(index => s"Customer $index,customer$index@example.com\n").mkString
+        val csvPath = csvValidatedPath(csvText)
+
+        val extractCustomersResponse = aiClient
+          .extractFromCsv(csvPath, "AI_CLIENT_SPEC_TEXT_SUCCESS")
+          .zioValue
+
+        val expectedCandidate = ExtractCustomerIndividualData(
+          candidate = ExtractCustomerIndividual(
+            fullName = CustomerFullName.assume("John Smith"),
+            emails = List.empty,
+            phoneNumbers = List.empty,
+            addressLine1 = None,
+            addressLine2 = None,
+            city = None,
+            postalCode = None,
+            country = None,
+          ),
+          isDuplicate = true,
+          extractionNotes = None,
+        )
+        extractCustomersResponse shouldBe ExtractCustomersResponse(
+          entriesIdentified = 3L,
+          entriesProcessed = 3L,
+          customerIndividualCandidates = List.fill(3)(expectedCandidate),
+          customerBusinessCandidates = List.empty,
+          unidentifiedEntriesSummary = None,
+        )
+
+        val extractFromCsvRequestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+        extractFromCsvRequestMappings.size shouldBe 3
+        extractFromCsvRequestMappings.map(_.mapping.method).distinct shouldBe Seq("POST")
+        extractFromCsvRequestMappings.map(_.mapping.url).distinct shouldBe Seq("/v1/chat/completions")
+        extractFromCsvRequestMappings.map(_.count).distinct shouldBe Seq(3)
+      }
+
+      "honor a configured maximum batch size when splitting CSV rows into AI requests" in withContext { context =>
+        import context.*
+
+        val aiClientConfigSmallBatches = aiClientConfig.copy(csvBatchMaxDataRows = 10)
+
+        val aiClient = ZIO
+          .service[AIClient]
+          .provide(
+            AIClient.live,
+            ZLayer.succeed(aiClientConfigSmallBatches),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val csvText =
+          "Full Name,Email\n" +
+            (1 to 25).map(index => s"Customer $index,customer$index@example.com\n").mkString
         val csvPath = csvValidatedPath(csvText)
 
         val extractCustomersResponse = aiClient
