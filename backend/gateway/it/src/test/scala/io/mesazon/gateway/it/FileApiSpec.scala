@@ -917,7 +917,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val customerBookImageBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
+        val extractCustomersPostResponse = gatewayClient
           .extractCustomersPost[smithy.InternalServerError](
             Some(organizationUserRow.organizationID),
             Some(ExtractCustomersFileName.assume("customers.jpeg")),
@@ -926,7 +926,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.Ok
+        extractCustomersPostResponse.code shouldBe StatusCode.Ok
 
         val extractCustomerIndividualDataExpected = ExtractCustomerIndividualData(
           candidate = ExtractCustomerIndividual(
@@ -953,8 +953,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           extractionNotes = None,
         )
 
-        extractCustomersResponse.body shouldBe Right(
-          ExtractCustomersResponse(
+        extractCustomersPostResponse.body shouldBe Right(
+          ExtractCustomersPostResponse(
             entriesIdentified = 1L,
             entriesProcessed = 1L,
             customerIndividualCandidates = List(extractCustomerIndividualDataExpected),
@@ -987,7 +987,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val customerBookFileBytes =
           ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
+        val extractCustomersPostResponse = gatewayClient
           .extractCustomersPost[smithy.InternalServerError](
             Some(organizationUserRow.organizationID),
             Some(ExtractCustomersFileName.assume("customers.csv")),
@@ -996,7 +996,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.Ok
+        extractCustomersPostResponse.code shouldBe StatusCode.Ok
 
         val extractCustomerIndividualDataExpected = ExtractCustomerIndividualData(
           candidate = ExtractCustomerIndividual(
@@ -1015,8 +1015,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           extractionNotes = None,
         )
 
-        extractCustomersResponse.body shouldBe Right(
-          ExtractCustomersResponse(
+        extractCustomersPostResponse.body shouldBe Right(
+          ExtractCustomersPostResponse(
             entriesIdentified = 1L,
             entriesProcessed = 1L,
             customerIndividualCandidates = List(extractCustomerIndividualDataExpected),
@@ -1049,7 +1049,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val customerBookFileBytes =
           ZStream.fromResource("assets/contact-book-test-spreadsheet-2.xlsx").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
+        val extractCustomersPostResponse = gatewayClient
           .extractCustomersPost[smithy.InternalServerError](
             Some(organizationUserRow.organizationID),
             Some(ExtractCustomersFileName.assume("customers.xlsx")),
@@ -1058,7 +1058,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.Ok
+        extractCustomersPostResponse.code shouldBe StatusCode.Ok
 
         val extractCustomerIndividualDataExpected = ExtractCustomerIndividualData(
           candidate = ExtractCustomerIndividual(
@@ -1077,8 +1077,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           extractionNotes = None,
         )
 
-        extractCustomersResponse.body shouldBe Right(
-          ExtractCustomersResponse(
+        extractCustomersPostResponse.body shouldBe Right(
+          ExtractCustomersPostResponse(
             entriesIdentified = 1L,
             entriesProcessed = 1L,
             customerIndividualCandidates = List(extractCustomerIndividualDataExpected),
@@ -1103,7 +1103,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val customerBookFileBytes =
           ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
+        val extractCustomersPostResponse = gatewayClient
           .extractCustomersPost[smithy.BadRequest](
             None,
             Some(ExtractCustomersFileName.assume("customers.csv")),
@@ -1112,8 +1112,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.BadRequest
-        extractCustomersResponse.body.left.value shouldBe smithy.BadRequest()
+        extractCustomersPostResponse.code shouldBe StatusCode.BadRequest
+        extractCustomersPostResponse.body.left.value shouldBe smithy.BadRequest()
       }
 
       "fail with BadRequest when the file name header is missing" in withContext { context =>
@@ -1137,7 +1137,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val customerBookFileBytes =
           ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
+        val extractCustomersPostResponse = gatewayClient
           .extractCustomersPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
             None,
@@ -1146,8 +1146,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.BadRequest
-        extractCustomersResponse.body.left.value shouldBe smithy.BadRequest()
+        extractCustomersPostResponse.code shouldBe StatusCode.BadRequest
+        extractCustomersPostResponse.body.left.value shouldBe smithy.BadRequest()
       }
 
       "fail with Unauthorized when access token is missing" in withContext { context =>
@@ -1157,7 +1157,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val customerBookFileBytes =
           ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
+        val extractCustomersPostResponse = gatewayClient
           .extractCustomersPost[smithy.Unauthorized](
             Some(organizationID),
             Some(ExtractCustomersFileName.assume("customers.csv")),
@@ -1166,8 +1166,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.Unauthorized
-        extractCustomersResponse.body.left.value shouldBe smithy.Unauthorized()
+        extractCustomersPostResponse.code shouldBe StatusCode.Unauthorized
+        extractCustomersPostResponse.body.left.value shouldBe smithy.Unauthorized()
       }
 
       "fail with Unauthorized when access token is invalid" in withContext { context =>
@@ -1177,7 +1177,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val customerBookFileBytes =
           ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
+        val extractCustomersPostResponse = gatewayClient
           .extractCustomersPost[smithy.Unauthorized](
             Some(organizationID),
             Some(ExtractCustomersFileName.assume("customers.csv")),
@@ -1186,8 +1186,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.Unauthorized
-        extractCustomersResponse.body.left.value shouldBe smithy.Unauthorized()
+        extractCustomersPostResponse.code shouldBe StatusCode.Unauthorized
+        extractCustomersPostResponse.body.left.value shouldBe smithy.Unauthorized()
       }
 
       "fail with Forbidden when the user is assigned to the organization with a disallowed role" in withContext {
@@ -1218,7 +1218,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           val customerBookFileBytes =
             ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
-          val extractCustomersResponse = gatewayClient
+          val extractCustomersPostResponse = gatewayClient
             .extractCustomersPost[smithy.Forbidden](
               Some(organizationUserRow.organizationID),
               Some(ExtractCustomersFileName.assume("customers.csv")),
@@ -1227,8 +1227,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
             )
             .zioValue
 
-          extractCustomersResponse.code shouldBe StatusCode.Forbidden
-          extractCustomersResponse.body.left.value shouldBe smithy.Forbidden()
+          extractCustomersPostResponse.code shouldBe StatusCode.Forbidden
+          extractCustomersPostResponse.body.left.value shouldBe smithy.Forbidden()
       }
 
       "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
@@ -1246,7 +1246,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val customerBookFileBytes =
           ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
+        val extractCustomersPostResponse = gatewayClient
           .extractCustomersPost[smithy.Forbidden](
             Some(organizationID),
             Some(ExtractCustomersFileName.assume("customers.csv")),
@@ -1255,8 +1255,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.Forbidden
-        extractCustomersResponse.body.left.value shouldBe smithy.Forbidden()
+        extractCustomersPostResponse.code shouldBe StatusCode.Forbidden
+        extractCustomersPostResponse.body.left.value shouldBe smithy.Forbidden()
       }
 
       "fail with InternalServerError when the user is not assigned to the organization" in withContext { context =>
@@ -1273,7 +1273,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val customerBookFileBytes =
           ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
+        val extractCustomersPostResponse = gatewayClient
           .extractCustomersPost[smithy.InternalServerError](
             Some(organizationID),
             Some(ExtractCustomersFileName.assume("customers.csv")),
@@ -1282,8 +1282,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.InternalServerError
-        extractCustomersResponse.body.left.value shouldBe smithy.InternalServerError()
+        extractCustomersPostResponse.code shouldBe StatusCode.InternalServerError
+        extractCustomersPostResponse.body.left.value shouldBe smithy.InternalServerError()
       }
 
       "fail with BadRequest when the file name extension does not match the uploaded file" in withContext { context =>
@@ -1306,7 +1306,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val customerBookFileBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
+        val extractCustomersPostResponse = gatewayClient
           .extractCustomersPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
             Some(ExtractCustomersFileName.assume("customers.csv")),
@@ -1315,8 +1315,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.BadRequest
-        extractCustomersResponse.body.left.value shouldBe smithy.BadRequest()
+        extractCustomersPostResponse.code shouldBe StatusCode.BadRequest
+        extractCustomersPostResponse.body.left.value shouldBe smithy.BadRequest()
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
       }
@@ -1342,7 +1342,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val customerBookFileBytes = ZStream.fromResource("assets/test-plain.zip").runCollect.zioValue
 
-          val extractCustomersResponse = gatewayClient
+          val extractCustomersPostResponse = gatewayClient
             .extractCustomersPost[smithy.InternalServerError](
               Some(organizationUserRow.organizationID),
               Some(ExtractCustomersFileName.assume("customers.xlsx")),
@@ -1351,8 +1351,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
             )
             .zioValue
 
-          extractCustomersResponse.code shouldBe StatusCode.InternalServerError
-          extractCustomersResponse.body.left.value shouldBe smithy.InternalServerError()
+          extractCustomersPostResponse.code shouldBe StatusCode.InternalServerError
+          extractCustomersPostResponse.body.left.value shouldBe smithy.InternalServerError()
 
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
       }

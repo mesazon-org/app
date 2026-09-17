@@ -66,7 +66,7 @@ object FileServiceEndpoints {
       .in("extract" / "customer-book")
       .in(header[ExtractCustomersFileName](FileNameHeader))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
-      .out(jsonBody[ExtractCustomersResponse])
+      .out(jsonBody[ExtractCustomersPostResponse])
       .errorOut(
         tapirServerErrorOut(
           NonEmptyChunk(
