@@ -11,14 +11,9 @@ import sttp.tapir.docs.apispec.schema.TapirSchemaToJsonSchema
 
 object ai {
 
-  private lazy val assistantResponseSchemaValue: Schema[AssistantResponse] = Schema.derived[AssistantResponse]
+  given assistantResponseSchema: Schema[AssistantResponse] = Schema.derived[AssistantResponse]
 
-  private lazy val assistantResponseCodecValue: JsonValueCodec[AssistantResponse] =
-    JsonCodecMaker.make[AssistantResponse]
-
-  given assistantResponseSchema: Schema[AssistantResponse] = assistantResponseSchemaValue
-
-  given assistantResponseCodec: JsonValueCodec[AssistantResponse] = assistantResponseCodecValue
+  given assistantResponseCodec: JsonValueCodec[AssistantResponse] = JsonCodecMaker.make[AssistantResponse]
 
   given extractCustomersPostResponseOpenAIJsonSchema: OpenAIJsonSchema[ExtractCustomersPostResponse] =
     fromTapir(tapir.extractCustomersPostResponseSchema)

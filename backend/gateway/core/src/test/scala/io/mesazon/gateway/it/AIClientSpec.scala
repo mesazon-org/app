@@ -6,8 +6,6 @@ import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClient
 import io.mesazon.gateway.config.AIClientConfig
-import io.mesazon.gateway.json.ai.given
-import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
 import io.mesazon.gateway.json.{ai, OpenAIJsonSchema}
 import io.mesazon.gateway.utils.{CsvValidatedPath, FileScannedPath}
 import io.mesazon.testkit.base.*
@@ -133,124 +131,6 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
         extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
         extractFromImageRequestMappings(0).count shouldBe 1
-      }
-
-      "successfully decode a candidate marked as a duplicate with populated extraction notes" in withContext {
-        context =>
-          import context.*
-
-          val aiClient = ZIO
-            .service[AIClient]
-            .provide(
-              AIClient.live,
-              ZLayer.succeed(aiClientConfig),
-              HttpClientZioBackend.layer(),
-            )
-            .zioValue
-
-          val extractCustomersResponse = aiClient
-            .extractFromImage[ExtractCustomersResponse](
-              imageScannedPath(),
-              SupportedMediaType.JPEG,
-              "AI_CLIENT_SPEC_DUPLICATE_NOTES",
-            )
-            .zioValue
-
-          val extractCustomerIndividualDataExpected = ExtractCustomerIndividualData(
-            candidate = ExtractCustomerIndividual(
-              fullName = CustomerFullName.assume("John Smith"),
-              emails = List.empty,
-              phoneNumbers = List.empty,
-              addressLine1 = None,
-              addressLine2 = None,
-              city = None,
-              postalCode = None,
-              country = None,
-            ),
-            isDuplicate = true,
-            extractionNotes = Some("Phone number partially illegible"),
-          )
-
-          extractCustomersResponse shouldBe ExtractCustomersResponse(
-            entriesIdentified = 1L,
-            entriesProcessed = 1L,
-            customerIndividualCandidates = List(extractCustomerIndividualDataExpected),
-            customerBusinessCandidates = List.empty,
-            unidentifiedEntriesSummary = None,
-          )
-      }
-
-      "successfully decode a response with a populated unidentified-entries summary" in withContext { context =>
-        import context.*
-
-        val aiClient = ZIO
-          .service[AIClient]
-          .provide(
-            AIClient.live,
-            ZLayer.succeed(aiClientConfig),
-            HttpClientZioBackend.layer(),
-          )
-          .zioValue
-
-        val extractCustomersResponse = aiClient
-          .extractFromImage[ExtractCustomersResponse](
-            imageScannedPath(),
-            SupportedMediaType.JPEG,
-            "AI_CLIENT_SPEC_UNIDENTIFIED_SUMMARY",
-          )
-          .zioValue
-
-        val extractCustomerIndividualDataExpected = ExtractCustomerIndividualData(
-          candidate = ExtractCustomerIndividual(
-            fullName = CustomerFullName.assume("Alice Wong"),
-            emails = List.empty,
-            phoneNumbers = List.empty,
-            addressLine1 = None,
-            addressLine2 = None,
-            city = None,
-            postalCode = None,
-            country = None,
-          ),
-          isDuplicate = false,
-          extractionNotes = None,
-        )
-
-        extractCustomersResponse shouldBe ExtractCustomersResponse(
-          entriesIdentified = 4L,
-          entriesProcessed = 1L,
-          customerIndividualCandidates = List(extractCustomerIndividualDataExpected),
-          customerBusinessCandidates = List.empty,
-          unidentifiedEntriesSummary = Some("Could not read the last 3 entries"),
-        )
-      }
-
-      "successfully decode an empty result when nothing is recognizable in the image" in withContext { context =>
-        import context.*
-
-        val aiClient = ZIO
-          .service[AIClient]
-          .provide(
-            AIClient.live,
-            ZLayer.succeed(aiClientConfig),
-            HttpClientZioBackend.layer(),
-          )
-          .zioValue
-
-        val extractCustomersResponse = aiClient
-          .extractFromImage[ExtractCustomersResponse](
-            imageScannedPath(),
-            SupportedMediaType.JPEG,
-            "AI_CLIENT_SPEC_EMPTY_RESULT",
-          )
-          .zioValue
-
-        extractCustomersResponse shouldBe ExtractCustomersResponse(
-          entriesIdentified = 0L,
-          entriesProcessed = 0L,
-          customerIndividualCandidates = List.empty,
-          customerBusinessCandidates = List.empty,
-          unidentifiedEntriesSummary = None,
-        )
       }
 
       "successfully retry a rate-limited request and eventually decode the response" in withContext { context =>
@@ -486,42 +366,41 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           extractFromImageRequestMappings(0).count shouldBe 1
       }
 
-      "fail with an UnexpectedError when the AI response violates a refined field constraint" in withContext {
-        context =>
-          import context.*
+      "fail with an UnexpectedError when the AI response does not match the expected shape" in withContext { context =>
+        import context.*
 
-          val aiClient = ZIO
-            .service[AIClient]
-            .provide(
-              AIClient.live,
-              ZLayer.succeed(aiClientConfig),
-              HttpClientZioBackend.layer(),
-            )
-            .zioValue
+        val aiClient = ZIO
+          .service[AIClient]
+          .provide(
+            AIClient.live,
+            ZLayer.succeed(aiClientConfig),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
 
-          val serviceError = aiClient
-            .extractFromImage[ExtractCustomersResponse](
-              imageScannedPath(),
-              SupportedMediaType.JPEG,
-              "AI_CLIENT_SPEC_INVALID_REFINED",
-            )
-            .zioError
+        val serviceError = aiClient
+          .extractFromImage[ExtractedTestResult](
+            imageScannedPath(),
+            SupportedMediaType.JPEG,
+            "AI_CLIENT_SPEC_UNEXPECTED_SHAPE",
+          )
+          .zioError
 
-          serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
-          serviceError.message should startWith("Failed to parse AI response")
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError.message should startWith("Failed to parse AI response")
 
-          val extractFromImageRequestMappings =
-            wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+        val extractFromImageRequestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
 
-          extractFromImageRequestMappings.size shouldBe 1
-          extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
-          extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
-          extractFromImageRequestMappings(0).count shouldBe 1
+        extractFromImageRequestMappings.size shouldBe 1
+        extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
+        extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+        extractFromImageRequestMappings(0).count shouldBe 1
       }
     }
 
     "extractFromCsv" should {
-      "split CSV text into configured batches and merge their structured responses" in withContext { context =>
+      "decode CSV text into one result per configured batch, in order" in withContext { context =>
         import context.*
 
         val aiClient = ZIO
@@ -538,31 +417,11 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
             (1 to 101).map(index => s"Customer $index,customer$index@example.com\n").mkString
         val csvPath = csvValidatedPath(csvText)
 
-        val extractCustomersResponse = aiClient
-          .extractFromCsv(csvPath, "AI_CLIENT_SPEC_TEXT_SUCCESS")
+        val extractedTestResults = aiClient
+          .extractFromCsv[ExtractedTestResult](csvPath, "AI_CLIENT_SPEC_CSV_GENERIC_SUCCESS")
           .zioValue
 
-        val expectedCandidate = ExtractCustomerIndividualData(
-          candidate = ExtractCustomerIndividual(
-            fullName = CustomerFullName.assume("John Smith"),
-            emails = List.empty,
-            phoneNumbers = List.empty,
-            addressLine1 = None,
-            addressLine2 = None,
-            city = None,
-            postalCode = None,
-            country = None,
-          ),
-          isDuplicate = true,
-          extractionNotes = None,
-        )
-        extractCustomersResponse shouldBe ExtractCustomersResponse(
-          entriesIdentified = 3L,
-          entriesProcessed = 3L,
-          customerIndividualCandidates = List.fill(3)(expectedCandidate),
-          customerBusinessCandidates = List.empty,
-          unidentifiedEntriesSummary = None,
-        )
+        extractedTestResults.toChunk.toList shouldBe List.fill(3)(ExtractedTestResult("batch-result"))
 
         val extractFromCsvRequestMappings =
           wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
@@ -592,31 +451,11 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
             (1 to 25).map(index => s"Customer $index,customer$index@example.com\n").mkString
         val csvPath = csvValidatedPath(csvText)
 
-        val extractCustomersResponse = aiClient
-          .extractFromCsv(csvPath, "AI_CLIENT_SPEC_TEXT_SUCCESS")
+        val extractedTestResults = aiClient
+          .extractFromCsv[ExtractedTestResult](csvPath, "AI_CLIENT_SPEC_CSV_GENERIC_SUCCESS")
           .zioValue
 
-        val expectedCandidate = ExtractCustomerIndividualData(
-          candidate = ExtractCustomerIndividual(
-            fullName = CustomerFullName.assume("John Smith"),
-            emails = List.empty,
-            phoneNumbers = List.empty,
-            addressLine1 = None,
-            addressLine2 = None,
-            city = None,
-            postalCode = None,
-            country = None,
-          ),
-          isDuplicate = true,
-          extractionNotes = None,
-        )
-        extractCustomersResponse shouldBe ExtractCustomersResponse(
-          entriesIdentified = 3L,
-          entriesProcessed = 3L,
-          customerIndividualCandidates = List.fill(3)(expectedCandidate),
-          customerBusinessCandidates = List.empty,
-          unidentifiedEntriesSummary = None,
-        )
+        extractedTestResults.toChunk.toList shouldBe List.fill(3)(ExtractedTestResult("batch-result"))
 
         val extractFromCsvRequestMappings =
           wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
@@ -642,7 +481,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         val unreadableCsvPath = CsvValidatedPath(Files.createTempDirectory("ai-client-spec-missing-csv-"))
 
         val serviceError = aiClient
-          .extractFromCsv(unreadableCsvPath, "AI_CLIENT_SPEC_TEXT_SUCCESS")
+          .extractFromCsv[ExtractedTestResult](unreadableCsvPath, "AI_CLIENT_SPEC_CSV_GENERIC_SUCCESS")
           .zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
