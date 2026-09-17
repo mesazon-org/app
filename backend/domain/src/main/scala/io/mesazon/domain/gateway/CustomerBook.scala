@@ -161,7 +161,7 @@ case class ExtractCustomerBusinessData(
     extractionNotes: Option[String],
 )
 
-case class ExtractCustomersResponse(
+case class ExtractCustomersPostResponse(
     entriesIdentified: Long,
     entriesProcessed: Long,
     customerIndividualCandidates: List[ExtractCustomerIndividualData],

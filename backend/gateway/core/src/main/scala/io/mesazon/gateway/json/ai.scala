@@ -3,7 +3,7 @@ package io.mesazon.gateway.json
 import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker
 import io.github.iltotore.iron.jsoniter.given
-import io.mesazon.domain.gateway.{AssistantResponse, ExtractCustomersResponse}
+import io.mesazon.domain.gateway.*
 import sttp.apispec.{AnySchema, Schema as ApiSchema, SchemaLike}
 import sttp.tapir.Schema
 import sttp.tapir.codec.iron.given
@@ -20,8 +20,8 @@ object ai {
 
   given assistantResponseCodec: JsonValueCodec[AssistantResponse] = assistantResponseCodecValue
 
-  given extractCustomersResponseOpenAIJsonSchema: OpenAIJsonSchema[ExtractCustomersResponse] =
-    fromTapir(tapir.extractCustomersResponseSchema)
+  given extractCustomersPostResponseOpenAIJsonSchema: OpenAIJsonSchema[ExtractCustomersPostResponse] =
+    fromTapir(tapir.extractCustomersPostResponseSchema)
 
   private def requireAllPropertiesLike(schemaLike: SchemaLike): SchemaLike = schemaLike match {
     case schema: ApiSchema    => requireAllProperties(schema)

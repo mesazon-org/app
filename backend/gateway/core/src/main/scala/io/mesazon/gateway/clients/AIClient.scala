@@ -1,11 +1,9 @@
 package io.mesazon.gateway.clients
 
 import com.github.plokhotnyuk.jsoniter_scala.core.*
-import io.mesazon.domain.gateway.{ExtractCustomersResponse, ServiceError, SupportedMediaType}
+import io.mesazon.domain.gateway.{ServiceError, SupportedMediaType}
 import io.mesazon.gateway.config.AIClientConfig
 import io.mesazon.gateway.json.OpenAIJsonSchema
-import io.mesazon.gateway.json.ai.given
-import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
 import io.mesazon.gateway.utils.*
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVPrinter}
 import sttp.ai.openai.OpenAI
@@ -19,7 +17,7 @@ import zio.*
 import java.io.StringWriter
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import java.util.{Base64, Locale}
+import java.util.Base64
 import scala.jdk.CollectionConverters.*
 import scala.jdk.DurationConverters.JavaDurationOps
 import scala.util.Using
@@ -31,10 +29,10 @@ trait AIClient {
       instructions: String,
   )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
 
-  def extractFromCsv(
+  def extractFromCsv[A](
       csvValidatedPath: CsvValidatedPath,
       instructions: String,
-  ): IO[ServiceError, ExtractCustomersResponse]
+  )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, NonEmptyChunk[A]]
 }
 
 object AIClient {
@@ -160,41 +158,6 @@ object AIClient {
             .UnexpectedError("Failed to read file content for AI extraction", Some(error))
         )
 
-    private def normalizedName(name: String): String = name.toLowerCase(Locale.ROOT)
-
-    private def mergeExtractCustomersResponses(
-        responses: NonEmptyChunk[ExtractCustomersResponse]
-    ): ExtractCustomersResponse = {
-      val responseList         = responses.toChunk.toList
-      val individualCandidates = responseList.flatMap(_.customerIndividualCandidates)
-      val businessCandidates   = responseList.flatMap(_.customerBusinessCandidates)
-      val individualNameCounts = individualCandidates.groupMapReduce(candidate =>
-        normalizedName(candidate.candidate.fullName.value)
-      )(_ => 1)(_ + _)
-      val businessNameCounts = businessCandidates.groupMapReduce(candidate =>
-        normalizedName(candidate.candidate.businessName.value)
-      )(_ => 1)(_ + _)
-      val unidentifiedEntriesSummary = responseList
-        .flatMap(_.unidentifiedEntriesSummary)
-        .mkString("\n")
-
-      ExtractCustomersResponse(
-        entriesIdentified = responseList.map(_.entriesIdentified).sum,
-        entriesProcessed = responseList.map(_.entriesProcessed).sum,
-        customerIndividualCandidates = individualCandidates.map(candidate =>
-          candidate.copy(
-            isDuplicate = individualNameCounts(normalizedName(candidate.candidate.fullName.value)) > 1
-          )
-        ),
-        customerBusinessCandidates = businessCandidates.map(candidate =>
-          candidate.copy(
-            isDuplicate = businessNameCounts(normalizedName(candidate.candidate.businessName.value)) > 1
-          )
-        ),
-        unidentifiedEntriesSummary = Option.when(unidentifiedEntriesSummary.nonEmpty)(unidentifiedEntriesSummary),
-      )
-    }
-
     override def extractFromImage[A](
         imageScannedPath: FileScannedPath,
         supportedMediaType: SupportedMediaType,
@@ -207,15 +170,15 @@ object AIClient {
         )
         .flatMap(extractFromImageBytes[A](_, supportedMediaType, instructions))
 
-    override def extractFromCsv(
+    override def extractFromCsv[A](
         csvValidatedPath: CsvValidatedPath,
         instructions: String,
-    ): IO[ServiceError, ExtractCustomersResponse] =
+    )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, NonEmptyChunk[A]] =
       csvBatches(csvValidatedPath)
         .flatMap(csvBatchTexts =>
           ZIO
             .foreachPar(csvBatchTexts)(csvBatchText =>
-              sendAndDecode[ExtractCustomersResponse](
+              sendAndDecode[A](
                 ChatCompletionModel.GPT56Luna,
                 instructions,
                 Content.TextContent(csvBatchText),
@@ -223,7 +186,6 @@ object AIClient {
             )
             .withParallelism(aiClientConfig.csvBatchParallelism)
         )
-        .map(mergeExtractCustomersResponses)
 
   }
 
