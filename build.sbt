@@ -9,9 +9,11 @@ organization      := "io.mesazon"
 organizationName  := "Mesazon"
 scalafixOnCompile := enableScalaLint
 scalafmtOnCompile := enableScalaLint
-semanticdbEnabled := true
-Test / fork       := true
-run / fork        := true
+semanticdbEnabled      := true
+semanticdbIncludeInJar := true
+Test / fork            := true
+run / fork             := true
+usePipelining          := true
 
 lazy val backendDirName = "backend"
 
