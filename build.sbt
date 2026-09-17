@@ -12,7 +12,6 @@ scalafmtOnCompile := enableScalaLint
 semanticdbEnabled := true
 Test / fork       := true
 run / fork        := true
-usePipelining     := true
 
 lazy val backendDirName = "backend"
 
