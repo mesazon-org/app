@@ -39,9 +39,6 @@ trait AIClient {
 
 object AIClient {
 
-  inline private val csvBatchMaxDataRows = 50
-  inline private val csvBatchParallelism = 3
-
   private final class AIClientImpl(
       openAI: OpenAI,
       backend: Backend[Task],
@@ -142,7 +139,7 @@ object AIClient {
           val dataRows = records
             .drop(1)
             .filterNot(_.forall(_.trim.isEmpty))
-          val dataRowBatches = dataRows.grouped(csvBatchMaxDataRows).map(_.toList).toList match {
+          val dataRowBatches = dataRows.grouped(aiClientConfig.csvBatchMaxDataRows).map(_.toList).toList match {
             case Nil     => List(List.empty[List[String]])
             case batches => batches
           }
@@ -224,7 +221,7 @@ object AIClient {
                 Content.TextContent(csvBatchText),
               )
             )
-            .withParallelism(csvBatchParallelism)
+            .withParallelism(aiClientConfig.csvBatchParallelism)
         )
         .map(mergeExtractCustomersResponses)
 
