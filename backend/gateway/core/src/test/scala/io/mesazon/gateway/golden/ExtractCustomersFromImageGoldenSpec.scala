@@ -4,7 +4,7 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClient
 import io.mesazon.gateway.config.AIClientConfig
 import io.mesazon.gateway.json.ai.given
-import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
+import io.mesazon.gateway.json.tapir.extractCustomersPostResponseCodec
 import io.mesazon.gateway.service.FileService
 import io.mesazon.gateway.utils.FileScannedPath
 import io.mesazon.testkit.base.ZWordSpecBase
@@ -49,8 +49,8 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
     )
     .zioValue
 
-  private val extractCustomersResponseExpectedByImageNumber: Map[Int, ExtractCustomersResponse] = Map(
-    1 -> ExtractCustomersResponse(
+  private val extractCustomersPostResponseExpectedByImageNumber: Map[Int, ExtractCustomersPostResponse] = Map(
+    1 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 4L,
       customerIndividualCandidates = List(
@@ -150,7 +150,7 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
       unidentifiedEntriesSummary =
         Some("The crossed-out name and smudged phone number in entry 5 at the bottom could not be read."),
     ),
-    2 -> ExtractCustomersResponse(
+    2 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 5L,
       customerIndividualCandidates = List(
@@ -261,7 +261,7 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
       ),
       unidentifiedEntriesSummary = None,
     ),
-    3 -> ExtractCustomersResponse(
+    3 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 4L,
       customerIndividualCandidates = List(
@@ -360,7 +360,7 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
       unidentifiedEntriesSummary =
         Some("Entry 5 at the bottom has a crossed-out, unreadable name and an incomplete phone number."),
     ),
-    4 -> ExtractCustomersResponse(
+    4 -> ExtractCustomersPostResponse(
       entriesIdentified = 1L,
       entriesProcessed = 1L,
       customerIndividualCandidates = List.empty,
@@ -399,7 +399,7 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
       ),
       unidentifiedEntriesSummary = None,
     ),
-    5 -> ExtractCustomersResponse(
+    5 -> ExtractCustomersPostResponse(
       entriesIdentified = 1L,
       entriesProcessed = 1L,
       customerIndividualCandidates = List.empty,
@@ -431,7 +431,7 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
       ),
       unidentifiedEntriesSummary = None,
     ),
-    6 -> ExtractCustomersResponse(
+    6 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 5L,
       customerIndividualCandidates = List(
@@ -540,7 +540,7 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
       ),
       unidentifiedEntriesSummary = None,
     ),
-    7 -> ExtractCustomersResponse(
+    7 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 4L,
       customerIndividualCandidates = List(
@@ -647,7 +647,7 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
       ),
       unidentifiedEntriesSummary = Some("В нижней строке таблицы имя замазано, а телефон указан лишь частично."),
     ),
-    8 -> ExtractCustomersResponse(
+    8 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 4L,
       customerIndividualCandidates = List(
@@ -752,7 +752,7 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
         "The last populated row has contact details and an Austin address, but no person or business name is visible."
       ),
     ),
-    9 -> ExtractCustomersResponse(
+    9 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 5L,
       customerIndividualCandidates = List(
@@ -872,7 +872,7 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
       ),
       unidentifiedEntriesSummary = None,
     ),
-    10 -> ExtractCustomersResponse(
+    10 -> ExtractCustomersPostResponse(
       entriesIdentified = 6L,
       entriesProcessed = 6L,
       customerIndividualCandidates = List(
@@ -1040,17 +1040,17 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
             Path.of(getClass.getResource(s"/assets/contact-book-test-image-$imageNumber.png").toURI)
           )
 
-          val extractCustomersResponse = aiClient
-            .extractFromImage[ExtractCustomersResponse](
+          val extractCustomersPostResponse = aiClient
+            .extractFromImage[ExtractCustomersPostResponse](
               customerBookImageScannedPath,
               SupportedMediaType.PNG,
               FileService.extractCustomersFromImageInstructions,
             )
             .zioValue
 
-          info(s"contact-book-test-image-$imageNumber.png => $extractCustomersResponse")
+          info(s"contact-book-test-image-$imageNumber.png => $extractCustomersPostResponse")
 
-          extractCustomersResponse shouldBe extractCustomersResponseExpectedByImageNumber(imageNumber)
+          extractCustomersPostResponse shouldBe extractCustomersPostResponseExpectedByImageNumber(imageNumber)
         }
       }
     }

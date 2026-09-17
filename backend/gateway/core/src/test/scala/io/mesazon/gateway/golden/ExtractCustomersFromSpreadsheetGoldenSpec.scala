@@ -4,7 +4,8 @@ import com.github.plokhotnyuk.jsoniter_scala.core.{writeToString, WriterConfig}
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClient
 import io.mesazon.gateway.config.AIClientConfig
-import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
+import io.mesazon.gateway.json.ai.given
+import io.mesazon.gateway.json.tapir.extractCustomersPostResponseCodec
 import io.mesazon.gateway.service.FileService
 import io.mesazon.gateway.utils.{FileScannedPath, SpreadsheetTool, TempFile}
 import io.mesazon.testkit.base.ZWordSpecBase
@@ -13,8 +14,8 @@ import zio.*
 import zio.stream.{ZSink, ZStream}
 
 /** Manual-only check against the real OpenAI API: validates or converts each spreadsheet fixture through
-  * `SpreadsheetTool`, sends the resulting CSV through the real `AIClient`, and prints the formatted response for
-  * inspection without asserting its contents.
+  * `SpreadsheetTool`, sends the resulting CSV through the real `AIClient`, and prints each batch's formatted response
+  * for inspection without asserting its contents or merging them.
   *
   * Never calls out for real in CI: `apiKey` ships empty, so every case is canceled rather than hitting the real API
   * with a blank key. To run for real, fill in a real key below and invoke this spec directly:
@@ -69,7 +70,7 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
             .provide(SpreadsheetTool.live)
             .zioValue
 
-          val extractCustomersResponse = ZIO
+          val extractCustomersPostResponses = ZIO
             .scoped(for {
               spreadsheetTempPath <- TempFile.createScoped("extract-customers-from-spreadsheet-golden-")
               _                   <- ZStream
@@ -81,16 +82,18 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
                 spreadsheetScannedPath,
                 supportedMediaType,
               )
-              response <- aiClient.extractFromCsv(
+              responses <- aiClient.extractFromCsv[ExtractCustomersPostResponse](
                 csvValidatedPath,
                 FileService.extractCustomersFromFileInstructions,
               )
-            } yield response)
+            } yield responses)
             .zioValue
 
-          info(
-            s"$fileName response:\n${writeToString(extractCustomersResponse, WriterConfig.withIndentionStep(2))}"
-          )
+          extractCustomersPostResponses.zipWithIndex.foreach { case (extractCustomersPostResponse, batchIndex) =>
+            info(
+              s"$fileName batch $batchIndex response:\n${writeToString(extractCustomersPostResponse, WriterConfig.withIndentionStep(2))}"
+            )
+          }
         }
       }
     }
