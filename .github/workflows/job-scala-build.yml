@@ -22,6 +22,7 @@ on:
 env:
   ENABLE_SCALA_LINT_ON_COMPILE: ${{ vars.ENABLE_SCALA_LINT_ON_COMPILE || 'false' }}
   DOCKER_REPOSITORY: ${{ vars.DOCKER_REPOSITORY }}
+  IS_CI: ${{ vars.IS_CI || 'false' }}
 jobs:
   build:
     name: Build ${{ inputs.module }}
