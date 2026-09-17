@@ -61,7 +61,7 @@ object FileServiceEndpoints {
       )
       .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
 
-  private val extractCustomersPostEndpoint =
+  private val extractCustomerBookPostEndpoint =
     securedEndpoint.post
       .in("extract" / "customer-book")
       .in(header[ExtractCustomersFileName](FileNameHeader))
@@ -129,7 +129,7 @@ object FileServiceEndpoints {
                 catalogueItemImageByteStream,
               )
           }),
-        extractCustomersPostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
+        extractCustomerBookPostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
           authorizationService
             .auth(
               accessToken = accessToken,
@@ -153,7 +153,7 @@ object FileServiceEndpoints {
             List(
               uploadOrganizationLogoPostEndpoint,
               uploadCatalogueItemImagePostEndpoint,
-              extractCustomersPostEndpoint,
+              extractCustomerBookPostEndpoint,
             ),
             Info(
               title = "FileService",

@@ -811,7 +811,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
         response shouldBe extractCustomersResponse
         extractFromImageCallsRef.refValue shouldBe List(
-          (fileScannedPath, SupportedMediaType.JPEG, FileService.extractCustomersFromPhotoInstructions)
+          (fileScannedPath, SupportedMediaType.JPEG, FileService.extractCustomersFromImageInstructions)
         )
         extractFromCsvCallsRef.refValue shouldBe List.empty
       }

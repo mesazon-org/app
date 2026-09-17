@@ -101,7 +101,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
 
   "AIClient" when {
     "extractFromImage" should {
-      "successfully extract a structured response from a photo" in withContext { context =>
+      "successfully extract a structured response from an image" in withContext { context =>
         import context.*
 
         val aiClient = ZIO
@@ -222,7 +222,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         )
       }
 
-      "successfully decode an empty result when nothing is recognizable in the photo" in withContext { context =>
+      "successfully decode an empty result when nothing is recognizable in the image" in withContext { context =>
         import context.*
 
         val aiClient = ZIO

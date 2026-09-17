@@ -13,17 +13,17 @@ import zio.*
 
 import java.nio.file.Path
 
-/** Manual-only check against the real OpenAI API: sends each sample photo in
-  * `assets/contact-book-test-photo-1.png`..`-10.png` through the real `AIClient` and asserts the complete captured
-  * golden response for that photo across different languages, column namings, and source types.
+/** Manual-only check against the real OpenAI API: sends each sample image in
+  * `assets/contact-book-test-image-1.png`..`-10.png` through the real `AIClient` and asserts the complete captured
+  * golden response for that image across different languages, column namings, and source types.
   *
   * Never calls out for real in CI: `apiKey` ships empty, so every case is canceled rather than hitting the real API
   * with a blank key. To run for real, fill in a real key below and invoke this spec directly:
   * {{{
-  * sbt "gateway-core/testOnly io.mesazon.gateway.golden.ExtractCustomersFromPhotoGoldenSpec"
+  * sbt "gateway-core/testOnly io.mesazon.gateway.golden.ExtractCustomersFromImageGoldenSpec"
   * }}}
   */
-class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
+class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
 
   private val apiKey =
     ""
@@ -47,7 +47,7 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
     )
     .zioValue
 
-  private val extractCustomersResponseExpectedByPhotoNumber: Map[Int, ExtractCustomersResponse] = Map(
+  private val extractCustomersResponseExpectedByImageNumber: Map[Int, ExtractCustomersResponse] = Map(
     1 -> ExtractCustomersResponse(
       entriesIdentified = 5L,
       entriesProcessed = 4L,
@@ -1025,30 +1025,30 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
 
   "AIClient" when {
     "extract" should {
-      (1 to 10).foreach { photoNumber =>
-        s"extract customers from contact-book-test-photo-$photoNumber.png" in {
+      (1 to 10).foreach { imageNumber =>
+        s"extract customers from contact-book-test-image-$imageNumber.png" in {
           assume(
             apiKey.nonEmpty,
-            "Fill in a real OpenAI API key in ExtractCustomersFromPhotoGoldenSpec.apiKey to run this manually",
+            "Fill in a real OpenAI API key in ExtractCustomersFromImageGoldenSpec.apiKey to run this manually",
           )
 
           val aiClient = buildAIClient
 
-          val customerBookPhotoScannedPath = FileScannedPath(
-            Path.of(getClass.getResource(s"/assets/contact-book-test-photo-$photoNumber.png").toURI)
+          val customerBookImageScannedPath = FileScannedPath(
+            Path.of(getClass.getResource(s"/assets/contact-book-test-image-$imageNumber.png").toURI)
           )
 
           val extractCustomersResponse = aiClient
             .extractFromImage[ExtractCustomersResponse](
-              customerBookPhotoScannedPath,
+              customerBookImageScannedPath,
               SupportedMediaType.PNG,
-              FileService.extractCustomersFromPhotoInstructions,
+              FileService.extractCustomersFromImageInstructions,
             )
             .zioValue
 
-          info(s"contact-book-test-photo-$photoNumber.png => $extractCustomersResponse")
+          info(s"contact-book-test-image-$imageNumber.png => $extractCustomersResponse")
 
-          extractCustomersResponse shouldBe extractCustomersResponseExpectedByPhotoNumber(photoNumber)
+          extractCustomersResponse shouldBe extractCustomersResponseExpectedByImageNumber(imageNumber)
         }
       }
     }

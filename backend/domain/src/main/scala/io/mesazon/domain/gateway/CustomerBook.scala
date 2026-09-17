@@ -101,7 +101,7 @@ case class InsertCustomersPostRequest(
     customerIndividuals: List[InsertCustomerIndividualPostRequest],
 )
 
-// Photo extraction
+// File extraction
 
 case class ExtractCustomerEmailEntry(
     email: CustomerEmail,

@@ -35,8 +35,8 @@ trait FileService[F[_]] {
 
 object FileService {
 
-  private[gateway] val extractCustomersFromPhotoInstructions =
-    """You are reading a photo of a paper customer list, grid, or business card for a business-management product.
+  private[gateway] val extractCustomersFromImageInstructions =
+    """You are reading an image of a paper customer list, grid, or business card for a business-management product.
       |Find every entry that looks like a person or a business the caller trades with.
       |For each entry, decide freely whether it looks like an individual or a business - there is no fixed rule
       |mapping a source (e.g. a business card) to one kind or the other.
@@ -55,14 +55,14 @@ object FileService {
       |optional field - omit the field entirely instead.
       |If something about a candidate is missing or unclear (e.g. a smudged phone number, no visible email), say so
       |in one short, plain sentence in that candidate's extraction notes; otherwise leave the notes out entirely.
-      |Compare candidates only against each other within this same photo, never against any other data. Two
+      |Compare candidates only against each other within this same image, never against any other data. Two
       |candidates of the same kind (both individuals or both businesses) whose names match once capitalisation is
       |ignored are each a duplicate of the other; two candidates of different kinds are never duplicates of each
       |other even when their names match.
-      |Report how many entries the photo seemed to contain in total, and how many of those you actually turned into
+      |Report how many entries the image seemed to contain in total, and how many of those you actually turned into
       |candidates. If some entries could not be turned into candidates, add one short, plain-text summary line
-      |describing what could not be read and where in the photo to look; otherwise leave that summary out entirely.
-      |If the photo has nothing recognizable as a customer at all, return both counts as zero and empty candidate
+      |describing what could not be read and where in the image to look; otherwise leave that summary out entirely.
+      |If the image has nothing recognizable as a customer at all, return both counts as zero and empty candidate
       |lists rather than treating that as an error.""".stripMargin
 
   private[gateway] val extractCustomersFromFileInstructions =
@@ -230,7 +230,7 @@ object FileService {
           aiClient.extractFromImage[ExtractCustomersResponse](
             customerBookScanOutput.fileScannedPath,
             supportedMediaType,
-            extractCustomersFromPhotoInstructions,
+            extractCustomersFromImageInstructions,
           )
         case supportedMediaType if SupportedMediaType.spreadsheets.contains(supportedMediaType) =>
           spreadsheetTool

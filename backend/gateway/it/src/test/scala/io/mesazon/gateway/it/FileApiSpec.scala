@@ -897,7 +897,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
     }
 
     "/extract/customer-book" should {
-      "extract customer candidates from a photo" in withContext { context =>
+      "extract customer candidates from an image" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
@@ -915,13 +915,13 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val customerBookPhotoBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
+        val customerBookImageBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
 
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.InternalServerError](
             Some(organizationUserRow.organizationID),
             Some(ExtractCustomersFileName.assume("customers.jpeg")),
-            customerBookPhotoBytes,
+            customerBookImageBytes,
             Some(accessJwt.accessToken),
           )
           .zioValue
@@ -984,7 +984,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.InternalServerError](
@@ -1045,7 +1046,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.xlsx").runCollect.zioValue
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-test-spreadsheet-2.xlsx").runCollect.zioValue
 
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.InternalServerError](
@@ -1098,7 +1100,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.BadRequest](
@@ -1131,7 +1134,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.BadRequest](
@@ -1150,7 +1154,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         import context.*
 
         val organizationID        = arbitrarySample[OrganizationID]
-        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.Unauthorized](
@@ -1169,7 +1174,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         import context.*
 
         val organizationID        = arbitrarySample[OrganizationID]
-        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.Unauthorized](
@@ -1209,7 +1215,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-          val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+          val customerBookFileBytes =
+            ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
           val extractCustomersResponse = gatewayClient
             .extractCustomersPost[smithy.Forbidden](
@@ -1236,7 +1243,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val organizationID        = arbitrarySample[OrganizationID]
-        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.Forbidden](
@@ -1262,7 +1270,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val organizationID        = arbitrarySample[OrganizationID]
-        val customerBookFileBytes = ZStream.fromResource("assets/test-customers.csv").runCollect.zioValue
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-test-spreadsheet-1.csv").runCollect.zioValue
 
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.InternalServerError](

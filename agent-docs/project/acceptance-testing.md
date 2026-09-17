@@ -239,4 +239,4 @@ sbt "runLint"
 
 When build tooling fails before the tests start, match the signature and workaround in [Known issues](../known-issues.md). A packaging failure is not an acceptance-test result; rerun until the intended suite reports a non-zero test count.
 
-For a focused nested spec, use the standalone-runner selection and invocation-only working-directory setting in [Known issues](../known-issues.md#focused-nested-acceptance-selection-executes-no-tests). A `testOnly` parent with `-z` can select zero tests; the verified nested file-suite selection runs all 30 file API cases, including photo extraction.
+For a focused nested spec, use the standalone-runner selection and invocation-only working-directory setting in [Known issues](../known-issues.md#focused-nested-acceptance-selection-executes-no-tests). A `testOnly` parent with `-z` can select zero tests; the verified nested file-suite selection runs all 30 file API cases, including image extraction.
