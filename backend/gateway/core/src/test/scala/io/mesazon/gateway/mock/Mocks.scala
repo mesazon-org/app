@@ -1,7 +1,7 @@
 package io.mesazon.gateway.mock
 
 import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
-import io.mesazon.domain.gateway.{ServiceError, SupportedMediaType}
+import io.mesazon.domain.gateway.{ExtractCustomersResponse, ServiceError, SupportedMediaType}
 import io.mesazon.gateway.clients.AIClient
 import io.mesazon.gateway.json.OpenAIJsonSchema
 import io.mesazon.gateway.utils.*
@@ -22,12 +22,12 @@ object Mocks {
       extractFromImageCallsRef.update(_ :+ (imageScannedPath, supportedMediaType, instructions)) *>
         extractResult.map(_.asInstanceOf[B])
 
-    override def extractFromCsv[B](
+    override def extractFromCsv(
         csvValidatedPath: CsvValidatedPath,
         instructions: String,
-    )(using OpenAIJsonSchema[B], JsonValueCodec[B]): IO[ServiceError, B] =
+    ): IO[ServiceError, ExtractCustomersResponse] =
       extractFromCsvCallsRef.update(_ :+ (csvValidatedPath, instructions)) *>
-        extractResult.map(_.asInstanceOf[B])
+        extractResult.map(_.asInstanceOf[ExtractCustomersResponse])
 
   }
 }

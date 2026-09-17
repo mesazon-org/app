@@ -70,11 +70,16 @@ object FileService {
       |business-management product. There is no fixed column layout - any column you don't recognize is simply
       |ignored, and a completely blank row is not an entry at all: do not count it, identify it, or mention it in
       |the summary.
-      |Find every entry that looks like a person or a business the caller trades with.
+      |You are receiving one ordered batch from the file. The first row is the header, and every subsequent
+      |non-blank row is exactly one entry that must be examined. Process every data row in this batch.
+      |Find every entry that looks like a person or a business the caller trades with. When separate first-name
+      |and last-name columns are present, combine their non-empty values into the candidate's full name.
       |For each entry, decide freely whether it looks like an individual or a business - there is no fixed rule
       |mapping a row to one kind or the other.
       |Only return an entry as a candidate if you can make out a name for it. If you cannot make out any name for
       |an entry, do not return it as a candidate at all - just count it.
+      |Every row with a readable name must produce exactly one candidate in the appropriate candidate list and
+      |must be included in entriesProcessed. Do not omit named candidates to shorten the response.
       |For a candidate business, only include a business contact if you can make out that contact's name, for
       |example from an extra column with a name in it. This is best-effort only: it is never guaranteed, and no
       |particular column or layout is required for it to happen.
@@ -236,7 +241,7 @@ object FileService {
           spreadsheetTool
             .validateAndConvertToCsv(customerBookScanOutput.fileScannedPath, supportedMediaType)
             .flatMap(csvValidatedPath =>
-              aiClient.extractFromCsv[ExtractCustomersResponse](
+              aiClient.extractFromCsv(
                 csvValidatedPath,
                 extractCustomersFromFileInstructions,
               )

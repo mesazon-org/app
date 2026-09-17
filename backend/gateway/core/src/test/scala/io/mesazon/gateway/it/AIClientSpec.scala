@@ -519,7 +519,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
     }
 
     "extractFromCsv" should {
-      "successfully extract a structured response from validated CSV-shaped text content" in withContext { context =>
+      "split CSV text into 50-row Luna requests and merge their structured responses" in withContext { context =>
         import context.*
 
         val aiClient = ZIO
@@ -531,21 +531,44 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
           )
           .zioValue
 
-        val csvPath = csvValidatedPath("Full Name,Email\nJohn Smith,john.smith@example.com\n")
+        val csvText =
+          "Full Name,Email\n" +
+            (1 to 101).map(index => s"Customer $index,customer$index@example.com\n").mkString
+        val csvPath = csvValidatedPath(csvText)
 
-        val extractedTestResult = aiClient
-          .extractFromCsv[ExtractedTestResult](csvPath, "AI_CLIENT_SPEC_TEXT_SUCCESS")
+        val extractCustomersResponse = aiClient
+          .extractFromCsv(csvPath, "AI_CLIENT_SPEC_TEXT_SUCCESS")
           .zioValue
 
-        extractedTestResult shouldBe ExtractedTestResult("extracted-text-value")
+        val expectedCandidate = ExtractCustomerIndividualData(
+          candidate = ExtractCustomerIndividual(
+            fullName = CustomerFullName.assume("John Smith"),
+            emails = List.empty,
+            phoneNumbers = List.empty,
+            addressLine1 = None,
+            addressLine2 = None,
+            city = None,
+            postalCode = None,
+            country = None,
+          ),
+          isDuplicate = true,
+          extractionNotes = None,
+        )
+        extractCustomersResponse shouldBe ExtractCustomersResponse(
+          entriesIdentified = 3L,
+          entriesProcessed = 3L,
+          customerIndividualCandidates = List.fill(3)(expectedCandidate),
+          customerBusinessCandidates = List.empty,
+          unidentifiedEntriesSummary = None,
+        )
 
         val extractFromCsvRequestMappings =
           wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
 
-        extractFromCsvRequestMappings.size shouldBe 1
-        extractFromCsvRequestMappings(0).mapping.method shouldBe "POST"
-        extractFromCsvRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
-        extractFromCsvRequestMappings(0).count shouldBe 1
+        extractFromCsvRequestMappings.size shouldBe 3
+        extractFromCsvRequestMappings.map(_.mapping.method).distinct shouldBe Seq("POST")
+        extractFromCsvRequestMappings.map(_.mapping.url).distinct shouldBe Seq("/v1/chat/completions")
+        extractFromCsvRequestMappings.map(_.count).distinct shouldBe Seq(3)
       }
 
       "fail with an UnexpectedError when the CSV path cannot be read before sending" in withContext { context =>
@@ -563,7 +586,7 @@ class AIClientSpec extends ZWordSpecBase, DockerComposeBase {
         val unreadableCsvPath = CsvValidatedPath(Files.createTempDirectory("ai-client-spec-missing-csv-"))
 
         val serviceError = aiClient
-          .extractFromCsv[ExtractedTestResult](unreadableCsvPath, "AI_CLIENT_SPEC_TEXT_SUCCESS")
+          .extractFromCsv(unreadableCsvPath, "AI_CLIENT_SPEC_TEXT_SUCCESS")
           .zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]

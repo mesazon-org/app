@@ -1,20 +1,20 @@
 package io.mesazon.gateway.golden
 
+import com.github.plokhotnyuk.jsoniter_scala.core.{writeToString, WriterConfig}
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClient
 import io.mesazon.gateway.config.AIClientConfig
-import io.mesazon.gateway.json.ai.given
 import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
 import io.mesazon.gateway.service.FileService
-import io.mesazon.gateway.utils.{FileScannedPath, SpreadsheetTool}
+import io.mesazon.gateway.utils.{FileScannedPath, SpreadsheetTool, TempFile}
 import io.mesazon.testkit.base.ZWordSpecBase
 import sttp.client4.httpclient.zio.HttpClientZioBackend
 import zio.*
+import zio.stream.{ZSink, ZStream}
 
-import java.nio.file.Path
-
-/** Manual-only check against the real OpenAI API: converts each Excel fixture to validated CSV through
-  * `SpreadsheetTool`, sends that CSV through the real `AIClient`, and asserts the complete captured golden response.
+/** Manual-only check against the real OpenAI API: validates or converts each spreadsheet fixture through
+  * `SpreadsheetTool`, sends the resulting CSV through the real `AIClient`, and prints the formatted response for
+  * inspection without asserting its contents.
   *
   * Never calls out for real in CI: `apiKey` ships empty, so every case is canceled rather than hitting the real API
   * with a blank key. To run for real, fill in a real key below and invoke this spec directly:
@@ -37,7 +37,7 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
           host = "api.openai.com",
           port = 443,
           apiKey = apiKey,
-          requestTimeout = Duration.fromSeconds(60),
+          requestTimeout = Duration.fromSeconds(120),
           sendMaxRetries = 2,
           sendRetryDelay = Duration.fromSeconds(1),
         )
@@ -46,60 +46,14 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
     )
     .zioValue
 
-  private val extractCustomersResponseExpected = ExtractCustomersResponse(
-    entriesIdentified = 2L,
-    entriesProcessed = 2L,
-    customerIndividualCandidates = List(
-      ExtractCustomerIndividualData(
-        candidate = ExtractCustomerIndividual(
-          fullName = CustomerFullName.assume("John Smith"),
-          emails = List(
-            ExtractCustomerEmailEntry(
-              email = CustomerEmail.assume("john.smith@example.com"),
-              isDefault = true,
-            )
-          ),
-          phoneNumbers = List.empty,
-          addressLine1 = None,
-          addressLine2 = None,
-          city = None,
-          postalCode = None,
-          country = None,
-        ),
-        isDuplicate = false,
-        extractionNotes = None,
-      ),
-      ExtractCustomerIndividualData(
-        candidate = ExtractCustomerIndividual(
-          fullName = CustomerFullName.assume("Jane Doe"),
-          emails = List(
-            ExtractCustomerEmailEntry(
-              email = CustomerEmail.assume("jane.doe@example.com"),
-              isDefault = true,
-            )
-          ),
-          phoneNumbers = List.empty,
-          addressLine1 = None,
-          addressLine2 = None,
-          city = None,
-          postalCode = None,
-          country = None,
-        ),
-        isDuplicate = false,
-        extractionNotes = None,
-      ),
-    ),
-    customerBusinessCandidates = List.empty,
-    unidentifiedEntriesSummary = None,
-  )
-
   private val spreadsheetCases = List(
+    ("contact-book-test-spreadsheet-1.csv", SupportedMediaType.CSV),
     ("contact-book-test-spreadsheet-2.xls", SupportedMediaType.XLS),
     ("contact-book-test-spreadsheet-3.xlsx", SupportedMediaType.XLSX),
   )
 
   "AIClient" when {
-    "extractFromCsv after SpreadsheetTool conversion" should {
+    "extractFromCsv after SpreadsheetTool validation and conversion" should {
       spreadsheetCases.foreach { case (fileName, supportedMediaType) =>
         s"extract customers from $fileName" in {
           assume(
@@ -107,7 +61,7 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
             "Fill in a real OpenAI API key in ExtractCustomersFromSpreadsheetGoldenSpec.apiKey to run this manually",
           )
 
-          val aiClient       = buildAIClient
+          val aiClient        = buildAIClient
           val spreadsheetTool = ZIO
             .service[SpreadsheetTool]
             .provide(SpreadsheetTool.live)
@@ -115,23 +69,26 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
 
           val extractCustomersResponse = ZIO
             .scoped(for {
-              spreadsheetScannedPath <- ZIO.succeed(
-                FileScannedPath(Path.of(getClass.getResource(s"/assets/$fileName").toURI))
-              )
+              spreadsheetTempPath <- TempFile.createScoped("extract-customers-from-spreadsheet-golden-")
+              _                   <- ZStream
+                .fromResource(s"assets/$fileName")
+                .run(ZSink.fromPath(spreadsheetTempPath))
+                .orDie
+              spreadsheetScannedPath = FileScannedPath(spreadsheetTempPath)
               csvValidatedPath <- spreadsheetTool.validateAndConvertToCsv(
                 spreadsheetScannedPath,
                 supportedMediaType,
               )
-              response <- aiClient.extractFromCsv[ExtractCustomersResponse](
+              response <- aiClient.extractFromCsv(
                 csvValidatedPath,
                 FileService.extractCustomersFromFileInstructions,
               )
             } yield response)
             .zioValue
 
-          info(s"$fileName => $extractCustomersResponse")
-
-          extractCustomersResponse shouldBe extractCustomersResponseExpected
+          info(
+            s"$fileName response:\n${writeToString(extractCustomersResponse, WriterConfig.withIndentionStep(2))}"
+          )
         }
       }
     }

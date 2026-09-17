@@ -1,10 +1,13 @@
 package io.mesazon.gateway.clients
 
 import com.github.plokhotnyuk.jsoniter_scala.core.*
-import io.mesazon.domain.gateway.{ServiceError, SupportedMediaType}
+import io.mesazon.domain.gateway.{ExtractCustomersResponse, ServiceError, SupportedMediaType}
 import io.mesazon.gateway.config.AIClientConfig
 import io.mesazon.gateway.json.OpenAIJsonSchema
+import io.mesazon.gateway.json.ai.given
+import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
 import io.mesazon.gateway.utils.*
+import org.apache.commons.csv.{CSVFormat, CSVParser, CSVPrinter}
 import sttp.ai.openai.OpenAI
 import sttp.ai.openai.OpenAIExceptions.OpenAIException
 import sttp.ai.openai.requests.completions.chat.ChatRequestBody.{ChatBody, ChatCompletionModel, ResponseFormat}
@@ -13,10 +16,13 @@ import sttp.client4.{Backend, ResponseException, SttpClientException}
 import sttp.model.StatusCode
 import zio.*
 
+import java.io.StringWriter
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import java.util.Base64
+import java.util.{Base64, Locale}
+import scala.jdk.CollectionConverters.*
 import scala.jdk.DurationConverters.JavaDurationOps
+import scala.util.Using
 
 trait AIClient {
   def extractFromImage[A](
@@ -25,13 +31,16 @@ trait AIClient {
       instructions: String,
   )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
 
-  def extractFromCsv[A](
+  def extractFromCsv(
       csvValidatedPath: CsvValidatedPath,
       instructions: String,
-  )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
+  ): IO[ServiceError, ExtractCustomersResponse]
 }
 
 object AIClient {
+
+  inline private val csvBatchMaxDataRows = 50
+  inline private val csvBatchParallelism = 3
 
   private final class AIClientImpl(
       openAI: OpenAI,
@@ -64,6 +73,7 @@ object AIClient {
       )
 
     private def sendAndDecode[A](
+        model: ChatCompletionModel,
         instructions: String,
         content: Content,
     )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
@@ -71,7 +81,7 @@ object AIClient {
         response <- openAI
           .createChatCompletion(
             ChatBody(
-              model = ChatCompletionModel.GPT56Sol,
+              model = model,
               messages = Seq(
                 Message.System(instructions),
                 Message.User(content),
@@ -107,6 +117,7 @@ object AIClient {
       val imageBase64 = Base64.getEncoder.encodeToString(imageBytes)
       val imageMime   = supportedMediaType.mimes.head
       sendAndDecode[A](
+        ChatCompletionModel.GPT56Sol,
         instructions,
         Content.ArrayContent(
           Seq(
@@ -115,6 +126,75 @@ object AIClient {
             )
           )
         ),
+      )
+    }
+
+    private def csvBatches(csvValidatedPath: CsvValidatedPath): IO[ServiceError, NonEmptyChunk[String]] =
+      ZIO.attemptBlocking {
+        Using.resource(
+          CSVParser.parse(
+            Files.newBufferedReader(csvValidatedPath.value, StandardCharsets.UTF_8),
+            CSVFormat.DEFAULT,
+          )
+        ) { csvParser =>
+          val records  = csvParser.iterator().asScala.map(_.iterator().asScala.toList).toList
+          val header   = records.headOption.getOrElse(List.empty)
+          val dataRows = records
+            .drop(1)
+            .filterNot(_.forall(_.trim.isEmpty))
+          val dataRowBatches = dataRows.grouped(csvBatchMaxDataRows).map(_.toList).toList match {
+            case Nil     => List(List.empty[List[String]])
+            case batches => batches
+          }
+          val batchTexts = dataRowBatches.map { batchRows =>
+            val writer = new StringWriter()
+            Using.resource(new CSVPrinter(writer, CSVFormat.DEFAULT)) { csvPrinter =>
+              csvPrinter.printRecord(header*)
+              batchRows.foreach(row => csvPrinter.printRecord(row*))
+            }
+            writer.toString
+          }
+
+          NonEmptyChunk(batchTexts.head, batchTexts.tail*)
+        }
+      }
+        .mapError(error =>
+          ServiceError.InternalServerError
+            .UnexpectedError("Failed to read file content for AI extraction", Some(error))
+        )
+
+    private def normalizedName(name: String): String = name.toLowerCase(Locale.ROOT)
+
+    private def mergeExtractCustomersResponses(
+        responses: NonEmptyChunk[ExtractCustomersResponse]
+    ): ExtractCustomersResponse = {
+      val responseList         = responses.toChunk.toList
+      val individualCandidates = responseList.flatMap(_.customerIndividualCandidates)
+      val businessCandidates   = responseList.flatMap(_.customerBusinessCandidates)
+      val individualNameCounts = individualCandidates.groupMapReduce(candidate =>
+        normalizedName(candidate.candidate.fullName.value)
+      )(_ => 1)(_ + _)
+      val businessNameCounts = businessCandidates.groupMapReduce(candidate =>
+        normalizedName(candidate.candidate.businessName.value)
+      )(_ => 1)(_ + _)
+      val unidentifiedEntriesSummary = responseList
+        .flatMap(_.unidentifiedEntriesSummary)
+        .mkString("\n")
+
+      ExtractCustomersResponse(
+        entriesIdentified = responseList.map(_.entriesIdentified).sum,
+        entriesProcessed = responseList.map(_.entriesProcessed).sum,
+        customerIndividualCandidates = individualCandidates.map(candidate =>
+          candidate.copy(
+            isDuplicate = individualNameCounts(normalizedName(candidate.candidate.fullName.value)) > 1
+          )
+        ),
+        customerBusinessCandidates = businessCandidates.map(candidate =>
+          candidate.copy(
+            isDuplicate = businessNameCounts(normalizedName(candidate.candidate.businessName.value)) > 1
+          )
+        ),
+        unidentifiedEntriesSummary = Option.when(unidentifiedEntriesSummary.nonEmpty)(unidentifiedEntriesSummary),
       )
     }
 
@@ -130,17 +210,23 @@ object AIClient {
         )
         .flatMap(extractFromImageBytes[A](_, supportedMediaType, instructions))
 
-    override def extractFromCsv[A](
+    override def extractFromCsv(
         csvValidatedPath: CsvValidatedPath,
         instructions: String,
-    )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
-      ZIO
-        .attemptBlocking(Files.readString(csvValidatedPath.value, StandardCharsets.UTF_8))
-        .mapError(error =>
-          ServiceError.InternalServerError
-            .UnexpectedError("Failed to read file content for AI extraction", Some(error))
+    ): IO[ServiceError, ExtractCustomersResponse] =
+      csvBatches(csvValidatedPath)
+        .flatMap(csvBatchTexts =>
+          ZIO
+            .foreachPar(csvBatchTexts)(csvBatchText =>
+              sendAndDecode[ExtractCustomersResponse](
+                ChatCompletionModel.GPT56Luna,
+                instructions,
+                Content.TextContent(csvBatchText),
+              )
+            )
+            .withParallelism(csvBatchParallelism)
         )
-        .flatMap(csvText => sendAndDecode[A](instructions, Content.TextContent(csvText)))
+        .map(mergeExtractCustomersResponses)
 
   }
 
