@@ -920,7 +920,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.InternalServerError](
             Some(organizationUserRow.organizationID),
-            Some(FileNameDeclared.assume("customers.jpeg")),
+            Some(ExtractCustomersFileName.assume("customers.jpeg")),
             customerBookPhotoBytes,
             Some(accessJwt.accessToken),
           )
@@ -989,7 +989,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.InternalServerError](
             Some(organizationUserRow.organizationID),
-            Some(FileNameDeclared.assume("customers.csv")),
+            Some(ExtractCustomersFileName.assume("customers.csv")),
             customerBookFileBytes,
             Some(accessJwt.accessToken),
           )
@@ -1050,7 +1050,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.InternalServerError](
             Some(organizationUserRow.organizationID),
-            Some(FileNameDeclared.assume("customers.xlsx")),
+            Some(ExtractCustomersFileName.assume("customers.xlsx")),
             customerBookFileBytes,
             Some(accessJwt.accessToken),
           )
@@ -1103,7 +1103,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.BadRequest](
             None,
-            Some(FileNameDeclared.assume("customers.csv")),
+            Some(ExtractCustomersFileName.assume("customers.csv")),
             customerBookFileBytes,
             Some(accessJwt.accessToken),
           )
@@ -1155,7 +1155,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.Unauthorized](
             Some(organizationID),
-            Some(FileNameDeclared.assume("customers.csv")),
+            Some(ExtractCustomersFileName.assume("customers.csv")),
             customerBookFileBytes,
             None,
           )
@@ -1174,7 +1174,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.Unauthorized](
             Some(organizationID),
-            Some(FileNameDeclared.assume("customers.csv")),
+            Some(ExtractCustomersFileName.assume("customers.csv")),
             customerBookFileBytes,
             Some(AccessToken("invalidtoken")),
           )
@@ -1214,7 +1214,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           val extractCustomersResponse = gatewayClient
             .extractCustomersPost[smithy.Forbidden](
               Some(organizationUserRow.organizationID),
-              Some(FileNameDeclared.assume("customers.csv")),
+              Some(ExtractCustomersFileName.assume("customers.csv")),
               customerBookFileBytes,
               Some(accessJwt.accessToken),
             )
@@ -1241,7 +1241,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.Forbidden](
             Some(organizationID),
-            Some(FileNameDeclared.assume("customers.csv")),
+            Some(ExtractCustomersFileName.assume("customers.csv")),
             customerBookFileBytes,
             Some(accessJwt.accessToken),
           )
@@ -1267,7 +1267,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.InternalServerError](
             Some(organizationID),
-            Some(FileNameDeclared.assume("customers.csv")),
+            Some(ExtractCustomersFileName.assume("customers.csv")),
             customerBookFileBytes,
             Some(accessJwt.accessToken),
           )
@@ -1300,7 +1300,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val extractCustomersResponse = gatewayClient
           .extractCustomersPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
-            Some(FileNameDeclared.assume("customers.csv")),
+            Some(ExtractCustomersFileName.assume("customers.csv")),
             customerBookFileBytes,
             Some(accessJwt.accessToken),
           )
@@ -1336,7 +1336,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           val extractCustomersResponse = gatewayClient
             .extractCustomersPost[smithy.InternalServerError](
               Some(organizationUserRow.organizationID),
-              Some(FileNameDeclared.assume("customers.xlsx")),
+              Some(ExtractCustomersFileName.assume("customers.xlsx")),
               customerBookFileBytes,
               Some(accessJwt.accessToken),
             )

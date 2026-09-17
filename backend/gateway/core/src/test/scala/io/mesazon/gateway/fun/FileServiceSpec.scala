@@ -49,7 +49,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               organizationLogoImageByteStream,
-              FileNameDeclared.assume(organizationLogoImageOriginalFileName.value),
+              organizationLogoImageOriginalFileName.value,
               SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
@@ -117,7 +117,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               organizationLogoImageByteStream,
-              FileNameDeclared.assume(organizationLogoImageOriginalFileName.value),
+              organizationLogoImageOriginalFileName.value,
               SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
@@ -149,7 +149,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               organizationLogoImageByteStream,
-              FileNameDeclared.assume(organizationLogoImageOriginalFileName.value),
+              organizationLogoImageOriginalFileName.value,
               SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
@@ -198,7 +198,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               organizationLogoImageByteStream,
-              FileNameDeclared.assume(organizationLogoImageOriginalFileName.value),
+              organizationLogoImageOriginalFileName.value,
               SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
@@ -267,7 +267,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               organizationLogoImageByteStream,
-              FileNameDeclared.assume(organizationLogoImageOriginalFileName.value),
+              organizationLogoImageOriginalFileName.value,
               SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
@@ -367,7 +367,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
-              FileNameDeclared.assume(catalogueItemImageOriginalFileName.value),
+              catalogueItemImageOriginalFileName.value,
               SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
@@ -525,7 +525,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
-              FileNameDeclared.assume(catalogueItemImageOriginalFileName.value),
+              catalogueItemImageOriginalFileName.value,
               SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
@@ -570,7 +570,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
-              FileNameDeclared.assume(catalogueItemImageOriginalFileName.value),
+              catalogueItemImageOriginalFileName.value,
               SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
@@ -632,7 +632,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
-              FileNameDeclared.assume(catalogueItemImageOriginalFileName.value),
+              catalogueItemImageOriginalFileName.value,
               SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
@@ -713,7 +713,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           fileScannerMock.scan
             .expects(
               catalogueItemImageByteStream,
-              FileNameDeclared.assume(catalogueItemImageOriginalFileName.value),
+              catalogueItemImageOriginalFileName.value,
               SupportedMediaType.images,
               fileServiceConfig.maxUploadBytes,
             )
@@ -765,10 +765,10 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
     "extractCustomerBook" should {
       "return the AI's extracted candidates for an image" in new TestContext {
-        val organizationID         = arbitrarySample[OrganizationID]
-        val fileNameDeclared       = FileNameDeclared.assume("customers.jpeg")
-        val customerBookByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
-        val fileScannedPath        = FileScannedPath(Files.createTempFile("file-service-spec-", ".jpeg"))
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val extractCustomersFileName       = ExtractCustomersFileName.assume("customers.jpeg")
+        val extractCustomersFileByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val fileScannedPath                = FileScannedPath(Files.createTempFile("file-service-spec-", ".jpeg"))
         fileScannedPath.value.toFile.deleteOnExit()
         val fileScannerScanOutput: FileScannerScanOutput = (
           fileScannedPath = fileScannedPath,
@@ -787,8 +787,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
 
         fileScannerMock.scan
           .expects(
-            customerBookByteStream,
-            fileNameDeclared,
+            extractCustomersFileByteStream,
+            extractCustomersFileName.value,
             SupportedMediaType.extractData,
             fileServiceConfig.maxUploadBytes,
           )
@@ -806,7 +806,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val fileService = buildFileService(aiClient)
 
         val response = fileService
-          .extractCustomerBook(organizationID, fileNameDeclared, customerBookByteStream)
+          .extractCustomerBook(organizationID, extractCustomersFileName, extractCustomersFileByteStream)
           .zioValue
 
         response shouldBe extractCustomersResponse
@@ -817,11 +817,11 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       }
 
       "return the AI's extracted candidates for a spreadsheet after CSV conversion" in new TestContext {
-        val organizationID         = arbitrarySample[OrganizationID]
-        val fileNameDeclared       = FileNameDeclared.assume("customers.csv")
-        val customerBookCsvBytes   = "Full Name,Email".getBytes(StandardCharsets.UTF_8)
-        val customerBookByteStream = ZStream.fromIterable(customerBookCsvBytes)
-        val fileScannedPath        = FileScannedPath(Files.createTempFile("file-service-spec-", ".csv"))
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val extractCustomersFileName       = ExtractCustomersFileName.assume("customers.csv")
+        val customerBookCsvBytes           = "Full Name,Email".getBytes(StandardCharsets.UTF_8)
+        val extractCustomersFileByteStream = ZStream.fromIterable(customerBookCsvBytes)
+        val fileScannedPath                = FileScannedPath(Files.createTempFile("file-service-spec-", ".csv"))
         fileScannedPath.value.toFile.deleteOnExit()
         val fileScannerScanOutput: FileScannerScanOutput = (
           fileScannedPath = fileScannedPath,
@@ -845,8 +845,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         inSequence(
           fileScannerMock.scan
             .expects(
-              customerBookByteStream,
-              fileNameDeclared,
+              extractCustomersFileByteStream,
+              extractCustomersFileName.value,
               SupportedMediaType.extractData,
               fileServiceConfig.maxUploadBytes,
             )
@@ -869,7 +869,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val fileService = buildFileService(aiClient)
 
         val response = fileService
-          .extractCustomerBook(organizationID, fileNameDeclared, customerBookByteStream)
+          .extractCustomerBook(organizationID, extractCustomersFileName, extractCustomersFileByteStream)
           .zioValue
 
         response shouldBe extractCustomersResponse
@@ -880,23 +880,23 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       }
 
       "propagate the validation error without calling AI when the scanner rejects the declared filename" in new TestContext {
-        val organizationID         = arbitrarySample[OrganizationID]
-        val fileNameDeclared       = FileNameDeclared.assume("customers.png")
-        val customerBookByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
-        val scanError              = ServiceError.BadRequestError.ValidationError(
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val extractCustomersFileName       = ExtractCustomersFileName.assume("customers.png")
+        val extractCustomersFileByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val scanError                      = ServiceError.BadRequestError.ValidationError(
           Seq(
             ServiceError.BadRequestError.InvalidFieldError(
               "fileNameDeclared",
               "File name declaration does not match detected media type [image/jpeg]",
-              fileNameDeclared.value,
+              extractCustomersFileName.value,
             )
           )
         )
 
         fileScannerMock.scan
           .expects(
-            customerBookByteStream,
-            fileNameDeclared,
+            extractCustomersFileByteStream,
+            extractCustomersFileName.value,
             SupportedMediaType.extractData,
             fileServiceConfig.maxUploadBytes,
           )
@@ -914,7 +914,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val fileService = buildFileService(aiClient)
 
         val serviceError = fileService
-          .extractCustomerBook(organizationID, fileNameDeclared, customerBookByteStream)
+          .extractCustomerBook(organizationID, extractCustomersFileName, extractCustomersFileByteStream)
           .zioError
 
         serviceError shouldBe scanError
