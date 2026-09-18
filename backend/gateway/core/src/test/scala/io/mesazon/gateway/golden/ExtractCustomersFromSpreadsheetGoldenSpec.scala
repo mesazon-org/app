@@ -78,10 +78,11 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
                 .run(ZSink.fromPath(spreadsheetTempPath))
                 .orDie
               spreadsheetScannedPath = FileScannedPath(spreadsheetTempPath)
-              csvValidatedPath <- spreadsheetTool.validateAndConvertToCsv(
-                spreadsheetScannedPath,
-                supportedMediaType,
-              )
+              csvValidatedPath <-
+                if (SupportedMediaType.excel.contains(supportedMediaType))
+                  spreadsheetTool.convertExcelToCsv(spreadsheetScannedPath)
+                else
+                  spreadsheetTool.validateCsv(spreadsheetScannedPath)
               responses <- aiClient.extractFromCsv[ExtractCustomersPostResponse](
                 csvValidatedPath,
                 FileService.extractCustomersFromFileInstructions,
