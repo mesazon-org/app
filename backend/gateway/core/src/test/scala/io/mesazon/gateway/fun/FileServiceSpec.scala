@@ -852,7 +852,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
             .once(),
-          spreadsheetToolMock.validateCsv
+          spreadsheetToolMock.convertToCsv
             .expects(fileScannedPath)
             .returns(ZIO.succeed(csvValidatedPath))
             .once(),
@@ -937,7 +937,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
             .once(),
-          spreadsheetToolMock.validateCsv
+          spreadsheetToolMock.convertToCsv
             .expects(fileScannedPath)
             .returns(ZIO.succeed(csvValidatedPath))
             .once(),
@@ -1013,7 +1013,6 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         extractFromCsvCallsRef.refValue shouldBe List.empty
       }
     }
-
   }
 
   trait TestContext {

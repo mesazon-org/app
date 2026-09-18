@@ -1,6 +1,6 @@
 package io.mesazon.gateway.utils
 
-import io.mesazon.domain.gateway.{ServiceError, SupportedMediaType}
+import io.mesazon.domain.gateway.ServiceError
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVPrinter}
 import org.apache.poi.ss.usermodel.*
 import zio.*
@@ -11,9 +11,12 @@ import java.nio.file.{Files, Path}
 import scala.jdk.CollectionConverters.*
 
 trait SpreadsheetTool {
-  def validateAndConvertToCsv(
-      fileScannedPath: FileScannedPath,
-      supportedMediaType: SupportedMediaType,
+  def convertExcelToCsv(
+      excelFileScannedPath: FileScannedPath
+  ): ZIO[Scope, ServiceError, CsvValidatedPath]
+
+  def convertToCsv(
+      csvFileScannedPath: FileScannedPath
   ): ZIO[Scope, ServiceError, CsvValidatedPath]
 
 }
@@ -89,21 +92,15 @@ object SpreadsheetTool {
     private def validateAndRefine(csvPath: Path): ZIO[Scope, ServiceError, CsvValidatedPath] =
       validateCsvFile(csvPath).as(CsvValidatedPath(csvPath))
 
-    override def validateAndConvertToCsv(
-        fileScannedPath: FileScannedPath,
-        supportedMediaType: SupportedMediaType,
+    override def convertExcelToCsv(
+        excelFileScannedPath: FileScannedPath
     ): ZIO[Scope, ServiceError, CsvValidatedPath] =
-      supportedMediaType match {
-        case mediaType if SupportedMediaType.excel.contains(mediaType) =>
-          convertExcelToCsvFile(fileScannedPath).flatMap(validateAndRefine)
-        case mediaType if SupportedMediaType.csv.contains(mediaType) =>
-          validateAndRefine(fileScannedPath.value)
-        case unexpected =>
-          ZIO.fail(
-            ServiceError.InternalServerError
-              .UnexpectedError(s"Unsupported media type for CSV/Excel conversion: [$unexpected]")
-          )
-      }
+      convertExcelToCsvFile(excelFileScannedPath).flatMap(validateAndRefine)
+
+    override def convertToCsv(
+        csvFileScannedPath: FileScannedPath
+    ): ZIO[Scope, ServiceError, CsvValidatedPath] =
+      validateAndRefine(csvFileScannedPath.value)
 
   }
 

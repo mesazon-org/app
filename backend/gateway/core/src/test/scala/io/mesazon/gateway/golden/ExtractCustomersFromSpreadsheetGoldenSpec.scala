@@ -82,7 +82,7 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
                 if (SupportedMediaType.excel.contains(supportedMediaType))
                   spreadsheetTool.convertExcelToCsv(spreadsheetScannedPath)
                 else
-                  spreadsheetTool.validateCsv(spreadsheetScannedPath)
+                  spreadsheetTool.convertToCsv(spreadsheetScannedPath)
               responses <- aiClient.extractFromCsv[ExtractCustomersPostResponse](
                 csvValidatedPath,
                 FileService.extractCustomersFromFileInstructions,

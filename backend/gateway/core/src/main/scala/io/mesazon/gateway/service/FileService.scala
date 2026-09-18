@@ -28,7 +28,7 @@ trait FileService[F[_]] {
       catalogueItemImageByteStream: ZStream[Any, Throwable, Byte],
   ): F[Unit]
 
-  def extractCustomerBook(
+  def extractCustomers(
       organizationID: OrganizationID,
       extractCustomersFileName: ExtractCustomersFileName,
       extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
@@ -153,6 +153,16 @@ object FileService {
       )
     }
 
+    private def extractFromCsvValidatedPath(
+        csvValidatedPath: CsvValidatedPath
+    ): ServiceTask[ExtractCustomersPostResponse] =
+      aiClient
+        .extractFromCsv[ExtractCustomersPostResponse](
+          csvValidatedPath,
+          extractCustomersFromFileInstructions,
+        )
+        .map(mergeExtractCustomersPostResponses)
+
     override def uploadOrganizationLogo(
         organizationID: OrganizationID,
         organizationLogoImageOriginalFileName: ImageOriginalFileName,
@@ -162,7 +172,7 @@ object FileService {
         organizationLogoImageByteStream,
         organizationLogoImageOriginalFileName.value,
         SupportedMediaType.images,
-        fileServiceConfig.maxUploadBytes,
+        fileServiceConfig.fileBytesMax,
       )
       organizationLogoImageNormalizedResult <- imageProcessing.normalize(
         FileByteStreamScanned(ZStream.fromPath(organizationLogoImageScanOutput.fileScannedPath.value)),
@@ -223,7 +233,7 @@ object FileService {
           catalogueItemImageByteStream,
           catalogueItemImageOriginalFileName.value,
           SupportedMediaType.images,
-          fileServiceConfig.maxUploadBytes,
+          fileServiceConfig.fileBytesMax,
         )
         catalogueItemImageNormalizedResult <- imageProcessing.normalize(
           FileByteStreamScanned(ZStream.fromPath(catalogueItemImageScanOutput.fileScannedPath.value)),
@@ -256,7 +266,7 @@ object FileService {
         )
       } yield ())
 
-    override def extractCustomerBook(
+    override def extractCustomers(
         organizationID: OrganizationID,
         extractCustomersFileName: ExtractCustomersFileName,
         extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
@@ -265,7 +275,7 @@ object FileService {
         extractCustomersFileByteStream,
         extractCustomersFileName.value,
         SupportedMediaType.extractData,
-        fileServiceConfig.maxUploadBytes,
+        fileServiceConfig.fileBytesMax,
       )
       extractCustomersPostResponse <- customerBookScanOutput.supportedMediaType match {
         case supportedMediaType if SupportedMediaType.images.contains(supportedMediaType) =>
@@ -274,17 +284,14 @@ object FileService {
             supportedMediaType,
             extractCustomersFromImageInstructions,
           )
-        case supportedMediaType if SupportedMediaType.spreadsheets.contains(supportedMediaType) =>
+        case supportedMediaType if SupportedMediaType.excel.contains(supportedMediaType) =>
           spreadsheetTool
-            .validateAndConvertToCsv(customerBookScanOutput.fileScannedPath, supportedMediaType)
-            .flatMap(csvValidatedPath =>
-              aiClient
-                .extractFromCsv[ExtractCustomersPostResponse](
-                  csvValidatedPath,
-                  extractCustomersFromFileInstructions,
-                )
-                .map(mergeExtractCustomersPostResponses)
-            )
+            .convertExcelToCsv(customerBookScanOutput.fileScannedPath)
+            .flatMap(extractFromCsvValidatedPath)
+        case supportedMediaType if SupportedMediaType.csv.contains(supportedMediaType) =>
+          spreadsheetTool
+            .convertToCsv(customerBookScanOutput.fileScannedPath)
+            .flatMap(extractFromCsvValidatedPath)
         case supportedMediaTypeUnexpected =>
           ZIO.fail(
             ServiceError.InternalServerError.UnexpectedError(
@@ -328,13 +335,13 @@ object FileService {
             )
         )
 
-      override def extractCustomerBook(
+      override def extractCustomers(
           organizationID: OrganizationID,
           extractCustomersFileName: ExtractCustomersFileName,
           extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
       ): TapirTask[ExtractCustomersPostResponse] =
         HttpErrorHandler.errorResponseHandlerTapir(
-          service.extractCustomerBook(
+          service.extractCustomers(
             organizationID,
             extractCustomersFileName,
             extractCustomersFileByteStream,

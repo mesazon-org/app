@@ -1,10 +1,10 @@
 package io.mesazon.gateway.unit.utils
 
-import io.mesazon.domain.gateway.{ServiceError, SupportedMediaType}
-import io.mesazon.gateway.utils.{FileScannedPath, SpreadsheetTool, TempFile}
+import io.mesazon.domain.gateway.ServiceError
+import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.ZWordSpecBase
 import zio.*
-import zio.stream.{ZSink, ZStream}
+import zio.stream.*
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -28,7 +28,7 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
     } yield FileScannedPath(fileTempPath)
 
   "SpreadsheetTool" when {
-    "validateAndConvertToCsv" should {
+    "convertExcelToCsv" should {
       "convert only the first sheet of a multi-sheet .xlsx workbook to validated CSV-shaped text, ignoring the other sheets" in {
         val spreadsheetTool = ZIO
           .service[SpreadsheetTool]
@@ -38,11 +38,8 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
         val convertedCsvText = ZIO
           .scoped(for {
             excelFileScannedPath <- fileScannedPath(ZStream.fromResource("assets/contact-book-test-spreadsheet-3.xlsx"))
-            csvValidatedPath     <- spreadsheetTool.validateAndConvertToCsv(
-              excelFileScannedPath,
-              SupportedMediaType.XLSX,
-            )
-            csvText <- ZIO.attemptBlocking(Files.readString(csvValidatedPath.value)).orDie
+            csvValidatedPath     <- spreadsheetTool.convertExcelToCsv(excelFileScannedPath)
+            csvText              <- ZIO.attemptBlocking(Files.readString(csvValidatedPath.value)).orDie
           } yield csvText)
           .zioValue
 
@@ -58,17 +55,16 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
         val convertedCsvText = ZIO
           .scoped(for {
             excelFileScannedPath <- fileScannedPath(ZStream.fromResource("assets/contact-book-test-spreadsheet-2.xls"))
-            csvValidatedPath     <- spreadsheetTool.validateAndConvertToCsv(
-              excelFileScannedPath,
-              SupportedMediaType.XLS,
-            )
-            csvText <- ZIO.attemptBlocking(Files.readString(csvValidatedPath.value)).orDie
+            csvValidatedPath     <- spreadsheetTool.convertExcelToCsv(excelFileScannedPath)
+            csvText              <- ZIO.attemptBlocking(Files.readString(csvValidatedPath.value)).orDie
           } yield csvText)
           .zioValue
 
         convertedCsvText shouldBe wellFormedCsvText
       }
+    }
 
+    "convertToCsv" should {
       "accept a well-formed CSV file without converting it" in {
         val spreadsheetTool = ZIO
           .service[SpreadsheetTool]
@@ -80,11 +76,8 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
             csvFileScannedPath <- fileScannedPath(
               ZStream.fromIterable(wellFormedCsvText.getBytes(StandardCharsets.UTF_8))
             )
-            csvValidatedPath <- spreadsheetTool.validateAndConvertToCsv(
-              csvFileScannedPath,
-              SupportedMediaType.CSV,
-            )
-            csvText <- ZIO.attemptBlocking(Files.readString(csvValidatedPath.value)).orDie
+            csvValidatedPath <- spreadsheetTool.convertToCsv(csvFileScannedPath)
+            csvText          <- ZIO.attemptBlocking(Files.readString(csvValidatedPath.value)).orDie
           } yield csvText)
           .zioValue
 
@@ -102,10 +95,7 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
             csvFileScannedPath <- fileScannedPath(
               ZStream.fromIterable(malformedCsvText.getBytes(StandardCharsets.UTF_8))
             )
-            validatedCsvByteStream <- spreadsheetTool.validateAndConvertToCsv(
-              csvFileScannedPath,
-              SupportedMediaType.CSV,
-            )
+            validatedCsvByteStream <- spreadsheetTool.convertToCsv(csvFileScannedPath)
           } yield validatedCsvByteStream)
           .zioError
 
