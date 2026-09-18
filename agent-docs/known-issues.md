@@ -95,7 +95,7 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 
 - **Status:** Mitigated 2026-09-13
 - **Severity:** Medium
-- **Signature:** `gateway-it/testOnly *GatewayAcceptanceSpec -- -z /extract/customer-book` builds the images and reports success, but executes zero tests. Running `FileApiSpec` directly instead bypasses the parent context initialization. Running ScalaTest's standalone runner from the repository root can also abort with `Unable to parse YAML file` / missing `compose.yaml` before starting tests.
+- **Signature:** `gateway-it/testOnly *GatewayAcceptanceSpec -- -z /extract/customers` builds the images and reports success, but executes zero tests. Running `FileApiSpec` directly instead bypasses the parent context initialization. Running ScalaTest's standalone runner from the repository root can also abort with `Unable to parse YAML file` / missing `compose.yaml` before starting tests.
 - **Cause:** sbt's ScalaTest wildcard test selector targets the selected parent's own test names, not its nested specs. The compose harness also depends on the gateway-it working directory. Nested suite selection is supported by the standalone [ScalaTest runner](https://www.scalatest.org/user_guide/using_the_runner), not sbt's suite-argument parser.
 - **Fix:** After publishing the current gateway and WireMock images, select the nested file suite through its parent and set the forked runner's working directory for this invocation only:
   ```sh

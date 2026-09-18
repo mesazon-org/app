@@ -600,7 +600,7 @@ The body is the image or file itself, exactly as with every other upload in this
 | File | Binary | PNG, JPEG or WEBP; or genuinely readable as CSV or Excel (`.xls` or `.xlsx`); up to 20 MB | ✅ | The image or file to read, sent as the request body |
 | File Name | `String` | 1–255 characters, trimmed; supported extension matching the actual format | ✅ | The file's name, sent as a header and required to identify the declared format. It is never stored |
 
-**Response — `ExtractCustomersResponse`**
+**Response — `ExtractCustomersPostResponse`**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |

@@ -896,7 +896,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
       // "Oversized Tapir upload can hang the request instead of failing fast".
     }
 
-    "/extract/customer-book" should {
+    "/extract/customers" should {
       "extract customer candidates from an image" in withContext { context =>
         import context.*
 

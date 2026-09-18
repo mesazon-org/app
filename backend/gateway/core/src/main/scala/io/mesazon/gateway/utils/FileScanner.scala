@@ -14,7 +14,7 @@ trait FileScanner {
       fileByteStream: ZStream[Any, Throwable, Byte],
       fileNameDeclared: String,
       supportedMediaTypes: List[SupportedMediaType],
-      maxFileBytes: Long,
+      fileBytesMax: Long,
   ): ZIO[Scope, ServiceError, FileScannerScanOutput]
 }
 
@@ -22,8 +22,10 @@ object FileScanner {
 
   private final class FileScannerImpl extends FileScanner {
 
-    private val ExtraBytesToRead = 1L // Read one extra byte to check if the file exceeds the max size
-    private val tika             = new Tika()
+    private val ExtraBytesToRead        = 1L // Read one extra byte to check if the file exceeds the max size
+    private val InitialBytesWritten     = 0L
+    private val NoRemainingBytesAllowed = 0L
+    private val tika                    = new Tika()
 
     inline private val FileNameDeclaredField = "fileNameDeclared"
 
@@ -83,9 +85,12 @@ object FileScanner {
               ServiceError.InternalServerError.UnexpectedError("Failed to write file to temp file", Some(e))
             )
             .chunks
-            .runFoldZIO(0L) { (written, chunk) =>
+            .runFoldZIO(InitialBytesWritten) { (written, chunk) =>
               val allowedToWrite =
-                math.max(0L, fileBytesMax + ExtraBytesToRead - written).min(Int.MaxValue.toLong).toInt
+                math
+                  .max(NoRemainingBytesAllowed, fileBytesMax + ExtraBytesToRead - written)
+                  .min(Int.MaxValue.toLong)
+                  .toInt
               val chunkToWrite = chunk.take(allowedToWrite)
               ZIO
                 .attemptBlocking(if (chunkToWrite.nonEmpty) outputStream.write(chunkToWrite.toArray))
