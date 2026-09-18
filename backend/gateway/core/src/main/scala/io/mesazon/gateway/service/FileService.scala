@@ -5,12 +5,14 @@ import io.mesazon.gateway.HttpErrorHandler
 import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.json.ai.given
-import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
+import io.mesazon.gateway.json.tapir.extractCustomersPostResponseCodec
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.tapir.TapirTask
 import io.mesazon.gateway.utils.*
 import zio.*
 import zio.stream.*
+
+import java.util.Locale
 
 trait FileService[F[_]] {
   def uploadOrganizationLogo(
@@ -30,7 +32,7 @@ trait FileService[F[_]] {
       organizationID: OrganizationID,
       extractCustomersFileName: ExtractCustomersFileName,
       extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
-  ): F[ExtractCustomersResponse]
+  ): F[ExtractCustomersPostResponse]
 }
 
 object FileService {
@@ -115,6 +117,41 @@ object FileService {
       s3ClientOrganizationMedia: S3ClientOrganizationMedia,
       aiClient: AIClient,
   ) extends FileService[ServiceTask] {
+
+    private def normalizedName(name: String): String = name.toLowerCase(Locale.ROOT)
+
+    private def mergeExtractCustomersPostResponses(
+        responses: NonEmptyChunk[ExtractCustomersPostResponse]
+    ): ExtractCustomersPostResponse = {
+      val responseList         = responses.toChunk.toList
+      val individualCandidates = responseList.flatMap(_.customerIndividualCandidates)
+      val businessCandidates   = responseList.flatMap(_.customerBusinessCandidates)
+      val individualNameCounts = individualCandidates.groupMapReduce(candidate =>
+        normalizedName(candidate.candidate.fullName.value)
+      )(_ => 1)(_ + _)
+      val businessNameCounts = businessCandidates.groupMapReduce(candidate =>
+        normalizedName(candidate.candidate.businessName.value)
+      )(_ => 1)(_ + _)
+      val unidentifiedEntriesSummary = responseList
+        .flatMap(_.unidentifiedEntriesSummary)
+        .mkString("\n")
+
+      ExtractCustomersPostResponse(
+        entriesIdentified = responseList.map(_.entriesIdentified).sum,
+        entriesProcessed = responseList.map(_.entriesProcessed).sum,
+        customerIndividualCandidates = individualCandidates.map(candidate =>
+          candidate.copy(
+            isDuplicate = individualNameCounts(normalizedName(candidate.candidate.fullName.value)) > 1
+          )
+        ),
+        customerBusinessCandidates = businessCandidates.map(candidate =>
+          candidate.copy(
+            isDuplicate = businessNameCounts(normalizedName(candidate.candidate.businessName.value)) > 1
+          )
+        ),
+        unidentifiedEntriesSummary = Option.when(unidentifiedEntriesSummary.nonEmpty)(unidentifiedEntriesSummary),
+      )
+    }
 
     override def uploadOrganizationLogo(
         organizationID: OrganizationID,
@@ -223,16 +260,16 @@ object FileService {
         organizationID: OrganizationID,
         extractCustomersFileName: ExtractCustomersFileName,
         extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
-    ): ServiceTask[ExtractCustomersResponse] = ZIO.scoped(for {
+    ): ServiceTask[ExtractCustomersPostResponse] = ZIO.scoped(for {
       customerBookScanOutput <- fileScanner.scan(
         extractCustomersFileByteStream,
         extractCustomersFileName.value,
         SupportedMediaType.extractData,
         fileServiceConfig.maxUploadBytes,
       )
-      extractCustomersResponse <- customerBookScanOutput.supportedMediaType match {
+      extractCustomersPostResponse <- customerBookScanOutput.supportedMediaType match {
         case supportedMediaType if SupportedMediaType.images.contains(supportedMediaType) =>
-          aiClient.extractFromImage[ExtractCustomersResponse](
+          aiClient.extractFromImage[ExtractCustomersPostResponse](
             customerBookScanOutput.fileScannedPath,
             supportedMediaType,
             extractCustomersFromImageInstructions,
@@ -241,10 +278,12 @@ object FileService {
           spreadsheetTool
             .validateAndConvertToCsv(customerBookScanOutput.fileScannedPath, supportedMediaType)
             .flatMap(csvValidatedPath =>
-              aiClient.extractFromCsv(
-                csvValidatedPath,
-                extractCustomersFromFileInstructions,
-              )
+              aiClient
+                .extractFromCsv[ExtractCustomersPostResponse](
+                  csvValidatedPath,
+                  extractCustomersFromFileInstructions,
+                )
+                .map(mergeExtractCustomersPostResponses)
             )
         case supportedMediaTypeUnexpected =>
           ZIO.fail(
@@ -253,7 +292,7 @@ object FileService {
             )
           )
       }
-    } yield extractCustomersResponse)
+    } yield extractCustomersPostResponse)
 
   }
 
@@ -293,7 +332,7 @@ object FileService {
           organizationID: OrganizationID,
           extractCustomersFileName: ExtractCustomersFileName,
           extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
-      ): TapirTask[ExtractCustomersResponse] =
+      ): TapirTask[ExtractCustomersPostResponse] =
         HttpErrorHandler.errorResponseHandlerTapir(
           service.extractCustomerBook(
             organizationID,
