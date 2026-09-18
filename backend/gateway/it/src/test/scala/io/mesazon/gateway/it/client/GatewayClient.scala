@@ -419,7 +419,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, ExtractCustomersPostResponse]]] =
     basicRequest
-      .post(externalUri.addPath("extract", "customer-book"))
+      .post(externalUri.addPath("extract", "customers"))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)

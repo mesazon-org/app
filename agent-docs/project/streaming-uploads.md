@@ -4,7 +4,7 @@ Read when changing `FileScanner.scan`, `ImageProcessing.normalize`, upload byte-
 
 ## `EntityLimiter` is not a hard cap
 
-`org.http4s.server.middleware.EntityLimiter` wraps the Tapir routes (`HttpApp.scala`, `TapirMaxEntitySize` = `file-service.max-upload-bytes` = 20 MB, kept in sync manually — not enforced structurally). It does not truncate the body. Its `takeLimited(n)`: take `n` bytes; if more remain, echo **all** the remainder to the downstream reader (unbounded — as much as the client sends), then raise `EntityTooLarge` only once that remainder hits real EOF. It guarantees eventual failure, never a bounded amount of data delivered before failure.
+`org.http4s.server.middleware.EntityLimiter` wraps the Tapir routes (`HttpApp.scala`, `TapirMaxEntitySize` = `file-service.file-bytes-max` = 20 MB, kept in sync manually — not enforced structurally). It does not truncate the body. Its `takeLimited(n)`: take `n` bytes; if more remain, echo **all** the remainder to the downstream reader (unbounded — as much as the client sends), then raise `EntityTooLarge` only once that remainder hits real EOF. It guarantees eventual failure, never a bounded amount of data delivered before failure.
 
 Consequences for `FileScanner.scan`:
 
@@ -13,7 +13,7 @@ Consequences for `FileScanner.scan`:
 
 ## Current design
 
-`FileScanner.scan` folds `fileByteStream.chunks` in one pass (`runFoldZIO`): pulls to true EOF (drains the connection fully) but writes at most `maxFileBytes + 1` bytes to the temp file. Bytes beyond the cap are counted, never buffered or written — disk usage stays bounded regardless of actual body size, while the connection still gets fully drained.
+`FileScanner.scan` folds `fileByteStream.chunks` in one pass (`runFoldZIO`): pulls to true EOF (drains the connection fully) but writes at most `fileBytesMax + 1` bytes to the temp file. Bytes beyond the cap are counted, never buffered or written — disk usage stays bounded regardless of actual body size, while the connection still gets fully drained.
 
 `scan` requires the declared filename, validates its extension against the caller's allowed media types before reading the body, writes to a scoped temp file, asks Tika to detect the content using that filename as its hint, and rejects a declared/detected mismatch with `BadRequest`. It returns `FileScannerScanOutput`: the scoped `FileScannedPath`, matched `SupportedMediaType`, and actual `FileBytesSize`. Every `FileService` upload uses this method. Customer extraction passes the path directly to the AI or spreadsheet client; logo and catalogue uploads rebuild a `FileByteStreamScanned` from the already capped local path for `ImageProcessing`.
 

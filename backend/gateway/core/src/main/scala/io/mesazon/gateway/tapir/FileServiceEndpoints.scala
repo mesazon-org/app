@@ -61,9 +61,9 @@ object FileServiceEndpoints {
       )
       .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
 
-  private val extractCustomerBookPostEndpoint =
+  private val extractCustomersPostEndpoint =
     securedEndpoint.post
-      .in("extract" / "customer-book")
+      .in("extract" / "customers")
       .in(header[ExtractCustomersFileName](FileNameHeader))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
       .out(jsonBody[ExtractCustomersPostResponse])
@@ -129,7 +129,7 @@ object FileServiceEndpoints {
                 catalogueItemImageByteStream,
               )
           }),
-        extractCustomerBookPostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
+        extractCustomersPostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
           authorizationService
             .auth(
               accessToken = accessToken,
@@ -140,7 +140,7 @@ object FileServiceEndpoints {
             .as(organizationID)
         }
           .serverLogic(organizationID => { case (extractCustomersFileName, extractCustomersFileByteStream) =>
-            fileService.extractCustomerBook(
+            fileService.extractCustomers(
               organizationID,
               extractCustomersFileName,
               extractCustomersFileByteStream,
@@ -153,7 +153,7 @@ object FileServiceEndpoints {
             List(
               uploadOrganizationLogoPostEndpoint,
               uploadCatalogueItemImagePostEndpoint,
-              extractCustomerBookPostEndpoint,
+              extractCustomersPostEndpoint,
             ),
             Info(
               title = "FileService",
