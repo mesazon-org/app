@@ -4,25 +4,26 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClient
 import io.mesazon.gateway.config.AIClientConfig
 import io.mesazon.gateway.json.ai.given
-import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
+import io.mesazon.gateway.json.tapir.extractCustomersPostResponseCodec
 import io.mesazon.gateway.service.FileService
-import io.mesazon.gateway.utils.FileByteStreamScanned
+import io.mesazon.gateway.utils.FileScannedPath
 import io.mesazon.testkit.base.ZWordSpecBase
 import sttp.client4.httpclient.zio.HttpClientZioBackend
 import zio.*
-import zio.stream.ZStream
 
-/** Manual-only check against the real OpenAI API: sends each sample photo in
-  * `assets/contact-book-test-photo-1.png`..`-10.png` through the real `AIClient` and asserts the complete captured
-  * golden response for that photo across different languages, column namings, and source types.
+import java.nio.file.Path
+
+/** Manual-only check against the real OpenAI API: sends each sample image in
+  * `assets/contact-book-image-test-1.png`..`-10.png` through the real `AIClient` and asserts the complete captured
+  * golden response for that image across different languages, column namings, and source types.
   *
   * Never calls out for real in CI: `apiKey` ships empty, so every case is canceled rather than hitting the real API
   * with a blank key. To run for real, fill in a real key below and invoke this spec directly:
   * {{{
-  * sbt "gateway-core/testOnly io.mesazon.gateway.golden.ExtractCustomersFromPhotoGoldenSpec"
+  * sbt "gateway-core/testOnly io.mesazon.gateway.golden.ExtractCustomersFromImageGoldenSpec"
   * }}}
   */
-class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
+class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
 
   private val apiKey =
     ""
@@ -40,14 +41,16 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
           requestTimeout = Duration.fromSeconds(60),
           sendMaxRetries = 2,
           sendRetryDelay = Duration.fromSeconds(1),
+          csvBatchMaxDataRows = 50,
+          csvBatchParallelism = 3,
         )
       ),
       HttpClientZioBackend.layer(),
     )
     .zioValue
 
-  private val extractCustomersResponseExpectedByPhotoNumber: Map[Int, ExtractCustomersResponse] = Map(
-    1 -> ExtractCustomersResponse(
+  private val extractCustomersPostResponseExpectedByImageNumber: Map[Int, ExtractCustomersPostResponse] = Map(
+    1 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 4L,
       customerIndividualCandidates = List(
@@ -147,7 +150,7 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
       unidentifiedEntriesSummary =
         Some("The crossed-out name and smudged phone number in entry 5 at the bottom could not be read."),
     ),
-    2 -> ExtractCustomersResponse(
+    2 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 5L,
       customerIndividualCandidates = List(
@@ -258,7 +261,7 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
       ),
       unidentifiedEntriesSummary = None,
     ),
-    3 -> ExtractCustomersResponse(
+    3 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 4L,
       customerIndividualCandidates = List(
@@ -357,7 +360,7 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
       unidentifiedEntriesSummary =
         Some("Entry 5 at the bottom has a crossed-out, unreadable name and an incomplete phone number."),
     ),
-    4 -> ExtractCustomersResponse(
+    4 -> ExtractCustomersPostResponse(
       entriesIdentified = 1L,
       entriesProcessed = 1L,
       customerIndividualCandidates = List.empty,
@@ -396,7 +399,7 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
       ),
       unidentifiedEntriesSummary = None,
     ),
-    5 -> ExtractCustomersResponse(
+    5 -> ExtractCustomersPostResponse(
       entriesIdentified = 1L,
       entriesProcessed = 1L,
       customerIndividualCandidates = List.empty,
@@ -428,7 +431,7 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
       ),
       unidentifiedEntriesSummary = None,
     ),
-    6 -> ExtractCustomersResponse(
+    6 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 5L,
       customerIndividualCandidates = List(
@@ -537,7 +540,7 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
       ),
       unidentifiedEntriesSummary = None,
     ),
-    7 -> ExtractCustomersResponse(
+    7 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 4L,
       customerIndividualCandidates = List(
@@ -644,7 +647,7 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
       ),
       unidentifiedEntriesSummary = Some("В нижней строке таблицы имя замазано, а телефон указан лишь частично."),
     ),
-    8 -> ExtractCustomersResponse(
+    8 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 4L,
       customerIndividualCandidates = List(
@@ -749,7 +752,7 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
         "The last populated row has contact details and an Austin address, but no person or business name is visible."
       ),
     ),
-    9 -> ExtractCustomersResponse(
+    9 -> ExtractCustomersPostResponse(
       entriesIdentified = 5L,
       entriesProcessed = 5L,
       customerIndividualCandidates = List(
@@ -869,7 +872,7 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
       ),
       unidentifiedEntriesSummary = None,
     ),
-    10 -> ExtractCustomersResponse(
+    10 -> ExtractCustomersPostResponse(
       entriesIdentified = 6L,
       entriesProcessed = 6L,
       customerIndividualCandidates = List(
@@ -1023,30 +1026,31 @@ class ExtractCustomersFromPhotoGoldenSpec extends ZWordSpecBase {
   )
 
   "AIClient" when {
-    "extractFromImage" should {
-      (1 to 10).foreach { photoNumber =>
-        s"extract customers from contact-book-test-photo-$photoNumber.png" in {
+    "extract" should {
+      (1 to 10).foreach { imageNumber =>
+        s"extract customers from contact-book-image-test-$imageNumber.png" in {
           assume(
             apiKey.nonEmpty,
-            "Fill in a real OpenAI API key in ExtractCustomersFromPhotoGoldenSpec.apiKey to run this manually",
+            "Fill in a real OpenAI API key in ExtractCustomersFromImageGoldenSpec.apiKey to run this manually",
           )
 
           val aiClient = buildAIClient
 
-          val customerBookPhotoByteStreamScanned =
-            FileByteStreamScanned(ZStream.fromResource(s"assets/contact-book-test-photo-$photoNumber.png"))
+          val customerBookImageScannedPath = FileScannedPath(
+            Path.of(getClass.getResource(s"/assets/contact-book-image-test-$imageNumber.png").toURI)
+          )
 
-          val extractCustomersResponse = aiClient
-            .extractFromImage[ExtractCustomersResponse](
-              customerBookPhotoByteStreamScanned,
+          val extractCustomersPostResponse = aiClient
+            .extractFromImage[ExtractCustomersPostResponse](
+              customerBookImageScannedPath,
               SupportedMediaType.PNG,
-              FileService.extractCustomersFromPhotoInstructions,
+              FileService.extractCustomersFromImageInstructions,
             )
             .zioValue
 
-          info(s"contact-book-test-photo-$photoNumber.png => $extractCustomersResponse")
+          info(s"contact-book-image-test-$imageNumber.png => $extractCustomersPostResponse")
 
-          extractCustomersResponse shouldBe extractCustomersResponseExpectedByPhotoNumber(photoNumber)
+          extractCustomersPostResponse shouldBe extractCustomersPostResponseExpectedByImageNumber(imageNumber)
         }
       }
     }

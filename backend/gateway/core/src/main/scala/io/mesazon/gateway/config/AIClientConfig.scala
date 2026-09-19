@@ -11,6 +11,8 @@ final case class AIClientConfig(
     requestTimeout: Duration,
     sendMaxRetries: Int,
     sendRetryDelay: Duration,
+    csvBatchMaxDataRows: Int,
+    csvBatchParallelism: Int,
 ) {
   val baseUri: Uri = Uri.unsafeApply(scheme, host, port).addPath("v1")
 }

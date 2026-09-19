@@ -49,7 +49,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
         val organizationID                        = organizationDetailsRow.organizationID
         val logoBytes                             =
           ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
@@ -112,7 +112,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val logoBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
+        val logoBytes = ZStream.fromResource("assets/organization-image-it-1.jpeg").runCollect.zioValue
 
         val uploadOrganizationLogoResponse = gatewayClient
           .uploadOrganizationLogoPost[smithy.BadRequest](
@@ -137,7 +137,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
         val logoBytes                             =
           ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
 
@@ -157,7 +157,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
       "fail with Unauthorized when access token is missing" in withContext { context =>
         import context.*
 
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
         val organizationID                        = arbitrarySample[OrganizationID]
         val logoBytes                             =
           ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
@@ -178,7 +178,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
       "fail with Unauthorized when access token is invalid" in withContext { context =>
         import context.*
 
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
         val organizationID                        = arbitrarySample[OrganizationID]
         val logoBytes                             =
           ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
@@ -221,7 +221,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-          val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+          val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
           val logoBytes                             =
             ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
 
@@ -249,7 +249,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
         val organizationID                        = arbitrarySample[OrganizationID]
         val logoBytes                             =
           ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
@@ -277,7 +277,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
         val organizationID                        = arbitrarySample[OrganizationID]
         val logoBytes                             =
           ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
@@ -312,7 +312,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("malformed.png")
+        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-malformed-it-1.png")
         val organizationID                        = organizationDetailsRow.organizationID
         val logoBytes                             =
           ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
@@ -380,7 +380,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-          val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+          val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
           val organizationID                     = catalogueItemRowActive.organizationID
           val catalogueItemID                    = catalogueItemRowActive.catalogueItemID
           val imageBytes                         =
@@ -445,7 +445,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -481,7 +481,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val catalogueItemID = arbitrarySample[CatalogueItemID]
-        val imageBytes      = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
+        val imageBytes      = ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
           .uploadCatalogueItemImagePost[smithy.BadRequest](
@@ -508,7 +508,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -530,7 +530,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val organizationID                     = arbitrarySample[OrganizationID]
-        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -552,7 +552,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val organizationID                     = arbitrarySample[OrganizationID]
-        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -595,7 +595,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
           val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-          val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+          val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
           val imageBytes                         =
             ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
@@ -626,7 +626,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val organizationID                     = arbitrarySample[OrganizationID]
-        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -655,7 +655,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val organizationID                     = arbitrarySample[OrganizationID]
-        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -691,7 +691,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -735,7 +735,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
@@ -765,7 +765,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           .isLeft shouldBe true
       }
 
-      "fail with InternalServerError when the uploaded file is not a supported image" in withContext { context =>
+      "fail with BadRequest when the uploaded file does not match its image filename" in withContext { context =>
         import context.*
 
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow]
@@ -792,13 +792,13 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("malformed.png")
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-malformed-it-1.png")
         val organizationID                     = catalogueItemRowActive.organizationID
         val catalogueItemID                    = catalogueItemRowActive.catalogueItemID
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
-          .uploadCatalogueItemImagePost[smithy.InternalServerError](
+          .uploadCatalogueItemImagePost[smithy.BadRequest](
             Some(organizationID),
             Some(catalogueItemID),
             Some(catalogueItemImageOriginalFileName),
@@ -807,8 +807,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           )
           .zioValue
 
-        uploadCatalogueItemImageResponse.code shouldBe StatusCode.InternalServerError
-        uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.InternalServerError()
+        uploadCatalogueItemImageResponse.code shouldBe StatusCode.BadRequest
+        uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.BadRequest()
 
         val catalogueItemRowUpdated = postgresClient
           .executeQuery(catalogueItemQueries.getCatalogueItemRow(organizationID, catalogueItemID))
@@ -859,7 +859,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-          val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("test-logo-1.jpeg")
+          val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
           val imageBytes                         =
             ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
@@ -896,8 +896,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
       // "Oversized Tapir upload can hang the request instead of failing fast".
     }
 
-    "/extract/customer-book-photo" should {
-      "extract customer candidates from a photo" in withContext { context =>
+    "/extract/customers" should {
+      "extract customer candidates from an image" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
@@ -915,17 +915,18 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val customerBookPhotoBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
+        val customerBookImageBytes = ZStream.fromResource("assets/contact-book-image-it-1.jpeg").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
-          .extractCustomersFromPhotoPost[smithy.InternalServerError](
+        val extractCustomersPostResponse = gatewayClient
+          .extractCustomersPost[smithy.InternalServerError](
             Some(organizationUserRow.organizationID),
-            customerBookPhotoBytes,
+            Some(ExtractCustomersFileName.assume("customers.jpeg")),
+            customerBookImageBytes,
             Some(accessJwt.accessToken),
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.Ok
+        extractCustomersPostResponse.code shouldBe StatusCode.Ok
 
         val extractCustomerIndividualDataExpected = ExtractCustomerIndividualData(
           candidate = ExtractCustomerIndividual(
@@ -952,8 +953,132 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           extractionNotes = None,
         )
 
-        extractCustomersResponse.body shouldBe Right(
-          ExtractCustomersResponse(
+        extractCustomersPostResponse.body shouldBe Right(
+          ExtractCustomersPostResponse(
+            entriesIdentified = 1L,
+            entriesProcessed = 1L,
+            customerIndividualCandidates = List(extractCustomerIndividualDataExpected),
+            customerBusinessCandidates = List.empty,
+            unidentifiedEntriesSummary = None,
+          )
+        )
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+      }
+
+      "extract customer candidates from a CSV file" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
+          userID = userDetailsRow.userID,
+          userRole = organizationUserRoleAllowed,
+        )
+
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-spreadsheet-it-1.csv").runCollect.zioValue
+
+        val extractCustomersPostResponse = gatewayClient
+          .extractCustomersPost[smithy.InternalServerError](
+            Some(organizationUserRow.organizationID),
+            Some(ExtractCustomersFileName.assume("customers.csv")),
+            customerBookFileBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        extractCustomersPostResponse.code shouldBe StatusCode.Ok
+
+        val extractCustomerIndividualDataExpected = ExtractCustomerIndividualData(
+          candidate = ExtractCustomerIndividual(
+            fullName = CustomerFullName.assume("John Smith"),
+            emails = List(
+              ExtractCustomerEmailEntry(email = CustomerEmail.assume("john.smith@example.com"), isDefault = true)
+            ),
+            phoneNumbers = List.empty,
+            addressLine1 = None,
+            addressLine2 = None,
+            city = None,
+            postalCode = None,
+            country = None,
+          ),
+          isDuplicate = false,
+          extractionNotes = None,
+        )
+
+        extractCustomersPostResponse.body shouldBe Right(
+          ExtractCustomersPostResponse(
+            entriesIdentified = 1L,
+            entriesProcessed = 1L,
+            customerIndividualCandidates = List(extractCustomerIndividualDataExpected),
+            customerBusinessCandidates = List.empty,
+            unidentifiedEntriesSummary = None,
+          )
+        )
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+      }
+
+      "extract customer candidates from an Excel file" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
+          userID = userDetailsRow.userID,
+          userRole = organizationUserRoleAllowed,
+        )
+
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-spreadsheet-it-2.xlsx").runCollect.zioValue
+
+        val extractCustomersPostResponse = gatewayClient
+          .extractCustomersPost[smithy.InternalServerError](
+            Some(organizationUserRow.organizationID),
+            Some(ExtractCustomersFileName.assume("customers.xlsx")),
+            customerBookFileBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        extractCustomersPostResponse.code shouldBe StatusCode.Ok
+
+        val extractCustomerIndividualDataExpected = ExtractCustomerIndividualData(
+          candidate = ExtractCustomerIndividual(
+            fullName = CustomerFullName.assume("John Smith"),
+            emails = List(
+              ExtractCustomerEmailEntry(email = CustomerEmail.assume("john.smith@example.com"), isDefault = true)
+            ),
+            phoneNumbers = List.empty,
+            addressLine1 = None,
+            addressLine2 = None,
+            city = None,
+            postalCode = None,
+            country = None,
+          ),
+          isDuplicate = false,
+          extractionNotes = None,
+        )
+
+        extractCustomersPostResponse.body shouldBe Right(
+          ExtractCustomersPostResponse(
             entriesIdentified = 1L,
             entriesProcessed = 1L,
             customerIndividualCandidates = List(extractCustomerIndividualDataExpected),
@@ -975,54 +1100,94 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val customerBookPhotoBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-spreadsheet-it-1.csv").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
-          .extractCustomersFromPhotoPost[smithy.BadRequest](
+        val extractCustomersPostResponse = gatewayClient
+          .extractCustomersPost[smithy.BadRequest](
             None,
-            customerBookPhotoBytes,
+            Some(ExtractCustomersFileName.assume("customers.csv")),
+            customerBookFileBytes,
             Some(accessJwt.accessToken),
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.BadRequest
-        extractCustomersResponse.body.left.value shouldBe smithy.BadRequest()
+        extractCustomersPostResponse.code shouldBe StatusCode.BadRequest
+        extractCustomersPostResponse.body.left.value shouldBe smithy.BadRequest()
+      }
+
+      "fail with BadRequest when the file name header is missing" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
+          userID = userDetailsRow.userID,
+          userRole = organizationUserRoleAllowed,
+        )
+
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-spreadsheet-it-1.csv").runCollect.zioValue
+
+        val extractCustomersPostResponse = gatewayClient
+          .extractCustomersPost[smithy.BadRequest](
+            Some(organizationUserRow.organizationID),
+            None,
+            customerBookFileBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        extractCustomersPostResponse.code shouldBe StatusCode.BadRequest
+        extractCustomersPostResponse.body.left.value shouldBe smithy.BadRequest()
       }
 
       "fail with Unauthorized when access token is missing" in withContext { context =>
         import context.*
 
-        val organizationID         = arbitrarySample[OrganizationID]
-        val customerBookPhotoBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
+        val organizationID        = arbitrarySample[OrganizationID]
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-spreadsheet-it-1.csv").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
-          .extractCustomersFromPhotoPost[smithy.Unauthorized](
+        val extractCustomersPostResponse = gatewayClient
+          .extractCustomersPost[smithy.Unauthorized](
             Some(organizationID),
-            customerBookPhotoBytes,
+            Some(ExtractCustomersFileName.assume("customers.csv")),
+            customerBookFileBytes,
             None,
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.Unauthorized
-        extractCustomersResponse.body.left.value shouldBe smithy.Unauthorized()
+        extractCustomersPostResponse.code shouldBe StatusCode.Unauthorized
+        extractCustomersPostResponse.body.left.value shouldBe smithy.Unauthorized()
       }
 
       "fail with Unauthorized when access token is invalid" in withContext { context =>
         import context.*
 
-        val organizationID         = arbitrarySample[OrganizationID]
-        val customerBookPhotoBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
+        val organizationID        = arbitrarySample[OrganizationID]
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-spreadsheet-it-1.csv").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
-          .extractCustomersFromPhotoPost[smithy.Unauthorized](
+        val extractCustomersPostResponse = gatewayClient
+          .extractCustomersPost[smithy.Unauthorized](
             Some(organizationID),
-            customerBookPhotoBytes,
+            Some(ExtractCustomersFileName.assume("customers.csv")),
+            customerBookFileBytes,
             Some(AccessToken("invalidtoken")),
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.Unauthorized
-        extractCustomersResponse.body.left.value shouldBe smithy.Unauthorized()
+        extractCustomersPostResponse.code shouldBe StatusCode.Unauthorized
+        extractCustomersPostResponse.body.left.value shouldBe smithy.Unauthorized()
       }
 
       "fail with Forbidden when the user is assigned to the organization with a disallowed role" in withContext {
@@ -1050,18 +1215,20 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-          val customerBookPhotoBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
+          val customerBookFileBytes =
+            ZStream.fromResource("assets/contact-book-spreadsheet-it-1.csv").runCollect.zioValue
 
-          val extractCustomersResponse = gatewayClient
-            .extractCustomersFromPhotoPost[smithy.Forbidden](
+          val extractCustomersPostResponse = gatewayClient
+            .extractCustomersPost[smithy.Forbidden](
               Some(organizationUserRow.organizationID),
-              customerBookPhotoBytes,
+              Some(ExtractCustomersFileName.assume("customers.csv")),
+              customerBookFileBytes,
               Some(accessJwt.accessToken),
             )
             .zioValue
 
-          extractCustomersResponse.code shouldBe StatusCode.Forbidden
-          extractCustomersResponse.body.left.value shouldBe smithy.Forbidden()
+          extractCustomersPostResponse.code shouldBe StatusCode.Forbidden
+          extractCustomersPostResponse.body.left.value shouldBe smithy.Forbidden()
       }
 
       "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
@@ -1075,19 +1242,21 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val organizationID         = arbitrarySample[OrganizationID]
-        val customerBookPhotoBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
+        val organizationID        = arbitrarySample[OrganizationID]
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-spreadsheet-it-1.csv").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
-          .extractCustomersFromPhotoPost[smithy.Forbidden](
+        val extractCustomersPostResponse = gatewayClient
+          .extractCustomersPost[smithy.Forbidden](
             Some(organizationID),
-            customerBookPhotoBytes,
+            Some(ExtractCustomersFileName.assume("customers.csv")),
+            customerBookFileBytes,
             Some(accessJwt.accessToken),
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.Forbidden
-        extractCustomersResponse.body.left.value shouldBe smithy.Forbidden()
+        extractCustomersPostResponse.code shouldBe StatusCode.Forbidden
+        extractCustomersPostResponse.body.left.value shouldBe smithy.Forbidden()
       }
 
       "fail with InternalServerError when the user is not assigned to the organization" in withContext { context =>
@@ -1100,22 +1269,24 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val organizationID         = arbitrarySample[OrganizationID]
-        val customerBookPhotoBytes = ZStream.fromResource("assets/test-logo-1.jpeg").runCollect.zioValue
+        val organizationID        = arbitrarySample[OrganizationID]
+        val customerBookFileBytes =
+          ZStream.fromResource("assets/contact-book-spreadsheet-it-1.csv").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
-          .extractCustomersFromPhotoPost[smithy.InternalServerError](
+        val extractCustomersPostResponse = gatewayClient
+          .extractCustomersPost[smithy.InternalServerError](
             Some(organizationID),
-            customerBookPhotoBytes,
+            Some(ExtractCustomersFileName.assume("customers.csv")),
+            customerBookFileBytes,
             Some(accessJwt.accessToken),
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.InternalServerError
-        extractCustomersResponse.body.left.value shouldBe smithy.InternalServerError()
+        extractCustomersPostResponse.code shouldBe StatusCode.InternalServerError
+        extractCustomersPostResponse.body.left.value shouldBe smithy.InternalServerError()
       }
 
-      "fail with InternalServerError when the uploaded file is not a supported image" in withContext { context =>
+      "fail with BadRequest when the file name extension does not match the uploaded file" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
@@ -1133,20 +1304,58 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
-        val customerBookPhotoBytes = ZStream.fromResource("assets/malformed.png").runCollect.zioValue
+        val customerBookFileBytes = ZStream.fromResource("assets/contact-book-image-it-1.jpeg").runCollect.zioValue
 
-        val extractCustomersResponse = gatewayClient
-          .extractCustomersFromPhotoPost[smithy.InternalServerError](
+        val extractCustomersPostResponse = gatewayClient
+          .extractCustomersPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
-            customerBookPhotoBytes,
+            Some(ExtractCustomersFileName.assume("customers.csv")),
+            customerBookFileBytes,
             Some(accessJwt.accessToken),
           )
           .zioValue
 
-        extractCustomersResponse.code shouldBe StatusCode.InternalServerError
-        extractCustomersResponse.body.left.value shouldBe smithy.InternalServerError()
+        extractCustomersPostResponse.code shouldBe StatusCode.BadRequest
+        extractCustomersPostResponse.body.left.value shouldBe smithy.BadRequest()
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+      }
+
+      "fail with InternalServerError when the uploaded file is a plain zip file accepted as a plausible Excel candidate but not genuinely a workbook" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+          val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+          val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleAllowed,
+          )
+
+          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+          val customerBookFileBytes =
+            ZStream.fromResource("assets/contact-book-compressed-it-1.zip").runCollect.zioValue
+
+          val extractCustomersPostResponse = gatewayClient
+            .extractCustomersPost[smithy.InternalServerError](
+              Some(organizationUserRow.organizationID),
+              Some(ExtractCustomersFileName.assume("customers.xlsx")),
+              customerBookFileBytes,
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+          extractCustomersPostResponse.code shouldBe StatusCode.InternalServerError
+          extractCustomersPostResponse.body.left.value shouldBe smithy.InternalServerError()
+
+          postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
       }
     }
   }

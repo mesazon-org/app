@@ -1,7 +1,7 @@
 package io.mesazon.gateway.config
 
 case class FileServiceConfig(
-    maxUploadBytes: Long
+    fileBytesMax: Long
 )
 
 object FileServiceConfig {

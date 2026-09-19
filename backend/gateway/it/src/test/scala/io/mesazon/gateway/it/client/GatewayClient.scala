@@ -412,16 +412,22 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .response(asJsonErrorUnit[E])
       .send(sttpBackend)
 
-  def extractCustomersFromPhotoPost[E: JsonValueCodec](
+  def extractCustomersPost[E: JsonValueCodec](
       organizationIDOpt: Option[OrganizationID],
-      customerBookPhotoBytes: Chunk[Byte],
+      extractCustomersFileNameOpt: Option[ExtractCustomersFileName],
+      extractCustomersFileBytes: Chunk[Byte],
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, ExtractCustomersResponse]]] =
+  ): Task[Response[Either[E, ExtractCustomersPostResponse]]] =
     basicRequest
-      .post(externalUri.addPath("extract", "customer-book-photo"))
+      .post(externalUri.addPath("extract", "customers"))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        extractCustomersFileNameOpt.fold(request)(extractCustomersFileName =>
+          request.header(FileNameHeader, extractCustomersFileName.value)
         )
       )
       .pipe(request =>
@@ -429,9 +435,9 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .body(customerBookPhotoBytes.toArray)
+      .body(extractCustomersFileBytes.toArray)
       .contentType(MediaType.ApplicationOctetStream)
-      .response(asJsonEitherOrFail[E, ExtractCustomersResponse])
+      .response(asJsonEitherOrFail[E, ExtractCustomersPostResponse])
       .send(sttpBackend)
 
   def insertCustomerIndividualPost[E: JsonValueCodec](

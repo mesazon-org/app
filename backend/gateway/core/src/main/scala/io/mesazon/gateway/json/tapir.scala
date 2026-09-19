@@ -12,9 +12,6 @@ object tapir {
 
   private given JsonValueCodec[TapirServerErrorBody] = JsonCodecMaker.make[TapirServerErrorBody]
 
-  private lazy val extractCustomersResponseCodecValue: JsonValueCodec[ExtractCustomersResponse] =
-    JsonCodecMaker.make[ExtractCustomersResponse]
-
   private lazy val tapirServerErrorBodySchema: Schema[TapirServerErrorBody] = Schema.derived[TapirServerErrorBody]
 
   private lazy val tapirServerErrorByCode: Map[String, TapirServerError] =
@@ -41,7 +38,8 @@ object tapir {
   given extractCustomerBusinessDataSchema: Schema[ExtractCustomerBusinessData] =
     Schema.derived[ExtractCustomerBusinessData]
 
-  given extractCustomersResponseSchema: Schema[ExtractCustomersResponse] = Schema.derived[ExtractCustomersResponse]
+  given extractCustomersPostResponseSchema: Schema[ExtractCustomersPostResponse] =
+    Schema.derived[ExtractCustomersPostResponse]
 
   given phoneNumberSchema: Schema[PhoneNumber] = Schema.derived[PhoneNumber]
 
@@ -60,7 +58,8 @@ object tapir {
   given insertCustomerBusinessPostRequestSchema: Schema[InsertCustomerBusinessPostRequest] =
     Schema.derived[InsertCustomerBusinessPostRequest]
 
-  given extractCustomersResponseCodec: JsonValueCodec[ExtractCustomersResponse] = extractCustomersResponseCodecValue
+  given extractCustomersPostResponseCodec: JsonValueCodec[ExtractCustomersPostResponse] =
+    JsonCodecMaker.make[ExtractCustomersPostResponse]
 
   given tapirServerErrorSchemaFallback: Schema[TapirServerError] =
     tapirServerErrorBodySchema
