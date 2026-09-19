@@ -2,11 +2,6 @@ import Projects.ProjectOps
 import smithy4s.codegen.Smithy4sCodegenPlugin
 
 val enableScalaLint = sys.env.getOrElse("ENABLE_SCALA_LINT_ON_COMPILE", "true").toBoolean
-// See agent-docs/known-issues.md: sbt 2's compile-action cache can serve a semanticdb-less result to
-// `checkLint`'s `scalafixAll` for a module compiled earlier only as someone else's dependency. Embedding
-// semanticdb in the jar fixes that, but it also inflates every packaged jar (incl. the shipped Docker image)
-// with build-tool-only metadata, so it's opted in only where `checkLint` actually runs: CI.
-val isCI = sys.env.getOrElse("IS_CI", "false").toBoolean
 
 scalaVersion           := "3.9.0"
 version                := "latest"
@@ -15,7 +10,7 @@ organizationName       := "Mesazon"
 scalafixOnCompile      := enableScalaLint
 scalafmtOnCompile      := enableScalaLint
 semanticdbEnabled      := true
-semanticdbIncludeInJar := isCI
+semanticdbIncludeInJar := true
 Test / fork            := true
 run / fork             := true
 usePipelining          := true
