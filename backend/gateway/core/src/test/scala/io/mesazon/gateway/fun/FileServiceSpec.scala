@@ -22,10 +22,11 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "successfully scan, normalize, upload and persist the organization logo" in new TestContext {
         val organizationID                        = arbitrarySample[OrganizationID]
         val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val organizationLogoImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets/organization-image-test-1.jpeg")
 
-        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg"))
-        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/test-logo-2.webp"))
+        val originalByteStream = ImageOriginalByteStream(ZStream.fromResource("assets/organization-image-test-1.jpeg"))
+        val normalizedByteStream =
+          ImageNormalizedByteStream(ZStream.fromResource("assets/organization-image-test-2.webp"))
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
@@ -109,7 +110,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "fail and stop the pipeline when scanning the organization logo fails" in new TestContext {
         val organizationID                        = arbitrarySample[OrganizationID]
         val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val organizationLogoImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets/organization-image-test-1.jpeg")
 
         val scanError = ServiceError.InternalServerError.UnexpectedError("Failed to scan organization logo")
 
@@ -141,7 +142,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "fail and stop the pipeline when normalizing the organization logo fails" in new TestContext {
         val organizationID                        = arbitrarySample[OrganizationID]
         val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val organizationLogoImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets/organization-image-test-1.jpeg")
 
         val normalizeError = ServiceError.InternalServerError.UnexpectedError("Failed to normalize organization logo")
 
@@ -185,10 +186,11 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "fail and stop the pipeline when uploading the organization logo to S3 fails" in new TestContext {
         val organizationID                        = arbitrarySample[OrganizationID]
         val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val organizationLogoImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets/organization-image-test-1.jpeg")
 
-        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg"))
-        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/test-logo-2.webp"))
+        val originalByteStream = ImageOriginalByteStream(ZStream.fromResource("assets/organization-image-test-1.jpeg"))
+        val normalizedByteStream =
+          ImageNormalizedByteStream(ZStream.fromResource("assets/organization-image-test-2.webp"))
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
@@ -238,10 +240,11 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "fail when persisting the organization logo details fails" in new TestContext {
         val organizationID                        = arbitrarySample[OrganizationID]
         val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val organizationLogoImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets/organization-image-test-1.jpeg")
 
-        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg"))
-        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/test-logo-2.webp"))
+        val originalByteStream = ImageOriginalByteStream(ZStream.fromResource("assets/organization-image-test-1.jpeg"))
+        val normalizedByteStream =
+          ImageNormalizedByteStream(ZStream.fromResource("assets/organization-image-test-2.webp"))
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
@@ -330,7 +333,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
@@ -338,8 +341,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           status = CatalogueItemStatus.Active,
         )
 
-        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg"))
-        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/test-logo-2.webp"))
+        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/catalogue-image-test-1.jpeg"))
+        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/catalogue-image-test-2.webp"))
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
@@ -420,7 +423,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
         inSequence(
           catalogueRepositoryMock.getCatalogueItem
@@ -447,7 +450,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
         val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
@@ -480,7 +483,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
         inSequence(
           catalogueRepositoryMock.getCatalogueItem
@@ -507,7 +510,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
@@ -551,7 +554,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
@@ -608,7 +611,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
@@ -616,8 +619,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           status = CatalogueItemStatus.Active,
         )
 
-        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg"))
-        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/test-logo-2.webp"))
+        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/catalogue-image-test-1.jpeg"))
+        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/catalogue-image-test-2.webp"))
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
@@ -674,7 +677,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val catalogueItemImageByteStream       = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
         val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
@@ -682,8 +685,8 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           status = CatalogueItemStatus.Active,
         )
 
-        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/test-logo-1.jpeg"))
-        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/test-logo-2.webp"))
+        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/catalogue-image-test-1.jpeg"))
+        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/catalogue-image-test-2.webp"))
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
@@ -767,7 +770,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "return the AI's extracted candidates for an image" in new TestContext {
         val organizationID                 = arbitrarySample[OrganizationID]
         val extractCustomersFileName       = ExtractCustomersFileName.assume("customers.jpeg")
-        val extractCustomersFileByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val extractCustomersFileByteStream = ZStream.fromResource("assets/contact-book-image-test-11.jpeg")
         val fileScannedPath                = FileScannedPath(Files.createTempFile("file-service-spec-", ".jpeg"))
         fileScannedPath.value.toFile.deleteOnExit()
         val fileScannerScanOutput: FileScannerScanOutput = (
@@ -974,7 +977,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
       "propagate the validation error without calling AI when the scanner rejects the declared filename" in new TestContext {
         val organizationID                 = arbitrarySample[OrganizationID]
         val extractCustomersFileName       = ExtractCustomersFileName.assume("customers.png")
-        val extractCustomersFileByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val extractCustomersFileByteStream = ZStream.fromResource("assets/contact-book-image-test-11.jpeg")
         val scanError                      = ServiceError.BadRequestError.ValidationError(
           Seq(
             ServiceError.BadRequestError.InvalidFieldError(

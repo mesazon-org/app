@@ -49,10 +49,12 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
     )
     .zioValue
 
+  // contact-book-spreadsheet-test-4.csv is the large, anonymized, real-shaped CSV fixture (the only file in this
+  // family not covered by a small synthetic case above it).
   private val spreadsheetCases = List(
-    ("contact-book-test-spreadsheet-large.csv", SupportedMediaType.CSV),
-    ("contact-book-test-spreadsheet-2.xls", SupportedMediaType.XLS),
-    ("contact-book-test-spreadsheet-3.xlsx", SupportedMediaType.XLSX),
+    ("contact-book-spreadsheet-test-4.csv", SupportedMediaType.CSV),
+    ("contact-book-spreadsheet-test-2.xls", SupportedMediaType.XLS),
+    ("contact-book-spreadsheet-test-3.xlsx", SupportedMediaType.XLSX),
   )
 
   "AIClient" when {

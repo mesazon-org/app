@@ -28,7 +28,7 @@ class ImageProcessingSpec extends ZWordSpecBase {
           .provide(ImageProcessing.live)
           .zioValue
 
-        val logoOriginalByteStream = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val logoOriginalByteStream = ZStream.fromResource("assets/organization-image-test-1.jpeg")
 
         ZIO
           .scoped(for {
@@ -52,7 +52,7 @@ class ImageProcessingSpec extends ZWordSpecBase {
           .provide(ImageProcessing.live)
           .zioValue
 
-        val logoOriginalByteStream = ZStream.fromResource("assets/test-logo-2.webp")
+        val logoOriginalByteStream = ZStream.fromResource("assets/organization-image-test-2.webp")
 
         ZIO
           .scoped(for {
@@ -76,7 +76,7 @@ class ImageProcessingSpec extends ZWordSpecBase {
           .provide(ImageProcessing.live)
           .zioValue
 
-        val logoOriginalByteStream = ZStream.fromResource("assets/test-logo-3.png")
+        val logoOriginalByteStream = ZStream.fromResource("assets/organization-image-test-3.png")
 
         ZIO
           .scoped(for {
@@ -103,7 +103,7 @@ class ImageProcessingSpec extends ZWordSpecBase {
         val result = ZIO
           .scoped(
             imageProcessing.normalize(
-              FileByteStreamScanned(ZStream.fromResource("assets/malformed.png")),
+              FileByteStreamScanned(ZStream.fromResource("assets/organization-malformed-test-1.png")),
               SupportedMediaType.images,
             )
           )

@@ -18,6 +18,17 @@ Feature specs live in `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/<
 - Shared `beforeEach` truncates every repository table and resets external services. Each test still owns all of its scenario data.
 - Keep `gateway-it / Test / parallelExecution := false`; nested suites share infrastructure.
 
+## Test assets
+
+Every test asset (image, spreadsheet, compressed archive, or malformed/invalid file) is named `<feature>-<type>-<scope>-<number>.<ext>`:
+
+- `<feature>` — the epic/feature it's for, matching this repo's existing feature names (`contact-book`, `organization`, `catalogue`, ...). When more than one feature's tests need identical file content, duplicate the physical file once per feature rather than sharing one file across features — each feature's tests reference their own copy, never another feature's.
+- `<type>` — what kind of file it is: `image`, `spreadsheet`, `compressed`, `malformed`.
+- `<scope>` — which module owns it: `test` (`gateway-core`) or `it` (`gateway-it`). `gateway-it`'s test scope depends on `gateway-core`'s test scope (`build.sbt`: `backendGatewayIt.dependsOn(backendGatewayCore % "test->test")`), which puts `gateway-core`'s test resources on `gateway-it`'s test classpath too — a project's own resources take precedence over its dependencies' for that project's own code, so this never causes wrong behavior, but the explicit `<scope>` marker keeps ownership unambiguous at a glance regardless of which module's copy a classpath lookup would actually resolve to.
+- `<number>` — a sequence number, unique within that `<feature>-<type>-<scope>` combination.
+
+Examples: `contact-book-image-test-1.png` (an image-extraction golden fixture), `organization-image-test-1.jpeg` (a logo-upload test image), `contact-book-spreadsheet-it-1.csv` (an acceptance-test CSV fixture).
+
 ## Structure, descriptions, and order
 
 Use one explicit section per endpoint:

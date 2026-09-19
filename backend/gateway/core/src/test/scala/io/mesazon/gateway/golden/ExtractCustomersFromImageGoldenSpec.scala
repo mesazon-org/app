@@ -14,7 +14,7 @@ import zio.*
 import java.nio.file.Path
 
 /** Manual-only check against the real OpenAI API: sends each sample image in
-  * `assets/contact-book-test-image-1.png`..`-10.png` through the real `AIClient` and asserts the complete captured
+  * `assets/contact-book-image-test-1.png`..`-10.png` through the real `AIClient` and asserts the complete captured
   * golden response for that image across different languages, column namings, and source types.
   *
   * Never calls out for real in CI: `apiKey` ships empty, so every case is canceled rather than hitting the real API
@@ -1028,7 +1028,7 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
   "AIClient" when {
     "extract" should {
       (1 to 10).foreach { imageNumber =>
-        s"extract customers from contact-book-test-image-$imageNumber.png" in {
+        s"extract customers from contact-book-image-test-$imageNumber.png" in {
           assume(
             apiKey.nonEmpty,
             "Fill in a real OpenAI API key in ExtractCustomersFromImageGoldenSpec.apiKey to run this manually",
@@ -1037,7 +1037,7 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
           val aiClient = buildAIClient
 
           val customerBookImageScannedPath = FileScannedPath(
-            Path.of(getClass.getResource(s"/assets/contact-book-test-image-$imageNumber.png").toURI)
+            Path.of(getClass.getResource(s"/assets/contact-book-image-test-$imageNumber.png").toURI)
           )
 
           val extractCustomersPostResponse = aiClient
@@ -1048,7 +1048,7 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
             )
             .zioValue
 
-          info(s"contact-book-test-image-$imageNumber.png => $extractCustomersPostResponse")
+          info(s"contact-book-image-test-$imageNumber.png => $extractCustomersPostResponse")
 
           extractCustomersPostResponse shouldBe extractCustomersPostResponseExpectedByImageNumber(imageNumber)
         }

@@ -27,37 +27,37 @@ class FileScannerSpec extends ZWordSpecBase {
 
         val scanSuccessCases = List(
           ScanSuccessCase(
-            fileResourcePath = "assets/test-logo-3.png",
+            fileResourcePath = "assets/contact-book-image-test-13.png",
             fileNameDeclared = "contact-book.PNG",
             supportedMediaTypeExpected = SupportedMediaType.PNG,
           ),
           ScanSuccessCase(
-            fileResourcePath = "assets/test-logo-1.jpeg",
+            fileResourcePath = "assets/contact-book-image-test-11.jpeg",
             fileNameDeclared = "contact-book.JPG",
             supportedMediaTypeExpected = SupportedMediaType.JPEG,
           ),
           ScanSuccessCase(
-            fileResourcePath = "assets/test-logo-1.jpeg",
+            fileResourcePath = "assets/contact-book-image-test-11.jpeg",
             fileNameDeclared = "contact-book.jpeg",
             supportedMediaTypeExpected = SupportedMediaType.JPEG,
           ),
           ScanSuccessCase(
-            fileResourcePath = "assets/test-logo-2.webp",
+            fileResourcePath = "assets/contact-book-image-test-12.webp",
             fileNameDeclared = "contact-book.WEBP",
             supportedMediaTypeExpected = SupportedMediaType.WEBP,
           ),
           ScanSuccessCase(
-            fileResourcePath = "assets/contact-book-test-spreadsheet-large.csv",
+            fileResourcePath = "assets/contact-book-spreadsheet-test-1.csv",
             fileNameDeclared = "customers.CSV",
             supportedMediaTypeExpected = SupportedMediaType.CSV,
           ),
           ScanSuccessCase(
-            fileResourcePath = "assets/contact-book-test-spreadsheet-2.xls",
+            fileResourcePath = "assets/contact-book-spreadsheet-test-2.xls",
             fileNameDeclared = "customers.XLS",
             supportedMediaTypeExpected = SupportedMediaType.XLS,
           ),
           ScanSuccessCase(
-            fileResourcePath = "assets/contact-book-test-spreadsheet-3.xlsx",
+            fileResourcePath = "assets/contact-book-spreadsheet-test-3.xlsx",
             fileNameDeclared = "customers.XLSX",
             supportedMediaTypeExpected = SupportedMediaType.XLSX,
           ),
@@ -107,7 +107,7 @@ class FileScannerSpec extends ZWordSpecBase {
           .zioValue
 
         val maxByteSize5Mb      = 5 * 1024 * 1024L
-        val fileByteStream      = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val fileByteStream      = ZStream.fromResource("assets/contact-book-image-test-11.jpeg")
         val fileNameDeclared    = "image"
         val supportedMediaTypes = SupportedMediaType.images ++ SupportedMediaType.spreadsheets
 
@@ -165,7 +165,7 @@ class FileScannerSpec extends ZWordSpecBase {
           .zioValue
 
         val maxByteSize5Mb      = 5 * 1024 * 1024L
-        val fileByteStream      = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val fileByteStream      = ZStream.fromResource("assets/contact-book-image-test-11.jpeg")
         val fileNameDeclared    = "image.png"
         val supportedMediaTypes = SupportedMediaType.images ++ SupportedMediaType.spreadsheets
 
@@ -194,7 +194,7 @@ class FileScannerSpec extends ZWordSpecBase {
           .zioValue
 
         val maxByteSize5Mb      = 5 * 1024 * 1024L
-        val fileByteStream      = ZStream.fromResource("assets/contact-book-test-spreadsheet-3.xlsx")
+        val fileByteStream      = ZStream.fromResource("assets/contact-book-spreadsheet-test-3.xlsx")
         val fileNameDeclared    = "customers.csv"
         val supportedMediaTypes = SupportedMediaType.images ++ SupportedMediaType.spreadsheets
 
@@ -284,7 +284,7 @@ class FileScannerSpec extends ZWordSpecBase {
         val bytesReadInitial       = 0L
         val bytesReadIncrement     = 1L
         val bytesReadRef           = Ref.make(bytesReadInitial).zioValue
-        val fileByteStreamExpected = ZStream.fromResource("assets/test-logo-1.jpeg")
+        val fileByteStreamExpected = ZStream.fromResource("assets/contact-book-image-test-11.jpeg")
         val fileByteStream         = fileByteStreamExpected.tap(_ => bytesReadRef.update(_ + bytesReadIncrement))
         val maxByteSize1b          = 1L
         val fileNameDeclared       = "customers.csv"
