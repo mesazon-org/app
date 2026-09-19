@@ -10,6 +10,7 @@ organizationName       := "Mesazon"
 scalafixOnCompile      := enableScalaLint
 scalafmtOnCompile      := enableScalaLint
 semanticdbEnabled      := true
+semanticdbIncludeInJar := true
 Test / fork            := true
 run / fork             := true
 usePipelining          := true
