@@ -50,7 +50,7 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
     .zioValue
 
   private val spreadsheetCases = List(
-    ("contact-book-test-spreadsheet-1.csv", SupportedMediaType.CSV),
+    ("contact-book-test-spreadsheet-large.csv", SupportedMediaType.CSV),
     ("contact-book-test-spreadsheet-2.xls", SupportedMediaType.XLS),
     ("contact-book-test-spreadsheet-3.xlsx", SupportedMediaType.XLSX),
   )

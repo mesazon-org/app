@@ -47,7 +47,7 @@ class FileScannerSpec extends ZWordSpecBase {
             supportedMediaTypeExpected = SupportedMediaType.WEBP,
           ),
           ScanSuccessCase(
-            fileResourcePath = "assets/contact-book-test-spreadsheet-1.csv",
+            fileResourcePath = "assets/contact-book-test-spreadsheet-large.csv",
             fileNameDeclared = "customers.CSV",
             supportedMediaTypeExpected = SupportedMediaType.CSV,
           ),
