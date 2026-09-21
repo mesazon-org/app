@@ -37,7 +37,7 @@ object Dependencies {
   lazy val springCoreV          = "7.0.9"
   lazy val bouncyCastleV        = "1.86"
   lazy val uuidCreatorV         = "6.1.1"
-  lazy val scalamockV           = "7.5.5"
+  lazy val scalamockV           = "7.6.0"
   lazy val scrimageV            = "4.6.8"
   lazy val tikaV                = "4.0.0"
   lazy val awssdkV              = "2.55.1"
