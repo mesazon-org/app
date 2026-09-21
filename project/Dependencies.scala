@@ -28,7 +28,7 @@ object Dependencies {
   lazy val circeV               = "0.14.16"
   lazy val sttpV                = "4.0.26"
   lazy val tapirV               = "1.13.31"
-  lazy val jsoniterV            = "2.40.1"
+  lazy val jsoniterV            = "2.41.0"
   lazy val sttpAIV              = "0.11.0"
   lazy val jmailV               = "2.2.2"
   lazy val simplejavamailV      = "9.3.5"
