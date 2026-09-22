@@ -2,15 +2,18 @@ package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
-import io.mesazon.gateway.clients.{AIClient, S3ClientOrganizationMedia}
+import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.json.ai.given
-import io.mesazon.gateway.json.tapir.extractCustomersResponseCodec
-import io.mesazon.gateway.repository.{CatalogueRepository, OrganizationManagementRepository}
+import io.mesazon.gateway.json.tapir.extractCustomersPostResponseCodec
+import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.tapir.TapirTask
 import io.mesazon.gateway.utils.*
+import org.apache.commons.csv.CSVRecord
 import zio.*
 import zio.stream.*
+
+import java.util.Locale
 
 trait FileService[F[_]] {
   def uploadOrganizationLogo(
@@ -26,43 +29,14 @@ trait FileService[F[_]] {
       catalogueItemImageByteStream: ZStream[Any, Throwable, Byte],
   ): F[Unit]
 
-  def extractCustomersFromPhoto(
+  def extractCustomers(
       organizationID: OrganizationID,
-      customerBookPhotoByteStream: ZStream[Any, Throwable, Byte],
-  ): F[ExtractCustomersResponse]
+      extractCustomersFileName: ExtractCustomersFileName,
+      extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
+  ): F[ExtractCustomersPostResponse]
 }
 
 object FileService {
-
-  private[gateway] val extractCustomersFromPhotoInstructions =
-    """You are reading a photo of a paper customer list, grid, or business card for a business-management product.
-      |Find every entry that looks like a person or a business the caller trades with.
-      |For each entry, decide freely whether it looks like an individual or a business - there is no fixed rule
-      |mapping a source (e.g. a business card) to one kind or the other.
-      |Only return an entry as a candidate if you can make out a name for it. If you cannot make out any name for
-      |an entry, do not return it as a candidate at all - just count it.
-      |For a candidate business, only include a business contact if you can make out that contact's name.
-      |For every field other than a name, try to produce a realistic, usable value (a real-looking email, a phone
-      |number with enough information to be dialed, trimmed non-empty text) but this is best-effort, not required
-      |to be perfectly accurate. For each phone, make a best-effort attempt to provide a valid phone pair for its
-      |country. phoneNationalNumber must contain only the national number, without the country code, and
-      |phoneCountryCode must contain the country dialling code. For example:
-      |{"phoneNationalNumber":"99123456","phoneCountryCode":"+357"}
-      |{"phoneNationalNumber":"4155550123","phoneCountryCode":"+1"}
-      |Email and phone lists may be empty. Whenever either list is non-empty, mark exactly one entry in that list
-      |with isDefault=true and mark every other entry with isDefault=false. Never send an empty string for an
-      |optional field - omit the field entirely instead.
-      |If something about a candidate is missing or unclear (e.g. a smudged phone number, no visible email), say so
-      |in one short, plain sentence in that candidate's extraction notes; otherwise leave the notes out entirely.
-      |Compare candidates only against each other within this same photo, never against any other data. Two
-      |candidates of the same kind (both individuals or both businesses) whose names match once capitalisation is
-      |ignored are each a duplicate of the other; two candidates of different kinds are never duplicates of each
-      |other even when their names match.
-      |Report how many entries the photo seemed to contain in total, and how many of those you actually turned into
-      |candidates. If some entries could not be turned into candidates, add one short, plain-text summary line
-      |describing what could not be read and where in the photo to look; otherwise leave that summary out entirely.
-      |If the photo has nothing recognizable as a customer at all, return both counts as zero and empty candidate
-      |lists rather than treating that as an error.""".stripMargin
 
   private final class FileServiceImpl(
       fileServiceConfig: FileServiceConfig,
@@ -70,9 +44,99 @@ object FileService {
       catalogueRepository: CatalogueRepository,
       fileScanner: FileScanner,
       imageProcessing: ImageProcessing,
+      spreadsheetTool: SpreadsheetTool,
       s3ClientOrganizationMedia: S3ClientOrganizationMedia,
-      aiClient: AIClient,
+      aiClientDataExtraction: AIClientDataExtraction,
   ) extends FileService[ServiceTask] {
+
+    private def normalizedName(name: String): String = name.toLowerCase(Locale.ROOT)
+
+    private def mergeExtractCustomersPostResponses(
+        responses: NonEmptyChunk[ExtractCustomersPostResponse]
+    ): ZIO[Any, ServiceError, ExtractCustomersPostResponse] = for {
+      responseList         = responses.toChunk.toList
+      individualCandidates = responseList.flatMap(_.customerIndividualCandidates)
+      businessCandidates   = responseList.flatMap(_.customerBusinessCandidates)
+      individualNameCounts = individualCandidates.groupMapReduce(candidate =>
+        normalizedName(candidate.candidate.fullName.value)
+      )(_ => 1)(_ + _)
+      businessNameCounts = businessCandidates.groupMapReduce(candidate =>
+        normalizedName(candidate.candidate.businessName.value)
+      )(_ => 1)(_ + _)
+      unidentifiedEntriesNotesAll = responseList.flatMap(_.unidentifiedEntriesNotes)
+      entriesIdentifiedSum        = responses.map(_.entriesIdentified).sum
+      entriesProcessedSum         = responses.map(_.entriesProcessed).sum
+      emptyEntryRowsAll           = responseList.flatMap(_.emptyEntryRows)
+      unidentifiedEntryRowsAll    = responseList.flatMap(_.unidentifiedEntryRows)
+      unidentifiedEntriesNotesOpt <- ZIO.when(unidentifiedEntriesNotesAll.nonEmpty)(
+        aiClientDataExtraction
+          .noteCompaction(
+            entriesIdentifiedSum,
+            entriesProcessedSum,
+            emptyEntryRowsAll,
+            unidentifiedEntryRowsAll,
+            unidentifiedEntriesNotesAll,
+            AIInstructions.noteCompactionInstructions,
+          )
+          .map(_.note)
+          .catchAllCause(cause =>
+            ZIO.logErrorCause("Failed to compact unidentified entries notes", cause) *>
+              ZIO.succeed(
+                unidentifiedEntriesNotesFallback(
+                  entriesIdentifiedSum,
+                  entriesProcessedSum,
+                  emptyEntryRowsAll,
+                  unidentifiedEntryRowsAll,
+                )
+              )
+          )
+      )
+      extractCustomersPostResponse = ExtractCustomersPostResponse(
+        entriesIdentified = entriesIdentifiedSum,
+        entriesProcessed = entriesProcessedSum,
+        emptyEntryRows = emptyEntryRowsAll,
+        unidentifiedEntryRows = unidentifiedEntryRowsAll,
+        unidentifiedEntriesNotes = unidentifiedEntriesNotesOpt,
+        customerIndividualCandidates = individualCandidates.map(candidate =>
+          candidate.copy(
+            isDuplicate = individualNameCounts(normalizedName(candidate.candidate.fullName.value)) > 1
+          )
+        ),
+        customerBusinessCandidates = businessCandidates.map(candidate =>
+          candidate.copy(
+            isDuplicate = businessNameCounts(normalizedName(candidate.candidate.businessName.value)) > 1
+          )
+        ),
+      )
+    } yield extractCustomersPostResponse
+
+    private def unidentifiedEntriesNotesFallback(
+        entriesIdentified: Long,
+        entriesProcessed: Long,
+        emptyEntryRows: List[Long],
+        unidentifiedEntryRows: List[Long],
+    ): String = {
+      val emptyEntryRowsSentence =
+        Option.when(emptyEntryRows.nonEmpty)(s" Rows ${emptyEntryRows.mkString(", ")} were blank.").getOrElse("")
+      val unidentifiedEntryRowsSentence = Option
+        .when(unidentifiedEntryRows.nonEmpty)(
+          s" Rows ${unidentifiedEntryRows.mkString(", ")} had no name we could read."
+        )
+        .getOrElse("")
+
+      s"$entriesProcessed of $entriesIdentified entries could be added automatically." +
+        emptyEntryRowsSentence + unidentifiedEntryRowsSentence
+    }
+
+    private def extractFromCsvRecordStream(
+        csvRecordStream: ZStream[Scope, ServiceError, CSVRecord]
+    ): ZIO[Scope, ServiceError, ExtractCustomersPostResponse] =
+      aiClientDataExtraction
+        .extractFromCsv[ExtractCustomersPostResponse](
+          csvRecordStream,
+          AIInstructions.extractCustomersFromFileInstructions,
+        )
+        .flatMap(mergeExtractCustomersPostResponses)
 
     override def uploadOrganizationLogo(
         organizationID: OrganizationID,
@@ -81,11 +145,12 @@ object FileService {
     ): ServiceTask[Unit] = ZIO.scoped(for {
       organizationLogoImageScanOutput <- fileScanner.scan(
         organizationLogoImageByteStream,
+        organizationLogoImageOriginalFileName.value,
         SupportedMediaType.images,
-        fileServiceConfig.maxUploadBytes,
+        fileServiceConfig.fileBytesMax,
       )
       organizationLogoImageNormalizedResult <- imageProcessing.normalize(
-        organizationLogoImageScanOutput.fileByteStreamScanned,
+        FileByteStreamScanned(ZStream.fromPath(organizationLogoImageScanOutput.fileScannedPath.value)),
         SupportedMediaType.images,
       )
       organizationLogoImageUploadedResult <-
@@ -141,11 +206,12 @@ object FileService {
           }
         catalogueItemImageScanOutput <- fileScanner.scan(
           catalogueItemImageByteStream,
+          catalogueItemImageOriginalFileName.value,
           SupportedMediaType.images,
-          fileServiceConfig.maxUploadBytes,
+          fileServiceConfig.fileBytesMax,
         )
         catalogueItemImageNormalizedResult <- imageProcessing.normalize(
-          catalogueItemImageScanOutput.fileByteStreamScanned,
+          FileByteStreamScanned(ZStream.fromPath(catalogueItemImageScanOutput.fileScannedPath.value)),
           SupportedMediaType.images,
         )
         catalogueItemImageUploadedResult <-
@@ -175,21 +241,37 @@ object FileService {
         )
       } yield ())
 
-    override def extractCustomersFromPhoto(
+    override def extractCustomers(
         organizationID: OrganizationID,
-        customerBookPhotoByteStream: ZStream[Any, Throwable, Byte],
-    ): ServiceTask[ExtractCustomersResponse] = ZIO.scoped(for {
-      customerBookPhotoScanOutput <- fileScanner.scan(
-        customerBookPhotoByteStream,
-        SupportedMediaType.images,
-        fileServiceConfig.maxUploadBytes,
+        extractCustomersFileName: ExtractCustomersFileName,
+        extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
+    ): ServiceTask[ExtractCustomersPostResponse] = ZIO.scoped(for {
+      customerBookScanOutput <- fileScanner.scan(
+        extractCustomersFileByteStream,
+        extractCustomersFileName.value,
+        SupportedMediaType.extractData,
+        fileServiceConfig.fileBytesMax,
       )
-      extractCustomersResponse <- aiClient.extractFromImage[ExtractCustomersResponse](
-        customerBookPhotoScanOutput.fileByteStreamScanned,
-        customerBookPhotoScanOutput.supportedMediaType,
-        extractCustomersFromPhotoInstructions,
-      )
-    } yield extractCustomersResponse)
+      extractCustomersPostResponse <- customerBookScanOutput.supportedMediaType match {
+        case supportedMediaType if SupportedMediaType.images.contains(supportedMediaType) =>
+          aiClientDataExtraction.extractFromImage[ExtractCustomersPostResponse](
+            customerBookScanOutput.fileScannedPath,
+            supportedMediaType,
+            AIInstructions.extractCustomersFromImageInstructions,
+          )
+        case supportedMediaType if SupportedMediaType.excel.contains(supportedMediaType) =>
+          extractFromCsvRecordStream(spreadsheetTool.convertExcelToCsv(customerBookScanOutput.fileScannedPath))
+        case supportedMediaType if SupportedMediaType.csv.contains(supportedMediaType) =>
+          extractFromCsvRecordStream(spreadsheetTool.convertToCsv(customerBookScanOutput.fileScannedPath))
+        case supportedMediaTypeUnexpected =>
+          ZIO.fail(
+            ServiceError.InternalServerError.UnexpectedError(
+              s"Unexpected supported media type: [$supportedMediaTypeUnexpected]"
+            )
+          )
+      }
+    } yield extractCustomersPostResponse)
+
   }
 
   def observed(service: FileService[ServiceTask]): FileService[TapirTask] =
@@ -224,13 +306,19 @@ object FileService {
             )
         )
 
-      override def extractCustomersFromPhoto(
+      override def extractCustomers(
           organizationID: OrganizationID,
-          customerBookPhotoByteStream: ZStream[Any, Throwable, Byte],
-      ): TapirTask[ExtractCustomersResponse] =
+          extractCustomersFileName: ExtractCustomersFileName,
+          extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
+      ): TapirTask[ExtractCustomersPostResponse] =
         HttpErrorHandler.errorResponseHandlerTapir(
-          service.extractCustomersFromPhoto(organizationID, customerBookPhotoByteStream)
+          service.extractCustomers(
+            organizationID,
+            extractCustomersFileName,
+            extractCustomersFileByteStream,
+          )
         )
+
     }
 
   val local = ZLayer

@@ -40,3 +40,4 @@ Reusable rules for routes Smithy cannot express. Related: [Smithy](smithy.md), [
 ## Naming
 
 - Error case: `PascalCase` + `Error`; wire code: `SCREAMING_SNAKE_CASE`.
+- Success case: an endpoint's declared output body type is named `<Operation><Method>Response` (e.g. `ExtractCustomersPostResponse`). When this endpoint is the type's only real shape owner, rename the underlying type in place to match — even when other non-Tapir code (an AI client, a repository) also happens to return it — rather than adding a parallel wrapper type. Introduce a separate endpoint-owned wrapper type, mapped via Chimney inline at the endpoint's `serverLogic` wiring (never inside the service, per [Scala](scala.md)'s no-private-mapping-helpers rule), only when the same underlying type is a genuinely distinct response for more than one differently-named endpoint.

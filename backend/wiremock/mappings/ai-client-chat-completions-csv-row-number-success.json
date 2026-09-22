@@ -1,0 +1,21 @@
+{
+  "priority": 2,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      { "contains": "AI_CLIENT_SPEC_CSV_ROW_NUMBER_SUCCESS" },
+      { "contains": "gpt-5.6-luna" },
+      { "contains": "json_schema" },
+      { "contains": "Row Number,Full Name,Email" },
+      { "contains": "2,Alice,alice@example.com" },
+      { "contains": "3,," },
+      { "contains": "4,Bob,bob@example.com" }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "body": "{\"id\":\"chatcmpl-ai-client-spec-csv-row-number\",\"object\":\"chat.completion\",\"created\":1700000000,\"model\":\"gpt-5.6-luna\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"value\\\":\\\"row-number-result\\\"}\"}}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}"
+  }
+}

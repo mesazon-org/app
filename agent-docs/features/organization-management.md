@@ -38,13 +38,13 @@ The repository also exposes `isOrganizationSlugExists` for slug-uniqueness check
 
 ## Logo upload
 
-`POST /upload/organization/logo` is a Tapir streaming endpoint, not Smithy — Smithy JSON routes cap at 5 MB (`HttpApp.SmithyMaxEntitySize`); Tapir streams binary and allows 20 MB (`HttpApp.TapirMaxEntitySize`, kept equal to `file-service.max-upload-bytes`). See [Alternate HTTP](../project/alternate-http.md) for the shared Tapir transport mechanics (docs mounting, error model, security wiring) this endpoint follows alongside [Catalogue](catalogue.md#image-upload)'s catalogue-item-image upload — the two mirror the same pipeline shape, differing only in entity scoping and persistence target.
+`POST /upload/organization/logo` is a Tapir streaming endpoint, not Smithy — Smithy JSON routes cap at 5 MB (`HttpApp.SmithyMaxEntitySize`); Tapir streams binary and allows 20 MB (`HttpApp.TapirMaxEntitySize`, kept equal to `file-service.file-bytes-max`). See [Alternate HTTP](../project/alternate-http.md) for the shared Tapir transport mechanics (docs mounting, error model, security wiring) this endpoint follows alongside [Catalogue](catalogue.md#image-upload)'s catalogue-item-image upload — the two mirror the same pipeline shape, differing only in entity scoping and persistence target.
 
 Binary body; organization in the `X-Organization-ID` header, original file name in the `X-File-Name` header. Security (`AuthorizationService.auth`): valid access JWT, `OnboardStage.completedStages` (= `PhoneVerified`), and the caller must be assigned to the organization as `OWNER` or `ADMIN` (disallowed role → `403`, no membership row → `500`).
 
 `FileService.uploadOrganizationLogo` runs inside one `ZIO.scoped` block; every intermediate file is a `TempFile.createScoped` (auto-deleted on scope close, even on failure):
 
-1. `FileScanner.scan` spools the incoming `ZStream[Byte]` to a temp file, draining the entire input even past the byte cap (writing at most `maxFileBytes + 1` bytes, discarding the rest) so an oversized request body isn't abandoned mid-read (rationale: [Streaming uploads](../project/streaming-uploads.md)). Detects the actual MIME type with Apache Tika (content sniffing, never the client's declared content type) and rejects anything outside `SupportedMediaType.images` (`PNG`, `JPEG`, `WEBP`).
+1. `FileScanner.scan` validates the existing declared filename header, spools the incoming `ZStream[Byte]` to a temp file, and drains the entire input even past the byte cap (writing at most `fileBytesMax + 1` bytes, discarding the rest) so an oversized request body isn't abandoned mid-read (rationale: [Streaming uploads](../project/streaming-uploads.md)). It detects the actual MIME type with Apache Tika using the filename as a hint, requires the extension and detected MIME to agree, and rejects anything outside `SupportedMediaType.images` (`PNG`, `JPEG`, `WEBP`).
 2. `ImageProcessing.normalize` re-detects the format with scrimage's `FormatDetector`, decodes, bounds to 640×640 px (`MaxDimensionPixels`), and re-encodes as lossless WebP. Yields the untouched original stream and the normalized variant.
 3. `S3ClientOrganizationMedia.uploadOrganizationLogo` stores both variants at `{organizationLogoBucketPathPrefix}/{organizationID}/{originalFileName|normalizedFileName}` in bucket `organization-media`, returning both bucket keys as an `UploadedImageResult` (`imageOriginalS3BucketKey`/`imageNormalizedS3BucketKey`), from which the service builds an `OrganizationLogoImageAsset` (composite `ImageAsset` newtype: original bucket key, normalized bucket key, original file name). `genMediaUrl` takes a single `S3BucketKey` and returns a presigned GET URL (`urlExpiresAtOffset`) as `S3MediaUrl`; logos are never served through the gateway. `readiness` does a `HeadBucket` check for the health endpoint.
 4. `OrganizationManagementRepository.updateOrganization`'s `logoImageAssetOptUpdate` persists the `OrganizationLogoImageAsset` and moves the organization to `OrganizationStage.LogoProvided` — unlike the catalogue-item image upload, this endpoint always transitions the owning row's lifecycle state.
@@ -56,13 +56,13 @@ Binary body; organization in the `X-Organization-ID` header, original file name 
 - Transport (shared): `tapir/FileServiceEndpoints.scala`, `tapir/tapir.scala`; wiring + entity limits: `HttpApp.scala`
 - S3 (shared): `clients/S3ClientOrganizationMedia.scala` (+ `S3ClientOrganizationMediaConfig`)
 - Domain (shared): `backend/domain/src/main/scala/io/mesazon/domain/gateway/SupportedMediaType.scala`
-- Config: `FileServiceConfig` (`file-service.max-upload-bytes`, shared with catalogue item image upload)
+- Config: `FileServiceConfig` (`file-service.file-bytes-max`, shared with catalogue item image upload)
 
 ### Tests (logo upload)
 
 - Acceptance (see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/FileApiSpec.scala`'s `/upload/organization/logo` block — upload happy path asserting both objects land in S3, missing `X-File-Name` header, missing token (401), invalid token (401), disallowed stage (403), missing `X-Organization-ID` header (400), non-member (500), disallowed role (403), and unsupported file type
 - Functional: `fun/FileServiceSpec.scala`'s `uploadOrganizationLogo` block
-- Unit (shared): `unit/utils/FileScannerSpec.scala` — proves the size cap (including the one-extra-byte boundary) and MIME-type rejection directly against `FileScanner.scan`, independent of HTTP transport
+- Unit (shared): `unit/utils/FileScannerSpec.scala` — proves supported filename/content agreement, the size cap (including the one-extra-byte boundary), and mismatch rejection directly against `FileScanner.scan`, independent of HTTP transport
 - Integration (shared): `it/S3ClientOrganizationMediaSpec.scala`'s `uploadOrganizationLogo` block against `src/test/resources/compose/s3.yaml`
 
 ## Key files

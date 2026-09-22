@@ -3,7 +3,7 @@ package io.mesazon.gateway.json
 import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker
 import io.github.iltotore.iron.jsoniter.given
-import io.mesazon.domain.gateway.{AssistantResponse, ExtractCustomersResponse}
+import io.mesazon.domain.gateway.*
 import sttp.apispec.{AnySchema, Schema as ApiSchema, SchemaLike}
 import sttp.tapir.Schema
 import sttp.tapir.codec.iron.given
@@ -11,17 +11,19 @@ import sttp.tapir.docs.apispec.schema.TapirSchemaToJsonSchema
 
 object ai {
 
-  private lazy val assistantResponseSchemaValue: Schema[AssistantResponse] = Schema.derived[AssistantResponse]
+  given assistantResponseSchema: Schema[AssistantResponse] = Schema.derived[AssistantResponse]
 
-  private lazy val assistantResponseCodecValue: JsonValueCodec[AssistantResponse] =
-    JsonCodecMaker.make[AssistantResponse]
+  given assistantResponseCodec: JsonValueCodec[AssistantResponse] = JsonCodecMaker.make[AssistantResponse]
 
-  given assistantResponseSchema: Schema[AssistantResponse] = assistantResponseSchemaValue
+  given extractCustomersPostResponseOpenAIJsonSchema: OpenAIJsonSchema[ExtractCustomersPostResponse] =
+    fromTapir(tapir.extractCustomersPostResponseSchema)
 
-  given assistantResponseCodec: JsonValueCodec[AssistantResponse] = assistantResponseCodecValue
+  given noteCompactionOutputSchema: Schema[NoteCompactionOutput] = Schema.derived[NoteCompactionOutput]
 
-  given extractCustomersResponseOpenAIJsonSchema: OpenAIJsonSchema[ExtractCustomersResponse] =
-    fromTapir(tapir.extractCustomersResponseSchema)
+  given noteCompactionOutputOpenAIJsonSchema: OpenAIJsonSchema[NoteCompactionOutput] =
+    fromTapir(noteCompactionOutputSchema)
+
+  given noteCompactionOutputCodec: JsonValueCodec[NoteCompactionOutput] = JsonCodecMaker.make[NoteCompactionOutput]
 
   private def requireAllPropertiesLike(schemaLike: SchemaLike): SchemaLike = schemaLike match {
     case schema: ApiSchema    => requireAllProperties(schema)

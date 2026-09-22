@@ -36,7 +36,7 @@ variable "twilio_client_auth_token" {
   sensitive   = true
 }
 
-variable "ai_client_api_key" {
+variable "ai_client_data_extraction_api_key" {
   description = "AI Client API Key for extracting customers from a photo."
   type        = string
   sensitive   = true

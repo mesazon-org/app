@@ -19,7 +19,7 @@ Three rules bind every role at every tier, small work included:
 
 - **Read the repository's own instructions first.** `AGENTS.md` (served to Claude as `CLAUDE.md`) is the entry point; its documentation router names the `agent-docs/` feature docs, flow slices, standards, and project guides a change triggers, and its validation flow names the required checks. Those standards are requirements — deviating needs the user's decision, not a quiet exception.
 - **Ask, do not assume, and take no initiative.** Every role opens its stage by listing its open questions and would-be assumptions with recommendations, and waits. Nothing outside the agreed scope gets added, improved, or refactored on an agent's own judgement.
-- **The user commits, always.** No agent runs `git commit`, `git push`, or stages files. The user reviews and commits by hand after PO's `pages/` update, after EM's engineering-doc update, and after every Lead slice, so each step is left commit-ready and self-contained.
+- **The user approves; the main-conversation EM commits.** Subagents never stage, commit, or push. After the user explicitly approves the exact current diff, the EM stages and commits only that slice and never pushes. Each commit message is `feat: <issue number> <epic title> <slice description>`, and each step remains self-contained.
 
 ## Shared sources and hosts
 
