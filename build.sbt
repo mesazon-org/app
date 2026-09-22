@@ -3,16 +3,17 @@ import smithy4s.codegen.Smithy4sCodegenPlugin
 
 val enableScalaLint = sys.env.getOrElse("ENABLE_SCALA_LINT_ON_COMPILE", "true").toBoolean
 
-scalaVersion      := "3.9.0"
-version           := "latest"
-organization      := "io.mesazon"
-organizationName  := "Mesazon"
-scalafixOnCompile := enableScalaLint
-scalafmtOnCompile := enableScalaLint
-semanticdbEnabled := true
-Test / fork       := true
-run / fork        := true
-usePipelining     := true
+scalaVersion           := "3.9.0"
+version                := "latest"
+organization           := "io.mesazon"
+organizationName       := "Mesazon"
+scalafixOnCompile      := enableScalaLint
+scalafmtOnCompile      := enableScalaLint
+semanticdbEnabled      := true
+semanticdbIncludeInJar := true
+Test / fork            := true
+run / fork             := true
+usePipelining          := true
 
 lazy val backendDirName = "backend"
 
