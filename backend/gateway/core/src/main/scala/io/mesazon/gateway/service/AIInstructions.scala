@@ -32,7 +32,9 @@ object AIInstructions {
       |with isDefault=true and mark every other entry with isDefault=false. Never send an empty string for an
       |optional field - omit the field entirely instead.
       |If something about a candidate is missing or unclear (e.g. a smudged phone number, no visible email), say so
-      |in one short, plain sentence in that candidate's extraction notes; otherwise leave the notes out entirely.
+      |as briefly as possible in that candidate's extraction notes - a short phrase or clause, not a full sentence,
+      |when a phrase suffices (e.g. "phone smudged, no email" rather than "The phone number is smudged and no email
+      |is visible"); otherwise leave the notes out entirely.
       |Compare candidates only against each other within this same image, never against any other data. Two
       |candidates of the same kind (both individuals or both businesses) whose names match once capitalisation is
       |ignored are each a duplicate of the other; two candidates of different kinds are never duplicates of each
@@ -89,8 +91,10 @@ object AIInstructions {
       |Email and phone lists may be empty. Whenever either list is non-empty, mark exactly one entry in that list
       |with isDefault=true and mark every other entry with isDefault=false. Never send an empty string for an
       |optional field - omit the field entirely instead.
-      |If something about a candidate is missing or unclear (e.g. a blank cell, no visible email), say so in one
-      |short, plain sentence in that candidate's extraction notes; otherwise leave the notes out entirely.
+      |If something about a candidate is missing or unclear (e.g. a blank cell, no visible email), say so as briefly
+      |as possible in that candidate's extraction notes - a short phrase or clause, not a full sentence, when a
+      |phrase suffices (e.g. "phone smudged, no email" rather than "The phone number is smudged and no email is
+      |visible"); otherwise leave the notes out entirely.
       |Compare candidates only against each other within this same file, never against any other data. Two
       |candidates of the same kind (both individuals or both businesses) whose names match once capitalisation is
       |ignored are each a duplicate of the other; two candidates of different kinds are never duplicates of each
@@ -110,10 +114,11 @@ object AIInstructions {
       |how many were actually turned into candidates, a list of row numbers that were completely blank, a list of
       |row numbers that had content but no name that could be made out, and a list of raw notes written by each
       |batch as it was read.
-      |Write exactly one short, friendly, plain-English message for the person who uploaded the file, telling
-      |them what happened and which row numbers deserve a second look. Avoid technical or error-message language.
-      |Mention specific row numbers when they are given. Fold in anything useful from the raw notes coherently, in
-      |your own words, rather than repeating or concatenating them.
-      |If there is nothing worth mentioning, still return a short reassuring message rather than an empty
-      |one.""".stripMargin
+      |Write exactly one compact, plain-English message — a single short sentence or two clipped clauses, not a
+      |paragraph. Aim for roughly 15-20 words; never pad with filler like "I found" or narrate what you did. State
+      |only the essential facts tersely, in a style like "343/346 processed. Rows 4-6: name unclear. Some phone
+      |numbers normalized." rather than a fuller narrative. Fold in anything useful from the raw notes as briefly as
+      |possible, in your own words; drop a raw note's detail entirely if keeping the message compact matters more
+      |than keeping that detail. If there is nothing worth mentioning, return a short reassuring message (e.g. "All
+      |entries processed cleanly.") rather than an empty one.""".stripMargin
 }
