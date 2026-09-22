@@ -80,9 +80,9 @@ module "gateway_core_app" {
     TWILIO_CLIENT_HOST   = "api.twilio.com"
     TWILIO_CLIENT_PORT   = "443"
 
-    AI_CLIENT_SCHEME = "https"
-    AI_CLIENT_HOST   = "api.openai.com"
-    AI_CLIENT_PORT   = "443"
+    AI_CLIENT_DATA_EXTRACTION_SCHEME = "https"
+    AI_CLIENT_DATA_EXTRACTION_HOST   = "api.openai.com"
+    AI_CLIENT_DATA_EXTRACTION_PORT   = "443"
   }
 
   secret_vars = {
@@ -95,7 +95,7 @@ module "gateway_core_app" {
     TWILIO_CLIENT_ACCOUNT_SID = var.twilio_client_account_sid
     TWILIO_CLIENT_AUTH_TOKEN  = var.twilio_client_auth_token
 
-    AI_CLIENT_API_KEY = var.ai_client_api_key
+    AI_CLIENT_DATA_EXTRACTION_API_KEY = var.ai_client_data_extraction_api_key
 
     JWT_SECRET_KEY = var.jwt_secret_key
 

@@ -44,6 +44,7 @@ object Main extends ZIOAppDefault {
       OtpGenerator.live,
       FileScanner.live,
       ImageProcessing.live,
+      SpreadsheetTool.live,
 
       // Services
       AuthenticationService.live,
@@ -103,7 +104,7 @@ object Main extends ZIOAppDefault {
       RepositoryConfig.live,
       HttpClientConfig.live,
       OpenAIClientConfig.live,
-      AIClientConfig.live,
+      AIClientDataExtractionConfig.live,
       EmailConfig.live,
       UserSignUpConfig.live,
       JwtConfig.live,
@@ -137,7 +138,7 @@ object Main extends ZIOAppDefault {
       SttpBackend.live,
       WahaClient.live,
       OpenAIClient.live,
-      AIClient.live,
+      AIClientDataExtraction.live,
       EmailClient.live,
       TwilioClient.live,
       S3ClientOrganizationMedia.live,

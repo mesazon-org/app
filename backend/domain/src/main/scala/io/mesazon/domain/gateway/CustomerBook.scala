@@ -101,7 +101,7 @@ case class InsertCustomersPostRequest(
     customerIndividuals: List[InsertCustomerIndividualPostRequest],
 )
 
-// Photo extraction
+// File extraction
 
 case class ExtractCustomerEmailEntry(
     email: CustomerEmail,
@@ -161,10 +161,12 @@ case class ExtractCustomerBusinessData(
     extractionNotes: Option[String],
 )
 
-case class ExtractCustomersResponse(
+case class ExtractCustomersPostResponse(
     entriesIdentified: Long,
     entriesProcessed: Long,
     customerIndividualCandidates: List[ExtractCustomerIndividualData],
     customerBusinessCandidates: List[ExtractCustomerBusinessData],
-    unidentifiedEntriesSummary: Option[String],
+    emptyEntryRows: List[Long],
+    unidentifiedEntryRows: List[Long],
+    unidentifiedEntriesNotes: Option[String],
 )

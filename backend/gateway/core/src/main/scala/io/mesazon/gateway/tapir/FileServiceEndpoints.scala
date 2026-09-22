@@ -61,11 +61,12 @@ object FileServiceEndpoints {
       )
       .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
 
-  private val extractCustomersFromPhotoPostEndpoint =
+  private val extractCustomersPostEndpoint =
     securedEndpoint.post
-      .in("extract" / "customer-book-photo")
+      .in("extract" / "customers")
+      .in(header[ExtractCustomersFileName](FileNameHeader))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
-      .out(jsonBody[ExtractCustomersResponse])
+      .out(jsonBody[ExtractCustomersPostResponse])
       .errorOut(
         tapirServerErrorOut(
           NonEmptyChunk(
@@ -128,7 +129,7 @@ object FileServiceEndpoints {
                 catalogueItemImageByteStream,
               )
           }),
-        extractCustomersFromPhotoPostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
+        extractCustomersPostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
           authorizationService
             .auth(
               accessToken = accessToken,
@@ -138,8 +139,12 @@ object FileServiceEndpoints {
             )
             .as(organizationID)
         }
-          .serverLogic(organizationID => { case customerBookPhotoByteStream =>
-            fileService.extractCustomersFromPhoto(organizationID, customerBookPhotoByteStream)
+          .serverLogic(organizationID => { case (extractCustomersFileName, extractCustomersFileByteStream) =>
+            fileService.extractCustomers(
+              organizationID,
+              extractCustomersFileName,
+              extractCustomersFileByteStream,
+            )
           }),
       )
       openApiDocsOpt = Option.when(enableDocs)(
@@ -148,7 +153,7 @@ object FileServiceEndpoints {
             List(
               uploadOrganizationLogoPostEndpoint,
               uploadCatalogueItemImagePostEndpoint,
-              extractCustomersFromPhotoPostEndpoint,
+              extractCustomersPostEndpoint,
             ),
             Info(
               title = "FileService",

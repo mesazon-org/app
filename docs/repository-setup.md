@@ -50,7 +50,7 @@ SBT (Simple Build Tool) is Scala's build tool ([docs](https://www.scala-sbt.org/
 |---|---|---|---|
 | `postgres` | `postgres:17.5-alpine` | 5432 | Primary DB. `POSTGRES_DB=local_db`, user/pass `postgres`/`postgres`. Bootstraps `local_schema` + roles once via `backend/schemas/local/postgres/init.sql` (only runs on first volume creation). |
 | `flyway` | `flyway/flyway:12.0.0-alpine` | — | Applies migrations from `backend/schemas/migrations` against `local_schema`. Depends on `postgres` but there's no startup healthcheck, so if it races Postgres on a cold start, just re-run it (`docker compose -f compose/compose.yaml up flyway`). |
-| `gateway` | `local/gateway-core:latest` | 8080/8081/8082/8083 | The actual service. **Not pulled from a registry** — build it first with `sbt "gatewayCore/Docker/publishLocal"`. |
+| `gateway` | `local/gateway-core:latest` | 8080/8081/8082/8083 | The actual service. **Not pulled from a registry** — build it first with `sbt "gateway-core/Docker/publishLocal"`. |
 | `wiremock` | `local/wiremock:latest` | (internal only) | Stubs external HTTP deps. Also built locally, not pulled — same `sbt` step covers it if you run the full `gateway-build`. |
 | `mailhog` | `mailhog/mailhog:v1.0.1` | 1025 (SMTP), 8025 (UI) | Local email catcher — `application.conf` already points email at it by default. |
 | `s3` | `adobe/s3mock:5.0.0` | 9090 | S3-compatible mock; auto-creates `organization-media`. `application.conf`'s S3 client defaults to mock mode. |
@@ -81,11 +81,11 @@ sbt "gateway-it/test"     # acceptance tests — auto-publishes the wiremock + g
 **Run the gateway as a container** (closest to how it runs in prod):
 
 ```sh
-sbt "gatewayCore/Docker/publishLocal"
+sbt "gateway-core/Docker/publishLocal"
 docker compose -f compose/compose.yaml up
 ```
 
-**Run the gateway straight from sbt** (faster inner loop, not containerized): bring up `postgres` + `flyway` + `mailhog` + `s3` + `waha` via compose (compose maps Postgres to `localhost:5432`), then `sbt "gatewayCore/run"` with `DATABASE_HOST`/etc. pointed at `localhost`. This path isn't documented anywhere else in the repo — treat it as a starting point, not a guarantee, if you hit issues.
+**Run the gateway straight from sbt** (faster inner loop, not containerized): bring up `postgres` + `flyway` + `mailhog` + `s3` + `waha` via compose (compose maps Postgres to `localhost:5432`), then `sbt "gateway-core/run"` with `DATABASE_HOST`/etc. pointed at `localhost`. This path isn't documented anywhere else in the repo — treat it as a starting point, not a guarantee, if you hit issues.
 
 ## 4. External integrations — what's real vs. mocked locally
 
