@@ -9,6 +9,17 @@ object AIInstructions {
       |mapping a source (e.g. a business card) to one kind or the other.
       |Only return an entry as a candidate if you can make out a name for it. If you cannot make out any name for
       |an entry, do not return it as a candidate at all - just count it.
+      |If you cannot make out any name at all for an entry - not even a first name - but it has an email address
+      |that plausibly encodes a real person's name, infer the name from that email address instead and return the
+      |entry as an ordinary candidate. Be deliberately lenient about what counts as plausible: a full first-and-last
+      |pattern such as john.smith@example.com, a single first name such as john@example.com, or an initial-plus-
+      |surname pattern such as jsmith@example.com (read as something like "J Smith") all qualify. Never do this for
+      |a role or department mailbox (e.g. info@, sales@, support@, noreply@, admin@, contact@) or for a purely
+      |numeric or otherwise meaningless local part (e.g. xk29fj3@...). This applies equally to a business contact's
+      |name, never to a business's own name. Never use an email this way when any part of a name - even a first
+      |name alone - was directly readable; only infer from an email when no name at all could be read. When you
+      |infer a name from an email address this way, say so in that candidate's extraction notes, for example
+      |"Name inferred from the email address".
       |For a candidate business, only include a business contact if you can make out that contact's name.
       |For every field other than a name, try to produce a realistic, usable value (a real-looking email, a phone
       |number with enough information to be dialed, trimmed non-empty text) but this is best-effort, not required
@@ -51,6 +62,18 @@ object AIInstructions {
       |Only return an entry as a candidate if you can make out a name for it. If you cannot make out any name for
       |a non-blank entry, do not return it as a candidate at all - count it, and add its Row Number to
       |unidentifiedEntryRows.
+      |If you cannot make out any name at all for a non-blank entry - not even a first name - but it has an email
+      |address that plausibly encodes a real person's name, infer the name from that email address instead and
+      |return the entry as an ordinary candidate, included in entriesProcessed the same as any other and never
+      |added to unidentifiedEntryRows. Be deliberately lenient about what counts as plausible: a full first-and-last
+      |pattern such as john.smith@example.com, a single first name such as john@example.com, or an initial-plus-
+      |surname pattern such as jsmith@example.com (read as something like "J Smith") all qualify. Never do this for
+      |a role or department mailbox (e.g. info@, sales@, support@, noreply@, admin@, contact@) or for a purely
+      |numeric or otherwise meaningless local part (e.g. xk29fj3@...). This applies equally to a business contact's
+      |name, never to a business's own name. Never use an email this way when any part of a name - even a first
+      |name alone - was directly readable; only infer from an email when no name at all could be read. When you
+      |infer a name from an email address this way, say so in that candidate's extraction notes, for example
+      |"Name inferred from the email address".
       |Every row with a readable name must produce exactly one candidate in the appropriate candidate list and
       |must be included in entriesProcessed. Do not omit named candidates to shorten the response.
       |For a candidate business, only include a business contact if you can make out that contact's name, for
