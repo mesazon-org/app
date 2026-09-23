@@ -44,7 +44,7 @@ object Dependencies {
   lazy val awssdkV              = "2.55.1"
   lazy val zioS3V               = "0.4.4"
   lazy val poiV                 = "5.3.0"
-  lazy val commonsCsvV          = "1.12.0"
+  lazy val commonsCsvV          = "1.14.1"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
