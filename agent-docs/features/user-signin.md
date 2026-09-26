@@ -30,10 +30,20 @@ Wired by `ServerMiddleware` for any smithy service annotated `@httpBasicAuth`:
 6. On success, store `AuthedUser(userID)` in `AuthState` (request-scoped) for the handler.
 
 ### 2. Handler (`UserSignInService.signInPost`)
+
+> **In progress (issue 507):** steps 2–3 and the `organizations` response field are agreed but not built yet. Remove this note in the slice that ships them.
+
 1. Read `AuthedUser` from `AuthState`, load user details.
-2. **Delete all existing user tokens** — signing in invalidates every previously issued refresh/reset token (single active session policy). Nothing notifies the user or the other device that its session was revoked.
-3. Generate access JWT + refresh JWT (`JwtService`), persist the refresh token (`user_token` table, type `RefreshToken`).
-4. Respond with `accessToken`, `refreshToken`, `accessTokenExpiresInSeconds`, and the current `onboardStage` (client uses it to resume onboarding if incomplete).
+2. **Load the user's organizations** — `OrganizationManagementRepository.getUserOrganizations(userID)`, in one transaction:
+   - `OrganizationUserQueries.getAllByUserID`: every membership row for the user, `ORDER BY created_at DESC, organization_id ASC` (newest membership first, stable tie-break). Served by `idx_organization_user_user_id_created_at`.
+   - If there are none, return `Nil` without a second query. Otherwise `OrganizationDetailsQueries.getAllByIDs(NonEmptyList[OrganizationID])` (`WHERE organization_id IN (...)`), then pair each membership with its details row in membership order, as a named tuple `(organizationDetailsRow, organizationUserRow)`.
+   - A membership whose `organization_details` row is missing is a data-integrity error → `InternalServerError.UnexpectedError` (500). There is no FK from `organization_user` to `organization_details`; the app only ever writes both in one transaction.
+   - No filter on `organizationStage`: organizations mid-onboarding (`DetailsProvided`) are included.
+3. **Sign each logo link** — for an organization with a `logoImageAsset`, `S3ClientOrganizationMedia.genMediaUrl(imageNormalizedS3BucketKey)` produces a presigned GET URL (local signing, no network call), mirroring `CatalogueService`'s `imageNormalizedUrl`. No logo → `logoUrl` absent.
+   - Steps 2–3 run **before** any token is touched, so a failure there returns 500 and leaves every existing session intact.
+4. **Delete all existing user tokens** — signing in invalidates every previously issued refresh/reset token (single active session policy). Nothing notifies the user or the other device that its session was revoked.
+5. Generate access JWT + refresh JWT (`JwtService`), persist the refresh token (`user_token` table, type `RefreshToken`).
+6. Respond with `accessToken`, `refreshToken`, `accessTokenExpiresInSeconds`, the current `onboardStage` (client uses it to resume onboarding if incomplete), and `organizations`: a `@required` list of `SignInOrganization { organizationID, name, slug, role, logoUrl? }` in the order from step 2. `role` maps the domain `OrganizationUserRole` to the smithy enum via `organizationUserRoleFromDomainToSmithy` in `service/service.scala`, next to the existing smithy→domain mapper. The list is empty for a user with no memberships, which is the common case at sign-in.
 
 ## Key files
 
@@ -46,10 +56,12 @@ The feature follows the [current consolidated layout](../project/feature-consoli
 - Credential auth: `service/AuthenticationService.scala`; middleware wiring: `middleware/ServerMiddleware.scala`
 - Request-scoped auth state: `state/AuthState.scala` (`io.mesazon.gateway.state`)
 - Attempt tracking: `repository/UserActionAttemptRepository.scala`
+- Organizations: `repository/OrganizationManagementRepository.scala` (`getUserOrganizations`), `repository/queries/OrganizationUserQueries.scala`, `repository/queries/OrganizationDetailsQueries.scala`; logo links: `clients/S3ClientOrganizationMedia.scala`; index migration `backend/schemas/migrations/V2026.09.26__organization_user_user_id_index.sql`
 - Config: `AuthenticationConfig` (`signInAttemptsMax`, `signInAttemptsBlockDuration`)
 
 ## Tests
 
 - Acceptance (see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserSignInApiSpec.scala` — happy path (asserts exactly one refresh-token row + attempt counter cleared), token rotation on re-sign-in, lockout after max failed attempts (correct password still rejected), plus missing credentials / invalid email / wrong password / disallowed stage
 - Functional: `fun/UserSignInServiceSpec.scala`, `fun/AuthenticationServiceSpec.scala`
-- Integration: `it/UserActionAttemptRepositorySpec.scala`, `it/UserCredentialsRepositorySpec.scala`, `it/UserTokenRepositorySpec.scala`
+- Integration: `it/UserActionAttemptRepositorySpec.scala`, `it/UserCredentialsRepositorySpec.scala`, `it/UserTokenRepositorySpec.scala`, `it/OrganizationManagementRepositorySpec.scala` (`getUserOrganizations`: ordering and tie-break, empty, orphan membership → 500)
+- Acceptance for organizations: signing in returns the seeded memberships in order with role; `logoUrl shouldBe defined` only when a logo asset exists (URL correctness is proven once in `S3ClientOrganizationMediaSpec`); a user with no memberships gets an empty list.
