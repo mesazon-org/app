@@ -16,13 +16,15 @@ This file is not published with the site. It is for whoever writes or reviews an
 
 An epic covers one area of the product end to end, described from the outside in: what a person can do, in what order, the situations each step has to handle, and the rules behind them.
 
-The audience is **non-engineers**. Someone who has never opened the codebase should read it start to finish and understand what the product does. `agent-docs/features/` stays the engineering source of truth for endpoints, types, files and tests; an epic never duplicates that.
+The audience is **non-engineers**. Someone who has never opened the codebase should read it start to finish, quickly and without getting bored, and come away knowing what the feature does at a high level. `agent-docs/features/` is the engineering source of truth for endpoints, types, files, tests and every implementation detail. An epic describes the feature; the feature doc specifies how it is built.
 
-### The two rules
+### The three rules
 
-**Plain, simple English.** Short sentences, everyday words. Say "wrong code" before "invalid OTP". No Scala, type, class or file names. No endpoint paths. No internal jargon and no unexplained abbreviations. Describe what a person can see and do, not the implementation that produces it. If a sentence only makes sense to someone who has read the code, rewrite it.
+**Plain, simple English at a high level.** Short sentences, everyday words. Say "wrong code" before "invalid OTP". No Scala, type, class or file names. No endpoint paths. No internal jargon and no unexplained abbreviations. Describe what a person can see and do, not the implementation that produces it. If a sentence only makes sense to someone who has read the code, rewrite it or move it to the feature doc. State each rule once, in the place it belongs — do not repeat it in Requirements, then Scenarios, then Outcome.
 
-**Always true of the code.** Every stage name, error code, field rule, limit and business rule must match what the code actually does today. Check against the matching `agent-docs/features/*.md` doc and, where that does not settle it, the code itself. Update the epic whenever the feature changes, in the same change, not later. A confidently wrong epic is worse than a missing one.
+**Agreed numbers are requirements, implementation is not.** Keep in the epic every number the business agreed on: expiry times, attempt limits, cooldowns, size and count limits, page sizes, decimal places. Move out of the epic, into the matching feature doc, everything about *how* it is built: headers and transport, what is stored in which table, token persistence, hashing, file storage and links, retries and backoff, developer or environment bypasses, cleanup of working files, and the reasoning behind why a particular error code was chosen.
+
+**Always true of the code, and nothing lost.** Every stage name, error code, field rule, limit and business rule the epic still states must match what the code actually does today. Check against the matching `agent-docs/features/*.md` doc and, where that does not settle it, the code itself. Update the epic whenever the feature changes, in the same change, not later. A confidently wrong epic is worse than a missing one. When you shorten an epic, every fact you take out must already be in the matching feature doc, or you add it there, in agent-facing language, in the same change. Trimming an epic never deletes information from the repository.
 
 For field constraints, check validators first, then the Iron predicates in `backend/domain/.../domain.scala` and newtype bindings in `gateway/Newtypes.scala`. Validators may add library checks (such as email or phone validation) that predicates alone do not express. Never describe a user input as system-generated.
 
@@ -61,7 +63,11 @@ Every step repeats the same four sections, in this order:
 
 Scenarios come first on purpose. Work them out, and the requirements follow.
 
+Keep every section short. A scenario cell is one to three plain clauses; a requirement is one sentence; an error description is a short plain reason. If a cell needs a paragraph to explain *how*, that paragraph belongs in the feature doc.
+
 ### Field tables
+
+The Request and Response field tables are the contract between frontend and backend, so they are the one place an epic stays precise. **Field Name**, **Type**, **Constraint** and **Required** are exact and code-derived, as described below; never loosen them to make the page read more easily. **Description** stays high-level — what the field is for — with any implementation detail kept in the feature doc.
 
 Request and response fields use five columns: **Field Name**, **Type**, **Constraint**, **Required**, **Description**.
 
@@ -94,7 +100,7 @@ When the epic and the validation layer disagree, the code wins and the epic is w
 
 ### Reading the Outcome section
 
-**Outcome** is what actually changed once the step succeeded: the stage the person moves to, what was saved or deleted, what was sent, what was revoked. It also covers the unhappy paths that change something — an expired code that gets deleted, a wrong code that deliberately changes nothing.
+**Outcome** is what changed for the person once the step succeeded: the stage they move to, what they can now do, what was sent to them, what stopped working (such as sessions elsewhere). It also covers the unhappy paths that change something — an expired code that can no longer be used, a wrong code that deliberately changes nothing. Say it in the person's terms; which rows, tokens or files were written or deleted belongs in the feature doc.
 
 This is where a step with an empty response earns its place. The response tells a reader nothing, so the outcome has to tell them everything.
 
@@ -102,7 +108,7 @@ This is where a step with an empty response earns its place. The response tells 
 
 Everything above that section describes what the product does **today**. That section is the opposite: situations the epic has not decided yet, behaviour that looks wrong or unintended, and questions needing a product answer before anything is built.
 
-Nothing in it exists. Each entry says what happens today, why it matters, and ends with a **To decide:** line naming the question someone has to answer.
+Nothing in it exists. Each entry is short: what happens today, why it matters, and a **To decide:** line naming the question someone has to answer — a few sentences, not an engineering write-up. Mechanics that explain *why* it happens go in the feature doc. A fault with no product decision behind it (a crash, a stall, a wrong status code nobody chose) is not a gap; record it in [`agent-docs/known-issues.md`](../../agent-docs/known-issues.md) or the feature doc instead.
 
 Reviewing an epic against the code is how the section gets filled:
 
@@ -110,6 +116,15 @@ Reviewing an epic against the code is how the section gets filled:
 - Behaviour the epic assumes but the code never implements, or that looks unintended once you read it → **a gap**, written here, never as though it already works.
 
 Drop the section when there is nothing in it. An empty heading is worse than none.
+
+### Moving detail to the feature doc
+
+Whenever you write or shorten an epic:
+
+1. Read the matching `agent-docs/features/*.md` doc first.
+2. For every sentence you remove or compress, find where the feature doc already says it. If it does not, add it there — concise, agent-facing, pointing at the code — in the same change.
+3. Keep existing `###`/`####` headings unchanged; other epics link to their anchors. If one must change, fix every link to it in the same change.
+4. When you renumber scenarios or requirements, fix every reference to the old numbers, in epics and feature docs alike. Feature docs should describe the rule rather than cite an epic number.
 
 ### Missing tests are not gaps
 

@@ -102,7 +102,7 @@ The "exactly one default" rule is deliberately *not* listed here — `Organizati
 
 **Correction, 2026-09-03:** this entry originally asked for an acceptance test sending an oversized body to `/upload/organization/logo` over real HTTP. Do not write that test. [Known issues](known-issues.md#oversized-tapir-upload-can-hang-the-request-instead-of-failing-fast) already documents that exact request as a reproduction of an open hang: it explicitly says not to add a real end-to-end acceptance test past the entity limit, because it destabilizes the rest of the acceptance suite.
 
-`FileScannerSpec` already proves the byte cap directly against `FileScanner.scan`, including the one-byte-over boundary, independent of HTTP transport — that is deliberate, per the known issue's own prevention note, and is the right level for this. `[Organization Onboarding](../pages/epics/04-organization-onboarding.md)` step 2 now describes the real behaviour (a stall, not a clean rejection) as its own gap rather than as untested-but-working behaviour.
+`FileScannerSpec` already proves the byte cap directly against `FileScanner.scan`, including the one-byte-over boundary, independent of HTTP transport — that is deliberate, per the known issue's own prevention note, and is the right level for this. `[Organization Onboarding](../pages/epics/04-organization-onboarding.md)` step 2 now describes the real behaviour (a stall, not a clean rejection) as today's behaviour and a known engineering fault, rather than as untested-but-working behaviour; the fault itself is tracked in known-issues.
 
 Leaving this entry in place, struck through, so nobody re-adds it believing it was simply overlooked.
 
@@ -124,7 +124,7 @@ Leaving this entry in place, struck through, so nobody re-adds it believing it w
 
 `customer-book.md` already tracks this as "Acceptance: 8/13 endpoints complete", so it is a known shortfall rather than a discovery — recorded here so it sits with the rest of the backlog.
 
-Worth noting what the shape of the gap implies: **every mutation except insert and archive is untested over HTTP.** That includes both endpoints where the update is applied wholesale (email and phone lists replace rather than merge), the uniqueness conflicts on renaming, and every endpoint that exercises the silent no-op on an archived parent — which is [gap 3 in the epic](../pages/epics/05-customer-book.md#3-changes-to-an-archived-customer-are-silently-discarded). The behaviour most likely to surprise a user is the behaviour with no black-box test behind it.
+Worth noting what the shape of the gap implies: **every mutation except insert and archive is untested over HTTP.** That includes both endpoints where the update is applied wholesale (email and phone lists replace rather than merge), the uniqueness conflicts on renaming, and every endpoint that exercises the silent no-op on an archived parent — which is [gap 2 in the epic](../pages/epics/05-customer-book.md#2-changes-to-an-archived-customer-are-silently-discarded). The behaviour most likely to surprise a user is the behaviour with no black-box test behind it.
 
 The repository and functional layers do cover these, so this is about transport, role gating, and the org-scoping header — the things only an acceptance test sees.
 

@@ -94,9 +94,9 @@ export ANTHROPIC_AUTH_TOKEN="<their-key>"
 export ANTHROPIC_API_KEY="" # must be explicitly empty, or Claude Code may prefer it over ANTHROPIC_AUTH_TOKEN
 export CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1
 ```
-**Also required**: once OmniRoute has more than one provider serving the same bare model name (its built-in `cc` tier alongside the `claude` connection just added), Claude Code's alias resolution (`opus` → `claude-opus-4-8`) becomes ambiguous and fails with `API Error: 400 Ambiguous model... Use provider/model prefix`. Look up the exact `cc/`-prefixed IDs (`OMNIROUTE_API_KEY=<their-key> omniroute models`, they drift as new Claude models ship) and pin them:
+**Also required**: once OmniRoute has more than one provider serving the same bare model name (its built-in `cc` tier alongside the `claude` connection just added), Claude Code's alias resolution (`opus` → `claude-opus-5-5`) becomes ambiguous and fails with `API Error: 400 Ambiguous model... Use provider/model prefix`. Look up the exact `cc/`-prefixed IDs (`OMNIROUTE_API_KEY=<their-key> omniroute models`, they drift as new Claude models ship) and pin them:
 ```sh
-export ANTHROPIC_DEFAULT_OPUS_MODEL="cc/claude-opus-4-8"     # match to whatever `omniroute models` actually lists
+export ANTHROPIC_DEFAULT_OPUS_MODEL="cc/claude-opus-5-5"     # match to whatever `omniroute models` actually lists
 export ANTHROPIC_DEFAULT_SONNET_MODEL="cc/claude-sonnet-5"
 export ANTHROPIC_DEFAULT_HAIKU_MODEL="cc/claude-haiku-4-5-20251001"
 ```
