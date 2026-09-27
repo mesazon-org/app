@@ -25,25 +25,20 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(userID = authedUser.userID)
 
-        val organizationDetailsRowWithLogo = arbitrarySample[OrganizationDetailsRow]
-          .copy(logoImageAsset = Some(arbitrarySample[OrganizationLogoImageAsset]))
-        val organizationDetailsRowWithoutLogo = arbitrarySample[OrganizationDetailsRow]
-          .copy(logoImageAsset = None)
-
-        organizationDetailsRowWithLogo.organizationID shouldNot equal(organizationDetailsRowWithoutLogo.organizationID)
-
-        val organizationUserRowOwner = arbitrarySample[OrganizationUserRow]
+        val organizationAndUserDetailsRowOwnerWithLogo = arbitrarySample[OrganizationAndUserDetailsRow]
           .copy(
-            organizationID = organizationDetailsRowWithLogo.organizationID,
-            userID = authedUser.userID,
             userRole = OrganizationUserRole.Owner,
+            logoImageNormalizedS3BucketKey = Some(arbitrarySample[ImageNormalizedS3BucketKey]),
           )
-        val organizationUserRowAdmin = arbitrarySample[OrganizationUserRow]
+        val organizationAndUserDetailsRowAdminWithoutLogo = arbitrarySample[OrganizationAndUserDetailsRow]
           .copy(
-            organizationID = organizationDetailsRowWithoutLogo.organizationID,
-            userID = authedUser.userID,
             userRole = OrganizationUserRole.Admin,
+            logoImageNormalizedS3BucketKey = None,
           )
+
+        organizationAndUserDetailsRowOwnerWithLogo.organizationID shouldNot equal(
+          organizationAndUserDetailsRowAdminWithoutLogo.organizationID
+        )
 
         val organizationLogoUrl = arbitrarySample[S3MediaUrl]
 
@@ -73,22 +68,11 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           organizationManagementRepositoryMock.getUserOrganizations
             .expects(authedUser.userID)
             .returningZIO(
-              List(
-                (
-                  organizationDetailsRow = organizationDetailsRowWithLogo,
-                  organizationUserRow = organizationUserRowOwner,
-                ),
-                (
-                  organizationDetailsRow = organizationDetailsRowWithoutLogo,
-                  organizationUserRow = organizationUserRowAdmin,
-                ),
-              )
+              List(organizationAndUserDetailsRowOwnerWithLogo, organizationAndUserDetailsRowAdminWithoutLogo)
             )
             .once(),
           s3ClientOrganizationMediaMock.genMediaUrl
-            .expects(
-              organizationDetailsRowWithLogo.logoImageAsset.value.value.imageNormalizedS3BucketKey.to[S3BucketKey]
-            )
+            .expects(organizationAndUserDetailsRowOwnerWithLogo.logoImageNormalizedS3BucketKey.value.to[S3BucketKey])
             .returningZIO(organizationLogoUrl)
             .once(),
           userTokenRepositoryMock.deleteAllUserTokens
@@ -120,16 +104,16 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           accessToken = accessJwt.accessToken.value,
           organizations = List(
             smithy.SignInOrganization(
-              organizationID = organizationDetailsRowWithLogo.organizationID.value,
-              name = organizationDetailsRowWithLogo.name.value,
-              slug = organizationDetailsRowWithLogo.slug.value,
+              organizationID = organizationAndUserDetailsRowOwnerWithLogo.organizationID.value,
+              name = organizationAndUserDetailsRowOwnerWithLogo.name.value,
+              slug = organizationAndUserDetailsRowOwnerWithLogo.slug.value,
               role = smithy.OrganizationUserRole.OWNER,
               logoUrl = Some(organizationLogoUrl.value),
             ),
             smithy.SignInOrganization(
-              organizationID = organizationDetailsRowWithoutLogo.organizationID.value,
-              name = organizationDetailsRowWithoutLogo.name.value,
-              slug = organizationDetailsRowWithoutLogo.slug.value,
+              organizationID = organizationAndUserDetailsRowAdminWithoutLogo.organizationID.value,
+              name = organizationAndUserDetailsRowAdminWithoutLogo.name.value,
+              slug = organizationAndUserDetailsRowAdminWithoutLogo.slug.value,
               role = smithy.OrganizationUserRole.ADMIN,
               logoUrl = None,
             ),
@@ -256,13 +240,8 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(userID = authedUser.userID)
 
-        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
-          .copy(logoImageAsset = Some(arbitrarySample[OrganizationLogoImageAsset]))
-        val organizationUserRow = arbitrarySample[OrganizationUserRow]
-          .copy(
-            organizationID = organizationDetailsRow.organizationID,
-            userID = authedUser.userID,
-          )
+        val organizationAndUserDetailsRow = arbitrarySample[OrganizationAndUserDetailsRow]
+          .copy(logoImageNormalizedS3BucketKey = Some(arbitrarySample[ImageNormalizedS3BucketKey]))
 
         val unexpectedError = ServiceError.InternalServerError.UnexpectedError("Failed to presignGetObject request")
 
@@ -278,11 +257,11 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
           organizationManagementRepositoryMock.getUserOrganizations
             .expects(authedUser.userID)
             .returningZIO(
-              List((organizationDetailsRow = organizationDetailsRow, organizationUserRow = organizationUserRow))
+              List(organizationAndUserDetailsRow)
             )
             .once(),
           s3ClientOrganizationMediaMock.genMediaUrl
-            .expects(organizationDetailsRow.logoImageAsset.value.value.imageNormalizedS3BucketKey.to[S3BucketKey])
+            .expects(organizationAndUserDetailsRow.logoImageNormalizedS3BucketKey.value.to[S3BucketKey])
             .returns(ZIO.fail(unexpectedError))
             .once(),
         )
