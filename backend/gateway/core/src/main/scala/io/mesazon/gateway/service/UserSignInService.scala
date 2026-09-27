@@ -1,6 +1,7 @@
 package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.{ServiceError, TokenType}
+import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.state.*
@@ -14,6 +15,8 @@ object UserSignInService {
       userDetailsRepository: UserDetailsRepository,
       userTokenRepository: UserTokenRepository,
       jwtService: JwtService,
+      @scala.annotation.unused organizationManagementRepository: OrganizationManagementRepository,
+      @scala.annotation.unused s3ClientOrganizationMedia: S3ClientOrganizationMedia,
   ) extends smithy.UserSignInService[ServiceTask] {
 
     /** HTTP POST /signin */
@@ -26,6 +29,9 @@ object UserSignInService {
             s"User details not found for userID: [${authedUser.userID}]"
           )
         )
+      signInOrganizations <- ZIO.die(NotImplementedError("signInPost organizations")): UIO[
+        List[smithy.SignInOrganization]
+      ]
       _          <- userTokenRepository.deleteAllUserTokens(authedUser.userID)
       accessJwt  <- jwtService.generateAccessToken(authedUser.userID)
       refreshJwt <- jwtService.generateRefreshToken(authedUser.userID)
@@ -40,6 +46,7 @@ object UserSignInService {
       onboardStage = onboardStageFromDomainToSmithy(userDetailsRow.onboardStage),
       refreshToken = refreshJwt.refreshToken.value,
       accessToken = accessJwt.accessToken.value,
+      organizations = signInOrganizations,
     )
   }
 

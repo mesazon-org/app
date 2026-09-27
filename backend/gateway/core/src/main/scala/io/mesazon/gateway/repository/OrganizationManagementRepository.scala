@@ -57,9 +57,16 @@ trait OrganizationManagementRepository {
       organizationID: OrganizationID,
       userID: UserID,
   ): IO[ServiceError, Option[OrganizationUserRow]]
+
+  def getUserOrganizations(
+      userID: UserID
+  ): IO[ServiceError, List[OrganizationManagementRepository.OrganizationDetailsRowWithOrganizationUserRow]]
 }
 
 object OrganizationManagementRepository {
+
+  type OrganizationDetailsRowWithOrganizationUserRow =
+    (organizationDetailsRow: OrganizationDetailsRow, organizationUserRow: OrganizationUserRow)
 
   private final class OrganizationManagementRepositoryImpl(
       database: DatabaseOps.ServiceOps[Transactor[Task]],
@@ -221,6 +228,11 @@ object OrganizationManagementRepository {
             e,
           )
         )
+
+    override def getUserOrganizations(
+        userID: UserID
+    ): IO[ServiceError, List[OrganizationDetailsRowWithOrganizationUserRow]] =
+      ZIO.die(NotImplementedError("getUserOrganizations"))
   }
 
   val live = ZLayer.derive[OrganizationManagementRepositoryImpl].project[OrganizationManagementRepository](identity)
