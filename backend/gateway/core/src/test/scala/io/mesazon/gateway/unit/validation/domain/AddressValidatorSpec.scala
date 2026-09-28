@@ -2,6 +2,7 @@ package io.mesazon.gateway.unit.validation.domain
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import io.mesazon.gateway.service.addressTypeFromDomainToSmithy
 import io.mesazon.gateway.validation.domain.AddressValidator
 import io.mesazon.testkit.base.*
 import zio.*
@@ -21,58 +22,44 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
   "AddressValidator" when {
     "validate" should {
-      "build a customer address entry from valid parts, keeping its address type" in {
-        val addressEntry = arbitrarySample[AddressEntry].copy(addressLine2 = Some(arbitrarySample[AddressLine2]))
+      "build an address entry from valid parts, keeping its address type" in {
+        val addressEntry = AddressEntry(
+          address = arbitrarySample[Address].copy(addressLine2 = Some(arbitrarySample[AddressLine2])),
+          addressType = arbitrarySample[AddressType],
+        )
 
         addressValidator
           .validate(
-            addressLine1Raw = addressEntry.addressLine1.value,
-            addressLine2RawOpt = addressEntry.addressLine2.map(_.value),
-            cityRaw = addressEntry.city.value,
-            postalCodeRaw = addressEntry.postalCode.value,
-            countryRaw = addressEntry.country.value,
-            addressType = addressEntry.addressType,
-            addressEntryConstructor = CustomerAddressEntry.either,
+            addressLine1Raw = addressEntry.address.addressLine1.value,
+            addressLine2RawOpt = addressEntry.address.addressLine2.map(_.value),
+            cityRaw = addressEntry.address.city.value,
+            postalCodeRaw = addressEntry.address.postalCode.value,
+            countryRaw = addressEntry.address.country.value,
+            addressTypeRaw = addressTypeFromDomainToSmithy(addressEntry.addressType),
           )
           .zioValue
           .toEither
-          .value shouldBe CustomerAddressEntry(addressEntry)
+          .value shouldBe addressEntry
       }
 
-      "build a customer address entry without a second address line when none is given" in {
-        val addressEntry = arbitrarySample[AddressEntry].copy(addressLine2 = None)
+      "build an address entry without a second address line when none is given" in {
+        val addressEntry = AddressEntry(
+          address = arbitrarySample[Address].copy(addressLine2 = None),
+          addressType = arbitrarySample[AddressType],
+        )
 
         addressValidator
           .validate(
-            addressLine1Raw = addressEntry.addressLine1.value,
+            addressLine1Raw = addressEntry.address.addressLine1.value,
             addressLine2RawOpt = None,
-            cityRaw = addressEntry.city.value,
-            postalCodeRaw = addressEntry.postalCode.value,
-            countryRaw = addressEntry.country.value,
-            addressType = addressEntry.addressType,
-            addressEntryConstructor = CustomerAddressEntry.either,
+            cityRaw = addressEntry.address.city.value,
+            postalCodeRaw = addressEntry.address.postalCode.value,
+            countryRaw = addressEntry.address.country.value,
+            addressTypeRaw = addressTypeFromDomainToSmithy(addressEntry.addressType),
           )
           .zioValue
           .toEither
-          .value shouldBe CustomerAddressEntry(addressEntry)
-      }
-
-      "build an organization address entry from valid parts" in {
-        val addressEntry = arbitrarySample[AddressEntry]
-
-        addressValidator
-          .validate(
-            addressLine1Raw = addressEntry.addressLine1.value,
-            addressLine2RawOpt = addressEntry.addressLine2.map(_.value),
-            cityRaw = addressEntry.city.value,
-            postalCodeRaw = addressEntry.postalCode.value,
-            countryRaw = addressEntry.country.value,
-            addressType = addressEntry.addressType,
-            addressEntryConstructor = OrganizationAddressEntry.either,
-          )
-          .zioValue
-          .toEither
-          .value shouldBe OrganizationAddressEntry(addressEntry)
+          .value shouldBe addressEntry
       }
 
       "fail with an InvalidFieldError for every blank address part, in field order" in {
@@ -85,8 +72,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
             cityRaw = addressPartRawBlank,
             postalCodeRaw = addressPartRawBlank,
             countryRaw = addressPartRawBlank,
-            addressType = addressType,
-            addressEntryConstructor = CustomerAddressEntry.either,
+            addressTypeRaw = addressTypeFromDomainToSmithy(addressType),
           )
           .zioValue
           .toEither
@@ -103,12 +89,16 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
       }
 
       "fail with an InvalidFieldError for every address part with leading or trailing whitespace, in field order" in {
-        val addressEntry = arbitrarySample[AddressEntry].copy(addressLine2 = Some(arbitrarySample[AddressLine2]))
-        val addressLine1RawUntrimmed    = s" ${addressEntry.addressLine1.value}"
-        val addressLine2RawUntrimmedOpt = addressEntry.addressLine2.map(addressLine2 => s"${addressLine2.value} ")
-        val cityRawUntrimmed            = s"\t${addressEntry.city.value}"
-        val postalCodeRawUntrimmed      = s"${addressEntry.postalCode.value}\n"
-        val countryRawUntrimmed         = s" ${addressEntry.country.value} "
+        val addressEntry = AddressEntry(
+          address = arbitrarySample[Address].copy(addressLine2 = Some(arbitrarySample[AddressLine2])),
+          addressType = arbitrarySample[AddressType],
+        )
+        val addressLine1RawUntrimmed    = s" ${addressEntry.address.addressLine1.value}"
+        val addressLine2RawUntrimmedOpt =
+          addressEntry.address.addressLine2.map(addressLine2 => s"${addressLine2.value} ")
+        val cityRawUntrimmed       = s"\t${addressEntry.address.city.value}"
+        val postalCodeRawUntrimmed = s"${addressEntry.address.postalCode.value}\n"
+        val countryRawUntrimmed    = s" ${addressEntry.address.country.value} "
 
         addressValidator
           .validate(
@@ -117,8 +107,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
             cityRaw = cityRawUntrimmed,
             postalCodeRaw = postalCodeRawUntrimmed,
             countryRaw = countryRawUntrimmed,
-            addressType = addressEntry.addressType,
-            addressEntryConstructor = CustomerAddressEntry.either,
+            addressTypeRaw = addressTypeFromDomainToSmithy(addressEntry.addressType),
           )
           .zioValue
           .toEither
@@ -145,8 +134,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
             cityRaw = addressPartRawTooLong,
             postalCodeRaw = addressPartRawTooLong,
             countryRaw = addressPartRawTooLong,
-            addressType = addressType,
-            addressEntryConstructor = CustomerAddressEntry.either,
+            addressTypeRaw = addressTypeFromDomainToSmithy(addressType),
           )
           .zioValue
           .toEither
@@ -167,13 +155,12 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         addressValidator
           .validate(
-            addressLine1Raw = addressEntry.addressLine1.value,
+            addressLine1Raw = addressEntry.address.addressLine1.value,
             addressLine2RawOpt = Some(addressPartRawBlank),
-            cityRaw = addressEntry.city.value,
-            postalCodeRaw = addressEntry.postalCode.value,
-            countryRaw = addressEntry.country.value,
-            addressType = addressEntry.addressType,
-            addressEntryConstructor = CustomerAddressEntry.either,
+            cityRaw = addressEntry.address.city.value,
+            postalCodeRaw = addressEntry.address.postalCode.value,
+            countryRaw = addressEntry.address.country.value,
+            addressTypeRaw = addressTypeFromDomainToSmithy(addressEntry.addressType),
           )
           .zioValue
           .toEither

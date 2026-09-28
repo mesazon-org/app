@@ -52,6 +52,7 @@ File: `validation/service/<Feature>RequestValidator.scala`.
 - Do not create a validator when wire decoding already guarantees the entire request (for example UUID-only input); construct its newtypes in the service.
 - Bind Smithy inputs as `<fullRequestName>Smithy`; qualify Tapir inputs equivalently. Bind validated values as the plain domain request name.
 - Compose fields in declaration order with `ValidatedNec` + `mapN`; clients must receive all errors in stable field order.
+- Put every constructor argument in the tuple, in the target's declaration order, and finish with `.mapN(Target.apply)`. Wrap an infallible value (such as an enum mapped from Smithy) in `Validated.validNec(...)` rather than capturing it in a lambda: write `(addressValidated, Validated.validNec(addressTypeFromSmithyToDomain(addressTypeRaw))).mapN(AddressEntry.apply)`, not `addressValidated.map(AddressEntry(_, addressType))` (see `validation/domain/AddressValidator.scala`).
 - `fieldName` exactly equals the Smithy member, except a `validateAllNested` batch wrapper uses the singular item concept because the error represents one indexed element.
 - Singular, batch, and combined requests reuse private per-item/per-field validation; never duplicate field lists.
 - A batch error identifies one failed element, so pass the singular item concept to `validateAllNested` (for example `catalogueItem`, not the plural request member `catalogueItems`). Preserve the source index and return no error for valid elements between failures.

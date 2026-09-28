@@ -62,6 +62,8 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
 
   given arbImageAsset: Arbitrary[ImageAsset] = Arbitrary(Gen.resultOf(ImageAsset.apply))
 
+  given arbAddress: Arbitrary[Address] = Arbitrary(Gen.resultOf(Address.apply))
+
   given arbAddressEntry: Arbitrary[AddressEntry] = Arbitrary(Gen.resultOf(AddressEntry.apply))
 
   given arbAuthedUser: Arbitrary[AuthedUser] = Arbitrary(Gen.resultOf(AuthedUser.apply))
