@@ -41,6 +41,17 @@ final class OrganizationUserQueries(
       q.query[OrganizationUserRow].option
     }
 
+  def getAllByUserID(userID: UserID): TranzactIO[List[OrganizationUserRow]] =
+    tzio {
+      val q =
+        fr"SELECT" ++ frOrganizationUserFields ++
+          fr"FROM" ++ frTable ++
+          whereAnd(fr"user_id = $userID") ++
+          fr"ORDER BY created_at DESC, organization_id ASC"
+
+      q.query[OrganizationUserRow].to[List]
+    }
+
   def insert(organizationUserRow: OrganizationUserRow): TranzactIO[Unit] =
     tzio {
       val q =

@@ -1,9 +1,10 @@
 package io.mesazon.gateway.repository
 
+import cats.data.NonEmptyList
 import io.github.gaelrenoux.tranzactio.DatabaseOps
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.repository.domain.{OrganizationDetailsRow, OrganizationUserRow}
+import io.mesazon.gateway.repository.domain.{OrganizationAndUserDetailsRow, OrganizationDetailsRow, OrganizationUserRow}
 import io.mesazon.gateway.repository.queries.*
 import io.mesazon.generator.IDGenerator
 import org.typelevel.doobie.Transactor
@@ -57,6 +58,10 @@ trait OrganizationManagementRepository {
       organizationID: OrganizationID,
       userID: UserID,
   ): IO[ServiceError, Option[OrganizationUserRow]]
+
+  def getUserOrganizations(
+      userID: UserID
+  ): IO[ServiceError, List[OrganizationAndUserDetailsRow]]
 }
 
 object OrganizationManagementRepository {
@@ -221,6 +226,51 @@ object OrganizationManagementRepository {
             e,
           )
         )
+
+    override def getUserOrganizations(
+        userID: UserID
+    ): IO[ServiceError, List[OrganizationAndUserDetailsRow]] = for {
+      organizationUserRowsWithOrganizationDetailsRows <- database
+        .transactionOrWiden(
+          for {
+            organizationUserRows    <- organizationUserQueries.getAllByUserID(userID)
+            organizationDetailsRows <- NonEmptyList.fromList(organizationUserRows.map(_.organizationID)) match {
+              case Some(organizationIDs) => organizationDetailsQueries.getAllByIDs(organizationIDs)
+              case None                  => ZIO.succeed(Nil)
+            }
+          } yield (organizationUserRows = organizationUserRows, organizationDetailsRows = organizationDetailsRows)
+        )
+        .mapError(e =>
+          ServiceError.InternalServerError.RepositoryError(
+            s"Failed to get organizations for userID: [$userID]",
+            e,
+          )
+        )
+      organizationDetailsRowByOrganizationID = organizationUserRowsWithOrganizationDetailsRows.organizationDetailsRows
+        .map(organizationDetailsRow => organizationDetailsRow.organizationID -> organizationDetailsRow)
+        .toMap
+      organizationAndUserDetailsRows <- ZIO.foreach(
+        organizationUserRowsWithOrganizationDetailsRows.organizationUserRows
+      )(organizationUserRow =>
+        ZIO
+          .fromOption(organizationDetailsRowByOrganizationID.get(organizationUserRow.organizationID))
+          .orElseFail(
+            ServiceError.InternalServerError.UnexpectedError(
+              s"Organization details not found for organizationID: [${organizationUserRow.organizationID}]"
+            )
+          )
+          .map(organizationDetailsRow =>
+            OrganizationAndUserDetailsRow(
+              organizationID = organizationDetailsRow.organizationID,
+              name = organizationDetailsRow.name,
+              slug = organizationDetailsRow.slug,
+              userRole = organizationUserRow.userRole,
+              logoImageNormalizedS3BucketKey =
+                organizationDetailsRow.logoImageAsset.map(_.value.imageNormalizedS3BucketKey),
+            )
+          )
+      )
+    } yield organizationAndUserDetailsRows
   }
 
   val live = ZLayer.derive[OrganizationManagementRepositoryImpl].project[OrganizationManagementRepository](identity)
