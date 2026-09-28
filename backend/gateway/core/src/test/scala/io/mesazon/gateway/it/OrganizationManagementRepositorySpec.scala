@@ -6,7 +6,7 @@ import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.*
 import io.mesazon.gateway.repository.OrganizationManagementRepository
-import io.mesazon.gateway.repository.domain.{OrganizationDetailsRow, OrganizationUserRow}
+import io.mesazon.gateway.repository.domain.{OrganizationAndUserDetailsRow, OrganizationDetailsRow, OrganizationUserRow}
 import io.mesazon.gateway.repository.queries.{OrganizationDetailsQueries, OrganizationUserQueries}
 import io.mesazon.gateway.utils.*
 import io.mesazon.generator.IDGenerator
@@ -475,6 +475,207 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           .zioValue
 
         slugExists shouldBe false
+      }
+    }
+
+    "getUserOrganizations" should {
+      "successfully get the user's organizations with the most recent membership first, excluding other users' memberships" in new TestContext {
+        val userID      = arbitrarySample[UserID]
+        val userIDOther = arbitrarySample[UserID]
+
+        userID shouldNot equal(userIDOther)
+
+        val organizationLogoImageAsset2 = arbitrarySample[OrganizationLogoImageAsset]
+        val organizationLogoImageAsset3 = arbitrarySample[OrganizationLogoImageAsset]
+
+        val organizationDetailsRow1 = arbitrarySample[OrganizationDetailsRow]
+          .copy(logoImageAsset = None, createdAt = CreatedAt(instantNow), updatedAt = UpdatedAt(instantNow))
+        val organizationDetailsRow2 = arbitrarySample[OrganizationDetailsRow]
+          .copy(
+            logoImageAsset = Some(organizationLogoImageAsset2),
+            createdAt = CreatedAt(instantNow),
+            updatedAt = UpdatedAt(instantNow),
+          )
+        val organizationDetailsRow3 = arbitrarySample[OrganizationDetailsRow]
+          .copy(
+            logoImageAsset = Some(organizationLogoImageAsset3),
+            createdAt = CreatedAt(instantNow),
+            updatedAt = UpdatedAt(instantNow),
+          )
+
+        List(
+          organizationDetailsRow1.organizationID,
+          organizationDetailsRow2.organizationID,
+          organizationDetailsRow3.organizationID,
+        ).distinct should have size 3
+        List(
+          organizationDetailsRow1.slug,
+          organizationDetailsRow2.slug,
+          organizationDetailsRow3.slug,
+        ).distinct should have size 3
+
+        val organizationUserRow1 = arbitrarySample[OrganizationUserRow]
+          .copy(
+            organizationID = organizationDetailsRow1.organizationID,
+            userID = userID,
+            createdAt = CreatedAt(instantNow),
+            updatedAt = UpdatedAt(instantNow),
+          )
+        val organizationUserRow2 = arbitrarySample[OrganizationUserRow]
+          .copy(
+            organizationID = organizationDetailsRow2.organizationID,
+            userID = userID,
+            createdAt = CreatedAt(instantNow.plusSeconds(10)),
+            updatedAt = UpdatedAt(instantNow.plusSeconds(10)),
+          )
+        val organizationUserRow3 = arbitrarySample[OrganizationUserRow]
+          .copy(
+            organizationID = organizationDetailsRow3.organizationID,
+            userID = userID,
+            createdAt = CreatedAt(instantNow.plusSeconds(20)),
+            updatedAt = UpdatedAt(instantNow.plusSeconds(20)),
+          )
+        val organizationUserRowOther = arbitrarySample[OrganizationUserRow]
+          .copy(
+            organizationID = organizationDetailsRow2.organizationID,
+            userID = userIDOther,
+            createdAt = CreatedAt(instantNow.plusSeconds(30)),
+            updatedAt = UpdatedAt(instantNow.plusSeconds(30)),
+          )
+
+        postgresClient
+          .executeQuery(
+            for {
+              _ <- organizationDetailsQueries.insert(organizationDetailsRow1)
+              _ <- organizationDetailsQueries.insert(organizationDetailsRow2)
+              _ <- organizationDetailsQueries.insert(organizationDetailsRow3)
+              _ <- organizationUserQueries.insert(organizationUserRow1)
+              _ <- organizationUserQueries.insert(organizationUserRow2)
+              _ <- organizationUserQueries.insert(organizationUserRow3)
+              _ <- organizationUserQueries.insert(organizationUserRowOther)
+            } yield ()
+          )
+          .zioValue
+
+        val organizationAndUserDetailsRows = organizationManagementRepository
+          .getUserOrganizations(userID)
+          .zioValue
+
+        organizationAndUserDetailsRows shouldBe List(
+          OrganizationAndUserDetailsRow(
+            organizationID = organizationDetailsRow3.organizationID,
+            name = organizationDetailsRow3.name,
+            slug = organizationDetailsRow3.slug,
+            userRole = organizationUserRow3.userRole,
+            logoImageNormalizedS3BucketKey = Some(organizationLogoImageAsset3.value.imageNormalizedS3BucketKey),
+          ),
+          OrganizationAndUserDetailsRow(
+            organizationID = organizationDetailsRow2.organizationID,
+            name = organizationDetailsRow2.name,
+            slug = organizationDetailsRow2.slug,
+            userRole = organizationUserRow2.userRole,
+            logoImageNormalizedS3BucketKey = Some(organizationLogoImageAsset2.value.imageNormalizedS3BucketKey),
+          ),
+          OrganizationAndUserDetailsRow(
+            organizationID = organizationDetailsRow1.organizationID,
+            name = organizationDetailsRow1.name,
+            slug = organizationDetailsRow1.slug,
+            userRole = organizationUserRow1.userRole,
+            logoImageNormalizedS3BucketKey = None,
+          ),
+        )
+      }
+
+      "successfully order memberships sharing a created at by organization ID ascending" in new TestContext {
+        val userID = arbitrarySample[UserID]
+
+        val organizationDetailsRow1 = arbitrarySample[OrganizationDetailsRow]
+          .copy(logoImageAsset = None, createdAt = CreatedAt(instantNow), updatedAt = UpdatedAt(instantNow))
+        val organizationDetailsRow2 = arbitrarySample[OrganizationDetailsRow]
+          .copy(logoImageAsset = None, createdAt = CreatedAt(instantNow), updatedAt = UpdatedAt(instantNow))
+
+        organizationDetailsRow1.organizationID shouldNot equal(organizationDetailsRow2.organizationID)
+        organizationDetailsRow1.slug shouldNot equal(organizationDetailsRow2.slug)
+
+        val organizationUserRow1 = arbitrarySample[OrganizationUserRow]
+          .copy(
+            organizationID = organizationDetailsRow1.organizationID,
+            userID = userID,
+            createdAt = CreatedAt(instantNow),
+            updatedAt = UpdatedAt(instantNow),
+          )
+        val organizationUserRow2 = arbitrarySample[OrganizationUserRow]
+          .copy(
+            organizationID = organizationDetailsRow2.organizationID,
+            userID = userID,
+            createdAt = CreatedAt(instantNow),
+            updatedAt = UpdatedAt(instantNow),
+          )
+
+        // Postgres compares uuid bytewise, which matches the lowercase hex string order but not java.util.UUID.compareTo.
+        val organizationUserRowsExpectedOrder =
+          List(organizationUserRow1, organizationUserRow2).sortBy(_.organizationID.value.toString)
+
+        val organizationAndUserDetailsRowsExpected = List(
+          OrganizationAndUserDetailsRow(
+            organizationID = organizationDetailsRow1.organizationID,
+            name = organizationDetailsRow1.name,
+            slug = organizationDetailsRow1.slug,
+            userRole = organizationUserRow1.userRole,
+            logoImageNormalizedS3BucketKey = None,
+          ),
+          OrganizationAndUserDetailsRow(
+            organizationID = organizationDetailsRow2.organizationID,
+            name = organizationDetailsRow2.name,
+            slug = organizationDetailsRow2.slug,
+            userRole = organizationUserRow2.userRole,
+            logoImageNormalizedS3BucketKey = None,
+          ),
+        ).sortBy(_.organizationID.value.toString)
+
+        // Inserted in reverse of the expected order so insertion order cannot satisfy the assertion.
+        postgresClient
+          .executeQuery(
+            for {
+              _ <- organizationDetailsQueries.insert(organizationDetailsRow1)
+              _ <- organizationDetailsQueries.insert(organizationDetailsRow2)
+              _ <- ZIO.foreachDiscard(organizationUserRowsExpectedOrder.reverse)(organizationUserQueries.insert)
+            } yield ()
+          )
+          .zioValue
+
+        val organizationAndUserDetailsRows = organizationManagementRepository
+          .getUserOrganizations(userID)
+          .zioValue
+
+        organizationAndUserDetailsRows shouldBe organizationAndUserDetailsRowsExpected
+      }
+
+      "successfully return an empty list when the user has no memberships" in new TestContext {
+        val userID = arbitrarySample[UserID]
+
+        val organizationAndUserDetailsRows = organizationManagementRepository
+          .getUserOrganizations(userID)
+          .zioValue
+
+        organizationAndUserDetailsRows shouldBe Nil
+      }
+
+      "fail with an UnexpectedError when a membership's organization details row is missing" in new TestContext {
+        val organizationUserRow = arbitrarySample[OrganizationUserRow]
+          .copy(createdAt = CreatedAt(instantNow), updatedAt = UpdatedAt(instantNow))
+
+        postgresClient
+          .executeQuery(organizationUserQueries.insert(organizationUserRow))
+          .zioValue
+
+        val serviceError = organizationManagementRepository
+          .getUserOrganizations(organizationUserRow.userID)
+          .zioError
+
+        serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
+          s"Organization details not found for organizationID: [${organizationUserRow.organizationID}]"
+        )
       }
     }
   }

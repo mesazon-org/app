@@ -6,7 +6,7 @@ title: User Onboarding
 
 ### Overview
 
-Users should be able to sign up and create an account with their own email.
+People create their own account with their email address. They prove they own the email, set a password, add their name and phone number, and prove they own the phone. Once that is done they can create an organization.
 
 ### Related / Out of scope
 
@@ -22,21 +22,20 @@ Throughout this epic, a **one-time passcode** (OTP) is a short code we send to s
 
 #### Functional
 
-1. Everyone moves through the same five steps in the same order. Each step only accepts people at the right onboard stage, and turns away anyone else.
-2. A passcode is six characters long and mixes letters and digits. It stops working once it expires.
+1. Everyone moves through the same five steps in the same order. Each step only accepts people at the right onboard stage: sign up answers anyone else with a look-alike reply, and every other step turns them away.
+2. A passcode is six characters long and mixes letters and digits. Email and phone passcodes both last 45 seconds, then stop working.
 3. Every passcode has its own id. To use a passcode the person sends back both the id and the code they received.
 4. Someone who leaves partway through keeps their progress. Once they have set a password they come back by signing in; before that, they sign up again with the same email and carry on.
-5. An email address belongs to one account only. Before we do anything with an email we strip surrounding spaces and lower-case it, so `Sam@Example.com ` and `sam@example.com` are the same person and cannot become two accounts.
-6. A rejected passcode is reported with its own error code. Any other reason a step here refuses someone — a missing, invalid, or expired access token — gets the same error code used everywhere else in the product for a rejected access token.
+5. An email address belongs to one account only. We strip surrounding spaces and lower-case it first, so `Sam@Example.com ` and `sam@example.com` are the same person.
+6. A rejected passcode never uses the access-token error. A missing, invalid, or expired access token gets the same `UNAUTHORIZED_ERROR` used everywhere else in the product.
 
 #### Non-functional
 
-1. Signing up and verifying an email do not require being signed in. We keep them safe by limiting how often a passcode can be resent, and by never revealing whether an email is already registered, rather than by asking people to log in first.
-2. Asking for a new passcode too soon does not send another one. While the previous passcode is still inside its waiting period we reuse it and send nothing, but its expiry is pushed out again, so the person always gets the full window to use the code they were sent.
-3. If a verification email or text fails to send, we try again a few times, waiting a little longer between each attempt. If it still fails, the request fails and the person is told. The welcome email is the exception: if it cannot be sent, the person carries on unaffected.
-4. A fixed passcode can be switched on for local development, so developers do not need a real inbox or phone. It is controlled by an environment setting and must stay switched off in production.
-5. A wrong passcode is counted, separately for each passcode issued. After 5 wrong tries in a row on the same passcode — on either the email step or the phone step — we delete it and reject the next attempt exactly as we would an expired one, so it cannot be guessed by trying repeatedly. Successfully verifying a passcode clears its wrong-try count too, the same as issuing a genuinely new passcode does. Reusing an existing passcode because a resend landed inside its cooldown window does not count against this, and does not reset it either — only being issued a genuinely new passcode, or verifying one correctly, starts the count over. The person is not told how many tries they have left.
-6. A passcode id we no longer hold is rejected exactly like an expired passcode — same response, and nothing to delete. This covers a stale browser tab, a reused link, an already-used passcode, or asking about phone verification when no passcode is outstanding at all.
+1. Signing up and verifying an email do not need a sign in. They are protected instead by limits on resending passcodes and by never revealing whether an email is already registered.
+2. The resend cooldown is the last 15 seconds before a passcode expires, for email and phone alike. Asking for a passcode again while the current one still has more than that left reuses it and sends nothing. Once it is inside that last stretch, or has expired, a new passcode is made and sent.
+3. If a verification email or text cannot be sent, the request fails and the person is told. The welcome email is the exception: if it cannot be sent, the person carries on.
+4. After 5 wrong tries in a row on the same passcode, the next attempt is rejected like an expired passcode and the passcode is deleted. The count restarts only when a genuinely new passcode is issued or the passcode is verified correctly; reusing a passcode does not restart it. The person is never told how many tries are left.
+5. A passcode id we no longer hold, such as a stale browser tab, a reused link, or a passcode already used, is rejected like an expired passcode.
 
 ### User flow
 
@@ -48,7 +47,7 @@ Throughout this epic, a **one-time passcode** (OTP) is a short code we send to s
 
 ### Prerequisites
 
-Before diving in the user flow steps we should first introduce the concept of onboard stage. All users will be assigned an onboard stage and only users will the right onboard stage will be able to perform actions. For every single step we will be documenting what stages are allowed and anything else will be rejected.
+Every account has an **onboard stage** saying how far through sign up it has got. Each step below lists the stages it accepts.
 
 #### Onboard Stages Example:
 
@@ -56,33 +55,33 @@ Before diving in the user flow steps we should first introduce the concept of on
 | --- | --- | --- | --- |
 | onboardStage | `OnboardStage` | `EmailVerification` `EmailVerified` `PasswordProvided` `PhoneVerification` `PhoneVerified` | Users onboard stages |
 
-A new user's account is created directly at `EmailVerification` — there is no separate "no stage yet" value.
+A new account starts at `EmailVerification`; there is no earlier stage.
 
 ### 1. User Sign's Up
 
-**Allowed onboard stages: \[EmailVerification, EmailVerified\]** (a brand-new email has no account yet, so no stage check applies)
+**Allowed onboard stages: \[EmailVerification, EmailVerified\]** (a brand-new email has no account yet, so no stage check applies; an email past these stages gets a look-alike reply, not an error)
 
-- Users redirects from sign-in form to sign-up page.
-- User fills sign's up page with email
+- The person comes from the sign in page and enters their email.
+- They always go on to the verify passcode page.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User sign's up for the first time | - No account exists yet - Generate new OTP (One Time Passcode) with expiration time - User should receive an email containing the new generated OTP - Frontend receives the new OTP ID - Users should provide the OTP contained in email and alongside OTP ID provided to fronted should request backend to verify Users email - Redirects user to verify OTP page |
-| 2. User signs up with an email they already verified, but have not set a password for | - Allowed onboardStages (EmailVerification, EmailVerified) - Onboard stage is reset to EmailVerification (must verify again) - Generate new OTP (One Time Passcode) with expiration time - User should receive an email containing the new generated OTP - Frontend receives the new OTP ID - Users should provide the OTP contained in email and alongside OTP ID provided to fronted should request backend to verify Users email - Redirects user to verify OTP page |
-| 3. User signs up with an email that already been requested to sign up with OTP expired | - Allowed onboardStages (EmailVerification, EmailVerified) - Generate an OTP (One Time Passcode) with expiration time - User should receive an email containing the generated OTP - Frontend receives the new OTP ID - Users should provide the OTP contained in email and alongside OTP ID provided to fronted should request backend to verify Users email - Redirects user to verify OTP page |
-| 4. User signs up with an email that already been requested to sign up while still inside the resend-cooldown window | - Allowed onboardStages (EmailVerification, EmailVerified) - Reuses the existing passcode value - User should **not** receive an email (already sent, cooldown still active) - Expiration time of the existing OTP is extended (prevents email scanning attacks) - Frontend receives a new OTP ID even though the passcode itself is unchanged (a fresh id is issued every time it is reused this way) - Redirects user to verify OTP page |
-| 5. User signs up again with an email whose existing passcode is still live and not yet close to expiring, and this is the sixth such sign-up request in a row for that same passcode | - Allowed onboardStages (EmailVerification, EmailVerified) - The existing OTP is treated as expired even though it is still live, and is deleted - A brand-new OTP (One Time Passcode) is generated with a fresh expiration time - User should receive an email containing the new passcode - The wrong-attempt count from the old passcode is cleared, the same as for any genuinely new passcode - Frontend receives the new OTP ID - Redirects user to verify OTP page |
-| 6. User signs up with an email that already has a password set | - Users with onboard stage other than (EmailVerification, EmailVerified) — i.e. PasswordProvided onwards - Onboard stage is **not** changed and the email cannot be re-verified this way - Users should not be notified that email already exists in database, instead they should redirect to validate OTP page but no email will be sent. (This prevents email scanning attacks) - Frontend receives a fake OTP ID - Redirects user to verify OTP page |
+| 1. Signs up for the first time | - Account created at `EmailVerification` - A new passcode is emailed |
+| 2. Signs up again after verifying their email but before setting a password | - Stage goes back to `EmailVerification` - They verify again, with the passcode handled as in scenarios 3 to 5 |
+| 3. Signs up again once the earlier passcode has expired or is inside its resend cooldown | - A new passcode is emailed |
+| 4. Signs up again while the passcode still has more than its resend cooldown left | - Same passcode kept and no email sent - Its expiry restarts at a full window - A new passcode id is returned |
+| 5. Signs up again as in scenario 4, for the sixth time in a row on the same passcode | - The passcode is replaced even though it still works - The new one is emailed and its wrong-try count starts over |
+| 6. Signs up with an email that already has a password | - Same reply as for a new email, with a fake passcode id - Nothing sent, nothing saved, stage unchanged |
 
 #### Requirements
 
-1. When someone signs up with an email for the first time, we create their account, generate a passcode, and email it to them.
-2. Someone who has not finished verifying their email can ask us to send the passcode again. While the passcode is still inside its resend-cooldown window we do not send another email and the passcode itself does not change, but a new id is issued for it every time it is reused this way.
-3. If someone verified their email but has not set a password yet, signing up again with that email starts verification over. Their onboard stage goes back to `EmailVerification` and they verify once more.
-4. Once someone has set a password, signing up again with their email does nothing at all. They cannot re-verify this way, and they cannot be sent back to an earlier step. We reply exactly as we would for a brand-new email, but send no email and save nothing, so sign up can never be used to find out whether an email is registered.
-5. A passcode that is still live and not yet close to expiring can only be silently kept alive by resending, through repeat sign-up requests, up to 5 times. Each such sign-up request while the passcode is still comfortably live counts as one reuse. On the 6th reuse in a row, the next sign-up request treats the passcode as expired — even though it is still live — deletes it, and issues a genuinely new one, emailed the same as any other new passcode. This is a limit on how many times one passcode can be silently reused, by request count, not by how long it has been alive — there is no separate real-time ceiling.
+1. A first-time email gets a new account at `EmailVerification` and an emailed passcode.
+2. Signing up again before a password is set restarts email verification at `EmailVerification`, even if the email was already verified.
+3. A passcode can be silently reused this way up to 5 times in a row; the 6th such request replaces it with a new, emailed one. The limit counts requests, not time.
+4. Each reuse restarts the passcode's full expiry window and returns a new id for the same code.
+5. Once a password is set, signing up again changes nothing and sends nothing but replies exactly as for a new email, so sign up never reveals whether an email is registered.
 
 #### Request / Response / Outcome
 
@@ -103,9 +102,9 @@ This response looks the same whatever the email turns out to be. For an email th
 
 **Outcome**
 
-- A brand-new email gets an account created at `EmailVerification`, a new passcode saved against it, and a verification email sent.
-- An email already part-way through sign up has its stage reset to `EmailVerification`. The existing passcode is reused, with its expiry pushed out to a full fresh window, if it is still live and not yet close to expiring **and** has not already been reused this way 5 times in a row. If the passcode has expired outright, is close enough to expiring to be inside its resend-cooldown window, or has already been reused 5 times in a row, it is deleted and a brand-new passcode is generated and emailed instead, restarting its expiry window and its reuse count.
-- An email that already has a password set changes nothing: nothing saved, nothing sent, stage untouched.
+- A new email has an account at `EmailVerification` and a passcode in its inbox.
+- An email part-way through sign up is back at `EmailVerification`, with its passcode reused silently or replaced and emailed, as above.
+- An email that already has a password changes nothing and receives nothing.
 
 #### Http Error Responses
 
@@ -118,28 +117,24 @@ This response looks the same whatever the email turns out to be. For an email th
 
 **Allowed onboard stages: \[EmailVerification\]**
 
-- User redirects from sign up page to verify OTP page for verifying their email
-- User submits OTP sent to their email (when eligible) and frontend sent OTP ID along side OTP
-- Client will receive session for the ongoing requests
+- The person arrives from sign up and enters the passcode from their email.
+- On success they are signed in and go on to set a password.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User received email with OTP and submit it to the form | - User OTP is verified against the one stored - User onboard stage should be updated to `EmailVerified` - The wrong-attempt count for this passcode is cleared - All of the user's existing tokens are revoked and a fresh access/refresh token pair is issued - Redirects user to providing password page |
-| 2. User provides a wrong OTP, still under the attempt limit | - User receives a plain bad request response, with no detail about why - The passcode is not deleted and remains usable |
-| 3. User provides an expired OTP | - The OTP is deleted - User receives the same plain bad request response as any other rejection here |
-| 4. User submits the wrong OTP for the sixth time in a row | - Rejected without the OTP even being checked - The OTP is deleted, exactly as if it had expired - User receives the same plain bad request response as any other rejection here - Getting a new OTP means signing up again with the same email (see [step 1](#1-user-signs-up)) |
-| 5. User submits a passcode id we hold no record of — an old browser tab, a reused link, a passcode already used, or the fake id handed back when signing up with an email that already has a password (see [step 1, scenario 5](#1-user-signs-up)) | - Rejected with the same plain bad request response as any other rejection here - No passcode is deleted, because none was found |
+| 1. Enters the correct passcode | - Moves to `EmailVerified` - Earlier sign-ins are cancelled and a fresh session starts |
+| 2. Enters a wrong passcode, under the limit | - Plain rejection - The passcode still works |
+| 3. Enters an expired passcode | - The passcode is deleted - Plain rejection |
+| 4. Tries again after 5 wrong tries in a row | - Rejected without checking the code, and the passcode is deleted - A new one means signing up again (see [step 1](#1-user-signs-up)) |
+| 5. Sends a passcode id we hold no record of, including the fake id from [step 1, scenario 6](#1-user-signs-up) | - Plain rejection - Nothing deleted |
 
 #### Requirements
 
-1. When someone enters the correct passcode, we mark their email as verified and move them to `EmailVerified`.
-2. Verifying an email starts a fresh session. Any sign-in the person had before is cancelled, so only the newest one keeps working.
-3. Every way this step can go wrong — a wrong passcode, an expired one, too many wrong tries in a row, or a passcode id we don't recognise — gets back exactly the same plain bad-request response, with no detail about which of these happened. This keeps the guarantee from [step 1, scenario 5](#1-user-signs-up): the fake passcode id handed back for an email that already has a password must fail here in a way nobody can tell apart from a real, active passcode being guessed wrong, or sign up would leak whether an email is already registered.
-4. A wrong passcode is counted. After 5 wrong tries in a row, we delete it — the same as when it expires — so guessing cannot go on forever.
-5. Submitting a passcode id we do not recognise is rejected the same way, and nothing is deleted because there is nothing to delete.
-6. Verifying correctly clears the wrong-attempt count for that passcode, so nothing is left behind once sign up moves on.
+1. The correct passcode marks the email verified and moves the person to `EmailVerified`.
+2. Verifying starts a fresh session and cancels any sign-in the person had before.
+3. Every failure here gets the same plain rejection, so the fake id from [step 1, scenario 6](#1-user-signs-up) cannot be told apart from a real passcode guessed wrong.
 
 #### Request / Response / Outcome
 
@@ -147,8 +142,8 @@ This response looks the same whatever the email turns out to be. For an email th
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| OTP ID | `UUID` | Canonical 36-character form | ✅ | A random generated UUID assigned to specific OTP |
-| OTP | `String` | Exactly 6 characters, uppercase letters and digits only | ✅ | A random generated String including letters and digits. |
+| OTP ID | `UUID` | Canonical 36-character form | ✅ | The passcode id returned by sign up. |
+| OTP | `String` | Exactly 6 characters, uppercase letters and digits only | ✅ | The passcode from the email. |
 
 **Response**
 
@@ -161,20 +156,16 @@ This response looks the same whatever the email turns out to be. For an email th
 
 **Outcome**
 
-- The stage moves to `EmailVerified` and the passcode is deleted, so it cannot be used twice.
-- The wrong-attempt count for this passcode is cleared, the same as when a genuinely new passcode is issued.
-- Every token the person already held is revoked, a fresh access and refresh token are issued, and the refresh token is saved.
-- A wrong passcode changes nothing and leaves the passcode usable; the response is the same plain bad request used for every other rejection reason here.
-- An expired passcode is deleted, then the same plain bad request response is returned.
-- After 5 wrong tries in a row, the passcode is deleted and any further attempt against it gets the same plain bad request response. The person must sign up again to receive a new one.
-- Submitting a passcode id we hold no record of gets the same plain bad request response; nothing is deleted because there is nothing to delete.
+- The person is at `EmailVerified` and signed in; the passcode cannot be used again and any earlier sign-in stops working.
+- A wrong passcode changes nothing. An expired passcode, or a try after 5 wrong ones, deletes it, and the person must sign up again for a new one.
+- An unknown passcode id changes nothing.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - Form validation error |
-| 400 | `BAD_REQUEST_ERROR` | - OTP was wrong - OTP expired - Too many wrong attempts - OTP id not recognized |
+| 400 | `BAD_REQUEST_ERROR` | - Wrong, expired or unrecognised passcode, or too many wrong tries |
 | 403 | `FORBIDDEN_ERROR` | - Invalid onboard stage |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 
@@ -182,19 +173,19 @@ This response looks the same whatever the email turns out to be. For an email th
 
 **Allowed onboard stages: \[EmailVerified\]**
 
-- User provides new password for the email provided
+- The person sets a password for their account, then goes on to add their details.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User submits password request | - Users new password is hashed and stored in database - User onboard stage should be updated to `PasswordProvided` - User should be able to sign-in - User should receive a welcoming email (best-effort — never blocks or fails the request) |
+| 1. Sets a password | - Password saved; moves to `PasswordProvided` and can now sign in - A welcome email is attempted and never holds them up |
 
 #### Requirements
 
-1. Once their email is verified, the person sets a password. We store it scrambled, never as they typed it.
-2. We then move them to `PasswordProvided`. From this point on they can sign in.
-3. We try to send them a welcome email.
+1. The password is stored scrambled, never as the person typed it.
+2. The person moves to `PasswordProvided` and from then on signs in with the password.
+3. We try to send a welcome email; if it fails, the step still succeeds.
 
 #### Request / Response / Outcome
 
@@ -212,9 +203,8 @@ This response looks the same whatever the email turns out to be. For an email th
 
 **Outcome**
 
-- The password is scrambled and saved. We never keep it as the person typed it.
-- The stage moves to `PasswordProvided`. From here the person can sign in.
-- A welcome email is attempted. If it cannot be sent we record that and carry on; the person is never held up by it.
+- The person has a password, is at `PasswordProvided`, and can sign in.
+- They receive a welcome email if it could be sent.
 
 #### Http Error Responses
 
@@ -229,23 +219,24 @@ This response looks the same whatever the email turns out to be. For an email th
 
 **Allowed onboard stages: \[PasswordProvided, PhoneVerification\]**
 
-- User should provide details about their account
+- The person gives their full name and phone number, then goes on to verify the phone.
+- They can come back here to change their number or get a new passcode.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User submits details request | - Users details stored to database - User onboard stage should be updated to `PhoneVerification` - User should receive an SMS with OTP - Redirects User to Verify OTP page |
-| 2. User re-submits details request while an existing OTP is still inside the resend-cooldown window | - Submitted details are stored (this step can be used to change the phone number) - Existing OTP is reused, no new SMS is sent while inside the cooldown - Redirects User to Verify OTP page |
-| 3. User re-submits details request once the resend-cooldown has passed | - Submitted details are stored - A new OTP is generated - User should receive a new SMS with OTP - Redirects User to Verify OTP page |
-| 4. User submits a phone number that already belongs to a different account | - Nothing is stored: full name, phone number, and onboard stage all stay exactly as they were before the request - No SMS is sent - Request is rejected with a conflict error |
-| 5. User resubmits the phone number already stored on their own account | - Not treated as a conflict, because it belongs to the same account - Behaves like any other resubmission (see scenarios 2 and 3) |
+| 1. Submits their details | - Details saved; moves to `PhoneVerification` - A passcode is texted |
+| 2. Submits again while the passcode still has more than its resend cooldown left | - Details saved, including a changed number - Same passcode kept and no text sent |
+| 3. Submits again once the passcode is inside its resend cooldown or expired | - Details saved - A new passcode is texted |
+| 4. Gives a phone number that belongs to a different account | - Rejected as a conflict - Nothing saved and no text sent |
+| 5. Gives the number already saved on their own account | - Not a conflict; behaves as scenario 2 or 3 |
 
 #### Requirements
 
-1. The person gives their full name and phone number. We save those details, move them to `PhoneVerification`, and text them a passcode.
-2. They can come back to this step to correct their phone number. We save whatever they send us each time.
-3. A phone number can belong to only one account. If the phone number given is already saved against a different account, we refuse the request and change nothing — not the name, not the phone number, and not the onboard stage. Resubmitting the phone number already saved on your own account is not a conflict.
+1. Each submission saves the name and phone number, replacing what was there, and moves the person to `PhoneVerification`.
+2. A reused passcode keeps its original expiry; the reply shows the time it has left.
+3. A phone number belongs to one account only. A number already saved on a different account is refused and nothing changes — not the name, the number, or the stage.
 
 #### Request / Response / Outcome
 
@@ -273,9 +264,9 @@ This response looks the same whatever the email turns out to be. For an email th
 
 **Outcome**
 
-- The name and phone number are saved, replacing whatever was stored before. The stage moves to `PhoneVerification`.
-- A passcode is saved and texted to the number given, or the existing one is reused with no text sent if it is still inside its waiting period.
-- If the phone number given already belongs to a different account, nothing is saved, the stage stays as it was, and no passcode is generated or sent.
+- The person's name and number are saved and they are at `PhoneVerification`.
+- They have a passcode waiting: a newly texted one, or the one they already had.
+- A conflicting number changes nothing and sends nothing.
 
 #### Http Error Responses
 
@@ -291,30 +282,25 @@ This response looks the same whatever the email turns out to be. For an email th
 
 **Allowed onboard stages: \[PhoneVerification\]**
 
-- User redirects from provides details page to verify OTP page for verifying their phone number
-- User submits SMS OTP sent to their phone and frontend sent OTP ID along side OTP
+- The person arrives from providing details and enters the passcode from the text message.
+- On success sign up is finished and they go on to create an organization.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User received SMS with OTP and submit it to the form | - User OTP is verified against the one stored - User onboard stage should be updated to `PhoneVerified` - The wrong-attempt count for this passcode is cleared - Redirects user to create Organization page |
-| 2. User provides wrong or expired OTP | - User receives a message about what went wrong |
-| 3. User reloads the verify page while a passcode is still outstanding | - Looking up the pending verification returns the OTP ID and how long it stays valid - No new OTP is generated and no SMS is sent - User carries on entering the passcode they already received, without re-submitting their details |
-| 4. User submits the wrong OTP for the sixth time in a row | - Rejected without the OTP even being checked - The OTP is deleted, exactly as if it had expired - User receives the same message as an expired OTP - Getting a new OTP means going back to [providing details](#4-user-provides-details) to trigger a resend |
-| 5. User submits a passcode id we hold no record of — an old browser tab, a reused link, or a passcode already used | - Rejected with the same message as an expired passcode - No passcode is deleted, because none was found - Getting a new OTP means going back to [providing details](#4-user-provides-details) to trigger a resend |
-| 6. User opens the verify-phone page when no passcode is outstanding at all | - Rejected with the same message as an expired passcode - Getting a new OTP means going back to [providing details](#4-user-provides-details) to trigger a resend |
+| 1. Enters the correct passcode | - Moves to `PhoneVerified`; sign up is finished |
+| 2. Enters a wrong or expired passcode | - Told what went wrong - A wrong one still works; an expired one is deleted |
+| 3. Reloads the page while a passcode is waiting | - Can look up the passcode id and time left - Nothing new is made or sent |
+| 4. Tries again after 5 wrong tries in a row | - Rejected like an expired passcode, and the passcode is deleted - A new one means going back to [providing details](#4-user-provides-details) |
+| 5. Sends a passcode id we hold no record of | - Rejected like an expired passcode; nothing deleted - A new one means going back to [providing details](#4-user-provides-details) |
+| 6. Opens the page when no passcode is waiting | - Rejected like an expired passcode - A new one means going back to [providing details](#4-user-provides-details) |
 
 #### Requirements
 
-1. When someone enters the correct passcode from the text message, we move them to `PhoneVerified`.
-2. Sign up is now finished and they can create an organization.
-3. We reject the passcode if it is wrong, if it has expired, or if the account is not at a stage where verifying is allowed.
-4. Someone who reloads this page can look up the passcode they are already waiting on, and how long it stays valid, without going back to fill in their details again.
-5. A wrong passcode is counted. After 5 wrong tries in a row, we delete it and reject the next attempt exactly as we would an expired one.
-6. Submitting a passcode id we do not recognise gets the same answer as an expired passcode, not a server error.
-7. Opening this page with no passcode outstanding at all also gets the same answer as an expired passcode.
-8. Verifying correctly clears the wrong-attempt count for that passcode, so nothing is left behind once sign up is finished.
+1. The correct passcode moves the person to `PhoneVerified`; sign up is finished and they can create an organization.
+2. A wrong passcode gets its own answer. An expired passcode, too many wrong tries, an unknown id, or no passcode waiting all get the expired answer, never a server error.
+3. Someone who reloads this page can look up the passcode they are waiting on without filling in their details again.
 
 #### Request / Response / Outcome
 
@@ -324,8 +310,8 @@ Submitting the passcode:
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| OTP ID | `UUID` | Canonical 36-character form | ✅ | A random generated UUID assigned to specific OTP |
-| OTP | `String` | Exactly 6 characters, uppercase letters and digits only | ✅ | A random generated String including letters and digits. |
+| OTP ID | `UUID` | Canonical 36-character form | ✅ | The passcode id returned by providing details. |
+| OTP | `String` | Exactly 6 characters, uppercase letters and digits only | ✅ | The passcode from the text message. |
 
 Looking up a passcode already waiting: request is empty — the person is identified by their session.
 
@@ -346,12 +332,10 @@ When looking up a passcode already waiting:
 
 **Outcome**
 
-- The stage moves to `PhoneVerified` and the passcode is deleted. Sign up is finished and the person can create an organization.
-- The wrong-attempt count for this passcode is cleared, the same as when a genuinely new passcode is issued.
-- A wrong passcode changes nothing and leaves the passcode usable. An expired one is deleted before the request is refused.
-- After 5 wrong tries in a row, the passcode is deleted and any further attempt against it is rejected the same way an expired passcode is. The person must go back to providing details to receive a new one.
-- Submitting or looking up a passcode id we hold no record of — including opening this page with nothing outstanding — is rejected the same way an expired passcode is, and nothing is deleted because there is nothing to delete.
-- Looking up a passcode normally changes nothing, but it deletes the passcode when it is close enough to expiry — see [gap 2](#2-opening-the-phone-verification-page-can-destroy-a-usable-passcode).
+- The person is at `PhoneVerified`, the passcode cannot be used again, and they can create an organization.
+- A wrong passcode changes nothing. An expired passcode, or a try after 5 wrong ones, deletes it, and the person goes back to providing details for a new one.
+- An unknown passcode id, or no passcode waiting, changes nothing.
+- Looking up a passcode normally changes nothing, but deletes it when it is inside its resend cooldown — see [gap 1](#1-opening-the-phone-verification-page-can-destroy-a-usable-passcode).
 
 #### Http Error Responses
 
@@ -359,18 +343,19 @@ When looking up a passcode already waiting:
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - Form validation error |
 | 400 | `BAD_REQUEST_ERROR` | - OTP was wrong |
-| 401 | `UNAUTHORIZED_OTP_ERROR` | - OTP expired - Too many wrong attempts - OTP id not recognized - No OTP outstanding |
+| 401 | `UNAUTHORIZED_OTP_ERROR` | - Expired or unrecognised passcode, too many wrong tries, or no passcode waiting |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Invalid onboard stage |
 | 500 | `INTERNAL_SERVER_ERROR` | - Unexpected error |
 
 ### Known gaps and open questions
 
-Decisions this epic has not made yet. Everything above describes what the product does today; everything here does **not** exist and needs a product answer before it can be built.
+Everything above describes what the product does today. Nothing here exists yet; each needs a product answer before it can be built.
+
 #### 1. Opening the phone verification page can destroy a usable passcode
 
-Looking up an outstanding phone passcode applies a stricter expiry rule than submitting one does. If the passcode is close enough to expiry to be inside the resend window, the lookup deletes it and reports it as expired — even though submitting that same passcode directly would still have worked.
+Today, looking up a waiting phone passcode deletes it and reports it as expired once it is inside its resend cooldown, even though submitting it would still work. A person who reloads the page in that last stretch loses a passcode they could have used.
 
-**To decide:** whether the lookup should ever delete a passcode, or only report how long is left and leave it to the person to use or replace.
+**To decide:** whether the lookup should ever delete a passcode, or only report how long is left.
 
 {% include abbreviations.md %}

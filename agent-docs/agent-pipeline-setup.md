@@ -33,12 +33,12 @@ EM speaks directly to the user and handles agent dispatch. If a subagent cannot 
 
 | Role | Claude profile | Codex profile | Use |
 |---|---|---|---|
-| PO | `sonnet` | `gpt-5.6-luna`/high | clarify the product by asking, never assuming; accountable for `pages/`; final product-completeness review |
-| EM | main session; optional separate profile `sonnet` | main session; optional separate profile `gpt-5.6-luna`/high | technical concerns, plan, complexity, dispatch, approval relay, technical-completion review, close |
-| Lead MEDIUM | `sonnet` | `gpt-5.6-luna`/high | contained feature/integration work |
-| Lead HIGH | `opus` | `gpt-5.6-sol`/high | high-risk implementation |
+| PO | `opus` (Opus 5.5) | `gpt-5.6-luna`/high | clarify the product by asking, never assuming; accountable for `pages/`; final product-completeness review |
+| EM | main session; optional separate profile `opus` (Opus 5.5) | main session; optional separate profile `gpt-5.6-luna`/high | technical concerns, plan, complexity, dispatch, approval relay, technical-completion review, close |
+| Lead MEDIUM | `opus` (Opus 5.5) | `gpt-5.6-luna`/high | contained feature/integration work |
+| Lead HIGH | `opus` (Opus 5.5) | `gpt-5.6-sol`/high | high-risk implementation |
 
-Only two Leads exist — the medium and the strongest model of each provider. The [complexity contract](../.agents/contracts/complexity.md) decides between them; it does not change the process, since both tiers run every gate and keep slices at three hand-written files or fewer. Model availability depends on the account/host. Main EM uses the user's selected session model; the optional EM profile does not change it.
+Only two Leads exist. On Claude every role runs Opus 5.5 and there is no lower tier; on Codex the Leads use the medium and the strongest model. The [complexity contract](../.agents/contracts/complexity.md) decides between them; on Claude it changes only the depth of reasoning and review, and it never changes the process, since both tiers run every gate and keep slices at three hand-written files or fewer. Model availability depends on the account/host. Main EM uses the user's selected session model; the optional EM profile does not change it.
 
 Documentation ownership is accountability, not a write restriction. PO finishes `pages/` before gate 1 and EM finishes `agent-docs/` before gate 2; the Lead updates reference docs beside the code it changes. All roles may make verified factual edits within agreed scope. One writer per file. EM's review covers code and docs together; PO is consulted again for product ambiguity and always for the completion review that closes the loop.
 
@@ -110,7 +110,7 @@ export ANTHROPIC_AUTH_TOKEN="<omniroute-api-key>"
 export ANTHROPIC_API_KEY=""
 export CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1
 
-export ANTHROPIC_DEFAULT_OPUS_MODEL="cc/claude-opus-4-8"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="cc/claude-opus-5-5"
 export ANTHROPIC_DEFAULT_SONNET_MODEL="cc/claude-sonnet-5"
 export ANTHROPIC_DEFAULT_HAIKU_MODEL="cc/claude-haiku-4-5-20251001"
 ```
@@ -118,7 +118,7 @@ export ANTHROPIC_DEFAULT_HAIKU_MODEL="cc/claude-haiku-4-5-20251001"
 Explicit aliases prevent `400 Ambiguous model` when multiple providers expose the same bare name. IDs may drift; inspect `OMNIROUTE_API_KEY=<key> omniroute models`, update all three, then verify a prefixed model:
 
 ```sh
-OMNIROUTE_API_KEY=<key> omniroute chat "reply with exactly: pong" --model cc/claude-opus-4-8
+OMNIROUTE_API_KEY=<key> omniroute chat "reply with exactly: pong" --model cc/claude-opus-5-5
 ```
 
 Restart every Claude Code process; environment is read at startup. `ANTHROPIC_BASE_URL` must not end in `/v1`.

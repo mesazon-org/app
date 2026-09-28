@@ -37,6 +37,9 @@ trait RepositoryArbitraries
 
   given arbOrganizationUserRow: Arbitrary[OrganizationUserRow] = Arbitrary(Gen.resultOf(OrganizationUserRow.apply))
 
+  given arbOrganizationAndUserDetailsRow: Arbitrary[OrganizationAndUserDetailsRow] =
+    Arbitrary(Gen.resultOf(OrganizationAndUserDetailsRow.apply))
+
   given arbCatalogueItemRow: Arbitrary[CatalogueItemRow] = Arbitrary(Gen.resultOf(CatalogueItemRow.apply))
 
   given arbCatalogueItemSummaryRow: Arbitrary[CatalogueItemSummaryRow] =

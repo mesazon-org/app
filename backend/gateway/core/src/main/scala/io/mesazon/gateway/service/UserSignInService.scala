@@ -1,6 +1,8 @@
 package io.mesazon.gateway.service
 
-import io.mesazon.domain.gateway.{ServiceError, TokenType}
+import io.mesazon.domain.gateway.{S3BucketKey, ServiceError, TokenType}
+import io.mesazon.domain.to
+import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.state.*
@@ -14,6 +16,8 @@ object UserSignInService {
       userDetailsRepository: UserDetailsRepository,
       userTokenRepository: UserTokenRepository,
       jwtService: JwtService,
+      organizationManagementRepository: OrganizationManagementRepository,
+      s3ClientOrganizationMedia: S3ClientOrganizationMedia,
   ) extends smithy.UserSignInService[ServiceTask] {
 
     /** HTTP POST /signin */
@@ -26,6 +30,22 @@ object UserSignInService {
             s"User details not found for userID: [${authedUser.userID}]"
           )
         )
+      organizationAndUserDetailsRows <- organizationManagementRepository.getUserOrganizations(authedUser.userID)
+      signInOrganizations            <- ZIO.foreach(organizationAndUserDetailsRows)(organizationAndUserDetailsRow =>
+        ZIO
+          .foreach(organizationAndUserDetailsRow.logoImageNormalizedS3BucketKey)(logoImageNormalizedS3BucketKey =>
+            s3ClientOrganizationMedia.genMediaUrl(logoImageNormalizedS3BucketKey.to[S3BucketKey]).map(_.value)
+          )
+          .map(logoUrlOpt =>
+            smithy.SignInOrganization(
+              organizationID = organizationAndUserDetailsRow.organizationID.value,
+              name = organizationAndUserDetailsRow.name.value,
+              slug = organizationAndUserDetailsRow.slug.value,
+              role = organizationUserRoleFromDomainToSmithy(organizationAndUserDetailsRow.userRole),
+              logoUrl = logoUrlOpt,
+            )
+          )
+      )
       _          <- userTokenRepository.deleteAllUserTokens(authedUser.userID)
       accessJwt  <- jwtService.generateAccessToken(authedUser.userID)
       refreshJwt <- jwtService.generateRefreshToken(authedUser.userID)
@@ -40,6 +60,7 @@ object UserSignInService {
       onboardStage = onboardStageFromDomainToSmithy(userDetailsRow.onboardStage),
       refreshToken = refreshJwt.refreshToken.value,
       accessToken = accessJwt.accessToken.value,
+      organizations = signInOrganizations,
     )
   }
 

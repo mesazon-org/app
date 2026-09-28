@@ -53,6 +53,16 @@ final class OrganizationDetailsQueries(
       q.query[OrganizationDetailsRow].option
     }
 
+  def getAllByIDs(organizationIDs: NonEmptyList[OrganizationID]): TranzactIO[List[OrganizationDetailsRow]] =
+    tzio {
+      val q =
+        fr"SELECT" ++ frOrganizationDetailsFields ++
+          fr"FROM" ++ frTable ++
+          whereAnd(in(fr"organization_id", organizationIDs))
+
+      q.query[OrganizationDetailsRow].to[List]
+    }
+
   def insert(organizationDetailsRow: OrganizationDetailsRow): TranzactIO[Unit] =
     tzio {
       val q =
