@@ -26,7 +26,7 @@ Every request in this epic names the organization it applies to, and only touche
 2. Only businesses have **contacts** — the individual people you deal with inside that company. A contact is never itself a customer and can never be the target of an order.
 3. A customer's name must be unique among that organization's active customers **of the same kind**. A person and a business may share a name, and archiving a customer frees their name for reuse.
 4. Customers are **archived**, never deleted. Contacts are the opposite: removing one deletes it outright.
-5. A customer may have any number of email addresses and phone numbers. Each business contact has at most one of each.
+5. A customer may have any number of email addresses, phone numbers and addresses. Each business contact has at most one email address and one phone number, and no address.
 
 #### Non-functional
 
@@ -62,14 +62,16 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 
 **Customer status** — a customer is `Active` or `Archived`. New customers start active. Archiving is one-way.
 
-**Default contact details** — email and phone lists may be left empty. When a list has entries, exactly one of them must be marked as the default.
+**Default contact details** — email and phone lists may be left empty. When a list has entries, exactly one of them must be marked as the default. Addresses have no default.
+
+**Address type** — every address is marked as shipping, billing, or both. Both (`SHIPPING_AND_BILLING`) means one address serves both purposes.
 
 ### 1. User Adds a Customer
 
 **Who can reach this step: an owner or admin of the organization.**
 
 - User chooses whether they are adding a person or a business.
-- User fills in the name and whatever contact details and address they have.
+- User fills in the name and whatever contact details and addresses they have.
 - For a business they may also record the people they deal with there.
 
 #### Business Scenarios
@@ -84,15 +86,18 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 | 6. User submits several bad entries at once | - Every problem is reported together - Each is tied to the entry that caused it, including which contact inside which business |
 | 7. User leaves the contact lists empty | - Accepted. The customer simply has no recorded contact details |
 | 8. A member with the ordinary user role tries to add a customer | - Rejected. Reading is open to everyone; changing is not |
+| 9. User adds a customer with several addresses of different types | - Every address is stored with its type - Several of the same type, or identical ones, are accepted - None is marked as a default - An empty list is accepted; the customer simply has no recorded address |
+| 10. User gives an address missing a required part, or with a type other than shipping, billing, or both | - Rejected and nothing is stored |
 
 #### Requirements
 
-1. A name is required. Everything else — contact details, address, tax id, contacts — is optional.
+1. A name is required. Everything else — contact details, addresses, tax id, contacts — is optional.
 2. A tax id may be recorded for a business and never for a person.
 3. When email or phone lists are given, every entry must be valid and exactly one must be marked as the default.
 4. A name must be unique among active customers of the same kind within the organization.
 5. Within one business, no two contacts may share an email address, and no two may share a phone number.
 6. Adding several customers at once succeeds completely or not at all.
+7. Every address given needs a first address line, city, postal code, country and type; the second address line is optional.
 
 #### Request / Response / Outcome
 
@@ -113,20 +118,20 @@ The two shapes are separate and neither is a variant of the other. A person has 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Full Name | `String` | 1–255 characters, trimmed | ✅ | The person's name |
-| Emails | `EmailEntry[]` | Empty by default | ❌ | Contact addresses. See **EmailEntry** below |
+| Emails | `EmailEntry[]` | Empty by default | ❌ | Contact email addresses. See **EmailEntry** below |
 | Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact numbers. See **PhoneNumberEntry** below |
-| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | 1–255 characters, trimmed | ❌ | Where they are |
+| Addresses | `AddressEntry[]` | Empty by default | ❌ | Where they are. See **AddressEntry** below |
 
 **Request — CustomerBusiness**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Business Name | `String` | 1–255 characters, trimmed | ✅ | The company's name |
-| Emails | `EmailEntry[]` | Empty by default | ❌ | Contact addresses. See **EmailEntry** below |
+| Emails | `EmailEntry[]` | Empty by default | ❌ | Contact email addresses. See **EmailEntry** below |
 | Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact numbers. See **PhoneNumberEntry** below |
 | Tax ID | `String` | 1–255 characters, trimmed | ❌ | The company's tax reference. A person may never have one |
 | Customer Business Contacts | `BusinessContact[]` | Empty by default | ❌ | People inside the business. See **BusinessContact** below |
-| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | 1–255 characters, trimmed | ❌ | Where they are |
+| Addresses | `AddressEntry[]` | Empty by default | ❌ | Where they are. See **AddressEntry** below |
 
 The shapes used above and throughout this epic:
 
@@ -134,8 +139,8 @@ The shapes used above and throughout this epic:
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters | ✅ | One contact address |
-| Is Default | `Boolean` | Exactly one entry in the list must be true | ✅ | Marks the address to use by default |
+| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters | ✅ | One contact email address |
+| Is Default | `Boolean` | Exactly one entry in the list must be true | ✅ | Marks the email address to use by default |
 
 **PhoneNumberEntry**
 
@@ -150,6 +155,17 @@ The shapes used above and throughout this epic:
 | --- | --- | --- | --- | --- |
 | Phone National Number | `String` | 1–255 characters, trimmed; must be a real number for its country | ✅ | The number without its country code |
 | Phone Country Code | `String` | 1–255 characters, trimmed; must be a real country dialling code | ✅ | The country dialling code |
+
+**AddressEntry**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Address Line 1 | `String` | 1–255 characters, trimmed | ✅ | Street address |
+| Address Line 2 | `String` | 1–255 characters, trimmed | ❌ | Street address, continued |
+| City | `String` | 1–255 characters, trimmed | ✅ |  |
+| Postal Code | `String` | 1–255 characters, trimmed | ✅ |  |
+| Country | `String` | 1–255 characters, trimmed | ✅ | Free text, as the person types it |
+| Address Type | `AddressType` | `SHIPPING`, `BILLING` or `SHIPPING_AND_BILLING` | ✅ | What the address is used for. `SHIPPING_AND_BILLING` means one address serves both |
 
 **BusinessContact**
 
@@ -170,9 +186,9 @@ A successful add answers with what was just created. Adding one person or one bu
 | --- | --- | --- | --- | --- |
 | Customer ID | `UUID` | Canonical 36-character form | ✅ | The new customer's identifier |
 | Full Name | `String` | — | ✅ | The person's name |
-| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded address, each marked default or not |
+| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded email address, each marked default or not |
 | Phone Numbers | `PhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
-| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | — | ❌ | Present only if recorded |
+| Addresses | `AddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
 
 **Response — one CustomerBusiness**
 
@@ -180,10 +196,10 @@ A successful add answers with what was just created. Adding one person or one bu
 | --- | --- | --- | --- | --- |
 | Customer ID | `UUID` | Canonical 36-character form | ✅ | The new customer's identifier |
 | Business Name | `String` | — | ✅ | The company's name |
-| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded address, each marked default or not |
+| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded email address, each marked default or not |
 | Tax ID | `String` | — | ❌ | Present only if recorded |
 | Phone Numbers | `PhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
-| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | — | ❌ | Present only if recorded |
+| Addresses | `AddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
 | Customer Business Contacts | `BusinessContactCreated[]` | May be empty | ✅ | Every contact just stored, each carrying its new identifier |
 
 **BusinessContactCreated**
@@ -286,7 +302,7 @@ Nothing changes. This step only reads.
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User opens a customer that exists | - Their full details are returned, including all contact details and the address |
+| 1. User opens a customer that exists | - Their full details are returned, including all contact details and every address with its type |
 | 2. User opens a customer that has been archived | - Their details are still returned. Archiving hides a customer from the list, not from a direct look-up |
 | 3. User opens a customer that does not exist, or asks for a person using the business screen | - Reported as a server error rather than "not found" — see [gap 1](#1-looking-up-a-customer-that-is-not-there-is-reported-as-a-server-error) |
 
@@ -312,9 +328,9 @@ There are two answers, one per kind, and the caller gets whichever they asked fo
 | --- | --- | --- | --- | --- |
 | Customer ID | `UUID` | Canonical 36-character form | ✅ | Identifies the customer |
 | Full Name | `String` | — | ✅ | The person's name |
-| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded address, each marked default or not |
+| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded email address, each marked default or not |
 | Phone Numbers | `PhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
-| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | — | ❌ | Present only if recorded |
+| Addresses | `AddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
 
 **Response — CustomerBusiness**
 
@@ -322,10 +338,10 @@ There are two answers, one per kind, and the caller gets whichever they asked fo
 | --- | --- | --- | --- | --- |
 | Customer ID | `UUID` | Canonical 36-character form | ✅ | Identifies the customer |
 | Business Name | `String` | — | ✅ | The company's name |
-| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded address, each marked default or not |
+| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded email address, each marked default or not |
 | Tax ID | `String` | — | ❌ | Present only if recorded |
 | Phone Numbers | `PhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
-| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | — | ❌ | Present only if recorded |
+| Addresses | `AddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
 
 Neither answer includes the business's contacts, and neither says whether the customer is archived. See [gap 2](#2-changes-to-an-archived-customer-are-silently-discarded).
 
@@ -353,7 +369,7 @@ Nothing changes. This step only reads.
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User changes an active customer's details | - The change is saved - Email and phone lists are replaced wholesale by whatever is sent - Fields left out are left as they were |
+| 1. User changes an active customer's details | - The change is saved - Email, phone and address lists are replaced wholesale by whatever is sent - Single fields left out are left as they were |
 | 2. User renames a customer to a name another active customer of the same kind already has | - Rejected as a conflict |
 | 3. User changes a customer that has been archived | - Nothing happens, and the change is reported as successful - See [gap 2](#2-changes-to-an-archived-customer-are-silently-discarded) |
 | 4. User changes a customer that does not exist | - Nothing happens, and it is reported as successful |
@@ -362,8 +378,8 @@ Nothing changes. This step only reads.
 #### Requirements
 
 1. Only active customers can be changed. The kind is fixed at creation and never changes.
-2. Email and phone lists are replaced entirely by what is sent, rather than merged. Sending an empty list clears them.
-3. Optional single fields left out of the request are left unchanged.
+2. Email, phone and address lists are replaced entirely by what is sent, rather than merged. Sending an empty list clears them.
+3. Optional single fields left out of the request, such as the name or tax id, are left unchanged.
 4. A rename must still leave the name unique among active customers of the same kind.
 
 #### Request / Response / Outcome
@@ -378,7 +394,7 @@ There are two ways to update, one per kind, and the caller must use the one matc
 | Full Name | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current name |
 | Emails | `EmailEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
 | Phone Numbers | `PhoneNumberEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
-| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | 1–255 characters, trimmed | ❌ | Left out means unchanged |
+| Addresses | `AddressEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
 
 **Request — updating a CustomerBusiness**
 
@@ -389,7 +405,7 @@ There are two ways to update, one per kind, and the caller must use the one matc
 | Emails | `EmailEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
 | Tax ID | `String` | 1–255 characters, trimmed | ❌ | Left out means unchanged |
 | Phone Numbers | `PhoneNumberEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
-| Address Line 1, Address Line 2, City, Postal Code, Country | `String` | 1–255 characters, trimmed | ❌ | Left out means unchanged |
+| Addresses | `AddressEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
 
 Neither form touches the business's contacts. Those are managed on their own, in [step 5](#5-user-manages-a-businesss-contacts).
 
@@ -565,11 +581,13 @@ This step helps a business move its existing customer list into the product quic
 | 17. A spreadsheet row is completely blank | - Not counted as an entry - Its row number is listed as empty |
 | 18. User uploads a spreadsheet with a very large number of rows | - Every row is read, in groups of up to 50, with up to 3 groups at a time - If any group fails, the whole read fails with no partial result - Row numbers and duplicate marks still refer to the whole file |
 | 19. User sends a supported file whose name matches it | - Accepted and read - The name's extension is matched ignoring capitalisation |
+| 20. An entry has one or more addresses | - Each comes back on the candidate marked as shipping, billing, or both, as the source shows - When the source does not say, it is marked as both (`SHIPPING_AND_BILLING`) |
+| 21. An address is missing its first line, city, postal code or country | - That address is left off the candidate - The candidate is still returned, with a note that an incomplete address was found - The rest of the read carries on |
 
 #### Requirements
 
 1. Every candidate has the same shape as a person or business added in [step 1](#1-user-adds-a-customer), whatever the source, and the AI decides which kind each entry is.
-2. A candidate's name, and any contact's name, is never empty, and every other returned detail follows its field rule from step 1, or the whole read fails with a server error.
+2. A candidate's name, and any contact's name, is never empty, and every other returned detail follows its field rule from step 1, or the whole read fails with a server error. An incomplete address is the one exception: it is left off rather than failing the read (requirement 16).
 3. Whether a phone number is real for its country, and whether exactly one default is marked, is only checked when a candidate is actually added.
 4. When no name at all can be read but an email plainly looks like a person's name, the name is worked out from that email, noted on the candidate, and counted as an ordinary candidate — never for a role mailbox, a meaningless address, a business's own name, or a name that was partly readable.
 5. The response always says how many entries were found and how many became candidates; for a spreadsheet, missed rows are listed by the row numbers the person sees in their own file, and for an image any detail goes in the notes.
@@ -583,6 +601,7 @@ This step helps a business move its existing customer list into the product quic
 13. Each AI attempt may take up to one minute, and temporary failures are tried again up to two more times, while rejections and unusable answers are not.
 14. Large spreadsheets are read in groups of up to 50 rows, up to 3 groups at a time, and if any group fails the whole read fails with no partial candidates.
 15. When a spreadsheet read in groups has something worth flagging, the person gets one short combined message, and failing to combine the messages never fails the read.
+16. Every address on a candidate carries a type taken from the source, or `SHIPPING_AND_BILLING` when the source does not say; an address missing its first line, city, postal code or country is left off, and the candidate's note says an incomplete address was found.
 
 #### Request / Response / Outcome
 
@@ -612,7 +631,7 @@ The body is the image or file itself, as with every other upload in this product
 
 **ExtractCustomerIndividualData**
 
-A `candidate` part with the same fields and constraints as **CustomerIndividual** ([step 1](#1-user-adds-a-customer)) — Full Name, Emails, Phone Numbers, and address — where each phone number has only a national number and a country dialling code. Alongside it:
+A `candidate` part with the same fields and constraints as **CustomerIndividual** ([step 1](#1-user-adds-a-customer)) — Full Name, Emails, Phone Numbers, and Addresses — where each phone number has only a national number and a country dialling code, and each address carries its type. Alongside it:
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
@@ -621,7 +640,7 @@ A `candidate` part with the same fields and constraints as **CustomerIndividual*
 
 **ExtractCustomerBusinessData**
 
-A `candidate` part with the same fields and constraints as **CustomerBusiness** ([step 1](#1-user-adds-a-customer)) — Business Name, Emails, Phone Numbers, Tax ID, address, and Customer Business Contacts — where each phone number has only a national number and a country dialling code. Alongside it:
+A `candidate` part with the same fields and constraints as **CustomerBusiness** ([step 1](#1-user-adds-a-customer)) — Business Name, Emails, Phone Numbers, Tax ID, Addresses, and Customer Business Contacts — where each phone number has only a national number and a country dialling code, and each address carries its type. Alongside it:
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
