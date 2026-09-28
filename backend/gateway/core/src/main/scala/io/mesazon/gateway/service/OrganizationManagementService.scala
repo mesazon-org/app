@@ -45,11 +45,7 @@ object OrganizationManagementService {
           createOrganizationPostRequest.emails,
           createOrganizationPostRequest.phoneNumbers,
           OrganizationStage.DetailsProvided,
-          createOrganizationPostRequest.addressLine1,
-          createOrganizationPostRequest.addressLine2,
-          createOrganizationPostRequest.city,
-          createOrganizationPostRequest.postalCode,
-          createOrganizationPostRequest.country,
+          createOrganizationPostRequest.addresses,
           createOrganizationPostRequest.companyRegistrationNumber,
           createOrganizationPostRequest.taxID,
         )
