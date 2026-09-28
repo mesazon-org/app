@@ -26,6 +26,10 @@ list CustomerPhoneNumberEntryRequests {
     member: CustomerPhoneNumberEntryRequest
 }
 
+list CustomerAddressEntryRequests {
+    member: AddressEntryRequest
+}
+
 structure InsertCustomerIndividualPostRequest {
     @required
     fullName: String
