@@ -43,6 +43,8 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
   given arbActionAttemptType: Arbitrary[ActionAttemptType] =
     Arbitrary(Gen.oneOf(ActionAttemptType.values.toIndexedSeq))
 
+  given arbAddressType: Arbitrary[AddressType] = Arbitrary(Gen.oneOf(AddressType.values.toIndexedSeq))
+
   given arbPrice: Arbitrary[Price] = Arbitrary(
     for {
       priceCurrencyCode <- Gen.oneOf("JPY", "USD", "KWD")
@@ -59,6 +61,8 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
   )
 
   given arbImageAsset: Arbitrary[ImageAsset] = Arbitrary(Gen.resultOf(ImageAsset.apply))
+
+  given arbAddressEntry: Arbitrary[AddressEntry] = Arbitrary(Gen.resultOf(AddressEntry.apply))
 
   given arbAuthedUser: Arbitrary[AuthedUser] = Arbitrary(Gen.resultOf(AuthedUser.apply))
 
