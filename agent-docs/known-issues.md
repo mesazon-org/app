@@ -21,6 +21,15 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Prevention:** After a Scala or Smithy4s version bump, if a fatal warning appears only in generated (`src_managed`) sources, suppress the specific diagnostic id scoped to `src_managed`, rather than relaxing `-Wunused:all` or tpolecat's fatal-warnings mode globally.
 - **Verify:** `sbt "clean; compile"` succeeds with no `E230` failure; `sbt "runLint"` passes; `sbt "gateway-build"` (or `checkLint; testFull` on the affected aggregate) reproduces the CI-equivalent fatal-warnings path and passes.
 
+## Removed Smithy shape keeps compiling from `src_managed`
+
+- **Status:** Workaround 2026-09-28
+- **Severity:** Low
+- **Signature:** After deleting or renaming a Smithy shape, `sbt compile` still compiles its old generated file under `target/.../src_managed/main/smithy4s/...` (e.g. `OrganizationAddressEntryRequest.scala` after it was replaced by `AddressEntryRequest`), so references to the removed type keep compiling locally or a stale type clashes with the new one.
+- **Cause:** smithy4s incremental codegen writes new/changed shapes but does not delete generated files for shapes that no longer exist.
+- **Fix:** Run `sbt "gateway-core/clean; smithy4sCodegen; compile"` after removing or renaming a Smithy shape.
+- **Verify:** `src_managed/.../smithy/` no longer contains the removed shape's file and the clean compile succeeds (a clean CI build never sees the stale file).
+
 ## Customer batch (businesses/individuals) closes HTTP connection
 
 - **Status:** Resolved 2026-08-24 (recurred on `/insert/customer-individuals` after the 2026-07-29 businesses fix; root cause now fixed at the shared generator)

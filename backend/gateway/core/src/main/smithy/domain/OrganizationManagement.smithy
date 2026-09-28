@@ -26,6 +26,10 @@ list OrganizationPhoneNumberEntryRequests {
     member: OrganizationPhoneNumberEntryRequest
 }
 
+list OrganizationAddressEntryRequests {
+    member: AddressEntryRequest
+}
+
 structure CreateOrganizationPostRequest {
     @required
     name: String

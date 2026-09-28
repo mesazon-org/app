@@ -9,7 +9,8 @@ import org.scalacheck.*
 
 trait OrganizationManagementSmithyArbitraries
     extends OrganizationManagementDomainArbitraries,
-      IronRefinedTypeTransformer {
+      IronRefinedTypeTransformer,
+      AddressSmithyTransformers {
 
   given Transformer[OrganizationPhoneNumber, smithy.PhoneNumberRequest] = organizationPhoneNumber =>
     smithy.PhoneNumberRequest(
@@ -25,6 +26,9 @@ trait OrganizationManagementSmithyArbitraries
       phoneNumber = entry.phoneNumber.transformInto[smithy.PhoneNumberRequest],
       isDefault = entry.isDefault,
     )
+
+  given Transformer[OrganizationAddressEntry, smithy.AddressEntryRequest] = organizationAddressEntry =>
+    addressEntryTransformer.transform(organizationAddressEntry.value)
 
   given arbCreateOrganizationPostRequestSmithy: Arbitrary[smithy.CreateOrganizationPostRequest] = Arbitrary(
     Arbitrary.arbitrary[CreateOrganizationPostRequest].map(_.transformInto[smithy.CreateOrganizationPostRequest])

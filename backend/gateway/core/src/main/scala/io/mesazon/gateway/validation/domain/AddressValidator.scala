@@ -11,24 +11,17 @@ import zio.{UIO, ZIO, ZLayer}
 
 final class AddressValidator {
 
-  def validate(
-      addressLine1Raw: String,
-      addressLine2RawOpt: Option[String],
-      cityRaw: String,
-      postalCodeRaw: String,
-      countryRaw: String,
-      addressTypeRaw: smithy.AddressType,
-  ): UIO[ValidatedNec[InvalidFieldError, AddressEntry]] =
+  def validate(addressEntryRequest: smithy.AddressEntryRequest): UIO[ValidatedNec[InvalidFieldError, AddressEntry]] =
     ZIO.succeed(
       (
         (
-          validateRequiredField("addressLine1", addressLine1Raw, AddressLine1.either),
-          validateOptionalField("addressLine2", addressLine2RawOpt, AddressLine2.either),
-          validateRequiredField("city", cityRaw, City.either),
-          validateRequiredField("postalCode", postalCodeRaw, PostalCode.either),
-          validateRequiredField("country", countryRaw, Country.either),
+          validateRequiredField("addressLine1", addressEntryRequest.address.addressLine1, AddressLine1.either),
+          validateOptionalField("addressLine2", addressEntryRequest.address.addressLine2, AddressLine2.either),
+          validateRequiredField("city", addressEntryRequest.address.city, City.either),
+          validateRequiredField("postalCode", addressEntryRequest.address.postalCode, PostalCode.either),
+          validateRequiredField("country", addressEntryRequest.address.country, Country.either),
         ).mapN(Address.apply),
-        Validated.validNec(addressTypeFromSmithyToDomain(addressTypeRaw)),
+        Validated.validNec(addressTypeFromSmithyToDomain(addressEntryRequest.addressType)),
       ).mapN(AddressEntry.apply)
     )
 }

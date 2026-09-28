@@ -30,6 +30,25 @@ structure PhoneNumberRequest {
     phoneCountryCode: String
 }
 
+structure AddressRequest {
+    @required
+    addressLine1: String
+    addressLine2: String
+    @required
+    city: String
+    @required
+    postalCode: String
+    @required
+    country: String
+}
+
+structure AddressEntryRequest {
+    @required
+    address: AddressRequest
+    @required
+    addressType: AddressType
+}
+
 @trait(selector: "service")
 structure completedOnboardStage {}
 

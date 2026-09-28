@@ -160,12 +160,18 @@ The shapes used above and throughout this epic:
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
+| Address | `Address` | — | ✅ | Where it is. See **Address** below |
+| Address Type | `AddressType` | `SHIPPING`, `BILLING` or `SHIPPING_AND_BILLING` | ✅ | What the address is used for. `SHIPPING_AND_BILLING` means one address serves both |
+
+**Address**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
 | Address Line 1 | `String` | 1–255 characters, trimmed | ✅ | Street address |
 | Address Line 2 | `String` | 1–255 characters, trimmed | ❌ | Street address, continued |
 | City | `String` | 1–255 characters, trimmed | ✅ |  |
 | Postal Code | `String` | 1–255 characters, trimmed | ✅ |  |
 | Country | `String` | 1–255 characters, trimmed | ✅ | Free text, as the person types it |
-| Address Type | `AddressType` | `SHIPPING`, `BILLING` or `SHIPPING_AND_BILLING` | ✅ | What the address is used for. `SHIPPING_AND_BILLING` means one address serves both |
 
 **BusinessContact**
 
