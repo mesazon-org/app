@@ -3,6 +3,7 @@ package io.mesazon.gateway.unit.validation.domain
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.gateway.service.addressTypeFromDomainToSmithy
+import io.mesazon.gateway.smithy
 import io.mesazon.gateway.validation.domain.AddressValidator
 import io.mesazon.testkit.base.*
 import zio.*
@@ -30,12 +31,16 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         addressValidator
           .validate(
-            addressLine1Raw = addressEntry.address.addressLine1.value,
-            addressLine2RawOpt = addressEntry.address.addressLine2.map(_.value),
-            cityRaw = addressEntry.address.city.value,
-            postalCodeRaw = addressEntry.address.postalCode.value,
-            countryRaw = addressEntry.address.country.value,
-            addressTypeRaw = addressTypeFromDomainToSmithy(addressEntry.addressType),
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = addressEntry.address.addressLine1.value,
+                addressLine2 = addressEntry.address.addressLine2.map(_.value),
+                city = addressEntry.address.city.value,
+                postalCode = addressEntry.address.postalCode.value,
+                country = addressEntry.address.country.value,
+              ),
+              addressType = addressTypeFromDomainToSmithy(addressEntry.addressType),
+            )
           )
           .zioValue
           .toEither
@@ -50,12 +55,16 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         addressValidator
           .validate(
-            addressLine1Raw = addressEntry.address.addressLine1.value,
-            addressLine2RawOpt = None,
-            cityRaw = addressEntry.address.city.value,
-            postalCodeRaw = addressEntry.address.postalCode.value,
-            countryRaw = addressEntry.address.country.value,
-            addressTypeRaw = addressTypeFromDomainToSmithy(addressEntry.addressType),
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = addressEntry.address.addressLine1.value,
+                addressLine2 = addressEntry.address.addressLine2.map(_.value),
+                city = addressEntry.address.city.value,
+                postalCode = addressEntry.address.postalCode.value,
+                country = addressEntry.address.country.value,
+              ),
+              addressType = addressTypeFromDomainToSmithy(addressEntry.addressType),
+            )
           )
           .zioValue
           .toEither
@@ -67,12 +76,16 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         addressValidator
           .validate(
-            addressLine1Raw = addressPartRawBlank,
-            addressLine2RawOpt = Some(addressPartRawBlank),
-            cityRaw = addressPartRawBlank,
-            postalCodeRaw = addressPartRawBlank,
-            countryRaw = addressPartRawBlank,
-            addressTypeRaw = addressTypeFromDomainToSmithy(addressType),
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = addressPartRawBlank,
+                addressLine2 = Some(addressPartRawBlank),
+                city = addressPartRawBlank,
+                postalCode = addressPartRawBlank,
+                country = addressPartRawBlank,
+              ),
+              addressType = addressTypeFromDomainToSmithy(addressType),
+            )
           )
           .zioValue
           .toEither
@@ -102,12 +115,16 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         addressValidator
           .validate(
-            addressLine1Raw = addressLine1RawUntrimmed,
-            addressLine2RawOpt = addressLine2RawUntrimmedOpt,
-            cityRaw = cityRawUntrimmed,
-            postalCodeRaw = postalCodeRawUntrimmed,
-            countryRaw = countryRawUntrimmed,
-            addressTypeRaw = addressTypeFromDomainToSmithy(addressEntry.addressType),
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = addressLine1RawUntrimmed,
+                addressLine2 = addressLine2RawUntrimmedOpt,
+                city = cityRawUntrimmed,
+                postalCode = postalCodeRawUntrimmed,
+                country = countryRawUntrimmed,
+              ),
+              addressType = addressTypeFromDomainToSmithy(addressEntry.addressType),
+            )
           )
           .zioValue
           .toEither
@@ -129,12 +146,16 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         addressValidator
           .validate(
-            addressLine1Raw = addressPartRawTooLong,
-            addressLine2RawOpt = Some(addressPartRawTooLong),
-            cityRaw = addressPartRawTooLong,
-            postalCodeRaw = addressPartRawTooLong,
-            countryRaw = addressPartRawTooLong,
-            addressTypeRaw = addressTypeFromDomainToSmithy(addressType),
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = addressPartRawTooLong,
+                addressLine2 = Some(addressPartRawTooLong),
+                city = addressPartRawTooLong,
+                postalCode = addressPartRawTooLong,
+                country = addressPartRawTooLong,
+              ),
+              addressType = addressTypeFromDomainToSmithy(addressType),
+            )
           )
           .zioValue
           .toEither
@@ -155,12 +176,16 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         addressValidator
           .validate(
-            addressLine1Raw = addressEntry.address.addressLine1.value,
-            addressLine2RawOpt = Some(addressPartRawBlank),
-            cityRaw = addressEntry.address.city.value,
-            postalCodeRaw = addressEntry.address.postalCode.value,
-            countryRaw = addressEntry.address.country.value,
-            addressTypeRaw = addressTypeFromDomainToSmithy(addressEntry.addressType),
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = addressEntry.address.addressLine1.value,
+                addressLine2 = Some(addressPartRawBlank),
+                city = addressEntry.address.city.value,
+                postalCode = addressEntry.address.postalCode.value,
+                country = addressEntry.address.country.value,
+              ),
+              addressType = addressTypeFromDomainToSmithy(addressEntry.addressType),
+            )
           )
           .zioValue
           .toEither
