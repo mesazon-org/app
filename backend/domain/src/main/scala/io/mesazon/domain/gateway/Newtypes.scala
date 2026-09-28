@@ -134,21 +134,6 @@ type OrganizationPhoneNumber = OrganizationPhoneNumber.T
 object OrganizationAddressEntry extends RefinedType[AddressEntry, Pure]
 type OrganizationAddressEntry = OrganizationAddressEntry.T
 
-object OrganizationAddressLine1 extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationAddressLine1 = OrganizationAddressLine1.T
-
-object OrganizationAddressLine2 extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationAddressLine2 = OrganizationAddressLine2.T
-
-object OrganizationCity extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationCity = OrganizationCity.T
-
-object OrganizationPostalCode extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationPostalCode = OrganizationPostalCode.T
-
-object OrganizationCountry extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationCountry = OrganizationCountry.T
-
 object OrganizationCompanyRegistrationNumber extends RefinedType[String, NonEmptyTrimmed]
 type OrganizationCompanyRegistrationNumber = OrganizationCompanyRegistrationNumber.T
 

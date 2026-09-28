@@ -40,11 +40,8 @@ structure CreateOrganizationPostRequest {
     emails: OrganizationEmailEntryRequests
     @default([])
     phoneNumbers: OrganizationPhoneNumberEntryRequests
-    addressLine1: String
-    addressLine2: String
-    city: String
-    postalCode: String
-    country: String
+    @default([])
+    addresses: OrganizationAddressEntryRequests
     companyRegistrationNumber: String
     taxID: String
 }
