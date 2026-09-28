@@ -127,6 +127,8 @@ Work is not done when the last slice compiles. It walks back up the chain it cam
 
 PO is accountable for `pages/` and for product requirements; EM is accountable for every document under `agent-docs/`, AGENTS.md, and final consistency. Accountability is not an exclusive write permission: any role may make a verified factual edit inside the agreed scope, and Lead normally updates reference docs beside the code. One writer per file at a time; preserve other roles' edits.
 
+Epics describe, feature docs specify. An epic stays a short, high-level, human-readable overview: agreed numbers and precise Request/Response field tables stay in it, and implementation detail lives in the matching `agent-docs/features/*.md` doc. Whoever edits an epic reads that feature doc first, and must not delete information: every fact removed from an epic must already be in the feature doc, or be added there in the same change. See `pages/epics/EPIC-STANDARDS.md`.
+
 PO finishes the affected epic before stage 1's gate. EM finishes the affected feature/project docs before stage 3's gate. New feature docs are created and linked in the first implementation slice. Never rewrite an agreed requirement to excuse code that does something else.
 
 ## Cost and completion

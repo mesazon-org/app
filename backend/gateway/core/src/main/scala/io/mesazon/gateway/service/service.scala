@@ -49,6 +49,12 @@ def organizationUserRoleFromSmithyToDomain(role: smithy.OrganizationUserRole): O
   case smithy.OrganizationUserRole.USER  => OrganizationUserRole.User
 }
 
+def organizationUserRoleFromDomainToSmithy(role: OrganizationUserRole): smithy.OrganizationUserRole = role match {
+  case OrganizationUserRole.Owner => smithy.OrganizationUserRole.OWNER
+  case OrganizationUserRole.Admin => smithy.OrganizationUserRole.ADMIN
+  case OrganizationUserRole.User  => smithy.OrganizationUserRole.USER
+}
+
 def catalogueItemStatusFromDomainToSmithy(status: CatalogueItemStatus): smithy.CatalogueItemStatus = status match {
   case CatalogueItemStatus.Active   => smithy.CatalogueItemStatus.ACTIVE
   case CatalogueItemStatus.Archived => smithy.CatalogueItemStatus.ARCHIVED

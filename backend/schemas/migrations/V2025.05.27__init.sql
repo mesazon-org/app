@@ -96,6 +96,8 @@ create table organization_user
     primary key (organization_id, user_id)
 );
 
+CREATE INDEX idx_organization_user_user_id_created_at ON organization_user (user_id, created_at DESC, organization_id);
+
 create type customer_status as enum ('Active', 'Archived');
 
 create table customer

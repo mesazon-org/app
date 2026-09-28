@@ -48,7 +48,7 @@ Each slice guide links its technology standards.
 
 ### Product epics
 
-`pages/epics/` describes observable product behavior in plain English; `agent-docs/features/` holds engineering details. PO is accountable for `pages/`, EM for engineering docs. Any role, including Lead, may update factual docs within agreed scope; EM reviews code/docs together. Product ambiguity goes to the user.
+`pages/epics/` is a short, high-level, human-readable description of observable product behavior, including the agreed numbers (expiries, limits, cooldowns). Its Request/Response field tables stay precise because clients build against them. `agent-docs/features/` holds every implementation detail. When an epic is written or shortened, every removed fact must already be in, or be added to, the matching feature doc. PO is accountable for `pages/`, EM for engineering docs. Any role, including Lead, may update factual docs within agreed scope; EM reviews code/docs together. Product ambiguity goes to the user.
 
 Read the affected epic for feature/behavior changes and [Epic standards](pages/epics/EPIC-STANDARDS.md) when writing or reviewing pages. Keep pages true to verified code. New epics need front matter and entries in both indexes; formatting, glossary, and validation-source rules live in Epic standards.
 
@@ -122,7 +122,7 @@ Apply only the checks relevant to the change; CI gates remain unchanged.
 
 ## Epics
 
-Business-facing product specs in `pages/epics/`, published via GitHub Pages and written for non-engineers. See [Product epics](#product-epics) for the two rules every epic follows.
+Business-facing product specs in `pages/epics/`, published via GitHub Pages and written for non-engineers. See [Product epics](#product-epics) for the rules every epic follows.
 
 New epic → follow [Epic standards](pages/epics/EPIC-STANDARDS.md) and copy its skeleton, list it here, and add it to `pages/index.md` (both indexes are updated together).
 
