@@ -43,6 +43,18 @@ def customerTypeFromDomainToSmithy(customerType: CustomerType): smithy.CustomerT
     case CustomerType.Business   => smithy.CustomerType.BUSINESS
   }
 
+def addressTypeFromDomainToSmithy(addressType: AddressType): smithy.AddressType = addressType match {
+  case AddressType.Shipping           => smithy.AddressType.SHIPPING
+  case AddressType.Billing            => smithy.AddressType.BILLING
+  case AddressType.ShippingAndBilling => smithy.AddressType.SHIPPING_AND_BILLING
+}
+
+def addressTypeFromSmithyToDomain(addressType: smithy.AddressType): AddressType = addressType match {
+  case smithy.AddressType.SHIPPING             => AddressType.Shipping
+  case smithy.AddressType.BILLING              => AddressType.Billing
+  case smithy.AddressType.SHIPPING_AND_BILLING => AddressType.ShippingAndBilling
+}
+
 def organizationUserRoleFromSmithyToDomain(role: smithy.OrganizationUserRole): OrganizationUserRole = role match {
   case smithy.OrganizationUserRole.OWNER => OrganizationUserRole.Owner
   case smithy.OrganizationUserRole.ADMIN => OrganizationUserRole.Admin

@@ -17,6 +17,12 @@ enum CustomerType {
     BUSINESS
 }
 
+enum AddressType {
+    SHIPPING
+    BILLING
+    SHIPPING_AND_BILLING
+}
+
 structure PhoneNumberRequest {
     @required
     phoneNationalNumber: String
