@@ -1,6 +1,6 @@
 # Organization Management
 
-Owns organization details/address/slug/stage, membership roles, and creation. `@completedOnboardStage` requires a valid access token and `OnboardStage.completedStages` (`PhoneVerified`).
+Owns organization details/addresses/slug/stage, membership roles, and creation. `@completedOnboardStage` requires a valid access token and `OnboardStage.completedStages` (`PhoneVerified`).
 
 **Scope**: organization rows, membership/roles, creation endpoint, slug uniqueness, and the logo upload endpoint that advances the organization to `LogoProvided`.
 
@@ -25,8 +25,9 @@ Follow the [role policy](../standards/smithy.md#custom-traits): reads `OWNER|ADM
 ## Flow
 
 ### POST /create/organization (`OrganizationManagementService.createOrganizationPost`)
-1. Read `AuthedUser`; validate name, slug, contacts, optional tagline/address/company registration/tax ID.
+1. Read `AuthedUser`; validate name, slug, contacts, addresses, optional tagline/company registration/tax ID.
    - `emails`/`phoneNumbers` are JSONB lists of value + `isDefault`; validate every entry and exactly one default when non-empty.
+   - `addresses` is a JSONB list of `OrganizationAddressEntryRequest` (`addressLine1`, optional `addressLine2`, `city`, `postalCode`, `country`, `addressType`); empty is valid, no count cap, no uniqueness, no default rule. Each part is `NonEmptyTrimmed` via the `Organization*` address newtypes (errors carry the entry index). Smithy `AddressType` is an enum and every part except `addressLine2` is `@required`, so an unknown type or missing part fails request decoding (400) before the validator runs. Today → after: five flat optional columns/fields (`address_line_1` … `country`) → one `addresses jsonb not null` list; the flat fields and `...OptUpdate` parameters are removed, replaced by `addressesOptUpdate` on `updateOrganization`.
    - `OrganizationSlug`: trimmed, non-empty, max 63, `^[a-z0-9]+(?:-[a-z0-9]+)*$`; safe for URL path or DNS label.
 2. `OrganizationManagementRepository.createOrganization` inserts **in one transaction**:
    - `OrganizationDetailsRow` (generated `OrganizationID`, stage `DetailsProvided`, `logoImageAsset` `None`), and
@@ -70,7 +71,7 @@ Error codes on this endpoint are Tapir's `TapirServerError` codes (`TapirServerE
 
 ## Key files
 
-- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OrganizationManagement.scala` (contact-point entries, `CreateOrganizationPostRequest`); `Organization*` newtypes live in the shared `Newtypes.scala`, and the `OrganizationStage`/`OrganizationUserRole` enums each have their own file (`OrganizationStage.scala`, `OrganizationUserRole.scala`) — see [domain placement](flow/02-validation.md#domain-placement)
+- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OrganizationManagement.scala` (contact-point and address entries, `CreateOrganizationPostRequest`); the shared `AddressType` enum (`SHIPPING`/`BILLING`/`SHIPPING_AND_BILLING`, Smithy enum in `domain/Gateway.smithy`) has its own file `AddressType.scala`; `Organization*` newtypes live in the shared `Newtypes.scala`, and the `OrganizationStage`/`OrganizationUserRole` enums each have their own file (`OrganizationStage.scala`, `OrganizationUserRole.scala`) — see [domain placement](flow/02-validation.md#domain-placement)
 - Validator: `validation/service/OrganizationManagementRequestValidator.scala`
 - Arbitraries: `testkit/base/OrganizationManagementDomainArbitraries.scala`, `gateway/utils/OrganizationManagementSmithyArbitraries.scala`
 - Service: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/OrganizationManagementService.scala`

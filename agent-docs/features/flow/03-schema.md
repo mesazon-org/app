@@ -21,7 +21,7 @@ Current pre-release migration is `V2025.05.27__init.sql`; extend it only while n
 - `TimeProvider.instantNow` supplies `CreatedAt`/`UpdatedAt`; no DB time defaults.
 - Enum-as-text examples: `onboard_stage`, `organization_stage`, `user_role`, `otp_type`, `token_type`, `action_attempt_type`.
 - Phone value: `phone_region`, `phone_country_code`, `phone_national_number`, `phone_number_e164`.
-- Atomic multi-value contacts: `emails`, `phone_numbers` as `jsonb`.
+- Atomic multi-value contacts: `emails`, `phone_numbers`, `addresses` as `jsonb` (on `organization_details` and `customer`; enums inside, such as `addressType`, are stored as case-name strings).
 - `customer.status` is the sole native-enum exception: PG `customer_status`, labels `Active`/`Archived`; archive, never hard-delete.
 - `customer_type`: `INDIVIDUAL` or `BUSINESS`, all customer data on `customer`.
   - Individual: `name` full name, `tax_id` null.

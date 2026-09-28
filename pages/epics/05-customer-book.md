@@ -582,7 +582,7 @@ This step helps a business move its existing customer list into the product quic
 | 18. User uploads a spreadsheet with a very large number of rows | - Every row is read, in groups of up to 50, with up to 3 groups at a time - If any group fails, the whole read fails with no partial result - Row numbers and duplicate marks still refer to the whole file |
 | 19. User sends a supported file whose name matches it | - Accepted and read - The name's extension is matched ignoring capitalisation |
 | 20. An entry has one or more addresses | - Each comes back on the candidate marked as shipping, billing, or both, as the source shows - When the source does not say, it is marked as both (`SHIPPING_AND_BILLING`) |
-| 21. An address is missing its first line, city, postal code or country | - That address is left off the candidate - The candidate is still returned, with a note that an incomplete address was found - The rest of the read carries on |
+| 21. An address is missing its first line, city, postal code or country | - That address is left off the candidate - The candidate is still returned, with a note saying which part of the address was missing - The rest of the read carries on |
 
 #### Requirements
 
@@ -601,7 +601,7 @@ This step helps a business move its existing customer list into the product quic
 13. Each AI attempt may take up to one minute, and temporary failures are tried again up to two more times, while rejections and unusable answers are not.
 14. Large spreadsheets are read in groups of up to 50 rows, up to 3 groups at a time, and if any group fails the whole read fails with no partial candidates.
 15. When a spreadsheet read in groups has something worth flagging, the person gets one short combined message, and failing to combine the messages never fails the read.
-16. Every address on a candidate carries a type taken from the source, or `SHIPPING_AND_BILLING` when the source does not say; an address missing its first line, city, postal code or country is left off, and the candidate's note says an incomplete address was found.
+16. Every address on a candidate carries a type taken from the source, or `SHIPPING_AND_BILLING` when the source does not say; an address missing its first line, city, postal code or country is left off, and the candidate's note says which part was missing, for example that the postal code could not be read.
 
 #### Request / Response / Outcome
 
