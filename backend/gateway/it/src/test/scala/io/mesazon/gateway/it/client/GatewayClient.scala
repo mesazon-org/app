@@ -50,6 +50,25 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     override def nullValue: smithy.OnboardStage = null
   }
 
+  given JsonValueCodec[smithy.AddressType] = new JsonValueCodec[smithy.AddressType] {
+    override def decodeValue(in: JsonReader, default: smithy.AddressType): smithy.AddressType =
+      in.readString(null) match {
+        case "SHIPPING"             => smithy.AddressType.SHIPPING
+        case "BILLING"              => smithy.AddressType.BILLING
+        case "SHIPPING_AND_BILLING" => smithy.AddressType.SHIPPING_AND_BILLING
+        case str                    => throw new IllegalArgumentException(s"Unknown AddressType: $str")
+      }
+
+    override def encodeValue(x: smithy.AddressType, out: JsonWriter): Unit =
+      x match {
+        case smithy.AddressType.SHIPPING             => out.writeVal("SHIPPING")
+        case smithy.AddressType.BILLING              => out.writeVal("BILLING")
+        case smithy.AddressType.SHIPPING_AND_BILLING => out.writeVal("SHIPPING_AND_BILLING")
+      }
+
+    override def nullValue: smithy.AddressType = null
+  }
+
   given JsonValueCodec[smithy.SignUpEmailPostRequest]        = JsonCodecMaker.make[smithy.SignUpEmailPostRequest]
   given JsonValueCodec[smithy.SignUpVerifyEmailPostRequest]  = JsonCodecMaker.make[smithy.SignUpVerifyEmailPostRequest]
   given JsonValueCodec[smithy.OnboardPasswordPostRequest]    = JsonCodecMaker.make[smithy.OnboardPasswordPostRequest]

@@ -17,6 +17,8 @@ class OrganizationManagementApiSpec
       OrganizationManagementSmithyArbitraries,
       RepositoryArbitraries {
 
+  inline private val organizationAddressEntriesCount = 3
+
   "Organization Management Service API" when {
     "POST /create/organization" should {
       "successfully create organization" in withContext { context =>
@@ -29,6 +31,74 @@ class OrganizationManagementApiSpec
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
         val createOrganizationPostRequest = arbitrarySample[CreateOrganizationPostRequest]
+          .copy(addresses = arbitrarySample[OrganizationAddressEntry](organizationAddressEntriesCount).toList)
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val createOrganizationPostResponse =
+          gatewayClient
+            .createOrganizationPost[smithy.InternalServerError](
+              createOrganizationPostRequest.name,
+              createOrganizationPostRequest.slug,
+              createOrganizationPostRequest.tagline,
+              createOrganizationPostRequest.emails,
+              createOrganizationPostRequest.phoneNumbers,
+              createOrganizationPostRequest.addresses,
+              createOrganizationPostRequest.companyRegistrationNumber,
+              createOrganizationPostRequest.taxID,
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+        val organizationDetailsRowsAll =
+          postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
+        organizationDetailsRowsAll should have size 1
+        organizationDetailsRowsAll.head shouldBe OrganizationDetailsRow(
+          organizationID = organizationDetailsRowsAll.head.organizationID,
+          name = createOrganizationPostRequest.name,
+          slug = createOrganizationPostRequest.slug,
+          tagline = createOrganizationPostRequest.tagline,
+          emails = createOrganizationPostRequest.emails,
+          phoneNumbers = createOrganizationPostRequest.phoneNumbers,
+          organizationStage = OrganizationStage.DetailsProvided,
+          addresses = createOrganizationPostRequest.addresses,
+          companyRegistrationNumber = createOrganizationPostRequest.companyRegistrationNumber,
+          taxID = createOrganizationPostRequest.taxID,
+          logoImageAsset = None,
+          createdAt = organizationDetailsRowsAll.head.createdAt,
+          updatedAt = organizationDetailsRowsAll.head.updatedAt,
+        )
+
+        createOrganizationPostResponse.code shouldBe StatusCode.Ok
+        createOrganizationPostResponse.body.value shouldBe smithy.CreateOrganizationPostResponse(organizationID =
+          organizationDetailsRowsAll.head.organizationID.value
+        )
+
+        mailHogClient.readInbox().zioValue.total shouldBe 1
+
+        val organizationUserRowsAll =
+          postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUsersTesting).zioValue
+
+        organizationUserRowsAll should have size 1
+        organizationUserRowsAll.head shouldBe OrganizationUserRow(
+          organizationDetailsRowsAll.head.organizationID,
+          userDetailsRow.userID,
+          OrganizationUserRole.Owner,
+          organizationUserRowsAll.head.createdAt,
+          organizationUserRowsAll.head.updatedAt,
+        )
+      }
+
+      "successfully create organization without addresses" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val createOrganizationPostRequest = arbitrarySample[CreateOrganizationPostRequest].copy(addresses = Nil)
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
