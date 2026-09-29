@@ -9,9 +9,10 @@ import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.state.AuthState
 import io.mesazon.gateway.utils.*
-import io.mesazon.gateway.validation.domain.{EmailValidator, PhoneNumberDomainValidator}
+import io.mesazon.gateway.validation.domain.*
 import io.mesazon.gateway.validation.service.*
 import io.mesazon.testkit.base.ZWordSpecBase
+import io.scalaland.chimney.dsl.*
 import zio.*
 
 import java.time.Instant
@@ -47,11 +48,7 @@ class OrganizationManagementServiceSpec
               organizationDetailsRow.emails,
               organizationDetailsRow.phoneNumbers,
               organizationDetailsRow.organizationStage,
-              organizationDetailsRow.addressLine1,
-              organizationDetailsRow.addressLine2,
-              organizationDetailsRow.city,
-              organizationDetailsRow.postalCode,
-              organizationDetailsRow.country,
+              organizationDetailsRow.addresses,
               organizationDetailsRow.companyRegistrationNumber,
               organizationDetailsRow.taxID,
             )
@@ -79,11 +76,12 @@ class OrganizationManagementServiceSpec
               entry.isDefault,
             )
           ),
-          addressLine1 = organizationDetailsRow.addressLine1.map(_.value),
-          addressLine2 = organizationDetailsRow.addressLine2.map(_.value),
-          city = organizationDetailsRow.city.map(_.value),
-          postalCode = organizationDetailsRow.postalCode.map(_.value),
-          country = organizationDetailsRow.country.map(_.value),
+          addresses = organizationDetailsRow.addresses.map(organizationAddressEntry =>
+            (organizationAddressEntry.value: AddressEntry)
+              .into[smithy.AddressEntryRequest]
+              .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
+              .transform
+          ),
           companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber.map(_.value),
           taxID = organizationDetailsRow.taxID.map(_.value),
         )
@@ -123,11 +121,7 @@ class OrganizationManagementServiceSpec
               organizationDetailsRow.emails,
               organizationDetailsRow.phoneNumbers,
               organizationDetailsRow.organizationStage,
-              organizationDetailsRow.addressLine1,
-              organizationDetailsRow.addressLine2,
-              organizationDetailsRow.city,
-              organizationDetailsRow.postalCode,
-              organizationDetailsRow.country,
+              organizationDetailsRow.addresses,
               organizationDetailsRow.companyRegistrationNumber,
               organizationDetailsRow.taxID,
             )
@@ -159,11 +153,12 @@ class OrganizationManagementServiceSpec
               entry.isDefault,
             )
           ),
-          addressLine1 = organizationDetailsRow.addressLine1.map(_.value),
-          addressLine2 = organizationDetailsRow.addressLine2.map(_.value),
-          city = organizationDetailsRow.city.map(_.value),
-          postalCode = organizationDetailsRow.postalCode.map(_.value),
-          country = organizationDetailsRow.country.map(_.value),
+          addresses = organizationDetailsRow.addresses.map(organizationAddressEntry =>
+            (organizationAddressEntry.value: AddressEntry)
+              .into[smithy.AddressEntryRequest]
+              .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
+              .transform
+          ),
           companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber.map(_.value),
           taxID = organizationDetailsRow.taxID.map(_.value),
         )
@@ -230,6 +225,7 @@ class OrganizationManagementServiceSpec
           PhoneNumberUtil.live,
           OrganizationManagementRequestValidator.live,
           EmailValidator.live,
+          AddressValidator.live,
           ZLayer.succeed(organizationManagementConfig),
           ZLayer.succeed(phoneNumberValidatorConfig),
           PhoneNumberDomainValidator.live,

@@ -3,6 +3,7 @@ package io.mesazon.gateway.unit.validation.service
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.gateway.config.PhoneNumberValidatorConfig
+import io.mesazon.gateway.service.addressTypeFromDomainToSmithy
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.domain.*
@@ -28,6 +29,7 @@ class OrganizationManagementRequestValidatorSpec extends ZWordSpecBase, Organiza
       OrganizationManagementRequestValidator.live,
       EmailValidator.live,
       PhoneNumberDomainValidator.live,
+      AddressValidator.live,
       PhoneNumberUtil.live,
       ZLayer.succeed(PhoneNumberValidatorConfig(supportedPhoneRegions = Set("CY", "GB"))),
     )
@@ -39,15 +41,38 @@ class OrganizationManagementRequestValidatorSpec extends ZWordSpecBase, Organiza
 
       validator
         .validatedCreateOrganizationPostRequest(
-          createOrganizationPostRequest.transformInto[smithy.CreateOrganizationPostRequest]
+          createOrganizationPostRequest
+            .into[smithy.CreateOrganizationPostRequest]
+            .withFieldComputed(
+              _.addresses,
+              _.addresses.map(organizationAddressEntry =>
+                (organizationAddressEntry.value: AddressEntry)
+                  .into[smithy.AddressEntryRequest]
+                  .withFieldComputed(
+                    _.addressType,
+                    addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
+                  )
+                  .transform
+              ),
+            )
+            .transform
         )
         .zioValue shouldBe createOrganizationPostRequest
     }
 
     "accumulate every field error" in {
+      val organizationAddressEntry  = arbitrarySample[OrganizationAddressEntry]
+      val addressEntryRequestSmithy = (organizationAddressEntry.value: AddressEntry)
+        .into[smithy.AddressEntryRequest]
+        .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
+        .transform
       val createOrganizationPostRequestSmithy = arbitrarySample[smithy.CreateOrganizationPostRequest].copy(
         name = "",
         emails = List(smithy.OrganizationEmailEntryRequest(email = "invalid-email", isDefault = true)),
+        addresses = List(
+          addressEntryRequestSmithy,
+          addressEntryRequestSmithy.copy(address = addressEntryRequestSmithy.address.copy(city = "")),
+        ),
       )
 
       validator.validatedCreateOrganizationPostRequest(createOrganizationPostRequestSmithy).zioError shouldBe
@@ -55,6 +80,7 @@ class OrganizationManagementRequestValidatorSpec extends ZWordSpecBase, Organiza
           invalidFields = List(
             InvalidFieldError("name", nonEmptyTrimmedError, List("")),
             emailFormatError("invalid-email", index = 0),
+            InvalidFieldError("city", nonEmptyTrimmedError, List(""), index = 1),
           )
         )
     }

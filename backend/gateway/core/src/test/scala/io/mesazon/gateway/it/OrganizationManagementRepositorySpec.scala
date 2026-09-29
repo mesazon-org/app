@@ -101,11 +101,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             emails = organizationDetailsRow.emails,
             phoneNumbers = organizationDetailsRow.phoneNumbers,
             organizationStage = organizationDetailsRow.organizationStage,
-            addressLine1 = organizationDetailsRow.addressLine1,
-            addressLine2 = organizationDetailsRow.addressLine2,
-            city = organizationDetailsRow.city,
-            postalCode = organizationDetailsRow.postalCode,
-            country = organizationDetailsRow.country,
+            addresses = organizationDetailsRow.addresses,
             companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber,
             taxID = organizationDetailsRow.taxID,
           )
@@ -182,11 +178,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             emails = organizationDetailsRow1.emails,
             phoneNumbers = organizationDetailsRow1.phoneNumbers,
             organizationStage = organizationDetailsRow1.organizationStage,
-            addressLine1 = organizationDetailsRow1.addressLine1,
-            addressLine2 = organizationDetailsRow1.addressLine2,
-            city = organizationDetailsRow1.city,
-            postalCode = organizationDetailsRow1.postalCode,
-            country = organizationDetailsRow1.country,
+            addresses = organizationDetailsRow1.addresses,
             companyRegistrationNumber = organizationDetailsRow1.companyRegistrationNumber,
             taxID = organizationDetailsRow1.taxID,
           )
@@ -201,11 +193,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             emails = organizationDetailsRow2.emails,
             phoneNumbers = organizationDetailsRow2.phoneNumbers,
             organizationStage = organizationDetailsRow2.organizationStage,
-            addressLine1 = organizationDetailsRow2.addressLine1,
-            addressLine2 = organizationDetailsRow2.addressLine2,
-            city = organizationDetailsRow2.city,
-            postalCode = organizationDetailsRow2.postalCode,
-            country = organizationDetailsRow2.country,
+            addresses = organizationDetailsRow2.addresses,
             companyRegistrationNumber = organizationDetailsRow2.companyRegistrationNumber,
             taxID = organizationDetailsRow2.taxID,
           )
@@ -280,11 +268,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             emails = organizationDetailsRow.emails,
             phoneNumbers = organizationDetailsRow.phoneNumbers,
             organizationStage = organizationDetailsRow.organizationStage,
-            addressLine1 = organizationDetailsRow.addressLine1,
-            addressLine2 = organizationDetailsRow.addressLine2,
-            city = organizationDetailsRow.city,
-            postalCode = organizationDetailsRow.postalCode,
-            country = organizationDetailsRow.country,
+            addresses = organizationDetailsRow.addresses,
             companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber,
             taxID = organizationDetailsRow.taxID,
           )
@@ -320,11 +304,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
         val emailsOptUpdate                    = arbitrarySample[Option[List[OrganizationEmailEntryRequest]]]
         val phoneNumbersOptUpdate              = arbitrarySample[Option[List[OrganizationPhoneNumberEntryRequest]]]
         val organizationStageOptUpdate         = arbitrarySample[Option[OrganizationStage]]
-        val addressLine1OptUpdate              = arbitrarySample[Option[OrganizationAddressLine1]]
-        val addressLine2OptUpdate              = arbitrarySample[Option[OrganizationAddressLine2]]
-        val cityOptUpdate                      = arbitrarySample[Option[OrganizationCity]]
-        val postalCodeOptUpdate                = arbitrarySample[Option[OrganizationPostalCode]]
-        val countryOptUpdate                   = arbitrarySample[Option[OrganizationCountry]]
+        val addressesOptUpdate                 = arbitrarySample[Option[List[OrganizationAddressEntry]]]
         val companyRegistrationNumberOptUpdate = arbitrarySample[Option[OrganizationCompanyRegistrationNumber]]
         val taxIDOptUpdate                     = arbitrarySample[Option[OrganizationTaxID]]
         val logoImageAssetOptUpdate            = arbitrarySample[Option[OrganizationLogoImageAsset]]
@@ -345,11 +325,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             taglineOptUpdate = taglineOptUpdate,
             emailsOptUpdate = emailsOptUpdate,
             phoneNumbersOptUpdate = phoneNumbersOptUpdate,
-            addressLine1OptUpdate = addressLine1OptUpdate,
-            addressLine2OptUpdate = addressLine2OptUpdate,
-            cityOptUpdate = cityOptUpdate,
-            postalCodeOptUpdate = postalCodeOptUpdate,
-            countryOptUpdate = countryOptUpdate,
+            addressesOptUpdate = addressesOptUpdate,
             companyRegistrationNumberOptUpdate = companyRegistrationNumberOptUpdate,
             taxIDOptUpdate = taxIDOptUpdate,
             logoImageAssetOptUpdate = logoImageAssetOptUpdate,
@@ -363,11 +339,7 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           emails = emailsOptUpdate.getOrElse(organizationDetailsRow.emails),
           phoneNumbers = phoneNumbersOptUpdate.getOrElse(organizationDetailsRow.phoneNumbers),
           organizationStage = organizationStageOptUpdate.getOrElse(organizationDetailsRow.organizationStage),
-          addressLine1 = addressLine1OptUpdate.orElse(organizationDetailsRow.addressLine1),
-          addressLine2 = addressLine2OptUpdate.orElse(organizationDetailsRow.addressLine2),
-          city = cityOptUpdate.orElse(organizationDetailsRow.city),
-          postalCode = postalCodeOptUpdate.orElse(organizationDetailsRow.postalCode),
-          country = countryOptUpdate.orElse(organizationDetailsRow.country),
+          addresses = addressesOptUpdate.getOrElse(organizationDetailsRow.addresses),
           companyRegistrationNumber =
             companyRegistrationNumberOptUpdate.orElse(organizationDetailsRow.companyRegistrationNumber),
           taxID = taxIDOptUpdate.orElse(organizationDetailsRow.taxID),

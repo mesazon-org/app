@@ -6,9 +6,10 @@ import io.mesazon.gateway.service.addressTypeFromDomainToSmithy
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.validation.domain.AddressValidator
 import io.mesazon.testkit.base.*
+import io.scalaland.chimney.dsl.*
 import zio.*
 
-class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
+class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefinedTypeTransformer {
 
   inline private val addressPartLengthMax = 255
   inline private val addressPartRawBlank  = ""
@@ -31,16 +32,10 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         addressValidator
           .validate(
-            smithy.AddressEntryRequest(
-              address = smithy.AddressRequest(
-                addressLine1 = addressEntry.address.addressLine1.value,
-                addressLine2 = addressEntry.address.addressLine2.map(_.value),
-                city = addressEntry.address.city.value,
-                postalCode = addressEntry.address.postalCode.value,
-                country = addressEntry.address.country.value,
-              ),
-              addressType = addressTypeFromDomainToSmithy(addressEntry.addressType),
-            )
+            addressEntry
+              .into[smithy.AddressEntryRequest]
+              .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
+              .transform
           )
           .zioValue
           .toEither
@@ -55,16 +50,10 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries {
 
         addressValidator
           .validate(
-            smithy.AddressEntryRequest(
-              address = smithy.AddressRequest(
-                addressLine1 = addressEntry.address.addressLine1.value,
-                addressLine2 = addressEntry.address.addressLine2.map(_.value),
-                city = addressEntry.address.city.value,
-                postalCode = addressEntry.address.postalCode.value,
-                country = addressEntry.address.country.value,
-              ),
-              addressType = addressTypeFromDomainToSmithy(addressEntry.addressType),
-            )
+            addressEntry
+              .into[smithy.AddressEntryRequest]
+              .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
+              .transform
           )
           .zioValue
           .toEither

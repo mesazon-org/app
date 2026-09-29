@@ -4,10 +4,13 @@ import com.dimafeng.testcontainers.*
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import fs2.io.net.Network
+import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.json.tapir.given
+import io.mesazon.gateway.service.addressTypeFromDomainToSmithy
 import io.mesazon.gateway.smithy
+import io.scalaland.chimney.dsl.*
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.client4.jsoniter.*
@@ -305,11 +308,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       tagline: Option[OrganizationTagline],
       emails: List[OrganizationEmailEntryRequest],
       phoneNumbers: List[OrganizationPhoneNumberEntryRequest],
-      addressLine1: Option[OrganizationAddressLine1],
-      addressLine2: Option[OrganizationAddressLine2],
-      city: Option[OrganizationCity],
-      postalCode: Option[OrganizationPostalCode],
-      country: Option[OrganizationCountry],
+      addresses: List[OrganizationAddressEntry],
       companyRegistrationNumberOpt: Option[OrganizationCompanyRegistrationNumber],
       taxIDOpt: Option[OrganizationTaxID],
       accessTokenOpt: Option[AccessToken],
@@ -332,11 +331,15 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
                 entry.isDefault,
               )
             ),
-            addressLine1 = addressLine1.map(_.value),
-            addressLine2 = addressLine2.map(_.value),
-            city = city.map(_.value),
-            postalCode = postalCode.map(_.value),
-            country = country.map(_.value),
+            addresses = addresses.map(organizationAddressEntry =>
+              (organizationAddressEntry.value: AddressEntry)
+                .into[smithy.AddressEntryRequest]
+                .withFieldComputed(
+                  _.addressType,
+                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
+                )
+                .transform
+            ),
             companyRegistrationNumber = companyRegistrationNumberOpt.map(_.value),
             taxID = taxIDOpt.map(_.value),
           )
