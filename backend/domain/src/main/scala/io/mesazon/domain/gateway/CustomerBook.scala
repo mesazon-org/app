@@ -18,11 +18,7 @@ case class InsertCustomerIndividualPostRequest(
     fullName: CustomerFullName,
     emails: List[CustomerEmailEntryRequest],
     phoneNumbers: List[CustomerPhoneNumberEntryRequest],
-    addressLine1: Option[CustomerAddressLine1],
-    addressLine2: Option[CustomerAddressLine2],
-    city: Option[CustomerCity],
-    postalCode: Option[CustomerPostalCode],
-    country: Option[CustomerCountry],
+    addresses: List[CustomerAddressEntry],
 )
 
 case class InsertCustomerIndividualsPostRequest(
@@ -34,11 +30,7 @@ case class UpdateCustomerIndividualPutRequest(
     fullName: Option[CustomerFullName],
     emails: List[CustomerEmailEntryRequest],
     phoneNumbers: List[CustomerPhoneNumberEntryRequest],
-    addressLine1: Option[CustomerAddressLine1],
-    addressLine2: Option[CustomerAddressLine2],
-    city: Option[CustomerCity],
-    postalCode: Option[CustomerPostalCode],
-    country: Option[CustomerCountry],
+    addresses: List[CustomerAddressEntry],
 )
 
 // Business contacts
@@ -69,11 +61,7 @@ case class InsertCustomerBusinessPostRequest(
     emails: List[CustomerEmailEntryRequest],
     taxID: Option[CustomerTaxID],
     phoneNumbers: List[CustomerPhoneNumberEntryRequest],
-    addressLine1: Option[CustomerAddressLine1],
-    addressLine2: Option[CustomerAddressLine2],
-    city: Option[CustomerCity],
-    postalCode: Option[CustomerPostalCode],
-    country: Option[CustomerCountry],
+    addresses: List[CustomerAddressEntry],
     customerBusinessContacts: List[InsertCustomerBusinessContact],
 )
 
@@ -87,11 +75,7 @@ case class UpdateCustomerBusinessPutRequest(
     emails: List[CustomerEmailEntryRequest],
     taxID: Option[CustomerTaxID],
     phoneNumbers: List[CustomerPhoneNumberEntryRequest],
-    addressLine1: Option[CustomerAddressLine1],
-    addressLine2: Option[CustomerAddressLine2],
-    city: Option[CustomerCity],
-    postalCode: Option[CustomerPostalCode],
-    country: Option[CustomerCountry],
+    addresses: List[CustomerAddressEntry],
 )
 
 // Combined

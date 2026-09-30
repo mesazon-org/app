@@ -9,7 +9,7 @@ import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
-import io.mesazon.gateway.validation.domain.{EmailValidator, PhoneNumberDomainValidator}
+import io.mesazon.gateway.validation.domain.{AddressValidator, EmailValidator, PhoneNumberDomainValidator}
 import io.mesazon.gateway.validation.service.CustomerBookRequestValidator
 import io.mesazon.testkit.base.ZWordSpecBase
 import io.scalaland.chimney.dsl.*
@@ -29,11 +29,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
       phoneNumbers = request.phoneNumbers.map(entry =>
         CustomerPhoneNumberEntryInput(phoneNumber = entry.phoneNumber, isDefault = entry.isDefault)
       ),
-      addressLine1 = request.addressLine1,
-      addressLine2 = request.addressLine2,
-      city = request.city,
-      postalCode = request.postalCode,
-      country = request.country,
+      addresses = request.addresses,
     )
 
   private def toInsertCustomerBusinessInput(request: InsertCustomerBusinessPostRequest): InsertCustomerBusinessInput =
@@ -44,11 +40,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
       phoneNumbers = request.phoneNumbers.map(entry =>
         CustomerPhoneNumberEntryInput(phoneNumber = entry.phoneNumber, isDefault = entry.isDefault)
       ),
-      addressLine1 = request.addressLine1,
-      addressLine2 = request.addressLine2,
-      city = request.city,
-      postalCode = request.postalCode,
-      country = request.country,
+      addresses = request.addresses,
       customerBusinessContacts = request.customerBusinessContacts.map(contact =>
         CustomerBusinessContactInput(
           fullName = contact.fullName,
@@ -72,11 +64,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           fullName = insertCustomerIndividualInput.fullName,
           emails = insertCustomerIndividualInput.emails,
           phoneNumbers = insertCustomerIndividualInput.phoneNumbers,
-          addressLine1 = insertCustomerIndividualInput.addressLine1,
-          addressLine2 = insertCustomerIndividualInput.addressLine2,
-          city = insertCustomerIndividualInput.city,
-          postalCode = insertCustomerIndividualInput.postalCode,
-          country = insertCustomerIndividualInput.country,
+          addresses = insertCustomerIndividualInput.addresses,
         )
 
         customerBookRepositoryMock.insertCustomerIndividual
@@ -108,11 +96,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               isDefault = entry.isDefault,
             )
           ),
-          addressLine1 = customerIndividualDetailsRow.addressLine1.map(_.value),
-          addressLine2 = customerIndividualDetailsRow.addressLine2.map(_.value),
-          city = customerIndividualDetailsRow.city.map(_.value),
-          postalCode = customerIndividualDetailsRow.postalCode.map(_.value),
-          country = customerIndividualDetailsRow.country.map(_.value),
+          addresses = customerIndividualDetailsRow.addresses.map(_.transformInto[smithy.AddressEntryRequest]),
         )
       }
 
@@ -161,11 +145,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
             fullName = insertCustomerIndividualInput.fullName,
             emails = insertCustomerIndividualInput.emails,
             phoneNumbers = insertCustomerIndividualInput.phoneNumbers,
-            addressLine1 = insertCustomerIndividualInput.addressLine1,
-            addressLine2 = insertCustomerIndividualInput.addressLine2,
-            city = insertCustomerIndividualInput.city,
-            postalCode = insertCustomerIndividualInput.postalCode,
-            country = insertCustomerIndividualInput.country,
+            addresses = insertCustomerIndividualInput.addresses,
           )
         )
 
@@ -226,11 +206,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           emails = insertCustomerBusinessInput.emails,
           taxID = insertCustomerBusinessInput.taxID,
           phoneNumbers = insertCustomerBusinessInput.phoneNumbers,
-          addressLine1 = insertCustomerBusinessInput.addressLine1,
-          addressLine2 = insertCustomerBusinessInput.addressLine2,
-          city = insertCustomerBusinessInput.city,
-          postalCode = insertCustomerBusinessInput.postalCode,
-          country = insertCustomerBusinessInput.country,
+          addresses = insertCustomerBusinessInput.addresses,
         )
         val customerBusinessContactRows =
           insertCustomerBusinessInput.customerBusinessContacts.map(customerBusinessContactInput =>
@@ -276,11 +252,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               isDefault = entry.isDefault,
             )
           ),
-          addressLine1 = customerBusinessDetailsRow.addressLine1.map(_.value),
-          addressLine2 = customerBusinessDetailsRow.addressLine2.map(_.value),
-          city = customerBusinessDetailsRow.city.map(_.value),
-          postalCode = customerBusinessDetailsRow.postalCode.map(_.value),
-          country = customerBusinessDetailsRow.country.map(_.value),
+          addresses = customerBusinessDetailsRow.addresses.map(_.transformInto[smithy.AddressEntryRequest]),
           customerBusinessContacts = customerBusinessContactRows.map(customerBusinessContactRow =>
             smithy.InsertCustomerBusinessContactResponse(
               customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID.value,
@@ -346,11 +318,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
                 emails = insertCustomerBusinessInput.emails,
                 taxID = insertCustomerBusinessInput.taxID,
                 phoneNumbers = insertCustomerBusinessInput.phoneNumbers,
-                addressLine1 = insertCustomerBusinessInput.addressLine1,
-                addressLine2 = insertCustomerBusinessInput.addressLine2,
-                city = insertCustomerBusinessInput.city,
-                postalCode = insertCustomerBusinessInput.postalCode,
-                country = insertCustomerBusinessInput.country,
+                addresses = insertCustomerBusinessInput.addresses,
               ),
               customerBusinessContactRows = List.empty,
             )
@@ -416,11 +384,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
             fullName = insertCustomerIndividualInput.fullName,
             emails = insertCustomerIndividualInput.emails,
             phoneNumbers = insertCustomerIndividualInput.phoneNumbers,
-            addressLine1 = insertCustomerIndividualInput.addressLine1,
-            addressLine2 = insertCustomerIndividualInput.addressLine2,
-            city = insertCustomerIndividualInput.city,
-            postalCode = insertCustomerIndividualInput.postalCode,
-            country = insertCustomerIndividualInput.country,
+            addresses = insertCustomerIndividualInput.addresses,
           )
         )
         val customerBusinessInsertRows: List[CustomerBusinessInsertRow] =
@@ -431,11 +395,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
                 emails = insertCustomerBusinessInput.emails,
                 taxID = insertCustomerBusinessInput.taxID,
                 phoneNumbers = insertCustomerBusinessInput.phoneNumbers,
-                addressLine1 = insertCustomerBusinessInput.addressLine1,
-                addressLine2 = insertCustomerBusinessInput.addressLine2,
-                city = insertCustomerBusinessInput.city,
-                postalCode = insertCustomerBusinessInput.postalCode,
-                country = insertCustomerBusinessInput.country,
+                addresses = insertCustomerBusinessInput.addresses,
               ),
               customerBusinessContactRows = List.empty,
             )
@@ -522,11 +482,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
                 CustomerPhoneNumberEntryInput(phoneNumber = entry.phoneNumber, isDefault = entry.isDefault)
               )
             ),
-            updateCustomerIndividualPutRequest.addressLine1,
-            updateCustomerIndividualPutRequest.addressLine2,
-            updateCustomerIndividualPutRequest.city,
-            updateCustomerIndividualPutRequest.postalCode,
-            updateCustomerIndividualPutRequest.country,
+            Some(updateCustomerIndividualPutRequest.addresses),
           )
           .returningZIO(Some(customerIndividualDetailsRow))
           .once()
@@ -578,11 +534,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
                 CustomerPhoneNumberEntryInput(phoneNumber = entry.phoneNumber, isDefault = entry.isDefault)
               )
             ),
-            updateCustomerBusinessPutRequest.addressLine1,
-            updateCustomerBusinessPutRequest.addressLine2,
-            updateCustomerBusinessPutRequest.city,
-            updateCustomerBusinessPutRequest.postalCode,
-            updateCustomerBusinessPutRequest.country,
+            Some(updateCustomerBusinessPutRequest.addresses),
           )
           .returningZIO(Some(customerBusinessDetailsRow))
           .once()
@@ -789,11 +741,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               isDefault = entry.isDefault,
             )
           ),
-          addressLine1 = customerIndividualDetailsRow.addressLine1.map(_.value),
-          addressLine2 = customerIndividualDetailsRow.addressLine2.map(_.value),
-          city = customerIndividualDetailsRow.city.map(_.value),
-          postalCode = customerIndividualDetailsRow.postalCode.map(_.value),
-          country = customerIndividualDetailsRow.country.map(_.value),
+          addresses = customerIndividualDetailsRow.addresses.map(_.transformInto[smithy.AddressEntryRequest]),
         )
       }
 
@@ -848,11 +796,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               isDefault = entry.isDefault,
             )
           ),
-          addressLine1 = customerBusinessDetailsRow.addressLine1.map(_.value),
-          addressLine2 = customerBusinessDetailsRow.addressLine2.map(_.value),
-          city = customerBusinessDetailsRow.city.map(_.value),
-          postalCode = customerBusinessDetailsRow.postalCode.map(_.value),
-          country = customerBusinessDetailsRow.country.map(_.value),
+          addresses = customerBusinessDetailsRow.addresses.map(_.transformInto[smithy.AddressEntryRequest]),
         )
       }
 
@@ -931,6 +875,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           CustomerBookService.local,
           CustomerBookRequestValidator.live,
           EmailValidator.live,
+          AddressValidator.live,
           PhoneNumberDomainValidator.live,
           PhoneNumberUtil.live,
           ZLayer.succeed(PhoneNumberValidatorConfig(supportedPhoneRegions = Set("CY", "GB"))),

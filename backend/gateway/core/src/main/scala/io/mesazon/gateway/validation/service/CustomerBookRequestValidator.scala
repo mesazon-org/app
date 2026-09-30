@@ -11,6 +11,7 @@ import zio.*
 final class CustomerBookRequestValidator(
     emailValidator: EmailValidator,
     phoneNumberDomainValidator: PhoneNumberDomainValidator,
+    addressValidator: AddressValidator,
 ) {
 
   def validatedInsertCustomerIndividualPostRequest(
@@ -56,17 +57,14 @@ final class CustomerBookRequestValidator(
     toValidatedRequestIO(
       validateCustomerEmails(request.emails)
         .zip(validateCustomerPhoneNumbers(request.phoneNumbers))
-        .map((emailsValidated, phoneNumbersValidated) =>
+        .zip(validateCustomerAddresses(request.addresses))
+        .map((emailsValidated, phoneNumbersValidated, addressesValidated) =>
           (
             CustomerID(request.customerID).validNec,
             validateOptionalField("fullName", request.fullName, CustomerFullName.either),
             emailsValidated,
             phoneNumbersValidated,
-            validateOptionalField("addressLine1", request.addressLine1, CustomerAddressLine1.either),
-            validateOptionalField("addressLine2", request.addressLine2, CustomerAddressLine2.either),
-            validateOptionalField("city", request.city, CustomerCity.either),
-            validateOptionalField("postalCode", request.postalCode, CustomerPostalCode.either),
-            validateOptionalField("country", request.country, CustomerCountry.either),
+            addressesValidated,
           ).mapN(UpdateCustomerIndividualPutRequest.apply)
         )
     )
@@ -77,18 +75,15 @@ final class CustomerBookRequestValidator(
     toValidatedRequestIO(
       validateCustomerEmails(request.emails)
         .zip(validateCustomerPhoneNumbers(request.phoneNumbers))
-        .map((emailsValidated, phoneNumbersValidated) =>
+        .zip(validateCustomerAddresses(request.addresses))
+        .map((emailsValidated, phoneNumbersValidated, addressesValidated) =>
           (
             CustomerID(request.customerID).validNec,
             validateOptionalField("businessName", request.businessName, CustomerBusinessName.either),
             emailsValidated,
             validateOptionalField("taxID", request.taxID, CustomerTaxID.either),
             phoneNumbersValidated,
-            validateOptionalField("addressLine1", request.addressLine1, CustomerAddressLine1.either),
-            validateOptionalField("addressLine2", request.addressLine2, CustomerAddressLine2.either),
-            validateOptionalField("city", request.city, CustomerCity.either),
-            validateOptionalField("postalCode", request.postalCode, CustomerPostalCode.either),
-            validateOptionalField("country", request.country, CustomerCountry.either),
+            addressesValidated,
           ).mapN(UpdateCustomerBusinessPutRequest.apply)
         )
     )
@@ -121,6 +116,13 @@ final class CustomerBookRequestValidator(
         .map(_.map(validated => CustomerPhoneNumberEntryRequest(CustomerPhoneNumber(validated), phoneNumber.isDefault)))
     ).map(_.andThen(entries => validateSingleDefault("phoneNumbers", entries)(_.isDefault)))
 
+  private def validateCustomerAddresses(
+      addresses: List[smithy.AddressEntryRequest]
+  ): UIO[ValidatedNec[InvalidFieldError, List[CustomerAddressEntry]]] =
+    validateAll(addresses)(addressEntryRequest =>
+      addressValidator.validate(addressEntryRequest).map(_.map(CustomerAddressEntry(_)))
+    )
+
   private def validateOptionalCustomerEmail(
       emailRawOpt: Option[String]
   ): UIO[ValidatedNec[InvalidFieldError, Option[CustomerEmail]]] =
@@ -142,16 +144,13 @@ final class CustomerBookRequestValidator(
   ): UIO[ValidatedNec[InvalidFieldError, InsertCustomerIndividualPostRequest]] =
     validateCustomerEmails(request.emails)
       .zip(validateCustomerPhoneNumbers(request.phoneNumbers))
-      .map((emailsValidated, phoneNumbersValidated) =>
+      .zip(validateCustomerAddresses(request.addresses))
+      .map((emailsValidated, phoneNumbersValidated, addressesValidated) =>
         (
           validateRequiredField("fullName", request.fullName, CustomerFullName.either),
           emailsValidated,
           phoneNumbersValidated,
-          validateOptionalField("addressLine1", request.addressLine1, CustomerAddressLine1.either),
-          validateOptionalField("addressLine2", request.addressLine2, CustomerAddressLine2.either),
-          validateOptionalField("city", request.city, CustomerCity.either),
-          validateOptionalField("postalCode", request.postalCode, CustomerPostalCode.either),
-          validateOptionalField("country", request.country, CustomerCountry.either),
+          addressesValidated,
         ).mapN(InsertCustomerIndividualPostRequest.apply)
       )
 
@@ -193,20 +192,17 @@ final class CustomerBookRequestValidator(
   ): UIO[ValidatedNec[InvalidFieldError, InsertCustomerBusinessPostRequest]] =
     validateCustomerEmails(request.emails)
       .zip(validateCustomerPhoneNumbers(request.phoneNumbers))
+      .zip(validateCustomerAddresses(request.addresses))
       .zip(
         validateAll(request.customerBusinessContacts)(validateInsertCustomerBusinessContact)
       )
-      .map((emailsValidated, phoneNumbersValidated, contactsValidated) =>
+      .map((emailsValidated, phoneNumbersValidated, addressesValidated, contactsValidated) =>
         (
           validateRequiredField("businessName", request.businessName, CustomerBusinessName.either),
           emailsValidated,
           validateOptionalField("taxID", request.taxID, CustomerTaxID.either),
           phoneNumbersValidated,
-          validateOptionalField("addressLine1", request.addressLine1, CustomerAddressLine1.either),
-          validateOptionalField("addressLine2", request.addressLine2, CustomerAddressLine2.either),
-          validateOptionalField("city", request.city, CustomerCity.either),
-          validateOptionalField("postalCode", request.postalCode, CustomerPostalCode.either),
-          validateOptionalField("country", request.country, CustomerCountry.either),
+          addressesValidated,
           contactsValidated,
         ).mapN(InsertCustomerBusinessPostRequest.apply)
       )

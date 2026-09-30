@@ -1,6 +1,7 @@
 package io.mesazon.gateway.utils
 
 import io.mesazon.domain.gateway.*
+import io.mesazon.gateway.service.addressTypeFromDomainToSmithy
 import io.mesazon.gateway.smithy
 import io.mesazon.testkit.base.*
 import io.scalaland.chimney.Transformer
@@ -23,6 +24,12 @@ trait CustomerBookSmithyArbitraries extends CustomerBookDomainArbitraries, IronR
       phoneNumber = entry.phoneNumber.transformInto[smithy.PhoneNumberRequest],
       isDefault = entry.isDefault,
     )
+
+  given Transformer[CustomerAddressEntry, smithy.AddressEntryRequest] = customerAddressEntry =>
+    (customerAddressEntry.value: AddressEntry)
+      .into[smithy.AddressEntryRequest]
+      .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
+      .transform
 
   given Transformer[InsertCustomerBusinessPostRequest, smithy.InsertCustomerBusinessPostRequest] = business =>
     business

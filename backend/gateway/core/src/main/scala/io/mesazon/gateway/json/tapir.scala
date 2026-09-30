@@ -52,12 +52,6 @@ object tapir {
   given insertCustomerBusinessContactSchema: Schema[InsertCustomerBusinessContact] =
     Schema.derived[InsertCustomerBusinessContact]
 
-  given insertCustomerIndividualPostRequestSchema: Schema[InsertCustomerIndividualPostRequest] =
-    Schema.derived[InsertCustomerIndividualPostRequest]
-
-  given insertCustomerBusinessPostRequestSchema: Schema[InsertCustomerBusinessPostRequest] =
-    Schema.derived[InsertCustomerBusinessPostRequest]
-
   given extractCustomersPostResponseCodec: JsonValueCodec[ExtractCustomersPostResponse] =
     JsonCodecMaker.make[ExtractCustomersPostResponse]
 

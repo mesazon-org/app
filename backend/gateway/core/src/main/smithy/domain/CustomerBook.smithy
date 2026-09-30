@@ -37,11 +37,8 @@ structure InsertCustomerIndividualPostRequest {
     emails: CustomerEmailEntryRequests
     @default([])
     phoneNumbers: CustomerPhoneNumberEntryRequests
-    addressLine1: String
-    addressLine2: String
-    city: String
-    postalCode: String
-    country: String
+    @default([])
+    addresses: CustomerAddressEntryRequests
 }
 
 list InsertCustomerIndividuals {
@@ -73,11 +70,8 @@ structure InsertCustomerBusinessPostRequest {
     taxID: String
     @default([])
     phoneNumbers: CustomerPhoneNumberEntryRequests
-    addressLine1: String
-    addressLine2: String
-    city: String
-    postalCode: String
-    country: String
+    @default([])
+    addresses: CustomerAddressEntryRequests
     @default([])
     customerBusinessContacts: InsertCustomerBusinessContacts
 }
@@ -106,11 +100,8 @@ structure UpdateCustomerIndividualPutRequest {
     emails: CustomerEmailEntryRequests
     @default([])
     phoneNumbers: CustomerPhoneNumberEntryRequests
-    addressLine1: String
-    addressLine2: String
-    city: String
-    postalCode: String
-    country: String
+    @default([])
+    addresses: CustomerAddressEntryRequests
 }
 
 structure UpdateCustomerBusinessPutRequest {
@@ -122,11 +113,8 @@ structure UpdateCustomerBusinessPutRequest {
     taxID: String
     @default([])
     phoneNumbers: CustomerPhoneNumberEntryRequests
-    addressLine1: String
-    addressLine2: String
-    city: String
-    postalCode: String
-    country: String
+    @default([])
+    addresses: CustomerAddressEntryRequests
 }
 
 structure AddCustomerBusinessContact {
@@ -178,11 +166,8 @@ structure GetCustomerIndividualGetResponse {
     emails: CustomerEmailEntryRequests
     @required
     phoneNumbers: CustomerPhoneNumberEntryRequests
-    addressLine1: String
-    addressLine2: String
-    city: String
-    postalCode: String
-    country: String
+    @required
+    addresses: CustomerAddressEntryRequests
 }
 
 structure GetCustomerBusinessGetResponse {
@@ -195,11 +180,8 @@ structure GetCustomerBusinessGetResponse {
     taxID: String
     @required
     phoneNumbers: CustomerPhoneNumberEntryRequests
-    addressLine1: String
-    addressLine2: String
-    city: String
-    postalCode: String
-    country: String
+    @required
+    addresses: CustomerAddressEntryRequests
 }
 
 structure GetCustomer {
@@ -229,11 +211,8 @@ structure InsertCustomerIndividualPostResponse {
     emails: CustomerEmailEntryRequests
     @required
     phoneNumbers: CustomerPhoneNumberEntryRequests
-    addressLine1: String
-    addressLine2: String
-    city: String
-    postalCode: String
-    country: String
+    @required
+    addresses: CustomerAddressEntryRequests
 }
 
 structure InsertCustomerIndividualsPostResponse {
@@ -265,11 +244,8 @@ structure InsertCustomerBusinessPostResponse {
     taxID: String
     @required
     phoneNumbers: CustomerPhoneNumberEntryRequests
-    addressLine1: String
-    addressLine2: String
-    city: String
-    postalCode: String
-    country: String
+    @required
+    addresses: CustomerAddressEntryRequests
     @required
     customerBusinessContacts: InsertCustomerBusinessContactsResponse
 }

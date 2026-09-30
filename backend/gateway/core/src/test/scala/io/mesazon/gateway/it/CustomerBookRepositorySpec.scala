@@ -25,6 +25,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 
+  inline private val customerAddressEntriesCount = 3
+
   override def beforeAll(): Unit = {
     super.beforeAll()
 
@@ -67,11 +69,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           insertCustomerIndividualInput.fullName,
           insertCustomerIndividualInput.emails,
           insertCustomerIndividualInput.phoneNumbers,
-          insertCustomerIndividualInput.addressLine1,
-          insertCustomerIndividualInput.addressLine2,
-          insertCustomerIndividualInput.city,
-          insertCustomerIndividualInput.postalCode,
-          insertCustomerIndividualInput.country,
+          insertCustomerIndividualInput.addresses,
           CustomerStatus.Active,
           CreatedAt(instantNow),
           UpdatedAt(instantNow),
@@ -138,11 +136,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           insertCustomerIndividualInput1.fullName,
           insertCustomerIndividualInput1.emails,
           insertCustomerIndividualInput1.phoneNumbers,
-          insertCustomerIndividualInput1.addressLine1,
-          insertCustomerIndividualInput1.addressLine2,
-          insertCustomerIndividualInput1.city,
-          insertCustomerIndividualInput1.postalCode,
-          insertCustomerIndividualInput1.country,
+          insertCustomerIndividualInput1.addresses,
           CustomerStatus.Active,
           CreatedAt(instantNow),
           UpdatedAt(instantNow),
@@ -153,11 +147,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           insertCustomerIndividualInput2.fullName,
           insertCustomerIndividualInput2.emails,
           insertCustomerIndividualInput2.phoneNumbers,
-          insertCustomerIndividualInput2.addressLine1,
-          insertCustomerIndividualInput2.addressLine2,
-          insertCustomerIndividualInput2.city,
-          insertCustomerIndividualInput2.postalCode,
-          insertCustomerIndividualInput2.country,
+          insertCustomerIndividualInput2.addresses,
           CustomerStatus.Active,
           CreatedAt(instantNow),
           UpdatedAt(instantNow),
@@ -201,11 +191,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           insertCustomerBusinessInput.taxID,
           insertCustomerBusinessInput.emails,
           insertCustomerBusinessInput.phoneNumbers,
-          insertCustomerBusinessInput.addressLine1,
-          insertCustomerBusinessInput.addressLine2,
-          insertCustomerBusinessInput.city,
-          insertCustomerBusinessInput.postalCode,
-          insertCustomerBusinessInput.country,
+          insertCustomerBusinessInput.addresses,
           CustomerStatus.Active,
           CreatedAt(instantNow),
           UpdatedAt(instantNow),
@@ -292,11 +278,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           insertCustomerIndividualInput.fullName,
           insertCustomerIndividualInput.emails,
           insertCustomerIndividualInput.phoneNumbers,
-          insertCustomerIndividualInput.addressLine1,
-          insertCustomerIndividualInput.addressLine2,
-          insertCustomerIndividualInput.city,
-          insertCustomerIndividualInput.postalCode,
-          insertCustomerIndividualInput.country,
+          insertCustomerIndividualInput.addresses,
           CustomerStatus.Active,
           CreatedAt(instantNow),
           UpdatedAt(instantNow),
@@ -308,11 +290,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           insertCustomerBusinessInput.taxID,
           insertCustomerBusinessInput.emails,
           insertCustomerBusinessInput.phoneNumbers,
-          insertCustomerBusinessInput.addressLine1,
-          insertCustomerBusinessInput.addressLine2,
-          insertCustomerBusinessInput.city,
-          insertCustomerBusinessInput.postalCode,
-          insertCustomerBusinessInput.country,
+          insertCustomerBusinessInput.addresses,
           CustomerStatus.Active,
           CreatedAt(instantNow),
           UpdatedAt(instantNow),
@@ -351,7 +329,10 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
     "updateCustomerIndividual" should {
       "update the details row in place and return the updated row" in new TestContext {
         val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
-          .copy(status = CustomerStatus.Active)
+          .copy(
+            status = CustomerStatus.Active,
+            addresses = arbitrarySample[CustomerAddressEntry](customerAddressEntriesCount).toList,
+          )
 
         postgresClient
           .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
@@ -359,6 +340,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
         val customerFullNameUpdate         = arbitrarySample[CustomerFullName]
         val customerEmailEntryInputsUpdate = arbitrarySample[List[CustomerEmailEntryInput]]
+        val customerAddressEntriesUpdate   = arbitrarySample[CustomerAddressEntry](customerAddressEntriesCount).toList
+
+        customerAddressEntriesUpdate shouldNot equal(customerIndividualDetailsRow.addresses)
 
         (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once()
 
@@ -368,6 +352,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             customerIndividualDetailsRow.customerID,
             fullNameOptUpdate = Some(customerFullNameUpdate),
             emailsOptUpdate = Some(customerEmailEntryInputsUpdate),
+            addressesOptUpdate = Some(customerAddressEntriesUpdate),
           )
           .zioValue
 
@@ -375,6 +360,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           customerIndividualDetailsRow.copy(
             fullName = customerFullNameUpdate,
             emails = customerEmailEntryInputsUpdate,
+            addresses = customerAddressEntriesUpdate,
             updatedAt = UpdatedAt(instantNow),
           )
         )
@@ -412,13 +398,18 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
     "updateCustomerBusiness" should {
       "update the details row in place and return the updated row" in new TestContext {
         val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
-          .copy(status = CustomerStatus.Active)
+          .copy(
+            status = CustomerStatus.Active,
+            addresses = arbitrarySample[CustomerAddressEntry](customerAddressEntriesCount).toList,
+          )
 
         postgresClient
           .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
           .zioValue
 
         val customerBusinessNameUpdate = arbitrarySample[CustomerBusinessName]
+
+        customerBusinessDetailsRow.addresses shouldNot equal(Nil)
 
         (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once()
 
@@ -427,11 +418,16 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             customerBusinessDetailsRow.organizationID,
             customerBusinessDetailsRow.customerID,
             businessNameOptUpdate = Some(customerBusinessNameUpdate),
+            addressesOptUpdate = Some(Nil),
           )
           .zioValue
 
         customerBusinessDetailsRowUpdated shouldBe Some(
-          customerBusinessDetailsRow.copy(businessName = customerBusinessNameUpdate, updatedAt = UpdatedAt(instantNow))
+          customerBusinessDetailsRow.copy(
+            businessName = customerBusinessNameUpdate,
+            addresses = Nil,
+            updatedAt = UpdatedAt(instantNow),
+          )
         )
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe

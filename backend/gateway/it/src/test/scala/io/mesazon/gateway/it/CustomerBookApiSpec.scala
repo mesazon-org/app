@@ -71,11 +71,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           phoneNumbers = insertCustomerIndividualPostRequest.phoneNumbers.map(entry =>
             CustomerPhoneNumberEntryInput(entry.phoneNumber, entry.isDefault)
           ),
-          addressLine1 = insertCustomerIndividualPostRequest.addressLine1,
-          addressLine2 = insertCustomerIndividualPostRequest.addressLine2,
-          city = insertCustomerIndividualPostRequest.city,
-          postalCode = insertCustomerIndividualPostRequest.postalCode,
-          country = insertCustomerIndividualPostRequest.country,
+          addresses = insertCustomerIndividualPostRequest.addresses,
           status = CustomerStatus.Active,
           createdAt = customerIndividualDetailsRowsAll.head.createdAt,
           updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
@@ -95,11 +91,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               entry.isDefault,
             )
           ),
-          addressLine1 = insertCustomerIndividualPostRequest.addressLine1.map(_.value),
-          addressLine2 = insertCustomerIndividualPostRequest.addressLine2.map(_.value),
-          city = insertCustomerIndividualPostRequest.city.map(_.value),
-          postalCode = insertCustomerIndividualPostRequest.postalCode.map(_.value),
-          country = insertCustomerIndividualPostRequest.country.map(_.value),
+          addresses = insertCustomerIndividualPostRequest.addresses.map(_.transformInto[smithy.AddressEntryRequest]),
         )
       }
 
@@ -433,11 +425,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               phoneNumbers = insertCustomerIndividualPostRequest.phoneNumbers.map(entry =>
                 CustomerPhoneNumberEntryInput(entry.phoneNumber, entry.isDefault)
               ),
-              addressLine1 = insertCustomerIndividualPostRequest.addressLine1,
-              addressLine2 = insertCustomerIndividualPostRequest.addressLine2,
-              city = insertCustomerIndividualPostRequest.city,
-              postalCode = insertCustomerIndividualPostRequest.postalCode,
-              country = insertCustomerIndividualPostRequest.country,
+              addresses = insertCustomerIndividualPostRequest.addresses,
               status = CustomerStatus.Active,
               createdAt = customerIndividualDetailsRow.createdAt,
               updatedAt = customerIndividualDetailsRow.updatedAt,
@@ -790,11 +778,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             CustomerPhoneNumberEntryInput(entry.phoneNumber, entry.isDefault)
           ),
           taxID = insertCustomerBusinessPostRequest.taxID,
-          addressLine1 = insertCustomerBusinessPostRequest.addressLine1,
-          addressLine2 = insertCustomerBusinessPostRequest.addressLine2,
-          city = insertCustomerBusinessPostRequest.city,
-          postalCode = insertCustomerBusinessPostRequest.postalCode,
-          country = insertCustomerBusinessPostRequest.country,
+          addresses = insertCustomerBusinessPostRequest.addresses,
           status = CustomerStatus.Active,
           createdAt = customerBusinessDetailsRowsAll.head.createdAt,
           updatedAt = customerBusinessDetailsRowsAll.head.updatedAt,
@@ -831,11 +815,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               entry.isDefault,
             )
           ),
-          addressLine1 = insertCustomerBusinessPostRequest.addressLine1.map(_.value),
-          addressLine2 = insertCustomerBusinessPostRequest.addressLine2.map(_.value),
-          city = insertCustomerBusinessPostRequest.city.map(_.value),
-          postalCode = insertCustomerBusinessPostRequest.postalCode.map(_.value),
-          country = insertCustomerBusinessPostRequest.country.map(_.value),
+          addresses = insertCustomerBusinessPostRequest.addresses.map(_.transformInto[smithy.AddressEntryRequest]),
           customerBusinessContacts = List(
             smithy.InsertCustomerBusinessContactResponse(
               customerBusinessContactID = customerBusinessContactRowsAll.head.customerBusinessContactID.value,
@@ -1269,11 +1249,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
                 CustomerPhoneNumberEntryInput(entry.phoneNumber, entry.isDefault)
               ),
               taxID = insertCustomerBusinessPostRequest.taxID,
-              addressLine1 = insertCustomerBusinessPostRequest.addressLine1,
-              addressLine2 = insertCustomerBusinessPostRequest.addressLine2,
-              city = insertCustomerBusinessPostRequest.city,
-              postalCode = insertCustomerBusinessPostRequest.postalCode,
-              country = insertCustomerBusinessPostRequest.country,
+              addresses = insertCustomerBusinessPostRequest.addresses,
               status = CustomerStatus.Active,
               createdAt = customerBusinessDetailsRow.createdAt,
               updatedAt = customerBusinessDetailsRow.updatedAt,
@@ -1886,11 +1862,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               entry.isDefault,
             )
           ),
-          addressLine1 = customerIndividualDetailsRow.addressLine1.map(_.value),
-          addressLine2 = customerIndividualDetailsRow.addressLine2.map(_.value),
-          city = customerIndividualDetailsRow.city.map(_.value),
-          postalCode = customerIndividualDetailsRow.postalCode.map(_.value),
-          country = customerIndividualDetailsRow.country.map(_.value),
+          addresses = customerIndividualDetailsRow.addresses.map(_.transformInto[smithy.AddressEntryRequest]),
         )
       }
 
@@ -2099,11 +2071,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               entry.isDefault,
             )
           ),
-          addressLine1 = customerBusinessDetailsRow.addressLine1.map(_.value),
-          addressLine2 = customerBusinessDetailsRow.addressLine2.map(_.value),
-          city = customerBusinessDetailsRow.city.map(_.value),
-          postalCode = customerBusinessDetailsRow.postalCode.map(_.value),
-          country = customerBusinessDetailsRow.country.map(_.value),
+          addresses = customerBusinessDetailsRow.addresses.map(_.transformInto[smithy.AddressEntryRequest]),
         )
       }
 
