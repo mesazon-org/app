@@ -31,14 +31,22 @@ object AIInstructions {
       |Email and phone lists may be empty. Whenever either list is non-empty, mark exactly one entry in that list
       |with isDefault=true and mark every other entry with isDefault=false. Never send an empty string for an
       |optional field - omit the field entirely instead.
-      |The addresses list may be empty. Return every address you can read for a candidate in its addresses list, each
-      |with an addressType taken from the source: an address marked as where invoices or bills go (e.g. "Invoice to",
-      |"Bill to") is BILLING, an address marked as where goods are delivered (e.g. "Deliver to", "Ship to") is
-      |SHIPPING, and when the source does not say, use SHIPPING_AND_BILLING. Every address needs addressLine1, city,
-      |postalCode and country; addressLine2 is optional. If addressLine1, city, postalCode or country cannot be read
-      |for an address, leave that address out entirely rather than returning it incomplete, keep the rest of the
+      |The addresses list may be empty and never holds more than two addresses. Every address needs addressLine1,
+      |city, postalCode and country; addressLine2 is optional. If addressLine1, city, postalCode or country cannot be
+      |read for an address, leave that address out entirely rather than returning it incomplete, keep the rest of the
       |candidate, and say in that candidate's extraction notes which part was missing, for example "Address could not
-      |be read because the postal code was missing".
+      |be read because the postal code was missing". Only the complete addresses that remain count for the rules
+      |below.
+      |When a candidate has exactly one complete address, always return it with addressType SHIPPING_AND_BILLING,
+      |whatever the source says about it.
+      |When a candidate has exactly two complete addresses, return one as SHIPPING and the other as BILLING as the
+      |source shows: an address marked as where goods are delivered (e.g. "Deliver to", "Ship to") is SHIPPING and an
+      |address marked as where invoices or bills go (e.g. "Invoice to", "Bill to") is BILLING. When the source does
+      |not say which is which, return the first as SHIPPING and the second as BILLING, and say in that candidate's
+      |extraction notes that the address types were assumed.
+      |When a candidate has three or more complete addresses, return only two of them: the best shipping and billing
+      |pair the source shows, or else the first two, typed one SHIPPING and one BILLING by the same rule as for two
+      |addresses, and say in that candidate's extraction notes that further addresses were left out.
       |If something about a candidate is missing or unclear (e.g. a smudged phone number, no visible email), say so
       |as briefly as possible in that candidate's extraction notes - a short phrase or clause, not a full sentence,
       |when a phrase suffices (e.g. "phone smudged, no email" rather than "The phone number is smudged and no email
@@ -99,14 +107,22 @@ object AIInstructions {
       |Email and phone lists may be empty. Whenever either list is non-empty, mark exactly one entry in that list
       |with isDefault=true and mark every other entry with isDefault=false. Never send an empty string for an
       |optional field - omit the field entirely instead.
-      |The addresses list may be empty. Return every address you can read for a candidate in its addresses list, each
-      |with an addressType taken from the source: an address marked as where invoices or bills go (e.g. "Invoice to",
-      |"Bill to") is BILLING, an address marked as where goods are delivered (e.g. "Deliver to", "Ship to") is
-      |SHIPPING, and when the source does not say, use SHIPPING_AND_BILLING. Every address needs addressLine1, city,
-      |postalCode and country; addressLine2 is optional. If addressLine1, city, postalCode or country cannot be read
-      |for an address, leave that address out entirely rather than returning it incomplete, keep the rest of the
+      |The addresses list may be empty and never holds more than two addresses. Every address needs addressLine1,
+      |city, postalCode and country; addressLine2 is optional. If addressLine1, city, postalCode or country cannot be
+      |read for an address, leave that address out entirely rather than returning it incomplete, keep the rest of the
       |candidate, and say in that candidate's extraction notes which part was missing, for example "Address could not
-      |be read because the postal code was missing".
+      |be read because the postal code was missing". Only the complete addresses that remain count for the rules
+      |below.
+      |When a candidate has exactly one complete address, always return it with addressType SHIPPING_AND_BILLING,
+      |whatever the source says about it.
+      |When a candidate has exactly two complete addresses, return one as SHIPPING and the other as BILLING as the
+      |source shows: an address marked as where goods are delivered (e.g. "Deliver to", "Ship to") is SHIPPING and an
+      |address marked as where invoices or bills go (e.g. "Invoice to", "Bill to") is BILLING. When the source does
+      |not say which is which, return the first as SHIPPING and the second as BILLING, and say in that candidate's
+      |extraction notes that the address types were assumed.
+      |When a candidate has three or more complete addresses, return only two of them: the best shipping and billing
+      |pair the source shows, or else the first two, typed one SHIPPING and one BILLING by the same rule as for two
+      |addresses, and say in that candidate's extraction notes that further addresses were left out.
       |If something about a candidate is missing or unclear (e.g. a blank cell, no visible email), say so as briefly
       |as possible in that candidate's extraction notes - a short phrase or clause, not a full sentence, when a
       |phrase suffices (e.g. "phone smudged, no email" rather than "The phone number is smudged and no email is
