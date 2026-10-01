@@ -168,7 +168,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
             smithy.GetCustomer(
               customerID = customerIndividualDetailsRow.customerID.value,
               name = customerIndividualDetailsRow.fullName.value,
-              customerType = smithy.CustomerType.INDIVIDUAL,
+              customerType = smithy.CustomerType.Individual,
             )
           )
         )
@@ -343,7 +343,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
             smithy.GetCustomer(
               customerID = customerBusinessInsertRow.customerBusinessDetailsRow.customerID.value,
               name = customerBusinessInsertRow.customerBusinessDetailsRow.businessName.value,
-              customerType = smithy.CustomerType.BUSINESS,
+              customerType = smithy.CustomerType.Business,
             )
           )
         )
@@ -424,14 +424,14 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
             smithy.GetCustomer(
               customerID = customerIndividualDetailsRow.customerID.value,
               name = customerIndividualDetailsRow.fullName.value,
-              customerType = smithy.CustomerType.INDIVIDUAL,
+              customerType = smithy.CustomerType.Individual,
             )
           ) ++
             customerBusinessInsertRows.map(customerBusinessInsertRow =>
               smithy.GetCustomer(
                 customerID = customerBusinessInsertRow.customerBusinessDetailsRow.customerID.value,
                 name = customerBusinessInsertRow.customerBusinessDetailsRow.businessName.value,
-                customerType = smithy.CustomerType.BUSINESS,
+                customerType = smithy.CustomerType.Business,
               )
             )
         )
@@ -842,8 +842,8 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               customerID = customerSummaryRow.customerID.value,
               name = customerSummaryRow.name.value,
               customerType = customerSummaryRow.customerType match {
-                case CustomerType.Individual => smithy.CustomerType.INDIVIDUAL
-                case CustomerType.Business   => smithy.CustomerType.BUSINESS
+                case CustomerType.Individual => smithy.CustomerType.Individual
+                case CustomerType.Business   => smithy.CustomerType.Business
               },
             )
           )

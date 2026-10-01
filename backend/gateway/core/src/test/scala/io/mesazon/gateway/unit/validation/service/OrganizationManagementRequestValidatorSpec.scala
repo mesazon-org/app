@@ -72,7 +72,7 @@ class OrganizationManagementRequestValidatorSpec extends ZWordSpecBase, Organiza
               postalCode = "1010",
               country = "Cyprus",
             ),
-            addressType = smithy.AddressType.SHIPPING_AND_BILLING,
+            addressType = smithy.AddressType.ShippingAndBilling,
           )
         ),
       )
