@@ -9,6 +9,7 @@ import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.state.AuthState
 import io.mesazon.gateway.utils.*
+import io.mesazon.gateway.utils.given
 import io.mesazon.gateway.validation.domain.*
 import io.mesazon.gateway.validation.service.*
 import io.mesazon.testkit.base.ZWordSpecBase
@@ -76,12 +77,7 @@ class OrganizationManagementServiceSpec
               entry.isDefault,
             )
           ),
-          addresses = organizationDetailsRow.addresses.map(organizationAddressEntry =>
-            (organizationAddressEntry.value: AddressEntry)
-              .into[smithy.AddressEntryRequest]
-              .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
-              .transform
-          ),
+          addresses = organizationDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
           companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber.map(_.value),
           taxID = organizationDetailsRow.taxID.map(_.value),
         )
@@ -153,12 +149,7 @@ class OrganizationManagementServiceSpec
               entry.isDefault,
             )
           ),
-          addresses = organizationDetailsRow.addresses.map(organizationAddressEntry =>
-            (organizationAddressEntry.value: AddressEntry)
-              .into[smithy.AddressEntryRequest]
-              .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
-              .transform
-          ),
+          addresses = organizationDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
           companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber.map(_.value),
           taxID = organizationDetailsRow.taxID.map(_.value),
         )

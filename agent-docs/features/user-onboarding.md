@@ -8,7 +8,7 @@ Guides a user from a verified email to a fully onboarded account: set a password
 
 `EmailVerification` → `EmailVerified` → `PasswordProvided` → `PhoneVerification` → `PhoneVerified` (**completed**)
 
-Stages and per-flow allowed lists live in `backend/domain/src/main/scala/io/mesazon/domain/gateway/OnboardStage.scala` (the `OnboardStage` enum + companion — it has its own file since other features read it too, see [domain placement](flow/02-validation.md#domain-placement)). When adding a stage, update the companion-object lists (there's a comment warning about this). The Smithy `OnboardStage` enum mirrors the domain enum with identical `UpperCamelCase` cases, so call sites convert it directly with Chimney rather than named mapping helpers.
+Stages and per-flow allowed lists live in `backend/domain/src/main/scala/io/mesazon/domain/gateway/OnboardStage.scala` (the `OnboardStage` enum + companion — it has its own file since other features read it too, see [domain placement](flow/02-validation.md#domain-placement)). When adding a stage, update the companion-object lists (there's a comment warning about this). The Smithy `OnboardStage` enum mirrors the domain enum with identical `UpperCamelCase` cases; conversions follow the [Chimney enum standard](../standards/chimney.md#enums).
 
 ## Endpoints (smithy, bearer auth — access JWT)
 

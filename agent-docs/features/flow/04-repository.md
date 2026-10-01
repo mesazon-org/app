@@ -1,6 +1,6 @@
 # Slice 4 — Repository
 
-Use after schema migration. Add persistence-only domain types, Row/Queries/Repository code, codecs, config, layer definitions, and real-Postgres tests. Read [PostgreSQL](../../standards/postgres.md), [Doobie](../../standards/doobie.md), and [Scala](../../standards/scala.md).
+Use after schema migration. Add persistence-only domain types, Row/Queries/Repository code, codecs, config, layer definitions, and real-Postgres tests. Read [PostgreSQL](../../standards/postgres.md), [Doobie](../../standards/doobie.md), [Scala](../../standards/scala.md), and [Chimney](../../standards/chimney.md).
 
 Flow: `Service → Repository (ZIO boundary) → Queries (SQL) → PostgreSQL`. Services never see Doobie, `TranzactIO`, Queries, or Smithy request types at the repository boundary.
 
@@ -24,7 +24,7 @@ Use project acronyms (`UserID`, `OtpID`, `IDGenerator`, `JwtService`, `WahaClien
 - Repeated/`jsonb` fields use repository-owned `...Input` elements, never Smithy `...Request` types.
 - Default repository inputs are flat parameters with full domain names. Do not pass API/Smithy request models.
 - Define `<Operation><Entity>Input` in the repository companion only for a batch element or repeated/nested child. It has no generated ID/audit fields. Singular and batch operations reuse the same element input; single-only update/remove operations remain flat.
-- The service maps validated request → input with Chimney/`iron-chimney` (`transformInto`).
+- The service maps validated request → input following the [Chimney standard](../../standards/chimney.md).
 - Repository returns Rows/projections, not Smithy or Doobie types: `get` → `Option[Row]`, create/update → affected Row where useful, many → `List[Row]`; insert returns generated ID(s) when later references need them.
 
 ## Queries

@@ -4,8 +4,9 @@ import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import io.github.iltotore.iron.jsoniter.given
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.service.{addressTypeFromDomainToSmithy, addressTypeFromSmithyToDomain}
+import io.mesazon.gateway.service.addressTypeFromSmithyToDomain
 import io.mesazon.gateway.smithy
+import io.scalaland.chimney.dsl.*
 import sttp.tapir.Schema
 import sttp.tapir.codec.iron.given
 
@@ -21,7 +22,7 @@ object tapir {
 
   given addressTypeSchema: Schema[AddressType] =
     Schema.derivedEnumeration[AddressType](encode =
-      Some(addressType => addressTypeFromDomainToSmithy(addressType).stringValue)
+      Some(addressType => addressType.transformInto[smithy.AddressType].stringValue)
     )
 
   given addressSchema: Schema[Address] = Schema.derived[Address]
@@ -73,7 +74,7 @@ object tapir {
     }
 
     override def encodeValue(addressType: AddressType, out: JsonWriter): Unit =
-      out.writeVal(addressTypeFromDomainToSmithy(addressType).stringValue)
+      out.writeVal(addressType.transformInto[smithy.AddressType].stringValue)
 
     override def nullValue: AddressType = null
   }

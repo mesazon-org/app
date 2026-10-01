@@ -9,6 +9,7 @@ import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
+import io.mesazon.gateway.utils.given
 import io.mesazon.gateway.validation.domain.{AddressValidator, EmailValidator, PhoneNumberDomainValidator}
 import io.mesazon.gateway.validation.service.CustomerBookRequestValidator
 import io.mesazon.testkit.base.ZWordSpecBase
@@ -96,7 +97,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               isDefault = entry.isDefault,
             )
           ),
-          addresses = customerIndividualDetailsRow.addresses.map(_.transformInto[smithy.AddressEntryRequest]),
+          addresses = customerIndividualDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
         )
       }
 
@@ -252,7 +253,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               isDefault = entry.isDefault,
             )
           ),
-          addresses = customerBusinessDetailsRow.addresses.map(_.transformInto[smithy.AddressEntryRequest]),
+          addresses = customerBusinessDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
           customerBusinessContacts = customerBusinessContactRows.map(customerBusinessContactRow =>
             smithy.InsertCustomerBusinessContactResponse(
               customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID.value,
@@ -741,7 +742,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               isDefault = entry.isDefault,
             )
           ),
-          addresses = customerIndividualDetailsRow.addresses.map(_.transformInto[smithy.AddressEntryRequest]),
+          addresses = customerIndividualDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
         )
       }
 
@@ -796,7 +797,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               isDefault = entry.isDefault,
             )
           ),
-          addresses = customerBusinessDetailsRow.addresses.map(_.transformInto[smithy.AddressEntryRequest]),
+          addresses = customerBusinessDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
         )
       }
 

@@ -2,7 +2,6 @@ package io.mesazon.gateway.unit.validation.domain
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
-import io.mesazon.gateway.service.addressTypeFromDomainToSmithy
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.validation.domain.AddressValidator
 import io.mesazon.testkit.base.*
@@ -40,10 +39,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
 
         addressValidator
           .validate(
-            addressEntry
-              .into[smithy.AddressEntryRequest]
-              .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
-              .transform
+            addressEntry.transformInto[smithy.AddressEntryRequest]
           )
           .zioValue
           .toEither
@@ -58,10 +54,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
 
         addressValidator
           .validate(
-            addressEntry
-              .into[smithy.AddressEntryRequest]
-              .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
-              .transform
+            addressEntry.transformInto[smithy.AddressEntryRequest]
           )
           .zioValue
           .toEither
@@ -81,7 +74,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
                 postalCode = addressPartRawBlank,
                 country = addressPartRawBlank,
               ),
-              addressType = addressTypeFromDomainToSmithy(addressType),
+              addressType = addressType.transformInto[smithy.AddressType],
             )
           )
           .zioValue
@@ -120,7 +113,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
                 postalCode = postalCodeRawUntrimmed,
                 country = countryRawUntrimmed,
               ),
-              addressType = addressTypeFromDomainToSmithy(addressEntry.addressType),
+              addressType = addressEntry.addressType.transformInto[smithy.AddressType],
             )
           )
           .zioValue
@@ -151,7 +144,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
                 postalCode = addressPartRawTooLong,
                 country = addressPartRawTooLong,
               ),
-              addressType = addressTypeFromDomainToSmithy(addressType),
+              addressType = addressType.transformInto[smithy.AddressType],
             )
           )
           .zioValue
@@ -181,7 +174,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
                 postalCode = addressEntry.address.postalCode.value,
                 country = addressEntry.address.country.value,
               ),
-              addressType = addressTypeFromDomainToSmithy(addressEntry.addressType),
+              addressType = addressEntry.addressType.transformInto[smithy.AddressType],
             )
           )
           .zioValue
@@ -202,12 +195,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         addressValidator
           .validateAddressEntries(
             addressEntries.map(
-              _.into[smithy.AddressEntryRequest]
-                .withFieldComputed(
-                  _.addressType,
-                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
-                )
-                .transform
+              _.transformInto[smithy.AddressEntryRequest]
             )
           )
           .zioValue
@@ -222,12 +210,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         addressValidator
           .validateAddressEntries(
             addressEntries.map(
-              _.into[smithy.AddressEntryRequest]
-                .withFieldComputed(
-                  _.addressType,
-                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
-                )
-                .transform
+              _.transformInto[smithy.AddressEntryRequest]
             )
           )
           .zioValue
@@ -244,12 +227,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         addressValidator
           .validateAddressEntries(
             addressEntries.map(
-              _.into[smithy.AddressEntryRequest]
-                .withFieldComputed(
-                  _.addressType,
-                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
-                )
-                .transform
+              _.transformInto[smithy.AddressEntryRequest]
             )
           )
           .zioValue
@@ -266,12 +244,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         addressValidator
           .validateAddressEntries(
             addressEntries.map(
-              _.into[smithy.AddressEntryRequest]
-                .withFieldComputed(
-                  _.addressType,
-                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
-                )
-                .transform
+              _.transformInto[smithy.AddressEntryRequest]
             )
           )
           .zioValue
@@ -285,12 +258,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         addressValidator
           .validateAddressEntries(
             addressEntries.map(
-              _.into[smithy.AddressEntryRequest]
-                .withFieldComputed(
-                  _.addressType,
-                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
-                )
-                .transform
+              _.transformInto[smithy.AddressEntryRequest]
             )
           )
           .zioValue
@@ -311,12 +279,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         addressValidator
           .validateAddressEntries(
             addressEntries.map(
-              _.into[smithy.AddressEntryRequest]
-                .withFieldComputed(
-                  _.addressType,
-                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
-                )
-                .transform
+              _.transformInto[smithy.AddressEntryRequest]
             )
           )
           .zioValue
@@ -333,12 +296,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         addressValidator
           .validateAddressEntries(
             addressEntries.map(
-              _.into[smithy.AddressEntryRequest]
-                .withFieldComputed(
-                  _.addressType,
-                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
-                )
-                .transform
+              _.transformInto[smithy.AddressEntryRequest]
             )
           )
           .zioValue
@@ -355,12 +313,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         addressValidator
           .validateAddressEntries(
             addressEntries.map(
-              _.into[smithy.AddressEntryRequest]
-                .withFieldComputed(
-                  _.addressType,
-                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
-                )
-                .transform
+              _.transformInto[smithy.AddressEntryRequest]
             )
           )
           .zioValue
@@ -381,12 +334,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         addressValidator
           .validateAddressEntries(
             addressEntries.map(
-              _.into[smithy.AddressEntryRequest]
-                .withFieldComputed(
-                  _.addressType,
-                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
-                )
-                .transform
+              _.transformInto[smithy.AddressEntryRequest]
             )
           )
           .zioValue
@@ -400,9 +348,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
       "fail with InvalidFieldErrors for an invalid address part and the combination together, part errors first" in {
         val addressEntryRequestSmithy =
           AddressEntry(address = arbitrarySample[Address], addressType = AddressType.Shipping)
-            .into[smithy.AddressEntryRequest]
-            .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
-            .transform
+            .transformInto[smithy.AddressEntryRequest]
 
         addressValidator
           .validateAddressEntries(

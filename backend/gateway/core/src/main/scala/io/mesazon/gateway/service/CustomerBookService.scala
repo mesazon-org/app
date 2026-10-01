@@ -4,21 +4,15 @@ import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.repository.CustomerBookRepository
 import io.mesazon.gateway.repository.CustomerBookRepository.*
+import io.mesazon.gateway.utils.ironRefinedTypeToTargetTransformer
 import io.mesazon.gateway.validation.service.CustomerBookRequestValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
-import io.scalaland.chimney.Transformer
 import io.scalaland.chimney.dsl.*
 import zio.*
 
 import java.util.UUID
 
 object CustomerBookService {
-
-  // iron-chimney only unwraps a refined newtype into its own base type; CustomerPhoneNumber's base type is the
-  // PhoneNumber case class, not smithy.PhoneNumberRequest, so Chimney's nested-case-class derivation needs this
-  // explicit hop (unwrap, then derive PhoneNumber -> PhoneNumberRequest) to map every phoneNumber field in this file.
-  private given Transformer[CustomerPhoneNumber, smithy.PhoneNumberRequest] =
-    customerPhoneNumber => (customerPhoneNumber.value: PhoneNumber).transformInto[smithy.PhoneNumberRequest]
 
   private final class CustomerBookServiceImpl(
       customerBookRequestValidator: CustomerBookRequestValidator,
@@ -37,19 +31,7 @@ object CustomerBookService {
         OrganizationID(organizationID),
         insertCustomerIndividualPostRequest.transformInto[InsertCustomerIndividualInput],
       )
-    } yield customerIndividualDetailsRow
-      .into[smithy.InsertCustomerIndividualPostResponse]
-      .withFieldComputed(
-        _.addresses,
-        customerIndividualDetailsRow =>
-          customerIndividualDetailsRow.addresses.map(customerAddressEntry =>
-            (customerAddressEntry.value: AddressEntry)
-              .into[smithy.AddressEntryRequest]
-              .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
-              .transform
-          ),
-      )
-      .transform
+    } yield customerIndividualDetailsRow.transformInto[smithy.InsertCustomerIndividualPostResponse]
 
     /** HTTP POST /insert/customer-individuals */
     override def insertCustomerIndividualsPost(
@@ -62,7 +44,7 @@ object CustomerBookService {
         )
       customerIndividualDetailsRows <- customerBookRepository.insertCustomerIndividuals(
         OrganizationID(organizationID),
-        insertCustomerIndividualsPostRequest.customerIndividuals.map(_.transformInto[InsertCustomerIndividualInput]),
+        insertCustomerIndividualsPostRequest.customerIndividuals.transformInto[List[InsertCustomerIndividualInput]],
       )
     } yield smithy.InsertCustomerIndividualsPostResponse(
       customerIndividuals = customerIndividualDetailsRows.map(
@@ -87,21 +69,10 @@ object CustomerBookService {
       )
     } yield customerBusinessInsertRow.customerBusinessDetailsRow
       .into[smithy.InsertCustomerBusinessPostResponse]
-      .withFieldComputed(
-        _.addresses,
-        customerBusinessDetailsRow =>
-          customerBusinessDetailsRow.addresses.map(customerAddressEntry =>
-            (customerAddressEntry.value: AddressEntry)
-              .into[smithy.AddressEntryRequest]
-              .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
-              .transform
-          ),
-      )
       .withFieldConst(
         _.customerBusinessContacts,
-        customerBusinessInsertRow.customerBusinessContactRows.map(
-          _.transformInto[smithy.InsertCustomerBusinessContactResponse]
-        ),
+        customerBusinessInsertRow.customerBusinessContactRows
+          .transformInto[List[smithy.InsertCustomerBusinessContactResponse]],
       )
       .transform
 
@@ -115,7 +86,7 @@ object CustomerBookService {
       )
       customerBusinessInsertRows <- customerBookRepository.insertCustomerBusinesses(
         OrganizationID(organizationID),
-        insertCustomerBusinessesPostRequest.customerBusinesses.map(_.transformInto[InsertCustomerBusinessInput]),
+        insertCustomerBusinessesPostRequest.customerBusinesses.transformInto[List[InsertCustomerBusinessInput]],
       )
     } yield smithy.InsertCustomerBusinessesPostResponse(
       customerBusinesses = customerBusinessInsertRows.map(
@@ -137,8 +108,8 @@ object CustomerBookService {
       )
       insertCustomersResult <- customerBookRepository.insertCustomers(
         OrganizationID(organizationID),
-        insertCustomersPostRequest.customerIndividuals.map(_.transformInto[InsertCustomerIndividualInput]),
-        insertCustomersPostRequest.customerBusinesses.map(_.transformInto[InsertCustomerBusinessInput]),
+        insertCustomersPostRequest.customerIndividuals.transformInto[List[InsertCustomerIndividualInput]],
+        insertCustomersPostRequest.customerBusinesses.transformInto[List[InsertCustomerBusinessInput]],
       )
     } yield smithy.InsertCustomersPostResponse(
       customers = insertCustomersResult.customerIndividualDetailsRows.map(
@@ -168,9 +139,10 @@ object CustomerBookService {
         organizationID = OrganizationID(organizationID),
         customerID = updateCustomerIndividualPutRequest.customerID,
         fullNameOptUpdate = updateCustomerIndividualPutRequest.fullName,
-        emailsOptUpdate = Some(updateCustomerIndividualPutRequest.emails.map(_.transformInto[CustomerEmailEntryInput])),
-        phoneNumbersOptUpdate =
-          Some(updateCustomerIndividualPutRequest.phoneNumbers.map(_.transformInto[CustomerPhoneNumberEntryInput])),
+        emailsOptUpdate = Some(updateCustomerIndividualPutRequest.emails.transformInto[List[CustomerEmailEntryInput]]),
+        phoneNumbersOptUpdate = Some(
+          updateCustomerIndividualPutRequest.phoneNumbers.transformInto[List[CustomerPhoneNumberEntryInput]]
+        ),
         addressesOptUpdate = Some(updateCustomerIndividualPutRequest.addresses),
       )
     } yield ()
@@ -187,10 +159,11 @@ object CustomerBookService {
         organizationID = OrganizationID(organizationID),
         customerID = updateCustomerBusinessPutRequest.customerID,
         businessNameOptUpdate = updateCustomerBusinessPutRequest.businessName,
-        emailsOptUpdate = Some(updateCustomerBusinessPutRequest.emails.map(_.transformInto[CustomerEmailEntryInput])),
+        emailsOptUpdate = Some(updateCustomerBusinessPutRequest.emails.transformInto[List[CustomerEmailEntryInput]]),
         taxIDOptUpdate = updateCustomerBusinessPutRequest.taxID,
-        phoneNumbersOptUpdate =
-          Some(updateCustomerBusinessPutRequest.phoneNumbers.map(_.transformInto[CustomerPhoneNumberEntryInput])),
+        phoneNumbersOptUpdate = Some(
+          updateCustomerBusinessPutRequest.phoneNumbers.transformInto[List[CustomerPhoneNumberEntryInput]]
+        ),
         addressesOptUpdate = Some(updateCustomerBusinessPutRequest.addresses),
       )
     } yield ()
@@ -208,7 +181,7 @@ object CustomerBookService {
         OrganizationID(organizationID),
         addCustomerBusinessContactsPutRequest.customerID,
         addCustomerBusinessContactsPutRequest.customerBusinessContacts
-          .map(_.transformInto[CustomerBusinessContactInput]),
+          .transformInto[List[CustomerBusinessContactInput]],
       )
     } yield ()
 
@@ -250,19 +223,7 @@ object CustomerBookService {
             s"Customer individual not found for customerID: [$customerID]"
           )
         )
-    } yield customerIndividualDetailsRow
-      .into[smithy.GetCustomerIndividualGetResponse]
-      .withFieldComputed(
-        _.addresses,
-        customerIndividualDetailsRow =>
-          customerIndividualDetailsRow.addresses.map(customerAddressEntry =>
-            (customerAddressEntry.value: AddressEntry)
-              .into[smithy.AddressEntryRequest]
-              .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
-              .transform
-          ),
-      )
-      .transform
+    } yield customerIndividualDetailsRow.transformInto[smithy.GetCustomerIndividualGetResponse]
 
     /** HTTP GET /get/customer-business/{customerID} */
     override def getCustomerBusinessGet(
@@ -274,19 +235,7 @@ object CustomerBookService {
         .someOrFail(
           ServiceError.InternalServerError.UnexpectedError(s"Customer business not found for customerID: [$customerID]")
         )
-    } yield customerBusinessDetailsRow
-      .into[smithy.GetCustomerBusinessGetResponse]
-      .withFieldComputed(
-        _.addresses,
-        customerBusinessDetailsRow =>
-          customerBusinessDetailsRow.addresses.map(customerAddressEntry =>
-            (customerAddressEntry.value: AddressEntry)
-              .into[smithy.AddressEntryRequest]
-              .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
-              .transform
-          ),
-      )
-      .transform
+    } yield customerBusinessDetailsRow.transformInto[smithy.GetCustomerBusinessGetResponse]
 
     /** HTTP GET /get/customers */
     override def getCustomersGet(
@@ -294,7 +243,7 @@ object CustomerBookService {
     ): ServiceTask[smithy.GetCustomersGetResponse] = for {
       customerSummaryRows <- customerBookRepository.getCustomers(OrganizationID(organizationID))
     } yield smithy.GetCustomersGetResponse(
-      customers = customerSummaryRows.map(_.transformInto[smithy.GetCustomer])
+      customers = customerSummaryRows.transformInto[List[smithy.GetCustomer]]
     )
 
   }

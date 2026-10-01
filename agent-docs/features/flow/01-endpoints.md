@@ -7,7 +7,7 @@ Declare endpoints and transport models before implementation. Default: [Smithy](
 - Shapes: `backend/gateway/core/src/main/smithy/`; generated Scala package: `io.mesazon.gateway.smithy`.
 - Namespace: `io.mesazon.gateway.smithy`.
 - Service file `$version: "2"`; domain file `$version: "2.0"`.
-- Mirrored domain↔Smithy enums keep identical `UpperCamelCase` cases and are converted directly with Chimney when implementation lands; do not add named 1-to-1 enum mappers.
+- Mirrored domain↔Smithy enums keep identical `UpperCamelCase` cases; implementation follows the [Chimney enum standard](../../standards/chimney.md#enums).
 
 For Tapir, define the typed endpoint inputs/outputs/errors and OpenAPI metadata in the feature endpoint file following [Alternate HTTP](../../project/alternate-http.md). The endpoint remains unwired until Slice 5.
 

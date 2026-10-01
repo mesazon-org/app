@@ -8,8 +8,8 @@ import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.json.tapir.given
-import io.mesazon.gateway.service.addressTypeFromDomainToSmithy
 import io.mesazon.gateway.smithy
+import io.mesazon.gateway.utils.given
 import io.scalaland.chimney.dsl.*
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
@@ -350,15 +350,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
                 entry.isDefault,
               )
             ),
-            addresses = addresses.map(organizationAddressEntry =>
-              (organizationAddressEntry.value: AddressEntry)
-                .into[smithy.AddressEntryRequest]
-                .withFieldComputed(
-                  _.addressType,
-                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
-                )
-                .transform
-            ),
+            addresses = addresses.transformInto[List[smithy.AddressEntryRequest]],
             companyRegistrationNumber = companyRegistrationNumberOpt.map(_.value),
             taxID = taxIDOpt.map(_.value),
           )

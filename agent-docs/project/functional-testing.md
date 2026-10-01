@@ -1,6 +1,6 @@
 # Functional testing
 
-Mocked-dependency proof for one gateway service. Use with the current feature doc, [Service flow](../features/flow/05-service.md), and [Scala](../standards/scala.md).
+Mocked-dependency proof for one gateway service. Use with the current feature doc, [Service flow](../features/flow/05-service.md), [Scala](../standards/scala.md), and [Chimney](../standards/chimney.md).
 
 ## Boundary
 
@@ -32,7 +32,7 @@ One block per operation; successes (including no-ops) first, then every owned fa
 
 - Set expectations before building the service, with exact argument values/counts, including default arguments — no wildcards.
 - Whenever a test sets expectations on two or more mocks (the same dependency called twice, or different dependencies), wrap them in `inSequence`. A functional test must prove call *order*, not just that each mock was eventually called and the final output happened to be correct.
-- Happy requests originate as domain arbitrary values and transform to Smithy; use the original domain value (or its Chimney repository input) as the exact mock expectation.
+- Happy requests originate as domain arbitrary values and transform to Smithy following the [Chimney standard](../standards/chimney.md); use the original domain value (or its transformed repository input) as the exact mock expectation.
 - Invalid requests originate as Smithy values with only the tested field(s) changed; assert the complete `ValidationError`.
 - A validation-failure case sets no downstream expectations, proving the repository/client is untouched.
 - Dependency failures propagate the same `ServiceError` unchanged — test one generic instance propagating, not every subtype; test a specific subtype only when the service handles it differently (retries it, translates it, counts it, etc.). For tolerated/retried failures, count invocations and assert both the eventual successful response and `maxRetries + 1` calls.

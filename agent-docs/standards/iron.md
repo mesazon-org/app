@@ -1,6 +1,6 @@
 # Refined newtypes
 
-Reusable refined-newtype rules. Related: [validation](../features/flow/02-validation.md), [schema](postgres.md), [codecs](doobie.md), [transport](smithy.md), [Scala naming](scala.md).
+Reusable refined-newtype rules. Related: [validation](../features/flow/02-validation.md), [schema](postgres.md), [codecs](doobie.md), [transport](smithy.md), [Scala naming](scala.md), [Chimney transformations](chimney.md#iron-refined-products).
 
 ## Use
 

@@ -1,6 +1,6 @@
 # Contract-first HTTP API
 
-Reusable Smithy rules. Related: [Mesazon endpoints](../features/flow/01-endpoints.md), [authentication](../project/authentication.md), [validation](../features/flow/02-validation.md), [newtypes](iron.md), [Scala/tests](scala.md), [Tapir](tapir.md).
+Reusable Smithy rules. Related: [Mesazon endpoints](../features/flow/01-endpoints.md), [authentication](../project/authentication.md), [validation](../features/flow/02-validation.md), [newtypes](iron.md), [Scala/tests](scala.md), [Chimney](chimney.md), [Tapir](tapir.md).
 
 ## Names
 
@@ -16,7 +16,7 @@ Reusable Smithy rules. Related: [Mesazon endpoints](../features/flow/01-endpoint
 - Contact/value+flag entry: `<Owner><Kind>EntryRequest`; list plural `...EntryRequests`; domain entry has same name.
 - Owner-less value shapes shared by several features live in `domain/Gateway.smithy` and mirror their shared domain case class (`PhoneNumberRequest` ↔ `PhoneNumber`, `AddressRequest` ↔ `Address`, `AddressEntryRequest` ↔ `AddressEntry`); each feature declares only its owner-named list, e.g. `list OrganizationAddressEntryRequests { member: AddressEntryRequest }`.
 - Request list member: `@default([])`, never `@required`, so omitted empty JSON decodes to non-optional `Nil`. Response list: `@required`. Never model request list as `Option[List]` solely to default it empty.
-- Members: `camelCase`; IDL UUID named `<entity>ID`; client duration integer named `<thing>ExpiresInSeconds`; enum values use `UpperCamelCase` and exactly match their mirrored domain enum cases. Convert mirrored domain↔contract enums directly with Chimney; do not add named mapping helpers for a 1-to-1 enum.
+- Members: `camelCase`; IDL UUID named `<entity>ID`; client duration integer named `<thing>ExpiresInSeconds`; enum values use `UpperCamelCase` and exactly match their mirrored domain enum cases. Follow [Chimney's enum rules](chimney.md#enums) when converting them.
 - URI: verb-first kebab-case; plural entity for batches (`/insert/customers`).
 
 ## Files
