@@ -10,7 +10,7 @@ service UserSignUpService {
     operations: [SignUpEmailPost, SignUpVerifyEmailPost]
 }
 
-/// **Required Onboard Stage:** [`N/A`, `EMAIL_VERIFICATION`, `EMAIL_VERIFIED`]
+/// **Required Onboard Stage:** [`N/A`, `EmailVerification`, `EmailVerified`]
 @http(method: "POST", uri: "/signup/email", code: 200)
 operation SignUpEmailPost {
     input := {
@@ -22,7 +22,7 @@ operation SignUpEmailPost {
     errors: [ValidationError, InternalServerError]
 }
 
-/// **Required Onboard Stage:** [`EMAIL_VERIFICATION`]
+/// **Required Onboard Stage:** [`EmailVerification`]
 @http(method: "POST", uri: "/signup/verify/email", code: 200)
 operation SignUpVerifyEmailPost {
     input := {
