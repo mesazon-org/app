@@ -7,6 +7,7 @@ import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.state.*
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
+import io.scalaland.chimney.dsl.*
 import zio.*
 
 object UserSignInService {
@@ -57,7 +58,7 @@ object UserSignInService {
       )
     } yield smithy.SignInPostResponse(
       accessTokenExpiresInSeconds = accessJwt.expiresIn.toSeconds,
-      onboardStage = onboardStageFromDomainToSmithy(userDetailsRow.onboardStage),
+      onboardStage = userDetailsRow.onboardStage.transformInto[smithy.OnboardStage],
       refreshToken = refreshJwt.refreshToken.value,
       accessToken = accessJwt.accessToken.value,
       organizations = signInOrganizations,

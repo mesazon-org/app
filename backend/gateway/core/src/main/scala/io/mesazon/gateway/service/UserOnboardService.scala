@@ -63,7 +63,7 @@ object UserOnboardService {
               s"Failed to send welcome email after onboarding completed for userID=${authedUser.userID}, email=${userDetailsRowUpdated.email}"
             ) *> ZIO.logDebugCause("Welcome email send failure cause", cause)
           )
-      } yield smithy.OnboardPasswordPostResponse(onboardStageFromDomainToSmithy(OnboardStage.PasswordProvided))
+      } yield smithy.OnboardPasswordPostResponse(smithy.OnboardStage.PasswordProvided)
 
     /** HTTP POST /onboard/details */
     override def onboardDetailsPost(
@@ -129,7 +129,7 @@ object UserOnboardService {
             } yield (userOtpRow, userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds)
         }
       } yield smithy.OnboardDetailsPostResponse(
-        onboardStage = onboardStageFromDomainToSmithy(OnboardStage.PhoneVerification),
+        onboardStage = smithy.OnboardStage.PhoneVerification,
         otpID = userOtpRowNew.otpID.value,
         otpExpiresInSeconds = otpExpiresInSeconds,
       )
@@ -209,7 +209,7 @@ object UserOnboardService {
                 .OtpVerifyError(s"Wrong OTP provided for otpID: [${onboardVerifyPhoneNumberPostRequest.otpID}]")
             )
       } yield smithy.OnboardVerifyPhoneNumberPostResponse(
-        onboardStage = onboardStageFromDomainToSmithy(OnboardStage.PhoneVerified)
+        onboardStage = smithy.OnboardStage.PhoneVerified
       )
 
     /** HTTP GET /onboard/verify/phone-number */

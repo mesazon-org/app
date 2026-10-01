@@ -5,10 +5,10 @@ import io.mesazon.gateway.it.client.GatewayClient
 import io.mesazon.gateway.it.client.GatewayClient.given
 import io.mesazon.gateway.it.harness.GatewayAcceptanceTest
 import io.mesazon.gateway.repository.domain.*
-import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.*
+import io.scalaland.chimney.dsl.*
 import org.scalatest.DoNotDiscover
 import sttp.model.*
 import zio.*
@@ -48,7 +48,7 @@ class UserSignInApiSpec
           gatewayClient.signInPost[smithy.InternalServerError](userDetailsRow.email, password).zioValue
 
         signInPostResponse.code shouldBe StatusCode.Ok
-        signInPostResponse.body.value.onboardStage shouldBe onboardStageFromDomainToSmithy(onboardStage)
+        signInPostResponse.body.value.onboardStage shouldBe onboardStage.transformInto[smithy.OnboardStage]
 
         val userActionAttemptRowsAll =
           postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
@@ -97,7 +97,7 @@ class UserSignInApiSpec
             gatewayClient.signInPost[smithy.InternalServerError](userDetailsRow.email, password).zioValue
 
           signInPostResponse.code shouldBe StatusCode.Ok
-          signInPostResponse.body.value.onboardStage shouldBe onboardStageFromDomainToSmithy(onboardStage)
+          signInPostResponse.body.value.onboardStage shouldBe onboardStage.transformInto[smithy.OnboardStage]
 
           val userActionAttemptRowsAll =
             postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
@@ -144,7 +144,7 @@ class UserSignInApiSpec
           gatewayClient.signInPost[smithy.InternalServerError](userDetailsRow.email, password).zioValue
 
         signInPostResponse.code shouldBe StatusCode.Ok
-        signInPostResponse.body.value.onboardStage shouldBe onboardStageFromDomainToSmithy(onboardStage)
+        signInPostResponse.body.value.onboardStage shouldBe onboardStage.transformInto[smithy.OnboardStage]
 
         val userActionAttemptRowsAll =
           postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
