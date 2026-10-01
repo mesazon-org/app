@@ -11,8 +11,10 @@ import zio.*
 
 class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefinedTypeTransformer {
 
-  inline private val addressPartLengthMax = 255
-  inline private val addressPartRawBlank  = ""
+  inline private val addressPartLengthMax       = 255
+  inline private val addressPartRawBlank        = ""
+  inline private val addressEntriesCountTooMany = 3
+  inline private val addressEntryIndexSecond    = 1
 
   private val nonEmptyTrimmedError =
     "Should not have leading or trailing whitespaces & Should have a minimum length of 1 & Should have a maximum length of 255"
@@ -21,6 +23,12 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
     .service[AddressValidator]
     .provide(AddressValidator.live)
     .zioValue
+
+  private val addressEntriesCombinationError = InvalidFieldError(
+    "addresses",
+    "Addresses must be empty, exactly one SHIPPING_AND_BILLING entry, or exactly one SHIPPING and one BILLING entry",
+    Seq.empty,
+  )
 
   "AddressValidator" when {
     "validate" should {
@@ -183,6 +191,236 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
           .toNonEmptyList
           .toList shouldBe List(
           InvalidFieldError("addressLine2", nonEmptyTrimmedError, List(addressPartRawBlank))
+        )
+      }
+    }
+
+    "validateAddressEntries" should {
+      "successfully validate an empty address list" in {
+        val addressEntries = List.empty[AddressEntry]
+
+        addressValidator
+          .validateAddressEntries(
+            addressEntries.map(
+              _.into[smithy.AddressEntryRequest]
+                .withFieldComputed(
+                  _.addressType,
+                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
+                )
+                .transform
+            )
+          )
+          .zioValue
+          .toEither
+          .value shouldBe addressEntries
+      }
+
+      "successfully validate a single address used for both shipping and billing" in {
+        val addressEntries =
+          List(AddressEntry(address = arbitrarySample[Address], addressType = AddressType.ShippingAndBilling))
+
+        addressValidator
+          .validateAddressEntries(
+            addressEntries.map(
+              _.into[smithy.AddressEntryRequest]
+                .withFieldComputed(
+                  _.addressType,
+                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
+                )
+                .transform
+            )
+          )
+          .zioValue
+          .toEither
+          .value shouldBe addressEntries
+      }
+
+      "successfully validate a shipping address followed by a billing address" in {
+        val addressEntries = List(
+          AddressEntry(address = arbitrarySample[Address], addressType = AddressType.Shipping),
+          AddressEntry(address = arbitrarySample[Address], addressType = AddressType.Billing),
+        )
+
+        addressValidator
+          .validateAddressEntries(
+            addressEntries.map(
+              _.into[smithy.AddressEntryRequest]
+                .withFieldComputed(
+                  _.addressType,
+                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
+                )
+                .transform
+            )
+          )
+          .zioValue
+          .toEither
+          .value shouldBe addressEntries
+      }
+
+      "successfully validate a billing address followed by a shipping address" in {
+        val addressEntries = List(
+          AddressEntry(address = arbitrarySample[Address], addressType = AddressType.Billing),
+          AddressEntry(address = arbitrarySample[Address], addressType = AddressType.Shipping),
+        )
+
+        addressValidator
+          .validateAddressEntries(
+            addressEntries.map(
+              _.into[smithy.AddressEntryRequest]
+                .withFieldComputed(
+                  _.addressType,
+                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
+                )
+                .transform
+            )
+          )
+          .zioValue
+          .toEither
+          .value shouldBe addressEntries
+      }
+
+      "fail with an InvalidFieldError when more than two addresses are given" in {
+        val addressEntries = arbitrarySample[AddressEntry](addressEntriesCountTooMany).toList
+
+        addressValidator
+          .validateAddressEntries(
+            addressEntries.map(
+              _.into[smithy.AddressEntryRequest]
+                .withFieldComputed(
+                  _.addressType,
+                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
+                )
+                .transform
+            )
+          )
+          .zioValue
+          .toEither
+          .left
+          .value
+          .toNonEmptyList
+          .toList shouldBe List(addressEntriesCombinationError)
+      }
+
+      "fail with an InvalidFieldError when two addresses share the same type" in {
+        val addressType    = arbitrarySample[AddressType]
+        val addressEntries = List(
+          AddressEntry(address = arbitrarySample[Address], addressType = addressType),
+          AddressEntry(address = arbitrarySample[Address], addressType = addressType),
+        )
+
+        addressValidator
+          .validateAddressEntries(
+            addressEntries.map(
+              _.into[smithy.AddressEntryRequest]
+                .withFieldComputed(
+                  _.addressType,
+                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
+                )
+                .transform
+            )
+          )
+          .zioValue
+          .toEither
+          .left
+          .value
+          .toNonEmptyList
+          .toList shouldBe List(addressEntriesCombinationError)
+      }
+
+      "fail with an InvalidFieldError when a single address is shipping only" in {
+        val addressEntries = List(AddressEntry(address = arbitrarySample[Address], addressType = AddressType.Shipping))
+
+        addressValidator
+          .validateAddressEntries(
+            addressEntries.map(
+              _.into[smithy.AddressEntryRequest]
+                .withFieldComputed(
+                  _.addressType,
+                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
+                )
+                .transform
+            )
+          )
+          .zioValue
+          .toEither
+          .left
+          .value
+          .toNonEmptyList
+          .toList shouldBe List(addressEntriesCombinationError)
+      }
+
+      "fail with an InvalidFieldError when a single address is billing only" in {
+        val addressEntries = List(AddressEntry(address = arbitrarySample[Address], addressType = AddressType.Billing))
+
+        addressValidator
+          .validateAddressEntries(
+            addressEntries.map(
+              _.into[smithy.AddressEntryRequest]
+                .withFieldComputed(
+                  _.addressType,
+                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
+                )
+                .transform
+            )
+          )
+          .zioValue
+          .toEither
+          .left
+          .value
+          .toNonEmptyList
+          .toList shouldBe List(addressEntriesCombinationError)
+      }
+
+      "fail with an InvalidFieldError when a shipping and billing address comes with another address" in {
+        val addressTypeOther = Random.shuffle(List(AddressType.Shipping, AddressType.Billing)).zioValue.head
+        val addressEntries   = List(
+          AddressEntry(address = arbitrarySample[Address], addressType = AddressType.ShippingAndBilling),
+          AddressEntry(address = arbitrarySample[Address], addressType = addressTypeOther),
+        )
+
+        addressValidator
+          .validateAddressEntries(
+            addressEntries.map(
+              _.into[smithy.AddressEntryRequest]
+                .withFieldComputed(
+                  _.addressType,
+                  addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType),
+                )
+                .transform
+            )
+          )
+          .zioValue
+          .toEither
+          .left
+          .value
+          .toNonEmptyList
+          .toList shouldBe List(addressEntriesCombinationError)
+      }
+
+      "fail with InvalidFieldErrors for an invalid address part and the combination together, part errors first" in {
+        val addressEntryRequestSmithy =
+          AddressEntry(address = arbitrarySample[Address], addressType = AddressType.Shipping)
+            .into[smithy.AddressEntryRequest]
+            .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
+            .transform
+
+        addressValidator
+          .validateAddressEntries(
+            List(
+              addressEntryRequestSmithy,
+              addressEntryRequestSmithy.copy(address =
+                addressEntryRequestSmithy.address.copy(city = addressPartRawBlank)
+              ),
+            )
+          )
+          .zioValue
+          .toEither
+          .left
+          .value
+          .toNonEmptyList
+          .toList shouldBe List(
+          InvalidFieldError("city", nonEmptyTrimmedError, List(addressPartRawBlank), index = addressEntryIndexSecond),
+          addressEntriesCombinationError,
         )
       }
     }

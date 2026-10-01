@@ -95,4 +95,24 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
           .map(defaultIndex => entries.updated(defaultIndex, setDefault(entries(defaultIndex))))
     }
 
+  protected def genAddressEntriesAllowedCombination: Gen[List[AddressEntry]] =
+    Gen.oneOf(
+      Gen.const(List.empty[AddressEntry]),
+      Arbitrary
+        .arbitrary[Address]
+        .map(address => List(AddressEntry(address = address, addressType = AddressType.ShippingAndBilling))),
+      for {
+        addressEntryShipping <- Arbitrary
+          .arbitrary[Address]
+          .map(address => AddressEntry(address = address, addressType = AddressType.Shipping))
+        addressEntryBilling <- Arbitrary
+          .arbitrary[Address]
+          .map(address => AddressEntry(address = address, addressType = AddressType.Billing))
+        addressEntries <- Gen.oneOf(
+          List(addressEntryShipping, addressEntryBilling),
+          List(addressEntryBilling, addressEntryShipping),
+        )
+      } yield addressEntries,
+    )
+
 }

@@ -9,6 +9,8 @@ import io.mesazon.gateway.smithy
 import io.mesazon.gateway.validation.service.{validateOptionalField, validateRequiredField}
 import zio.{UIO, ZIO, ZLayer}
 
+import scala.annotation.unused
+
 final class AddressValidator {
 
   def validate(addressEntryRequest: smithy.AddressEntryRequest): UIO[ValidatedNec[InvalidFieldError, AddressEntry]] =
@@ -24,6 +26,11 @@ final class AddressValidator {
         Validated.validNec(addressTypeFromSmithyToDomain(addressEntryRequest.addressType)),
       ).mapN(AddressEntry.apply)
     )
+
+  def validateAddressEntries(
+      @unused addressEntryRequests: List[smithy.AddressEntryRequest]
+  ): UIO[ValidatedNec[InvalidFieldError, List[AddressEntry]]] =
+    ZIO.die(new NotImplementedError("AddressValidator.validateAddressEntries is not implemented yet"))
 }
 
 object AddressValidator {
