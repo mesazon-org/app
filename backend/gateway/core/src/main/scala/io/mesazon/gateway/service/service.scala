@@ -6,14 +6,6 @@ import zio.*
 
 type ServiceTask[A] = IO[ServiceError, A]
 
-def onboardStageFromSmithyToDomain(stage: smithy.OnboardStage): OnboardStage = stage match {
-  case smithy.OnboardStage.EmailVerification => OnboardStage.EmailVerification
-  case smithy.OnboardStage.EmailVerified     => OnboardStage.EmailVerified
-  case smithy.OnboardStage.PasswordProvided  => OnboardStage.PasswordProvided
-  case smithy.OnboardStage.PhoneVerification => OnboardStage.PhoneVerification
-  case smithy.OnboardStage.PhoneVerified     => OnboardStage.PhoneVerified
-}
-
 def verifyOnboardStage(
     userID: UserID,
     onboardStageUser: OnboardStage,
