@@ -4,7 +4,6 @@ import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import io.github.iltotore.iron.jsoniter.given
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.service.addressTypeFromSmithyToDomain
 import io.mesazon.gateway.smithy
 import io.scalaland.chimney.dsl.*
 import sttp.tapir.Schema
@@ -69,7 +68,7 @@ object tapir {
       val addressTypeRaw = in.readString(null)
       smithy.AddressType
         .fromString(addressTypeRaw)
-        .map(addressTypeFromSmithyToDomain)
+        .map(_.transformInto[AddressType])
         .getOrElse(in.decodeError(s"Unknown AddressType: [$addressTypeRaw]"))
     }
 

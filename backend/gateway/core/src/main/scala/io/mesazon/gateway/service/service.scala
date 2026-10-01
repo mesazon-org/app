@@ -21,12 +21,6 @@ def verifyOnboardStage(
       )
     )
 
-def addressTypeFromSmithyToDomain(addressType: smithy.AddressType): AddressType = addressType match {
-  case smithy.AddressType.Shipping           => AddressType.Shipping
-  case smithy.AddressType.Billing            => AddressType.Billing
-  case smithy.AddressType.ShippingAndBilling => AddressType.ShippingAndBilling
-}
-
 def organizationUserRoleFromSmithyToDomain(role: smithy.OrganizationUserRole): OrganizationUserRole = role match {
   case smithy.OrganizationUserRole.Owner => OrganizationUserRole.Owner
   case smithy.OrganizationUserRole.Admin => OrganizationUserRole.Admin

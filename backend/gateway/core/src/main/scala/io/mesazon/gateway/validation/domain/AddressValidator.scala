@@ -4,9 +4,9 @@ import cats.data.{Validated, ValidatedNec}
 import cats.syntax.all.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
-import io.mesazon.gateway.service.addressTypeFromSmithyToDomain
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.validation.service.{validateAll, validateOptionalField, validateRequiredField}
+import io.scalaland.chimney.dsl.*
 import zio.{UIO, ZIO, ZLayer}
 
 final class AddressValidator {
@@ -34,7 +34,7 @@ final class AddressValidator {
           validateRequiredField("postalCode", addressEntryRequest.address.postalCode, PostalCode.either),
           validateRequiredField("country", addressEntryRequest.address.country, Country.either),
         ).mapN(Address.apply),
-        Validated.validNec(addressTypeFromSmithyToDomain(addressEntryRequest.addressType)),
+        Validated.validNec(addressEntryRequest.addressType.transformInto[AddressType]),
       ).mapN(AddressEntry.apply)
     )
 
@@ -43,7 +43,7 @@ final class AddressValidator {
   ): UIO[ValidatedNec[InvalidFieldError, List[AddressEntry]]] =
     validateAll(addressEntryRequests)(validate).map(
       _ <* validateAddressTypesCombination(
-        addressEntryRequests.map(addressEntryRequest => addressTypeFromSmithyToDomain(addressEntryRequest.addressType))
+        addressEntryRequests.map(_.addressType).transformInto[List[AddressType]]
       )
     )
 }
