@@ -21,12 +21,6 @@ def verifyOnboardStage(
       )
     )
 
-def organizationUserRoleFromSmithyToDomain(role: smithy.OrganizationUserRole): OrganizationUserRole = role match {
-  case smithy.OrganizationUserRole.Owner => OrganizationUserRole.Owner
-  case smithy.OrganizationUserRole.Admin => OrganizationUserRole.Admin
-  case smithy.OrganizationUserRole.User  => OrganizationUserRole.User
-}
-
 def organizationUserRoleFromDomainToSmithy(role: OrganizationUserRole): smithy.OrganizationUserRole = role match {
   case OrganizationUserRole.Owner => smithy.OrganizationUserRole.Owner
   case OrganizationUserRole.Admin => smithy.OrganizationUserRole.Admin
