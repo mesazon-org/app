@@ -442,7 +442,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
                   .customerID
                   .value,
                 name = insertCustomerIndividualPostRequest.fullName.value,
-                customerType = smithy.CustomerType.INDIVIDUAL,
+                customerType = smithy.CustomerType.Individual,
               )
           )
         )
@@ -1266,7 +1266,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
                   .customerID
                   .value,
                 name = insertCustomerBusinessPostRequest.businessName.value,
-                customerType = smithy.CustomerType.BUSINESS,
+                customerType = smithy.CustomerType.Business,
               )
           )
         )
@@ -2264,7 +2264,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRowArchived))
           .zioValue
 
-        // all three customers are stored; the response below returns only the two ACTIVE ones
+        // all three customers are stored; the response below returns only the two Active ones
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 3
 
         val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
@@ -2282,12 +2282,12 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         val getCustomerIndividual = smithy.GetCustomer(
           customerID = customerIndividualDetailsRow.customerID.value,
           name = customerIndividualDetailsRow.fullName.value,
-          customerType = smithy.CustomerType.INDIVIDUAL,
+          customerType = smithy.CustomerType.Individual,
         )
         val getCustomerBusiness = smithy.GetCustomer(
           customerID = customerBusinessDetailsRow.customerID.value,
           name = customerBusinessDetailsRow.businessName.value,
-          customerType = smithy.CustomerType.BUSINESS,
+          customerType = smithy.CustomerType.Business,
         )
 
         getCustomersGetResponse.body.value.customers should contain theSameElementsAs List(

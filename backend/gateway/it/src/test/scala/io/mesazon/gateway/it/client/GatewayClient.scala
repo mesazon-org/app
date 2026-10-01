@@ -30,21 +30,21 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.OnboardStage] = new JsonValueCodec[smithy.OnboardStage] {
     override def decodeValue(in: JsonReader, default: smithy.OnboardStage): smithy.OnboardStage =
       in.readString(null) match {
-        case "EMAIL_VERIFICATION" => smithy.OnboardStage.EMAIL_VERIFICATION
-        case "EMAIL_VERIFIED"     => smithy.OnboardStage.EMAIL_VERIFIED
-        case "PASSWORD_PROVIDED"  => smithy.OnboardStage.PASSWORD_PROVIDED
-        case "PHONE_VERIFICATION" => smithy.OnboardStage.PHONE_VERIFICATION
-        case "PHONE_VERIFIED"     => smithy.OnboardStage.PHONE_VERIFIED
-        case str                  => throw new IllegalArgumentException(s"Unknown OnboardStage: $str")
+        case "EmailVerification" => smithy.OnboardStage.EmailVerification
+        case "EmailVerified"     => smithy.OnboardStage.EmailVerified
+        case "PasswordProvided"  => smithy.OnboardStage.PasswordProvided
+        case "PhoneVerification" => smithy.OnboardStage.PhoneVerification
+        case "PhoneVerified"     => smithy.OnboardStage.PhoneVerified
+        case str                 => throw new IllegalArgumentException(s"Unknown OnboardStage: $str")
       }
 
     override def encodeValue(x: smithy.OnboardStage, out: JsonWriter): Unit =
       x match {
-        case smithy.OnboardStage.EMAIL_VERIFICATION => out.writeVal("EMAIL_VERIFICATION")
-        case smithy.OnboardStage.EMAIL_VERIFIED     => out.writeVal("EMAIL_VERIFIED")
-        case smithy.OnboardStage.PASSWORD_PROVIDED  => out.writeVal("PASSWORD_PROVIDED")
-        case smithy.OnboardStage.PHONE_VERIFICATION => out.writeVal("PHONE_VERIFICATION")
-        case smithy.OnboardStage.PHONE_VERIFIED     => out.writeVal("PHONE_VERIFIED")
+        case smithy.OnboardStage.EmailVerification => out.writeVal("EmailVerification")
+        case smithy.OnboardStage.EmailVerified     => out.writeVal("EmailVerified")
+        case smithy.OnboardStage.PasswordProvided  => out.writeVal("PasswordProvided")
+        case smithy.OnboardStage.PhoneVerification => out.writeVal("PhoneVerification")
+        case smithy.OnboardStage.PhoneVerified     => out.writeVal("PhoneVerified")
       }
 
     override def nullValue: smithy.OnboardStage = null
@@ -53,17 +53,17 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.AddressType] = new JsonValueCodec[smithy.AddressType] {
     override def decodeValue(in: JsonReader, default: smithy.AddressType): smithy.AddressType =
       in.readString(null) match {
-        case "SHIPPING"             => smithy.AddressType.SHIPPING
-        case "BILLING"              => smithy.AddressType.BILLING
-        case "SHIPPING_AND_BILLING" => smithy.AddressType.SHIPPING_AND_BILLING
-        case str                    => throw new IllegalArgumentException(s"Unknown AddressType: $str")
+        case "Shipping"           => smithy.AddressType.Shipping
+        case "Billing"            => smithy.AddressType.Billing
+        case "ShippingAndBilling" => smithy.AddressType.ShippingAndBilling
+        case str                  => throw new IllegalArgumentException(s"Unknown AddressType: $str")
       }
 
     override def encodeValue(x: smithy.AddressType, out: JsonWriter): Unit =
       x match {
-        case smithy.AddressType.SHIPPING             => out.writeVal("SHIPPING")
-        case smithy.AddressType.BILLING              => out.writeVal("BILLING")
-        case smithy.AddressType.SHIPPING_AND_BILLING => out.writeVal("SHIPPING_AND_BILLING")
+        case smithy.AddressType.Shipping           => out.writeVal("Shipping")
+        case smithy.AddressType.Billing            => out.writeVal("Billing")
+        case smithy.AddressType.ShippingAndBilling => out.writeVal("ShippingAndBilling")
       }
 
     override def nullValue: smithy.AddressType = null
@@ -86,15 +86,15 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.CustomerType] = new JsonValueCodec[smithy.CustomerType] {
     override def decodeValue(in: JsonReader, default: smithy.CustomerType): smithy.CustomerType =
       in.readString(null) match {
-        case "INDIVIDUAL" => smithy.CustomerType.INDIVIDUAL
-        case "BUSINESS"   => smithy.CustomerType.BUSINESS
+        case "Individual" => smithy.CustomerType.Individual
+        case "Business"   => smithy.CustomerType.Business
         case str          => throw new IllegalArgumentException(s"Unknown CustomerType: $str")
       }
 
     override def encodeValue(x: smithy.CustomerType, out: JsonWriter): Unit =
       x match {
-        case smithy.CustomerType.INDIVIDUAL => out.writeVal("INDIVIDUAL")
-        case smithy.CustomerType.BUSINESS   => out.writeVal("BUSINESS")
+        case smithy.CustomerType.Individual => out.writeVal("Individual")
+        case smithy.CustomerType.Business   => out.writeVal("Business")
       }
 
     override def nullValue: smithy.CustomerType = null
@@ -103,15 +103,15 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.CatalogueItemStatus] = new JsonValueCodec[smithy.CatalogueItemStatus] {
     override def decodeValue(in: JsonReader, default: smithy.CatalogueItemStatus): smithy.CatalogueItemStatus =
       in.readString(null) match {
-        case "ACTIVE"   => smithy.CatalogueItemStatus.ACTIVE
-        case "ARCHIVED" => smithy.CatalogueItemStatus.ARCHIVED
+        case "Active"   => smithy.CatalogueItemStatus.Active
+        case "Archived" => smithy.CatalogueItemStatus.Archived
         case str        => throw new IllegalArgumentException(s"Unknown CatalogueItemStatus: $str")
       }
 
     override def encodeValue(x: smithy.CatalogueItemStatus, out: JsonWriter): Unit =
       x match {
-        case smithy.CatalogueItemStatus.ACTIVE   => out.writeVal("ACTIVE")
-        case smithy.CatalogueItemStatus.ARCHIVED => out.writeVal("ARCHIVED")
+        case smithy.CatalogueItemStatus.Active   => out.writeVal("Active")
+        case smithy.CatalogueItemStatus.Archived => out.writeVal("Archived")
       }
 
     override def nullValue: smithy.CatalogueItemStatus = null
