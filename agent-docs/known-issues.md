@@ -35,7 +35,7 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Status:** Workaround 2026-09-30
 - **Severity:** Medium
 - **Signature:** After a Smithy request gains a member whose type is a new Smithy enum (e.g. `AddressType` inside `AddressEntryRequest`), acceptance tests that send it fail intermittently with a 400 / empty stored rows — only when the sampled request actually contains the enum (e.g. a non-empty `addresses` list), so a different set of tests fails on each run.
-- **Cause:** `gateway-it`'s `GatewayClient` derives its request codecs with jsoniter `JsonCodecMaker.make`. Without a codec for the enum in scope, jsoniter encodes it as a discriminator object (`{"type": "SHIPPING"}`) instead of the wire string, and the gateway's decoder rejects it.
+- **Cause:** `gateway-it`'s `GatewayClient` derives its request codecs with jsoniter `JsonCodecMaker.make`. Without a codec for the enum in scope, jsoniter encodes it as a discriminator object (`{"type": "Shipping"}`) instead of the wire string, and the gateway's decoder rejects it.
 - **Fix:** Declare a hand-written `given JsonValueCodec[smithy.<Enum>]` in `GatewayClient`, before the request codecs that use it, like the existing `OnboardStage`, `CustomerType` and `AddressType` codecs.
 - **Verify:** Run the affected acceptance spec twice; both runs pass with non-empty generated values.
 

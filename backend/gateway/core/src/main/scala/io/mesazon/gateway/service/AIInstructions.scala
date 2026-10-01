@@ -37,15 +37,15 @@ object AIInstructions {
       |candidate, and say in that candidate's extraction notes which part was missing, for example "Address could not
       |be read because the postal code was missing". Only the complete addresses that remain count for the rules
       |below.
-      |When a candidate has exactly one complete address, always return it with addressType SHIPPING_AND_BILLING,
+      |When a candidate has exactly one complete address, always return it with addressType ShippingAndBilling,
       |whatever the source says about it.
-      |When a candidate has exactly two complete addresses, return one as SHIPPING and the other as BILLING as the
-      |source shows: an address marked as where goods are delivered (e.g. "Deliver to", "Ship to") is SHIPPING and an
-      |address marked as where invoices or bills go (e.g. "Invoice to", "Bill to") is BILLING. When the source does
-      |not say which is which, return the first as SHIPPING and the second as BILLING, and say in that candidate's
+      |When a candidate has exactly two complete addresses, return one as Shipping and the other as Billing as the
+      |source shows: an address marked as where goods are delivered (e.g. "Deliver to", "Ship to") is Shipping and an
+      |address marked as where invoices or bills go (e.g. "Invoice to", "Bill to") is Billing. When the source does
+      |not say which is which, return the first as Shipping and the second as Billing, and say in that candidate's
       |extraction notes that the address types were assumed.
       |When a candidate has three or more complete addresses, return only two of them: the best shipping and billing
-      |pair the source shows, or else the first two, typed one SHIPPING and one BILLING by the same rule as for two
+      |pair the source shows, or else the first two, typed one Shipping and one Billing by the same rule as for two
       |addresses, and say in that candidate's extraction notes that further addresses were left out.
       |If something about a candidate is missing or unclear (e.g. a smudged phone number, no visible email), say so
       |as briefly as possible in that candidate's extraction notes - a short phrase or clause, not a full sentence,
@@ -113,15 +113,15 @@ object AIInstructions {
       |candidate, and say in that candidate's extraction notes which part was missing, for example "Address could not
       |be read because the postal code was missing". Only the complete addresses that remain count for the rules
       |below.
-      |When a candidate has exactly one complete address, always return it with addressType SHIPPING_AND_BILLING,
+      |When a candidate has exactly one complete address, always return it with addressType ShippingAndBilling,
       |whatever the source says about it.
-      |When a candidate has exactly two complete addresses, return one as SHIPPING and the other as BILLING as the
-      |source shows: an address marked as where goods are delivered (e.g. "Deliver to", "Ship to") is SHIPPING and an
-      |address marked as where invoices or bills go (e.g. "Invoice to", "Bill to") is BILLING. When the source does
-      |not say which is which, return the first as SHIPPING and the second as BILLING, and say in that candidate's
+      |When a candidate has exactly two complete addresses, return one as Shipping and the other as Billing as the
+      |source shows: an address marked as where goods are delivered (e.g. "Deliver to", "Ship to") is Shipping and an
+      |address marked as where invoices or bills go (e.g. "Invoice to", "Bill to") is Billing. When the source does
+      |not say which is which, return the first as Shipping and the second as Billing, and say in that candidate's
       |extraction notes that the address types were assumed.
       |When a candidate has three or more complete addresses, return only two of them: the best shipping and billing
-      |pair the source shows, or else the first two, typed one SHIPPING and one BILLING by the same rule as for two
+      |pair the source shows, or else the first two, typed one Shipping and one Billing by the same rule as for two
       |addresses, and say in that candidate's extraction notes that further addresses were left out.
       |If something about a candidate is missing or unclear (e.g. a blank cell, no visible email), say so as briefly
       |as possible in that candidate's extraction notes - a short phrase or clause, not a full sentence, when a
