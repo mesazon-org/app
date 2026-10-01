@@ -88,9 +88,9 @@ This is a cross-feature interaction: someone asks for a password reset, then sig
 
 ### 10. Creating an organization with only the required fields
 
-**Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 1, scenarios 3 and 4 — contact lists may be empty, and tagline, address, registration number and tax id may all be omitted.
+**Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 1, scenarios 3, 4 and 7 — contact and address lists may be empty, and tagline, registration number and tax id may all be omitted.
 
-Every test in `OrganizationManagementApiSpec` builds its request from a fully-populated arbitrary. Nothing ever sends empty `emails`/`phoneNumbers` lists or omits the optional fields.
+Every test in `OrganizationManagementApiSpec` builds its request from a fully-populated arbitrary. Nothing ever deterministically sends empty `emails`/`phoneNumbers`/`addresses` lists or omits the optional fields; `addresses` is sampled `0..5`, so an empty or a multi-entry address list is covered only by chance per run (the same holds for the customer insert/get happy paths in `CustomerBookApiSpec`).
 
 This is a transport-level risk rather than a logic one, which is exactly what acceptance tests are for. Empty lists are the known hazard here: a client codec that drops an empty list turns a `@default([])` member into a missing one, and the request shape changes underneath the service. The validator unit spec cannot see that, because it starts from an already-decoded request.
 
@@ -124,8 +124,18 @@ Leaving this entry in place, struck through, so nobody re-adds it believing it w
 
 `customer-book.md` already tracks this as "Acceptance: 8/13 endpoints complete", so it is a known shortfall rather than a discovery — recorded here so it sits with the rest of the backlog.
 
-Worth noting what the shape of the gap implies: **every mutation except insert and archive is untested over HTTP.** That includes both endpoints where the update is applied wholesale (email and phone lists replace rather than merge), the uniqueness conflicts on renaming, and every endpoint that exercises the silent no-op on an archived parent — which is [gap 2 in the epic](../pages/epics/05-customer-book.md#2-changes-to-an-archived-customer-are-silently-discarded). The behaviour most likely to surprise a user is the behaviour with no black-box test behind it.
+Worth noting what the shape of the gap implies: **every mutation except insert and archive is untested over HTTP.** That includes both endpoints where the update is applied wholesale (email, phone and address lists replace rather than merge; an empty address list clears it), the uniqueness conflicts on renaming, and every endpoint that exercises the silent no-op on an archived parent — which is [gap 2 in the epic](../pages/epics/05-customer-book.md#2-changes-to-an-archived-customer-are-silently-discarded). The behaviour most likely to surprise a user is the behaviour with no black-box test behind it.
 
 The repository and functional layers do cover these, so this is about transport, role gating, and the org-scoping header — the things only an acceptance test sees.
 
 **Where:** `CustomerBookApiSpec`. Follow the matrix the eight existing blocks already use.
+
+## Rejections decided at request decoding
+
+### 13. An address with an unknown type or a missing required part
+
+**Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 1, scenario 8, and [Customer Book](../pages/epics/05-customer-book.md), step 1, scenario 10 — an address whose type is not `SHIPPING`, `BILLING` or `SHIPPING_AND_BILLING`, or that leaves out its first line, city, postal code or country, is rejected and nothing is stored.
+
+`addressType` is a Smithy enum and those parts are `@required`, so both cases fail while the request is decoded, before any validator runs. No test sends such a body: the typed `GatewayClient` cannot express an unknown enum value or a missing required member, and a raw-JSON client method was deliberately not added. The exact status body for a decode failure is therefore unproven, which is why the epics say only "rejected" and their error tables are unchanged. Blank, untrimmed and over-long parts are covered (`AddressValidatorSpec`, and the request validator specs prove the entry index).
+
+**Where:** `OrganizationManagementApiSpec` and `CustomerBookApiSpec`. Needs a raw-body request method on `GatewayClient`; pin the real status and body, and assert nothing was stored.
