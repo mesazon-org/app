@@ -6,12 +6,23 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.gateway.service.addressTypeFromSmithyToDomain
 import io.mesazon.gateway.smithy
-import io.mesazon.gateway.validation.service.{validateOptionalField, validateRequiredField}
+import io.mesazon.gateway.validation.service.{validateAll, validateOptionalField, validateRequiredField}
 import zio.{UIO, ZIO, ZLayer}
 
-import scala.annotation.unused
-
 final class AddressValidator {
+
+  private def validateAddressTypesCombination(addressTypes: List[AddressType]): ValidatedNec[InvalidFieldError, Unit] =
+    addressTypes match {
+      case Nil | List(AddressType.ShippingAndBilling) | List(AddressType.Shipping, AddressType.Billing) |
+          List(AddressType.Billing, AddressType.Shipping) =>
+        ().validNec
+      case _ =>
+        InvalidFieldError(
+          "addresses",
+          "Addresses must be empty, exactly one SHIPPING_AND_BILLING entry, or exactly one SHIPPING and one BILLING entry",
+          Seq.empty,
+        ).invalidNec
+    }
 
   def validate(addressEntryRequest: smithy.AddressEntryRequest): UIO[ValidatedNec[InvalidFieldError, AddressEntry]] =
     ZIO.succeed(
@@ -28,9 +39,13 @@ final class AddressValidator {
     )
 
   def validateAddressEntries(
-      @unused addressEntryRequests: List[smithy.AddressEntryRequest]
+      addressEntryRequests: List[smithy.AddressEntryRequest]
   ): UIO[ValidatedNec[InvalidFieldError, List[AddressEntry]]] =
-    ZIO.die(new NotImplementedError("AddressValidator.validateAddressEntries is not implemented yet"))
+    validateAll(addressEntryRequests)(validate).map(
+      _ <* validateAddressTypesCombination(
+        addressEntryRequests.map(addressEntryRequest => addressTypeFromSmithyToDomain(addressEntryRequest.addressType))
+      )
+    )
 }
 
 object AddressValidator {
