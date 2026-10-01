@@ -90,7 +90,7 @@ This is a cross-feature interaction: someone asks for a password reset, then sig
 
 **Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 1, scenarios 3, 4 and 7 — contact and address lists may be empty, and tagline, registration number and tax id may all be omitted.
 
-Every test in `OrganizationManagementApiSpec` builds its request from a fully-populated arbitrary. Nothing ever deterministically sends empty `emails`/`phoneNumbers`/`addresses` lists or omits the optional fields; `addresses` is sampled from the allowed combinations (empty, one `SHIPPING_AND_BILLING`, or a `SHIPPING` + `BILLING` pair), so each shape is covered only by chance per run, and no acceptance test sends a rejected combination (the rule is proven in `AddressValidatorSpec` only; by the testing rule in `features/flow/02-validation.md` the request validator specs do not re-test it) (the same holds for the customer insert/get happy paths in `CustomerBookApiSpec`).
+Every test in `OrganizationManagementApiSpec` builds its request from a fully-populated arbitrary. Nothing ever deterministically sends empty `emails`/`phoneNumbers`/`addresses` lists or omits the optional fields; `addresses` is sampled from the allowed combinations (empty, one `ShippingAndBilling`, or a `Shipping` + `Billing` pair), so each shape is covered only by chance per run, and no acceptance test sends a rejected combination (the rule is proven in `AddressValidatorSpec` only; by the testing rule in `features/flow/02-validation.md` the request validator specs do not re-test it) (the same holds for the customer insert/get happy paths in `CustomerBookApiSpec`).
 
 This is a transport-level risk rather than a logic one, which is exactly what acceptance tests are for. Empty lists are the known hazard here: a client codec that drops an empty list turns a `@default([])` member into a missing one, and the request shape changes underneath the service. The validator unit spec cannot see that, because it starts from an already-decoded request.
 
@@ -134,7 +134,7 @@ The repository and functional layers do cover these, so this is about transport,
 
 ### 13. An address with an unknown type or a missing required part
 
-**Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 1, scenario 8, and [Customer Book](../pages/epics/05-customer-book.md), step 1, scenario 10 — an address whose type is not `SHIPPING`, `BILLING` or `SHIPPING_AND_BILLING`, or that leaves out its first line, city, postal code or country, is rejected and nothing is stored.
+**Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 1, scenario 8, and [Customer Book](../pages/epics/05-customer-book.md), step 1, scenario 10 — an address whose type is not `Shipping`, `Billing` or `ShippingAndBilling`, or that leaves out its first line, city, postal code or country, is rejected and nothing is stored.
 
 `addressType` is a Smithy enum and those parts are `@required`, so both cases fail while the request is decoded, before any validator runs. No test sends such a body: the typed `GatewayClient` cannot express an unknown enum value or a missing required member, and a raw-JSON client method was deliberately not added. The exact status body for a decode failure is therefore unproven, which is why the epics say only "rejected" and their error tables are unchanged. Blank, untrimmed and over-long parts are covered (`AddressValidatorSpec`, and the request validator specs prove the entry index).
 
@@ -146,6 +146,6 @@ The repository and functional layers do cover these, so this is about transport,
 
 **Behaviour:** [Customer Book](../pages/epics/05-customer-book.md), step 7, scenarios 20–23 — one address is always marked shipping and billing; two are split into shipping and billing (first/second when the source does not say, with a note); three or more are cut to two with a note; an incomplete address is left off with a note naming the missing part.
 
-All of this is prompt text in `AIInstructions`. `FileApiSpec` only decodes a stubbed response carrying one `SHIPPING_AND_BILLING` address, so it proves the response shape and wire value, not what the model does. The golden specs are manual, need a live key, and have not been run since the address shape changed — so it is also unconfirmed that the real service accepts the new strict schema. Accepted as a risk on 2026-10-01.
+All of this is prompt text in `AIInstructions`. `FileApiSpec` only decodes a stubbed response carrying one `ShippingAndBilling` address, so it proves the response shape and wire value, not what the model does. The golden specs are manual, need a live key, and have not been run since the address shape changed — so it is also unconfirmed that the real service accepts the new strict schema. Accepted as a risk on 2026-10-01.
 
 **Where:** `golden/ExtractCustomersFromImageGoldenSpec` and `golden/ExtractCustomersFromSpreadsheetGoldenSpec`, run manually with a key.

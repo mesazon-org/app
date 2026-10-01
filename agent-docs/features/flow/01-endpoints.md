@@ -33,9 +33,9 @@ Pair it with `@organizationUserRolesAllowed(roles: [...])`; values are quoted an
 
 | Operation | Roles |
 |---|---|
-| Read (`GET`) | `OWNER`, `ADMIN`, `USER` |
-| Mutation | `OWNER`, `ADMIN` |
-| Delete organization | `OWNER` |
+| Read (`GET`) | `Owner`, `Admin`, `User` |
+| Mutation | `Owner`, `Admin` |
+| Delete organization | `Owner` |
 
 Keep the role marker identical to the trait. Missing organization header → `400`; disallowed role → `403`; absent membership → `500`.
 
