@@ -67,9 +67,7 @@ final class OrganizationManagementRequestValidator(
   private def validateOrganizationAddresses(
       addresses: List[smithy.AddressEntryRequest]
   ): UIO[ValidatedNec[InvalidFieldError, List[OrganizationAddressEntry]]] =
-    validateAll(addresses)(addressEntryRequest =>
-      addressValidator.validate(addressEntryRequest).map(_.map(OrganizationAddressEntry(_)))
-    )
+    addressValidator.validateAddressEntries(addresses).map(_.map(_.map(OrganizationAddressEntry(_))))
 }
 
 object OrganizationManagementRequestValidator {

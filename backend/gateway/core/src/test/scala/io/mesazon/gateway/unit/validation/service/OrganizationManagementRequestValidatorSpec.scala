@@ -61,17 +61,19 @@ class OrganizationManagementRequestValidatorSpec extends ZWordSpecBase, Organiza
     }
 
     "accumulate every field error" in {
-      val organizationAddressEntry  = arbitrarySample[OrganizationAddressEntry]
-      val addressEntryRequestSmithy = (organizationAddressEntry.value: AddressEntry)
-        .into[smithy.AddressEntryRequest]
-        .withFieldComputed(_.addressType, addressEntry => addressTypeFromDomainToSmithy(addressEntry.addressType))
-        .transform
       val createOrganizationPostRequestSmithy = arbitrarySample[smithy.CreateOrganizationPostRequest].copy(
         name = "",
         emails = List(smithy.OrganizationEmailEntryRequest(email = "invalid-email", isDefault = true)),
         addresses = List(
-          addressEntryRequestSmithy,
-          addressEntryRequestSmithy.copy(address = addressEntryRequestSmithy.address.copy(city = "")),
+          smithy.AddressEntryRequest(
+            address = smithy.AddressRequest(
+              addressLine1 = "1 Main Street",
+              city = "",
+              postalCode = "1010",
+              country = "Cyprus",
+            ),
+            addressType = smithy.AddressType.SHIPPING_AND_BILLING,
+          )
         ),
       )
 
@@ -80,7 +82,7 @@ class OrganizationManagementRequestValidatorSpec extends ZWordSpecBase, Organiza
           invalidFields = List(
             InvalidFieldError("name", nonEmptyTrimmedError, List("")),
             emailFormatError("invalid-email", index = 0),
-            InvalidFieldError("city", nonEmptyTrimmedError, List(""), index = 1),
+            InvalidFieldError("city", nonEmptyTrimmedError, List(""), index = 0),
           )
         )
     }

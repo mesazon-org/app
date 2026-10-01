@@ -5,9 +5,6 @@ import org.scalacheck.*
 
 trait OrganizationManagementDomainArbitraries extends GatewayArbitraries {
 
-  private val organizationAddressEntriesSizeMin = 0
-  private val organizationAddressEntriesSizeMax = 5
-
   given arbOrganizationStage: Arbitrary[OrganizationStage] = Arbitrary(Gen.oneOf(OrganizationStage.values.toIndexedSeq))
 
   given arbOrganizationUserRole: Arbitrary[OrganizationUserRole] = Arbitrary(
@@ -36,9 +33,7 @@ trait OrganizationManagementDomainArbitraries extends GatewayArbitraries {
   )
 
   given arbOrganizationAddressEntries: Arbitrary[List[OrganizationAddressEntry]] = Arbitrary(
-    Gen
-      .choose(organizationAddressEntriesSizeMin, organizationAddressEntriesSizeMax)
-      .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[OrganizationAddressEntry]))
+    genAddressEntriesAllowedCombination.map(_.map(OrganizationAddressEntry(_)))
   )
 
   given arbCreateOrganizationPostRequest: Arbitrary[CreateOrganizationPostRequest] = Arbitrary(
