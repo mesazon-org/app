@@ -48,7 +48,7 @@ Like the customer book, these are not a single journey. They are the things that
 
 ### Prerequisites
 
-**Item status** — an item is `Active` or `Archived`. New items start active. Archiving is one-way.
+**Item status** — an item is `ACTIVE` or `ARCHIVED`. New items start active. Archiving is one-way.
 
 **Unit** — a free-form word for what the item is sold in: `piece`, `kg`, `hour`, or anything else the business needs. There is no fixed list.
 
@@ -417,6 +417,6 @@ Updating an item can set or replace a price, but there is no way to say "this it
 
 #### 5. Catalogue status values have not yet been standardized
 
-Today the API uses `ACTIVE` and `ARCHIVED` for catalogue item status. The approved target is the same two values in PascalCase: `Active` and `Archived`. This target is not shipped yet.
+Today the API uses `ACTIVE` and `ARCHIVED` for catalogue item status. The approved target is the same two values in UpperCamelCase: `Active` and `Archived`. This target is not shipped yet.
 
 {% include abbreviations.md %}

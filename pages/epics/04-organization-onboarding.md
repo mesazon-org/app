@@ -250,6 +250,10 @@ Nothing limits how many organizations one account may create, and nothing lists 
 
 #### 6. Address type values have not yet been standardized
 
-Today the API uses `SHIPPING`, `BILLING` and `SHIPPING_AND_BILLING` for address types. The approved target is the same three values in PascalCase: `Shipping`, `Billing` and `ShippingAndBilling`. This target is not shipped yet.
+Today the API uses `SHIPPING`, `BILLING` and `SHIPPING_AND_BILLING` for address types. The approved target is the same three values in UpperCamelCase: `Shipping`, `Billing` and `ShippingAndBilling`. This target is not shipped yet.
+
+#### 7. Onboard stage and organization role wire values have not yet been standardized
+
+Today the API uses uppercase values for onboard stage and organization role, even though this epic names them in UpperCamelCase. The approved target is UpperCamelCase for both mirrored enums. These targets are not shipped yet.
 
 {% include abbreviations.md %}

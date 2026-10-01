@@ -53,7 +53,7 @@ Every account has an **onboard stage** saying how far through sign up it has got
 
 | **Field Name** | **Type** | **Values** | **Description** |
 | --- | --- | --- | --- |
-| onboardStage | `OnboardStage` | `EmailVerification` `EmailVerified` `PasswordProvided` `PhoneVerification` `PhoneVerified` | Users onboard stages |
+| onboardStage | `OnboardStage` | `EMAIL_VERIFICATION` `EMAIL_VERIFIED` `PASSWORD_PROVIDED` `PHONE_VERIFICATION` `PHONE_VERIFIED` | Users onboard stages |
 
 A new account starts at `EmailVerification`; there is no earlier stage.
 
@@ -152,7 +152,7 @@ This response looks the same whatever the email turns out to be. For an email th
 | Access Token | `String` | JWT | ✅ | Signs the person in so they can carry on through the remaining steps. |
 | Access Token Expires In Seconds | `Long` | Whole seconds | ✅ | How long the access token stays usable. |
 | Refresh Token | `String` | JWT | ✅ | Used to get a new access token once the current one runs out. |
-| Onboard Stage | `OnboardStage` | `EmailVerified` | ✅ | The stage the person has moved to. |
+| Onboard Stage | `OnboardStage` | `EMAIL_VERIFIED` | ✅ | The stage the person has moved to. |
 
 **Outcome**
 
@@ -199,7 +199,7 @@ This response looks the same whatever the email turns out to be. For an email th
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Onboard Stage | `OnboardStage` | `PasswordProvided` | ✅ | The stage the person has moved to. |
+| Onboard Stage | `OnboardStage` | `PASSWORD_PROVIDED` | ✅ | The stage the person has moved to. |
 
 **Outcome**
 
@@ -258,7 +258,7 @@ This response looks the same whatever the email turns out to be. For an email th
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Onboard Stage | `OnboardStage` | `PhoneVerification` | ✅ | The stage the person has moved to. |
+| Onboard Stage | `OnboardStage` | `PHONE_VERIFICATION` | ✅ | The stage the person has moved to. |
 | OTP ID | `UUID` | Canonical 36-character form | ✅ | Identifies the passcode we texted them. Sent back together with the passcode in the next step. |
 | OTP Expires In Seconds | `Long` | Whole seconds | ✅ | How long the passcode stays usable. |
 
@@ -321,7 +321,7 @@ After submitting the passcode:
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Onboard Stage | `OnboardStage` | `PhoneVerified` | ✅ | The stage the person has moved to. Sign up is complete. |
+| Onboard Stage | `OnboardStage` | `PHONE_VERIFIED` | ✅ | The stage the person has moved to. Sign up is complete. |
 
 When looking up a passcode already waiting:
 
@@ -357,5 +357,9 @@ Everything above describes what the product does today. Nothing here exists yet;
 Today, looking up a waiting phone passcode deletes it and reports it as expired once it is inside its resend cooldown, even though submitting it would still work. A person who reloads the page in that last stretch loses a passcode they could have used.
 
 **To decide:** whether the lookup should ever delete a passcode, or only report how long is left.
+
+#### 2. Onboard stage wire values have not yet been standardized
+
+Today the API uses `EMAIL_VERIFICATION`, `EMAIL_VERIFIED`, `PASSWORD_PROVIDED`, `PHONE_VERIFICATION` and `PHONE_VERIFIED`. The approved target is the same five values in UpperCamelCase: `EmailVerification`, `EmailVerified`, `PasswordProvided`, `PhoneVerification` and `PhoneVerified`. This target is not shipped yet.
 
 {% include abbreviations.md %}
