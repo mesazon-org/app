@@ -68,7 +68,7 @@ object CustomerBookService {
       customerIndividuals = customerIndividualDetailsRows.map(
         _.into[smithy.GetCustomer]
           .withFieldRenamed(_.fullName, _.name)
-          .withFieldConst(_.customerType, customerTypeFromDomainToSmithy(CustomerType.Individual))
+          .withFieldConst(_.customerType, smithy.CustomerType.Individual)
           .transform
       )
     )
@@ -122,7 +122,7 @@ object CustomerBookService {
         _.customerBusinessDetailsRow
           .into[smithy.GetCustomer]
           .withFieldRenamed(_.businessName, _.name)
-          .withFieldConst(_.customerType, customerTypeFromDomainToSmithy(CustomerType.Business))
+          .withFieldConst(_.customerType, smithy.CustomerType.Business)
           .transform
       )
     )
@@ -144,14 +144,14 @@ object CustomerBookService {
       customers = insertCustomersResult.customerIndividualDetailsRows.map(
         _.into[smithy.GetCustomer]
           .withFieldRenamed(_.fullName, _.name)
-          .withFieldConst(_.customerType, customerTypeFromDomainToSmithy(CustomerType.Individual))
+          .withFieldConst(_.customerType, smithy.CustomerType.Individual)
           .transform
       ) ++
         insertCustomersResult.customerBusinessInsertRows.map(
           _.customerBusinessDetailsRow
             .into[smithy.GetCustomer]
             .withFieldRenamed(_.businessName, _.name)
-            .withFieldConst(_.customerType, customerTypeFromDomainToSmithy(CustomerType.Business))
+            .withFieldConst(_.customerType, smithy.CustomerType.Business)
             .transform
         )
     )
@@ -294,14 +294,7 @@ object CustomerBookService {
     ): ServiceTask[smithy.GetCustomersGetResponse] = for {
       customerSummaryRows <- customerBookRepository.getCustomers(OrganizationID(organizationID))
     } yield smithy.GetCustomersGetResponse(
-      customers = customerSummaryRows.map(
-        _.into[smithy.GetCustomer]
-          .withFieldComputed(
-            _.customerType,
-            customerSummaryRow => customerTypeFromDomainToSmithy(customerSummaryRow.customerType),
-          )
-          .transform
-      )
+      customers = customerSummaryRows.map(_.transformInto[smithy.GetCustomer])
     )
 
   }

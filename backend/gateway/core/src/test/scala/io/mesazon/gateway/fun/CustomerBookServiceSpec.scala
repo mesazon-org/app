@@ -841,10 +841,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
             smithy.GetCustomer(
               customerID = customerSummaryRow.customerID.value,
               name = customerSummaryRow.name.value,
-              customerType = customerSummaryRow.customerType match {
-                case CustomerType.Individual => smithy.CustomerType.Individual
-                case CustomerType.Business   => smithy.CustomerType.Business
-              },
+              customerType = customerSummaryRow.customerType.transformInto[smithy.CustomerType],
             )
           )
         )

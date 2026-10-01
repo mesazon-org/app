@@ -21,12 +21,6 @@ def verifyOnboardStage(
       )
     )
 
-def customerTypeFromDomainToSmithy(customerType: CustomerType): smithy.CustomerType =
-  customerType match {
-    case CustomerType.Individual => smithy.CustomerType.Individual
-    case CustomerType.Business   => smithy.CustomerType.Business
-  }
-
 def addressTypeFromDomainToSmithy(addressType: AddressType): smithy.AddressType = addressType match {
   case AddressType.Shipping           => smithy.AddressType.Shipping
   case AddressType.Billing            => smithy.AddressType.Billing
