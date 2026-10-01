@@ -67,8 +67,8 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 | 4. User leaves the optional details blank | - The organization is created with only a name and short name |
 | 5. The confirmation email cannot be sent | - The organization is still created and the user is not held up |
 | 6. User has not finished personal onboarding | - Rejected. Verifying a phone number is what unlocks this step |
-| 7. User supplies one or more addresses | - Each address is marked as shipping, billing, or both - Any number may be given, including several of the same type or identical ones - None is marked as a default - An empty list is allowed; the organization simply has no recorded address |
-| 8. User supplies an address missing a required part, or with a type other than shipping, billing, or both | - Rejected and nothing is stored |
+| 7. User supplies one address for both shipping and billing, or a shipping address and a billing address | - Each address is stored with its type - None is marked as a default - An empty list is allowed; the organization simply has no recorded address |
+| 8. User supplies an address missing a required part, with a type other than shipping, billing, or both, or any other combination of addresses | - Rejected and nothing is stored |
 
 #### Requirements
 
@@ -77,6 +77,7 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 3. When contact emails or phone numbers are given, every entry must be valid and exactly one of them must be marked as the default.
 4. We email the creator to confirm, but never let that email delay or block the creation.
 5. Every address given needs a first address line, city, postal code, country and type; the second address line is optional, and addresses have no default.
+6. When addresses are given there must be either exactly one, marked as both shipping and billing, or exactly two, one shipping and one billing in either order. Three or more, two of the same type, a single shipping-only or billing-only address, or a both-purposes address alongside another are all rejected.
 
 #### Request / Response / Outcome
 
@@ -89,7 +90,7 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 | Tagline | `String` | 1–255 characters, trimmed | ❌ | A short line describing the business |
 | Emails | `EmailEntry[]` | Empty by default | ❌ | Contact email addresses. See **EmailEntry** below |
 | Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact phone numbers. See **PhoneNumberEntry** below |
-| Addresses | `AddressEntry[]` | Empty by default | ❌ | The business's addresses. See **AddressEntry** below |
+| Addresses | `AddressEntry[]` | Empty by default; otherwise one `SHIPPING_AND_BILLING` entry, or one `SHIPPING` and one `BILLING` entry | ❌ | The business's addresses. See **AddressEntry** below |
 | Company Registration Number | `String` | 1–255 characters, trimmed | ❌ |  |
 | Tax ID | `String` | 1–255 characters, trimmed | ❌ |  |
 
@@ -147,7 +148,7 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - Form validation error - Short name has the wrong shape - A contact list has no default, or more than one |
+| 400 | `VALIDATION_ERROR` | - Form validation error - Short name has the wrong shape - A contact list has no default, or more than one - The addresses are not an allowed combination |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
 | 500 | `INTERNAL_SERVER_ERROR` | - The short name is already taken - Unexpected error |

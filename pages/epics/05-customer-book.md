@@ -26,7 +26,8 @@ Every request in this epic names the organization it applies to, and only touche
 2. Only businesses have **contacts** — the individual people you deal with inside that company. A contact is never itself a customer and can never be the target of an order.
 3. A customer's name must be unique among that organization's active customers **of the same kind**. A person and a business may share a name, and archiving a customer frees their name for reuse.
 4. Customers are **archived**, never deleted. Contacts are the opposite: removing one deletes it outright.
-5. A customer may have any number of email addresses, phone numbers and addresses. Each business contact has at most one email address and one phone number, and no address.
+5. A customer may have any number of email addresses and phone numbers. Each business contact has at most one email address and one phone number, and no address.
+6. A customer has no address, exactly one address marked as both shipping and billing, or exactly two addresses, one shipping and one billing in either order. Whenever addresses are sent, anything else is rejected: three or more, two of the same type, a single shipping-only or billing-only address, or a both-purposes address alongside another.
 
 #### Non-functional
 
@@ -64,7 +65,7 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 
 **Default contact details** — email and phone lists may be left empty. When a list has entries, exactly one of them must be marked as the default. Addresses have no default.
 
-**Address type** — every address is marked as shipping, billing, or both. Both (`SHIPPING_AND_BILLING`) means one address serves both purposes.
+**Address type** — every address is marked as shipping, billing, or both. Both (`SHIPPING_AND_BILLING`) means one address serves both purposes. Functional rule 6 says which combinations are allowed.
 
 ### 1. User Adds a Customer
 
@@ -86,8 +87,8 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 | 6. User submits several bad entries at once | - Every problem is reported together - Each is tied to the entry that caused it, including which contact inside which business |
 | 7. User leaves the contact lists empty | - Accepted. The customer simply has no recorded contact details |
 | 8. A member with the ordinary user role tries to add a customer | - Rejected. Reading is open to everyone; changing is not |
-| 9. User adds a customer with several addresses of different types | - Every address is stored with its type - Several of the same type, or identical ones, are accepted - None is marked as a default - An empty list is accepted; the customer simply has no recorded address |
-| 10. User gives an address missing a required part, or with a type other than shipping, billing, or both | - Rejected and nothing is stored |
+| 9. User adds a customer with one address for both shipping and billing, or a shipping address and a billing address | - Every address is stored with its type - None is marked as a default - An empty list is accepted; the customer simply has no recorded address |
+| 10. User gives an address missing a required part, with a type other than shipping, billing, or both, or any other combination of addresses | - Rejected and nothing is stored |
 
 #### Requirements
 
@@ -97,7 +98,7 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 4. A name must be unique among active customers of the same kind within the organization.
 5. Within one business, no two contacts may share an email address, and no two may share a phone number.
 6. Adding several customers at once succeeds completely or not at all.
-7. Every address given needs a first address line, city, postal code, country and type; the second address line is optional.
+7. Every address given needs a first address line, city, postal code, country and type; the second address line is optional. Together the addresses must be an allowed combination (functional rule 6).
 
 #### Request / Response / Outcome
 
@@ -120,7 +121,7 @@ The two shapes are separate and neither is a variant of the other. A person has 
 | Full Name | `String` | 1–255 characters, trimmed | ✅ | The person's name |
 | Emails | `EmailEntry[]` | Empty by default | ❌ | Contact email addresses. See **EmailEntry** below |
 | Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact numbers. See **PhoneNumberEntry** below |
-| Addresses | `AddressEntry[]` | Empty by default | ❌ | Where they are. See **AddressEntry** below |
+| Addresses | `AddressEntry[]` | Empty by default; otherwise one `SHIPPING_AND_BILLING` entry, or one `SHIPPING` and one `BILLING` entry | ❌ | Where they are. See **AddressEntry** below |
 
 **Request — CustomerBusiness**
 
@@ -131,7 +132,7 @@ The two shapes are separate and neither is a variant of the other. A person has 
 | Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact numbers. See **PhoneNumberEntry** below |
 | Tax ID | `String` | 1–255 characters, trimmed | ❌ | The company's tax reference. A person may never have one |
 | Customer Business Contacts | `BusinessContact[]` | Empty by default | ❌ | People inside the business. See **BusinessContact** below |
-| Addresses | `AddressEntry[]` | Empty by default | ❌ | Where they are. See **AddressEntry** below |
+| Addresses | `AddressEntry[]` | Empty by default; otherwise one `SHIPPING_AND_BILLING` entry, or one `SHIPPING` and one `BILLING` entry | ❌ | Where they are. See **AddressEntry** below |
 
 The shapes used above and throughout this epic:
 
@@ -384,7 +385,7 @@ Nothing changes. This step only reads.
 #### Requirements
 
 1. Only active customers can be changed. The kind is fixed at creation and never changes.
-2. Email, phone and address lists are replaced entirely by what is sent, rather than merged. Sending an empty list clears them.
+2. Email, phone and address lists are replaced entirely by what is sent, rather than merged. Sending an empty list clears them, and leaving a list out is the same as sending it empty.
 3. Optional single fields left out of the request, such as the name or tax id, are left unchanged.
 4. A rename must still leave the name unique among active customers of the same kind.
 
@@ -400,7 +401,7 @@ There are two ways to update, one per kind, and the caller must use the one matc
 | Full Name | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current name |
 | Emails | `EmailEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
 | Phone Numbers | `PhoneNumberEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
-| Addresses | `AddressEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
+| Addresses | `AddressEntry[]` | Replaces the whole list; when not empty, one `SHIPPING_AND_BILLING` entry, or one `SHIPPING` and one `BILLING` entry | ❌ | Send the complete set, not just additions |
 
 **Request — updating a CustomerBusiness**
 
@@ -411,7 +412,7 @@ There are two ways to update, one per kind, and the caller must use the one matc
 | Emails | `EmailEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
 | Tax ID | `String` | 1–255 characters, trimmed | ❌ | Left out means unchanged |
 | Phone Numbers | `PhoneNumberEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
-| Addresses | `AddressEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
+| Addresses | `AddressEntry[]` | Replaces the whole list; when not empty, one `SHIPPING_AND_BILLING` entry, or one `SHIPPING` and one `BILLING` entry | ❌ | Send the complete set, not just additions |
 
 Neither form touches the business's contacts. Those are managed on their own, in [step 5](#5-user-manages-a-businesss-contacts).
 
@@ -587,14 +588,16 @@ This step helps a business move its existing customer list into the product quic
 | 17. A spreadsheet row is completely blank | - Not counted as an entry - Its row number is listed as empty |
 | 18. User uploads a spreadsheet with a very large number of rows | - Every row is read, in groups of up to 50, with up to 3 groups at a time - If any group fails, the whole read fails with no partial result - Row numbers and duplicate marks still refer to the whole file |
 | 19. User sends a supported file whose name matches it | - Accepted and read - The name's extension is matched ignoring capitalisation |
-| 20. An entry has one or more addresses | - Each comes back on the candidate marked as shipping, billing, or both, as the source shows - When the source does not say, it is marked as both (`SHIPPING_AND_BILLING`) |
-| 21. An address is missing its first line, city, postal code or country | - That address is left off the candidate - The candidate is still returned, with a note saying which part of the address was missing - The rest of the read carries on |
+| 20. An entry has one complete address | - It always comes back marked as both shipping and billing (`SHIPPING_AND_BILLING`), whatever the source says |
+| 21. An address is missing its first line, city, postal code or country | - That address is left off the candidate - The candidate is still returned, with a note saying which part of the address was missing - If that leaves one address, it is marked as both shipping and billing - The rest of the read carries on |
+| 22. An entry has two complete addresses | - One comes back as shipping and the other as billing, as the source shows - When the source does not say which is which, the first is shipping and the second billing, and the candidate notes that the types were assumed |
+| 23. An entry has three or more complete addresses | - Two are kept: the best shipping and billing pair, or else the first two - The candidate notes that further addresses were left out |
 
 #### Requirements
 
 1. Every candidate has the same shape as a person or business added in [step 1](#1-user-adds-a-customer), whatever the source, and the AI decides which kind each entry is.
-2. A candidate's name, and any contact's name, is never empty, and every other returned detail follows its field rule from step 1, or the whole read fails with a server error. An incomplete address is the one exception: it is left off rather than failing the read (requirement 16).
-3. Whether a phone number is real for its country, and whether exactly one default is marked, is only checked when a candidate is actually added.
+2. A candidate's name, and any contact's name, is never empty, and every other returned detail follows its field rule from step 1, or the whole read fails with a server error. The AI is asked to leave an incomplete address off the candidate (requirement 16); if it returns one anyway, the read fails like any other broken detail.
+3. Whether a phone number is real for its country, whether exactly one default is marked, and whether the addresses are an allowed combination, is only checked when a candidate is actually added.
 4. When no name at all can be read but an email plainly looks like a person's name, the name is worked out from that email, noted on the candidate, and counted as an ordinary candidate — never for a role mailbox, a meaningless address, a business's own name, or a name that was partly readable.
 5. The response always says how many entries were found and how many became candidates; for a spreadsheet, missed rows are listed by the row numbers the person sees in their own file, and for an image any detail goes in the notes.
 6. Candidates of the same kind whose names match, ignoring capitalisation, are each marked as a possible duplicate across the whole image or file, but never compared with customers already in the book.
@@ -607,7 +610,8 @@ This step helps a business move its existing customer list into the product quic
 13. Each AI attempt may take up to one minute, and temporary failures are tried again up to two more times, while rejections and unusable answers are not.
 14. Large spreadsheets are read in groups of up to 50 rows, up to 3 groups at a time, and if any group fails the whole read fails with no partial candidates.
 15. When a spreadsheet read in groups has something worth flagging, the person gets one short combined message, and failing to combine the messages never fails the read.
-16. Every address on a candidate carries a type taken from the source, or `SHIPPING_AND_BILLING` when the source does not say; an address missing its first line, city, postal code or country is left off, and the candidate's note says which part was missing, for example that the postal code could not be read.
+16. An address missing its first line, city, postal code or country is left off the candidate, and the candidate's note says which part was missing, for example that the postal code could not be read; only the addresses that remain count towards requirement 17.
+17. The AI is asked to return at most two addresses per candidate: one alone is always marked `SHIPPING_AND_BILLING`; two are marked one shipping and one billing as the source shows, or first shipping and second billing with a note that the types were assumed when it does not say; and from three or more, two are kept — the best shipping and billing pair, or else the first two — with a note that further addresses were left out.
 
 #### Request / Response / Outcome
 
