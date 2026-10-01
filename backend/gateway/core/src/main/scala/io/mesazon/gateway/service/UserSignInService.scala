@@ -1,5 +1,6 @@
 package io.mesazon.gateway.service
 
+import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.{S3BucketKey, ServiceError, TokenType}
 import io.mesazon.domain.to
 import io.mesazon.gateway.clients.S3ClientOrganizationMedia
@@ -38,13 +39,10 @@ object UserSignInService {
             s3ClientOrganizationMedia.genMediaUrl(logoImageNormalizedS3BucketKey.to[S3BucketKey]).map(_.value)
           )
           .map(logoUrlOpt =>
-            smithy.SignInOrganization(
-              organizationID = organizationAndUserDetailsRow.organizationID.value,
-              name = organizationAndUserDetailsRow.name.value,
-              slug = organizationAndUserDetailsRow.slug.value,
-              role = organizationUserRoleFromDomainToSmithy(organizationAndUserDetailsRow.userRole),
-              logoUrl = logoUrlOpt,
-            )
+            organizationAndUserDetailsRow
+              .into[smithy.SignInOrganization]
+              .withFieldConst(_.logoUrl, logoUrlOpt)
+              .transform
           )
       )
       _          <- userTokenRepository.deleteAllUserTokens(authedUser.userID)

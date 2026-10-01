@@ -21,12 +21,6 @@ def verifyOnboardStage(
       )
     )
 
-def organizationUserRoleFromDomainToSmithy(role: OrganizationUserRole): smithy.OrganizationUserRole = role match {
-  case OrganizationUserRole.Owner => smithy.OrganizationUserRole.Owner
-  case OrganizationUserRole.Admin => smithy.OrganizationUserRole.Admin
-  case OrganizationUserRole.User  => smithy.OrganizationUserRole.User
-}
-
 def catalogueItemStatusFromDomainToSmithy(status: CatalogueItemStatus): smithy.CatalogueItemStatus = status match {
   case CatalogueItemStatus.Active   => smithy.CatalogueItemStatus.Active
   case CatalogueItemStatus.Archived => smithy.CatalogueItemStatus.Archived
