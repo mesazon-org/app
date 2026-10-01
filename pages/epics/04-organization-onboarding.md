@@ -248,4 +248,8 @@ Nothing limits how many organizations one account may create, and nothing lists 
 
 **To decide:** whether an account may hold more than one organization, and if so how they choose between them.
 
+#### 6. Address type values have not yet been standardized
+
+Today the API uses `SHIPPING`, `BILLING` and `SHIPPING_AND_BILLING` for address types. The approved target is the same three values in PascalCase: `Shipping`, `Billing` and `ShippingAndBilling`. This target is not shipped yet.
+
 {% include abbreviations.md %}

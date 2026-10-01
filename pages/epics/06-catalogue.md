@@ -415,4 +415,8 @@ Updating an item can set or replace a price, but there is no way to say "this it
 
 **To decide:** whether removing a price should be possible, and if so how the request should say "clear this" as distinct from "leave this alone".
 
+#### 5. Catalogue status values have not yet been standardized
+
+Today the API uses `ACTIVE` and `ARCHIVED` for catalogue item status. The approved target is the same two values in PascalCase: `Active` and `Archived`. This target is not shipped yet.
+
 {% include abbreviations.md %}

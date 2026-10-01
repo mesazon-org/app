@@ -720,4 +720,8 @@ Nothing today creates such a record, but a future change or a direct data fix co
 
 **To decide:** whether a limit is needed, and if so what it should be.
 
+#### 6. API enum values have not yet been standardized
+
+Today the API uses uppercase values for address type (`SHIPPING`, `BILLING`, `SHIPPING_AND_BILLING`) and customer type (`INDIVIDUAL`, `BUSINESS`). The approved target is PascalCase for both enums: `Shipping`, `Billing`, `ShippingAndBilling`, `Individual` and `Business`. This target is not shipped yet.
+
 {% include abbreviations.md %}
