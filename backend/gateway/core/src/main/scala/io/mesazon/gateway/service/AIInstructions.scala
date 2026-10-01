@@ -31,6 +31,14 @@ object AIInstructions {
       |Email and phone lists may be empty. Whenever either list is non-empty, mark exactly one entry in that list
       |with isDefault=true and mark every other entry with isDefault=false. Never send an empty string for an
       |optional field - omit the field entirely instead.
+      |The addresses list may be empty. Return every address you can read for a candidate in its addresses list, each
+      |with an addressType taken from the source: an address marked as where invoices or bills go (e.g. "Invoice to",
+      |"Bill to") is BILLING, an address marked as where goods are delivered (e.g. "Deliver to", "Ship to") is
+      |SHIPPING, and when the source does not say, use SHIPPING_AND_BILLING. Every address needs addressLine1, city,
+      |postalCode and country; addressLine2 is optional. If addressLine1, city, postalCode or country cannot be read
+      |for an address, leave that address out entirely rather than returning it incomplete, keep the rest of the
+      |candidate, and say in that candidate's extraction notes which part was missing, for example "Address could not
+      |be read because the postal code was missing".
       |If something about a candidate is missing or unclear (e.g. a smudged phone number, no visible email), say so
       |as briefly as possible in that candidate's extraction notes - a short phrase or clause, not a full sentence,
       |when a phrase suffices (e.g. "phone smudged, no email" rather than "The phone number is smudged and no email
@@ -91,6 +99,14 @@ object AIInstructions {
       |Email and phone lists may be empty. Whenever either list is non-empty, mark exactly one entry in that list
       |with isDefault=true and mark every other entry with isDefault=false. Never send an empty string for an
       |optional field - omit the field entirely instead.
+      |The addresses list may be empty. Return every address you can read for a candidate in its addresses list, each
+      |with an addressType taken from the source: an address marked as where invoices or bills go (e.g. "Invoice to",
+      |"Bill to") is BILLING, an address marked as where goods are delivered (e.g. "Deliver to", "Ship to") is
+      |SHIPPING, and when the source does not say, use SHIPPING_AND_BILLING. Every address needs addressLine1, city,
+      |postalCode and country; addressLine2 is optional. If addressLine1, city, postalCode or country cannot be read
+      |for an address, leave that address out entirely rather than returning it incomplete, keep the rest of the
+      |candidate, and say in that candidate's extraction notes which part was missing, for example "Address could not
+      |be read because the postal code was missing".
       |If something about a candidate is missing or unclear (e.g. a blank cell, no visible email), say so as briefly
       |as possible in that candidate's extraction notes - a short phrase or clause, not a full sentence, when a
       |phrase suffices (e.g. "phone smudged, no email" rather than "The phone number is smudged and no email is

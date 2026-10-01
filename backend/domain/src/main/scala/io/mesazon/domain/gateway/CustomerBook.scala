@@ -106,11 +106,7 @@ case class ExtractCustomerIndividual(
     fullName: CustomerFullName,
     emails: List[ExtractCustomerEmailEntry],
     phoneNumbers: List[ExtractCustomerPhoneNumberEntry],
-    addressLine1: Option[CustomerAddressLine1],
-    addressLine2: Option[CustomerAddressLine2],
-    city: Option[CustomerCity],
-    postalCode: Option[CustomerPostalCode],
-    country: Option[CustomerCountry],
+    addresses: List[CustomerAddressEntry],
 )
 
 case class ExtractCustomerBusinessContact(
@@ -125,11 +121,7 @@ case class ExtractCustomerBusiness(
     emails: List[ExtractCustomerEmailEntry],
     taxID: Option[CustomerTaxID],
     phoneNumbers: List[ExtractCustomerPhoneNumberEntry],
-    addressLine1: Option[CustomerAddressLine1],
-    addressLine2: Option[CustomerAddressLine2],
-    city: Option[CustomerCity],
-    postalCode: Option[CustomerPostalCode],
-    country: Option[CustomerCountry],
+    addresses: List[CustomerAddressEntry],
     customerBusinessContacts: List[ExtractCustomerBusinessContact],
 )
 

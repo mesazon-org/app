@@ -178,21 +178,6 @@ type CustomerPhoneNumber = CustomerPhoneNumber.T
 object CustomerAddressEntry extends RefinedType[AddressEntry, Pure]
 type CustomerAddressEntry = CustomerAddressEntry.T
 
-object CustomerAddressLine1 extends RefinedType[String, NonEmptyTrimmed]
-type CustomerAddressLine1 = CustomerAddressLine1.T
-
-object CustomerAddressLine2 extends RefinedType[String, NonEmptyTrimmed]
-type CustomerAddressLine2 = CustomerAddressLine2.T
-
-object CustomerCity extends RefinedType[String, NonEmptyTrimmed]
-type CustomerCity = CustomerCity.T
-
-object CustomerPostalCode extends RefinedType[String, NonEmptyTrimmed]
-type CustomerPostalCode = CustomerPostalCode.T
-
-object CustomerCountry extends RefinedType[String, NonEmptyTrimmed]
-type CustomerCountry = CustomerCountry.T
-
 // Catalogue
 
 object CatalogueItemID extends RefinedTypeUUID

@@ -943,11 +943,20 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
                 isDefault = true,
               )
             ),
-            addressLine1 = None,
-            addressLine2 = None,
-            city = None,
-            postalCode = None,
-            country = None,
+            addresses = List(
+              CustomerAddressEntry(
+                AddressEntry(
+                  address = Address(
+                    addressLine1 = AddressLine1.assume("1 Main Street"),
+                    addressLine2 = None,
+                    city = City.assume("Springfield"),
+                    postalCode = PostalCode.assume("62701"),
+                    country = Country.assume("United States"),
+                  ),
+                  addressType = AddressType.ShippingAndBilling,
+                )
+              )
+            ),
           ),
           isDuplicate = false,
           extractionNotes = None,
@@ -1007,11 +1016,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
               ExtractCustomerEmailEntry(email = CustomerEmail.assume("john.smith@example.com"), isDefault = true)
             ),
             phoneNumbers = List.empty,
-            addressLine1 = None,
-            addressLine2 = None,
-            city = None,
-            postalCode = None,
-            country = None,
+            addresses = List.empty,
           ),
           isDuplicate = false,
           extractionNotes = None,
@@ -1071,11 +1076,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
               ExtractCustomerEmailEntry(email = CustomerEmail.assume("john.smith@example.com"), isDefault = true)
             ),
             phoneNumbers = List.empty,
-            addressLine1 = None,
-            addressLine2 = None,
-            city = None,
-            postalCode = None,
-            country = None,
+            addresses = List.empty,
           ),
           isDuplicate = false,
           extractionNotes = None,
