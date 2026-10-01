@@ -7,19 +7,19 @@ import zio.*
 type ServiceTask[A] = IO[ServiceError, A]
 
 def onboardStageFromDomainToSmithy(stage: OnboardStage): smithy.OnboardStage = stage match {
-  case OnboardStage.EmailVerification => smithy.OnboardStage.EMAIL_VERIFICATION
-  case OnboardStage.EmailVerified     => smithy.OnboardStage.EMAIL_VERIFIED
-  case OnboardStage.PasswordProvided  => smithy.OnboardStage.PASSWORD_PROVIDED
-  case OnboardStage.PhoneVerification => smithy.OnboardStage.PHONE_VERIFICATION
-  case OnboardStage.PhoneVerified     => smithy.OnboardStage.PHONE_VERIFIED
+  case OnboardStage.EmailVerification => smithy.OnboardStage.EmailVerification
+  case OnboardStage.EmailVerified     => smithy.OnboardStage.EmailVerified
+  case OnboardStage.PasswordProvided  => smithy.OnboardStage.PasswordProvided
+  case OnboardStage.PhoneVerification => smithy.OnboardStage.PhoneVerification
+  case OnboardStage.PhoneVerified     => smithy.OnboardStage.PhoneVerified
 }
 
 def onboardStageFromSmithyToDomain(stage: smithy.OnboardStage): OnboardStage = stage match {
-  case smithy.OnboardStage.EMAIL_VERIFICATION => OnboardStage.EmailVerification
-  case smithy.OnboardStage.EMAIL_VERIFIED     => OnboardStage.EmailVerified
-  case smithy.OnboardStage.PASSWORD_PROVIDED  => OnboardStage.PasswordProvided
-  case smithy.OnboardStage.PHONE_VERIFICATION => OnboardStage.PhoneVerification
-  case smithy.OnboardStage.PHONE_VERIFIED     => OnboardStage.PhoneVerified
+  case smithy.OnboardStage.EmailVerification => OnboardStage.EmailVerification
+  case smithy.OnboardStage.EmailVerified     => OnboardStage.EmailVerified
+  case smithy.OnboardStage.PasswordProvided  => OnboardStage.PasswordProvided
+  case smithy.OnboardStage.PhoneVerification => OnboardStage.PhoneVerification
+  case smithy.OnboardStage.PhoneVerified     => OnboardStage.PhoneVerified
 }
 
 def verifyOnboardStage(
@@ -39,37 +39,37 @@ def verifyOnboardStage(
 
 def customerTypeFromDomainToSmithy(customerType: CustomerType): smithy.CustomerType =
   customerType match {
-    case CustomerType.Individual => smithy.CustomerType.INDIVIDUAL
-    case CustomerType.Business   => smithy.CustomerType.BUSINESS
+    case CustomerType.Individual => smithy.CustomerType.Individual
+    case CustomerType.Business   => smithy.CustomerType.Business
   }
 
 def addressTypeFromDomainToSmithy(addressType: AddressType): smithy.AddressType = addressType match {
-  case AddressType.Shipping           => smithy.AddressType.SHIPPING
-  case AddressType.Billing            => smithy.AddressType.BILLING
-  case AddressType.ShippingAndBilling => smithy.AddressType.SHIPPING_AND_BILLING
+  case AddressType.Shipping           => smithy.AddressType.Shipping
+  case AddressType.Billing            => smithy.AddressType.Billing
+  case AddressType.ShippingAndBilling => smithy.AddressType.ShippingAndBilling
 }
 
 def addressTypeFromSmithyToDomain(addressType: smithy.AddressType): AddressType = addressType match {
-  case smithy.AddressType.SHIPPING             => AddressType.Shipping
-  case smithy.AddressType.BILLING              => AddressType.Billing
-  case smithy.AddressType.SHIPPING_AND_BILLING => AddressType.ShippingAndBilling
+  case smithy.AddressType.Shipping           => AddressType.Shipping
+  case smithy.AddressType.Billing            => AddressType.Billing
+  case smithy.AddressType.ShippingAndBilling => AddressType.ShippingAndBilling
 }
 
 def organizationUserRoleFromSmithyToDomain(role: smithy.OrganizationUserRole): OrganizationUserRole = role match {
-  case smithy.OrganizationUserRole.OWNER => OrganizationUserRole.Owner
-  case smithy.OrganizationUserRole.ADMIN => OrganizationUserRole.Admin
-  case smithy.OrganizationUserRole.USER  => OrganizationUserRole.User
+  case smithy.OrganizationUserRole.Owner => OrganizationUserRole.Owner
+  case smithy.OrganizationUserRole.Admin => OrganizationUserRole.Admin
+  case smithy.OrganizationUserRole.User  => OrganizationUserRole.User
 }
 
 def organizationUserRoleFromDomainToSmithy(role: OrganizationUserRole): smithy.OrganizationUserRole = role match {
-  case OrganizationUserRole.Owner => smithy.OrganizationUserRole.OWNER
-  case OrganizationUserRole.Admin => smithy.OrganizationUserRole.ADMIN
-  case OrganizationUserRole.User  => smithy.OrganizationUserRole.USER
+  case OrganizationUserRole.Owner => smithy.OrganizationUserRole.Owner
+  case OrganizationUserRole.Admin => smithy.OrganizationUserRole.Admin
+  case OrganizationUserRole.User  => smithy.OrganizationUserRole.User
 }
 
 def catalogueItemStatusFromDomainToSmithy(status: CatalogueItemStatus): smithy.CatalogueItemStatus = status match {
-  case CatalogueItemStatus.Active   => smithy.CatalogueItemStatus.ACTIVE
-  case CatalogueItemStatus.Archived => smithy.CatalogueItemStatus.ARCHIVED
+  case CatalogueItemStatus.Active   => smithy.CatalogueItemStatus.Active
+  case CatalogueItemStatus.Archived => smithy.CatalogueItemStatus.Archived
 }
 
 val DevOtp = "123QWE"

@@ -101,7 +101,7 @@ private[tapir] lazy val jsonBodyStringRaw: EndpointIO.Body[String, String] =
   * `OrganizationUserRole` list the endpoint's security logic enforces, so the docs cannot drift.
   */
 private[tapir] def requiredOrganizationRolesDescription(roles: List[OrganizationUserRole]): String =
-  roles.map(role => s"`${role.toString.toUpperCase}`").mkString("**Required Organization User Roles:** [", ", ", "]")
+  roles.map(role => s"`${role.toString}`").mkString("**Required Organization User Roles:** [", ", ", "]")
 
 private[tapir] lazy val securedEndpoint =
   endpoint

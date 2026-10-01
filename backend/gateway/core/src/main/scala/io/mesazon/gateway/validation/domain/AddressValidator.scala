@@ -19,7 +19,7 @@ final class AddressValidator {
       case _ =>
         InvalidFieldError(
           "addresses",
-          "Addresses must be empty, exactly one SHIPPING_AND_BILLING entry, or exactly one SHIPPING and one BILLING entry",
+          "Addresses must be empty, exactly one ShippingAndBilling entry, or exactly one Shipping and one Billing entry",
           Seq.empty,
         ).invalidNec
     }
