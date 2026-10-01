@@ -1,5 +1,6 @@
 package io.mesazon.gateway.service
 
+import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.to
 import io.mesazon.gateway.clients.S3ClientOrganizationMedia
@@ -7,6 +8,7 @@ import io.mesazon.gateway.repository.CatalogueRepository
 import io.mesazon.gateway.repository.CatalogueRepository.InsertCatalogueItemInput
 import io.mesazon.gateway.validation.service.CatalogueRequestValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
+import io.scalaland.chimney.dsl.*
 import zio.*
 
 import java.util.UUID
@@ -128,12 +130,10 @@ object CatalogueService {
               .map(_.value)
           )
           .map(imageNormalizedUrlOpt =>
-            smithy.GetCatalogueItem(
-              catalogueItemID = catalogueItemSummaryRow.catalogueItemID.value,
-              name = catalogueItemSummaryRow.name.value,
-              status = catalogueItemStatusFromDomainToSmithy(catalogueItemSummaryRow.status),
-              imageNormalizedUrl = imageNormalizedUrlOpt,
-            )
+            catalogueItemSummaryRow
+              .into[smithy.GetCatalogueItem]
+              .withFieldConst(_.imageNormalizedUrl, imageNormalizedUrlOpt)
+              .transform
           )
       )
     } yield smithy.GetCatalogueItemsGetResponse(catalogueItems)

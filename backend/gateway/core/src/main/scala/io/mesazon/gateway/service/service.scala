@@ -1,7 +1,6 @@
 package io.mesazon.gateway.service
 
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.smithy
 import zio.*
 
 type ServiceTask[A] = IO[ServiceError, A]
@@ -20,11 +19,6 @@ def verifyOnboardStage(
         onboardStagesAllowed = onboardStagesAllowed,
       )
     )
-
-def catalogueItemStatusFromDomainToSmithy(status: CatalogueItemStatus): smithy.CatalogueItemStatus = status match {
-  case CatalogueItemStatus.Active   => smithy.CatalogueItemStatus.Active
-  case CatalogueItemStatus.Archived => smithy.CatalogueItemStatus.Archived
-}
 
 val DevOtp = "123QWE"
 
