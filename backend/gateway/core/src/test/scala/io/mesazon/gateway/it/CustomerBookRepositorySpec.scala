@@ -53,7 +53,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
   "CustomerBookRepository" when {
     "insertCustomerIndividual" should {
-      "insert a customer of type INDIVIDUAL and its details row in one transaction" in new TestContext {
+      "insert a customer of type Individual and its details row in one transaction" in new TestContext {
         val organizationID                = arbitrarySample[OrganizationID]
         val customerID                    = arbitrarySample[CustomerID]
         val insertCustomerIndividualInput = arbitrarySample[InsertCustomerIndividualInput]
@@ -168,7 +168,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
     }
 
     "insertCustomerBusiness" should {
-      "insert a customer of type BUSINESS, its details, and any inline contacts in one transaction" in new TestContext {
+      "insert a customer of type Business, its details, and any inline contacts in one transaction" in new TestContext {
         val organizationID               = arbitrarySample[OrganizationID]
         val customerID                   = arbitrarySample[CustomerID]
         val customerBusinessContactID    = arbitrarySample[CustomerBusinessContactID]
@@ -1026,7 +1026,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
     }
 
     "getCustomers" should {
-      "return a summary of every ACTIVE customer sorted case-insensitively by display name" in new TestContext {
+      "return a summary of every Active customer sorted case-insensitively by display name" in new TestContext {
         val organizationID = arbitrarySample[OrganizationID]
 
         val customerIndividualDetailsRow1 = arbitrarySample[CustomerIndividualDetailsRow]
