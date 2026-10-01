@@ -43,7 +43,7 @@ Wired by `ServerMiddleware` for any smithy service annotated `@httpBasicAuth`:
    - Steps 2–3 run **before** any token is touched, so a failure there returns 500 and leaves every existing session intact.
 4. **Delete all existing user tokens** — signing in invalidates every previously issued refresh/reset token (single active session policy). Nothing notifies the user or the other device that its session was revoked.
 5. Generate access JWT + refresh JWT (`JwtService`), persist the refresh token (`user_token` table, type `RefreshToken`).
-6. Respond with `accessToken`, `refreshToken`, `accessTokenExpiresInSeconds`, the current `onboardStage` (client uses it to resume onboarding if incomplete), and `organizations`: a `@required` list of `SignInOrganization { organizationID, name, slug, role, logoUrl? }` in the order from step 2. `role` maps the domain `OrganizationUserRole` to the smithy enum via `organizationUserRoleFromDomainToSmithy` in `service/service.scala`, next to the existing smithy→domain mapper. The list is empty for a user with no memberships, which is the common case at sign-in.
+6. Respond with `accessToken`, `refreshToken`, `accessTokenExpiresInSeconds`, the current `onboardStage` (client uses it to resume onboarding if incomplete), and `organizations`: a `@required` list of `SignInOrganization { organizationID, name, slug, role, logoUrl? }` in the order from step 2. The matching `OrganizationUserRole` domain and Smithy enums convert directly with Chimney rather than named mapping helpers. The list is empty for a user with no memberships, which is the common case at sign-in.
 
 ## Key files
 
