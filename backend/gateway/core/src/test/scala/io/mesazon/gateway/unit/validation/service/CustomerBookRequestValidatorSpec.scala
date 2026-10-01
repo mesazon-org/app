@@ -48,14 +48,20 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
       }
 
       "fail with a ValidationError accumulating every field error" in {
-        val addressEntryRequestSmithy = arbitrarySample[CustomerAddressEntry].transformInto[smithy.AddressEntryRequest]
         val insertCustomerIndividualPostRequestSmithy = arbitrarySample[smithy.InsertCustomerIndividualPostRequest]
           .copy(
             fullName = "",
             emails = List(smithy.CustomerEmailEntryRequest(email = "invalid-email", isDefault = false)),
             addresses = List(
-              addressEntryRequestSmithy,
-              addressEntryRequestSmithy.copy(address = addressEntryRequestSmithy.address.copy(city = "")),
+              smithy.AddressEntryRequest(
+                address = smithy.AddressRequest(
+                  addressLine1 = "1 Main Street",
+                  city = "",
+                  postalCode = "1010",
+                  country = "Cyprus",
+                ),
+                addressType = smithy.AddressType.SHIPPING_AND_BILLING,
+              )
             ),
           )
 
@@ -66,7 +72,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
             invalidFields = List(
               InvalidFieldError("fullName", nonEmptyTrimmedError, List("")),
               emailFormatError("invalid-email"),
-              InvalidFieldError("city", nonEmptyTrimmedError, List(""), index = 1),
+              InvalidFieldError("city", nonEmptyTrimmedError, List(""), index = 0),
             )
           )
       }
@@ -169,18 +175,13 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           )
       }
 
-      "fail with a ValidationError reporting only the failing individuals of a mixed batch, keeping the inner email and address indexes in the message" in {
-        val addressEntryRequestSmithy = arbitrarySample[CustomerAddressEntry].transformInto[smithy.AddressEntryRequest]
+      "fail with a ValidationError reporting only the failing individuals of a mixed batch, keeping the inner email indexes in the message" in {
         val invalidEmailsIndividualSmithy = arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(
           emails = List(
             smithy.CustomerEmailEntryRequest(email = "bad-1", isDefault = false),
             smithy.CustomerEmailEntryRequest(email = "ok@example.com", isDefault = true),
             smithy.CustomerEmailEntryRequest(email = "bad-2", isDefault = false),
-          ),
-          addresses = List(
-            addressEntryRequestSmithy,
-            addressEntryRequestSmithy.copy(address = addressEntryRequestSmithy.address.copy(city = "")),
-          ),
+          )
         )
 
         val insertCustomerIndividualsPostRequestSmithy = arbitrarySample[smithy.InsertCustomerIndividualsPostRequest]
@@ -197,7 +198,6 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
 
         val firstEmailError = emailFormatError("bad-1", index = 0)
         val thirdEmailError = emailFormatError("bad-2", index = 2)
-        val secondCityError = InvalidFieldError("city", nonEmptyTrimmedError, List(""), index = 1)
         val fullNameError   = InvalidFieldError("fullName", nonEmptyTrimmedError, List(""))
 
         validator
@@ -207,7 +207,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
             invalidFields = List(
               InvalidFieldError(
                 "customerIndividual",
-                s"Failed with invalid fields [$firstEmailError, $thirdEmailError, $secondCityError]",
+                s"Failed with invalid fields [$firstEmailError, $thirdEmailError]",
                 List(),
                 index = 1,
               ),

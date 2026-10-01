@@ -5,9 +5,6 @@ import org.scalacheck.*
 
 trait CustomerBookDomainArbitraries extends GatewayArbitraries {
 
-  private val customerAddressEntriesSizeMin = 0
-  private val customerAddressEntriesSizeMax = 5
-
   given arbCustomerType: Arbitrary[CustomerType] = Arbitrary(Gen.oneOf(CustomerType.values.toIndexedSeq))
 
   given arbCustomerStatus: Arbitrary[CustomerStatus] = Arbitrary(Gen.oneOf(CustomerStatus.values.toIndexedSeq))
@@ -34,9 +31,7 @@ trait CustomerBookDomainArbitraries extends GatewayArbitraries {
   )
 
   given arbCustomerAddressEntries: Arbitrary[List[CustomerAddressEntry]] = Arbitrary(
-    Gen
-      .choose(customerAddressEntriesSizeMin, customerAddressEntriesSizeMax)
-      .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CustomerAddressEntry]))
+    genAddressEntriesAllowedCombination.map(_.map(CustomerAddressEntry(_)))
   )
 
   given arbInsertCustomerIndividualPostRequest: Arbitrary[InsertCustomerIndividualPostRequest] = Arbitrary(

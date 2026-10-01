@@ -119,9 +119,7 @@ final class CustomerBookRequestValidator(
   private def validateCustomerAddresses(
       addresses: List[smithy.AddressEntryRequest]
   ): UIO[ValidatedNec[InvalidFieldError, List[CustomerAddressEntry]]] =
-    validateAll(addresses)(addressEntryRequest =>
-      addressValidator.validate(addressEntryRequest).map(_.map(CustomerAddressEntry(_)))
-    )
+    addressValidator.validateAddressEntries(addresses).map(_.map(_.map(CustomerAddressEntry(_))))
 
   private def validateOptionalCustomerEmail(
       emailRawOpt: Option[String]
