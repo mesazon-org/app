@@ -101,7 +101,7 @@ Request body is empty. The credentials travel in the request's authorization hea
 | Organization ID | `UUID` | Canonical 36-character form | ✅ | Identifies the organization. |
 | Name | `String` | 1–255 characters, trimmed | ✅ | The business name as people should see it. |
 | Slug | `String` | Lowercase letters, digits and hyphens only; max 63 characters | ✅ | The short name used in web addresses. |
-| Role | `OrganizationUserRole` | One of `OWNER`, `ADMIN`, `USER` | ✅ | What the signed-in person may do in this organization. |
+| Role | `OrganizationUserRole` | One of `Owner`, `Admin`, `User` | ✅ | What the signed-in person may do in this organization. |
 | Logo | `String` | A link to the stored image | ❌ | The organization's logo. Absent if the organization has not uploaded one yet. |
 
 **Outcome**
@@ -149,9 +149,5 @@ Failed attempts are counted per account only, so a stranger's guesses lock out t
 One session per account is deliberate, but nobody is told. Signing in on a phone ends the laptop's session without warning, so the one sign that a password was stolen — being signed out unexpectedly — goes unnoticed.
 
 **To decide:** whether ending other sessions should be announced (a notice on the new device, an email, or both), and whether more than one session should be allowed at all.
-
-#### 5. Sign-in enum wire values have not yet been standardized
-
-Today the API uses uppercase values for onboard stage and organization role. The approved target is UpperCamelCase for both mirrored enums: `EmailVerification`, `EmailVerified`, `PasswordProvided`, `PhoneVerification`, `PhoneVerified`, `Owner`, `Admin` and `User`. These targets are not shipped yet.
 
 {% include abbreviations.md %}

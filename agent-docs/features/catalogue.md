@@ -24,7 +24,7 @@ The `numeric` choice is the documented exception to the usual primitive set.
 
 ## Endpoints
 
-`CatalogueService`: bearer + completed onboarding + `X-Organization-ID`. Reads allow `OWNER|ADMIN|USER`; writes `OWNER|ADMIN`.
+`CatalogueService`: bearer + completed onboarding + `X-Organization-ID`. Reads allow `Owner|Admin|User`; writes `Owner|Admin`.
 
 | Method | Path | Operation | Effect/result |
 |---|---|---|---|
@@ -41,13 +41,13 @@ Errors:
 - archive/read: `BadRequest, Unauthorized, Forbidden, InternalServerError`; pure UUID cannot validation-fail and archive cannot create a name conflict.
 - Organization gate (all six, per [Authentication](../project/authentication.md#organization-scope)): missing `X-Organization-ID` → 400 `BAD_REQUEST_ERROR`; no membership row → 500 `INTERNAL_SERVER_ERROR`, not 403; disallowed role → 403; missing user details → 500. `CatalogueApiSpec` proves the non-member and missing-details 500s on every endpoint.
 
-Contract: `smithy/CatalogueService.smithy`, `smithy/domain/Catalogue.smithy`. Optional `price` is `CatalogueItemPriceRequest`; if present, both `amount` and `currency` are required. Request lists use `@default([])`; response lists use `@required`. `CatalogueItemStatus` is a Smithy enum (`ACTIVE`/`ARCHIVED`) exposed only on the list response; `GatewayClient`'s jsoniter codec for it must be hand-written like `OnboardStage`/`CustomerType` — smithy4s enums are not native Scala 3 enums, so macro derivation silently produces the wrong wire shape without one.
+Contract: `smithy/CatalogueService.smithy`, `smithy/domain/Catalogue.smithy`. Optional `price` is `CatalogueItemPriceRequest`; if present, both `amount` and `currency` are required. Request lists use `@default([])`; response lists use `@required`. `CatalogueItemStatus` is a Smithy enum (`Active`/`Archived`) exposed only on the list response; `GatewayClient`'s jsoniter codec for it must be hand-written like `OnboardStage`/`CustomerType` — smithy4s enums are not native Scala 3 enums, so macro derivation silently produces the wrong wire shape without one.
 
 ## Image upload
 
 `POST /upload/catalogue-item/image` is a Tapir streaming endpoint, not Smithy — Smithy JSON routes cap at 5 MB (`HttpApp.SmithyMaxEntitySize`); Tapir streams binary and allows 20 MB (`HttpApp.TapirMaxEntitySize`, kept equal to `file-service.file-bytes-max`). See [Alternate HTTP](../project/alternate-http.md) for the shared Tapir transport mechanics (docs mounting, error model, security wiring) this endpoint follows alongside [Organization Management](organization-management.md#logo-upload)'s logo upload — the two mirror the same pipeline shape, differing only in entity scoping and persistence target.
 
-Binary body; organization in `X-Organization-ID`, catalogue item in `X-Catalogue-Item-ID`, original file name in `X-File-Name`. Security (`AuthorizationService.auth`): valid access JWT, `OnboardStage.completedStages` (= `PhoneVerified`), and the caller must be assigned to the organization as `OWNER` or `ADMIN` (disallowed role → `403`, no membership row → `500`).
+Binary body; organization in `X-Organization-ID`, catalogue item in `X-Catalogue-Item-ID`, original file name in `X-File-Name`. Security (`AuthorizationService.auth`): valid access JWT, `OnboardStage.completedStages` (= `PhoneVerified`), and the caller must be assigned to the organization as `Owner` or `Admin` (disallowed role → `403`, no membership row → `500`).
 
 Errors: `TapirServerError` has no validation variant, so every 400 here is `BAD_REQUEST_ERROR` (never `VALIDATION_ERROR`). `HttpErrorHandler.errorResponseHandlerTapir` maps every `ServiceError.BadRequestError` — including `FileScanner`'s `ValidationError` for a missing/unsupported extension or an extension/detected-content mismatch — to `TapirServerError.BadRequestError`; a missing or undecodable `X-Organization-ID`/`X-Catalogue-Item-ID`/`X-File-Name` header goes through `tapir.scala`'s decode-failure handler, also `400 BAD_REQUEST_ERROR`. Missing/archived/foreign item, image decode/processing failure, and over-cap bytes are `500 INTERNAL_SERVER_ERROR`.
 
@@ -99,7 +99,7 @@ Details:
 
 ## Acceptance proof
 
-`CatalogueApiSpec` follows [Acceptance testing](../project/acceptance-testing.md) and covers all six endpoints over the real gateway and PostgreSQL stack. It proves complete rows/responses, exact validation and conflict bodies, atomic batch rollback and empty batches, update/archive no-ops for missing, archived, or foreign-organization items, archived by-ID visibility, active-only tenant-filtered listing, persisted image-field mapping, and every applicable organization middleware branch. Writes prove that `USER` is forbidden. Reads allow every defined role, so the disallowed-role case is structurally impossible and intentionally omitted. Because presigned URLs are generated on the fly (signature + expiry query params), the GET specs assert URL presence/absence rather than exact string equality — `S3ClientOrganizationMediaSpec` is what proves a presigned URL actually serves the uploaded bytes.
+`CatalogueApiSpec` follows [Acceptance testing](../project/acceptance-testing.md) and covers all six endpoints over the real gateway and PostgreSQL stack. It proves complete rows/responses, exact validation and conflict bodies, atomic batch rollback and empty batches, update/archive no-ops for missing, archived, or foreign-organization items, archived by-ID visibility, active-only tenant-filtered listing, persisted image-field mapping, and every applicable organization middleware branch. Writes prove that `User` is forbidden. Reads allow every defined role, so the disallowed-role case is structurally impossible and intentionally omitted. Because presigned URLs are generated on the fly (signature + expiry query params), the GET specs assert URL presence/absence rather than exact string equality — `S3ClientOrganizationMediaSpec` is what proves a presigned URL actually serves the uploaded bytes.
 
 `GatewayClient` supplies typed JSON codecs and HTTP methods for all six Catalogue operations, including required-list encoding for batch insert. `GatewayAcceptanceSpec` registers the child spec, and `GatewayItContext` exposes `CatalogueItemQueries` for direct arrangement and complete state assertions.
 

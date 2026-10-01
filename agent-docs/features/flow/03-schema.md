@@ -23,7 +23,7 @@ Current pre-release migration is `V2025.05.27__init.sql`; extend it only while n
 - Phone value: `phone_region`, `phone_country_code`, `phone_national_number`, `phone_number_e164`.
 - Atomic multi-value contacts: `emails`, `phone_numbers`, `addresses` as `jsonb` (on `organization_details` and `customer`; enums inside, such as `addressType`, are stored as case-name strings).
 - `customer.status` is the sole native-enum exception: PG `customer_status`, labels `Active`/`Archived`; archive, never hard-delete.
-- `customer_type`: `INDIVIDUAL` or `BUSINESS`, all customer data on `customer`.
+- `customer_type`: `Individual` or `Business`, all customer data on `customer`.
   - Individual: `name` full name, `tax_id` null.
   - Business: `name` company, optional `tax_id`.
   - `customer_business_contact` is not a customer/order target and has no status; key `(organization_id, customer_id, customer_business_contact_id)`, tenant-scoped FK.

@@ -48,7 +48,7 @@ Like the customer book, these are not a single journey. They are the things that
 
 ### Prerequisites
 
-**Item status** — an item is `ACTIVE` or `ARCHIVED`. New items start active. Archiving is one-way.
+**Item status** — an item is `Active` or `Archived`. New items start active. Archiving is one-way.
 
 **Unit** — a free-form word for what the item is sold in: `piece`, `kg`, `hour`, or anything else the business needs. There is no fixed list.
 
@@ -221,7 +221,7 @@ Request is empty apart from naming the organization.
 | --- | --- | --- | --- | --- |
 | Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Identifies the item, used to open it |
 | Name | `String` | — | ✅ | The item's name |
-| Status | `CatalogueItemStatus` | `ACTIVE` or `ARCHIVED` | ✅ | Always `ACTIVE` here, since only active items are listed |
+| Status | `CatalogueItemStatus` | `Active` or `Archived` | ✅ | Always `Active` here, since only active items are listed |
 | Image URL | `String` | A working link, present only if the item has an image | ❌ | A picture of the item |
 
 **Outcome**
@@ -414,9 +414,5 @@ An archived item answers a direct look-up exactly like an active one. Combined w
 Updating an item can set or replace a price, but there is no way to say "this item no longer has a price". Once set, a price can only be changed, never cleared.
 
 **To decide:** whether removing a price should be possible, and if so how the request should say "clear this" as distinct from "leave this alone".
-
-#### 5. Catalogue status values have not yet been standardized
-
-Today the API uses `ACTIVE` and `ARCHIVED` for catalogue item status. The approved target is the same two values in UpperCamelCase: `Active` and `Archived`. This target is not shipped yet.
 
 {% include abbreviations.md %}

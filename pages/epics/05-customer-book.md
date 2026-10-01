@@ -65,7 +65,7 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 
 **Default contact details** — email and phone lists may be left empty. When a list has entries, exactly one of them must be marked as the default. Addresses have no default.
 
-**Address type** — every address is marked as shipping, billing, or both. Both (`SHIPPING_AND_BILLING`) means one address serves both purposes. Functional rule 6 says which combinations are allowed.
+**Address type** — every address is marked as shipping, billing, or both. Both (`ShippingAndBilling`) means one address serves both purposes. Functional rule 6 says which combinations are allowed.
 
 ### 1. User Adds a Customer
 
@@ -121,7 +121,7 @@ The two shapes are separate and neither is a variant of the other. A person has 
 | Full Name | `String` | 1–255 characters, trimmed | ✅ | The person's name |
 | Emails | `EmailEntry[]` | Empty by default | ❌ | Contact email addresses. See **EmailEntry** below |
 | Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact numbers. See **PhoneNumberEntry** below |
-| Addresses | `AddressEntry[]` | Empty by default; otherwise one `SHIPPING_AND_BILLING` entry, or one `SHIPPING` and one `BILLING` entry | ❌ | Where they are. See **AddressEntry** below |
+| Addresses | `AddressEntry[]` | Empty by default; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Where they are. See **AddressEntry** below |
 
 **Request — CustomerBusiness**
 
@@ -132,7 +132,7 @@ The two shapes are separate and neither is a variant of the other. A person has 
 | Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact numbers. See **PhoneNumberEntry** below |
 | Tax ID | `String` | 1–255 characters, trimmed | ❌ | The company's tax reference. A person may never have one |
 | Customer Business Contacts | `BusinessContact[]` | Empty by default | ❌ | People inside the business. See **BusinessContact** below |
-| Addresses | `AddressEntry[]` | Empty by default; otherwise one `SHIPPING_AND_BILLING` entry, or one `SHIPPING` and one `BILLING` entry | ❌ | Where they are. See **AddressEntry** below |
+| Addresses | `AddressEntry[]` | Empty by default; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Where they are. See **AddressEntry** below |
 
 The shapes used above and throughout this epic:
 
@@ -162,7 +162,7 @@ The shapes used above and throughout this epic:
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Address | `Address` | — | ✅ | Where it is. See **Address** below |
-| Address Type | `AddressType` | `SHIPPING`, `BILLING` or `SHIPPING_AND_BILLING` | ✅ | What the address is used for. `SHIPPING_AND_BILLING` means one address serves both |
+| Address Type | `AddressType` | `Shipping`, `Billing` or `ShippingAndBilling` | ✅ | What the address is used for. `ShippingAndBilling` means one address serves both |
 
 **Address**
 
@@ -283,7 +283,7 @@ Request is empty apart from naming the organization. There is nothing to search,
 | --- | --- | --- | --- | --- |
 | Customer ID | `UUID` | Canonical 36-character form | ✅ | Identifies the customer, used to open them |
 | Name | `String` | — | ✅ | The person's or business's name |
-| Customer Type | `CustomerType` | `INDIVIDUAL` or `BUSINESS` | ✅ | Which kind, so the right screen can be opened |
+| Customer Type | `CustomerType` | `Individual` or `Business` | ✅ | Which kind, so the right screen can be opened |
 
 **Outcome**
 
@@ -401,7 +401,7 @@ There are two ways to update, one per kind, and the caller must use the one matc
 | Full Name | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current name |
 | Emails | `EmailEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
 | Phone Numbers | `PhoneNumberEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
-| Addresses | `AddressEntry[]` | Replaces the whole list; when not empty, one `SHIPPING_AND_BILLING` entry, or one `SHIPPING` and one `BILLING` entry | ❌ | Send the complete set, not just additions |
+| Addresses | `AddressEntry[]` | Replaces the whole list; when not empty, one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Send the complete set, not just additions |
 
 **Request — updating a CustomerBusiness**
 
@@ -412,7 +412,7 @@ There are two ways to update, one per kind, and the caller must use the one matc
 | Emails | `EmailEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
 | Tax ID | `String` | 1–255 characters, trimmed | ❌ | Left out means unchanged |
 | Phone Numbers | `PhoneNumberEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
-| Addresses | `AddressEntry[]` | Replaces the whole list; when not empty, one `SHIPPING_AND_BILLING` entry, or one `SHIPPING` and one `BILLING` entry | ❌ | Send the complete set, not just additions |
+| Addresses | `AddressEntry[]` | Replaces the whole list; when not empty, one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Send the complete set, not just additions |
 
 Neither form touches the business's contacts. Those are managed on their own, in [step 5](#5-user-manages-a-businesss-contacts).
 
@@ -588,7 +588,7 @@ This step helps a business move its existing customer list into the product quic
 | 17. A spreadsheet row is completely blank | - Not counted as an entry - Its row number is listed as empty |
 | 18. User uploads a spreadsheet with a very large number of rows | - Every row is read, in groups of up to 50, with up to 3 groups at a time - If any group fails, the whole read fails with no partial result - Row numbers and duplicate marks still refer to the whole file |
 | 19. User sends a supported file whose name matches it | - Accepted and read - The name's extension is matched ignoring capitalisation |
-| 20. An entry has one complete address | - It always comes back marked as both shipping and billing (`SHIPPING_AND_BILLING`), whatever the source says |
+| 20. An entry has one complete address | - It always comes back marked as both shipping and billing (`ShippingAndBilling`), whatever the source says |
 | 21. An address is missing its first line, city, postal code or country | - That address is left off the candidate - The candidate is still returned, with a note saying which part of the address was missing - If that leaves one address, it is marked as both shipping and billing - The rest of the read carries on |
 | 22. An entry has two complete addresses | - One comes back as shipping and the other as billing, as the source shows - When the source does not say which is which, the first is shipping and the second billing, and the candidate notes that the types were assumed |
 | 23. An entry has three or more complete addresses | - Two are kept: the best shipping and billing pair, or else the first two - The candidate notes that further addresses were left out |
@@ -611,7 +611,7 @@ This step helps a business move its existing customer list into the product quic
 14. Large spreadsheets are read in groups of up to 50 rows, up to 3 groups at a time, and if any group fails the whole read fails with no partial candidates.
 15. When a spreadsheet read in groups has something worth flagging, the person gets one short combined message, and failing to combine the messages never fails the read.
 16. An address missing its first line, city, postal code or country is left off the candidate, and the candidate's note says which part was missing, for example that the postal code could not be read; only the addresses that remain count towards requirement 17.
-17. The AI is asked to return at most two addresses per candidate: one alone is always marked `SHIPPING_AND_BILLING`; two are marked one shipping and one billing as the source shows, or first shipping and second billing with a note that the types were assumed when it does not say; and from three or more, two are kept — the best shipping and billing pair, or else the first two — with a note that further addresses were left out.
+17. The AI is asked to return at most two addresses per candidate: one alone is always marked `ShippingAndBilling`; two are marked one shipping and one billing as the source shows, or first shipping and second billing with a note that the types were assumed when it does not say; and from three or more, two are kept — the best shipping and billing pair, or else the first two — with a note that further addresses were left out.
 
 #### Request / Response / Outcome
 
@@ -719,9 +719,5 @@ Nothing today creates such a record, but a future change or a direct data fix co
 [Extracting customers from an image or file](#7-user-extracts-customers-from-an-image-or-file) can be used as often as an owner or admin likes, with no limit per person, per organization, or overall. Each read goes to an outside AI service, which costs money, so nothing stops it being used far more than the migration it is meant for needs.
 
 **To decide:** whether a limit is needed, and if so what it should be.
-
-#### 6. API enum values have not yet been standardized
-
-Today the API uses uppercase values for address type (`SHIPPING`, `BILLING`, `SHIPPING_AND_BILLING`) and customer type (`INDIVIDUAL`, `BUSINESS`). The approved target is UpperCamelCase for both enums: `Shipping`, `Billing`, `ShippingAndBilling`, `Individual` and `Business`. This target is not shipped yet.
 
 {% include abbreviations.md %}

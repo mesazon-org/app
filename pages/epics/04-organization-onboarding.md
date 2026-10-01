@@ -90,7 +90,7 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 | Tagline | `String` | 1–255 characters, trimmed | ❌ | A short line describing the business |
 | Emails | `EmailEntry[]` | Empty by default | ❌ | Contact email addresses. See **EmailEntry** below |
 | Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact phone numbers. See **PhoneNumberEntry** below |
-| Addresses | `AddressEntry[]` | Empty by default; otherwise one `SHIPPING_AND_BILLING` entry, or one `SHIPPING` and one `BILLING` entry | ❌ | The business's addresses. See **AddressEntry** below |
+| Addresses | `AddressEntry[]` | Empty by default; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | The business's addresses. See **AddressEntry** below |
 | Company Registration Number | `String` | 1–255 characters, trimmed | ❌ |  |
 | Tax ID | `String` | 1–255 characters, trimmed | ❌ |  |
 
@@ -120,7 +120,7 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Address | `Address` | — | ✅ | Where it is. See **Address** below |
-| Address Type | `AddressType` | `SHIPPING`, `BILLING` or `SHIPPING_AND_BILLING` | ✅ | What the address is used for. `SHIPPING_AND_BILLING` means one address serves both |
+| Address Type | `AddressType` | `Shipping`, `Billing` or `ShippingAndBilling` | ✅ | What the address is used for. `ShippingAndBilling` means one address serves both |
 
 **Address**
 
@@ -247,13 +247,5 @@ An organization moves to its logo-provided stage once a logo is uploaded, but no
 Nothing limits how many organizations one account may create, and nothing lists the ones an account already belongs to. Since creating an organization is the step immediately after personal onboarding, someone who repeats it simply accumulates organizations they own.
 
 **To decide:** whether an account may hold more than one organization, and if so how they choose between them.
-
-#### 6. Address type values have not yet been standardized
-
-Today the API uses `SHIPPING`, `BILLING` and `SHIPPING_AND_BILLING` for address types. The approved target is the same three values in UpperCamelCase: `Shipping`, `Billing` and `ShippingAndBilling`. This target is not shipped yet.
-
-#### 7. Onboard stage and organization role wire values have not yet been standardized
-
-Today the API uses uppercase values for onboard stage and organization role, even though this epic names them in UpperCamelCase. The approved target is UpperCamelCase for both mirrored enums. These targets are not shipped yet.
 
 {% include abbreviations.md %}
