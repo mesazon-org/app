@@ -31,14 +31,10 @@ structure PhoneNumberRequest {
 }
 
 structure AddressRequest {
-    @required
     addressLine1: String
     addressLine2: String
-    @required
     city: String
-    @required
     postalCode: String
-    @required
     country: String
 }
 
