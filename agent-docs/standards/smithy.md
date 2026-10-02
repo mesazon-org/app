@@ -7,7 +7,7 @@ Reusable Smithy rules. Related: [Mesazon endpoints](../features/flow/01-endpoint
 - Service/file: `<Feature>Service` / `<Feature>Service.smithy`.
 - Operation: `{Action}{Entity}{HttpMethod}` or `{Flow}{HttpMethod}`; suffix equals actual method. Batch operation/URI/shapes use plural entity.
 - Shapes: `<Operation>Request|Response` in feature domain file.
-- Service/operation/shape names use `PascalCase`.
+- Service/operation/shape names use `UpperCamelCase`.
 - Contract name is canonical: validated domain request has the exact same name. Rename both together.
 - Generated types are always package-qualified; import package, never members.
 - When wire/domain types coexist: bare binding = domain; generated binding = full type name + `Smithy`. Applies to handler params, validated outputs, wrappers, tests, and arbitrary givens.

@@ -6,7 +6,7 @@ For non-Smithy endpoints read [feature endpoints](../features/flow/01-endpoints.
 
 - `tapir/tapir.scala`: `securedEndpoint`, decode/error output, role description, aliases/options.
 - `tapir/FileServiceEndpoints.scala`: upload endpoint, docs endpoint, route/docs wiring.
-- `TapirServerError`: BadRequest, Unauthorized, Forbidden, NotFound, Conflict, InternalServer, ServiceUnavailable; cases are `PascalCaseError`, codes `SCREAMING_SNAKE_CASE`.
+- `TapirServerError`: BadRequest, Unauthorized, Forbidden, NotFound, Conflict, InternalServer, ServiceUnavailable; cases are `UpperCamelCase` + `Error`, codes `SCREAMING_SNAKE_CASE`.
 
 Each endpoint explicitly wires `zServerSecurityLogic(authorizationService.auth(...))`; there is no Smithy middleware. `securedEndpoint` supplies bearer and `X-Organization-ID`. Upload requires completed onboarding and `OrganizationUserRole.adminRoles`. File endpoints use the existing required `X-File-Name` header; customer extraction uses it for media detection and validation but does not store it.
 
