@@ -68,7 +68,8 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 | 5. The confirmation email cannot be sent | - The organization is still created and the user is not held up |
 | 6. User has not finished personal onboarding | - Rejected. Verifying a phone number is what unlocks this step |
 | 7. User supplies one address for both shipping and billing, or a shipping address and a billing address | - Each address is stored with its type - None is marked as a default - An empty list is allowed; the organization simply has no recorded address |
-| 8. User supplies an address missing a required part, with a type other than shipping, billing, or both, or any other combination of addresses | - Rejected and nothing is stored |
+| 8. User supplies an address with some text fields missing, but at least one field has content | - Accepted - The address is stored with the content that was supplied |
+| 9. User supplies an address whose text fields are all empty, with a type other than shipping, billing, or both, or any other combination of addresses | - Rejected and nothing is stored |
 
 #### Requirements
 
@@ -76,7 +77,7 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 2. The short name may contain only lowercase letters, digits and hyphens, is at most 63 characters, and must be unique across the whole product, because it is used in web addresses.
 3. When contact emails or phone numbers are given, every entry must be valid and exactly one of them must be marked as the default.
 4. We email the creator to confirm, but never let that email delay or block the creation.
-5. Every address given needs a first address line, city, postal code, country and type; the second address line is optional, and addresses have no default.
+5. Every address text field is optional. Missing, null, empty, and whitespace-only values count as empty; non-empty values are trimmed. An address must contain at least one non-empty text field, its type is required, and addresses have no default.
 6. When addresses are given there must be either exactly one, marked as both shipping and billing, or exactly two, one shipping and one billing in either order. Three or more, two of the same type, a single shipping-only or billing-only address, or a both-purposes address alongside another are all rejected.
 
 #### Request / Response / Outcome
@@ -126,11 +127,11 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Address Line 1 | `String` | 1–255 characters, trimmed | ✅ | Street address |
-| Address Line 2 | `String` | 1–255 characters, trimmed | ❌ | Street address, continued |
-| City | `String` | 1–255 characters, trimmed | ✅ |  |
-| Postal Code | `String` | 1–255 characters, trimmed | ✅ |  |
-| Country | `String` | 1–255 characters, trimmed | ✅ | Free text, as the person types it |
+| Address Line 1 | `String` | Up to 255 characters, trimmed when present | ❌ | Street address |
+| Address Line 2 | `String` | Up to 255 characters, trimmed when present | ❌ | Street address, continued |
+| City | `String` | Up to 255 characters, trimmed when present | ❌ |  |
+| Postal Code | `String` | Up to 255 characters, trimmed when present | ❌ |  |
+| Country | `String` | Up to 255 characters, trimmed when present | ❌ | Free text, as the person types it |
 
 **Response**
 
@@ -148,7 +149,7 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - Form validation error - Short name has the wrong shape - A contact list has no default, or more than one - The addresses are not an allowed combination |
+| 400 | `VALIDATION_ERROR` | - Form validation error - Short name has the wrong shape - A contact list has no default, or more than one - An address has no non-empty text field - The addresses are not an allowed combination |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
 | 500 | `INTERNAL_SERVER_ERROR` | - The short name is already taken - Unexpected error |

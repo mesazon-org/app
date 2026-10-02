@@ -87,8 +87,9 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 | 6. User submits several bad entries at once | - Every problem is reported together - Each is tied to the entry that caused it, including which contact inside which business |
 | 7. User leaves the contact lists empty | - Accepted. The customer simply has no recorded contact details |
 | 8. A member with the ordinary user role tries to add a customer | - Rejected. Reading is open to everyone; changing is not |
-| 9. User adds a customer with one address for both shipping and billing, or a shipping address and a billing address | - Every address is stored with its type - None is marked as a default - An empty list is accepted; the customer simply has no recorded address |
-| 10. User gives an address missing a required part, with a type other than shipping, billing, or both, or any other combination of addresses | - Rejected and nothing is stored |
+| 9. User adds a customer with one address for both shipping and billing, or a shipping address and a billing address, where each address has at least one non-empty text field | - Every address is stored with its type - None is marked as a default - An empty list is accepted; the customer simply has no recorded address |
+| 10. User gives an address with some text fields missing, but at least one field has content | - Accepted - The address is stored with the content that was supplied |
+| 11. User gives an address whose text fields are all empty, with a type other than shipping, billing, or both, or any other combination of addresses | - Rejected and nothing is stored |
 
 #### Requirements
 
@@ -98,7 +99,7 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 4. A name must be unique among active customers of the same kind within the organization.
 5. Within one business, no two contacts may share an email address, and no two may share a phone number.
 6. Adding several customers at once succeeds completely or not at all.
-7. Every address given needs a first address line, city, postal code, country and type; the second address line is optional. Together the addresses must be an allowed combination (functional rule 6).
+7. Every address text field is optional. Missing, null, empty, and whitespace-only values count as empty; non-empty values are trimmed. An address must contain at least one non-empty text field, its type is required, and together the addresses must be an allowed combination (functional rule 6).
 
 #### Request / Response / Outcome
 
@@ -168,11 +169,11 @@ The shapes used above and throughout this epic:
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Address Line 1 | `String` | 1–255 characters, trimmed | ✅ | Street address |
-| Address Line 2 | `String` | 1–255 characters, trimmed | ❌ | Street address, continued |
-| City | `String` | 1–255 characters, trimmed | ✅ |  |
-| Postal Code | `String` | 1–255 characters, trimmed | ✅ |  |
-| Country | `String` | 1–255 characters, trimmed | ✅ | Free text, as the person types it |
+| Address Line 1 | `String` | Up to 255 characters, trimmed when present | ❌ | Street address |
+| Address Line 2 | `String` | Up to 255 characters, trimmed when present | ❌ | Street address, continued |
+| City | `String` | Up to 255 characters, trimmed when present | ❌ |  |
+| Postal Code | `String` | Up to 255 characters, trimmed when present | ❌ |  |
+| Country | `String` | Up to 255 characters, trimmed when present | ❌ | Free text, as the person types it |
 
 **BusinessContact**
 
@@ -381,6 +382,8 @@ Nothing changes. This step only reads.
 | 3. User changes a customer that has been archived | - Nothing happens, and the change is reported as successful - See [gap 2](#2-changes-to-an-archived-customer-are-silently-discarded) |
 | 4. User changes a customer that does not exist | - Nothing happens, and it is reported as successful |
 | 5. A member with the ordinary user role tries to make a change | - Rejected |
+| 6. User replaces an address with some text fields missing, but at least one field has content | - Accepted - The partial address is stored |
+| 7. User replaces an address whose text fields are all empty | - Rejected and nothing is stored |
 
 #### Requirements
 
@@ -388,6 +391,7 @@ Nothing changes. This step only reads.
 2. Email, phone and address lists are replaced entirely by what is sent, rather than merged. Sending an empty list clears them, and leaving a list out is the same as sending it empty.
 3. Optional single fields left out of the request, such as the name or tax id, are left unchanged.
 4. A rename must still leave the name unique among active customers of the same kind.
+5. Address text fields are optional, but every address must contain at least one non-empty text field; an address with all five fields empty is rejected.
 
 #### Request / Response / Outcome
 
@@ -588,15 +592,15 @@ This step helps a business move its existing customer list into the product quic
 | 17. A spreadsheet row is completely blank | - Not counted as an entry - Its row number is listed as empty |
 | 18. User uploads a spreadsheet with a very large number of rows | - Every row is read, in groups of up to 50, with up to 3 groups at a time - If any group fails, the whole read fails with no partial result - Row numbers and duplicate marks still refer to the whole file |
 | 19. User sends a supported file whose name matches it | - Accepted and read - The name's extension is matched ignoring capitalisation |
-| 20. An entry has one complete address | - It always comes back marked as both shipping and billing (`ShippingAndBilling`), whatever the source says |
-| 21. An address is missing its first line, city, postal code or country | - That address is left off the candidate - The candidate is still returned, with a note saying which part of the address was missing - If that leaves one address, it is marked as both shipping and billing - The rest of the read carries on |
-| 22. An entry has two complete addresses | - One comes back as shipping and the other as billing, as the source shows - When the source does not say which is which, the first is shipping and the second billing, and the candidate notes that the types were assumed |
-| 23. An entry has three or more complete addresses | - Two are kept: the best shipping and billing pair, or else the first two - The candidate notes that further addresses were left out |
+| 20. An entry has one address with at least one non-empty text field | - It always comes back marked as both shipping and billing (`ShippingAndBilling`), whatever the source says - Missing or unclear fields are noted |
+| 21. An address has some text fields missing, but at least one field has content | - The partial address is returned with a note saying what was missing or unclear - The rest of the read carries on |
+| 22. An address has all five text fields empty | - That address is omitted - If no address has any non-empty text field, the candidate's address list is empty - The candidate itself is still returned |
+| 23. An entry has two or more addresses with at least one non-empty text field | - One comes back as shipping and the other as billing, as the source shows - When the source does not say which is which, the first is shipping and the second billing, and the candidate notes that the types were assumed - If there are more than two, the best shipping and billing pair is kept, or else the first two, with a note that further addresses were left out |
 
 #### Requirements
 
 1. Every candidate has the same shape as a person or business added in [step 1](#1-user-adds-a-customer), whatever the source, and the AI decides which kind each entry is.
-2. A candidate's name, and any contact's name, is never empty, and every other returned detail follows its field rule from step 1, or the whole read fails with a server error. The AI is asked to leave an incomplete address off the candidate (requirement 16); if it returns one anyway, the read fails like any other broken detail.
+2. A candidate's name, and any contact's name, is never empty, and every other returned detail follows its field rule from step 1, or the whole read fails with a server error. The AI instruction explicitly says to return an address when at least one of its five text fields has content, even when the address is partial, and to omit an address when all five fields are empty. Missing or unclear fields in a returned partial address are noted; if no address has any content, the candidate's address list is empty.
 3. Whether a phone number is real for its country, whether exactly one default is marked, and whether the addresses are an allowed combination, is only checked when a candidate is actually added.
 4. When no name at all can be read but an email plainly looks like a person's name, the name is worked out from that email, noted on the candidate, and counted as an ordinary candidate — never for a role mailbox, a meaningless address, a business's own name, or a name that was partly readable.
 5. The response always says how many entries were found and how many became candidates; for a spreadsheet, missed rows are listed by the row numbers the person sees in their own file, and for an image any detail goes in the notes.
@@ -610,8 +614,8 @@ This step helps a business move its existing customer list into the product quic
 13. Each AI attempt may take up to one minute, and temporary failures are tried again up to two more times, while rejections and unusable answers are not.
 14. Large spreadsheets are read in groups of up to 50 rows, up to 3 groups at a time, and if any group fails the whole read fails with no partial candidates.
 15. When a spreadsheet read in groups has something worth flagging, the person gets one short combined message, and failing to combine the messages never fails the read.
-16. An address missing its first line, city, postal code or country is left off the candidate, and the candidate's note says which part was missing, for example that the postal code could not be read; only the addresses that remain count towards requirement 17.
-17. The AI is asked to return at most two addresses per candidate: one alone is always marked `ShippingAndBilling`; two are marked one shipping and one billing as the source shows, or first shipping and second billing with a note that the types were assumed when it does not say; and from three or more, two are kept — the best shipping and billing pair, or else the first two — with a note that further addresses were left out.
+16. The AI instruction treats missing, null, empty, and whitespace-only address text as empty, and treats any non-whitespace content as present after trimming. It returns each address that has at least one non-empty text field, including partial addresses, and notes missing or unclear fields; it omits each address whose five text fields are all empty. If none remain, the candidate's address list is empty rather than the candidate being dropped.
+17. The AI is asked to return at most two non-empty addresses per candidate: one alone is always marked `ShippingAndBilling`; two are marked one shipping and one billing as the source shows, or first shipping and second billing with a note that the types were assumed when it does not say; and from three or more, two are kept — the best shipping and billing pair, or else the first two — with a note that further addresses were left out.
 
 #### Request / Response / Outcome
 
