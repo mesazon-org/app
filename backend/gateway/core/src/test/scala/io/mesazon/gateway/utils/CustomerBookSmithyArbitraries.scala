@@ -2,36 +2,12 @@ package io.mesazon.gateway.utils
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.smithy
+import io.mesazon.gateway.utils.given
 import io.mesazon.testkit.base.*
-import io.scalaland.chimney.Transformer
 import io.scalaland.chimney.dsl.*
 import org.scalacheck.*
 
 trait CustomerBookSmithyArbitraries extends CustomerBookDomainArbitraries, IronRefinedTypeTransformer {
-
-  given Transformer[CustomerPhoneNumber, smithy.PhoneNumberRequest] = customerPhoneNumber =>
-    smithy.PhoneNumberRequest(
-      phoneNationalNumber = customerPhoneNumber.value.phoneNationalNumber.value,
-      phoneCountryCode = customerPhoneNumber.value.phoneCountryCode.value,
-    )
-
-  given Transformer[CustomerEmailEntryRequest, smithy.CustomerEmailEntryRequest] = entry =>
-    smithy.CustomerEmailEntryRequest(email = entry.email.value, isDefault = entry.isDefault)
-
-  given Transformer[CustomerPhoneNumberEntryRequest, smithy.CustomerPhoneNumberEntryRequest] = entry =>
-    smithy.CustomerPhoneNumberEntryRequest(
-      phoneNumber = entry.phoneNumber.transformInto[smithy.PhoneNumberRequest],
-      isDefault = entry.isDefault,
-    )
-
-  given Transformer[InsertCustomerBusinessPostRequest, smithy.InsertCustomerBusinessPostRequest] = business =>
-    business
-      .into[smithy.InsertCustomerBusinessPostRequest]
-      .withFieldComputed(
-        _.customerBusinessContacts,
-        business => business.customerBusinessContacts.transformInto[List[smithy.InsertCustomerBusinessContact]],
-      )
-      .transform
 
   given arbInsertCustomerIndividualPostRequestSmithy: Arbitrary[smithy.InsertCustomerIndividualPostRequest] = Arbitrary(
     Arbitrary

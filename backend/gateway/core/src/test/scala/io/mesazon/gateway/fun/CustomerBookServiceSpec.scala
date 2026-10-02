@@ -97,7 +97,18 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               isDefault = entry.isDefault,
             )
           ),
-          addresses = customerIndividualDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
+          addresses = customerIndividualDetailsRow.addresses.map(customerAddressEntry =>
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = customerAddressEntry.value.address.addressLine1.value,
+                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
+                city = customerAddressEntry.value.address.city.value,
+                postalCode = customerAddressEntry.value.address.postalCode.value,
+                country = customerAddressEntry.value.address.country.value,
+              ),
+              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
+            )
+          ),
         )
       }
 
@@ -253,7 +264,18 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               isDefault = entry.isDefault,
             )
           ),
-          addresses = customerBusinessDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
+          addresses = customerBusinessDetailsRow.addresses.map(customerAddressEntry =>
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = customerAddressEntry.value.address.addressLine1.value,
+                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
+                city = customerAddressEntry.value.address.city.value,
+                postalCode = customerAddressEntry.value.address.postalCode.value,
+                country = customerAddressEntry.value.address.country.value,
+              ),
+              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
+            )
+          ),
           customerBusinessContacts = customerBusinessContactRows.map(customerBusinessContactRow =>
             smithy.InsertCustomerBusinessContactResponse(
               customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID.value,
@@ -742,7 +764,18 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               isDefault = entry.isDefault,
             )
           ),
-          addresses = customerIndividualDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
+          addresses = customerIndividualDetailsRow.addresses.map(customerAddressEntry =>
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = customerAddressEntry.value.address.addressLine1.value,
+                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
+                city = customerAddressEntry.value.address.city.value,
+                postalCode = customerAddressEntry.value.address.postalCode.value,
+                country = customerAddressEntry.value.address.country.value,
+              ),
+              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
+            )
+          ),
         )
       }
 
@@ -797,7 +830,18 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               isDefault = entry.isDefault,
             )
           ),
-          addresses = customerBusinessDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
+          addresses = customerBusinessDetailsRow.addresses.map(customerAddressEntry =>
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = customerAddressEntry.value.address.addressLine1.value,
+                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
+                city = customerAddressEntry.value.address.city.value,
+                postalCode = customerAddressEntry.value.address.postalCode.value,
+                country = customerAddressEntry.value.address.country.value,
+              ),
+              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
+            )
+          ),
         )
       }
 

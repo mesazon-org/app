@@ -61,26 +61,8 @@ class OrganizationManagementServiceSpec
             .once(),
         )
 
-        val createOrganizationPostRequestSmithy = smithy.CreateOrganizationPostRequest(
-          name = organizationDetailsRow.name.value,
-          slug = organizationDetailsRow.slug.value,
-          tagline = organizationDetailsRow.tagline.map(_.value),
-          emails = organizationDetailsRow.emails.map(entry =>
-            smithy.OrganizationEmailEntryRequest(entry.email.value, entry.isDefault)
-          ),
-          phoneNumbers = organizationDetailsRow.phoneNumbers.map(entry =>
-            smithy.OrganizationPhoneNumberEntryRequest(
-              smithy.PhoneNumberRequest(
-                phoneNationalNumber = entry.phoneNumber.value.phoneNationalNumber.value,
-                phoneCountryCode = entry.phoneNumber.value.phoneCountryCode.value,
-              ),
-              entry.isDefault,
-            )
-          ),
-          addresses = organizationDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
-          companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber.map(_.value),
-          taxID = organizationDetailsRow.taxID.map(_.value),
-        )
+        val createOrganizationPostRequestSmithy =
+          organizationDetailsRow.transformInto[smithy.CreateOrganizationPostRequest]
 
         val organizationManagementService = buildOrganizationManagementService
 
@@ -133,26 +115,8 @@ class OrganizationManagementServiceSpec
             .once(),
         )
 
-        val createOrganizationPostRequestSmithy = smithy.CreateOrganizationPostRequest(
-          name = organizationDetailsRow.name.value,
-          slug = organizationDetailsRow.slug.value,
-          tagline = organizationDetailsRow.tagline.map(_.value),
-          emails = organizationDetailsRow.emails.map(entry =>
-            smithy.OrganizationEmailEntryRequest(entry.email.value, entry.isDefault)
-          ),
-          phoneNumbers = organizationDetailsRow.phoneNumbers.map(entry =>
-            smithy.OrganizationPhoneNumberEntryRequest(
-              smithy.PhoneNumberRequest(
-                phoneNationalNumber = entry.phoneNumber.value.phoneNationalNumber.value,
-                phoneCountryCode = entry.phoneNumber.value.phoneCountryCode.value,
-              ),
-              entry.isDefault,
-            )
-          ),
-          addresses = organizationDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
-          companyRegistrationNumber = organizationDetailsRow.companyRegistrationNumber.map(_.value),
-          taxID = organizationDetailsRow.taxID.map(_.value),
-        )
+        val createOrganizationPostRequestSmithy =
+          organizationDetailsRow.transformInto[smithy.CreateOrganizationPostRequest]
 
         val organizationManagementService = buildOrganizationManagementService
 

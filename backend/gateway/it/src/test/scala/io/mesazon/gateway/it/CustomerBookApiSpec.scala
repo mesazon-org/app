@@ -92,7 +92,18 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               entry.isDefault,
             )
           ),
-          addresses = insertCustomerIndividualPostRequest.addresses.transformInto[List[smithy.AddressEntryRequest]],
+          addresses = insertCustomerIndividualPostRequest.addresses.map(customerAddressEntry =>
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = customerAddressEntry.value.address.addressLine1.value,
+                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
+                city = customerAddressEntry.value.address.city.value,
+                postalCode = customerAddressEntry.value.address.postalCode.value,
+                country = customerAddressEntry.value.address.country.value,
+              ),
+              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
+            )
+          ),
         )
       }
 
@@ -816,7 +827,18 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               entry.isDefault,
             )
           ),
-          addresses = insertCustomerBusinessPostRequest.addresses.transformInto[List[smithy.AddressEntryRequest]],
+          addresses = insertCustomerBusinessPostRequest.addresses.map(customerAddressEntry =>
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = customerAddressEntry.value.address.addressLine1.value,
+                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
+                city = customerAddressEntry.value.address.city.value,
+                postalCode = customerAddressEntry.value.address.postalCode.value,
+                country = customerAddressEntry.value.address.country.value,
+              ),
+              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
+            )
+          ),
           customerBusinessContacts = List(
             smithy.InsertCustomerBusinessContactResponse(
               customerBusinessContactID = customerBusinessContactRowsAll.head.customerBusinessContactID.value,
@@ -1863,7 +1885,18 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               entry.isDefault,
             )
           ),
-          addresses = customerIndividualDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
+          addresses = customerIndividualDetailsRow.addresses.map(customerAddressEntry =>
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = customerAddressEntry.value.address.addressLine1.value,
+                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
+                city = customerAddressEntry.value.address.city.value,
+                postalCode = customerAddressEntry.value.address.postalCode.value,
+                country = customerAddressEntry.value.address.country.value,
+              ),
+              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
+            )
+          ),
         )
       }
 
@@ -2072,7 +2105,18 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               entry.isDefault,
             )
           ),
-          addresses = customerBusinessDetailsRow.addresses.transformInto[List[smithy.AddressEntryRequest]],
+          addresses = customerBusinessDetailsRow.addresses.map(customerAddressEntry =>
+            smithy.AddressEntryRequest(
+              address = smithy.AddressRequest(
+                addressLine1 = customerAddressEntry.value.address.addressLine1.value,
+                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
+                city = customerAddressEntry.value.address.city.value,
+                postalCode = customerAddressEntry.value.address.postalCode.value,
+                country = customerAddressEntry.value.address.country.value,
+              ),
+              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
+            )
+          ),
         )
       }
 

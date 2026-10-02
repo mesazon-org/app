@@ -7,4 +7,4 @@ given ironRefinedTypeToTargetTransformer[WrappedType, TargetType <: Product](usi
     mirror: RefinedType.Mirror[WrappedType],
     transformer: Transformer.AutoDerived[mirror.BaseType, TargetType],
 ): Transformer[WrappedType, TargetType] =
-  value => transformer.transform(value.asInstanceOf[mirror.BaseType])
+  wrappedType => transformer.transform(wrappedType.asInstanceOf[mirror.BaseType])

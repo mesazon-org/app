@@ -28,43 +28,29 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   inline private val CatalogueItemIDHeader = "X-Catalogue-Item-ID"
 
   given JsonValueCodec[smithy.OnboardStage] = new JsonValueCodec[smithy.OnboardStage] {
-    override def decodeValue(in: JsonReader, default: smithy.OnboardStage): smithy.OnboardStage =
-      in.readString(null) match {
-        case "EmailVerification" => smithy.OnboardStage.EmailVerification
-        case "EmailVerified"     => smithy.OnboardStage.EmailVerified
-        case "PasswordProvided"  => smithy.OnboardStage.PasswordProvided
-        case "PhoneVerification" => smithy.OnboardStage.PhoneVerification
-        case "PhoneVerified"     => smithy.OnboardStage.PhoneVerified
-        case str                 => throw new IllegalArgumentException(s"Unknown OnboardStage: $str")
-      }
+    override def decodeValue(in: JsonReader, default: smithy.OnboardStage): smithy.OnboardStage = {
+      val onboardStageRaw = in.readString(null)
+      smithy.OnboardStage
+        .fromString(onboardStageRaw)
+        .getOrElse(in.decodeError(s"Unknown OnboardStage: [$onboardStageRaw]"))
+    }
 
-    override def encodeValue(x: smithy.OnboardStage, out: JsonWriter): Unit =
-      x match {
-        case smithy.OnboardStage.EmailVerification => out.writeVal("EmailVerification")
-        case smithy.OnboardStage.EmailVerified     => out.writeVal("EmailVerified")
-        case smithy.OnboardStage.PasswordProvided  => out.writeVal("PasswordProvided")
-        case smithy.OnboardStage.PhoneVerification => out.writeVal("PhoneVerification")
-        case smithy.OnboardStage.PhoneVerified     => out.writeVal("PhoneVerified")
-      }
+    override def encodeValue(onboardStage: smithy.OnboardStage, out: JsonWriter): Unit =
+      out.writeVal(onboardStage.stringValue)
 
     override def nullValue: smithy.OnboardStage = null
   }
 
   given JsonValueCodec[smithy.AddressType] = new JsonValueCodec[smithy.AddressType] {
-    override def decodeValue(in: JsonReader, default: smithy.AddressType): smithy.AddressType =
-      in.readString(null) match {
-        case "Shipping"           => smithy.AddressType.Shipping
-        case "Billing"            => smithy.AddressType.Billing
-        case "ShippingAndBilling" => smithy.AddressType.ShippingAndBilling
-        case str                  => throw new IllegalArgumentException(s"Unknown AddressType: $str")
-      }
+    override def decodeValue(in: JsonReader, default: smithy.AddressType): smithy.AddressType = {
+      val addressTypeRaw = in.readString(null)
+      smithy.AddressType
+        .fromString(addressTypeRaw)
+        .getOrElse(in.decodeError(s"Unknown AddressType: [$addressTypeRaw]"))
+    }
 
-    override def encodeValue(x: smithy.AddressType, out: JsonWriter): Unit =
-      x match {
-        case smithy.AddressType.Shipping           => out.writeVal("Shipping")
-        case smithy.AddressType.Billing            => out.writeVal("Billing")
-        case smithy.AddressType.ShippingAndBilling => out.writeVal("ShippingAndBilling")
-      }
+    override def encodeValue(addressType: smithy.AddressType, out: JsonWriter): Unit =
+      out.writeVal(addressType.stringValue)
 
     override def nullValue: smithy.AddressType = null
   }
@@ -84,35 +70,29 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     JsonCodecMaker.make[smithy.OnboardVerifyPhoneNumberPostRequest]
 
   given JsonValueCodec[smithy.CustomerType] = new JsonValueCodec[smithy.CustomerType] {
-    override def decodeValue(in: JsonReader, default: smithy.CustomerType): smithy.CustomerType =
-      in.readString(null) match {
-        case "Individual" => smithy.CustomerType.Individual
-        case "Business"   => smithy.CustomerType.Business
-        case str          => throw new IllegalArgumentException(s"Unknown CustomerType: $str")
-      }
+    override def decodeValue(in: JsonReader, default: smithy.CustomerType): smithy.CustomerType = {
+      val customerTypeRaw = in.readString(null)
+      smithy.CustomerType
+        .fromString(customerTypeRaw)
+        .getOrElse(in.decodeError(s"Unknown CustomerType: [$customerTypeRaw]"))
+    }
 
-    override def encodeValue(x: smithy.CustomerType, out: JsonWriter): Unit =
-      x match {
-        case smithy.CustomerType.Individual => out.writeVal("Individual")
-        case smithy.CustomerType.Business   => out.writeVal("Business")
-      }
+    override def encodeValue(customerType: smithy.CustomerType, out: JsonWriter): Unit =
+      out.writeVal(customerType.stringValue)
 
     override def nullValue: smithy.CustomerType = null
   }
 
   given JsonValueCodec[smithy.CatalogueItemStatus] = new JsonValueCodec[smithy.CatalogueItemStatus] {
-    override def decodeValue(in: JsonReader, default: smithy.CatalogueItemStatus): smithy.CatalogueItemStatus =
-      in.readString(null) match {
-        case "Active"   => smithy.CatalogueItemStatus.Active
-        case "Archived" => smithy.CatalogueItemStatus.Archived
-        case str        => throw new IllegalArgumentException(s"Unknown CatalogueItemStatus: $str")
-      }
+    override def decodeValue(in: JsonReader, default: smithy.CatalogueItemStatus): smithy.CatalogueItemStatus = {
+      val catalogueItemStatusRaw = in.readString(null)
+      smithy.CatalogueItemStatus
+        .fromString(catalogueItemStatusRaw)
+        .getOrElse(in.decodeError(s"Unknown CatalogueItemStatus: [$catalogueItemStatusRaw]"))
+    }
 
-    override def encodeValue(x: smithy.CatalogueItemStatus, out: JsonWriter): Unit =
-      x match {
-        case smithy.CatalogueItemStatus.Active   => out.writeVal("Active")
-        case smithy.CatalogueItemStatus.Archived => out.writeVal("Archived")
-      }
+    override def encodeValue(catalogueItemStatus: smithy.CatalogueItemStatus, out: JsonWriter): Unit =
+      out.writeVal(catalogueItemStatus.stringValue)
 
     override def nullValue: smithy.CatalogueItemStatus = null
   }
