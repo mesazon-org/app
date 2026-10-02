@@ -22,6 +22,7 @@ Reusable model-transformation rules. Related: [Scala](scala.md), [Smithy](smithy
 - Use the direct target case for a fixed compile-time value, for example `smithy.CustomerType.Individual`. Use `.transformInto[smithy.CustomerType]` for a runtime source value.
 - Never convert a mirrored enum through its string value, `fromString`, casting, or pattern matching.
 - Never add named domain-to-Smithy or Smithy-to-domain helpers for a one-to-one enum.
+- JSON wire parsing is not a model transformation: a codec may use the generated Smithy enum's `fromString` and `stringValue`. Reuse those APIs instead of duplicating every enum case with pattern matching.
 
 ## Iron refined products
 

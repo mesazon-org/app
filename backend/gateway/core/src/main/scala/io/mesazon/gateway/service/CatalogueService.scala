@@ -6,6 +6,7 @@ import io.mesazon.domain.to
 import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.repository.CatalogueRepository
 import io.mesazon.gateway.repository.CatalogueRepository.InsertCatalogueItemInput
+import io.mesazon.gateway.utils.given
 import io.mesazon.gateway.validation.service.CatalogueRequestValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import io.scalaland.chimney.dsl.*
@@ -31,11 +32,7 @@ object CatalogueService {
       )
       _ <- catalogueRepository.insertCatalogueItem(
         OrganizationID(organizationID),
-        InsertCatalogueItemInput(
-          name = insertCatalogueItemPostRequest.name,
-          unit = insertCatalogueItemPostRequest.unit,
-          price = insertCatalogueItemPostRequest.price,
-        ),
+        insertCatalogueItemPostRequest.transformInto[InsertCatalogueItemInput],
       )
     } yield ()
 
@@ -49,13 +46,7 @@ object CatalogueService {
       )
       _ <- catalogueRepository.insertCatalogueItems(
         OrganizationID(organizationID),
-        insertCatalogueItemsPostRequest.catalogueItems.map(insertCatalogueItemPostRequest =>
-          InsertCatalogueItemInput(
-            name = insertCatalogueItemPostRequest.name,
-            unit = insertCatalogueItemPostRequest.unit,
-            price = insertCatalogueItemPostRequest.price,
-          )
-        ),
+        insertCatalogueItemsPostRequest.catalogueItems.transformInto[List[InsertCatalogueItemInput]],
       )
     } yield ()
 
@@ -104,18 +95,10 @@ object CatalogueService {
           .genMediaUrl(catalogueItemImageAsset.value.imageNormalizedS3BucketKey.to[S3BucketKey])
           .map(_.value)
       )
-    } yield smithy.GetCatalogueItemGetResponse(
-      catalogueItemID = catalogueItemRow.catalogueItemID.value,
-      name = catalogueItemRow.name.value,
-      unit = catalogueItemRow.unit.value,
-      price = catalogueItemRow.price.map(catalogueItemPrice =>
-        smithy.CatalogueItemPriceRequest(
-          amount = catalogueItemPrice.value.amount.value,
-          currency = catalogueItemPrice.value.currency.value,
-        )
-      ),
-      imageNormalizedUrl = imageNormalizedUrlOpt,
-    )
+    } yield catalogueItemRow
+      .into[smithy.GetCatalogueItemGetResponse]
+      .withFieldConst(_.imageNormalizedUrl, imageNormalizedUrlOpt)
+      .transform
 
     /** HTTP GET /get/catalogue-items */
     override def getCatalogueItemsGet(

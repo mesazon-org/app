@@ -193,11 +193,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         val addressEntries = List.empty[AddressEntry]
 
         addressValidator
-          .validateAddressEntries(
-            addressEntries.map(
-              _.transformInto[smithy.AddressEntryRequest]
-            )
-          )
+          .validateAddressEntries(addressEntries.transformInto[List[smithy.AddressEntryRequest]])
           .zioValue
           .toEither
           .value shouldBe addressEntries
@@ -208,11 +204,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
           List(AddressEntry(address = arbitrarySample[Address], addressType = AddressType.ShippingAndBilling))
 
         addressValidator
-          .validateAddressEntries(
-            addressEntries.map(
-              _.transformInto[smithy.AddressEntryRequest]
-            )
-          )
+          .validateAddressEntries(addressEntries.transformInto[List[smithy.AddressEntryRequest]])
           .zioValue
           .toEither
           .value shouldBe addressEntries
@@ -225,11 +217,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         )
 
         addressValidator
-          .validateAddressEntries(
-            addressEntries.map(
-              _.transformInto[smithy.AddressEntryRequest]
-            )
-          )
+          .validateAddressEntries(addressEntries.transformInto[List[smithy.AddressEntryRequest]])
           .zioValue
           .toEither
           .value shouldBe addressEntries
@@ -242,11 +230,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         )
 
         addressValidator
-          .validateAddressEntries(
-            addressEntries.map(
-              _.transformInto[smithy.AddressEntryRequest]
-            )
-          )
+          .validateAddressEntries(addressEntries.transformInto[List[smithy.AddressEntryRequest]])
           .zioValue
           .toEither
           .value shouldBe addressEntries
@@ -256,11 +240,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         val addressEntries = arbitrarySample[AddressEntry](addressEntriesCountTooMany).toList
 
         addressValidator
-          .validateAddressEntries(
-            addressEntries.map(
-              _.transformInto[smithy.AddressEntryRequest]
-            )
-          )
+          .validateAddressEntries(addressEntries.transformInto[List[smithy.AddressEntryRequest]])
           .zioValue
           .toEither
           .left
@@ -277,11 +257,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         )
 
         addressValidator
-          .validateAddressEntries(
-            addressEntries.map(
-              _.transformInto[smithy.AddressEntryRequest]
-            )
-          )
+          .validateAddressEntries(addressEntries.transformInto[List[smithy.AddressEntryRequest]])
           .zioValue
           .toEither
           .left
@@ -294,11 +270,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         val addressEntries = List(AddressEntry(address = arbitrarySample[Address], addressType = AddressType.Shipping))
 
         addressValidator
-          .validateAddressEntries(
-            addressEntries.map(
-              _.transformInto[smithy.AddressEntryRequest]
-            )
-          )
+          .validateAddressEntries(addressEntries.transformInto[List[smithy.AddressEntryRequest]])
           .zioValue
           .toEither
           .left
@@ -311,11 +283,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         val addressEntries = List(AddressEntry(address = arbitrarySample[Address], addressType = AddressType.Billing))
 
         addressValidator
-          .validateAddressEntries(
-            addressEntries.map(
-              _.transformInto[smithy.AddressEntryRequest]
-            )
-          )
+          .validateAddressEntries(addressEntries.transformInto[List[smithy.AddressEntryRequest]])
           .zioValue
           .toEither
           .left
@@ -332,11 +300,7 @@ class AddressValidatorSpec extends ZWordSpecBase, GatewayArbitraries, IronRefine
         )
 
         addressValidator
-          .validateAddressEntries(
-            addressEntries.map(
-              _.transformInto[smithy.AddressEntryRequest]
-            )
-          )
+          .validateAddressEntries(addressEntries.transformInto[List[smithy.AddressEntryRequest]])
           .zioValue
           .toEither
           .left
