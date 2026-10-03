@@ -4,8 +4,6 @@ import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import io.github.iltotore.iron.jsoniter.given
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.smithy
-import io.scalaland.chimney.dsl.*
 import sttp.tapir.Schema
 import sttp.tapir.codec.iron.given
 
@@ -20,9 +18,7 @@ object tapir {
     TapirServerError.values.map(tapirServerError => tapirServerError.code -> tapirServerError).toMap
 
   given addressTypeSchema: Schema[AddressType] =
-    Schema.derivedEnumeration[AddressType](encode =
-      Some(addressType => addressType.transformInto[smithy.AddressType].stringValue)
-    )
+    Schema.derivedEnumeration[AddressType].defaultStringBased
 
   given addressSchema: Schema[Address] = Schema.derived[Address]
 
@@ -63,20 +59,7 @@ object tapir {
   given insertCustomerBusinessContactSchema: Schema[InsertCustomerBusinessContact] =
     Schema.derived[InsertCustomerBusinessContact]
 
-  given addressTypeCodec: JsonValueCodec[AddressType] = new JsonValueCodec[AddressType] {
-    override def decodeValue(in: JsonReader, default: AddressType): AddressType = {
-      val addressTypeRaw = in.readString(null)
-      smithy.AddressType
-        .fromString(addressTypeRaw)
-        .map(_.transformInto[AddressType])
-        .getOrElse(in.decodeError(s"Unknown AddressType: [$addressTypeRaw]"))
-    }
-
-    override def encodeValue(addressType: AddressType, out: JsonWriter): Unit =
-      out.writeVal(addressType.transformInto[smithy.AddressType].stringValue)
-
-    override def nullValue: AddressType = null
-  }
+  given addressTypeCodec: JsonValueCodec[AddressType] = JsonCodecMaker.makeWithoutDiscriminator[AddressType]
 
   given extractCustomersPostResponseCodec: JsonValueCodec[ExtractCustomersPostResponse] =
     JsonCodecMaker.make[ExtractCustomersPostResponse]
