@@ -132,11 +132,11 @@ The repository and functional layers do cover these, so this is about transport,
 
 ## Rejections decided at request decoding
 
-### 13. An address with an unknown type or a missing required part
+### 13. An address with an unknown type or a missing required address object/type
 
-**Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 1, scenario 8, and [Customer Book](../pages/epics/05-customer-book.md), step 1, scenario 10 — an address whose type is not `Shipping`, `Billing` or `ShippingAndBilling`, or that leaves out its first line, city, postal code or country, is rejected and nothing is stored.
+**Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 1, scenario 9, and [Customer Book](../pages/epics/05-customer-book.md), step 1, scenario 11 — an address whose type is not `Shipping`, `Billing` or `ShippingAndBilling`, or that omits its required address object or type, is rejected and nothing is stored. All five text fields are optional; a partial address with at least one valid populated field is accepted.
 
-`addressType` is a Smithy enum and those parts are `@required`, so both cases fail while the request is decoded, before any validator runs. No test sends such a body: the typed `GatewayClient` cannot express an unknown enum value or a missing required member, and a raw-JSON client method was deliberately not added. The exact status body for a decode failure is therefore unproven, which is why the epics say only "rejected" and their error tables are unchanged. Blank, untrimmed and over-long parts are covered (`AddressValidatorSpec`, and the request validator specs prove the entry index).
+`addressType` is a Smithy enum; the address object and type remain required, so these malformed bodies fail while the request is decoded, before any validator runs. No test sends such a body: the typed `GatewayClient` cannot express an unknown enum value or a missing required member, and a raw-JSON client method was deliberately not added. The exact status body for a decode failure is therefore unproven. Missing text fields reach validation normally; an all-missing address produces the indexed `address` error. Blank, whitespace-only, untrimmed and over-long parts are covered in `AddressValidatorSpec`, and the request validator specs prove the entry index. Deterministic HTTP coverage for partial and all-empty addresses remains missing.
 
 **Where:** `OrganizationManagementApiSpec` and `CustomerBookApiSpec`. Needs a raw-body request method on `GatewayClient`; pin the real status and body, and assert nothing was stored.
 
@@ -144,8 +144,8 @@ The repository and functional layers do cover these, so this is about transport,
 
 ### 14. Address rules in customer extraction
 
-**Behaviour:** [Customer Book](../pages/epics/05-customer-book.md), step 7, scenarios 20–23 — one address is always marked shipping and billing; two are split into shipping and billing (first/second when the source does not say, with a note); three or more are cut to two with a note; an incomplete address is left off with a note naming the missing part.
+**Behaviour:** [Customer Book](../pages/epics/05-customer-book.md), step 7, scenarios 20–23 — one address is always marked shipping and billing; two are split into shipping and billing (first/second when the source does not say, with a note); three or more are cut to two with a note. Partial addresses are retained when at least one text field has non-whitespace content, with populated values trimmed and a note for missing or unclear fields; all-empty addresses are omitted.
 
-All of this is prompt text in `AIInstructions`. `FileApiSpec` only decodes a stubbed response carrying one `ShippingAndBilling` address, so it proves the response shape and wire value, not what the model does. The golden specs are manual, need a live key, and have not been run since the address shape changed — so it is also unconfirmed that the real service accepts the new strict schema. Accepted as a risk on 2026-10-01.
+The partial-address rule is not yet implemented in `AIInstructions`: both prompts still require complete addresses and tell the model to discard incomplete ones. Update both prompts to the agreed optional-field behavior. `FileApiSpec` only decodes a stubbed response carrying one `ShippingAndBilling` address, so it proves the response shape and wire value, not what the model does. The golden specs are manual, need a live key, and have not been run since the address shape changed — so it is also unconfirmed that the real service accepts the new strict schema. Live-AI verification was accepted as a risk on 2026-10-01; the stale prompt instructions remain an implementation gap.
 
 **Where:** `golden/ExtractCustomersFromImageGoldenSpec` and `golden/ExtractCustomersFromSpreadsheetGoldenSpec`, run manually with a key.
