@@ -579,7 +579,7 @@ This step helps a business move its existing customer list into the product quic
 | 4. An entry has no readable name at all, but an email that looks like a person's name, such as `john.smith@example.com` | - The name is worked out from the email, for a person or a business contact, and the candidate notes it - Never for role mailboxes like `info@…`, or when any part of a name was readable |
 | 5. Two candidates in the same image or file share a name, ignoring capitalisation | - Each is marked as a possible duplicate if they are the same kind - A person and a business with the same name are not duplicates |
 | 6. Some entries could not be turned into candidates | - The counts show how many were found and how many became candidates |
-| 7. The image or file has nothing recognizable as a customer | - An empty result, with both counts at zero - Not an error |
+| 7. The image or file has nothing recognizable as a customer | - Empty lists, with both counts at zero - Not an error - The notes explain that the AI could not detect relevant customer data in the image or file |
 | 8. The file's name is missing, malformed, has an unsupported extension, or does not match the actual content | - Rejected with `400 BAD_REQUEST_ERROR` - The file is never sent to the AI |
 | 9. The file cannot really be read as a CSV or Excel file, or is larger than 20 MB | - Rejected with a server error |
 | 10. The AI service has a temporary failure | - Tried again up to two more times - If every attempt fails, a server error and no candidates |
@@ -595,7 +595,8 @@ This step helps a business move its existing customer list into the product quic
 | 20. An entry has one address with at least one non-empty text field | - It always comes back marked as both shipping and billing (`ShippingAndBilling`), whatever the source says - Missing or unclear fields are noted |
 | 21. An address has some text fields missing, but at least one field has content | - The partial address is returned with a note saying what was missing or unclear - The rest of the read carries on |
 | 22. An address has all five text fields empty | - That address is omitted - If no address has any non-empty text field, the candidate's address list is empty - The candidate itself is still returned |
-| 23. An entry has two or more addresses with at least one non-empty text field | - One comes back as shipping and the other as billing, as the source shows - When the source does not say which is which, the first is shipping and the second billing, and the candidate notes that the types were assumed - If there are more than two, the best shipping and billing pair is kept, or else the first two, with a note that further addresses were left out |
+| 23. An entry has two or more distinct addresses with at least one non-empty text field | - One comes back as shipping and the other as billing, as the source shows - When the source does not say which is which, the first is shipping and the second billing, and the candidate notes that the types were assumed - If there are more than two, the best shipping and billing pair is kept, or else the first two, with a note that further addresses were left out |
+| 24. The same address appears more than once for one customer | - Identical addresses are merged before assigning their types or choosing which to keep - If only one distinct address remains, it is marked as both shipping and billing - Addresses belonging to different customers are not merged |
 
 #### Requirements
 
@@ -641,7 +642,7 @@ The body is the image or file itself, as with every other upload in this product
 | Customer Business Candidates | `ExtractCustomerBusinessData[]` | May be empty | ✅ | Recognized businesses, in whatever order the source listed them |
 | Empty Entry Rows | `Long[]` | May be empty | ✅ | Spreadsheet rows that were completely blank, numbered as in the person's own file (header is row 1). Always empty for an image |
 | Unidentified Entry Rows | `Long[]` | May be empty | ✅ | Spreadsheet rows with content but no readable name, numbered as in the person's own file (header is row 1). Always empty for an image |
-| Unidentified Entries Notes | `String` | Concise, plain text | ❌ | Anything else worth flagging. For an image, the only place a missed entry is described. For a spreadsheet read in groups, one combined message |
+| Unidentified Entries Notes | `String` | Concise, plain text | ❌ | Anything else worth flagging, including when no relevant customer data could be detected. For an image, describes missed entries. For a spreadsheet read in groups, one combined message |
 
 **ExtractCustomerIndividualData**
 

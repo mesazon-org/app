@@ -85,5 +85,27 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
         }
       }
     }
+
+    "extractCustomers irrelavant" should {
+      "extract customers from contact-book-image-test-14.jpeg" in {
+        assume(
+          apiKey.nonEmpty,
+          "Fill in a real OpenAI API key in ExtractCustomersFromImageGoldenSpec.apiKey to run this manually",
+        )
+
+        val organizationID                 = OrganizationID.assume(UUID.randomUUID())
+        val extractCustomersFileName       = ExtractCustomersFileName.assume("contact-book-image-test-14.jpeg")
+        val extractCustomersFileByteStream =
+          ZStream.fromResource("assets/contact-book-image-test-14.jpeg")
+
+        val extractCustomersPostResponse = buildFileService
+          .extractCustomers(organizationID, extractCustomersFileName, extractCustomersFileByteStream)
+          .zioValue
+
+        info(
+          s"contact-book-image-test-14.jpeg response:\n${writeToString(extractCustomersPostResponse, WriterConfig.withIndentionStep(2))}"
+        )
+      }
+    }
   }
 }
