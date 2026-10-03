@@ -92,6 +92,7 @@ object Dependencies {
   lazy val testcontainers               = "org.testcontainers" % "testcontainers"                 % testcontainersV
   lazy val testcontainersScalaScalatest = "com.dimafeng"      %% "testcontainers-scala-scalatest" % testcontainersScalaV
   lazy val scalamock                    = "org.scalamock"     %% "scalamock"                      % scalamockV
+  lazy val scalamockScalaTest           = "org.scalamock"     %% "scalamock-scalatest"            % scalamockV
   lazy val scalamockZIO                 = "org.scalamock"     %% "scalamock-zio"                  % scalamockV
 
   // Chimney
