@@ -68,6 +68,7 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 
 - Use ScalaTest's infix assertion syntax: `actual shouldBe expected`, never `actual.shouldBe(expected)`. Keep the infix form for multiline expected models as well.
 - Name bindings after their exact models; qualifiers follow the model name.
+- Use domain arbitraries by default for valid test data, especially happy paths; use `.copy(...)` only to force scenario-specific fields. Prefer property-based round-trips when valid shapes vary. Keep explicit cases for boundaries and combinations that must be covered deterministically; random sampling alone does not prove exhaustive coverage.
 - Treat `arbitrarySample` as real work, especially for nested/list generators. If a test replaces a wrapper's entire generated collection, do not sample and discard that collection: sample the element model, derive related cases with `.copy(...)`, and directly construct the wrapper from the controlled elements. Sample the complete wrapper only when its generator or full round-trip is part of the proof.
 - Repository integration tests sample complete inputs/Rows with `arbitrarySample[ExactType]` and use `.copy(...)` only to force scenario fields. Keep `TestContext` free of helper methods and repeat arrangement, dependency expectations, and database reads locally; test isolation/readability takes precedence over removing duplication.
 - Derive a near-identical second expected model from the first with `.copy(...)`, changing only intentional differences. Assert correlated/equal and distinct fields directly through the expected models immediately after setup, so reviewers can verify the complete scenario from those models.
@@ -82,6 +83,8 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 
 - Name every `Arbitrary` given `arb<ExactTypeName>`; plural/list givens use the exact plural type name. Never use anonymous `given Arbitrary[...]` declarations.
 - Prefer `Arbitrary(Gen.resultOf(ExactType.apply))` when fields are independent and their existing givens already generate valid values. Use an explicit generator when fields must be correlated, normalized, bounded, or otherwise preserve a cross-field invariant.
+- When a test needs broader optional-field presence combinations than the shared arbitrary provides, define an arbitrary locally in that test rather than changing the shared generator. For an at-least-one-field scenario, vary every optional field and exclude only the all-absent case.
+- Construct scenario-valid values directly rather than using `suchThat` or rejection filtering, which can exhaust generation retries. For an at-least-one-field scenario, choose a non-empty subset of fields and populate it. Share a scenario-specific arbitrary within the spec only when multiple tests need it.
 - List arbitraries must include the empty-list case and use a bounded size. Default to `Gen.choose(0, 50).flatMap(size => Gen.listOfN(size, elementGen))`; use a smaller explicit maximum only when nesting, encoded body size, or dependency cost requires it.
 
 ### Ownership
