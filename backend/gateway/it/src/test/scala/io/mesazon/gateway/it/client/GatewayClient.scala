@@ -23,9 +23,9 @@ import scala.util.chaining.scalaUtilChainingOps
 case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]) {
   import config.*
 
-  inline private val OrganizationIDHeader  = "X-Organization-ID"
-  inline private val FileNameHeader        = "X-File-Name"
-  inline private val CatalogueItemIDHeader = "X-Catalogue-Item-ID"
+  private inline val OrganizationIDHeader  = "X-Organization-ID"
+  private inline val FileNameHeader        = "X-File-Name"
+  private inline val CatalogueItemIDHeader = "X-Catalogue-Item-ID"
 
   given JsonValueCodec[smithy.OnboardStage] = new JsonValueCodec[smithy.OnboardStage] {
     override def decodeValue(in: JsonReader, default: smithy.OnboardStage): smithy.OnboardStage = {

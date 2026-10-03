@@ -77,7 +77,7 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 2. The short name may contain only lowercase letters, digits and hyphens, is at most 63 characters, and must be unique across the whole product, because it is used in web addresses.
 3. When contact emails or phone numbers are given, every entry must be valid and exactly one of them must be marked as the default.
 4. We email the creator to confirm, but never let that email delay or block the creation.
-5. Every address text field is optional. Missing, null, empty, and whitespace-only values count as empty; non-empty values are trimmed. An address must contain at least one non-empty text field, its type is required, and addresses have no default.
+5. Every address text field is optional. Missing or null values are absent. Supplied values must contain 1–255 characters with no leading or trailing whitespace; empty or whitespace-only values are rejected for that field. An address must contain at least one non-empty text field, its type is required, and addresses have no default.
 6. When addresses are given there must be either exactly one, marked as both shipping and billing, or exactly two, one shipping and one billing in either order. Three or more, two of the same type, a single shipping-only or billing-only address, or a both-purposes address alongside another are all rejected.
 
 #### Request / Response / Outcome
@@ -127,11 +127,11 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Address Line 1 | `String` | Up to 255 characters, trimmed when present | ❌ | Street address |
-| Address Line 2 | `String` | Up to 255 characters, trimmed when present | ❌ | Street address, continued |
-| City | `String` | Up to 255 characters, trimmed when present | ❌ |  |
-| Postal Code | `String` | Up to 255 characters, trimmed when present | ❌ |  |
-| Country | `String` | Up to 255 characters, trimmed when present | ❌ | Free text, as the person types it |
+| Address Line 1 | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ | Street address |
+| Address Line 2 | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ | Street address, continued |
+| City | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ |  |
+| Postal Code | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ |  |
+| Country | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ | Free text, as the person types it |
 
 **Response**
 

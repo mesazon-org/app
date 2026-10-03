@@ -25,7 +25,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
   override def exposedServices: Set[ExposedService] = PostgreSQLTestClient.ExposedServices
 
-  inline private val customerAddressEntriesCount = 3
+  private inline val customerAddressEntriesCount = 3
 
   override def beforeAll(): Unit = {
     super.beforeAll()

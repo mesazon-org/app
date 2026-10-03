@@ -30,7 +30,7 @@ object WahaClient {
   type UserAccountsCheckResult = (registered: List[UserAccountID], nonRegistered: List[UserAccountID])
 
   private final class WahaClientImpl(config: WahaClientConfig)(using Backend[Task]) extends WahaClient {
-    inline private val charactersPerWord = 5.0
+    private inline val charactersPerWord = 5.0
 
     private val apiKeyHeader = getApiKeyHeader(config.apiKey)
 
@@ -51,7 +51,7 @@ object WahaClient {
         _ <- ZIO.sleep(typingMillis.toLong.millis)
       } yield ()
 
-    inline private def setGroupName(sessionID: SessionID, groupID: GroupID, name: GroupName): IO[WahaError, Unit] =
+    private inline def setGroupName(sessionID: SessionID, groupID: GroupID, name: GroupName): IO[WahaError, Unit] =
       for {
         _ <- ZIO.logDebug(
           s"Setting group name for sessionID: [$sessionID], groupID [$groupID], name: [$name]"
@@ -67,7 +67,7 @@ object WahaClient {
         _ <- ZIO.logDebug(s"Set group name response: [$response]")
       } yield ()
 
-    inline private def setGroupDescription(
+    private inline def setGroupDescription(
         sessionID: SessionID,
         groupID: GroupID,
         description: GroupDescription,
@@ -86,7 +86,7 @@ object WahaClient {
       _ <- ZIO.logDebug(s"Set group description response: [$response]")
     } yield ()
 
-    inline private def setGroupPicture(sessionID: SessionID, groupID: GroupID, picture: FileType): IO[WahaError, Unit] =
+    private inline def setGroupPicture(sessionID: SessionID, groupID: GroupID, picture: FileType): IO[WahaError, Unit] =
       for {
         _ <- ZIO.logDebug(
           s"Setting group picture for sessionID: [$sessionID], groupID [$groupID], picture: [$picture]"
@@ -104,7 +104,7 @@ object WahaClient {
         _ <- ZIO.logDebug(s"Set group picture response: [$response]")
       } yield ()
 
-    inline private def getInviteCode(sessionID: SessionID, groupID: GroupID): IO[WahaError, Response[GroupInviteUrl]] =
+    private inline def getInviteCode(sessionID: SessionID, groupID: GroupID): IO[WahaError, Response[GroupInviteUrl]] =
       for {
         _        <- ZIO.logDebug(s"Getting invite code for sessionID: [$sessionID], groupID [$groupID]")
         _        <- simulateHumanDelay
@@ -117,7 +117,7 @@ object WahaClient {
         _ <- ZIO.logDebug(s"Get invite code response: [$response]")
       } yield response
 
-    inline private def startStopTyping(
+    private inline def startStopTyping(
         sessionID: SessionID,
         chatID: ChatID,
         messageText: MessageText,
@@ -141,7 +141,7 @@ object WahaClient {
       _ <- ZIO.logDebug(s"Stop typing response: [$stopResponse]")
     } yield ()
 
-    inline private def sendMessage(input: ChattingMessageInput): IO[WahaError, ChattingSendMessageOutput] =
+    private inline def sendMessage(input: ChattingMessageInput): IO[WahaError, ChattingSendMessageOutput] =
       for {
         _        <- ZIO.logDebug(s"Sending message [$input]")
         _        <- simulateHumanDelay
@@ -183,7 +183,7 @@ object WahaClient {
         _ <- ZIO.logDebug(s"Send message response: [$response]")
       } yield response.body.transformInto[ChattingSendMessageOutput]
 
-    inline private def inviteParticipantsPrivately(
+    private inline def inviteParticipantsPrivately(
         sessionID: SessionID,
         groupID: GroupID,
         name: Option[GroupName],
@@ -220,7 +220,7 @@ object WahaClient {
         }
       } yield getGroupInviteCodeResponse
 
-    inline private def addGroupParticipants(
+    private inline def addGroupParticipants(
         sessionID: SessionID,
         groupID: GroupID,
         participants: NonEmptyList[UserAccountID],
@@ -239,7 +239,7 @@ object WahaClient {
       _ <- ZIO.logDebug(s"Add group participants response: [$response]")
     } yield response
 
-    inline private def removeGroupParticipants(
+    private inline def removeGroupParticipants(
         sessionID: SessionID,
         groupID: GroupID,
         participants: NonEmptyList[UserAccountID],
@@ -260,7 +260,7 @@ object WahaClient {
       _ <- ZIO.logDebug(s"Remove group participants response: [$response]")
     } yield response
 
-    inline private def promoteGroupParticipants(
+    private inline def promoteGroupParticipants(
         sessionID: SessionID,
         groupID: GroupID,
         participants: NonEmptyList[UserAccountID],
@@ -281,7 +281,7 @@ object WahaClient {
       _ <- ZIO.logDebug(s"Promote group participants response: [$response]")
     } yield response
 
-    inline private def demoteGroupParticipants(
+    private inline def demoteGroupParticipants(
         sessionID: SessionID,
         groupID: GroupID,
         participants: NonEmptyList[UserAccountID],

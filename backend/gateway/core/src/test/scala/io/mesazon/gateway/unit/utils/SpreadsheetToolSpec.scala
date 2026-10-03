@@ -11,7 +11,7 @@ import scala.jdk.CollectionConverters.*
 
 class SpreadsheetToolSpec extends ZWordSpecBase {
 
-  inline private val fileTempPrefix = "spreadsheet-tool-spec-"
+  private inline val fileTempPrefix = "spreadsheet-tool-spec-"
 
   private val wellFormedCsvText =
     "Full Name,Email\r\nJohn Smith,john.smith@example.com\r\nJane Doe,jane.doe@example.com\r\n"

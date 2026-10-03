@@ -62,7 +62,15 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
 
   given arbImageAsset: Arbitrary[ImageAsset] = Arbitrary(Gen.resultOf(ImageAsset.apply))
 
-  given arbAddress: Arbitrary[Address] = Arbitrary(Gen.resultOf(Address.apply))
+  given arbAddress: Arbitrary[Address] = Arbitrary(
+    for {
+      addressLine1    <- Arbitrary.arbitrary[AddressLine1]
+      addressLine2Opt <- Arbitrary.arbitrary[Option[AddressLine2]]
+      cityOpt         <- Arbitrary.arbitrary[Option[City]]
+      postalCodeOpt   <- Arbitrary.arbitrary[Option[PostalCode]]
+      countryOpt      <- Arbitrary.arbitrary[Option[Country]]
+    } yield Address(Some(addressLine1), addressLine2Opt, cityOpt, postalCodeOpt, countryOpt)
+  )
 
   given arbAddressEntry: Arbitrary[AddressEntry] = Arbitrary(Gen.resultOf(AddressEntry.apply))
 

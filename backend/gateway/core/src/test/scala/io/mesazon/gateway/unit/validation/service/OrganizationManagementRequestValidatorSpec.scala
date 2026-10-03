@@ -53,10 +53,10 @@ class OrganizationManagementRequestValidatorSpec extends ZWordSpecBase, Organiza
         addresses = List(
           smithy.AddressEntryRequest(
             address = smithy.AddressRequest(
-              addressLine1 = "1 Main Street",
-              city = "",
-              postalCode = "1010",
-              country = "Cyprus",
+              addressLine1 = Some("1 Main Street"),
+              city = Some(""),
+              postalCode = Some("1010"),
+              country = Some("Cyprus"),
             ),
             addressType = smithy.AddressType.ShippingAndBilling,
           )

@@ -99,7 +99,7 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 4. A name must be unique among active customers of the same kind within the organization.
 5. Within one business, no two contacts may share an email address, and no two may share a phone number.
 6. Adding several customers at once succeeds completely or not at all.
-7. Every address text field is optional. Missing, null, empty, and whitespace-only values count as empty; non-empty values are trimmed. An address must contain at least one non-empty text field, its type is required, and together the addresses must be an allowed combination (functional rule 6).
+7. Every address text field is optional. Missing or null values are absent. Supplied values must contain 1–255 characters with no leading or trailing whitespace; empty or whitespace-only values are rejected for that field. An address must contain at least one non-empty text field, its type is required, and together the addresses must be an allowed combination (functional rule 6).
 
 #### Request / Response / Outcome
 
@@ -169,11 +169,11 @@ The shapes used above and throughout this epic:
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Address Line 1 | `String` | Up to 255 characters, trimmed when present | ❌ | Street address |
-| Address Line 2 | `String` | Up to 255 characters, trimmed when present | ❌ | Street address, continued |
-| City | `String` | Up to 255 characters, trimmed when present | ❌ |  |
-| Postal Code | `String` | Up to 255 characters, trimmed when present | ❌ |  |
-| Country | `String` | Up to 255 characters, trimmed when present | ❌ | Free text, as the person types it |
+| Address Line 1 | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ | Street address |
+| Address Line 2 | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ | Street address, continued |
+| City | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ |  |
+| Postal Code | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ |  |
+| Country | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ | Free text, as the person types it |
 
 **BusinessContact**
 

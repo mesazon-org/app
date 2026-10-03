@@ -947,11 +947,11 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
               CustomerAddressEntry(
                 AddressEntry(
                   address = Address(
-                    addressLine1 = AddressLine1.assume("1 Main Street"),
+                    addressLine1 = Some(AddressLine1.assume("1 Main Street")),
                     addressLine2 = None,
-                    city = City.assume("Springfield"),
-                    postalCode = PostalCode.assume("62701"),
-                    country = Country.assume("United States"),
+                    city = Some(City.assume("Springfield")),
+                    postalCode = Some(PostalCode.assume("62701")),
+                    country = Some(Country.assume("United States")),
                   ),
                   addressType = AddressType.ShippingAndBilling,
                 )

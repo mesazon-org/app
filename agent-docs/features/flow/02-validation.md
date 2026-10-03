@@ -4,6 +4,8 @@ Use after the endpoint contract/models exist. Add validated request domain model
 
 Validation is the only boundary where untrusted transport primitives become refined domain values. It returns one 400 `ValidationError` containing every invalid field; never fail fast.
 
+Validators check supplied values unchanged. Do not trim, normalize, or filter invalid values into absence inside validation methods; helpers such as `trimAndFilterNonEmpty` are prohibited there. An optional field accepts `None`, but a supplied empty, whitespace-only, or untrimmed string fails that field's refinement and retains the original value in the error. Keep any explicitly agreed normalization in a separately named preprocessing step before validation.
+
 ## Domain placement
 
 - Request/entry case classes: `backend/domain/.../gateway/<Feature>.scala`, named after the transport request structure (exact Smithy request name on Smithy routes).
