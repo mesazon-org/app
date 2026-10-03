@@ -56,9 +56,5 @@ private given organizationEmailEntryRequestsCodec: JsonValueCodec[List[Organizat
 private given organizationPhoneNumberEntryRequestsCodec: JsonValueCodec[List[OrganizationPhoneNumberEntryRequest]] =
   JsonCodecMaker.make
 private given addressTypeCodec: JsonValueCodec[AddressType] = JsonCodecMaker.makeWithoutDiscriminator
-private given organizationAddressEntriesCodec: JsonValueCodec[List[OrganizationAddressEntry]] =
-  JsonCodecMaker.make
-
 given organizationEmailEntryRequestsMeta: Meta[List[OrganizationEmailEntryRequest]]             = jsonbMeta
 given organizationPhoneNumberEntryRequestsMeta: Meta[List[OrganizationPhoneNumberEntryRequest]] = jsonbMeta
-given organizationAddressEntriesMeta: Meta[List[OrganizationAddressEntry]]                      = jsonbMeta

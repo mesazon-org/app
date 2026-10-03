@@ -2,7 +2,10 @@ package io.mesazon.gateway.repository.queries
 
 import cats.data.NonEmptyList
 import cats.syntax.all.*
+import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
+import com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker
 import io.github.gaelrenoux.tranzactio.doobie.*
+import io.github.iltotore.iron.jsoniter.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.domain.*
@@ -15,6 +18,10 @@ import zio.*
 final class OrganizationDetailsQueries(
     config: RepositoryConfig
 ) {
+
+  private given organizationAddressEntriesCodec: JsonValueCodec[List[OrganizationAddressEntry]] =
+    JsonCodecMaker.make
+  private given organizationAddressEntriesMeta: Meta[List[OrganizationAddressEntry]] = jsonbMeta
 
   private val frSchema                   = Fragment.const(config.schema)
   private val frOrganizationDetailsTable = Fragment.const(config.organizationDetailsTable)
