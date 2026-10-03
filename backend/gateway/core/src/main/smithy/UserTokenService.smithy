@@ -10,7 +10,7 @@ service UserTokenService {
     operations: [TokenRefreshPost]
 }
 
-/// **Required Onboard Stage:** [`EMAIL_VERIFIED`, `PASSWORD_PROVIDED`, `PHONE_VERIFICATION`, `PHONE_VERIFIED`]
+/// **Required Onboard Stage:** [`EmailVerified`, `PasswordProvided`, `PhoneVerification`, `PhoneVerified`]
 @http(method: "POST", uri: "/token/refresh", code: 200)
 operation TokenRefreshPost {
     input := {

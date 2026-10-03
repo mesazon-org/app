@@ -430,13 +430,13 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
                 smithy.GetCatalogueItem(
                   catalogueItemID = catalogueItemSummaryRow1.catalogueItemID.value,
                   name = catalogueItemSummaryRow1.name.value,
-                  status = smithy.CatalogueItemStatus.ACTIVE,
+                  status = smithy.CatalogueItemStatus.Active,
                   imageNormalizedUrl = Some(catalogueItemImageNormalizedUrl.value),
                 ),
                 smithy.GetCatalogueItem(
                   catalogueItemID = catalogueItemSummaryRow2.catalogueItemID.value,
                   name = catalogueItemSummaryRow2.name.value,
-                  status = smithy.CatalogueItemStatus.ACTIVE,
+                  status = smithy.CatalogueItemStatus.Active,
                   imageNormalizedUrl = None,
                 ),
               )

@@ -31,11 +31,7 @@ trait CustomerBookRepository {
       fullNameOptUpdate: Option[CustomerFullName] = None,
       emailsOptUpdate: Option[List[CustomerEmailEntryInput]] = None,
       phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]] = None,
-      addressLine1OptUpdate: Option[CustomerAddressLine1] = None,
-      addressLine2OptUpdate: Option[CustomerAddressLine2] = None,
-      cityOptUpdate: Option[CustomerCity] = None,
-      postalCodeOptUpdate: Option[CustomerPostalCode] = None,
-      countryOptUpdate: Option[CustomerCountry] = None,
+      addressesOptUpdate: Option[List[CustomerAddressEntry]] = None,
   ): IO[ServiceError, Option[CustomerIndividualDetailsRow]]
 
   def insertCustomerBusiness(
@@ -55,11 +51,7 @@ trait CustomerBookRepository {
       emailsOptUpdate: Option[List[CustomerEmailEntryInput]] = None,
       taxIDOptUpdate: Option[CustomerTaxID] = None,
       phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]] = None,
-      addressLine1OptUpdate: Option[CustomerAddressLine1] = None,
-      addressLine2OptUpdate: Option[CustomerAddressLine2] = None,
-      cityOptUpdate: Option[CustomerCity] = None,
-      postalCodeOptUpdate: Option[CustomerPostalCode] = None,
-      countryOptUpdate: Option[CustomerCountry] = None,
+      addressesOptUpdate: Option[List[CustomerAddressEntry]] = None,
   ): IO[ServiceError, Option[CustomerBusinessDetailsRow]]
 
   def insertCustomers(
@@ -123,11 +115,7 @@ object CustomerBookRepository {
       fullName: CustomerFullName,
       emails: List[CustomerEmailEntryInput],
       phoneNumbers: List[CustomerPhoneNumberEntryInput],
-      addressLine1: Option[CustomerAddressLine1],
-      addressLine2: Option[CustomerAddressLine2],
-      city: Option[CustomerCity],
-      postalCode: Option[CustomerPostalCode],
-      country: Option[CustomerCountry],
+      addresses: List[CustomerAddressEntry],
   )
 
   case class InsertCustomerBusinessInput(
@@ -135,11 +123,7 @@ object CustomerBookRepository {
       emails: List[CustomerEmailEntryInput],
       taxID: Option[CustomerTaxID],
       phoneNumbers: List[CustomerPhoneNumberEntryInput],
-      addressLine1: Option[CustomerAddressLine1],
-      addressLine2: Option[CustomerAddressLine2],
-      city: Option[CustomerCity],
-      postalCode: Option[CustomerPostalCode],
-      country: Option[CustomerCountry],
+      addresses: List[CustomerAddressEntry],
       customerBusinessContacts: List[CustomerBusinessContactInput],
   )
 
@@ -218,11 +202,7 @@ object CustomerBookRepository {
         fullNameOptUpdate: Option[CustomerFullName],
         emailsOptUpdate: Option[List[CustomerEmailEntryInput]],
         phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]],
-        addressLine1OptUpdate: Option[CustomerAddressLine1],
-        addressLine2OptUpdate: Option[CustomerAddressLine2],
-        cityOptUpdate: Option[CustomerCity],
-        postalCodeOptUpdate: Option[CustomerPostalCode],
-        countryOptUpdate: Option[CustomerCountry],
+        addressesOptUpdate: Option[List[CustomerAddressEntry]],
     ): IO[ServiceError, Option[CustomerIndividualDetailsRow]] = for {
       instantNow                          <- timeProvider.instantNow
       customerIndividualDetailsRowUpdated <- database
@@ -234,11 +214,7 @@ object CustomerBookRepository {
             fullNameOptUpdate,
             emailsOptUpdate,
             phoneNumbersOptUpdate,
-            addressLine1OptUpdate,
-            addressLine2OptUpdate,
-            cityOptUpdate,
-            postalCodeOptUpdate,
-            countryOptUpdate,
+            addressesOptUpdate,
           )
         )
         .mapError(
@@ -337,11 +313,7 @@ object CustomerBookRepository {
         emailsOptUpdate: Option[List[CustomerEmailEntryInput]],
         taxIDOptUpdate: Option[CustomerTaxID],
         phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]],
-        addressLine1OptUpdate: Option[CustomerAddressLine1],
-        addressLine2OptUpdate: Option[CustomerAddressLine2],
-        cityOptUpdate: Option[CustomerCity],
-        postalCodeOptUpdate: Option[CustomerPostalCode],
-        countryOptUpdate: Option[CustomerCountry],
+        addressesOptUpdate: Option[List[CustomerAddressEntry]],
     ): IO[ServiceError, Option[CustomerBusinessDetailsRow]] = for {
       instantNow                        <- timeProvider.instantNow
       customerBusinessDetailsRowUpdated <- database
@@ -354,11 +326,7 @@ object CustomerBookRepository {
             emailsOptUpdate,
             taxIDOptUpdate,
             phoneNumbersOptUpdate,
-            addressLine1OptUpdate,
-            addressLine2OptUpdate,
-            cityOptUpdate,
-            postalCodeOptUpdate,
-            countryOptUpdate,
+            addressesOptUpdate,
           )
         )
         .mapError(
@@ -595,11 +563,7 @@ object CustomerBookRepository {
         input.fullName,
         input.emails,
         input.phoneNumbers,
-        input.addressLine1,
-        input.addressLine2,
-        input.city,
-        input.postalCode,
-        input.country,
+        input.addresses,
         CustomerStatus.Active,
         CreatedAt(instantNow),
         UpdatedAt(instantNow),
@@ -618,11 +582,7 @@ object CustomerBookRepository {
         input.taxID,
         input.emails,
         input.phoneNumbers,
-        input.addressLine1,
-        input.addressLine2,
-        input.city,
-        input.postalCode,
-        input.country,
+        input.addresses,
         CustomerStatus.Active,
         CreatedAt(instantNow),
         UpdatedAt(instantNow),

@@ -30,6 +30,10 @@ trait CustomerBookDomainArbitraries extends GatewayArbitraries {
     )(_.copy(isDefault = true))
   )
 
+  given arbCustomerAddressEntries: Arbitrary[List[CustomerAddressEntry]] = Arbitrary(
+    genAddressEntriesAllowedCombination.map(_.map(CustomerAddressEntry(_)))
+  )
+
   given arbInsertCustomerIndividualPostRequest: Arbitrary[InsertCustomerIndividualPostRequest] = Arbitrary(
     Gen.resultOf(InsertCustomerIndividualPostRequest.apply)
   )

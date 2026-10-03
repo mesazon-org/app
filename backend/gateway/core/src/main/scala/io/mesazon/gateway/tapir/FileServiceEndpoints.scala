@@ -21,8 +21,8 @@ object FileServiceEndpoints {
     override def id: smithy4s.ShapeId = smithy4s.ShapeId("io.mesazon.gateway.smithy", "FileService")
   }
 
-  inline private val FileNameHeader        = "X-File-Name"
-  inline private val CatalogueItemIDHeader = "X-Catalogue-Item-ID"
+  private inline val FileNameHeader        = "X-File-Name"
+  private inline val CatalogueItemIDHeader = "X-Catalogue-Item-ID"
 
   private val uploadOrganizationLogoPostEndpoint =
     securedEndpoint.post

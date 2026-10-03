@@ -120,6 +120,7 @@ object Main extends ZIOAppDefault {
       // Domain validators
       EmailValidator.live,
       PhoneNumberDomainValidator.live,
+      AddressValidator.live,
       PriceDomainValidator.live,
       WahaPhoneNumberDomainValidator.live,
 

@@ -1,5 +1,6 @@
 package io.mesazon.gateway.service
 
+import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.EmailClient
 import io.mesazon.gateway.config.OrganizationManagementConfig
@@ -7,6 +8,7 @@ import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.state.AuthState
 import io.mesazon.gateway.validation.service.OrganizationManagementRequestValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
+import io.scalaland.chimney.dsl.*
 import zio.*
 
 object OrganizationManagementService {
@@ -45,11 +47,7 @@ object OrganizationManagementService {
           createOrganizationPostRequest.emails,
           createOrganizationPostRequest.phoneNumbers,
           OrganizationStage.DetailsProvided,
-          createOrganizationPostRequest.addressLine1,
-          createOrganizationPostRequest.addressLine2,
-          createOrganizationPostRequest.city,
-          createOrganizationPostRequest.postalCode,
-          createOrganizationPostRequest.country,
+          createOrganizationPostRequest.addresses,
           createOrganizationPostRequest.companyRegistrationNumber,
           createOrganizationPostRequest.taxID,
         )
@@ -68,7 +66,7 @@ object OrganizationManagementService {
             cause,
           )
         )
-    } yield smithy.CreateOrganizationPostResponse(organizationDetailsRow.organizationID.value)
+    } yield organizationDetailsRow.transformInto[smithy.CreateOrganizationPostResponse]
   }
 
   def observed(

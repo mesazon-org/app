@@ -31,6 +31,27 @@ object AIInstructions {
       |Email and phone lists may be empty. Whenever either list is non-empty, mark exactly one entry in that list
       |with isDefault=true and mark every other entry with isDefault=false. Never send an empty string for an
       |optional field - omit the field entirely instead.
+      |The addresses list may be empty and never holds more than two addresses. All five text fields are optional:
+      |addressLine1, addressLine2, city, postalCode and country. Treat missing, null, empty and whitespace-only text
+      |as empty. Keep a partial address when at least one text field has non-whitespace content, trim populated
+      |values, and briefly note any missing or unclear fields in that candidate's extraction notes.
+      |Return empty address fields as null or omit them as the response schema permits, never as empty strings.
+      |Omit an address only when all five text fields are empty, keeping the rest of the candidate. If none remain,
+      |return addresses: []. Before assigning address types or limiting the list, merge repeated addresses within
+      |the same candidate. Addresses are equal when all five text fields match after trimming populated values
+      |and treating missing, null, empty and whitespace-only fields as absent; ignore addressType when comparing.
+      |Return each distinct address only once. If duplicates collapse to one address, mark it ShippingAndBilling.
+      |Never merge addresses belonging to different candidates. Only distinct non-empty addresses count below.
+      |When a candidate has exactly one non-empty address, always return it with addressType ShippingAndBilling,
+      |whatever the source says about it.
+      |When a candidate has exactly two non-empty addresses, return one as Shipping and the other as Billing as the
+      |source shows: an address marked as where goods are delivered (e.g. "Deliver to", "Ship to") is Shipping and an
+      |address marked as where invoices or bills go (e.g. "Invoice to", "Bill to") is Billing. When the source does
+      |not say which is which, return the first as Shipping and the second as Billing, and say in that candidate's
+      |extraction notes that the address types were assumed.
+      |When a candidate has three or more non-empty addresses, return only two of them: the best shipping and billing
+      |pair the source shows, or else the first two, typed one Shipping and one Billing by the same rule as for two
+      |addresses, and say in that candidate's extraction notes that further addresses were left out.
       |If something about a candidate is missing or unclear (e.g. a smudged phone number, no visible email), say so
       |as briefly as possible in that candidate's extraction notes - a short phrase or clause, not a full sentence,
       |when a phrase suffices (e.g. "phone smudged, no email" rather than "The phone number is smudged and no email
@@ -45,8 +66,11 @@ object AIInstructions {
       |friendly, plain-English sentence in unidentifiedEntriesNotes telling the person what could not be read and
       |where in the image to look, the same way you would explain it to them directly rather than in technical
       |language; otherwise leave that field out entirely.
-      |If the image has nothing recognizable as a customer at all, return both counts as zero and empty candidate
-      |lists rather than treating that as an error.""".stripMargin
+      |If the image does not contain recognizable customer data, for example an unrelated scene or document,
+      |do not invent customer entries. Return entriesIdentified and entriesProcessed as zero, with
+      |customerIndividualCandidates, customerBusinessCandidates, emptyEntryRows and unidentifiedEntryRows all
+      |empty. Set unidentifiedEntriesNotes to "AI could not detect relevant customer data in this image."
+      |This is an empty extraction result, not an error.""".stripMargin
 
   private[gateway] lazy val extractCustomersFromFileInstructions =
     """You are reading either a CSV file or a plain-text table taken from the first sheet of a spreadsheet for a
@@ -91,6 +115,27 @@ object AIInstructions {
       |Email and phone lists may be empty. Whenever either list is non-empty, mark exactly one entry in that list
       |with isDefault=true and mark every other entry with isDefault=false. Never send an empty string for an
       |optional field - omit the field entirely instead.
+      |The addresses list may be empty and never holds more than two addresses. All five text fields are optional:
+      |addressLine1, addressLine2, city, postalCode and country. Treat missing, null, empty and whitespace-only text
+      |as empty. Keep a partial address when at least one text field has non-whitespace content, trim populated
+      |values, and briefly note any missing or unclear fields in that candidate's extraction notes.
+      |Return empty address fields as null or omit them as the response schema permits, never as empty strings.
+      |Omit an address only when all five text fields are empty, keeping the rest of the candidate. If none remain,
+      |return addresses: []. Before assigning address types or limiting the list, merge repeated addresses within
+      |the same candidate. Addresses are equal when all five text fields match after trimming populated values
+      |and treating missing, null, empty and whitespace-only fields as absent; ignore addressType when comparing.
+      |Return each distinct address only once. If duplicates collapse to one address, mark it ShippingAndBilling.
+      |Never merge addresses belonging to different candidates. Only distinct non-empty addresses count below.
+      |When a candidate has exactly one non-empty address, always return it with addressType ShippingAndBilling,
+      |whatever the source says about it.
+      |When a candidate has exactly two non-empty addresses, return one as Shipping and the other as Billing as the
+      |source shows: an address marked as where goods are delivered (e.g. "Deliver to", "Ship to") is Shipping and an
+      |address marked as where invoices or bills go (e.g. "Invoice to", "Bill to") is Billing. When the source does
+      |not say which is which, return the first as Shipping and the second as Billing, and say in that candidate's
+      |extraction notes that the address types were assumed.
+      |When a candidate has three or more non-empty addresses, return only two of them: the best shipping and billing
+      |pair the source shows, or else the first two, typed one Shipping and one Billing by the same rule as for two
+      |addresses, and say in that candidate's extraction notes that further addresses were left out.
       |If something about a candidate is missing or unclear (e.g. a blank cell, no visible email), say so as briefly
       |as possible in that candidate's extraction notes - a short phrase or clause, not a full sentence, when a
       |phrase suffices (e.g. "phone smudged, no email" rather than "The phone number is smudged and no email is
@@ -105,8 +150,13 @@ object AIInstructions {
       |file, when adding it to emptyEntryRows or unidentifiedEntryRows. Reserve unidentifiedEntriesNotes for
       |anything else about this batch worth flagging beyond those two row lists; leave it out entirely when there is
       |nothing else to say.
-      |If the file has nothing recognizable as a customer at all, return both counts as zero and empty candidate
-      |lists rather than treating that as an error.""".stripMargin
+      |If this file batch does not contain recognizable customer data, for example an unrelated table or document,
+      |do not invent customer entries from arbitrary headings or unrelated content. Return entriesIdentified and
+      |entriesProcessed as zero, with customerIndividualCandidates, customerBusinessCandidates, emptyEntryRows and
+      |unidentifiedEntryRows all empty. Set unidentifiedEntriesNotes to
+      |"AI could not detect relevant customer data in this file." This is an empty extraction result, not an error.
+      |This rule does not apply to recognizable customer entries whose names could not be read: count and report
+      |those as unidentified entries using their real row numbers as described above.""".stripMargin
 
   private[gateway] lazy val noteCompactionInstructions =
     """You are helping a business-management product summarize what happened when it read a spreadsheet full of

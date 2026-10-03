@@ -67,7 +67,7 @@ class UserOnboardServiceSpec
         val onboardPasswordPostResponse =
           userOnboardService.onboardPasswordPost(onboardPasswordPostRequest).zioValue
 
-        onboardPasswordPostResponse shouldBe smithy.OnboardPasswordPostResponse(smithy.OnboardStage.PASSWORD_PROVIDED)
+        onboardPasswordPostResponse shouldBe smithy.OnboardPasswordPostResponse(smithy.OnboardStage.PasswordProvided)
       }
 
       "successfully onboard password for user but retry sending welcome email when fails to send email" in new TestContext {
@@ -116,7 +116,7 @@ class UserOnboardServiceSpec
         val onboardPasswordPostResponse =
           userOnboardService.onboardPasswordPost(onboardPasswordPostRequest).zioValue
 
-        onboardPasswordPostResponse shouldBe smithy.OnboardPasswordPostResponse(smithy.OnboardStage.PASSWORD_PROVIDED)
+        onboardPasswordPostResponse shouldBe smithy.OnboardPasswordPostResponse(smithy.OnboardStage.PasswordProvided)
 
         sendWelcomeEmailCounter.get.zioValue shouldBe userOnboardConfig.sendWelcomeEmailMaxRetries + 1
       }
@@ -280,7 +280,7 @@ class UserOnboardServiceSpec
           userOnboardService.onboardDetailsPost(onboardDetailsPostRequest).zioValue
 
         onboardDetailsPostResponse shouldBe smithy.OnboardDetailsPostResponse(
-          smithy.OnboardStage.PHONE_VERIFICATION,
+          smithy.OnboardStage.PhoneVerification,
           userOtpRow.otpID.value,
           userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds,
         )
@@ -351,7 +351,7 @@ class UserOnboardServiceSpec
           userOnboardService.onboardDetailsPost(onboardDetailsPostRequest).zioValue
 
         onboardDetailsPostResponse shouldBe smithy.OnboardDetailsPostResponse(
-          smithy.OnboardStage.PHONE_VERIFICATION,
+          smithy.OnboardStage.PhoneVerification,
           userOtpRow.otpID.value,
           userOnboardConfig.otpPhoneVerificationExpiresAtOffset.toSeconds,
         )
@@ -414,7 +414,7 @@ class UserOnboardServiceSpec
           userOnboardService.onboardDetailsPost(onboardDetailsPostRequest).zioValue
 
         onboardDetailsPostResponse shouldBe smithy.OnboardDetailsPostResponse(
-          smithy.OnboardStage.PHONE_VERIFICATION,
+          smithy.OnboardStage.PhoneVerification,
           userOtpRow.otpID.value,
           expiresAt.value.getEpochSecond - instantNow.getEpochSecond,
         )
@@ -497,7 +497,7 @@ class UserOnboardServiceSpec
         val onboardDetailsPostResponse =
           userOnboardService.onboardDetailsPost(onboardDetailsPostRequest).zioValue
 
-        onboardDetailsPostResponse.onboardStage.name shouldBe "PHONE_VERIFICATION"
+        onboardDetailsPostResponse.onboardStage.name shouldBe "PhoneVerification"
       }
 
       "fail with InvalidOnboardStage when onboardStage is not valid" in new TestContext {
@@ -784,7 +784,7 @@ class UserOnboardServiceSpec
           userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequest).zioValue
 
         onboardVerifyPhoneNumberResponse shouldBe smithy.OnboardVerifyPhoneNumberPostResponse(
-          smithy.OnboardStage.PHONE_VERIFIED
+          smithy.OnboardStage.PhoneVerified
         )
       }
 
@@ -851,7 +851,7 @@ class UserOnboardServiceSpec
           userOnboardService.onboardVerifyPhoneNumberPost(onboardVerifyPhoneNumberPostRequest).zioValue
 
         onboardVerifyPhoneNumberResponse shouldBe smithy.OnboardVerifyPhoneNumberPostResponse(
-          smithy.OnboardStage.PHONE_VERIFIED
+          smithy.OnboardStage.PhoneVerified
         )
       }
 

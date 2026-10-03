@@ -5,16 +5,22 @@ namespace io.mesazon.gateway.smithy
 use alloy#UUID
 
 enum OnboardStage {
-    EMAIL_VERIFICATION
-    EMAIL_VERIFIED
-    PASSWORD_PROVIDED
-    PHONE_VERIFICATION
-    PHONE_VERIFIED
+    EmailVerification
+    EmailVerified
+    PasswordProvided
+    PhoneVerification
+    PhoneVerified
 }
 
 enum CustomerType {
-    INDIVIDUAL
-    BUSINESS
+    Individual
+    Business
+}
+
+enum AddressType {
+    Shipping
+    Billing
+    ShippingAndBilling
 }
 
 structure PhoneNumberRequest {
@@ -24,13 +30,28 @@ structure PhoneNumberRequest {
     phoneCountryCode: String
 }
 
+structure AddressRequest {
+    addressLine1: String
+    addressLine2: String
+    city: String
+    postalCode: String
+    country: String
+}
+
+structure AddressEntryRequest {
+    @required
+    address: AddressRequest
+    @required
+    addressType: AddressType
+}
+
 @trait(selector: "service")
 structure completedOnboardStage {}
 
 enum OrganizationUserRole {
-    OWNER
-    ADMIN
-    USER
+    Owner
+    Admin
+    User
 }
 
 list OrganizationUserRoles {

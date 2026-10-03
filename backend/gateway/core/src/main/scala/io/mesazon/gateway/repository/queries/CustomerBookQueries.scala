@@ -23,9 +23,11 @@ final class CustomerBookQueries(
   private given customerEmailEntryInputsCodec: JsonValueCodec[List[CustomerEmailEntryInput]] = JsonCodecMaker.make
   private given customerPhoneNumberEntryInputsCodec: JsonValueCodec[List[CustomerPhoneNumberEntryInput]] =
     JsonCodecMaker.make
+  private given customerAddressEntriesCodec: JsonValueCodec[List[CustomerAddressEntry]] = JsonCodecMaker.make
 
   private given customerEmailEntryInputsMeta: Meta[List[CustomerEmailEntryInput]]             = jsonbMeta
   private given customerPhoneNumberEntryInputsMeta: Meta[List[CustomerPhoneNumberEntryInput]] = jsonbMeta
+  private given customerAddressEntriesMeta: Meta[List[CustomerAddressEntry]]                  = jsonbMeta
 
   private val frSchema = Fragment.const(config.schema)
 
@@ -57,11 +59,7 @@ final class CustomerBookQueries(
         |name,
         |emails,
         |phone_numbers,
-        |address_line_1,
-        |address_line_2,
-        |city,
-        |postal_code,
-        |country,
+        |addresses,
         |status,
         |created_at,
         |updated_at
@@ -75,11 +73,7 @@ final class CustomerBookQueries(
       fr0"${row.fullName}",
       fr0"${row.emails}",
       fr0"${row.phoneNumbers}",
-      fr0"${row.addressLine1}",
-      fr0"${row.addressLine2}",
-      fr0"${row.city}",
-      fr0"${row.postalCode}",
-      fr0"${row.country}",
+      fr0"${row.addresses}",
       fr0"${row.status}::" ++ frCustomerStatusType,
       fr0"${row.createdAt}",
       fr0"${row.updatedAt}",
@@ -92,11 +86,7 @@ final class CustomerBookQueries(
         |name,
         |emails,
         |phone_numbers,
-        |address_line_1,
-        |address_line_2,
-        |city,
-        |postal_code,
-        |country,
+        |addresses,
         |status::text,
         |created_at,
         |updated_at
@@ -111,11 +101,7 @@ final class CustomerBookQueries(
         |tax_id,
         |emails,
         |phone_numbers,
-        |address_line_1,
-        |address_line_2,
-        |city,
-        |postal_code,
-        |country,
+        |addresses,
         |status,
         |created_at,
         |updated_at
@@ -130,11 +116,7 @@ final class CustomerBookQueries(
       fr0"${row.taxID}",
       fr0"${row.emails}",
       fr0"${row.phoneNumbers}",
-      fr0"${row.addressLine1}",
-      fr0"${row.addressLine2}",
-      fr0"${row.city}",
-      fr0"${row.postalCode}",
-      fr0"${row.country}",
+      fr0"${row.addresses}",
       fr0"${row.status}::" ++ frCustomerStatusType,
       fr0"${row.createdAt}",
       fr0"${row.updatedAt}",
@@ -148,11 +130,7 @@ final class CustomerBookQueries(
         |tax_id,
         |emails,
         |phone_numbers,
-        |address_line_1,
-        |address_line_2,
-        |city,
-        |postal_code,
-        |country,
+        |addresses,
         |status::text,
         |created_at,
         |updated_at
@@ -260,11 +238,7 @@ final class CustomerBookQueries(
       fullNameOptUpdate: Option[CustomerFullName] = None,
       emailsOptUpdate: Option[List[CustomerEmailEntryInput]] = None,
       phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]] = None,
-      addressLine1OptUpdate: Option[CustomerAddressLine1] = None,
-      addressLine2OptUpdate: Option[CustomerAddressLine2] = None,
-      cityOptUpdate: Option[CustomerCity] = None,
-      postalCodeOptUpdate: Option[CustomerPostalCode] = None,
-      countryOptUpdate: Option[CustomerCountry] = None,
+      addressesOptUpdate: Option[List[CustomerAddressEntry]] = None,
   ): TranzactIO[Option[CustomerIndividualDetailsRow]] = {
     val updates = NonEmptyList.of(
       fr"updated_at = $updatedAt"
@@ -272,11 +246,7 @@ final class CustomerBookQueries(
       fullNameOptUpdate.map(v => fr"name = $v"),
       emailsOptUpdate.map(v => fr"emails = $v"),
       phoneNumbersOptUpdate.map(v => fr"phone_numbers = $v"),
-      addressLine1OptUpdate.map(v => fr"address_line_1 = $v"),
-      addressLine2OptUpdate.map(v => fr"address_line_2 = $v"),
-      cityOptUpdate.map(v => fr"city = $v"),
-      postalCodeOptUpdate.map(v => fr"postal_code = $v"),
-      countryOptUpdate.map(v => fr"country = $v"),
+      addressesOptUpdate.map(v => fr"addresses = $v"),
     ).flatten
 
     tzio {
@@ -305,11 +275,7 @@ final class CustomerBookQueries(
       emailsOptUpdate: Option[List[CustomerEmailEntryInput]] = None,
       taxIDOptUpdate: Option[CustomerTaxID] = None,
       phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]] = None,
-      addressLine1OptUpdate: Option[CustomerAddressLine1] = None,
-      addressLine2OptUpdate: Option[CustomerAddressLine2] = None,
-      cityOptUpdate: Option[CustomerCity] = None,
-      postalCodeOptUpdate: Option[CustomerPostalCode] = None,
-      countryOptUpdate: Option[CustomerCountry] = None,
+      addressesOptUpdate: Option[List[CustomerAddressEntry]] = None,
   ): TranzactIO[Option[CustomerBusinessDetailsRow]] = {
     val updates = NonEmptyList.of(
       fr"updated_at = $updatedAt"
@@ -318,11 +284,7 @@ final class CustomerBookQueries(
       taxIDOptUpdate.map(v => fr"tax_id = $v"),
       emailsOptUpdate.map(v => fr"emails = $v"),
       phoneNumbersOptUpdate.map(v => fr"phone_numbers = $v"),
-      addressLine1OptUpdate.map(v => fr"address_line_1 = $v"),
-      addressLine2OptUpdate.map(v => fr"address_line_2 = $v"),
-      cityOptUpdate.map(v => fr"city = $v"),
-      postalCodeOptUpdate.map(v => fr"postal_code = $v"),
-      countryOptUpdate.map(v => fr"country = $v"),
+      addressesOptUpdate.map(v => fr"addresses = $v"),
     ).flatten
 
     tzio {

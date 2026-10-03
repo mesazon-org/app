@@ -1,5 +1,6 @@
 package io.mesazon.gateway.service
 
+import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.{S3BucketKey, ServiceError, TokenType}
 import io.mesazon.domain.to
 import io.mesazon.gateway.clients.S3ClientOrganizationMedia
@@ -7,6 +8,7 @@ import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.state.*
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
+import io.scalaland.chimney.dsl.*
 import zio.*
 
 object UserSignInService {
@@ -37,13 +39,10 @@ object UserSignInService {
             s3ClientOrganizationMedia.genMediaUrl(logoImageNormalizedS3BucketKey.to[S3BucketKey]).map(_.value)
           )
           .map(logoUrlOpt =>
-            smithy.SignInOrganization(
-              organizationID = organizationAndUserDetailsRow.organizationID.value,
-              name = organizationAndUserDetailsRow.name.value,
-              slug = organizationAndUserDetailsRow.slug.value,
-              role = organizationUserRoleFromDomainToSmithy(organizationAndUserDetailsRow.userRole),
-              logoUrl = logoUrlOpt,
-            )
+            organizationAndUserDetailsRow
+              .into[smithy.SignInOrganization]
+              .withFieldConst(_.logoUrl, logoUrlOpt)
+              .transform
           )
       )
       _          <- userTokenRepository.deleteAllUserTokens(authedUser.userID)
@@ -57,7 +56,7 @@ object UserSignInService {
       )
     } yield smithy.SignInPostResponse(
       accessTokenExpiresInSeconds = accessJwt.expiresIn.toSeconds,
-      onboardStage = onboardStageFromDomainToSmithy(userDetailsRow.onboardStage),
+      onboardStage = userDetailsRow.onboardStage.transformInto[smithy.OnboardStage],
       refreshToken = refreshJwt.refreshToken.value,
       accessToken = accessJwt.accessToken.value,
       organizations = signInOrganizations,

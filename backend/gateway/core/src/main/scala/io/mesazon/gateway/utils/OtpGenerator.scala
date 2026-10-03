@@ -10,11 +10,11 @@ trait OtpGenerator {
 object OtpGenerator {
 
   private final class OtpGeneratorImpl extends OtpGenerator {
-    inline private val minInclusiveCharPerEach = 2
-    inline private val maxExclusiveCharPerEach = 5
-    inline private val maxChars                = 6
-    inline private val letters                 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    inline private val digits                  = "0123456789"
+    private inline val minInclusiveCharPerEach = 2
+    private inline val maxExclusiveCharPerEach = 5
+    private inline val maxChars                = 6
+    private inline val letters                 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    private inline val digits                  = "0123456789"
 
     override def generateOtp: UIO[Otp] = (for {
       random        <- ZIO.random

@@ -58,7 +58,7 @@ object AIClientDataExtraction {
 
     type CSVRecordWithIndex = (csvRecord: CSVRecord, index: Long)
 
-    inline private val dataRowNumberOffset = 1L
+    private inline val dataRowNumberOffset = 1L
 
     private def isRetryableSendError(error: Throwable): Boolean = error match {
       case _: SttpClientException.ResponseHandlingException[?] => false

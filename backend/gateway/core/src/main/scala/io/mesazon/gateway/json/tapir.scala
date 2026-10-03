@@ -17,6 +17,13 @@ object tapir {
   private lazy val tapirServerErrorByCode: Map[String, TapirServerError] =
     TapirServerError.values.map(tapirServerError => tapirServerError.code -> tapirServerError).toMap
 
+  given addressTypeSchema: Schema[AddressType] =
+    Schema.derivedEnumeration[AddressType].defaultStringBased
+
+  given addressSchema: Schema[Address] = Schema.derived[Address]
+
+  given addressEntrySchema: Schema[AddressEntry] = Schema.derived[AddressEntry]
+
   given extractCustomerEmailEntrySchema: Schema[ExtractCustomerEmailEntry] = Schema.derived[ExtractCustomerEmailEntry]
 
   given extractCustomerPhoneNumberSchema: Schema[ExtractCustomerPhoneNumber] =
@@ -52,11 +59,7 @@ object tapir {
   given insertCustomerBusinessContactSchema: Schema[InsertCustomerBusinessContact] =
     Schema.derived[InsertCustomerBusinessContact]
 
-  given insertCustomerIndividualPostRequestSchema: Schema[InsertCustomerIndividualPostRequest] =
-    Schema.derived[InsertCustomerIndividualPostRequest]
-
-  given insertCustomerBusinessPostRequestSchema: Schema[InsertCustomerBusinessPostRequest] =
-    Schema.derived[InsertCustomerBusinessPostRequest]
+  given addressTypeCodec: JsonValueCodec[AddressType] = JsonCodecMaker.makeWithoutDiscriminator[AddressType]
 
   given extractCustomersPostResponseCodec: JsonValueCodec[ExtractCustomersPostResponse] =
     JsonCodecMaker.make[ExtractCustomersPostResponse]

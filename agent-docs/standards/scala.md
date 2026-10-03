@@ -1,6 +1,6 @@
 # Scala
 
-Reusable Scala code/name/test rules. Boundaries: [Iron](iron.md), [Smithy](smithy.md), [Doobie](doobie.md), [Postgres](postgres.md). Mesazon: [validation](../features/flow/02-validation.md), [repository](../features/flow/04-repository.md), [service](../features/flow/05-service.md).
+Reusable Scala code/name/test rules. Boundaries: [Chimney](chimney.md), [Iron](iron.md), [Smithy](smithy.md), [Doobie](doobie.md), [Postgres](postgres.md). Mesazon: [validation](../features/flow/02-validation.md), [repository](../features/flow/04-repository.md), [service](../features/flow/05-service.md).
 
 ## Code
 
@@ -36,10 +36,12 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 | missing | `catalogueItemIDMissing` | `missingCatalogueItemID` |
 | optional raw | `emailRawOpt` | `emailOptRaw`, `optionalEmail` |
 
-- Spell out domain names; only established acronyms and `Impl` may abbreviate. Avoid vague `data`, `item`, `result`, `value`, `helper`, `thing`.
-- Types/traits/objects/enums/type aliases/constants: `PascalCase`. Values/fields/parameters/methods: `camelCase`.
+- Spell out domain names; only established acronyms and `Impl` may abbreviate. Avoid vague `data`, `entry`, `item`, `element`, `result`, `value`, `helper`, `thing`.
+- Lambda parameters follow the same exact-model naming rule as other bindings. Name them from the complete element model in lower camel case (`customerAddressEntry`, `customerEmailEntryInput`), never from their container position (`entry`, `item`, `element`, `value`).
+- Query update-fragment lambdas are an explicit exception: keep the established local `v` in direct expressions such as `nameOptUpdate.map(v => fr"name = $v")`, where the option and SQL column already provide the full context.
+- Types/traits/objects/enums/type aliases/constants: `UpperCamelCase`. Values/fields/parameters/methods: `lowerCamelCase`.
 - The JSON registry namespace objects `io.mesazon.gateway.json.ai` and `io.mesazon.gateway.json.tapir` are explicit lowercase exceptions; keep their declarations in `ai.scala` and `tapir.scala` respectively.
-- Every `Option`-typed value/field/parameter carries `Opt`. By default `Opt` is the final suffix, including local repository result bindings such as `catalogueItemRowUpdatedOpt`. Two exceptions: (1) Repository `Row` fields, repository-owned `...Input` fields, and validated request-model fields that mirror transport members retain the persisted/domain or transport concept name with no `Opt` at all. (2) When the trailing word names the value's specific role in an operation rather than a state qualifier (`Update`, `Result`, `Expected`, and alike), `Opt` always precedes that role word, which stays suffixed after `Opt` — the established repository update-input fields (`businessNameOptUpdate`, `addressLine1OptUpdate` in `CustomerBookRepository.updateCustomerBusiness`/`updateCustomerIndividual`, and equivalently throughout organization management), and likewise `extractFromCsvOptResult` for a mock's canned per-operation result, or an `Option`-typed test expectation such as `catalogueItemOptExpected`.
+- Every `Option`-typed value/field/parameter carries `Opt`. By default `Opt` is the final suffix, including local repository result bindings such as `catalogueItemRowUpdatedOpt`. Two exceptions: (1) Repository `Row` fields, repository-owned `...Input` fields, and validated request-model fields that mirror transport members retain the persisted/domain or transport concept name with no `Opt` at all. (2) When the trailing word names the value's specific role in an operation rather than a state qualifier (`Update`, `Result`, `Expected`, and alike), `Opt` always precedes that role word, which stays suffixed after `Opt` — the established repository update-input fields (`businessNameOptUpdate`, `taxIDOptUpdate` in `CustomerBookRepository.updateCustomerBusiness`/`updateCustomerIndividual`, and equivalently throughout organization management), and likewise `extractFromCsvOptResult` for a mock's canned per-operation result, or an `Option`-typed test expectation such as `catalogueItemOptExpected`.
 - That transport-mirroring exception covers only the field/parameter *declared on* the transport/persisted type — never a local `for`-binding or lambda parameter that merely computes the value fed into it. A service method assembling a transport response still names its own `Option`-typed local `imageNormalizedUrlOpt`, even though it flows straight into the response's non-`Opt` `imageNormalizedUrl` field: `imageNormalizedUrlOpt <- ...; ... yield Response(imageNormalizedUrl = imageNormalizedUrlOpt)`.
 - A `def`/method name never carries `Opt`, even when it returns an `Option` or takes an `Opt`-suffixed parameter — `Opt` marks a value's type, not a method's identity. Name the method after what it produces (`imageNormalizedUrl`, not `imageNormalizedUrlOpt`); only its parameters and result bindings at the call site get the `Opt` suffix.
 - `ID` stays uppercase in types and values (`CustomerID`, `customerID`, `IDGenerator`). Treat other acronyms as words (`Http`, `Jwt`, `Url`) unless an external standard fixes the spelling.
@@ -66,10 +68,11 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 
 - Use ScalaTest's infix assertion syntax: `actual shouldBe expected`, never `actual.shouldBe(expected)`. Keep the infix form for multiline expected models as well.
 - Name bindings after their exact models; qualifiers follow the model name.
+- Use domain arbitraries by default for valid test data, especially happy paths; use `.copy(...)` only to force scenario-specific fields. Prefer property-based round-trips when valid shapes vary. Keep explicit cases for boundaries and combinations that must be covered deterministically; random sampling alone does not prove exhaustive coverage.
 - Treat `arbitrarySample` as real work, especially for nested/list generators. If a test replaces a wrapper's entire generated collection, do not sample and discard that collection: sample the element model, derive related cases with `.copy(...)`, and directly construct the wrapper from the controlled elements. Sample the complete wrapper only when its generator or full round-trip is part of the proof.
 - Repository integration tests sample complete inputs/Rows with `arbitrarySample[ExactType]` and use `.copy(...)` only to force scenario fields. Keep `TestContext` free of helper methods and repeat arrangement, dependency expectations, and database reads locally; test isolation/readability takes precedence over removing duplication.
 - Derive a near-identical second expected model from the first with `.copy(...)`, changing only intentional differences. Assert correlated/equal and distinct fields directly through the expected models immediately after setup, so reviewers can verify the complete scenario from those models.
-- Build expected mappings independently and field-by-field; never use the mapper/transform/serializer/helper under test to create expected output. Using that transform to arrange test input is allowed.
+- Build expected mappings independently and field-by-field; never use the mapper/transform/serializer/helper under test to create expected output. Using that transform to arrange test input is allowed. Follow the mirrored-enum exception in [Chimney](chimney.md#tests-and-boundaries).
 - Assert the complete returned model. Project only when the field is the test's entire contract (for example, IDs surviving rollback).
 - Assert order only when contractual; otherwise compare order-insensitively.
 - If distinctness matters, guarantee it during setup and assert `not equal`. With low-cardinality generators, sample twice then modify one value; do not hard-code or sample-and-hope.
@@ -80,6 +83,8 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 
 - Name every `Arbitrary` given `arb<ExactTypeName>`; plural/list givens use the exact plural type name. Never use anonymous `given Arbitrary[...]` declarations.
 - Prefer `Arbitrary(Gen.resultOf(ExactType.apply))` when fields are independent and their existing givens already generate valid values. Use an explicit generator when fields must be correlated, normalized, bounded, or otherwise preserve a cross-field invariant.
+- When a test needs broader optional-field presence combinations than the shared arbitrary provides, define an arbitrary locally in that test rather than changing the shared generator. For an at-least-one-field scenario, vary every optional field and exclude only the all-absent case.
+- Construct scenario-valid values directly rather than using `suchThat` or rejection filtering, which can exhaust generation retries. For an at-least-one-field scenario, choose a non-empty subset of fields and populate it. Share a scenario-specific arbitrary within the spec only when multiple tests need it.
 - List arbitraries must include the empty-list case and use a bounded size. Default to `Gen.choose(0, 50).flatMap(size => Gen.listOfN(size, elementGen))`; use a smaller explicit maximum only when nesting, encoded body size, or dependency cost requires it.
 
 ### Ownership

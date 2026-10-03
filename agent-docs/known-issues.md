@@ -21,6 +21,33 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Prevention:** After a Scala or Smithy4s version bump, if a fatal warning appears only in generated (`src_managed`) sources, suppress the specific diagnostic id scoped to `src_managed`, rather than relaxing `-Wunused:all` or tpolecat's fatal-warnings mode globally.
 - **Verify:** `sbt "clean; compile"` succeeds with no `E230` failure; `sbt "runLint"` passes; `sbt "gateway-build"` (or `checkLint; testFull` on the affected aggregate) reproduces the CI-equivalent fatal-warnings path and passes.
 
+## Removed Smithy shape keeps compiling from `src_managed`
+
+- **Status:** Workaround 2026-09-28
+- **Severity:** Low
+- **Signature:** After deleting or renaming a Smithy shape, `sbt compile` still compiles its old generated file under `target/.../src_managed/main/smithy4s/...` (e.g. `OrganizationAddressEntryRequest.scala` after it was replaced by `AddressEntryRequest`), so references to the removed type keep compiling locally or a stale type clashes with the new one.
+- **Cause:** smithy4s incremental codegen writes new/changed shapes but does not delete generated files for shapes that no longer exist.
+- **Fix:** Run `sbt "gateway-core/clean; smithy4sCodegen; compile"` after removing or renaming a Smithy shape.
+- **Verify:** `src_managed/.../smithy/` no longer contains the removed shape's file and the clean compile succeeds (a clean CI build never sees the stale file).
+
+## Acceptance client sends a Smithy enum as an object and the gateway rejects the request
+
+- **Status:** Workaround 2026-09-30
+- **Severity:** Medium
+- **Signature:** After a Smithy request gains a member whose type is a new Smithy enum (e.g. `AddressType` inside `AddressEntryRequest`), acceptance tests that send it fail intermittently with a 400 / empty stored rows — only when the sampled request actually contains the enum (e.g. a non-empty `addresses` list), so a different set of tests fails on each run.
+- **Cause:** `gateway-it`'s `GatewayClient` derives its request codecs with jsoniter `JsonCodecMaker.make`. Without a codec for the enum in scope, jsoniter encodes it as a discriminator object (`{"type": "Shipping"}`) instead of the wire string, and the gateway's decoder rejects it.
+- **Fix:** Declare a hand-written `given JsonValueCodec[smithy.<Enum>]` in `GatewayClient`, before the request codecs that use it, like the existing `OnboardStage`, `CustomerType` and `AddressType` codecs.
+- **Verify:** Run the affected acceptance spec twice; both runs pass with non-empty generated values.
+
+## Standalone acceptance runner or test compile fails on a stale sbt server
+
+- **Status:** Workaround 2026-09-30
+- **Severity:** Low
+- **Signature:** Any of: the documented standalone-runner `set backendGatewayIt / Test / run / forkOptions := …` expression fails with `Not found: $Wrap… is not a legal path`; `gateway-core/Test/compile` reports main packages missing (`value clients is not a member of io.mesazon.gateway`) right after a `reload`; or a build that just compiled reports `Ambiguous given instances` in `json/tapir.scala` after a `sbt --no-server "gateway-core/console"` probe.
+- **Cause:** Stale state in the long-running sbt server (the same family as the action-cache and Docker-context issues below).
+- **Fix:** `sbt shutdown`, then rerun the same command.
+- **Verify:** The rerun compiles and the runner reaches the tests.
+
 ## Customer batch (businesses/individuals) closes HTTP connection
 
 - **Status:** Resolved 2026-08-24 (recurred on `/insert/customer-individuals` after the 2026-07-29 businesses fix; root cause now fixed at the shared generator)

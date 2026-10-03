@@ -11,6 +11,7 @@ import io.mesazon.gateway.smithy
 import io.mesazon.gateway.state.AuthState
 import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.ZWordSpecBase
+import io.scalaland.chimney.dsl.*
 import zio.*
 
 class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries, TokenArbitraries {
@@ -99,7 +100,7 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
 
         signInPostResponse shouldBe smithy.SignInPostResponse(
           accessTokenExpiresInSeconds = accessJwt.expiresIn.toSeconds,
-          onboardStage = onboardStageFromDomainToSmithy(userDetailsRow.onboardStage),
+          onboardStage = userDetailsRow.onboardStage.transformInto[smithy.OnboardStage],
           refreshToken = refreshJwt.refreshToken.value,
           accessToken = accessJwt.accessToken.value,
           organizations = List(
@@ -107,14 +108,14 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
               organizationID = organizationAndUserDetailsRowOwnerWithLogo.organizationID.value,
               name = organizationAndUserDetailsRowOwnerWithLogo.name.value,
               slug = organizationAndUserDetailsRowOwnerWithLogo.slug.value,
-              role = smithy.OrganizationUserRole.OWNER,
+              userRole = smithy.OrganizationUserRole.Owner,
               logoUrl = Some(organizationLogoUrl.value),
             ),
             smithy.SignInOrganization(
               organizationID = organizationAndUserDetailsRowAdminWithoutLogo.organizationID.value,
               name = organizationAndUserDetailsRowAdminWithoutLogo.name.value,
               slug = organizationAndUserDetailsRowAdminWithoutLogo.slug.value,
-              role = smithy.OrganizationUserRole.ADMIN,
+              userRole = smithy.OrganizationUserRole.Admin,
               logoUrl = None,
             ),
           ),
@@ -177,7 +178,7 @@ class UserSignInServiceSpec extends ZWordSpecBase, SmithyArbitraries, Repository
 
         signInPostResponse shouldBe smithy.SignInPostResponse(
           accessTokenExpiresInSeconds = accessJwt.expiresIn.toSeconds,
-          onboardStage = onboardStageFromDomainToSmithy(userDetailsRow.onboardStage),
+          onboardStage = userDetailsRow.onboardStage.transformInto[smithy.OnboardStage],
           refreshToken = refreshJwt.refreshToken.value,
           accessToken = accessJwt.accessToken.value,
           organizations = Nil,

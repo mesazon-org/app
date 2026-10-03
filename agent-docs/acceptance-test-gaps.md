@@ -88,9 +88,9 @@ This is a cross-feature interaction: someone asks for a password reset, then sig
 
 ### 10. Creating an organization with only the required fields
 
-**Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 1, scenarios 3 and 4 — contact lists may be empty, and tagline, address, registration number and tax id may all be omitted.
+**Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 1, scenarios 3, 4 and 7 — contact and address lists may be empty, and tagline, registration number and tax id may all be omitted.
 
-Every test in `OrganizationManagementApiSpec` builds its request from a fully-populated arbitrary. Nothing ever sends empty `emails`/`phoneNumbers` lists or omits the optional fields.
+Every test in `OrganizationManagementApiSpec` builds its request from a fully-populated arbitrary. Nothing ever deterministically sends empty `emails`/`phoneNumbers`/`addresses` lists or omits the optional fields; `addresses` is sampled from the allowed combinations (empty, one `ShippingAndBilling`, or a `Shipping` + `Billing` pair), so each shape is covered only by chance per run, and no acceptance test sends a rejected combination (the rule is proven in `AddressValidatorSpec` only; by the testing rule in `features/flow/02-validation.md` the request validator specs do not re-test it) (the same holds for the customer insert/get happy paths in `CustomerBookApiSpec`).
 
 This is a transport-level risk rather than a logic one, which is exactly what acceptance tests are for. Empty lists are the known hazard here: a client codec that drops an empty list turns a `@default([])` member into a missing one, and the request shape changes underneath the service. The validator unit spec cannot see that, because it starts from an already-decoded request.
 
@@ -124,8 +124,28 @@ Leaving this entry in place, struck through, so nobody re-adds it believing it w
 
 `customer-book.md` already tracks this as "Acceptance: 8/13 endpoints complete", so it is a known shortfall rather than a discovery — recorded here so it sits with the rest of the backlog.
 
-Worth noting what the shape of the gap implies: **every mutation except insert and archive is untested over HTTP.** That includes both endpoints where the update is applied wholesale (email and phone lists replace rather than merge), the uniqueness conflicts on renaming, and every endpoint that exercises the silent no-op on an archived parent — which is [gap 2 in the epic](../pages/epics/05-customer-book.md#2-changes-to-an-archived-customer-are-silently-discarded). The behaviour most likely to surprise a user is the behaviour with no black-box test behind it.
+Worth noting what the shape of the gap implies: **every mutation except insert and archive is untested over HTTP.** That includes both endpoints where the update is applied wholesale (email, phone and address lists replace rather than merge; an empty address list clears it), the uniqueness conflicts on renaming, and every endpoint that exercises the silent no-op on an archived parent — which is [gap 2 in the epic](../pages/epics/05-customer-book.md#2-changes-to-an-archived-customer-are-silently-discarded). The behaviour most likely to surprise a user is the behaviour with no black-box test behind it.
 
 The repository and functional layers do cover these, so this is about transport, role gating, and the org-scoping header — the things only an acceptance test sees.
 
 **Where:** `CustomerBookApiSpec`. Follow the matrix the eight existing blocks already use.
+
+## Rejections decided at request decoding
+
+### 13. An address with an unknown type or a missing required address object/type
+
+**Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 1, scenario 9, and [Customer Book](../pages/epics/05-customer-book.md), step 1, scenario 11 — an address whose type is not `Shipping`, `Billing` or `ShippingAndBilling`, or that omits its required address object or type, is rejected and nothing is stored. All five text fields are optional; a partial address with at least one valid populated field is accepted.
+
+`addressType` is a Smithy enum; the address object and type remain required, so these malformed bodies fail while the request is decoded, before any validator runs. No test sends such a body: the typed `GatewayClient` cannot express an unknown enum value or a missing required member, and a raw-JSON client method was deliberately not added. The exact status body for a decode failure is therefore unproven. Missing text fields reach validation normally; an all-missing address produces the indexed `address` error. Blank, whitespace-only, untrimmed and over-long parts are covered in `AddressValidatorSpec`, and the request validator specs prove the entry index. Deterministic HTTP coverage for partial and all-empty addresses remains missing.
+
+**Where:** `OrganizationManagementApiSpec` and `CustomerBookApiSpec`. Needs a raw-body request method on `GatewayClient`; pin the real status and body, and assert nothing was stored.
+
+## Behaviour that only a live AI run can show
+
+### 14. Address rules in customer extraction
+
+**Behaviour:** [Customer Book](../pages/epics/05-customer-book.md), step 7, scenarios 20–23 — one address is always marked shipping and billing; two are split into shipping and billing (first/second when the source does not say, with a note); three or more are cut to two with a note. Partial addresses are retained when at least one text field has non-whitespace content, with populated values trimmed and a note for missing or unclear fields; all-empty addresses are omitted.
+
+Both extraction prompts in `AIInstructions` now request the agreed partial-address behavior. `FileApiSpec` only decodes a stubbed response carrying one `ShippingAndBilling` address, so it proves the response shape and wire value, not what the model does. The golden specs are manual, need a live key, and have not been run since the address shape changed — so it is also unconfirmed that the real service accepts the new strict schema or follows the updated instructions. Live-AI verification was accepted as a risk on 2026-10-01 and remains outstanding.
+
+**Where:** `golden/ExtractCustomersFromImageGoldenSpec` and `golden/ExtractCustomersFromSpreadsheetGoldenSpec`, run manually with a key.
