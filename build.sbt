@@ -74,6 +74,7 @@ lazy val backendTestKitModule = createBackendModule("test-kit")(None)
     Dependencies.scalacheck,
     Dependencies.scalaTestPlusCheck,
     Dependencies.scalamock,
+    Dependencies.scalamockScalaTest,
     Dependencies.scalamockZIO,
     Dependencies.testcontainers,
     Dependencies.testcontainersScalaScalatest,
