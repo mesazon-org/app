@@ -15,6 +15,7 @@ case class RepositoryConfig(
     customerTable: String = "",
     customerBusinessContactTable: String = "",
     catalogueItemTable: String = "",
+    catalogueItemVariantTable: String = "",
 ) {
   val allTableNames = List(
     userCredentialsTable,
@@ -30,6 +31,7 @@ case class RepositoryConfig(
     customerTable,
     customerBusinessContactTable,
     catalogueItemTable,
+    catalogueItemVariantTable,
   ).filter(_.nonEmpty)
 }
 

@@ -144,6 +144,7 @@ create table catalogue_item
     organization_id                uuid                  not null,
     catalogue_item_id              uuid                  not null,
     name                           text                  not null,
+    description                    text,
     unit                           text                  not null,
     price_amount                   numeric,
     price_currency                 text,
@@ -158,6 +159,41 @@ create table catalogue_item
 
 create unique index uq_catalogue_item_name
     on catalogue_item (organization_id, name)
+    where status = 'Active';
+
+create type catalogue_item_variant_status as enum ('Active', 'Archived');
+
+create table catalogue_item_variant
+(
+    organization_id           uuid                          not null,
+    catalogue_item_id         uuid                          not null,
+    catalogue_item_variant_id uuid                          not null,
+    name                      text,
+    sku                       text,
+    sale_unit                 text                          not null,
+    measure_value             numeric,
+    measure_unit              text,
+    package_type              text,
+    package_count             integer,
+    price_amount              numeric,
+    price_currency            text,
+    status                    catalogue_item_variant_status not null,
+    created_at                timestamptz                   not null,
+    updated_at                timestamptz                   not null,
+    primary key (organization_id, catalogue_item_variant_id),
+    foreign key (organization_id, catalogue_item_id)
+        references catalogue_item (organization_id, catalogue_item_id)
+);
+
+create index idx_catalogue_item_variant_catalogue_item
+    on catalogue_item_variant (organization_id, catalogue_item_id);
+
+create unique index uq_catalogue_item_variant_name
+    on catalogue_item_variant (organization_id, catalogue_item_id, name)
+    where status = 'Active';
+
+create unique index uq_catalogue_item_variant_sku
+    on catalogue_item_variant (organization_id, sku)
     where status = 'Active';
 
 
