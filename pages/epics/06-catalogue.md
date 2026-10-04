@@ -35,7 +35,7 @@ Every request in this epic names the organization it applies to, and only touche
 
 1. Every request needs a signed-in person who has finished personal onboarding and belongs to the organization named in the request. Someone outside the organization is refused with a server error — the same gap as [Organization Onboarding gap 3]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}#3-not-belonging-to-an-organization-is-reported-as-a-server-error).
 2. Reading is open to owners, admins and ordinary members. Adding, changing, archiving and uploading an image are limited to owners and admins. This holds for items and variants alike.
-3. Prices and measures are exact. An amount is never rounded; it is kept with exactly the currency's standard number of decimal places. A measure value is kept exactly as given.
+3. Prices and measures are exact. An amount is never rounded; it is kept with exactly the currency's standard number of decimal places. A measure value is kept exactly as given, with at most 12 digits before the decimal point and 6 after.
 4. When a request contains several problems at once, all of them are reported together, each tied to the exact item or variant that caused it.
 5. Adding an item with its variants, or several items at once, is all-or-nothing. If any one item or variant fails, nothing is stored.
 6. A missing, invalid, or expired access token is refused with the same error code used everywhere else in the product for a rejected access token.
@@ -85,7 +85,7 @@ Like the customer book, these are not a single journey. They are the things that
 | 7. User gives a variant a SKU already used by an active variant in the organization, or gives two variants in the same request the same SKU | - Rejected as a conflict, naming the SKU |
 | 8. User gives two variants of the same item the same name | - Rejected as a conflict |
 | 9. User gives a price that breaks a rule in **Price** below — an unsupported currency, more decimal places than the currency allows, or an amount that is negative or too large | - Rejected, naming the part of the price at fault |
-| 10. User gives a measure value of zero or less, or a package count below 1 | - Rejected, naming the field at fault |
+| 10. User gives a measure value of zero or less, a measure value with more than 12 digits before the decimal point or more than 6 after it, or a package count below 1 | - Rejected, naming the field at fault |
 | 11. User submits several bad entries at once | - Every problem is reported together, each tied to the item or variant that caused it |
 | 12. A member with the ordinary user role tries to add an item | - Rejected |
 
@@ -121,9 +121,9 @@ A variant, wherever it is sent in this epic, is always this shape:
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Name | `String` | 1–255 characters, trimmed; unique among the item's active variants | ❌ | Tells this variant apart from the item's others |
-| SKU | `String` | At least 1 character, trimmed; unique among the organization's active variants | ❌ | The business's own stock code for this variant |
+| SKU | `String` | 1–255 characters, trimmed; unique among the organization's active variants | ❌ | The business's own stock code for this variant |
 | Sale Unit | `String` | 1–255 characters, trimmed | ✅ | What it is sold by, in the business's own words |
-| Measure Value | `BigDecimal` | Greater than zero; exact, never rounded | ❌ | How much of the measure unit one sale unit holds |
+| Measure Value | `BigDecimal` | Greater than zero; at most 12 digits before the decimal point and 6 after; exact, never rounded | ❌ | How much of the measure unit one sale unit holds |
 | Measure Unit | `String` | 1–255 characters, trimmed | ❌ | What the measure value is counted in |
 | Package Type | `String` | 1–255 characters, trimmed | ❌ | What it is packed in |
 | Package Count | `Int` | Whole number, at least 1 | ❌ | How many packages make up one sale unit |
@@ -279,7 +279,7 @@ Nothing changes. This step only reads.
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User opens an item that exists | - Its name, description if any, picture if any, and every active variant are returned |
+| 1. User opens an item that exists | - Its name, description if any, picture if any, and every active variant are returned, oldest first |
 | 2. The item has archived variants | - They are left out; only active variants are returned |
 | 3. User opens an item that has been archived | - Its name, description and picture are still returned. Archiving hides an item from the list, not from a direct look-up. Its variants were archived with it, so none are returned |
 | 4. User opens an item that does not exist | - Reported as a server error rather than "not found" — the same gap as [Customer Book gap 1]({{ site.baseurl }}{% link epics/05-customer-book.md %}#1-looking-up-a-customer-that-is-not-there-is-reported-as-a-server-error) |
@@ -306,7 +306,7 @@ Nothing changes. This step only reads.
 | Name | `String` | — | ✅ | The item's name |
 | Description | `String` | — | ❌ | Present only if the item has a description |
 | Image URL | `String` | A working link | ❌ | Present only if the item has an image |
-| Catalogue Item Variants | `CatalogueItemVariantDetails[]` | Active variants only; may be empty for an archived item | ✅ | The ways the item is sold today |
+| Catalogue Item Variants | `CatalogueItemVariantDetails[]` | Active variants only, in the order they were added; may be empty for an archived item | ✅ | The ways the item is sold today |
 
 **CatalogueItemVariantDetails**
 
@@ -567,9 +567,9 @@ Nothing changes. This step only reads.
 | --- | --- | --- | --- | --- |
 | Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ✅ | Which variant to change |
 | Name | `String` | 1–255 characters, trimmed; unique among the item's active variants | ❌ | Leave out to keep the current name |
-| SKU | `String` | At least 1 character, trimmed; unique among the organization's active variants | ❌ | Leave out to keep the current SKU |
+| SKU | `String` | 1–255 characters, trimmed; unique among the organization's active variants | ❌ | Leave out to keep the current SKU |
 | Sale Unit | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current sale unit |
-| Measure Value | `BigDecimal` | Greater than zero; exact, never rounded | ❌ | Leave out to keep the current measure value |
+| Measure Value | `BigDecimal` | Greater than zero; at most 12 digits before the decimal point and 6 after; exact, never rounded | ❌ | Leave out to keep the current measure value |
 | Measure Unit | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current measure unit |
 | Package Type | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current package type |
 | Package Count | `Int` | Whole number, at least 1 | ❌ | Leave out to keep the current package count |
