@@ -6,7 +6,7 @@ title: Catalogue
 
 ### Overview
 
-Every organization keeps a catalogue of what it sells — products, services, anything with a name and a price. It is where future orders will pick items from.
+Every organization keeps a catalogue of what it sells — products, services, anything it puts a name on. Each item comes in one or more variants: the actual things sold, each with its own unit, measure, packaging and price. It is where future orders will pick items from.
 
 ### Related / Out of scope
 
@@ -21,18 +21,21 @@ Every request in this epic names the organization it applies to, and only touche
 
 #### Functional
 
-1. An item has a name, a unit it is sold by, and may have an exact price. A price is either fully given — an amount and a currency together — or left out entirely; there is no price with only one of the two.
-2. An item's name must be unique among that organization's active items. Archiving an item frees its name for reuse.
-3. Items are **archived**, never deleted.
-4. An item may carry one image. Uploading a new one replaces it.
+1. An item has a name and may have a description and an image. Everything that is sold — the unit, measure, packaging and price — lives on the item's **variants**, not on the item itself.
+2. An item always has at least one active variant while it is active. It is created together with its first variants, and its last active variant cannot be archived on its own.
+3. A variant has a unit it is sold by, and may have a name, a stock-keeping unit (SKU) code, a measure, a package type, a package count, and an exact price. A price is either fully given — an amount and a currency together — or left out entirely; there is no price with only one of the two. Every other optional detail stands on its own.
+4. An item's name must be unique among that organization's active items. Archiving an item frees its name for reuse.
+5. A variant's name must be unique among the active variants of the same item. A variant's SKU must be unique among all of the organization's active variants. Archiving a variant frees both.
+6. Items and variants are **archived**, never deleted. Archiving an item archives all of its active variants with it.
+7. An item may carry one image. Uploading a new one replaces it. Variants have no image of their own.
 
 #### Non-functional
 
 1. Every request needs a signed-in person who has finished personal onboarding and belongs to the organization named in the request. Someone outside the organization is refused with a server error — the same gap as [Organization Onboarding gap 3]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}#3-not-belonging-to-an-organization-is-reported-as-a-server-error).
-2. Reading is open to owners, admins and ordinary members. Adding, changing, archiving and uploading an image are limited to owners and admins.
-3. Prices are exact. An amount is never rounded; it is kept with exactly the currency's standard number of decimal places.
-4. When a request contains several problems at once, all of them are reported together, each tied to the exact item that caused it.
-5. Adding several items at once is all-or-nothing. If any one of them fails, none of them are stored.
+2. Reading is open to owners, admins and ordinary members. Adding, changing, archiving and uploading an image are limited to owners and admins. This holds for items and variants alike.
+3. Prices and measures are exact. An amount is never rounded; it is kept with exactly the currency's standard number of decimal places. A measure value is kept exactly as given.
+4. When a request contains several problems at once, all of them are reported together, each tied to the exact item or variant that caused it.
+5. Adding an item with its variants, or several items at once, is all-or-nothing. If any one item or variant fails, nothing is stored.
 6. A missing, invalid, or expired access token is refused with the same error code used everywhere else in the product for a rejected access token.
 
 ### User flow
@@ -45,12 +48,18 @@ Like the customer book, these are not a single journey. They are the things that
 4. [User Opens an Item](#4-user-opens-an-item)
 5. [User Updates an Item](#5-user-updates-an-item)
 6. [User Archives an Item](#6-user-archives-an-item)
+7. [User Adds a Variant](#7-user-adds-a-variant)
+8. [User Opens a Variant](#8-user-opens-a-variant)
+9. [User Updates a Variant](#9-user-updates-a-variant)
+10. [User Archives a Variant](#10-user-archives-a-variant)
 
 ### Prerequisites
 
-**Item status** — an item is `Active` or `Archived`. New items start active. Archiving is one-way.
+**Item and variant status** — an item or variant is `Active` or `Archived`. New ones start active. Archiving is one-way.
 
-**Unit** — a free-form word for what the item is sold in: `piece`, `kg`, `hour`, or anything else the business needs. There is no fixed list.
+**Variant** — one way an item is sold. A coffee item might have a "250 g bag" variant and a "1 kg bag" variant, each with its own price and SKU.
+
+**Sale unit** — a free-form word for what a variant is sold in: `piece`, `box`, `hour`, or anything else the business needs. There is no fixed list. The same goes for the **measure unit** (`kg`, `ml`, ...) and the **package type** (`bottle`, `crate`, ...).
 
 **Price** — optional. When given, it is an exact amount plus a three-letter currency code, following the rules in **Price** in [step 1](#1-user-adds-an-item).
 
@@ -58,25 +67,31 @@ Like the customer book, these are not a single journey. They are the things that
 
 **Who can reach this step: an owner or admin of the organization.**
 
-- User gives the item a name, a unit, and optionally a price.
+- User gives the item a name, optionally a description, and at least one variant.
 - Several items can be added in one go.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User adds an item with no price | - Stored as active, with no price recorded |
-| 2. User adds an item with a price | - The amount and currency are stored together, exactly, never rounded |
-| 3. User adds several items at once | - All are stored together or none are |
-| 4. User adds an item whose name is already taken by an active item | - Rejected as a conflict, naming what clashed |
-| 5. User gives a price that breaks a rule in **Price** below — an unsupported currency, more decimal places than the currency allows, or an amount that is negative or too large | - Rejected, naming the part of the price at fault |
-| 6. User submits several bad entries at once | - Every problem is reported together, each tied to the item that caused it |
-| 7. A member with the ordinary user role tries to add an item | - Rejected |
+| 1. User adds an item with one variant and no price | - The item and its variant are stored as active, with no price recorded |
+| 2. User adds an item whose variants have prices | - Each variant's amount and currency are stored together, exactly, never rounded |
+| 3. User adds an item with several variants | - The item and every variant are stored together, or none are |
+| 4. User adds an item with no variants | - Rejected and nothing is stored |
+| 5. User adds several items at once | - All items and all their variants are stored together, or none are |
+| 6. User adds an item whose name is already taken by an active item | - Rejected as a conflict, naming what clashed |
+| 7. User gives a variant a SKU already used by an active variant in the organization, or gives two variants in the same request the same SKU | - Rejected as a conflict, naming the SKU |
+| 8. User gives two variants of the same item the same name | - Rejected as a conflict |
+| 9. User gives a price that breaks a rule in **Price** below — an unsupported currency, more decimal places than the currency allows, or an amount that is negative or too large | - Rejected, naming the part of the price at fault |
+| 10. User gives a measure value of zero or less, or a package count below 1 | - Rejected, naming the field at fault |
+| 11. User submits several bad entries at once | - Every problem is reported together, each tied to the item or variant that caused it |
+| 12. A member with the ordinary user role tries to add an item | - Rejected |
 
 #### Requirements
 
-1. A name and a unit are required. A price is optional.
-2. A price, when given, must meet every rule in **Price** below.
+1. A name and at least one variant are required. A description is optional.
+2. Each variant needs a sale unit. Its name, SKU, measure value, measure unit, package type, package count and price are each optional, independently of one another.
+3. A price, when given, must meet every rule in **Price** below.
 
 #### Request / Response / Outcome
 
@@ -94,34 +109,49 @@ A price, wherever it appears in this epic, is always this shape:
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Name | `String` | 1–255 characters, trimmed; unique among active items | ✅ | The item's name |
-| Unit | `String` | 1–255 characters, trimmed | ✅ | What it is sold by, in the business's own words |
-| Price | `Price` | See **Price** above | ❌ | Left out means the item has no set price |
+| Description | `String` | 1–255 characters, trimmed | ❌ | A short description of the item |
+| Catalogue Item Variants | `CatalogueItemVariant[]` | At least one entry; names unique within the item; SKUs unique among the organization's active variants | ✅ | The ways the item is sold, stored together with the item |
+
+**CatalogueItemVariant**
+
+A variant, wherever it is sent in this epic, is always this shape:
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Name | `String` | 1–255 characters, trimmed; unique among the item's active variants | ❌ | Tells this variant apart from the item's others |
+| SKU | `String` | At least 1 character, trimmed; unique among the organization's active variants | ❌ | The business's own stock code for this variant |
+| Sale Unit | `String` | 1–255 characters, trimmed | ✅ | What it is sold by, in the business's own words |
+| Measure Value | `BigDecimal` | Greater than zero; exact, never rounded | ❌ | How much of the measure unit one sale unit holds |
+| Measure Unit | `String` | 1–255 characters, trimmed | ❌ | What the measure value is counted in |
+| Package Type | `String` | 1–255 characters, trimmed | ❌ | What it is packed in |
+| Package Count | `Int` | Whole number, at least 1 | ❌ | How many packages make up one sale unit |
+| Price | `Price` | See **Price** above | ❌ | Left out means the variant has no set price |
 
 **Request — adding several at once**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Items | `CatalogueItem[]` | Empty by default. Each entry is the shape above | ❌ | The items to add, all together or not at all |
+| Catalogue Items | `CatalogueItem[]` | Empty by default. Each entry is the shape of **adding one item** above | ❌ | The items to add, all together or not at all |
 
 **Response**
 
-Response is empty. A successful add answers with nothing but a success status — no identifier for the item just created.
+Response is empty. A successful add answers with nothing but a success status — no identifier for the item or variants just created.
 
 **Outcome**
 
-- The item is stored as active, with its price if one was given.
-- For a batch, every item is stored together, or none is.
-- On any refusal, including a taken name, nothing at all is stored.
+- The item and every variant are stored as active, each variant with its price if one was given.
+- For a batch, every item and every variant is stored together, or none is.
+- On any refusal, including a taken name or SKU, nothing at all is stored.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the item each belongs to |
+| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the item or variant each belongs to - An item has no variants |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
-| 409 | `CONFLICT_ERROR` | - An active item already has that name |
+| 409 | `CONFLICT_ERROR` | - An active item already has that name - An active variant already has that SKU - Two variants of the same item share a name |
 | 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
 
 ### 2. User Uploads an Item's Image
@@ -201,7 +231,7 @@ Response is empty. A successful upload answers with nothing but a success status
 
 1. Any member may browse the catalogue, whatever their role.
 2. The list contains only active items.
-3. Each entry carries a name, its status, and a picture if the item has one — but not its unit or price. See [gap 2](#2-browsing-the-catalogue-does-not-show-the-price).
+3. Each entry carries a name, its status, and a picture if the item has one — but not its description or its variants, so no unit or price. See [gap 2](#2-browsing-the-catalogue-does-not-show-the-price-or-the-variants).
 
 #### Request / Response / Outcome
 
@@ -241,20 +271,21 @@ Nothing changes. This step only reads.
 
 **Who can reach this step: any member of the organization.**
 
-- User picks an item from the catalogue to see its full details.
+- User picks an item from the catalogue to see its full details and its variants.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User opens an item that exists | - Its name, unit, price if any, and picture if any are returned |
-| 2. User opens an item that has been archived | - Its details are still returned. Archiving hides an item from the list, not from a direct look-up |
-| 3. User opens an item that does not exist | - Reported as a server error rather than "not found" — the same gap as [Customer Book gap 1]({{ site.baseurl }}{% link epics/05-customer-book.md %}#1-looking-up-a-customer-that-is-not-there-is-reported-as-a-server-error) |
+| 1. User opens an item that exists | - Its name, description if any, picture if any, and every active variant are returned |
+| 2. The item has archived variants | - They are left out; only active variants are returned |
+| 3. User opens an item that has been archived | - Its name, description and picture are still returned. Archiving hides an item from the list, not from a direct look-up. Its variants were archived with it, so none are returned |
+| 4. User opens an item that does not exist | - Reported as a server error rather than "not found" — the same gap as [Customer Book gap 1]({{ site.baseurl }}{% link epics/05-customer-book.md %}#1-looking-up-a-customer-that-is-not-there-is-reported-as-a-server-error) |
 
 #### Requirements
 
 1. An item is looked up by identifier.
-2. The full details include the unit and price, which the list in step 3 leaves out.
+2. The full details include the description and the active variants, which the list in step 3 leaves out.
 3. An archived item can still be opened directly.
 
 #### Request / Response / Outcome
@@ -271,11 +302,27 @@ Nothing changes. This step only reads.
 | --- | --- | --- | --- | --- |
 | Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Identifies the item |
 | Name | `String` | — | ✅ | The item's name |
-| Unit | `String` | — | ✅ | What it is sold by |
-| Price | `Price` | See **Price** in step 1 | ❌ | Present only if the item has a price |
+| Description | `String` | — | ❌ | Present only if the item has a description |
 | Image URL | `String` | A working link | ❌ | Present only if the item has an image |
+| Catalogue Item Variants | `CatalogueItemVariantDetails[]` | Active variants only; may be empty for an archived item | ✅ | The ways the item is sold today |
 
-This answer does not say whether the item is archived. See [gap 3](#3-opening-an-item-does-not-say-whether-it-is-archived).
+**CatalogueItemVariantDetails**
+
+A variant, wherever it is returned in this epic, is always this shape:
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ✅ | Identifies the variant, used to open, change or archive it |
+| Name | `String` | — | ❌ | Present only if the variant has a name |
+| SKU | `String` | — | ❌ | Present only if the variant has a SKU |
+| Sale Unit | `String` | — | ✅ | What it is sold by |
+| Measure Value | `BigDecimal` | — | ❌ | Present only if given |
+| Measure Unit | `String` | — | ❌ | Present only if given |
+| Package Type | `String` | — | ❌ | Present only if given |
+| Package Count | `Int` | — | ❌ | Present only if given |
+| Price | `Price` | See **Price** in step 1 | ❌ | Present only if the variant has a price |
+
+This answer does not say whether the item, or a variant opened in step 8, is archived. See [gap 3](#3-opening-an-item-does-not-say-whether-it-is-archived).
 
 **Outcome**
 
@@ -294,7 +341,7 @@ Nothing changes. This step only reads.
 
 **Who can reach this step: an owner or admin of the organization.**
 
-- User changes an item's name, unit, or price.
+- User changes an item's name or description. Variants are changed one at a time, in [step 9](#9-user-updates-a-variant).
 
 #### Business Scenarios
 
@@ -308,8 +355,9 @@ Nothing changes. This step only reads.
 #### Requirements
 
 1. Only active items can be changed.
-2. A field left out of the request keeps its current value; there is no way to clear a price once set. See [gap 4](#4-a-price-can-be-changed-but-never-removed).
+2. A field left out of the request keeps its current value; there is no way to clear a description once set. See [gap 5](#5-an-optional-detail-can-be-changed-but-never-cleared).
 3. A rename must still leave the name unique among active items.
+4. This step never touches the item's variants.
 
 #### Request / Response / Outcome
 
@@ -319,8 +367,7 @@ Nothing changes. This step only reads.
 | --- | --- | --- | --- | --- |
 | Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Which item to change |
 | Name | `String` | 1–255 characters, trimmed; unique among active items | ❌ | Leave out to keep the current name |
-| Unit | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current unit |
-| Price | `Price` | See **Price** in step 1 | ❌ | Leave out to keep the current price. There is no way to send "no price" |
+| Description | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current description. There is no way to send "no description" |
 
 **Response**
 
@@ -346,20 +393,21 @@ Response is empty. A successful change answers with nothing but a success status
 
 **Who can reach this step: an owner or admin of the organization.**
 
-- User retires an item no longer for sale.
+- User retires an item no longer for sale, together with all its variants.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User archives an active item | - The item becomes archived and leaves the catalogue - Its name becomes free for a new active item to use - Its image, if any, is kept |
+| 1. User archives an active item | - The item becomes archived and leaves the catalogue - Every active variant of the item is archived in the same step - The item's name and its variants' SKUs become free for reuse - Its image, if any, is kept |
 | 2. User archives an item that is already archived, or does not exist | - Nothing happens, and it is reported as successful |
 | 3. User wants an archived item back | - Not possible. There is no way to reverse archiving — the same gap as [Customer Book gap 3]({{ site.baseurl }}{% link epics/05-customer-book.md %}#3-archiving-is-final-and-archived-customers-cannot-be-found-again) |
 
 #### Requirements
 
-1. An archived item is kept in full, including its image, and can still be opened directly by identifier.
-2. Archiving cannot be undone.
+1. An archived item is kept in full, including its image and its variants, and can still be opened directly by identifier.
+2. Archiving an item and its variants happens together, or not at all.
+3. Archiving cannot be undone.
 
 #### Request / Response / Outcome
 
@@ -375,7 +423,7 @@ Response is empty, whether the item was archived just now, was already archived,
 
 **Outcome**
 
-- An active item becomes archived and leaves the catalogue. Its record and image are kept, and its name is free for a new active item.
+- An active item and all its active variants become archived, and the item leaves the catalogue. Their records and the image are kept, the item's name is free for a new active item, and the variants' SKUs are free for new active variants.
 - An already-archived or missing item is left exactly as it was.
 
 #### Http Error Responses
@@ -387,32 +435,246 @@ Response is empty, whether the item was archived just now, was already archived,
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
 
+### 7. User Adds a Variant
+
+**Who can reach this step: an owner or admin of the organization.**
+
+- User adds another way of selling an existing, active item.
+
+#### Business Scenarios
+
+| **Scenarios** | **Requirements** |
+| --- | --- |
+| 1. User adds a variant to an active item | - Stored as active under that item |
+| 2. User gives a SKU already used by an active variant in the organization | - Rejected as a conflict, naming the SKU |
+| 3. User gives a name already used by another active variant of the same item | - Rejected as a conflict |
+| 4. User gives a field that breaks its rule — a bad price, a measure value of zero or less, a package count below 1 | - Rejected, every problem reported together |
+| 5. User adds a variant to an item that is archived, or does not exist | - Rejected - Today this is reported as a server error — see [gap 1](#1-uploading-for-a-missing-or-archived-item-is-reported-as-a-server-error) |
+| 6. A member with the ordinary user role tries to add a variant | - Rejected |
+
+#### Requirements
+
+1. A variant can only be added to an active item.
+2. The variant follows every rule in **CatalogueItemVariant** in [step 1](#1-user-adds-an-item).
+
+#### Request / Response / Outcome
+
+**Request**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Which item the variant belongs to |
+| Catalogue Item Variant | `CatalogueItemVariant` | See **CatalogueItemVariant** in step 1 | ✅ | The variant to add |
+
+**Response**
+
+Response is empty. A successful add answers with nothing but a success status — no identifier for the variant just created.
+
+**Outcome**
+
+- The variant is stored as active under the item, with its price if one was given.
+- On any refusal nothing is stored.
+
+#### Http Error Responses
+
+| **Http Code** | **Code** | **Description** |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
+| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
+| 409 | `CONFLICT_ERROR` | - An active variant already has that SKU - Another active variant of the item already has that name |
+| 500 | `INTERNAL_SERVER_ERROR` | - The item does not exist, belongs to another organization, or is archived - The person does not belong to the organization - Unexpected error |
+
+### 8. User Opens a Variant
+
+**Who can reach this step: any member of the organization.**
+
+- User looks at one variant on its own.
+
+#### Business Scenarios
+
+| **Scenarios** | **Requirements** |
+| --- | --- |
+| 1. User opens a variant that exists | - Its details are returned, together with the identifier of the item it belongs to |
+| 2. User opens a variant that has been archived | - Its details are still returned, without saying it is archived — see [gap 3](#3-opening-an-item-does-not-say-whether-it-is-archived) |
+| 3. User opens a variant that does not exist | - Reported as a server error rather than "not found", the same as opening a missing item in [step 4](#4-user-opens-an-item) |
+
+#### Requirements
+
+1. A variant is looked up by its own identifier.
+2. An archived variant can still be opened directly.
+
+#### Request / Response / Outcome
+
+**Request**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Catalogue Item Variant ID | `UUID` | Canonical 36-character form, in the address | ✅ | Which variant to open |
+
+**Response**
+
+Every field of the **CatalogueItemVariantDetails** shape defined in [step 4](#4-user-opens-an-item), plus:
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | The item this variant belongs to, used to open it |
+
+**Outcome**
+
+Nothing changes. This step only reads.
+
+#### Http Error Responses
+
+| **Http Code** | **Code** | **Description** |
+| --- | --- | --- |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
+| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
+| 500 | `INTERNAL_SERVER_ERROR` | - No variant with that identifier - The person does not belong to the organization - Unexpected error |
+
+### 9. User Updates a Variant
+
+**Who can reach this step: an owner or admin of the organization.**
+
+- User changes one variant's details — its name, SKU, unit, measure, packaging or price.
+
+#### Business Scenarios
+
+| **Scenarios** | **Requirements** |
+| --- | --- |
+| 1. User changes an active variant's details | - The change is saved - Fields left out of the request are left as they were |
+| 2. User changes the SKU to one another active variant in the organization already has | - Rejected as a conflict, naming the SKU |
+| 3. User renames the variant to a name another active variant of the same item already has | - Rejected as a conflict |
+| 4. User gives a field that breaks its rule | - Rejected, every problem reported together |
+| 5. User changes a variant that has been archived (including every variant of an archived item), or does not exist | - Nothing happens, and it is reported as successful, the same as changing an archived item in [step 5](#5-user-updates-an-item) |
+| 6. A member with the ordinary user role tries to make a change | - Rejected |
+
+#### Requirements
+
+1. Only active variants can be changed.
+2. A field left out of the request keeps its current value; there is no way to clear an optional detail or a price once set. See [gap 4](#4-a-price-can-be-changed-but-never-removed) and [gap 5](#5-an-optional-detail-can-be-changed-but-never-cleared).
+3. A change must still leave the name unique within the item and the SKU unique within the organization's active variants.
+
+#### Request / Response / Outcome
+
+**Request**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ✅ | Which variant to change |
+| Name | `String` | 1–255 characters, trimmed; unique among the item's active variants | ❌ | Leave out to keep the current name |
+| SKU | `String` | At least 1 character, trimmed; unique among the organization's active variants | ❌ | Leave out to keep the current SKU |
+| Sale Unit | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current sale unit |
+| Measure Value | `BigDecimal` | Greater than zero; exact, never rounded | ❌ | Leave out to keep the current measure value |
+| Measure Unit | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current measure unit |
+| Package Type | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current package type |
+| Package Count | `Int` | Whole number, at least 1 | ❌ | Leave out to keep the current package count |
+| Price | `Price` | See **Price** in step 1 | ❌ | Leave out to keep the current price. There is no way to send "no price" |
+
+**Response**
+
+Response is empty. A successful change answers with nothing but a success status — and so does a change that quietly did nothing.
+
+**Outcome**
+
+- For an active variant the details are replaced as described and nothing else changes.
+- For an archived or missing variant nothing is stored, and the answer is the same as success.
+
+#### Http Error Responses
+
+| **Http Code** | **Code** | **Description** |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | - One or more fields are invalid |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
+| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
+| 409 | `CONFLICT_ERROR` | - An active variant already has that SKU - Another active variant of the item already has that name |
+| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+
+### 10. User Archives a Variant
+
+**Who can reach this step: an owner or admin of the organization.**
+
+- User retires one way of selling an item while the item stays on sale.
+
+#### Business Scenarios
+
+| **Scenarios** | **Requirements** |
+| --- | --- |
+| 1. User archives an active variant while the item has other active variants | - The variant becomes archived and no longer appears when the item is opened - Its name and SKU become free for reuse |
+| 2. User archives the last active variant of an active item | - Rejected as a conflict; the item must keep at least one active variant. To retire it, archive the item in [step 6](#6-user-archives-an-item) |
+| 3. User archives a variant that is already archived (including every variant of an archived item), or does not exist | - Nothing happens, and it is reported as successful |
+| 4. User wants an archived variant back | - Not possible. There is no way to reverse archiving |
+| 5. A member with the ordinary user role tries to archive a variant | - Rejected |
+
+#### Requirements
+
+1. An archived variant is kept in full and can still be opened directly by identifier.
+2. An active item always keeps at least one active variant.
+3. Archiving cannot be undone.
+
+#### Request / Response / Outcome
+
+**Request**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ✅ | Which variant to archive |
+
+**Response**
+
+Response is empty, whether the variant was archived just now, was already archived, or never existed.
+
+**Outcome**
+
+- An active variant becomes archived. Its record is kept, and its name and SKU are free for new active variants.
+- An already-archived or missing variant is left exactly as it was.
+- A refused last variant is left exactly as it was.
+
+#### Http Error Responses
+
+| **Http Code** | **Code** | **Description** |
+| --- | --- | --- |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
+| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
+| 409 | `CONFLICT_ERROR` | - It is the last active variant of an active item |
+| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+
 ### Known gaps and open questions
 
 Everything above describes what the product does today. Nothing in this section exists yet; each one needs a product answer before it can be built.
 
 #### 1. Uploading for a missing or archived item is reported as a server error
 
-Naming an item that does not exist, belongs to another organization, or has been archived is refused as a server error. Picking an item a colleague just archived, or following a stale link, is ordinary, not a failure on our side.
+Naming an item that does not exist, belongs to another organization, or has been archived is refused as a server error — both when uploading its image and when adding a variant to it. Picking an item a colleague just archived, or following a stale link, is ordinary, not a failure on our side.
 
 **To decide:** whether this should be a plain refusal instead, naming what was wrong with the item.
 
-#### 2. Browsing the catalogue does not show the price
+#### 2. Browsing the catalogue does not show the price or the variants
 
-The list in step 3 gives a name, a status, and a picture — never the unit or the price. Seeing what anything costs means opening each item, which makes a long list close to useless for comparing prices at a glance.
+The list in step 3 gives a name, a status, and a picture — never the variants, so never a unit or a price. Seeing what anything costs means opening each item, which makes a long list close to useless for comparing prices at a glance.
 
-**To decide:** whether the price should be shown in the list, and if the concern is response size for a very large catalogue, whether that is better solved by adding price than by leaving it out.
+**To decide:** whether variants or prices should be shown in the list, and if the concern is response size for a very large catalogue, whether that is better solved by adding them than by leaving them out.
 
 #### 3. Opening an item does not say whether it is archived
 
-An archived item answers a direct look-up exactly like an active one. Combined with [step 5](#5-user-updates-an-item)'s silent no-op on an archived item, the edit screen for an archived item looks perfectly editable, with nothing warning that a save will quietly do nothing.
+An archived item answers a direct look-up exactly like an active one, and so does an archived variant in [step 8](#8-user-opens-a-variant). Combined with the silent no-op when changing an archived item ([step 5](#5-user-updates-an-item)) or variant ([step 9](#9-user-updates-a-variant)), the edit screen for an archived item or variant looks perfectly editable, with nothing warning that a save will quietly do nothing.
 
-**To decide:** whether the answer should include the item's status, the way [browsing the catalogue](#3-user-browses-the-catalogue) already does.
+**To decide:** whether the answers should include the item's or variant's status, the way [browsing the catalogue](#3-user-browses-the-catalogue) already does.
 
 #### 4. A price can be changed but never removed
 
-Updating an item can set or replace a price, but there is no way to say "this item no longer has a price". Once set, a price can only be changed, never cleared.
+Updating a variant can set or replace a price, but there is no way to say "this variant no longer has a price". Once set, a price can only be changed, never cleared.
 
 **To decide:** whether removing a price should be possible, and if so how the request should say "clear this" as distinct from "leave this alone".
+
+#### 5. An optional detail can be changed but never cleared
+
+The same limit as [gap 4](#4-a-price-can-be-changed-but-never-removed) applies to an item's description and to a variant's name, SKU, measure value, measure unit, package type and package count. Once set, each can only be replaced, never removed.
+
+**To decide:** whether clearing these should be possible, and how a request would say so.
 
 {% include abbreviations.md %}
