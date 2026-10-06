@@ -6,8 +6,6 @@ title: Catalogue
 
 ### Overview
 
-> **Not built yet:** the variant behaviour in this epic is agreed but not implemented. Until it ships, items keep one unit and one price as described in the previous version of this epic.
-
 Every organization keeps a catalogue of what it sells — products, services, anything it puts a name on. Each item comes in one or more variants: the actual things sold, each with its own unit, measure, packaging and price. It is where future orders will pick items from.
 
 ### Related / Out of scope
