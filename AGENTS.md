@@ -132,7 +132,7 @@ New epic → follow [Epic standards](pages/epics/EPIC-STANDARDS.md) and copy its
 - [Sign In](pages/epics/03-sign-in.md) — authenticate with email + password, start a session, resume onboarding if unfinished
 - [Organization Onboarding](pages/epics/04-organization-onboarding.md) — create the organization and its owner membership, then upload a logo
 - [Customer Book](pages/epics/05-customer-book.md) — add, browse, open, update, and archive customers; manage a business's contacts
-- [Catalogue](pages/epics/06-catalogue.md) — add, browse, open, update, and archive items and their variants; upload an item's image
+- [Catalogue](pages/epics/06-catalogue.md) — add, browse, open, update, and archive items; upload an item's image
 
 ## Features
 
