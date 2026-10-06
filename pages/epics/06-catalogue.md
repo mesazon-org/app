@@ -59,7 +59,7 @@ Like the customer book, these are not a single journey. They are the things that
 
 **Item status** — an item is either `Active` or `Archived`. New items start out `Active`. Archiving is one-way.
 
-**Variant status** — a variant is `Active`, `Inactive`, `OutOfStock` or `Archived`. New variants start out `Active`.
+**Variant status** — a variant is `Active`, `Inactive`, `OutOfStock` or `Archived`. Variants added with a new item start out `Active`. A variant added to an existing item starts with the status given — `Active`, `Inactive` or `OutOfStock` — or `Active` if none is given.
 - Owners and admins can move a variant freely between `Active`, `Inactive` and `OutOfStock`, in any direction, by updating the item.
 - `Archived` is reached only by archiving, and it is one-way.
 - `Inactive` and `OutOfStock` variants are still shown everywhere an `Active` one is. They count toward the item's variant count and "from" prices, and they keep their SKU reserved.
@@ -79,7 +79,7 @@ Like the customer book, these are not a single journey. They are the things that
 - Package types are pack, box, bag, bottle, can, jar, crate, carton, roll and other. "Other" has no label of its own.
 - Any quantity kind can have any package type, or none. Examples: a 1 L **bottle**, a **pack** of 6 × 1 L, a **box** of 12 kg, a **box** of 100 screws, or loose tomatoes per kg with no package.
 
-**Price** — an exact amount plus a currency of EUR, USD or GBP. Every rule is in **Price** in [step 1](#1-user-adds-an-item).
+**Price** — an exact amount plus a currency. Only EUR, USD and GBP are accepted; any other currency is refused. Every amount is kept with exactly two decimal places. Every rule is in **Price** in [step 1](#1-user-adds-an-item).
 
 ### 1. User Adds an Item
 
@@ -403,11 +403,11 @@ Nothing changes. This step only reads.
 | 3. User changes an existing variant's price, selling unit, options or status | - The change is saved for that variant only - Variants not mentioned are left exactly as they were |
 | 4. User marks a variant `OutOfStock` or `Inactive`, and later `Active` again | - Each move is saved; any move among these three statuses is allowed |
 | 5. User tries to set a variant to `Archived` through an update | - Rejected; variants are archived only through [step 7](#7-user-archives-a-variant) |
-| 6. User adds a new variant to an active item | - Stored as an active variant of that item |
+| 6. User adds a new variant to an active item | - Stored with the status given (`Active`, `Inactive` or `OutOfStock`), or `Active` if none is given |
 | 7. User renames an item to a name another active item already has | - Rejected as a conflict |
 | 8. User gives a variant a SKU that another non-archived variant already has | - Rejected as a conflict |
 | 9. User changes an item that has been archived, or does not exist | - Nothing happens, and it is reported as successful — the same gap as [Customer Book gap 2]({{ site.baseurl }}{% link epics/05-customer-book.md %}#2-changes-to-an-archived-customer-are-silently-discarded) |
-| 10. User names a variant that does not exist, belongs to another item, or is archived | - Not decided yet — see [gap 3](#3-updating-a-variant-that-is-missing-archived-or-belongs-to-another-item) |
+| 10. User names a variant that does not exist, belongs to another item, or is archived | - The whole update is refused, naming the variant, and nothing is stored |
 | 11. A member with the ordinary user role tries to make a change | - Rejected |
 
 #### Requirements
@@ -441,7 +441,7 @@ Nothing changes. This step only reads.
 | Options | `Map<String, String>` | Same as in **CatalogueItemVariant** | ❌ | Leave out to keep; when given, replaces all options |
 | Price | `Price` | See **Price** in step 1; must be given when adding a new variant | ❌ | Leave out to keep the current price |
 | Selling Unit | `SellingUnit` | See **SellingUnit** in step 1; must be given when adding a new variant | ❌ | Leave out to keep the current selling unit |
-| Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ❌ | Leave out to keep the current status; a new variant starts `Active` — see [gap 4](#4-choosing-the-status-of-a-variant-added-through-an-update) |
+| Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ❌ | Leave out to keep the current status. For a new variant, the status it starts with; left out, it starts `Active` |
 
 **Response**
 
@@ -449,7 +449,7 @@ Response is empty. A successful change answers with nothing but a success status
 
 **Outcome**
 
-- For an active item, the named fields and variants are changed, new variants are added as active, and nothing else changes.
+- For an active item, the named fields and variants are changed, new variants are added with the status given (or `Active`), and nothing else changes.
 - For an archived or missing item nothing is stored, and the answer is the same as success.
 - If anything is refused, nothing at all is stored.
 
@@ -457,7 +457,7 @@ Response is empty. A successful change answers with nothing but a success status
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the variant each belongs to - A variant status of `Archived` was sent - A new variant is missing its price or selling unit |
+| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the variant each belongs to - A variant status of `Archived` was sent - A new variant is missing its price or selling unit - A named variant does not exist, belongs to another item, or is archived |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
@@ -522,9 +522,10 @@ Response is empty, whether the item was archived just now, was already archived,
 | --- | --- |
 | 1. User archives one of several non-archived variants | - That variant becomes archived and its SKU becomes free for reuse - The item and its other variants are unchanged |
 | 2. User archives the item's last non-archived variant | - The variant becomes archived, and the item is archived with it, exactly as in [step 6](#6-user-archives-an-item) |
-| 3. User archives a variant that is already archived, or does not exist | - Not decided yet — see [gap 5](#5-archiving-a-variant-that-is-missing-or-already-archived) |
-| 4. User wants an archived variant back | - Not possible. Archiving cannot be undone |
-| 5. A member with the ordinary user role tries to archive a variant | - Rejected |
+| 3. User archives a variant that is already archived, or does not exist | - Nothing happens, and it is reported as successful, the same as archiving an item |
+| 4. User names a variant that belongs to a different item from the one named | - Not decided yet — see [gap 2](#2-archiving-a-variant-under-the-wrong-item) |
+| 5. User wants an archived variant back | - Not possible. Archiving cannot be undone |
+| 6. A member with the ordinary user role tries to archive a variant | - Rejected |
 
 #### Requirements
 
@@ -542,11 +543,12 @@ Response is empty, whether the item was archived just now, was already archived,
 
 **Response**
 
-Response is empty.
+Response is empty, whether the variant was archived just now, was already archived, or never existed.
 
 **Outcome**
 
 - The variant becomes archived and its SKU becomes free for reuse.
+- An already-archived or missing variant is left exactly as it was.
 - If it was the item's last non-archived variant, the item becomes archived too: it leaves the catalogue, its name becomes free, and its image is kept.
 
 #### Http Error Responses
@@ -568,28 +570,10 @@ Naming an item that does not exist, belongs to another organization, or has been
 
 **To decide:** whether this should be a plain refusal instead, naming what was wrong with the item.
 
-#### 2. Existing items have no variants or selling unit
+#### 2. Archiving a variant under the wrong item
 
-Items added before this change have a free-text unit and an optional price. They have no variants and no structured selling unit, and a free-text unit cannot be turned into one automatically.
+Archiving a variant names both the item and the variant. Nothing yet says what happens when the variant exists but belongs to a different item from the one named.
 
-**To decide:** what happens to existing catalogue items when this change ships.
-
-#### 3. Updating a variant that is missing, archived, or belongs to another item
-
-An update can name a variant by its identifier. Nothing yet says what happens when that variant does not exist, belongs to a different item, or has been archived.
-
-**To decide:** whether the whole update is refused, naming the variant, or that one entry is silently skipped, the way an update to an archived item is today.
-
-#### 4. Choosing the status of a variant added through an update
-
-A variant added in [step 1](#1-user-adds-an-item) always starts `Active`. Nothing yet says whether a variant added through an update may start straight away as `Inactive` or `OutOfStock`.
-
-**To decide:** whether a status given for a new variant is honoured, ignored, or refused.
-
-#### 5. Archiving a variant that is missing or already archived
-
-Archiving an item that is already archived, or missing, quietly succeeds. Nothing yet says whether archiving a variant behaves the same way, nor what happens when the variant belongs to a different item from the one named.
-
-**To decide:** whether these cases quietly succeed, like archiving an item, or are refused.
+**To decide:** whether this is refused, naming the variant, the way an update naming another item's variant is, or quietly does nothing, the way archiving a missing variant does.
 
 {% include abbreviations.md %}
