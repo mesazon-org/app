@@ -523,7 +523,7 @@ Response is empty, whether the item was archived just now, was already archived,
 | 1. User archives one of several non-archived variants | - That variant becomes archived and its SKU becomes free for reuse - The item and its other variants are unchanged |
 | 2. User archives the item's last non-archived variant | - The variant becomes archived, and the item is archived with it, exactly as in [step 6](#6-user-archives-an-item) |
 | 3. User archives a variant that is already archived, or does not exist | - Nothing happens, and it is reported as successful, the same as archiving an item |
-| 4. User names a variant that belongs to a different item from the one named | - Not decided yet — see [gap 2](#2-archiving-a-variant-under-the-wrong-item) |
+| 4. User names a variant that belongs to a different item from the one named | - Refused, naming the variant, and nothing changes |
 | 5. User wants an archived variant back | - Not possible. Archiving cannot be undone |
 | 6. A member with the ordinary user role tries to archive a variant | - Rejected |
 
@@ -555,6 +555,7 @@ Response is empty, whether the variant was archived just now, was already archiv
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | - The named variant belongs to a different item from the one named; the error names the variant |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
@@ -569,11 +570,5 @@ Everything above describes the agreed product. Nothing in this section has been 
 Naming an item that does not exist, belongs to another organization, or has been archived is refused as a server error. Picking an item a colleague just archived, or following a stale link, is ordinary, not a failure on our side.
 
 **To decide:** whether this should be a plain refusal instead, naming what was wrong with the item.
-
-#### 2. Archiving a variant under the wrong item
-
-Archiving a variant names both the item and the variant. Nothing yet says what happens when the variant exists but belongs to a different item from the one named.
-
-**To decide:** whether this is refused, naming the variant, the way an update naming another item's variant is, or quietly does nothing, the way archiving a missing variant does.
 
 {% include abbreviations.md %}
