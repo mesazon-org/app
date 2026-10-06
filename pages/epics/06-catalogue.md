@@ -76,7 +76,7 @@ Like the customer book, these are not a single journey. They are the things that
 | Customer-chosen measurement | Only the measurement unit is fixed; the customer picks how much | Tomatoes per kg |
 
 - Measurement units are gram, kilogram, millilitre, litre, millimetre, centimetre, metre and square metre.
-- Package types are pack, box, bag, bottle, can, jar, crate, carton, roll and other. "Other" has no label of its own.
+- Package types are pack, box, bag, bottle, can, jar, crate, carton and roll.
 - Any quantity kind can have any package type, or none. Examples: a 1 L **bottle**, a **pack** of 6 × 1 L, a **box** of 12 kg, a **box** of 100 screws, or loose tomatoes per kg with no package.
 
 **Price** — an exact amount plus a currency. Only EUR, USD and GBP are accepted; any other currency is refused. Every amount is kept with exactly two decimal places. Every rule is in **Price** in [step 1](#1-user-adds-an-item).
@@ -126,7 +126,7 @@ These shapes are used throughout this epic.
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Quantity | `SaleQuantity` | See **SaleQuantity** | ✅ | How much one unit holds |
-| Package Type | `PackageType` | `Pack`, `Box`, `Bag`, `Bottle`, `Can`, `Jar`, `Crate`, `Carton`, `Roll` or `Other` | ❌ | What it comes in; left out for loose goods |
+| Package Type | `PackageType` | `Pack`, `Box`, `Bag`, `Bottle`, `Can`, `Jar`, `Crate`, `Carton` or `Roll` | ❌ | What it comes in; left out for loose goods |
 
 **SaleQuantity** — exactly one of the three fields is given.
 
