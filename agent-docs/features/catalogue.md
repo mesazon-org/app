@@ -77,6 +77,8 @@ Errors: `TapirServerError` has no validation variant, so every 400 here is `BAD_
 
 ## Status
 
+Planned, not built yet: catalogue items with variants and selling units, as described in [Catalogue epic](../../pages/epics/06-catalogue.md). Until that ships, this document describes today's behaviour: a free-text unit and one optional price on the item.
+
 Complete: six Smithy operations plus the Tapir `POST /upload/catalogue-item/image` endpoint, request validation and shared ISO price validation, schema/enum/index, full repository (`CatalogueItemRow`/`CatalogueItemSummaryRow`), and service wiring including presigned-URL resolution on both GET endpoints. Unit, functional, integration, and acceptance tests cover every slice; see [Completed proof](#completed-proof) and [Acceptance proof](#acceptance-proof) below.
 
 Details:
