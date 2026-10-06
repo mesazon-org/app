@@ -9,14 +9,14 @@ Variants are agreed (epic [Catalogue](../../pages/epics/06-catalogue.md)) but **
 | Slice | Done | Remaining |
 |---|---|---|
 | Endpoints | Six item operations + Tapir image upload (old item shape) | Four variant operations; item shapes lose `unit`/`price`, gain `description` and `catalogueItemVariants`; price shape renamed `CatalogueItemVariantPrice` |
-| Validation | Item insert/batch/update with `unit`/`price`; `PriceDomainValidator` | Variant model, description, `MeasureValue` bound, measure/packaging both-or-neither rule, at-least-one-variant rule, variant insert/update validators |
+| Validation | Item insert/batch/update with `unit`/`price`; `PriceDomainValidator` | Variant model, description, measure-value bound, at-least-one-variant rule, variant insert/update validators |
 | Schema | `catalogue_item` with `unit`/`price` | `description` column; drop `unit`/`price_amount`/`price_currency`; `catalogue_item_variant` table, enum, indexes; config |
 | Repository | Item CRUD/archive/list | Variant Row/Queries, transactional item+variant insert, archive cascade, last-variant guard, parent locks |
 | Service | Six item operations | Item mapping changes, four variant operations |
 
 ## Scope
 
-Owns `catalogue_item` (name, optional description, optional image metadata, one-way archival), `catalogue_item_variant` (sale unit, optional name/SKU/measure/packaging/price, one-way archival), and the image upload endpoint (see [Image upload](#image-upload)) that writes back the three image columns without changing `CatalogueItemStatus`. Variants have no image. Excludes orders/line items and tenant membership/roles.
+Owns `catalogue_item` (name, optional description, optional image metadata, one-way archival), `catalogue_item_variant` (sale unit, optional name/SKU/measure/package/price, one-way archival), and the image upload endpoint (see [Image upload](#image-upload)) that writes back the three image columns without changing `CatalogueItemStatus`. Variants have no image. Excludes orders/line items and tenant membership/roles.
 
 ## Model and decisions
 
@@ -37,11 +37,11 @@ Columns in Row/field-list order: `organization_id`, `catalogue_item_id`, `catalo
 - PK `(organization_id, catalogue_item_variant_id)`; FK `(organization_id, catalogue_item_id)` → `catalogue_item`. Supporting index `idx_catalogue_item_variant_catalogue_item` on `(organization_id, catalogue_item_id)`.
 - `name` nullable, `CatalogueItemVariantName` (`NonEmptyTrimmed`). `uq_catalogue_item_variant_name`: partial unique `(organization_id, catalogue_item_id, name) where status='Active'`; NULL names never clash.
 - `sku` nullable, `CatalogueItemVariantSku` (`NonEmptyTrimmed`: 1–255, rejected if untrimmed), compared exactly (case-sensitive). `uq_catalogue_item_variant_sku`: partial unique `(organization_id, sku) where status='Active'`. The 255 cap also keeps the btree entry far below PostgreSQL's index-row size limit.
-- `sale_unit not null`, `CatalogueItemVariantSaleUnit` (`NonEmptyTrimmed`): open vocabulary (`piece`, `kg`, `hour`, bespoke services); rejected enum because new units must not require code/migrations.
-- `measure_value` + `measure_unit`: both null or both present, modelled as optional `CatalogueItemVariantMeasure`; see [Measure and packaging](#measure-and-packaging).
-- `package_type` + `package_count`: both null or both present, modelled as optional `CatalogueItemVariantPackaging`; see [Measure and packaging](#measure-and-packaging).
+- `sale_unit not null`, `CatalogueItemVariantSaleUnit` (`NonEmptyTrimmed`): open vocabulary (`piece`, `kg`, `hour`, bespoke services); rejected enum because new units must not require code/migrations. `measure_unit` (`CatalogueItemVariantMeasureUnit`) and `package_type` (`CatalogueItemVariantPackageType`) are likewise nullable open-text `NonEmptyTrimmed`.
+- `measure_value` nullable, `CatalogueItemVariantMeasureValue`: see [Measure value](#measure-value).
+- `package_count` nullable, `CatalogueItemVariantPackageCount` (`Int`, `>= 1`).
 - `price_amount` + `price_currency`: both null or both present, modelled as optional `CatalogueItemVariantPrice` (`Pure[Price]`); see [Price](#price).
-- Measure, packaging, and price are independent of each other; within each, both halves are present or both absent.
+- Measure value, measure unit, package type, and package count are independent of each other.
 - `status catalogue_item_variant_status` (`Active|Archived`): a second native PG enum, mirroring `catalogue_item_status`, with Scala `CatalogueItemVariantStatus` in its own file. One-way; never hard-deleted.
 - No CHECK constraints: domain types enforce value rules.
 
@@ -53,16 +53,9 @@ Price validation is shared because amount validity depends on currency. `PriceDo
 
 Smithy encodes `BigDecimal` as a JSON number. If clients cannot preserve exact decimal scale, change wire `amount` to `String` and parse it at validation.
 
-### Measure and packaging
+### Measure value
 
-Today the variant does not exist. After this change, measure and packaging follow the `Price` pattern: a shared case class with mandatory members, wrapped in a catalogue-owned `Pure` newtype, so a half measure or half packaging is unrepresentable.
-
-- `Measure(value: MeasureValue, unit: MeasureUnit)` in `Measure.scala`, wrapped by `CatalogueItemVariantMeasure`.
-- `Packaging(packageType: PackageType, packageCount: PackageCount)` in `Packaging.scala`, wrapped by `CatalogueItemVariantPackaging`. Not `Package`/`type`/`package`: those are Scala keywords or shadow `java.lang.Package`.
-- Shared value newtypes (common section of `Newtypes.scala`, no feature prefix): `MeasureValue`, `MeasureUnit` (`NonEmptyTrimmed`), `PackageType` (`NonEmptyTrimmed`), `PackageCount` (`Int`, `>= 1`).
-- `MeasureValue` is a refined `BigDecimal` whose constraint lives in `domain.scala` beside `NonEmptyTrimmed`: strictly greater than zero, at most 12 integer digits, at most 6 decimal places (scale `<= 6`). The integer-digit bound uses widened `precision - scale` arithmetic, as for price. The supplied scale is kept exactly (`1.50` stays `1.50`); no normalization, no rounding.
-- The wire stays flat (`measureValue`, `measureUnit`, `packageType`, `packageCount`); validation builds the pairs. No CHECK constraint: the domain types enforce both-or-neither.
-- Insert and update apply the same rule: an update sends both halves of a pair or neither; there is no read-before-update merge, so changing one half means sending both.
+`CatalogueItemVariantMeasureValue` is a refined `BigDecimal`: strictly greater than zero, at most 12 integer digits, at most 6 decimal places (scale `<= 6`). The integer-digit bound uses widened `precision - scale` arithmetic, as for price. The supplied scale is kept exactly (`1.50` stays `1.50`); no normalization, no rounding.
 
 The bound exists because of the wire decoder: smithy4s-json reads every `BigDecimal` with jsoniter's `readBigDecimal(null)`, which applies `MathContext.DECIMAL128` (34 significant digits) and silently rounds longer inputs before application code sees them. With at most 18 significant digits accepted, any input long enough to be rounded ends up with a scale above 6 and is rejected instead of being stored rounded. Price is protected the same way by its own integer-digit and currency-scale bounds.
 
@@ -128,11 +121,10 @@ Shared-shape exception (agreed with the user, deviating from [Smithy](../standar
 
 `CatalogueRequestValidator` validates item insert, batch insert, item update, variant insert, and variant update; UUID-only archive/get stay outside it. Trimmed means rejected if untrimmed, for every text field including SKU.
 
-- Domain requests (`backend/domain/.../gateway/Catalogue.scala`): `InsertCatalogueItemPostRequest(name, description, catalogueItemVariants: List[CatalogueItemVariant])`, `InsertCatalogueItemsPostRequest`, `UpdateCatalogueItemPutRequest(catalogueItemID, name, description)`, `CatalogueItemVariant(name, sku, saleUnit, measure, packaging, price)`, `InsertCatalogueItemVariantPostRequest(catalogueItemID, catalogueItemVariant)`, `UpdateCatalogueItemVariantPutRequest(catalogueItemVariantID, name, sku, saleUnit, measure, packaging, price)`, all optional.
+- Domain requests (`backend/domain/.../gateway/Catalogue.scala`): `InsertCatalogueItemPostRequest(name, description, catalogueItemVariants: List[CatalogueItemVariant])`, `InsertCatalogueItemsPostRequest`, `UpdateCatalogueItemPutRequest(catalogueItemID, name, description)`, `CatalogueItemVariant(name, sku, saleUnit, measureValue, measureUnit, packageType, packageCount, price)`, `InsertCatalogueItemVariantPostRequest(catalogueItemID, catalogueItemVariant)`, `UpdateCatalogueItemVariantPutRequest(catalogueItemVariantID, ...all variant fields optional)`.
 - An empty `catalogueItemVariants` fails field `catalogueItemVariants` with `At least one catalogue item variant is required` (`List`, not `NonEmptyList`, because Chimney has no cats module on the classpath).
-- Each flat field is validated on its own and reports under its own member name (`measureValue`, `measureUnit`, `packageType`, `packageCount`). Then each pair is checked: exactly one half present adds one error on field `measure` or `package` whose message names the member left out (e.g. `measureUnit must be given together with measureValue`). Pair and field errors accumulate with every other error, so a half pair whose present half is also invalid reports both.
 - Each failed variant collapses under `catalogueItemVariant` with its index (`validateAllNested`); a bad price stays one `price` error inside it; in a batch each failed item collapses again under `catalogueItem` with its index. Valid positions produce no error.
-- Newtypes (`Newtypes.scala`, `// Catalogue`): `CatalogueItemID`, `CatalogueItemName`, `CatalogueItemDescription`, `CatalogueItemImageAsset`, `CatalogueItemVariantID`, `CatalogueItemVariantName`, `CatalogueItemVariantSku`, `CatalogueItemVariantSaleUnit`, `CatalogueItemVariantMeasure`, `CatalogueItemVariantPackaging`, `CatalogueItemVariantPrice`; shared `MeasureValue`, `MeasureUnit`, `PackageType`, `PackageCount` in the common section. `CatalogueItemUnit` and `CatalogueItemPrice` are removed.
+- Newtypes (`Newtypes.scala`, `// Catalogue`): `CatalogueItemID`, `CatalogueItemName`, `CatalogueItemDescription`, `CatalogueItemImageAsset`, `CatalogueItemVariantID`, `CatalogueItemVariantName`, `CatalogueItemVariantSku`, `CatalogueItemVariantSaleUnit`, `CatalogueItemVariantMeasureValue`, `CatalogueItemVariantMeasureUnit`, `CatalogueItemVariantPackageType`, `CatalogueItemVariantPackageCount`, `CatalogueItemVariantPrice`. `CatalogueItemUnit` and `CatalogueItemPrice` are removed.
 
 ## Repository
 
@@ -145,7 +137,7 @@ Shared-shape exception (agreed with the user, deviating from [Smithy](../standar
 - `getCatalogueItem` → `Option[CatalogueItemRow]` (any status); `getCatalogueItemVariantsActive(organizationID, catalogueItemID)` → `List[CatalogueItemVariantRow]` ordered by `catalogue_item_variant_id`. Open item calls both separately; an item archived between the two reads shows an empty variant list (benign).
 - `getCatalogueItemSummariesActive` → `List[CatalogueItemSummaryRow]` (unchanged).
 - `insertCatalogueItemVariant` → `Option[CatalogueItemVariantID]` (`None` = parent missing/archived).
-- `updateCatalogueItemVariant(...OptUpdate)` → `Option[CatalogueItemVariantRow]`; `measureOptUpdate`, `packagingOptUpdate`, and `priceOptUpdate` each flatten across their two columns. `CatalogueItemVariantRow.measure`/`packaging`/`price` span their adjacent column pairs through the generic composite refined codecs (as `price`/`imageAsset` do).
+- `updateCatalogueItemVariant(...OptUpdate)` → `Option[CatalogueItemVariantRow]`; `priceOptUpdate` flattens across both price columns.
 - `archiveCatalogueItemVariant` → `Option[CatalogueItemVariantID]`, or `CatalogueItemVariantLastActive`.
 - `getCatalogueItemVariant` → `Option[CatalogueItemVariantRow]` (any status).
 - Preserve qualified native-enum write/read casts for both status enums. Generic refined `Meta[BigDecimal]`/`Meta[Int]` provide exact codecs.
@@ -197,7 +189,7 @@ Errors: `TapirServerError` has no validation variant, so every 400 here is `BAD_
 
 Today's suites cover the shipped item model; each is extended or adapted in the slice that changes its behavior.
 
-- Unit: `PriceDomainValidatorSpec` proves ISO normalization, canonical upward scale normalization, the exclusive monetary upper bound, compact non-zero extreme-exponent rejection, extreme-scale zero acceptance, fixed-fraction boundaries for zero-, two-, and three-digit currencies, pseudo/unsupported currency rejection, negative amounts, zero, and bounded non-zero negative scales. `CatalogueRequestValidatorSpec` proves a success round-trip and exact accumulated errors per public validator function, including indexed nested variant errors, the empty-variant-list error, and half-measure/half-packaging errors on insert and update, alone and together with an invalid present half. `MeasureValueSpec` (`unit/domain/`) proves the `MeasureValue` constraint boundaries: zero, negative, 12 vs 13 integer digits, 6 vs 7 decimals, negative scale, compact extreme exponent, and scale preservation.
+- Unit: `PriceDomainValidatorSpec` proves ISO normalization, canonical upward scale normalization, the exclusive monetary upper bound, compact non-zero extreme-exponent rejection, extreme-scale zero acceptance, fixed-fraction boundaries for zero-, two-, and three-digit currencies, pseudo/unsupported currency rejection, negative amounts, zero, and bounded non-zero negative scales. `CatalogueRequestValidatorSpec` proves a success round-trip and exact accumulated errors per public validator function, including indexed nested variant errors, the empty-variant-list error, and the measure-value bound.
 - Functional: `CatalogueServiceSpec` uses real price validation, a strict `CatalogueRepository` mock, and a strict `S3ClientOrganizationMedia` mock. It proves each operation's mapping and response, validation isolation, missing-item/variant 500s, no-op mutations, unchanged repository failures, and both image branches of the GET endpoints.
 - Integration: `CatalogueRepositorySpec` covers every repository method against real PostgreSQL with controlled IDs/timestamps: tenant scope; each unique index on its own (item name, variant SKU, variant name, unnamed variants not clashing, archive freeing names/SKUs); transactional item+variant insert and batch rollback in both tables; archive cascade; last-active-variant refusal leaving state unchanged; insert variant into missing/archived parent; update/no-op semantics; active-only ordered variant reads; any-status reads.
 - Acceptance: `CatalogueApiSpec` covers all ten endpoints over the real gateway and PostgreSQL stack, with complete rows/responses, exact validation and conflict bodies, atomic batch rollback, no-op mutations, and every applicable organization middleware branch. Writes prove that `User` is forbidden; reads allow every role, so the disallowed-role case is structurally impossible. Presigned URLs are asserted for presence/absence; `S3ClientOrganizationMediaSpec` proves a presigned URL serves the bytes. `GatewayClient` supplies typed codecs and methods for every operation; `GatewayItContext` exposes `CatalogueItemQueries` and `CatalogueItemVariantQueries`.

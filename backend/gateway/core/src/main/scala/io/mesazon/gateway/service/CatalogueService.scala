@@ -120,35 +120,6 @@ object CatalogueService {
           )
       )
     } yield smithy.GetCatalogueItemsGetResponse(catalogueItems)
-
-    /** HTTP POST /insert/catalogue-item-variant */
-    override def insertCatalogueItemVariantPost(
-        organizationID: UUID,
-        insertCatalogueItemVariantPostRequestSmithy: smithy.InsertCatalogueItemVariantPostRequest,
-    ): ServiceTask[Unit] =
-      ZIO.die(NotImplementedError("insertCatalogueItemVariantPost"))
-
-    /** HTTP PUT /update/catalogue-item-variant */
-    override def updateCatalogueItemVariantPut(
-        organizationID: UUID,
-        updateCatalogueItemVariantPutRequestSmithy: smithy.UpdateCatalogueItemVariantPutRequest,
-    ): ServiceTask[Unit] =
-      ZIO.die(NotImplementedError("updateCatalogueItemVariantPut"))
-
-    /** HTTP PUT /archive/catalogue-item-variant */
-    override def archiveCatalogueItemVariantPut(
-        organizationID: UUID,
-        archiveCatalogueItemVariantPutRequestSmithy: smithy.ArchiveCatalogueItemVariantPutRequest,
-    ): ServiceTask[Unit] =
-      ZIO.die(NotImplementedError("archiveCatalogueItemVariantPut"))
-
-    /** HTTP GET /get/catalogue-item-variant/{catalogueItemVariantID} */
-    override def getCatalogueItemVariantGet(
-
-        organizationID: UUID,
-        catalogueItemVariantID: UUID,
-    ): ServiceTask[smithy.GetCatalogueItemVariantGetResponse] =
-      ZIO.die(NotImplementedError("getCatalogueItemVariantGet"))
   }
 
   private def observed(service: smithy.CatalogueService[ServiceTask]): smithy.CatalogueService[Task] =
@@ -200,42 +171,6 @@ object CatalogueService {
       /** HTTP GET /get/catalogue-items */
       override def getCatalogueItemsGet(organizationID: UUID): Task[smithy.GetCatalogueItemsGetResponse] =
         HttpErrorHandler.errorResponseHandler(service.getCatalogueItemsGet(organizationID))
-
-      /** HTTP POST /insert/catalogue-item-variant */
-      override def insertCatalogueItemVariantPost(
-          organizationID: UUID,
-          insertCatalogueItemVariantPostRequestSmithy: smithy.InsertCatalogueItemVariantPostRequest,
-      ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(
-          service.insertCatalogueItemVariantPost(organizationID, insertCatalogueItemVariantPostRequestSmithy)
-        )
-
-      /** HTTP PUT /update/catalogue-item-variant */
-      override def updateCatalogueItemVariantPut(
-          organizationID: UUID,
-          updateCatalogueItemVariantPutRequestSmithy: smithy.UpdateCatalogueItemVariantPutRequest,
-      ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(
-          service.updateCatalogueItemVariantPut(organizationID, updateCatalogueItemVariantPutRequestSmithy)
-        )
-
-      /** HTTP PUT /archive/catalogue-item-variant */
-      override def archiveCatalogueItemVariantPut(
-          organizationID: UUID,
-          archiveCatalogueItemVariantPutRequestSmithy: smithy.ArchiveCatalogueItemVariantPutRequest,
-      ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(
-          service.archiveCatalogueItemVariantPut(organizationID, archiveCatalogueItemVariantPutRequestSmithy)
-        )
-
-      /** HTTP GET /get/catalogue-item-variant/{catalogueItemVariantID} */
-      override def getCatalogueItemVariantGet(
-          organizationID: UUID,
-          catalogueItemVariantID: UUID,
-      ): Task[smithy.GetCatalogueItemVariantGetResponse] =
-        HttpErrorHandler.errorResponseHandler(
-          service.getCatalogueItemVariantGet(organizationID, catalogueItemVariantID)
-        )
     }
 
   val local = ZLayer.derive[CatalogueServiceImpl].project[smithy.CatalogueService[ServiceTask]](identity)
