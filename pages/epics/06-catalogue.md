@@ -25,7 +25,7 @@ Every request in this epic names the organization it applies to, and only touche
 
 1. An item has a name and may have a description and an image. Everything that is sold — the unit, measure, packaging and price — lives on the item's **variants**, not on the item itself.
 2. An item always has at least one active variant while it is active. It is created together with its first variants, and its last active variant cannot be archived on its own.
-3. A variant has a unit it is sold by, and may have a name, a stock-keeping unit (SKU) code, a measure, a package type, a package count, and an exact price. A price is either fully given — an amount and a currency together — or left out entirely; there is no price with only one of the two. Every other optional detail stands on its own.
+3. A variant has a unit it is sold by, and may have a name, a stock-keeping unit (SKU) code, a measure, a package type, a package count, and an exact price. A price is either fully given — an amount and a currency together — or left out entirely; there is no price with only one of the two. The same holds for a measure — a measure value and a measure unit together — and for packaging — a package type and a package count together. Every other optional detail stands on its own.
 4. An item's name must be unique among that organization's active items. Archiving an item frees its name for reuse.
 5. A variant's name must be unique among the active variants of the same item. A variant's SKU must be unique among all of the organization's active variants. Archiving a variant frees both.
 6. Items and variants are **archived**, never deleted. Archiving an item archives all of its active variants with it.
@@ -86,13 +86,14 @@ Like the customer book, these are not a single journey. They are the things that
 | 8. User gives two variants of the same item the same name | - Rejected as a conflict |
 | 9. User gives a price that breaks a rule in **Price** below — an unsupported currency, more decimal places than the currency allows, or an amount that is negative or too large | - Rejected, naming the part of the price at fault |
 | 10. User gives a measure value of zero or less, a measure value with more than 12 digits before the decimal point or more than 6 after it, or a package count below 1 | - Rejected, naming the field at fault |
-| 11. User submits several bad entries at once | - Every problem is reported together, each tied to the item or variant that caused it |
-| 12. A member with the ordinary user role tries to add an item | - Rejected |
+| 11. User gives a measure value without a measure unit, or the other way round; or a package type without a package count, or the other way round | - Rejected, naming the field left out |
+| 12. User submits several bad entries at once | - Every problem is reported together, each tied to the item or variant that caused it |
+| 13. A member with the ordinary user role tries to add an item | - Rejected |
 
 #### Requirements
 
 1. A name and at least one variant are required. A description is optional.
-2. Each variant needs a sale unit. Its name, SKU, measure value, measure unit, package type, package count and price are each optional, independently of one another.
+2. Each variant needs a sale unit. Its name, SKU and price are each optional on their own. Its measure and its packaging are optional as pairs: the measure value and measure unit are given together or left out together, and so are the package type and package count.
 3. A price, when given, must meet every rule in **Price** below.
 
 #### Request / Response / Outcome
@@ -123,10 +124,10 @@ A variant, wherever it is sent in this epic, is always this shape:
 | Name | `String` | 1–255 characters, trimmed; unique among the item's active variants | ❌ | Tells this variant apart from the item's others |
 | SKU | `String` | 1–255 characters, trimmed; unique among the organization's active variants | ❌ | The business's own stock code for this variant |
 | Sale Unit | `String` | 1–255 characters, trimmed | ✅ | What it is sold by, in the business's own words |
-| Measure Value | `BigDecimal` | Greater than zero; at most 12 digits before the decimal point and 6 after; exact, never rounded | ❌ | How much of the measure unit one sale unit holds |
-| Measure Unit | `String` | 1–255 characters, trimmed | ❌ | What the measure value is counted in |
-| Package Type | `String` | 1–255 characters, trimmed | ❌ | What it is packed in |
-| Package Count | `Int` | Whole number, at least 1 | ❌ | How many packages make up one sale unit |
+| Measure Value | `BigDecimal` | Greater than zero; at most 12 digits before the decimal point and 6 after; exact, never rounded; given together with Measure Unit or not at all | ❌ | How much of the measure unit one sale unit holds |
+| Measure Unit | `String` | 1–255 characters, trimmed; given together with Measure Value or not at all | ❌ | What the measure value is counted in |
+| Package Type | `String` | 1–255 characters, trimmed; given together with Package Count or not at all | ❌ | What it is packed in |
+| Package Count | `Int` | Whole number, at least 1; given together with Package Type or not at all | ❌ | How many packages make up one sale unit |
 | Price | `Price` | See **Price** above | ❌ | Left out means the variant has no set price |
 
 **Request — adding several at once**
@@ -149,7 +150,7 @@ Response is empty. A successful add answers with nothing but a success status �
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the item or variant each belongs to - An item has no variants |
+| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the item or variant each belongs to - An item has no variants - A measure or a packaging is given only in half, naming the field left out |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
@@ -451,8 +452,9 @@ Response is empty, whether the item was archived just now, was already archived,
 | 2. User gives a SKU already used by an active variant in the organization | - Rejected as a conflict, naming the SKU |
 | 3. User gives a name already used by another active variant of the same item | - Rejected as a conflict |
 | 4. User gives a field that breaks its rule — a bad price, a measure value of zero or less, a package count below 1 | - Rejected, every problem reported together |
-| 5. User adds a variant to an item that is archived, or does not exist | - Rejected - Today this is reported as a server error — see [gap 1](#1-uploading-for-a-missing-or-archived-item-is-reported-as-a-server-error) |
-| 6. A member with the ordinary user role tries to add a variant | - Rejected |
+| 5. User gives a measure value without a measure unit, or the other way round; or a package type without a package count, or the other way round | - Rejected, naming the field left out |
+| 6. User adds a variant to an item that is archived, or does not exist | - Rejected - Today this is reported as a server error — see [gap 1](#1-uploading-for-a-missing-or-archived-item-is-reported-as-a-server-error) |
+| 7. A member with the ordinary user role tries to add a variant | - Rejected |
 
 #### Requirements
 
@@ -481,7 +483,7 @@ Response is empty. A successful add answers with nothing but a success status �
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together |
+| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together - A measure or a packaging is given only in half, naming the field left out |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
@@ -540,7 +542,7 @@ Nothing changes. This step only reads.
 
 **Who can reach this step: an owner or admin of the organization.**
 
-- User changes one variant's details — its name, SKU, unit, measure, packaging or price.
+- User changes one variant's details — its name, SKU, sale unit, measure, packaging or price.
 
 #### Business Scenarios
 
@@ -550,14 +552,16 @@ Nothing changes. This step only reads.
 | 2. User changes the SKU to one another active variant in the organization already has | - Rejected as a conflict, naming the SKU |
 | 3. User renames the variant to a name another active variant of the same item already has | - Rejected as a conflict |
 | 4. User gives a field that breaks its rule | - Rejected, every problem reported together |
-| 5. User changes a variant that has been archived (including every variant of an archived item), or does not exist | - Nothing happens, and it is reported as successful, the same as changing an archived item in [step 5](#5-user-updates-an-item) |
-| 6. A member with the ordinary user role tries to make a change | - Rejected |
+| 5. User sends a measure value without a measure unit, or the other way round; or a package type without a package count, or the other way round | - Rejected, naming the field left out - To change one half of a measure or packaging, both halves are sent |
+| 6. User changes a variant that has been archived (including every variant of an archived item), or does not exist | - Nothing happens, and it is reported as successful, the same as changing an archived item in [step 5](#5-user-updates-an-item) |
+| 7. A member with the ordinary user role tries to make a change | - Rejected |
 
 #### Requirements
 
 1. Only active variants can be changed.
 2. A field left out of the request keeps its current value; there is no way to clear an optional detail or a price once set. See [gap 4](#4-a-price-can-be-changed-but-never-removed) and [gap 5](#5-an-optional-detail-can-be-changed-but-never-cleared).
 3. A change must still leave the name unique within the item and the SKU unique within the organization's active variants.
+4. A measure value and a measure unit are sent together or left out together, and so are a package type and a package count.
 
 #### Request / Response / Outcome
 
@@ -569,10 +573,10 @@ Nothing changes. This step only reads.
 | Name | `String` | 1–255 characters, trimmed; unique among the item's active variants | ❌ | Leave out to keep the current name |
 | SKU | `String` | 1–255 characters, trimmed; unique among the organization's active variants | ❌ | Leave out to keep the current SKU |
 | Sale Unit | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current sale unit |
-| Measure Value | `BigDecimal` | Greater than zero; at most 12 digits before the decimal point and 6 after; exact, never rounded | ❌ | Leave out to keep the current measure value |
-| Measure Unit | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current measure unit |
-| Package Type | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current package type |
-| Package Count | `Int` | Whole number, at least 1 | ❌ | Leave out to keep the current package count |
+| Measure Value | `BigDecimal` | Greater than zero; at most 12 digits before the decimal point and 6 after; exact, never rounded; sent together with Measure Unit or not at all | ❌ | Leave out, with Measure Unit, to keep the current measure |
+| Measure Unit | `String` | 1–255 characters, trimmed; sent together with Measure Value or not at all | ❌ | Leave out, with Measure Value, to keep the current measure |
+| Package Type | `String` | 1–255 characters, trimmed; sent together with Package Count or not at all | ❌ | Leave out, with Package Count, to keep the current packaging |
+| Package Count | `Int` | Whole number, at least 1; sent together with Package Type or not at all | ❌ | Leave out, with Package Type, to keep the current packaging |
 | Price | `Price` | See **Price** in step 1 | ❌ | Leave out to keep the current price. There is no way to send "no price" |
 
 **Response**
@@ -588,7 +592,7 @@ Response is empty. A successful change answers with nothing but a success status
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - One or more fields are invalid |
+| 400 | `VALIDATION_ERROR` | - One or more fields are invalid - A measure or a packaging is sent only in half, naming the field left out |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
