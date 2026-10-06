@@ -15,6 +15,5 @@ Matching is case-sensitive and skips code spans, so `OTP` in backticks and the
 *[JWT]: JSON Web Token
 *[OTP]: One-Time Passcode
 *[RFC]: Request for Comments — an internet standards document
-*[SKU]: Stock-Keeping Unit — a business's own code for one thing it sells
 *[SMS]: Short Message Service — a text message
 *[UUID]: Universally Unique Identifier
