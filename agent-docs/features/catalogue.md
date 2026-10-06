@@ -77,7 +77,7 @@ Errors: `TapirServerError` has no validation variant, so every 400 here is `BAD_
 
 ## Status
 
-Planned, not built yet: catalogue items with variants and selling units, as described in [Catalogue epic](../../pages/epics/06-catalogue.md). Until that ships, this document describes today's behaviour: a free-text unit and one optional price on the item.
+Planned, not built yet: catalogue items with variants and selling units, as described in [Catalogue epic](../../pages/epics/06-catalogue.md). Until that ships, every other section of this document describes today's behaviour: a free-text unit and one optional price on the item. The agreed engineering design is in [Planned: variants and selling units](#planned-variants-and-selling-units).
 
 Complete: six Smithy operations plus the Tapir `POST /upload/catalogue-item/image` endpoint, request validation and shared ISO price validation, schema/enum/index, full repository (`CatalogueItemRow`/`CatalogueItemSummaryRow`), and service wiring including presigned-URL resolution on both GET endpoints. Unit, functional, integration, and acceptance tests cover every slice; see [Completed proof](#completed-proof) and [Acceptance proof](#acceptance-proof) below.
 
@@ -114,6 +114,78 @@ See [Image upload](#image-upload) for the `POST /upload/catalogue-item/image` en
 Both GET operations depend on `S3ClientOrganizationMedia.genMediaUrl` to resolve a real presigned URL from the persisted normalized bucket key — `getCatalogueItemGet` and `getCatalogueItemsGet` each resolve only `imageNormalizedUrl` (`Option[String]`, absent when the item has no image); the original bucket key is persisted (for migrations and user download) but never resolved to a URL in either response. `getCatalogueItemsGet` resolves it per item via `ZIO.foreach` over the repository's `CatalogueItemSummaryRow` list.
 
 `CatalogueServiceSpec` uses real price validation, a strict `CatalogueRepository` mock, and a strict `S3ClientOrganizationMedia` mock. It proves each of the six operations' mapping and response behavior, validation isolation, missing-item policy, no-op mutations, unchanged repository failures, and both the with-image and without-image branches of the GET endpoints' presigned-URL resolution.
+
+## Planned: variants and selling units
+
+Agreed design for the [Catalogue epic](../../pages/epics/06-catalogue.md). Not built yet; when it ships it replaces the item `unit`/price model above, and the sections above are rewritten to match. No deployed client uses today's contract, so the contract and schema change is breaking by agreement.
+
+### Delivery status
+
+| Slice | Done | Remaining |
+|---|---|---|
+| Docs (K1) | This section | — |
+| Domain (K2–K3) | — | Enums, value types, newtypes |
+| Endpoints (K4) | — | Smithy swap, seventh operation, forced compile stubs |
+| Failing tests (K5–K7) | — | Validator, service, repository |
+| Implementation | — | Validation, schema, repository, service, acceptance |
+
+### Schema
+
+Edited in place in `V2025.05.27__init.sql`; no new migration, no data migration. Dev Flyway runs `clean, migrate`.
+
+`catalogue_item`: drop `unit`, `price_amount`, `price_currency`; add `description text null`. `uq_catalogue_item_name` is unchanged.
+
+`catalogue_item_variant`:
+
+- `organization_id uuid`, `catalogue_item_variant_id uuid`, `catalogue_item_id uuid`, PK `(organization_id, catalogue_item_variant_id)` so a variant can be found by ID alone (needed to detect "belongs to another item").
+- FK `(organization_id, catalogue_item_id)` → `catalogue_item` `on delete restrict`; `idx_catalogue_item_variant_item` on `(organization_id, catalogue_item_id)`.
+- `sku`, `label`, `description` nullable `text`; `options jsonb not null` (JSON object, name → value).
+- `price_amount numeric not null`, `price_currency text not null`.
+- Selling unit: `sale_quantity_type text not null` (`Counted`/`FixedMeasurement`/`VariableMeasurement`), `sale_quantity_count bigint`, `measurement_value numeric`, `measurement_unit text`, `package_type text`. Check constraints tie column presence to `sale_quantity_type`: Counted has a count, and value + unit are both present or both absent; FixedMeasurement has value + unit and no count; VariableMeasurement has a unit only. No DB check on currency, unit, or package-type values; the domain enums guard them.
+- `status catalogue_item_variant_status not null`: native PG enum (`Active`, `Inactive`, `OutOfStock`, `Archived`), the same documented exception as `catalogue_item_status`; qualified casts as for the item.
+- `created_at`, `updated_at timestamptz not null`.
+- `uq_catalogue_item_variant_sku`: partial unique `(organization_id, sku) where status <> 'Archived' and sku is not null`; case-sensitive; mapped to 409, including duplicates within one request.
+- Config: `RepositoryConfig.catalogueItemVariantTable` + `allTableNames`, both `application.conf` files, local `init.sql` grants/truncate if needed.
+
+### Domain
+
+- Enums, one file each: `Currency` (`EUR`, `USD`, `GBP`), `MeasurementUnit` (`Gram`, `Kilogram`, `Millilitre`, `Litre`, `Millimetre`, `Centimetre`, `Metre`, `SquareMetre`), `PackageType` (`Pack`, `Box`, `Bag`, `Bottle`, `Can`, `Jar`, `Crate`, `Carton`, `Roll`, `Other`), `CatalogueItemVariantStatus` (`Active`, `Inactive`, `OutOfStock`, `Archived`). `CatalogueItemStatus` stays `Active`/`Archived`.
+- `Price(amount: PriceAmount, currency: Currency)`; `PriceCurrency` is removed. Owner wrapper `CatalogueItemVariantPrice` (`Pure[Price]`) replaces `CatalogueItemPrice`.
+- `Measurement(value: MeasurementValue, unit: MeasurementUnit)`; `SaleQuantity` Scala enum: `Counted(count: SaleQuantityCount, eachMeasurement: Option[Measurement])`, `FixedMeasurement(measurement)`, `VariableMeasurement(unit)`; `SellingUnit(quantity: SaleQuantity, packageType: Option[PackageType])`.
+- Newtypes (Catalogue group): `CatalogueItemDescription`, `CatalogueItemVariantID`, `CatalogueItemVariantSku`, `CatalogueItemVariantLabel`, `CatalogueItemVariantDescription`, `CatalogueItemVariantOptionName`, `CatalogueItemVariantOptionValue` (text ones `NonEmptyTrimmed`), `SaleQuantityCount` (`Long`), `MeasurementValue` (`BigDecimal`). `CatalogueItemUnit` is removed.
+- Options: `Map[CatalogueItemVariantOptionName, CatalogueItemVariantOptionValue]`. Duplicate JSON keys are resolved last-wins by the decoder, so names are unique by type; duplicates in the raw body are not rejected.
+- Update: `UpdateCatalogueItemPutRequest.variants: List[UpdateCatalogueItemVariant]`, a Scala enum `Change(catalogueItemVariantID, ...Opt fields)` / `Add(price, sellingUnit, status, ...)`. Clearable fields (item description; variant SKU, label, description) are `Option[Option[X]]`: outer `None` keeps, `Some(None)` clears.
+
+### Validation
+
+- Price (`PriceDomainValidator`, narrowed in place; Catalogue is its only caller): currency is `EUR`/`USD`/`GBP` only; amount non-negative, at most 12 integer digits, **at most 2 decimals on input, stored with exactly 2** by appending zeros (`1` → `1.00`); never rounded. The ISO `java.util.Currency` lookup is removed.
+- Measurement value (private checks in `CatalogueRequestValidator`, proven in `CatalogueRequestValidatorSpec`): greater than 0, at most 3 decimals, at most 12 integer digits, scale kept as given, never rounded.
+- Count: 1 through 999,999,999,999.
+- `SaleQuantityRequest`: exactly one of `counted`, `fixedMeasurement`, `variableMeasurement`, otherwise a named `VALIDATION_ERROR`.
+- Insert item: at least one variant. Update `Add`: price and selling unit required. Update status `Archived` is rejected.
+- Error naming: variants use `validateAllNested("catalogueItemVariant", ...)` inside each item; batch nests under `catalogueItem`. Each error names the item index, then the variant index, then the field.
+- **Open (Q5, user decision pending):** whether `currency`, `measurement unit`, and `packageType` are Smithy enums on the request wire (an unknown value then becomes a decode-time 400 that names neither the item nor the variant) or `String` validated into the domain enums (a named `VALIDATION_ERROR`, as the epic's non-functional requirement 4 asks). Variant `status` in update is a full four-case Smithy enum either way.
+
+### Endpoints
+
+Seven Smithy operations plus the unchanged image upload. New: `ArchiveCatalogueItemVariantPut`, `PUT /archive/catalogue-item-variant`, `Owner|Admin`, body `ArchiveCatalogueItemVariantPutRequest{catalogueItemID, catalogueItemVariantID}`, `204`, errors `BadRequest, ValidationError, Unauthorized, Forbidden, InternalServerError`.
+
+Shapes in `domain/Catalogue.smithy`: value shapes `PriceRequest`, `SellingUnitRequest`, `SaleQuantityRequest`, `CountedQuantityRequest`, `MeasurementRequest` (reused by requests and responses, as `CatalogueItemPriceRequest` is today); entries `InsertCatalogueItemVariant(s)`, `UpdateCatalogueItemVariant(s)`, `GetCatalogueItemVariant(s)`. Members: `description`, `variants`, `sku`, `label`, `options`, `price`, `sellingUnit`, `quantity`, `packageType`, `count`, `eachMeasurement`, `value`, `unit`, `status`, `catalogueItemVariantID`; list entry `GetCatalogueItem` gains `description`, `fromPrices` (`@required`), and `variantCount`. Request lists `@default([])`; insert `options` `@default({})`; update `options` optional (absent keeps, `{}` clears all). Update `description`, `sku`, `label`, and variant `description` carry `@alloy#nullable` (smithy4s `Option[Nullable[String]]`): absent keeps, `null` clears.
+
+`GatewayClient`: hand-written jsoniter codecs for every new enum (like `OnboardStage`/`CustomerType`), a hand-written null-emitting codec for the nullable members (new pattern), and encoding that keeps `options: {}` on update so clearing all options is possible.
+
+### Repository and transactions
+
+- `CatalogueItemQueries` (item) and new `CatalogueItemVariantQueries` (variant); `GatewayItContext` exposes both.
+- `CatalogueItemRow` drops `unit`/`price` and adds `description`; new `CatalogueItemVariantRow` with composite `price` and `sellingUnit` codecs across their adjacent columns.
+- Insert (single and batch): item plus its variants in one transaction, all-or-nothing; variants start `Active`.
+- `updateCatalogueItem` (name, description, image asset) stays for `FileService`, which is unchanged.
+- `updateCatalogueItemAndVariants`: one transaction. Lock the item `for update` where active; if it is missing or archived, silent no-op success, even with bogus variant IDs. Every named variant must belong to this item and be non-archived, otherwise the repository fails with `ValidationError` naming `catalogueItemVariantID` and its index. Then apply the item and variant changes and insert `Add` variants with the given status (default `Active`).
+- `archiveCatalogueItem`: lock the item, archive it and every non-archived variant in one transaction. Missing or archived: no-op.
+- `archiveCatalogueItemVariant`: lock the item; find the variant by `(organization_id, catalogue_item_variant_id)`. Not found (including another organization): no-op. Belongs to another item, whatever its status: `ValidationError` naming the variant. Already archived: no-op. Otherwise archive it, and if no non-archived variant remains, archive the item in the same transaction.
+- Every mutating variant transaction locks the item row first, so concurrent archives cannot leave an active item with no non-archived variants, or active variants on an archived item.
+- Reads: `getCatalogueItem` unchanged in role; new `getCatalogueItemVariantsNonArchived(organizationID, catalogueItemID)` ordered by `catalogue_item_variant_id` (UUIDv7, so insertion order). The list is one SQL query: `CatalogueItemSummaryRow` gains `description`, `fromPrices: List[Price]` (per-currency minimum over non-archived variants, ordered by currency), and `variantCount`. Neither order is contractual; tests compare order-insensitively.
+- Unique mapping adds `uq_catalogue_item_variant_sku` → 409.
 
 ## Open decisions
 
