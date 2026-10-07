@@ -41,7 +41,7 @@ object Dependencies {
   lazy val scalamockV           = "7.6.0"
   lazy val scrimageV            = "4.6.8"
   lazy val tikaV                = "4.1.0"
-  lazy val awssdkV              = "2.55.11"
+  lazy val awssdkV              = "2.55.12"
   lazy val zioS3V               = "0.4.4"
   lazy val poiV                 = "5.5.1"
   lazy val commonsCsvV          = "1.14.1"
