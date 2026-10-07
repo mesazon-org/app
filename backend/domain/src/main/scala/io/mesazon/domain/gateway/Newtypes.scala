@@ -219,8 +219,11 @@ type CatalogueItemVariantOptionValue = CatalogueItemVariantOptionValue.T
 object CatalogueItemVariantPrice extends RefinedType[Price, Pure]
 type CatalogueItemVariantPrice = CatalogueItemVariantPrice.T
 
-object SaleQuantityCount extends RefinedType[Long, Positive & LessEqual[999999999999L]]
-type SaleQuantityCount = SaleQuantityCount.T
+object CatalogueItemVariantQuantityValue extends RefinedType[BigDecimal, Positive & LessEqual[99999]]
+type CatalogueItemVariantQuantityValue = CatalogueItemVariantQuantityValue.T
 
-object MeasurementValue extends RefinedType[BigDecimal, Pure]
-type MeasurementValue = MeasurementValue.T
+object CatalogueItemVariantPerUnitValue extends RefinedType[BigDecimal, Positive & LessEqual[99999]]
+type CatalogueItemVariantPerUnitValue = CatalogueItemVariantPerUnitValue.T
+
+object CatalogueItemVariantUnitSizeValue extends RefinedType[BigDecimal, Positive & LessEqual[99999]]
+type CatalogueItemVariantUnitSizeValue = CatalogueItemVariantUnitSizeValue.T
