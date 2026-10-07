@@ -16,7 +16,7 @@ Every organization keeps a catalogue of what it sells. An item is the thing a cu
 - **Related** — [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}). Both work the same way — add, browse, open, update, archive — for a different kind of record. Anything already written there is not repeated here.
 - **Not built yet** — Orders. The catalogue exists so that orders can pick variants from it later, but nothing places or records an order yet.
 - **Not built yet** — Search, filtering and paging. The list returns every active item in one go.
-- **Not built yet** — Pricing by time. Nothing can be billed per hour or per day. A service can be listed as a counted quantity of 1, for example "1 session".
+- **Not built yet** — Pricing by time. Nothing can be billed per hour or per day. A service can be listed as a quantity of 1 piece, for example "1 session".
 - **Not built yet** — Images for individual variants. Only the item has an image.
 
 ### Requirements across the epic
@@ -27,7 +27,7 @@ Every request in this epic names the organization it applies to, and only touche
 
 1. An item has a name, may have a description, and has at least one variant. There is no upper limit on variants. The price and the way something is sold belong to each variant, not to the item.
 2. A variant must have a price and a selling unit. It may also have a SKU (stock-keeping unit), a label, a description, and options such as colour or size. A simple item is just an item with one variant that leaves all of these out.
-3. A variant's price is the full price of one selling unit as described. "2 caramels" is its own variant with its own price, not twice the price of one. When the customer chooses the quantity, as with loose tomatoes, the price is for one of the measurement unit, for example per kilogram.
+3. A variant's price is the full price of exactly the quantity its selling unit states, including everything inside it. "2 caramels" is its own variant with its own price, not twice the price of one. A pack of 6 bottles is priced as the whole pack. Loose tomatoes sold as "1 kilogram" are priced per kilogram.
 4. Each variant has its own currency. Variants of the same item may use different currencies.
 5. An item's name must be unique among the organization's active items. Archiving an item frees its name for reuse.
 6. A SKU, when given, must be unique among all of the organization's non-archived variants, across every item. Upper and lower case count as different. Archiving the variant, or its item, frees the SKU for reuse.
@@ -38,7 +38,7 @@ Every request in this epic names the organization it applies to, and only touche
 
 1. Every request needs a signed-in person who has finished personal onboarding and belongs to the organization named in the request. Someone outside the organization is refused with a server error — the same gap as [Organization Onboarding gap 3]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}#3-not-belonging-to-an-organization-is-reported-as-a-server-error).
 2. Owners, admins and ordinary members can all read. Only owners and admins can add, change, archive, or upload an image.
-3. Prices and measurements are exact and never rounded. A price is kept with exactly two decimal places. A measurement keeps the decimal places it was given, up to three.
+3. Prices and the numbers in a selling unit are exact and never rounded. A price is kept with exactly two decimal places. The numbers in a selling unit keep exactly the decimal places they were given.
 4. When a request contains several problems at once, all of them are reported together. Each problem names the exact item, and the exact variant within it, that caused it.
 5. Adding several items at once is all-or-nothing. If any one of them fails, none of them are stored.
 6. A missing, invalid, or expired access token is refused with the same error code used everywhere else in the product for a rejected access token.
@@ -67,17 +67,31 @@ Like the customer book, these are not a single journey. They are the things that
 
 **Options** — words the business chooses itself to tell variants apart, written as a name and a value: `Colour: Red`, `Size: M`, `Flavour: Peanut`. There is no fixed list. Two variants of the same item may have identical options.
 
-**Selling unit** — how one variant is sold. It is one of three quantity kinds, plus a package type, which is optional:
+**Selling unit** — how one variant is sold. It has up to three parts. Each part is a number and a unit:
 
-| Quantity kind | Meaning | Example |
+| Part | Meaning | Required |
 | --- | --- | --- |
-| Counted | A whole number of pieces, and optionally the size of each piece | 1 caramel; 100 screws; 6 × 1 L |
-| Fixed measurement | One exact amount | 1 L; 12 kg |
-| Customer-chosen measurement | Only the measurement unit is fixed; the customer picks how much | Tomatoes per kg |
+| Quantity | What one sale is — the amount the price covers | Yes |
+| Per unit | What each sold unit contains: how many containers, and which kind | No |
+| Unit size | The size of each single thing | No |
 
-- Measurement units are gram, kilogram, millilitre, litre, millimetre, centimetre, metre and square metre.
-- Package types are pack, box, bag, bottle, can, jar, crate, carton and roll.
-- Any quantity kind can have any package type, or none. Examples: a 1 L **bottle**, a **pack** of 6 × 1 L, a **box** of 12 kg, a **box** of 100 screws, or loose tomatoes per kg with no package.
+- There are three groups of units:
+  - **Measurement units:** gram, kilogram, millilitre, litre, millimetre, centimetre, metre and square metre.
+  - **Package units:** pack, box and piece. They say how something is sold or grouped.
+  - **Per units:** bag, bottle, can, jar and piece. They are the containers or pieces a customer sees, as in "per bottle".
+- The quantity can use any unit from any group. The per-unit part uses only per units. The unit-size part uses only measurement units.
+- Every number is greater than 0 and at most 99999. A number may have decimal places, and is never rounded.
+- Any combination of the three parts is accepted.
+
+| Example | Quantity | Per unit | Unit size |
+| --- | --- | --- | --- |
+| 1 caramel | 1 piece | — | — |
+| 2 caramels | 2 piece | — | — |
+| A 1 L bottle of Coca-Cola | 1 bottle | — | 1 litre |
+| A pack of 6 × 1 L bottles | 1 pack | 6 bottle | 1 litre |
+| A box of 12 kg of tomatoes | 1 box | — | 12 kilogram |
+| Loose tomatoes, priced per kg | 1 kilogram | — | — |
+| A box of 100 screws | 1 box | 100 piece | — |
 
 **Price** — an exact amount plus a currency. Only EUR, USD and GBP are accepted; any other currency is refused. Every amount is kept with exactly two decimal places. Every rule is in **Price** in [step 1](#1-user-adds-an-item).
 
@@ -121,36 +135,40 @@ These shapes are used throughout this epic.
 | Amount | `BigDecimal` | Non-negative; at most 12 integer digits; at most 2 decimal places; never rounded | ✅ | The exact amount |
 | Currency | `Currency` | `EUR`, `USD` or `GBP` | ✅ | Which currency the amount is in |
 
-**SellingUnit**
+**CatalogueItemVariantSaleUnit**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Quantity | `SaleQuantity` | See **SaleQuantity** | ✅ | How much one unit holds |
-| Package Type | `PackageType` | `Pack`, `Box`, `Bag`, `Bottle`, `Can`, `Jar`, `Crate`, `Carton` or `Roll` | ❌ | What it comes in; left out for loose goods |
+| Quantity | `CatalogueItemVariantQuantity` | See **CatalogueItemVariantQuantity** | ✅ | What one sale is, such as 1 pack or 1 kilogram |
+| Per Unit | `CatalogueItemVariantPerUnit` | See **CatalogueItemVariantPerUnit** | ❌ | What each sold unit contains, such as 6 bottles |
+| Unit Size | `CatalogueItemVariantUnitSize` | See **CatalogueItemVariantUnitSize** | ❌ | The size of each single thing, such as 1 litre |
 
-**SaleQuantity** — exactly one of the three fields is given.
-
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| Counted | `CountedQuantity` | See **CountedQuantity** | ❌ | A number of pieces |
-| Fixed Measurement | `Measurement` | See **Measurement** | ❌ | One exact amount, such as 1 L |
-| Variable Measurement | `MeasurementUnit` | See **MeasurementUnit** | ❌ | The customer chooses how much; the price is per one of this unit |
-
-**CountedQuantity**
+**CatalogueItemVariantQuantity**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Count | `Long` | Whole number from 1 upward; at most 12 digits | ✅ | How many pieces |
-| Each Measurement | `Measurement` | See **Measurement** | ❌ | The size of each piece, such as 1 L in a pack of 6 |
+| Value | `BigDecimal` | Greater than 0; at most 99999; never rounded | ✅ | How many |
+| Unit | `CatalogueItemVariantUnit` | Any **UnitSize**, **PackageUnit** or **PerUnit** value | ✅ | Of what |
 
-**Measurement**
+**CatalogueItemVariantPerUnit**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Value | `BigDecimal` | Greater than 0; at most 12 integer digits; at most 3 decimal places; never rounded | ✅ | The amount |
-| Unit | `MeasurementUnit` | See **MeasurementUnit** | ✅ | What it is measured in |
+| Value | `BigDecimal` | Greater than 0; at most 99999; never rounded | ✅ | How many in each sold unit |
+| Unit | `PerUnit` | See **PerUnit** | ✅ | What kind of container or piece |
 
-**MeasurementUnit** — `Gram`, `Kilogram`, `Millilitre`, `Litre`, `Millimetre`, `Centimetre`, `Metre` or `SquareMetre`.
+**CatalogueItemVariantUnitSize**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Value | `BigDecimal` | Greater than 0; at most 99999; never rounded | ✅ | The size |
+| Unit | `UnitSize` | See **UnitSize** | ✅ | What it is measured in |
+
+**UnitSize** — `Gram`, `Kilogram`, `Millilitre`, `Litre`, `Millimetre`, `Centimetre`, `Metre` or `SquareMetre`.
+
+**PackageUnit** — `Pack`, `Box` or `Piece`.
+
+**PerUnit** — `Bag`, `Bottle`, `Can`, `Jar` or `Piece`.
 
 **Request — adding one item**
 
@@ -168,8 +186,8 @@ These shapes are used throughout this epic.
 | Label | `String` | 1–255 characters, trimmed | ❌ | A short label for this variant, such as "1L Lemon bottle" for the item "COKE" |
 | Description | `String` | 1–255 characters, trimmed | ❌ | A longer description of this variant |
 | Options | `Map<String, String>` | Empty by default; each name and value 1–255 characters, trimmed; names unique within the variant; no limit on how many | ❌ | What sets this variant apart, such as colour and size |
-| Price | `Price` | See **Price** | ✅ | The full price of one selling unit |
-| Selling Unit | `SellingUnit` | See **SellingUnit** | ✅ | How this variant is sold |
+| Price | `Price` | See **Price** | ✅ | The full price of the quantity its selling unit states |
+| Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** | ✅ | How this variant is sold |
 
 **Request — adding several at once**
 
@@ -369,8 +387,8 @@ Nothing changes. This step only reads.
 | Label | `String` | — | ❌ | Present only if the variant has one |
 | Description | `String` | — | ❌ | Present only if the variant has one |
 | Options | `Map<String, String>` | May be empty | ✅ | What sets this variant apart |
-| Price | `Price` | See **Price** in step 1 | ✅ | The full price of one selling unit |
-| Selling Unit | `SellingUnit` | See **SellingUnit** in step 1 | ✅ | How this variant is sold |
+| Price | `Price` | See **Price** in step 1 | ✅ | The full price of the quantity its selling unit states |
+| Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ✅ | How this variant is sold |
 | Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ✅ | Whether the variant is on sale, paused, or out of stock |
 
 **Outcome**
@@ -440,7 +458,7 @@ Nothing changes. This step only reads.
 | Description | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep; can be cleared |
 | Options | `Map<String, String>` | Same as in **CatalogueItemVariant** | ❌ | Leave out to keep; when given, replaces all options |
 | Price | `Price` | See **Price** in step 1; must be given when adding a new variant | ❌ | Leave out to keep the current price |
-| Selling Unit | `SellingUnit` | See **SellingUnit** in step 1; must be given when adding a new variant | ❌ | Leave out to keep the current selling unit |
+| Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1; must be given when adding a new variant | ❌ | Leave out to keep the current selling unit |
 | Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ❌ | Leave out to keep the current status. For a new variant, the status it starts with; left out, it starts `Active` |
 
 **Response**
