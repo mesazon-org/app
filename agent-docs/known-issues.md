@@ -78,6 +78,16 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Prevention:** If a `clean` invocation and a killed/restarted sbt server both fail to clear a persistent-looking compile error — especially one citing Smithy-generated sources unrelated to the current change — suspect the action cache before suspecting the code. Do not spend time re-diagnosing the Smithy/TASTy content of the error; check for `CachedCompileFailure` in the stack trace first.
 - **Verify:** The same command that previously failed now recompiles (visible `compiling N Scala sources ...` output) and succeeds.
 
+## sbt 2 compile cannot overwrite a cache-linked SemanticDB file
+
+- **Status:** Workaround 2026-10-09
+- **Severity:** Medium
+- **Signature:** `gateway-core/compile` or `gateway-core/Test/compile` fails after an ordinary source edit with `(gateway-core / Compile / compileIncremental) java.nio.file.AccessDeniedException: .../target/out/jvm/scala-3.9.0/gateway-core/meta/META-INF/semanticdb/.../<File>.scala.semanticdb` (or `test-meta/...` for `Test / compileIncremental`). The named file can be the edited source or an unrelated one (generated Smithy sources, `HttpApp.scala`). Rerunning without a clean reproduces it.
+- **Cause:** sbt 2 restores cached outputs under `target/` as symlinks into its read-only content store (`~/Library/Caches/sbt/v2/cas/sha256-...`, mode `-r--r--r--`). When incremental compilation must rewrite one of those SemanticDB outputs, it writes through the symlink and is denied.
+- **Fix:** `sbt "gateway-core/clean; gateway-core/Test/compile"` — one invocation. `clean` removes the symlinked outputs so the compiler writes real files; source code needs no change.
+- **Prevention:** Treat this signature as a build-state problem, not a code error. If a clean compile then fails with `error while loading <Type>` against generated `.tasty` files, see [Generated Smithy TASTy cannot be loaded after codegen](#generated-smithy-tasty-cannot-be-loaded-after-codegen); if a failure survives `clean`, see [sbt 2 action cache replays a stale compile failure indefinitely](#sbt-2-action-cache-replays-a-stale-compile-failure-indefinitely).
+- **Verify:** The clean invocation ends in `[success]`. A cache-restored result can succeed without printing `compiling N Scala sources`; for a real compile of every source, check that the output lists `compiling` for both `classes` and `test-classes`.
+
 ## Stale sbt server produces a Docker context missing a numbered layer directory
 
 - **Status:** Resolved 2026-08-02

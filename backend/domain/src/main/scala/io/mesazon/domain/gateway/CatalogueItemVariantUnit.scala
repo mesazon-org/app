@@ -26,4 +26,6 @@ object CatalogueItemVariantUnit {
     case Jar
     case Piece
   }
+
+  val values: Array[CatalogueItemVariantUnit] = UnitSize.values ++ PackageUnit.values ++ PerUnit.values
 }
