@@ -210,11 +210,11 @@ type CatalogueItemVariantLabel = CatalogueItemVariantLabel.T
 object CatalogueItemVariantDescription extends RefinedType[String, NonEmptyTrimmed]
 type CatalogueItemVariantDescription = CatalogueItemVariantDescription.T
 
-object CatalogueItemVariantOptionName extends RefinedType[String, NonEmptyTrimmed]
-type CatalogueItemVariantOptionName = CatalogueItemVariantOptionName.T
+object CatalogueItemVariantAttributeName extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemVariantAttributeName = CatalogueItemVariantAttributeName.T
 
-object CatalogueItemVariantOptionValue extends RefinedType[String, NonEmptyTrimmed]
-type CatalogueItemVariantOptionValue = CatalogueItemVariantOptionValue.T
+object CatalogueItemVariantAttributeValue extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemVariantAttributeValue = CatalogueItemVariantAttributeValue.T
 
 object CatalogueItemVariantPrice extends RefinedType[Price, Pure]
 type CatalogueItemVariantPrice = CatalogueItemVariantPrice.T

@@ -17,7 +17,6 @@ object CatalogueItemVariantUnit {
   enum PackageUnit extends CatalogueItemVariantUnit {
     case Pack
     case Box
-    case Piece
   }
 
   enum PerUnit extends CatalogueItemVariantUnit {
@@ -25,5 +24,6 @@ object CatalogueItemVariantUnit {
     case Bottle
     case Can
     case Jar
+    case Piece
   }
 }
