@@ -21,7 +21,9 @@ trait CatalogueRepositoryV2Arbitraries extends CatalogueDomainArbitraries {
   given arbCatalogueItemVariantRows: Arbitrary[NonEmptyChunk[CatalogueItemVariantRow]] = Arbitrary(
     for {
       catalogueItemVariantRowHead  <- Arbitrary.arbitrary[CatalogueItemVariantRow]
-      catalogueItemVariantRowsTail <- Gen.choose(0, 9).flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemVariantRow]))
+      catalogueItemVariantRowsTail <- Gen
+        .choose(0, 9)
+        .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemVariantRow]))
     } yield NonEmptyChunk.fromIterable(catalogueItemVariantRowHead, catalogueItemVariantRowsTail)
   )
 
@@ -34,7 +36,9 @@ trait CatalogueRepositoryV2Arbitraries extends CatalogueDomainArbitraries {
   given arbCatalogueItemVariantSummaryRows: Arbitrary[NonEmptyChunk[CatalogueItemVariantSummaryRow]] = Arbitrary(
     for {
       catalogueItemVariantSummaryRowHead  <- Arbitrary.arbitrary[CatalogueItemVariantSummaryRow]
-      catalogueItemVariantSummaryRowsTail <- Gen.choose(0, 9).flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemVariantSummaryRow]))
+      catalogueItemVariantSummaryRowsTail <- Gen
+        .choose(0, 9)
+        .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemVariantSummaryRow]))
     } yield NonEmptyChunk.fromIterable(catalogueItemVariantSummaryRowHead, catalogueItemVariantSummaryRowsTail)
   )
 
@@ -47,7 +51,9 @@ trait CatalogueRepositoryV2Arbitraries extends CatalogueDomainArbitraries {
   given arbInsertCatalogueItemVariantInputs: Arbitrary[NonEmptyList[InsertCatalogueItemVariantInput]] = Arbitrary(
     for {
       insertCatalogueItemVariantInputHead  <- Arbitrary.arbitrary[InsertCatalogueItemVariantInput]
-      insertCatalogueItemVariantInputsTail <- Gen.choose(0, 9).flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[InsertCatalogueItemVariantInput]))
+      insertCatalogueItemVariantInputsTail <- Gen
+        .choose(0, 9)
+        .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[InsertCatalogueItemVariantInput]))
     } yield NonEmptyList(insertCatalogueItemVariantInputHead, insertCatalogueItemVariantInputsTail)
   )
 
