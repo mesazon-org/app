@@ -153,8 +153,57 @@ object CatalogueRepositoryV2 {
     override def insertCatalogueItems(
         organizationID: OrganizationID,
         insertCatalogueItemInputs: NonEmptyChunk[InsertCatalogueItemInput],
-    ): IO[ServiceError, NonEmptyChunk[CatalogueItemID]] =
-      ZIO.die(new NotImplementedError("insertCatalogueItems"))
+    ): IO[ServiceError, NonEmptyChunk[CatalogueItemID]] = for {
+      instantNow                 <- timeProvider.instantNow
+      catalogueItemIDsWithInputs <- ZIO.foreach(insertCatalogueItemInputs)(insertCatalogueItemInput =>
+        generateCatalogueItemID.map(catalogueItemID =>
+          (catalogueItemID = catalogueItemID, insertCatalogueItemInput = insertCatalogueItemInput)
+        )
+      )
+      catalogueItemRowsV2WithVariantRows <- ZIO.foreach(catalogueItemIDsWithInputs) { catalogueItemIDWithInput =>
+        ZIO
+          .foreach(catalogueItemIDWithInput.insertCatalogueItemInput.variants)(insertCatalogueItemVariantInput =>
+            generateCatalogueItemVariantID.map(catalogueItemVariantID =>
+              (
+                catalogueItemVariantID = catalogueItemVariantID,
+                insertCatalogueItemVariantInput = insertCatalogueItemVariantInput,
+              )
+            )
+          )
+          .map(catalogueItemVariantIDsWithInputs =>
+            (
+              catalogueItemRowV2 = buildCatalogueItemRowV2(
+                organizationID,
+                catalogueItemIDWithInput.catalogueItemID,
+                catalogueItemIDWithInput.insertCatalogueItemInput,
+                instantNow,
+              ),
+              catalogueItemVariantRows = catalogueItemVariantIDsWithInputs.map(catalogueItemVariantIDWithInput =>
+                buildCatalogueItemVariantRow(
+                  organizationID,
+                  catalogueItemIDWithInput.catalogueItemID,
+                  catalogueItemVariantIDWithInput.catalogueItemVariantID,
+                  catalogueItemVariantIDWithInput.insertCatalogueItemVariantInput,
+                  instantNow,
+                )
+              ),
+            )
+          )
+      }
+      catalogueItemRowsV2      = catalogueItemRowsV2WithVariantRows.map(_.catalogueItemRowV2)
+      catalogueItemVariantRows = catalogueItemRowsV2WithVariantRows.flatMap(_.catalogueItemVariantRows)
+      _ <- database
+        .transactionOrWiden(for {
+          _ <- catalogueQueries.insertCatalogueItemRowsV2(catalogueItemRowsV2.toList)
+          _ <- catalogueQueries.insertCatalogueItemVariantRows(catalogueItemVariantRows.toList)
+        } yield ())
+        .mapError(
+          catchUniqueConstraintViolation(
+            s"Failed to insert catalogue items for organization ID: [$organizationID]",
+            uniqueConstraintViolationMessage,
+          )
+        )
+    } yield catalogueItemIDsWithInputs.map(_.catalogueItemID)
 
     override def updateCatalogueItem(
         organizationID: OrganizationID,
