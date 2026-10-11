@@ -1,6 +1,5 @@
 package io.mesazon.gateway.utils
 
-import cats.data.NonEmptyList
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.repository.CatalogueRepositoryV2.*
 import io.mesazon.gateway.repository.domain.*
@@ -48,13 +47,13 @@ trait CatalogueRepositoryV2Arbitraries extends CatalogueDomainArbitraries {
   given arbInsertCatalogueItemVariantInput: Arbitrary[InsertCatalogueItemVariantInput] =
     Arbitrary(Gen.resultOf(InsertCatalogueItemVariantInput.apply))
 
-  given arbInsertCatalogueItemVariantInputs: Arbitrary[NonEmptyList[InsertCatalogueItemVariantInput]] = Arbitrary(
+  given arbInsertCatalogueItemVariantInputs: Arbitrary[NonEmptyChunk[InsertCatalogueItemVariantInput]] = Arbitrary(
     for {
       insertCatalogueItemVariantInputHead  <- Arbitrary.arbitrary[InsertCatalogueItemVariantInput]
       insertCatalogueItemVariantInputsTail <- Gen
         .choose(0, 9)
         .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[InsertCatalogueItemVariantInput]))
-    } yield NonEmptyList(insertCatalogueItemVariantInputHead, insertCatalogueItemVariantInputsTail)
+    } yield NonEmptyChunk.fromIterable(insertCatalogueItemVariantInputHead, insertCatalogueItemVariantInputsTail)
   )
 
   given arbInsertCatalogueItemInput: Arbitrary[InsertCatalogueItemInput] =
