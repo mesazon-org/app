@@ -44,8 +44,12 @@ trait CatalogueRepositoryV2Arbitraries extends CatalogueDomainArbitraries {
   given arbCatalogueItemSummaryRowV2: Arbitrary[CatalogueItemSummaryRowV2] =
     Arbitrary(Gen.resultOf(CatalogueItemSummaryRowV2.apply))
 
-  given arbInsertCatalogueItemVariantInput: Arbitrary[InsertCatalogueItemVariantInput] =
-    Arbitrary(Gen.resultOf(InsertCatalogueItemVariantInput.apply))
+  given arbInsertCatalogueItemVariantInput: Arbitrary[InsertCatalogueItemVariantInput] = Arbitrary(
+    for {
+      insertCatalogueItemVariantInput <- Gen.resultOf(InsertCatalogueItemVariantInput.apply)
+      enabledStatus                   <- Gen.oneOf(CatalogueItemVariantStatus.enabled)
+    } yield insertCatalogueItemVariantInput.copy(status = enabledStatus)
+  )
 
   given arbInsertCatalogueItemVariantInputs: Arbitrary[NonEmptyChunk[InsertCatalogueItemVariantInput]] = Arbitrary(
     for {
@@ -65,6 +69,10 @@ trait CatalogueRepositoryV2Arbitraries extends CatalogueDomainArbitraries {
       .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[InsertCatalogueItemInput]))
   )
 
-  given arbUpdateCatalogueItemVariantInput: Arbitrary[UpdateCatalogueItemVariantInput] =
-    Arbitrary(Gen.resultOf(UpdateCatalogueItemVariantInput.apply))
+  given arbUpdateCatalogueItemVariantInput: Arbitrary[UpdateCatalogueItemVariantInput] = Arbitrary(
+    for {
+      updateCatalogueItemVariantInput <- Gen.resultOf(UpdateCatalogueItemVariantInput.apply)
+      enabledStatusOpt                <- Gen.option(Gen.oneOf(CatalogueItemVariantStatus.enabled))
+    } yield updateCatalogueItemVariantInput.copy(status = enabledStatusOpt)
+  )
 }

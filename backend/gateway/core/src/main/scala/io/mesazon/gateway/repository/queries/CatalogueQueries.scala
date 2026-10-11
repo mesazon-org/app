@@ -18,7 +18,8 @@ final class CatalogueQueries(
     config: RepositoryConfig
 ) {
 
-  private given catalogueItemVariantAttributesCodec: JsonValueCodec[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]] =
+  private given catalogueItemVariantAttributesCodec
+      : JsonValueCodec[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]] =
     JsonCodecMaker.make
   private given catalogueItemVariantSaleUnitCodec: JsonValueCodec[CatalogueItemVariantSaleUnit] =
     JsonCodecMaker.make

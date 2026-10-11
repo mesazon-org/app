@@ -6,3 +6,8 @@ enum CatalogueItemVariantStatus {
   case OutOfStock
   case Archived
 }
+
+object CatalogueItemVariantStatus {
+  val enabled: List[CatalogueItemVariantStatus]  = List(Active, Inactive, OutOfStock)
+  val disabled: List[CatalogueItemVariantStatus] = List(Archived)
+}
