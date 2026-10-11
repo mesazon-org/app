@@ -480,6 +480,120 @@ class CatalogueRepositoryV2Spec extends ZWordSpecBase, CatalogueRepositoryV2Arbi
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing).zioValue shouldBe Nil
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe Nil
       }
+
+      "fail with a UniqueConstraintViolation and roll back the whole batch when two items in the batch share a variant SKU" in new TestContext {
+        val organizationID                   = arbitrarySample[OrganizationID]
+        val catalogueItemID1                 = arbitrarySample[CatalogueItemID]
+        val catalogueItemID2                 = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantID1          = arbitrarySample[CatalogueItemVariantID]
+        val catalogueItemVariantID2          = arbitrarySample[CatalogueItemVariantID]
+        val sharedSku                        = arbitrarySample[CatalogueItemVariantSku]
+        val insertCatalogueItemVariantInput1 = arbitrarySample[InsertCatalogueItemVariantInput]
+          .copy(sku = Some(sharedSku))
+        val insertCatalogueItemVariantInput2 = arbitrarySample[InsertCatalogueItemVariantInput]
+          .copy(sku = Some(sharedSku))
+        val insertCatalogueItemInput1 = arbitrarySample[InsertCatalogueItemInput]
+          .copy(variants = NonEmptyChunk.single(insertCatalogueItemVariantInput1))
+        val insertCatalogueItemInput2 = arbitrarySample[InsertCatalogueItemInput]
+          .copy(variants = NonEmptyChunk.single(insertCatalogueItemVariantInput2))
+        val insertCatalogueItemInputs = NonEmptyChunk(insertCatalogueItemInput1, insertCatalogueItemInput2)
+
+        catalogueItemID1 shouldNot equal(catalogueItemID2)
+
+        inSequence(
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemID1.value).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemID2.value).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemVariantID1.value).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemVariantID2.value).once(),
+        )
+
+        val serviceError =
+          catalogueRepository.insertCatalogueItems(organizationID, insertCatalogueItemInputs).zioError
+        serviceError shouldBe a[ServiceError.ConflictError.UniqueConstraintViolation]
+        serviceError.message shouldBe
+          "A catalogue item variant with the given SKU already exists in this organization"
+        serviceError.underlying.value shouldBe a[DbException]
+
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing).zioValue shouldBe Nil
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe Nil
+      }
+
+      "fail with a UniqueConstraintViolation and roll back the whole batch when one item's name matches a catalogue item committed in a previous transaction" in new TestContext {
+        val organizationID                          = arbitrarySample[OrganizationID]
+        val catalogueItemIDExisting                 = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantIDExisting          = arbitrarySample[CatalogueItemVariantID]
+        val catalogueItemID1                        = arbitrarySample[CatalogueItemID]
+        val catalogueItemID2                        = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantID1                 = arbitrarySample[CatalogueItemVariantID]
+        val catalogueItemVariantID2                 = arbitrarySample[CatalogueItemVariantID]
+        val insertCatalogueItemVariantInputExisting = arbitrarySample[InsertCatalogueItemVariantInput]
+        val insertCatalogueItemInputExisting        = arbitrarySample[InsertCatalogueItemInput]
+          .copy(variants = NonEmptyChunk.single(insertCatalogueItemVariantInputExisting))
+        val insertCatalogueItemVariantInput1 = arbitrarySample[InsertCatalogueItemVariantInput]
+        val insertCatalogueItemVariantInput2 = arbitrarySample[InsertCatalogueItemVariantInput]
+        val insertCatalogueItemInput1        = arbitrarySample[InsertCatalogueItemInput]
+          .copy(
+            name = insertCatalogueItemInputExisting.name,
+            variants = NonEmptyChunk.single(insertCatalogueItemVariantInput1),
+          )
+        val insertCatalogueItemInput2 = arbitrarySample[InsertCatalogueItemInput]
+          .copy(variants = NonEmptyChunk.single(insertCatalogueItemVariantInput2))
+        val insertCatalogueItemInputs = NonEmptyChunk(insertCatalogueItemInput1, insertCatalogueItemInput2)
+
+        catalogueItemID1 shouldNot equal(catalogueItemID2)
+
+        inSequence(
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemIDExisting.value).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemVariantIDExisting.value).once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemID1.value).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemID2.value).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemVariantID1.value).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemVariantID2.value).once(),
+        )
+
+        catalogueRepository.insertCatalogueItem(organizationID, insertCatalogueItemInputExisting).zioValue shouldBe
+          catalogueItemIDExisting
+
+        val serviceError =
+          catalogueRepository.insertCatalogueItems(organizationID, insertCatalogueItemInputs).zioError
+        serviceError shouldBe a[ServiceError.ConflictError.UniqueConstraintViolation]
+        serviceError.message shouldBe
+          "A catalogue item with the given name already exists in this organization"
+        serviceError.underlying.value shouldBe a[DbException]
+
+        val catalogueItemRowExistingExpected = CatalogueItemRowV2(
+          organizationID,
+          catalogueItemIDExisting,
+          insertCatalogueItemInputExisting.name,
+          insertCatalogueItemInputExisting.description,
+          None,
+          CatalogueItemStatus.Active,
+          CreatedAt(instantNow),
+          UpdatedAt(instantNow),
+        )
+        val catalogueItemVariantRowExistingExpected = CatalogueItemVariantRow(
+          organizationID,
+          catalogueItemVariantIDExisting,
+          catalogueItemIDExisting,
+          insertCatalogueItemVariantInputExisting.sku,
+          insertCatalogueItemVariantInputExisting.label,
+          insertCatalogueItemVariantInputExisting.description,
+          insertCatalogueItemVariantInputExisting.attributes,
+          insertCatalogueItemVariantInputExisting.price,
+          insertCatalogueItemVariantInputExisting.sellingUnit,
+          insertCatalogueItemVariantInputExisting.status,
+          CreatedAt(instantNow),
+          UpdatedAt(instantNow),
+        )
+
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing).zioValue shouldBe
+          List(catalogueItemRowExistingExpected)
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe
+          List(catalogueItemVariantRowExistingExpected)
+      }
     }
 
     "isUniqueCatalogueItemName" should {
