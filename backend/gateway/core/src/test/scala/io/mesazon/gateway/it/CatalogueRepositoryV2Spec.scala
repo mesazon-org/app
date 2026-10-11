@@ -56,11 +56,11 @@ class CatalogueRepositoryV2Spec extends ZWordSpecBase, CatalogueRepositoryV2Arbi
   "CatalogueRepositoryV2" when {
     "insertCatalogueItem" should {
       "insert a catalogue item and its variant rows in one transaction" in new TestContext {
-        val organizationID               = arbitrarySample[OrganizationID]
-        val catalogueItemID              = arbitrarySample[CatalogueItemID]
-        val catalogueItemVariantID       = arbitrarySample[CatalogueItemVariantID]
+        val organizationID                  = arbitrarySample[OrganizationID]
+        val catalogueItemID                 = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantID          = arbitrarySample[CatalogueItemVariantID]
         val insertCatalogueItemVariantInput = arbitrarySample[InsertCatalogueItemVariantInput]
-        val insertCatalogueItemInput     = arbitrarySample[InsertCatalogueItemInput]
+        val insertCatalogueItemInput        = arbitrarySample[InsertCatalogueItemInput]
           .copy(variants = NonEmptyChunk.single(insertCatalogueItemVariantInput))
 
         inSequence(
@@ -114,11 +114,13 @@ class CatalogueRepositoryV2Spec extends ZWordSpecBase, CatalogueRepositoryV2Arbi
         val insertCatalogueItemVariantInput2 = arbitrarySample[InsertCatalogueItemVariantInput]
         val insertCatalogueItemVariantInput3 = arbitrarySample[InsertCatalogueItemVariantInput]
         val insertCatalogueItemInput         = arbitrarySample[InsertCatalogueItemInput]
-          .copy(variants = NonEmptyChunk(
-            insertCatalogueItemVariantInput1,
-            insertCatalogueItemVariantInput2,
-            insertCatalogueItemVariantInput3,
-          ))
+          .copy(variants =
+            NonEmptyChunk(
+              insertCatalogueItemVariantInput1,
+              insertCatalogueItemVariantInput2,
+              insertCatalogueItemVariantInput3,
+            )
+          )
 
         inSequence(
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
@@ -174,10 +176,10 @@ class CatalogueRepositoryV2Spec extends ZWordSpecBase, CatalogueRepositoryV2Arbi
       }
 
       "insert a catalogue item whose name matches a disabled catalogue item's name, because the partial unique index excludes disabled rows" in new TestContext {
-        val organizationID       = arbitrarySample[OrganizationID]
+        val organizationID         = arbitrarySample[OrganizationID]
         val catalogueItemIDEnabled = arbitrarySample[CatalogueItemID]
         val catalogueItemVariantID = arbitrarySample[CatalogueItemVariantID]
-        val sharedName            = arbitrarySample[CatalogueItemName]
+        val sharedName             = arbitrarySample[CatalogueItemName]
 
         val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRowV2].copy(
           organizationID = organizationID,
@@ -208,12 +210,12 @@ class CatalogueRepositoryV2Spec extends ZWordSpecBase, CatalogueRepositoryV2Arbi
       }
 
       "insert a catalogue item variant whose SKU matches a disabled variant's SKU, because the partial unique index excludes disabled rows" in new TestContext {
-        val organizationID            = arbitrarySample[OrganizationID]
-        val catalogueItemIDDisabled   = arbitrarySample[CatalogueItemID]
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueItemIDDisabled        = arbitrarySample[CatalogueItemID]
         val catalogueItemVariantIDDisabled = arbitrarySample[CatalogueItemVariantID]
-        val catalogueItemIDEnabled    = arbitrarySample[CatalogueItemID]
-        val catalogueItemVariantIDEnabled = arbitrarySample[CatalogueItemVariantID]
-        val sharedSku                  = arbitrarySample[CatalogueItemVariantSku]
+        val catalogueItemIDEnabled         = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantIDEnabled  = arbitrarySample[CatalogueItemVariantID]
+        val sharedSku                      = arbitrarySample[CatalogueItemVariantSku]
 
         val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRowV2].copy(
           organizationID = organizationID,
@@ -260,7 +262,7 @@ class CatalogueRepositoryV2Spec extends ZWordSpecBase, CatalogueRepositoryV2Arbi
         val catalogueItemID2        = arbitrarySample[CatalogueItemID]
         val catalogueItemVariantID1 = arbitrarySample[CatalogueItemVariantID]
         val catalogueItemVariantID2 = arbitrarySample[CatalogueItemVariantID]
-        val sharedSku                = arbitrarySample[CatalogueItemVariantSku]
+        val sharedSku               = arbitrarySample[CatalogueItemVariantSku]
 
         catalogueItemID1 shouldNot equal(catalogueItemID2)
 
@@ -291,7 +293,10 @@ class CatalogueRepositoryV2Spec extends ZWordSpecBase, CatalogueRepositoryV2Arbi
           "A catalogue item variant with the given SKU already exists in this organization"
         serviceError.underlying.value shouldBe a[DbException]
 
-        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing).zioValue.map(_.catalogueItemID) shouldBe
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue
+          .map(_.catalogueItemID) shouldBe
           List(catalogueItemID1)
         postgresClient
           .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
@@ -300,12 +305,12 @@ class CatalogueRepositoryV2Spec extends ZWordSpecBase, CatalogueRepositoryV2Arbi
       }
 
       "fail with a UniqueConstraintViolation when a catalogue item name already exists in the organization, rolling back the second item" in new TestContext {
-        val organizationID          = arbitrarySample[OrganizationID]
-        val catalogueItemID1        = arbitrarySample[CatalogueItemID]
-        val catalogueItemID2        = arbitrarySample[CatalogueItemID]
-        val catalogueItemVariantID1 = arbitrarySample[CatalogueItemVariantID]
-        val catalogueItemVariantID2 = arbitrarySample[CatalogueItemVariantID]
-        val sharedName               = arbitrarySample[CatalogueItemName]
+        val organizationID                   = arbitrarySample[OrganizationID]
+        val catalogueItemID1                 = arbitrarySample[CatalogueItemID]
+        val catalogueItemID2                 = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantID1          = arbitrarySample[CatalogueItemVariantID]
+        val catalogueItemVariantID2          = arbitrarySample[CatalogueItemVariantID]
+        val sharedName                       = arbitrarySample[CatalogueItemName]
         val insertCatalogueItemVariantInput1 = arbitrarySample[InsertCatalogueItemVariantInput]
         val insertCatalogueItemVariantInput2 = arbitrarySample[InsertCatalogueItemVariantInput]
 
@@ -334,12 +339,114 @@ class CatalogueRepositoryV2Spec extends ZWordSpecBase, CatalogueRepositoryV2Arbi
           "A catalogue item with the given name already exists in this organization"
         serviceError.underlying.value shouldBe a[DbException]
 
-        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing).zioValue.map(_.catalogueItemID) shouldBe
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue
+          .map(_.catalogueItemID) shouldBe
           List(catalogueItemID1)
         postgresClient
           .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
           .zioValue
           .map(_.catalogueItemVariantID) shouldBe List(catalogueItemVariantID1)
+      }
+    }
+
+    "isUniqueCatalogueItemName" should {
+      "return false if an active catalogue item with the given name already exists in the organization" in new TestContext {
+        val organizationID    = arbitrarySample[OrganizationID]
+        val catalogueItemName = arbitrarySample[CatalogueItemName]
+
+        val catalogueItemRow = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          name = catalogueItemName,
+          status = CatalogueItemStatus.Active,
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRow)).zioValue
+
+        catalogueRepository.isUniqueCatalogueItemName(organizationID, catalogueItemName).zioValue shouldBe false
+      }
+
+      "return true if no catalogue item with the given name exists in the organization" in new TestContext {
+        val organizationID    = arbitrarySample[OrganizationID]
+        val catalogueItemName = arbitrarySample[CatalogueItemName]
+
+        catalogueRepository.isUniqueCatalogueItemName(organizationID, catalogueItemName).zioValue shouldBe true
+      }
+
+      "return true if the only catalogue item with the given name in the organization is disabled" in new TestContext {
+        val organizationID    = arbitrarySample[OrganizationID]
+        val catalogueItemName = arbitrarySample[CatalogueItemName]
+
+        val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          name = catalogueItemName,
+          status = arbitrarySample[CatalogueItemStatus](using Arbitrary(Gen.oneOf(CatalogueItemStatus.disabled))),
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowDisabled)).zioValue
+
+        catalogueRepository.isUniqueCatalogueItemName(organizationID, catalogueItemName).zioValue shouldBe true
+      }
+    }
+
+    "isUniqueCatalogueItemVariantSKU" should {
+      "return false if an enabled catalogue item variant with the given SKU already exists in the organization" in new TestContext {
+        val organizationID          = arbitrarySample[OrganizationID]
+        val catalogueItemVariantSku = arbitrarySample[CatalogueItemVariantSku]
+        val enabledStatus           = arbitrarySample[CatalogueItemVariantStatus](using
+          Arbitrary(Gen.oneOf(CatalogueItemVariantStatus.enabled))
+        )
+
+        val catalogueItemRow        = arbitrarySample[CatalogueItemRowV2].copy(organizationID = organizationID)
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          sku = Some(catalogueItemVariantSku),
+          status = enabledStatus,
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRow)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+          .zioValue
+
+        catalogueRepository
+          .isUniqueCatalogueItemVariantSKU(organizationID, catalogueItemVariantSku)
+          .zioValue shouldBe false
+      }
+
+      "return true if no catalogue item variant with the given SKU exists in the organization" in new TestContext {
+        val organizationID          = arbitrarySample[OrganizationID]
+        val catalogueItemVariantSku = arbitrarySample[CatalogueItemVariantSku]
+
+        catalogueRepository
+          .isUniqueCatalogueItemVariantSKU(organizationID, catalogueItemVariantSku)
+          .zioValue shouldBe true
+      }
+
+      "return true if the only catalogue item variant with the given SKU in the organization is disabled" in new TestContext {
+        val organizationID          = arbitrarySample[OrganizationID]
+        val catalogueItemVariantSku = arbitrarySample[CatalogueItemVariantSku]
+
+        val catalogueItemRow                = arbitrarySample[CatalogueItemRowV2].copy(organizationID = organizationID)
+        val catalogueItemVariantRowDisabled = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          sku = Some(catalogueItemVariantSku),
+          status = arbitrarySample[CatalogueItemVariantStatus](using
+            Arbitrary(Gen.oneOf(CatalogueItemVariantStatus.disabled))
+          ),
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRow)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowDisabled)))
+          .zioValue
+
+        catalogueRepository
+          .isUniqueCatalogueItemVariantSKU(organizationID, catalogueItemVariantSku)
+          .zioValue shouldBe true
       }
     }
   }

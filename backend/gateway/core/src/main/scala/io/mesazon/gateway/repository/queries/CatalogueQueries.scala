@@ -12,6 +12,7 @@ import io.mesazon.gateway.repository.domain.*
 import org.typelevel.doobie.*
 import org.typelevel.doobie.implicits.*
 import org.typelevel.doobie.postgres.implicits.*
+import org.typelevel.doobie.util.fragments.*
 import zio.*
 
 final class CatalogueQueries(
@@ -174,6 +175,57 @@ final class CatalogueQueries(
       frCatalogueItemVariantInsertFields,
       frCatalogueItemVariantValues,
       catalogueItemVariantRows,
+    )
+
+  private val frCatalogueItemDisabledStatuses: Fragment =
+    NonEmptyList
+      .fromListUnsafe(CatalogueItemStatus.disabled)
+      .map(disabledStatus => fr0"${disabledStatus}::" ++ frCatalogueItemStatusType)
+      .toList
+      .intercalate(fr",")
+
+  private val frCatalogueItemVariantDisabledStatuses: Fragment =
+    NonEmptyList
+      .fromListUnsafe(CatalogueItemVariantStatus.disabled)
+      .map(disabledStatus => fr0"${disabledStatus}::" ++ frCatalogueItemVariantStatusType)
+      .toList
+      .intercalate(fr",")
+
+  private def isUniqueWith(
+      frTable: Fragment,
+      organizationID: OrganizationID,
+      frFieldPredicate: Fragment,
+      frStatusPredicate: Fragment,
+  ): TranzactIO[Boolean] =
+    tzio {
+      val q =
+        fr"SELECT 1 FROM" ++ frTable ++
+          whereAnd(
+            fr"organization_id = $organizationID",
+            frFieldPredicate,
+            frStatusPredicate,
+          )
+
+      q.query[Int].option.map(_.isEmpty)
+    }
+
+  def isUniqueCatalogueItemName(organizationID: OrganizationID, name: CatalogueItemName): TranzactIO[Boolean] =
+    isUniqueWith(
+      frCatalogueItemTable,
+      organizationID,
+      fr"name = $name",
+      fr0"status NOT IN (" ++ frCatalogueItemDisabledStatuses ++ fr0")",
+    )
+
+  def isUniqueCatalogueItemVariantSKU(
+      organizationID: OrganizationID,
+      sku: CatalogueItemVariantSku,
+  ): TranzactIO[Boolean] =
+    isUniqueWith(
+      frCatalogueItemVariantTable,
+      organizationID,
+      fr"sku = $sku",
+      fr0"status NOT IN (" ++ frCatalogueItemVariantDisabledStatuses ++ fr0")",
     )
 
   // Testing

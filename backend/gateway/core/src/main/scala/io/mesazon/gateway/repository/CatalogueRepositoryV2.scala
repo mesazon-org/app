@@ -59,6 +59,16 @@ trait CatalogueRepositoryV2 {
       organizationID: OrganizationID,
       catalogueItemIDs: NonEmptyChunk[CatalogueItemID],
   ): IO[ServiceError, List[CatalogueItemSummaryRowV2]]
+
+  def isUniqueCatalogueItemName(
+      organizationID: OrganizationID,
+      name: CatalogueItemName,
+  ): IO[ServiceError, Boolean]
+
+  def isUniqueCatalogueItemVariantSKU(
+      organizationID: OrganizationID,
+      sku: CatalogueItemVariantSku,
+  ): IO[ServiceError, Boolean]
 }
 
 object CatalogueRepositoryV2 {
@@ -186,6 +196,32 @@ object CatalogueRepositoryV2 {
         catalogueItemIDs: NonEmptyChunk[CatalogueItemID],
     ): IO[ServiceError, List[CatalogueItemSummaryRowV2]] =
       ZIO.die(new NotImplementedError("getCatalogueItemSummariesActive"))
+
+    override def isUniqueCatalogueItemName(
+        organizationID: OrganizationID,
+        name: CatalogueItemName,
+    ): IO[ServiceError, Boolean] =
+      database
+        .transactionOrWiden(catalogueQueries.isUniqueCatalogueItemName(organizationID, name))
+        .mapError(e =>
+          ServiceError.InternalServerError.RepositoryError(
+            s"Failed to check name uniqueness for organizationID: [$organizationID], name: [$name]",
+            e,
+          )
+        )
+
+    override def isUniqueCatalogueItemVariantSKU(
+        organizationID: OrganizationID,
+        sku: CatalogueItemVariantSku,
+    ): IO[ServiceError, Boolean] =
+      database
+        .transactionOrWiden(catalogueQueries.isUniqueCatalogueItemVariantSKU(organizationID, sku))
+        .mapError(e =>
+          ServiceError.InternalServerError.RepositoryError(
+            s"Failed to check SKU uniqueness for organizationID: [$organizationID], sku: [$sku]",
+            e,
+          )
+        )
 
     private val uniqueConstraintViolationMessage: PartialFunction[String, String] = {
       case "uq_catalogue_item_variant_sku" =>
