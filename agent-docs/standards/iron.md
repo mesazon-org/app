@@ -28,6 +28,12 @@ Reusable refined-newtype rules. Related: [validation](../features/flow/02-valida
 - To reuse a value across an API shaped around a different but structurally identical newtype (same base type, same constraint), convert with `.to[Target]` (`io.mesazon.domain.to`, defined in `domain.scala` alongside `SameRefinement`) instead of a manual `Target.assume(source.value)`. It only compiles when both newtypes share the same base type and constraint, so a mismatched conversion is a compile error, not a runtime bug; there is no check to write or test.
 - Do not add `.to[Target]` for two newtypes that happen to both wrap `String` but encode different constraints — that pair is deliberately excluded, not a bug in the extension.
 
+## Refined newtypes as jsoniter map keys
+
+- `JsonCodecMaker.make` auto-derives a `JsonKeyCodec` for a `Map` key type; for a refined newtype's chained opaque types (`RefinedType.T` through Iron's `IronType`), that auto-derivation `StackOverflowError`s while dealiasing. Avoid it: never put a refined-newtype key inside a macro-derived `Map` codec without a hand-written `JsonKeyCodec` already in scope.
+- The fix is a generic hand-written `given JsonKeyCodec[WrappedType]`, scoped to `RefinedType.Mirror[WrappedType] { type BaseType = String }`, in `queries.scala` next to the existing generic `Read`/`Write`/`Put`/`Get`/`Meta` refined-type givens. It is still hand-written, not macro-derived — the macro-derive path stays unused for refined types; this given only reuses one implementation across every `String`-based refined newtype via the `Mirror` type parameter, the same way the existing `Get`/`Put`/`Meta` givens do, instead of hardcoding one per newtype.
+- Unlike those existing givens, it cannot delegate to a same-shaped `JsonKeyCodec[String]` instance — jsoniter-scala-core has no default `JsonKeyCodec[String]` to bypass to (string map keys are handled natively inside the macro, not via a given). It encodes/decodes the key directly against the `JsonReader`/`JsonWriter` string-key primitives (`readKeyAsString`/`writeKey`) and casts to/from `mirror.FinalType`, trusting — like the other bypass givens — that a value stored as a map key was already validated on write; it does not re-validate on read.
+
 ## Arbitraries
 
 - Shared refined-base generators live in `IronRefinedTypeArbitraries` and are explicitly named.
