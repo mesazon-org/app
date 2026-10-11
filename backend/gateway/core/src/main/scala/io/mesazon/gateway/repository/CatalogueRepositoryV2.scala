@@ -12,13 +12,12 @@ trait CatalogueRepositoryV2 {
   def insertCatalogueItem(
       organizationID: OrganizationID,
       insertCatalogueItemInput: InsertCatalogueItemInput,
-  ): IO[ServiceError, CatalogueItemSummaryRowV2]
+  ): IO[ServiceError, CatalogueItemID]
 
   def insertCatalogueItems(
       organizationID: OrganizationID,
-      insertCatalogueItemInputs: List[InsertCatalogueItemInput],
-  ): IO[ServiceError, List[CatalogueItemSummaryRowV2]]
-
+      insertCatalogueItemInputs: NonEmptyChunk[InsertCatalogueItemInput],
+  ): IO[ServiceError, NonEmptyChunk[CatalogueItemID]]
 
   def updateCatalogueItem(
       organizationID: OrganizationID,
@@ -28,32 +27,31 @@ trait CatalogueRepositoryV2 {
       imageAssetOptUpdate: Option[CatalogueItemImageAsset] = None,
       updateCatalogueItemVariantInputs: List[UpdateCatalogueItemVariantInput],
       insertCatalogueItemVariantInputs: List[InsertCatalogueItemVariantInput],
-  ): IO[ServiceError, Option[CatalogueItemWithVariantsRow]]
-
-  def updateCatalogueItemImageAsset(
-      organizationID: OrganizationID,
-      catalogueItemID: CatalogueItemID,
-      catalogueItemImageAsset: CatalogueItemImageAsset,
-  ): IO[ServiceError, Option[CatalogueItemRowV2]]
+  ): IO[ServiceError, Unit]
 
   def archiveCatalogueItem(
       organizationID: OrganizationID,
       catalogueItemID: CatalogueItemID,
-  ): IO[ServiceError, Option[CatalogueItemID]]
+  ): IO[ServiceError, Unit]
 
   def archiveCatalogueItemVariant(
       organizationID: OrganizationID,
       catalogueItemID: CatalogueItemID,
       catalogueItemVariantID: CatalogueItemVariantID,
-  ): IO[ServiceError, Option[CatalogueItemVariantID]]
+  ): IO[ServiceError, Unit]
 
   def getCatalogueItemWithVariantsActive(
       organizationID: OrganizationID,
       catalogueItemID: CatalogueItemID,
   ): IO[ServiceError, Option[CatalogueItemWithVariantsRow]]
 
-  def getCatalogueItemSummariesActive(
+  def getAllCatalogueItemSummariesActive(
       organizationID: OrganizationID
+  ): IO[ServiceError, List[CatalogueItemSummaryRowV2]]
+
+  def getCatalogueItemSummariesActive(
+      organizationID: OrganizationID,
+      catalogueItemIDs: NonEmptyChunk[CatalogueItemID],
   ): IO[ServiceError, List[CatalogueItemSummaryRowV2]]
 }
 
@@ -91,17 +89,14 @@ object CatalogueRepositoryV2 {
     override def insertCatalogueItem(
         organizationID: OrganizationID,
         insertCatalogueItemInput: InsertCatalogueItemInput,
-    ): IO[ServiceError, CatalogueItemSummaryRowV2] =
+    ): IO[ServiceError, CatalogueItemID] =
       ZIO.die(new NotImplementedError("insertCatalogueItem"))
 
     override def insertCatalogueItems(
         organizationID: OrganizationID,
         insertCatalogueItemInputs: List[InsertCatalogueItemInput],
-    ): IO[ServiceError, List[CatalogueItemSummaryRowV2]] =
+    ): IO[ServiceError, NonEmptyChunk[CatalogueItemID]] =
       ZIO.die(new NotImplementedError("insertCatalogueItems"))
-
-
-
 
     override def updateCatalogueItem(
         organizationID: OrganizationID,
@@ -111,27 +106,20 @@ object CatalogueRepositoryV2 {
         imageAssetOptUpdate: Option[CatalogueItemImageAsset],
         updateCatalogueItemVariantInputs: List[UpdateCatalogueItemVariantInput],
         insertCatalogueItemVariantInputs: List[InsertCatalogueItemVariantInput],
-    ): IO[ServiceError, Option[CatalogueItemWithVariantsRow]] =
+    ): IO[ServiceError, Unit] =
       ZIO.die(new NotImplementedError("updateCatalogueItem"))
-
-    override def updateCatalogueItemImageAsset(
-        organizationID: OrganizationID,
-        catalogueItemID: CatalogueItemID,
-        catalogueItemImageAsset: CatalogueItemImageAsset,
-    ): IO[ServiceError, Option[CatalogueItemRowV2]] =
-      ZIO.die(new NotImplementedError("updateCatalogueItemImageAsset"))
 
     override def archiveCatalogueItem(
         organizationID: OrganizationID,
         catalogueItemID: CatalogueItemID,
-    ): IO[ServiceError, Option[CatalogueItemID]] =
+    ): IO[ServiceError, Unit] =
       ZIO.die(new NotImplementedError("archiveCatalogueItem"))
 
     override def archiveCatalogueItemVariant(
         organizationID: OrganizationID,
         catalogueItemID: CatalogueItemID,
         catalogueItemVariantID: CatalogueItemVariantID,
-    ): IO[ServiceError, Option[CatalogueItemVariantID]] =
+    ): IO[ServiceError, Unit] =
       ZIO.die(new NotImplementedError("archiveCatalogueItemVariant"))
 
     override def getCatalogueItemWithVariantsActive(
@@ -140,8 +128,14 @@ object CatalogueRepositoryV2 {
     ): IO[ServiceError, Option[CatalogueItemWithVariantsRow]] =
       ZIO.die(new NotImplementedError("getCatalogueItemWithVariantsActive"))
 
-    override def getCatalogueItemSummariesActive(
+    override def getAllCatalogueItemSummariesActive(
         organizationID: OrganizationID
+    ): IO[ServiceError, List[CatalogueItemSummaryRowV2]] =
+      ZIO.die(new NotImplementedError("getAllCatalogueItemSummariesActive"))
+
+    override def getCatalogueItemSummariesActive(
+        organizationID: OrganizationID,
+        catalogueItemIDs: NonEmptyChunk[CatalogueItemID],
     ): IO[ServiceError, List[CatalogueItemSummaryRowV2]] =
       ZIO.die(new NotImplementedError("getCatalogueItemSummariesActive"))
   }
