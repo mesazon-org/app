@@ -37,6 +37,21 @@ given [WrappedType](using
 ): Meta[mirror.FinalType] =
   meta.asInstanceOf[Meta[mirror.FinalType]]
 
+// Hand-written, not macro-derived: JsonCodecMaker's auto-derivation of a JsonKeyCodec for a refined type
+// StackOverflows while dealiasing the chained opaque types (RefinedType.T through Iron's IronType). This
+// bypasses that path the same way the Read/Write/Put/Get/Meta givens above bypass macro derivation for
+// refined types, trusting that a FinalType value stored as a jsonb map key was already validated on write.
+given [WrappedType](using
+    mirror: RefinedType.Mirror[WrappedType] { type BaseType = String }
+): JsonKeyCodec[mirror.FinalType] =
+  new JsonKeyCodec[mirror.FinalType] {
+    override def decodeKey(in: JsonReader): mirror.FinalType =
+      in.readKeyAsString().asInstanceOf[mirror.FinalType]
+
+    override def encodeKey(x: mirror.FinalType, out: JsonWriter): Unit =
+      out.writeKey(x.asInstanceOf[String])
+  }
+
 inline given [A <: Enum](using mirror: Mirror.SumOf[A]): Get[A] = Get.deriveEnumString[A]
 
 inline given [A <: Enum](using mirror: Mirror.SumOf[A]): Put[A] = Put.deriveEnumString[A]

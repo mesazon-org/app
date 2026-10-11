@@ -1,1 +1,195 @@
+package io.mesazon.gateway.repository.queries
 
+import cats.data.NonEmptyList
+import cats.syntax.all.*
+import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
+import com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker
+import io.github.gaelrenoux.tranzactio.doobie.*
+import io.github.iltotore.iron.jsoniter.given
+import io.mesazon.domain.gateway.*
+import io.mesazon.gateway.config.RepositoryConfig
+import io.mesazon.gateway.repository.domain.*
+import org.typelevel.doobie.*
+import org.typelevel.doobie.implicits.*
+import org.typelevel.doobie.postgres.implicits.*
+import zio.*
+
+final class CatalogueQueries(
+    config: RepositoryConfig
+) {
+
+  private given catalogueItemVariantAttributesCodec: JsonValueCodec[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]] =
+    JsonCodecMaker.make
+  private given catalogueItemVariantSaleUnitCodec: JsonValueCodec[CatalogueItemVariantSaleUnit] =
+    JsonCodecMaker.make
+
+  private given catalogueItemVariantAttributesMeta
+      : Meta[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]] = jsonbMeta
+  private given catalogueItemVariantSaleUnitMeta: Meta[CatalogueItemVariantSaleUnit]     = jsonbMeta
+
+  private val frSchema = Fragment.const(config.schema)
+
+  private val frCatalogueItemTableName        = Fragment.const(config.catalogueItemTable)
+  private val frCatalogueItemVariantTableName = Fragment.const(config.catalogueItemVariantTable)
+
+  private val frCatalogueItemTable        = frSchema ++ fr0"." ++ frCatalogueItemTableName
+  private val frCatalogueItemVariantTable = frSchema ++ fr0"." ++ frCatalogueItemVariantTableName
+
+  private val frCatalogueItemStatusType        = frSchema ++ fr0".catalogue_item_status"
+  private val frCatalogueItemVariantStatusType = frSchema ++ fr0".catalogue_item_variant_status"
+
+  private val frCatalogueItemInsertFields =
+    fr"""
+        |organization_id,
+        |catalogue_item_id,
+        |name,
+        |description,
+        |image_original_s3_bucket_key,
+        |image_normalized_s3_bucket_key,
+        |image_original_file_name,
+        |status,
+        |created_at,
+        |updated_at
+         """.stripMargin
+
+  private def frCatalogueItemValues(row: CatalogueItemRowV2): Fragment =
+    fr0"(" ++ List(
+      fr0"${row.organizationID}",
+      fr0"${row.catalogueItemID}",
+      fr0"${row.name}",
+      fr0"${row.description}",
+      fr0"${row.imageAsset.map(_.value.imageOriginalS3BucketKey)}",
+      fr0"${row.imageAsset.map(_.value.imageNormalizedS3BucketKey)}",
+      fr0"${row.imageAsset.map(_.value.imageOriginalFileName)}",
+      fr0"${row.status}::" ++ frCatalogueItemStatusType,
+      fr0"${row.createdAt}",
+      fr0"${row.updatedAt}",
+    ).intercalate(fr",") ++ fr0")"
+
+  private val frCatalogueItemSelectFields =
+    fr"""
+        |organization_id,
+        |catalogue_item_id,
+        |name,
+        |description,
+        |image_original_s3_bucket_key,
+        |image_normalized_s3_bucket_key,
+        |image_original_file_name,
+        |status::text,
+        |created_at,
+        |updated_at
+         """.stripMargin
+
+  private val frCatalogueItemVariantInsertFields =
+    fr"""
+        |organization_id,
+        |catalogue_item_variant_id,
+        |catalogue_item_id,
+        |sku,
+        |label,
+        |description,
+        |attributes,
+        |price_amount,
+        |price_currency,
+        |selling_unit,
+        |status,
+        |created_at,
+        |updated_at
+         """.stripMargin
+
+  private def frCatalogueItemVariantValues(row: CatalogueItemVariantRow): Fragment =
+    fr0"(" ++ List(
+      fr0"${row.organizationID}",
+      fr0"${row.catalogueItemVariantID}",
+      fr0"${row.catalogueItemID}",
+      fr0"${row.sku}",
+      fr0"${row.label}",
+      fr0"${row.description}",
+      fr0"${row.attributes}",
+      fr0"${row.price.map(_.value.amount)}",
+      fr0"${row.price.map(_.value.currency)}",
+      fr0"${row.sellingUnit}",
+      fr0"${row.status}::" ++ frCatalogueItemVariantStatusType,
+      fr0"${row.createdAt}",
+      fr0"${row.updatedAt}",
+    ).intercalate(fr",") ++ fr0")"
+
+  private val frCatalogueItemVariantSelectFields =
+    fr"""
+        |organization_id,
+        |catalogue_item_variant_id,
+        |catalogue_item_id,
+        |sku,
+        |label,
+        |description,
+        |attributes,
+        |price_amount,
+        |price_currency,
+        |selling_unit,
+        |status::text,
+        |created_at,
+        |updated_at
+         """.stripMargin
+
+  private def insertRowWith[Row](
+      frTable: Fragment,
+      frFields: Fragment,
+      frValues: Row => Fragment,
+      row: Row,
+  ): TranzactIO[Unit] =
+    tzio {
+      val q =
+        fr"INSERT INTO" ++ frTable ++
+          fr"(" ++ frFields ++ fr")" ++
+          fr"VALUES" ++ frValues(row)
+
+      q.update.run.void
+    }
+
+  private def insertRowsWith[Row](
+      frTable: Fragment,
+      frFields: Fragment,
+      frValues: Row => Fragment,
+      rows: List[Row],
+  ): TranzactIO[Unit] =
+    NonEmptyList.fromList(rows).fold(ZIO.unit: TranzactIO[Unit]) { rowsNel =>
+      tzio {
+        val frAllValues = rowsNel.toList.map(frValues).intercalate(fr",")
+        val q           =
+          fr"INSERT INTO" ++ frTable ++
+            fr"(" ++ frFields ++ fr")" ++
+            fr"VALUES" ++ frAllValues
+
+        q.update.run.void
+      }
+    }
+
+  def insertCatalogueItemRowV2(catalogueItemRowV2: CatalogueItemRowV2): TranzactIO[Unit] =
+    insertRowWith(frCatalogueItemTable, frCatalogueItemInsertFields, frCatalogueItemValues, catalogueItemRowV2)
+
+  def insertCatalogueItemVariantRows(catalogueItemVariantRows: List[CatalogueItemVariantRow]): TranzactIO[Unit] =
+    insertRowsWith(
+      frCatalogueItemVariantTable,
+      frCatalogueItemVariantInsertFields,
+      frCatalogueItemVariantValues,
+      catalogueItemVariantRows,
+    )
+
+  // Testing
+  def getAllCatalogueItemRowsV2Testing: TranzactIO[List[CatalogueItemRowV2]] =
+    tzio {
+      val q = fr"SELECT" ++ frCatalogueItemSelectFields ++ fr"FROM" ++ frCatalogueItemTable
+      q.query[CatalogueItemRowV2].to[List]
+    }
+
+  def getAllCatalogueItemVariantRowsTesting: TranzactIO[List[CatalogueItemVariantRow]] =
+    tzio {
+      val q = fr"SELECT" ++ frCatalogueItemVariantSelectFields ++ fr"FROM" ++ frCatalogueItemVariantTable
+      q.query[CatalogueItemVariantRow].to[List]
+    }
+}
+
+object CatalogueQueries {
+
+  val live = ZLayer.derive[CatalogueQueries]
+}
