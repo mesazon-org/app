@@ -169,6 +169,9 @@ final class CatalogueQueries(
   def insertCatalogueItemRowV2(catalogueItemRowV2: CatalogueItemRowV2): TranzactIO[Unit] =
     insertRowWith(frCatalogueItemTable, frCatalogueItemInsertFields, frCatalogueItemValues, catalogueItemRowV2)
 
+  def insertCatalogueItemRowsV2(catalogueItemRowsV2: List[CatalogueItemRowV2]): TranzactIO[Unit] =
+    insertRowsWith(frCatalogueItemTable, frCatalogueItemInsertFields, frCatalogueItemValues, catalogueItemRowsV2)
+
   def insertCatalogueItemVariantRows(catalogueItemVariantRows: List[CatalogueItemVariantRow]): TranzactIO[Unit] =
     insertRowsWith(
       frCatalogueItemVariantTable,
