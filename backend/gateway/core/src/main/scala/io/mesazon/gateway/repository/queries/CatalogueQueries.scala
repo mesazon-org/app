@@ -9,6 +9,8 @@ import io.github.iltotore.iron.jsoniter.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.domain.*
+import io.mesazon.gateway.repository.queries.CatalogueQueries.*
+import io.scalaland.chimney.dsl.*
 import org.typelevel.doobie.*
 import org.typelevel.doobie.implicits.*
 import org.typelevel.doobie.postgres.implicits.*
@@ -131,6 +133,31 @@ final class CatalogueQueries(
         |status::text,
         |created_at,
         |updated_at
+         """.stripMargin
+
+  private val frCatalogueItemWithVariantJoinedSelectFields =
+    fr"""
+        |i.organization_id,
+        |i.catalogue_item_id,
+        |i.name,
+        |i.description,
+        |i.image_original_s3_bucket_key,
+        |i.image_normalized_s3_bucket_key,
+        |i.image_original_file_name,
+        |i.status::text,
+        |i.created_at,
+        |i.updated_at,
+        |v.catalogue_item_variant_id,
+        |v.sku,
+        |v.label,
+        |v.description,
+        |v.attributes,
+        |v.price_amount,
+        |v.price_currency,
+        |v.selling_unit,
+        |v.status::text,
+        |v.created_at,
+        |v.updated_at
          """.stripMargin
 
   private def insertRowWith[Row](
@@ -390,6 +417,44 @@ final class CatalogueQueries(
       q.update.run.void
     }
 
+  def getCatalogueItemWithVariantsRowEnabled(
+      organizationID: OrganizationID,
+      catalogueItemID: CatalogueItemID,
+  ): TranzactIO[Option[CatalogueItemWithVariantsRow]] =
+    tzio {
+      val q =
+        fr"SELECT" ++ frCatalogueItemWithVariantJoinedSelectFields ++
+          fr"FROM" ++ frCatalogueItemTable ++ fr"AS i" ++
+          fr"INNER JOIN" ++ frCatalogueItemVariantTable ++ fr"AS v" ++
+          fr"ON v.organization_id = i.organization_id" ++
+          fr"AND v.catalogue_item_id = i.catalogue_item_id" ++
+          fr0"AND v.status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr")" ++
+          whereAnd(
+            fr"i.organization_id = $organizationID",
+            fr"i.catalogue_item_id = $catalogueItemID",
+            fr0"i.status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")",
+          ) ++
+          fr"ORDER BY v.created_at ASC, v.catalogue_item_variant_id ASC"
+
+      q.query[CatalogueItemWithVariantJoinedRow]
+        .to[List]
+        .map(catalogueItemWithVariantJoinedRows =>
+          NonEmptyChunk
+            .fromIterableOption(catalogueItemWithVariantJoinedRows)
+            .map(catalogueItemWithVariantJoinedRowsNonEmpty =>
+              CatalogueItemWithVariantsRow(
+                catalogueItemWithVariantJoinedRowsNonEmpty.head.catalogueItemRowV2,
+                catalogueItemWithVariantJoinedRowsNonEmpty.map(
+                  _.into[CatalogueItemVariantRow]
+                    .withFieldConst(_.organizationID, organizationID)
+                    .withFieldConst(_.catalogueItemID, catalogueItemID)
+                    .transform
+                ),
+              )
+            )
+        )
+    }
+
   private val frCatalogueItemEnabledStatuses: Fragment =
     NonEmptyList
       .fromListUnsafe(CatalogueItemStatus.enabled)
@@ -456,6 +521,21 @@ final class CatalogueQueries(
 }
 
 object CatalogueQueries {
+
+  // The variant's organization_id/catalogue_item_id are not re-selected from the join; they equal the item's.
+  private case class CatalogueItemWithVariantJoinedRow(
+      catalogueItemRowV2: CatalogueItemRowV2,
+      catalogueItemVariantID: CatalogueItemVariantID,
+      sku: Option[CatalogueItemVariantSku],
+      label: Option[CatalogueItemVariantLabel],
+      description: Option[CatalogueItemVariantDescription],
+      attributes: Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue],
+      price: Option[CatalogueItemVariantPrice],
+      sellingUnit: CatalogueItemVariantSaleUnit,
+      status: CatalogueItemVariantStatus,
+      createdAt: CreatedAt,
+      updatedAt: UpdatedAt,
+  )
 
   val live = ZLayer.derive[CatalogueQueries]
 }

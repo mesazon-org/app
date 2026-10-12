@@ -372,7 +372,14 @@ object CatalogueRepositoryV2 {
         organizationID: OrganizationID,
         catalogueItemID: CatalogueItemID,
     ): IO[ServiceError, Option[CatalogueItemWithVariantsRow]] =
-      ZIO.die(new NotImplementedError("getCatalogueItemWithVariantsActive"))
+      database
+        .transactionOrWiden(catalogueQueries.getCatalogueItemWithVariantsRowEnabled(organizationID, catalogueItemID))
+        .mapError(e =>
+          ServiceError.InternalServerError.RepositoryError(
+            s"Failed to get catalogue item with ID: [$catalogueItemID]",
+            e,
+          )
+        )
 
     override def getAllCatalogueItemSummariesActive(
         organizationID: OrganizationID
