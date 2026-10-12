@@ -212,6 +212,27 @@ final class CatalogueQueries(
     }
   }
 
+  def archiveCatalogueItemRow(
+      organizationID: OrganizationID,
+      catalogueItemID: CatalogueItemID,
+      updatedAt: UpdatedAt,
+  ): TranzactIO[Int] =
+    tzio {
+      val q =
+        fr"UPDATE" ++ frCatalogueItemTable ++
+          set(
+            fr0"status = ${CatalogueItemStatus.Archived}::" ++ frCatalogueItemStatusType,
+            fr"updated_at = $updatedAt",
+          ) ++
+          whereAnd(
+            fr"organization_id = $organizationID",
+            fr"catalogue_item_id = $catalogueItemID",
+            fr0"status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")",
+          )
+
+      q.update.run
+    }
+
   def getCatalogueItemVariantRowsByIDs(
       organizationID: OrganizationID,
       catalogueItemID: CatalogueItemID,
@@ -287,6 +308,27 @@ final class CatalogueQueries(
             fr"t.organization_id = $organizationID",
             fr"t.catalogue_item_id = $catalogueItemID",
             fr0"t.status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr0")",
+          )
+
+      q.update.run.void
+    }
+
+  def archiveCatalogueItemVariantRowsByCatalogueItemID(
+      organizationID: OrganizationID,
+      catalogueItemID: CatalogueItemID,
+      updatedAt: UpdatedAt,
+  ): TranzactIO[Unit] =
+    tzio {
+      val q =
+        fr"UPDATE" ++ frCatalogueItemVariantTable ++
+          set(
+            fr0"status = ${CatalogueItemVariantStatus.Archived}::" ++ frCatalogueItemVariantStatusType,
+            fr"updated_at = $updatedAt",
+          ) ++
+          whereAnd(
+            fr"organization_id = $organizationID",
+            fr"catalogue_item_id = $catalogueItemID",
+            fr0"status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr0")",
           )
 
       q.update.run.void

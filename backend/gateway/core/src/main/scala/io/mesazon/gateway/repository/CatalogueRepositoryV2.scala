@@ -299,8 +299,28 @@ object CatalogueRepositoryV2 {
     override def archiveCatalogueItem(
         organizationID: OrganizationID,
         catalogueItemID: CatalogueItemID,
-    ): IO[ServiceError, Unit] =
-      ZIO.die(new NotImplementedError("archiveCatalogueItem"))
+    ): IO[ServiceError, Unit] = for {
+      instantNow <- timeProvider.instantNow
+      updatedAt = UpdatedAt(instantNow)
+      _ <- database
+        .transactionOrWiden(for {
+          affectedItemRows <- catalogueQueries.archiveCatalogueItemRow(organizationID, catalogueItemID, updatedAt)
+          _                <-
+            if (affectedItemRows == 0) ZIO.unit
+            else
+              catalogueQueries.archiveCatalogueItemVariantRowsByCatalogueItemID(
+                organizationID,
+                catalogueItemID,
+                updatedAt,
+              )
+        } yield ())
+        .mapError(e =>
+          ServiceError.InternalServerError.RepositoryError(
+            s"Failed to archive catalogue item with ID: [$catalogueItemID]",
+            e,
+          )
+        )
+    } yield ()
 
     override def archiveCatalogueItemVariant(
         organizationID: OrganizationID,
