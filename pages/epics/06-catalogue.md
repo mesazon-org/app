@@ -32,7 +32,7 @@ Every request in this epic names the organization it applies to, and only touche
 5. Each priced variant has its own currency, as part of its price. Variants of the same item may use different currencies. A variant with no price has no currency.
 6. An item's name must be unique among the organization's active items. Archiving an item frees its name for reuse.
 7. A SKU, when given, must be unique among all of the organization's non-archived variants, across every item. Upper and lower case count as different. Archiving the variant, or its item, frees the SKU for reuse.
-8. Items and variants are **archived**, never deleted. Archiving an item also archives all of its variants. Archiving an item's last non-archived variant also archives the item.
+8. Items and variants are **archived**, never deleted. Archiving an item also archives all of its variants. An item's last non-archived variant cannot be archived on its own; to retire it, archive the item.
 9. An item may carry one image. Uploading a new one replaces it.
 
 #### Non-functional
@@ -543,16 +543,15 @@ Response is empty, whether the item was archived just now, was already archived,
 | **Scenarios** | **Requirements** |
 | --- | --- |
 | 1. User archives one of several non-archived variants | - That variant becomes archived and its SKU becomes free for reuse - The item and its other variants are unchanged |
-| 2. User archives the item's last non-archived variant | - The variant becomes archived, and the item is archived with it, exactly as in [step 6](#6-user-archives-an-item) |
-| 3. User archives a variant that is already archived, or does not exist | - Nothing happens, and it is reported as successful, the same as archiving an item |
-| 4. User names a variant that belongs to a different item from the one named | - Refused, naming the variant, and nothing changes |
-| 5. User wants an archived variant back | - Not possible. Archiving cannot be undone |
-| 6. A member with the ordinary user role tries to archive a variant | - Rejected |
+| 2. User archives the item's last non-archived variant | - Rejected as not allowed, and nothing changes - The item stays active; to retire it, archive the item as in [step 6](#6-user-archives-an-item) |
+| 3. User archives a variant that is already archived, does not exist, or belongs to a different item from the one named | - Nothing happens, and it is reported as successful, the same as archiving an item |
+| 4. User wants an archived variant back | - Not possible. Archiving cannot be undone |
+| 5. A member with the ordinary user role tries to archive a variant | - Rejected |
 
 #### Requirements
 
 1. Archiving a variant is one-way. The variant is kept, but it is no longer listed, counted, or priced anywhere in the catalogue.
-2. An item never keeps active status with no non-archived variants. Archiving its last one archives the item.
+2. An active item always keeps at least one non-archived variant. Archiving a variant never archives its item.
 
 #### Request / Response / Outcome
 
@@ -565,22 +564,21 @@ Response is empty, whether the item was archived just now, was already archived,
 
 **Response**
 
-Response is empty, whether the variant was archived just now, was already archived, or never existed.
+Response is empty, whether the variant was archived just now, was already archived, never existed, or belongs to a different item.
 
 **Outcome**
 
-- The variant becomes archived and its SKU becomes free for reuse.
-- An already-archived or missing variant is left exactly as it was.
-- If it was the item's last non-archived variant, the item becomes archived too: it leaves the catalogue and can no longer be opened, its name becomes free, and its image is kept.
+- The variant becomes archived and its SKU becomes free for reuse. The item and its other variants are unchanged.
+- An already-archived or missing variant, or one belonging to a different item, is left exactly as it was.
+- If it is the item's last non-archived variant, the request is refused and nothing changes: the variant and the item both stay as they were.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - The named variant belongs to a different item from the one named; the error names the variant |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
-| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
+| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes - The variant is the item's last non-archived one; archive the item instead |
 | 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
 
 ### Known gaps and open questions

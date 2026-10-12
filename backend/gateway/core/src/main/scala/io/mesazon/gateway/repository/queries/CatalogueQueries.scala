@@ -334,6 +334,62 @@ final class CatalogueQueries(
       q.update.run.void
     }
 
+  def lockCatalogueItemRow(
+      organizationID: OrganizationID,
+      catalogueItemID: CatalogueItemID,
+  ): TranzactIO[Boolean] =
+    tzio {
+      val q =
+        fr"SELECT catalogue_item_id FROM" ++ frCatalogueItemTable ++
+          whereAnd(
+            fr"organization_id = $organizationID",
+            fr"catalogue_item_id = $catalogueItemID",
+            fr0"status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")",
+          ) ++
+          fr"FOR NO KEY UPDATE"
+
+      q.query[CatalogueItemID].option.map(_.isDefined)
+    }
+
+  def getCatalogueItemVariantIDsEnabled(
+      organizationID: OrganizationID,
+      catalogueItemID: CatalogueItemID,
+  ): TranzactIO[List[CatalogueItemVariantID]] =
+    tzio {
+      val q =
+        fr"SELECT catalogue_item_variant_id FROM" ++ frCatalogueItemVariantTable ++
+          whereAnd(
+            fr"organization_id = $organizationID",
+            fr"catalogue_item_id = $catalogueItemID",
+            fr0"status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr0")",
+          )
+
+      q.query[CatalogueItemVariantID].to[List]
+    }
+
+  def archiveCatalogueItemVariantRow(
+      organizationID: OrganizationID,
+      catalogueItemID: CatalogueItemID,
+      catalogueItemVariantID: CatalogueItemVariantID,
+      updatedAt: UpdatedAt,
+  ): TranzactIO[Unit] =
+    tzio {
+      val q =
+        fr"UPDATE" ++ frCatalogueItemVariantTable ++
+          set(
+            fr0"status = ${CatalogueItemVariantStatus.Archived}::" ++ frCatalogueItemVariantStatusType,
+            fr"updated_at = $updatedAt",
+          ) ++
+          whereAnd(
+            fr"organization_id = $organizationID",
+            fr"catalogue_item_id = $catalogueItemID",
+            fr"catalogue_item_variant_id = $catalogueItemVariantID",
+            fr0"status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr0")",
+          )
+
+      q.update.run.void
+    }
+
   private val frCatalogueItemEnabledStatuses: Fragment =
     NonEmptyList
       .fromListUnsafe(CatalogueItemStatus.enabled)

@@ -326,8 +326,47 @@ object CatalogueRepositoryV2 {
         organizationID: OrganizationID,
         catalogueItemID: CatalogueItemID,
         catalogueItemVariantID: CatalogueItemVariantID,
-    ): IO[ServiceError, Unit] =
-      ZIO.die(new NotImplementedError("archiveCatalogueItemVariant"))
+    ): IO[ServiceError, Unit] = for {
+      instantNow <- timeProvider.instantNow
+      updatedAt = UpdatedAt(instantNow)
+      _ <- database.transactionOrWiden {
+        for {
+          isCatalogueItemRowLocked <- catalogueQueries.lockCatalogueItemRow(organizationID, catalogueItemID)
+          _                        <-
+            if (!isCatalogueItemRowLocked) ZIO.unit
+            else
+              for {
+                catalogueItemVariantIDsEnabled <- catalogueQueries.getCatalogueItemVariantIDsEnabled(
+                  organizationID,
+                  catalogueItemID,
+                )
+                _ <-
+                  if (!catalogueItemVariantIDsEnabled.contains(catalogueItemVariantID)) ZIO.unit
+                  else if (catalogueItemVariantIDsEnabled == List(catalogueItemVariantID))
+                    ZIO.fail(
+                      ServiceError.ForbiddenError.InvalidAction(
+                        "archiveCatalogueItemVariant",
+                        s"Catalogue item variant [$catalogueItemVariantID] is the last enabled variant of catalogue item [$catalogueItemID]; archive the catalogue item instead",
+                      )
+                    )
+                  else
+                    catalogueQueries.archiveCatalogueItemVariantRow(
+                      organizationID,
+                      catalogueItemID,
+                      catalogueItemVariantID,
+                      updatedAt,
+                    )
+              } yield ()
+        } yield ()
+      }.mapError {
+        case s: ServiceError => s
+        case throwable       =>
+          ServiceError.InternalServerError.RepositoryError(
+            s"Failed to archive catalogue item variant with ID: [$catalogueItemVariantID]",
+            throwable,
+          )
+      }
+    } yield ()
 
     override def getCatalogueItemWithVariantsActive(
         organizationID: OrganizationID,
