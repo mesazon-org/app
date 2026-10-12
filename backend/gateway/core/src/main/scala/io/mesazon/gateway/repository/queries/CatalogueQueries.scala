@@ -180,17 +180,129 @@ final class CatalogueQueries(
       catalogueItemVariantRows,
     )
 
-  private val frCatalogueItemDisabledStatuses: Fragment =
+  def updateCatalogueItemRowV2(
+      organizationID: OrganizationID,
+      catalogueItemID: CatalogueItemID,
+      updatedAt: UpdatedAt,
+      nameOptUpdate: Option[CatalogueItemName] = None,
+      descriptionOptUpdate: Option[Option[CatalogueItemDescription]] = None,
+      imageAssetOptUpdate: Option[CatalogueItemImageAsset] = None,
+  ): TranzactIO[Int] = {
+    val updates = NonEmptyList.of(
+      fr"updated_at = $updatedAt"
+    ) ++ List(
+      nameOptUpdate.map(v => fr"name = $v"),
+      descriptionOptUpdate.map(v => fr"description = $v"),
+      imageAssetOptUpdate.map(v => fr"image_original_s3_bucket_key = ${v.value.imageOriginalS3BucketKey}"),
+      imageAssetOptUpdate.map(v => fr"image_normalized_s3_bucket_key = ${v.value.imageNormalizedS3BucketKey}"),
+      imageAssetOptUpdate.map(v => fr"image_original_file_name = ${v.value.imageOriginalFileName}"),
+    ).flatten
+
+    tzio {
+      val q =
+        fr"UPDATE" ++ frCatalogueItemTable ++
+          set(updates) ++
+          whereAnd(
+            fr"organization_id = $organizationID",
+            fr"catalogue_item_id = $catalogueItemID",
+            fr0"status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")",
+          )
+
+      q.update.run
+    }
+  }
+
+  def getCatalogueItemVariantRowsByIDs(
+      organizationID: OrganizationID,
+      catalogueItemID: CatalogueItemID,
+      catalogueItemVariantIDs: NonEmptyList[CatalogueItemVariantID],
+  ): TranzactIO[List[CatalogueItemVariantRow]] =
+    tzio {
+      val q =
+        fr"SELECT" ++ frCatalogueItemVariantSelectFields ++
+          fr"FROM" ++ frCatalogueItemVariantTable ++
+          whereAnd(
+            fr"organization_id = $organizationID",
+            fr"catalogue_item_id = $catalogueItemID",
+            in(fr"catalogue_item_variant_id", catalogueItemVariantIDs),
+            fr0"status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr0")",
+          )
+
+      q.query[CatalogueItemVariantRow].to[List]
+    }
+
+  private val frCatalogueItemVariantUpdateValueColumns =
+    fr"""
+        |catalogue_item_variant_id,
+        |sku,
+        |label,
+        |description,
+        |attributes,
+        |price_amount,
+        |price_currency,
+        |selling_unit,
+        |status,
+        |updated_at
+         """.stripMargin
+
+  private def frCatalogueItemVariantUpdateValues(row: CatalogueItemVariantRow): Fragment =
+    fr0"(" ++ List(
+      fr0"${row.catalogueItemVariantID}::uuid",
+      fr0"${row.sku}::text",
+      fr0"${row.label}::text",
+      fr0"${row.description}::text",
+      fr0"${row.attributes}::jsonb",
+      fr0"${row.price.map(_.value.amount)}::numeric",
+      fr0"${row.price.map(_.value.currency)}::text",
+      fr0"${row.sellingUnit}::jsonb",
+      fr0"${row.status}::" ++ frCatalogueItemVariantStatusType,
+      fr0"${row.updatedAt}::timestamptz",
+    ).intercalate(fr",") ++ fr0")"
+
+  def updateCatalogueItemVariantRows(
+      organizationID: OrganizationID,
+      catalogueItemID: CatalogueItemID,
+      catalogueItemVariantRows: NonEmptyList[CatalogueItemVariantRow],
+  ): TranzactIO[Unit] =
+    tzio {
+      val frAllValues = catalogueItemVariantRows.map(frCatalogueItemVariantUpdateValues).intercalate(fr",")
+
+      val q =
+        fr"UPDATE" ++ frCatalogueItemVariantTable ++ fr"AS t" ++
+          fr"""
+                |SET
+                |sku = v.sku,
+                |label = v.label,
+                |description = v.description,
+                |attributes = v.attributes,
+                |price_amount = v.price_amount,
+                |price_currency = v.price_currency,
+                |selling_unit = v.selling_unit,
+                |status = v.status,
+                |updated_at = v.updated_at
+                 """.stripMargin ++
+          fr"FROM (VALUES" ++ frAllValues ++ fr") AS v (" ++ frCatalogueItemVariantUpdateValueColumns ++ fr")" ++
+          whereAnd(
+            fr"t.catalogue_item_variant_id = v.catalogue_item_variant_id",
+            fr"t.organization_id = $organizationID",
+            fr"t.catalogue_item_id = $catalogueItemID",
+            fr0"t.status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr0")",
+          )
+
+      q.update.run.void
+    }
+
+  private val frCatalogueItemEnabledStatuses: Fragment =
     NonEmptyList
-      .fromListUnsafe(CatalogueItemStatus.disabled)
-      .map(disabledStatus => fr0"${disabledStatus}::" ++ frCatalogueItemStatusType)
+      .fromListUnsafe(CatalogueItemStatus.enabled)
+      .map(enabledStatus => fr0"${enabledStatus}::" ++ frCatalogueItemStatusType)
       .toList
       .intercalate(fr",")
 
-  private val frCatalogueItemVariantDisabledStatuses: Fragment =
+  private val frCatalogueItemVariantEnabledStatuses: Fragment =
     NonEmptyList
-      .fromListUnsafe(CatalogueItemVariantStatus.disabled)
-      .map(disabledStatus => fr0"${disabledStatus}::" ++ frCatalogueItemVariantStatusType)
+      .fromListUnsafe(CatalogueItemVariantStatus.enabled)
+      .map(enabledStatus => fr0"${enabledStatus}::" ++ frCatalogueItemVariantStatusType)
       .toList
       .intercalate(fr",")
 
@@ -217,7 +329,7 @@ final class CatalogueQueries(
       frCatalogueItemTable,
       organizationID,
       fr"name = $name",
-      fr0"status NOT IN (" ++ frCatalogueItemDisabledStatuses ++ fr0")",
+      fr0"status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")",
     )
 
   def isUniqueCatalogueItemVariantSKU(
@@ -228,7 +340,7 @@ final class CatalogueQueries(
       frCatalogueItemVariantTable,
       organizationID,
       fr"sku = $sku",
-      fr0"status NOT IN (" ++ frCatalogueItemVariantDisabledStatuses ++ fr0")",
+      fr0"status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr0")",
     )
 
   // Testing

@@ -1,5 +1,6 @@
 package io.mesazon.gateway.repository
 
+import cats.data.NonEmptyList
 import io.github.gaelrenoux.tranzactio.DatabaseOps
 import io.mesazon.clock.TimeProvider
 import io.mesazon.domain.gateway.*
@@ -213,8 +214,87 @@ object CatalogueRepositoryV2 {
         imageAssetOptUpdate: Option[CatalogueItemImageAsset],
         updateCatalogueItemVariantInputs: List[UpdateCatalogueItemVariantInput],
         insertCatalogueItemVariantInputs: List[InsertCatalogueItemVariantInput],
-    ): IO[ServiceError, Unit] =
-      ZIO.die(new NotImplementedError("updateCatalogueItem"))
+    ): IO[ServiceError, Unit] = for {
+      instantNow <- timeProvider.instantNow
+      updatedAt = UpdatedAt(instantNow)
+      insertCatalogueItemVariantIDsWithInputs <- ZIO.foreach(insertCatalogueItemVariantInputs)(
+        insertCatalogueItemVariantInput =>
+          generateCatalogueItemVariantID.map(catalogueItemVariantID =>
+            (
+              catalogueItemVariantID = catalogueItemVariantID,
+              insertCatalogueItemVariantInput = insertCatalogueItemVariantInput,
+            )
+          )
+      )
+      _ <- database.transactionOrWiden {
+        for {
+          affectedItemRows <- catalogueQueries.updateCatalogueItemRowV2(
+            organizationID,
+            catalogueItemID,
+            updatedAt,
+            nameOptUpdate,
+            descriptionOptUpdate,
+            imageAssetOptUpdate,
+          )
+          _ <-
+            if (affectedItemRows == 0) ZIO.unit
+            else
+              for {
+                updateCatalogueItemVariantInputsOptNonEmpty = NonEmptyList.fromList(updateCatalogueItemVariantInputs)
+                catalogueItemVariantRowsOptEnabled <- ZIO.foreach(
+                  updateCatalogueItemVariantInputsOptNonEmpty
+                )(updateCatalogueItemVariantInputsNonEmpty =>
+                  catalogueQueries.getCatalogueItemVariantRowsByIDs(
+                    organizationID,
+                    catalogueItemID,
+                    updateCatalogueItemVariantInputsNonEmpty.map(_.catalogueItemVariantID),
+                  )
+                )
+                _ <- catalogueItemVariantRowsOptEnabled match {
+                  case None                                  => ZIO.unit
+                  case Some(catalogueItemVariantRowsEnabled) =>
+                    if (catalogueItemVariantRowsEnabled.size != updateCatalogueItemVariantInputs.size)
+                      ZIO.fail(
+                        ServiceError.InternalServerError.UnexpectedError(
+                          s"Failed to update catalogue item with ID: [$catalogueItemID]. Some catalogue item variant IDs do not exist, belong to another catalogue item, or are disabled. Requested: [${updateCatalogueItemVariantInputs.map(_.catalogueItemVariantID)}], Found: [${catalogueItemVariantRowsEnabled}]"
+                        )
+                      )
+                    else ZIO.unit
+                }
+                catalogueItemVariantRowsOptUpdated = mergeUpdateCatalogueItemVariantInputs(
+                  updateCatalogueItemVariantInputsOptNonEmpty,
+                  catalogueItemVariantRowsOptEnabled.getOrElse(Nil),
+                  updatedAt,
+                )
+                _ <- ZIO.foreach(catalogueItemVariantRowsOptUpdated)(catalogueItemVariantRowsUpdated =>
+                  catalogueQueries.updateCatalogueItemVariantRows(
+                    organizationID,
+                    catalogueItemID,
+                    catalogueItemVariantRowsUpdated,
+                  )
+                )
+                catalogueItemVariantRows = insertCatalogueItemVariantIDsWithInputs.map(
+                  catalogueItemVariantIDWithInput =>
+                    buildCatalogueItemVariantRow(
+                      organizationID,
+                      catalogueItemID,
+                      catalogueItemVariantIDWithInput.catalogueItemVariantID,
+                      catalogueItemVariantIDWithInput.insertCatalogueItemVariantInput,
+                      instantNow,
+                    )
+                )
+                _ <- catalogueQueries.insertCatalogueItemVariantRows(catalogueItemVariantRows)
+              } yield ()
+        } yield ()
+      }.mapError {
+        case s: ServiceError => s
+        case throwable       =>
+          catchUniqueConstraintViolation(
+            s"Failed to update catalogue item with ID: [$catalogueItemID]",
+            uniqueConstraintViolationMessage,
+          )(throwable)
+      }
+    } yield ()
 
     override def archiveCatalogueItem(
         organizationID: OrganizationID,
@@ -277,6 +357,35 @@ object CatalogueRepositoryV2 {
         "A catalogue item variant with the given SKU already exists in this organization"
       case "uq_catalogue_item_name" => "A catalogue item with the given name already exists in this organization"
     }
+
+    private def mergeUpdateCatalogueItemVariantInputs(
+        updateCatalogueItemVariantInputs: Option[NonEmptyList[UpdateCatalogueItemVariantInput]],
+        catalogueItemVariantRowsExisting: List[CatalogueItemVariantRow],
+        updatedAt: UpdatedAt,
+    ): Option[NonEmptyList[CatalogueItemVariantRow]] =
+      updateCatalogueItemVariantInputs
+        .flatMap(updateCatalogueItemVariantInputsNonEmpty =>
+          updateCatalogueItemVariantInputsNonEmpty.traverse { updateCatalogueItemVariantInput =>
+            val catalogueItemVariantRowOptExisting = catalogueItemVariantRowsExisting.find(
+              _.catalogueItemVariantID == updateCatalogueItemVariantInput.catalogueItemVariantID
+            )
+            catalogueItemVariantRowOptExisting.map { catalogueItemVariantRowExisting =>
+              catalogueItemVariantRowExisting.copy(
+                sku = updateCatalogueItemVariantInput.sku.getOrElse(catalogueItemVariantRowExisting.sku),
+                label = updateCatalogueItemVariantInput.label.getOrElse(catalogueItemVariantRowExisting.label),
+                description =
+                  updateCatalogueItemVariantInput.description.getOrElse(catalogueItemVariantRowExisting.description),
+                attributes =
+                  updateCatalogueItemVariantInput.attributes.getOrElse(catalogueItemVariantRowExisting.attributes),
+                price = updateCatalogueItemVariantInput.price.getOrElse(catalogueItemVariantRowExisting.price),
+                sellingUnit =
+                  updateCatalogueItemVariantInput.sellingUnit.getOrElse(catalogueItemVariantRowExisting.sellingUnit),
+                status = updateCatalogueItemVariantInput.status.getOrElse(catalogueItemVariantRowExisting.status),
+                updatedAt = updatedAt,
+              )
+            }
+          }
+        )
 
     private def generateCatalogueItemID: IO[ServiceError, CatalogueItemID] =
       idGenerator.generateID
