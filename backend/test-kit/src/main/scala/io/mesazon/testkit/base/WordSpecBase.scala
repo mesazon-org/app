@@ -28,6 +28,9 @@ open class WordSpecBase
   def arbitrarySample[T: Arbitrary as arb]: T =
     arb.arbitrary.sample.getOrElse(throw new NoSuchElementException("No sample available"))
 
+  def arbitrarySample[T](gen: Gen[T]): T =
+    gen.sample.getOrElse(throw new NoSuchElementException("No sample available"))
+
   def arbitrarySample[T: Arbitrary as arb](number: Int): NonEmptyChunk[T] =
     NonEmptyChunk
       .fromIterableOption(
