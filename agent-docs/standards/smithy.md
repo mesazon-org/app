@@ -18,6 +18,7 @@ General:
 - Generated types are always package-qualified; import package, never members.
 - When wire/domain types coexist: bare binding = domain; generated binding = full type name + `Smithy`. Applies to handler params, validated outputs, wrappers, tests, and arbitrary givens.
 - Members: `camelCase`; IDL UUID named `<entity>ID`; client duration integer named `<thing>ExpiresInSeconds`; enum values use `UpperCamelCase` and exactly match their mirrored domain enum cases. Follow [Chimney's enum rules](chimney.md#enums) when converting them.
+- Member qualifiers: add a role qualifier only when the same shape holds more than one member it could otherwise be confused with. Put it as a suffix after the base noun, never as a verb prefix. `CatalogueItemPostRequest.variants` stays plain because a create carries only one kind of variant list. `CatalogueItemPutRequest` carries two, changes to existing variants and brand-new ones, so they are `variantsUpdate` and `variantsInsert`. Never qualify by reflex.
 
 Operations (suffix always equals the actual HTTP method):
 
@@ -26,13 +27,13 @@ Operations (suffix always equals the actual HTTP method):
 
 Shapes:
 
-- Operation shapes: `<Operation>Request|Response` in the feature domain file, so they follow the operation's style: `CatalogueItemPostRequest` (resource-oriented), `InsertCustomerIndividualPostRequest` (legacy).
+- Operation shapes: only the front-facing input/output shapes bind to the operation, named `<Operation>Request|Response` in the feature domain file, so they follow the operation's style: `CatalogueItemPostRequest`, `CatalogueItemSummaryGetResponse` (resource-oriented), `InsertCustomerIndividualPostRequest` (legacy).
+- Nested shapes (resource-oriented): a plain domain name with no operation name or HTTP method in it. The full view of an entity is the entity name alone (`CatalogueItemVariant`). Any other view takes a role suffix after the entity, never a prefix: `CatalogueItemVariantInsert`, `CatalogueItemVariantUpdate`, `CatalogueItemVariantSummary`, `CatalogueItemSummary`. A list is the plural, with no `List` suffix. When the role is a noun, the role is pluralised (`CatalogueItemVariantSummaries`, `CatalogueItemSummaries`); when it is `Insert`/`Update`, the entity is (`CatalogueItemVariantsInsert`, `CatalogueItemsInsert`). Legacy contracts keep their verb-first nested names (`InsertCustomerBusinessContact`, `InsertCustomerIndividuals`) until reworked.
 - Each operation owns its shapes; never share a common entity shape across operations. Two exceptions, both limited to create input and only when the reused shape means exactly the same input (same members, same required/optional/default traits, same validation and stored defaults):
-  - A batch create lists its single-create sibling's request shape as its entry (`list InsertCatalogueItems { member: CatalogueItemPostRequest }`).
-  - An update's list of new children reuses the create operation's child entry list (`CatalogueItemPutRequest.insertVariants: InsertCatalogueItemVariants`).
+  - A batch create lists its single-create sibling's request shape as its entry (`list CatalogueItemsInsert { member: CatalogueItemPostRequest }`).
+  - An update's list of new children reuses the create operation's child entry list (`CatalogueItemPutRequest.variantsInsert: CatalogueItemVariantsInsert`).
 
-  As soon as either side needs a member or trait the other does not have, split the shapes. Never share update, response, or read shapes, or shapes that only look alike.
-- Nested entity entry: `{Action}{Entity}` in both styles (`InsertCatalogueItemVariant`, `UpdateCatalogueItemVariant`, `GetCatalogueItem`); its list is the plural entry name, no `List` suffix (`InsertCatalogueItemVariants`, `GetCatalogueItems`).
+  Generic nested names are what make these reuses read correctly at every use site. As soon as either side needs a member or trait the other does not have, split the shapes. Never share update, response, or read shapes, or shapes that only look alike.
 - Contact/value+flag entry: `<Owner><Kind>EntryRequest`; list plural `...EntryRequests`; domain entry has same name.
 - Owner-less value shapes shared by several features live in `domain/Gateway.smithy` and mirror their shared domain case class (`PhoneNumberRequest` ↔ `PhoneNumber`, `AddressRequest` ↔ `Address`, `AddressEntryRequest` ↔ `AddressEntry`); each feature declares only its owner-named list, e.g. `list OrganizationAddressEntryRequests { member: AddressEntryRequest }`.
 - Request list member: `@default([])`, never `@required`, so omitted empty JSON decodes to non-optional `Nil`. Response list: `@required`. Never model request list as `Option[List]` solely to default it empty.

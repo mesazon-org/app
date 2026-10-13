@@ -51,39 +51,39 @@ enum CatalogueItemVariantUnitPerUnit {
     Piece
 }
 
-structure CatalogueItemVariantPriceRequest {
+structure CatalogueItemVariantPrice {
     @required
     amount: BigDecimal
     @required
     currency: String
 }
 
-structure CatalogueItemVariantQuantityRequest {
+structure CatalogueItemVariantQuantity {
     @required
     value: BigDecimal
     @required
     unit: CatalogueItemVariantUnit
 }
 
-structure CatalogueItemVariantPerUnitRequest {
+structure CatalogueItemVariantPerUnit {
     @required
     value: BigDecimal
     @required
     unit: CatalogueItemVariantUnitPerUnit
 }
 
-structure CatalogueItemVariantUnitSizeRequest {
+structure CatalogueItemVariantUnitSize {
     @required
     value: BigDecimal
     @required
     unit: CatalogueItemVariantUnitUnitSize
 }
 
-structure CatalogueItemVariantSaleUnitRequest {
+structure CatalogueItemVariantSaleUnit {
     @required
-    quantity: CatalogueItemVariantQuantityRequest
-    perUnit: CatalogueItemVariantPerUnitRequest
-    unitSize: CatalogueItemVariantUnitSizeRequest
+    quantity: CatalogueItemVariantQuantity
+    perUnit: CatalogueItemVariantPerUnit
+    unitSize: CatalogueItemVariantUnitSize
 }
 
 map CatalogueItemVariantAttributes {
@@ -91,19 +91,94 @@ map CatalogueItemVariantAttributes {
     value: String
 }
 
-structure InsertCatalogueItemVariant {
+list CatalogueItemIDs {
+    member: UUID
+}
+
+structure CatalogueItemVariantInsert {
     sku: String
     label: String
     description: String
     @default({})
     attributes: CatalogueItemVariantAttributes
-    price: CatalogueItemVariantPriceRequest
+    price: CatalogueItemVariantPrice
     @required
-    sellingUnit: CatalogueItemVariantSaleUnitRequest
+    sellingUnit: CatalogueItemVariantSaleUnit
 }
 
-list InsertCatalogueItemVariants {
-    member: InsertCatalogueItemVariant
+list CatalogueItemVariantsInsert {
+    member: CatalogueItemVariantInsert
+}
+
+structure CatalogueItemVariantUpdate {
+    @required
+    catalogueItemVariantID: UUID
+    @nullable
+    sku: String
+    @nullable
+    label: String
+    @nullable
+    description: String
+    attributes: CatalogueItemVariantAttributes
+    @nullable
+    price: CatalogueItemVariantPrice
+    sellingUnit: CatalogueItemVariantSaleUnit
+    status: CatalogueItemVariantStatus
+}
+
+list CatalogueItemVariantsUpdate {
+    member: CatalogueItemVariantUpdate
+}
+
+structure CatalogueItemVariant {
+    @required
+    catalogueItemVariantID: UUID
+    sku: String
+    label: String
+    description: String
+    @required
+    attributes: CatalogueItemVariantAttributes
+    price: CatalogueItemVariantPrice
+    @required
+    sellingUnit: CatalogueItemVariantSaleUnit
+    @required
+    status: CatalogueItemVariantStatus
+}
+
+list CatalogueItemVariants {
+    member: CatalogueItemVariant
+}
+
+structure CatalogueItemVariantSummary {
+    @required
+    catalogueItemVariantID: UUID
+    sku: String
+    label: String
+    price: CatalogueItemVariantPrice
+    @required
+    sellingUnit: CatalogueItemVariantSaleUnit
+    @required
+    status: CatalogueItemVariantStatus
+}
+
+list CatalogueItemVariantSummaries {
+    member: CatalogueItemVariantSummary
+}
+
+structure CatalogueItemSummary {
+    @required
+    catalogueItemID: UUID
+    @required
+    name: String
+    @required
+    status: CatalogueItemStatus
+    imageNormalizedUrl: String
+    @required
+    variants: CatalogueItemVariantSummaries
+}
+
+list CatalogueItemSummaries {
+    member: CatalogueItemSummary
 }
 
 structure CatalogueItemPostRequest {
@@ -111,20 +186,11 @@ structure CatalogueItemPostRequest {
     name: String
     description: String
     @default([])
-    variants: InsertCatalogueItemVariants
+    variants: CatalogueItemVariantsInsert
 }
 
-list InsertCatalogueItems {
+list CatalogueItemsInsert {
     member: CatalogueItemPostRequest
-}
-
-structure CatalogueItemBatchPostRequest {
-    @default([])
-    catalogueItems: InsertCatalogueItems
-}
-
-list CatalogueItemIDs {
-    member: UUID
 }
 
 structure CatalogueItemPostResponse {
@@ -132,29 +198,14 @@ structure CatalogueItemPostResponse {
     catalogueItemID: UUID
 }
 
+structure CatalogueItemBatchPostRequest {
+    @default([])
+    catalogueItems: CatalogueItemsInsert
+}
+
 structure CatalogueItemBatchPostResponse {
     @required
     catalogueItemIDs: CatalogueItemIDs
-}
-
-structure UpdateCatalogueItemVariant {
-    @required
-    catalogueItemVariantID: UUID
-    @nullable
-    sku: String
-    @nullable
-    label: String
-    @nullable
-    description: String
-    attributes: CatalogueItemVariantAttributes
-    @nullable
-    price: CatalogueItemVariantPriceRequest
-    sellingUnit: CatalogueItemVariantSaleUnitRequest
-    status: CatalogueItemVariantStatus
-}
-
-list UpdateCatalogueItemVariants {
-    member: UpdateCatalogueItemVariant
 }
 
 structure CatalogueItemPutRequest {
@@ -162,28 +213,9 @@ structure CatalogueItemPutRequest {
     @nullable
     description: String
     @default([])
-    updateVariants: UpdateCatalogueItemVariants
+    variantsUpdate: CatalogueItemVariantsUpdate
     @default([])
-    insertVariants: InsertCatalogueItemVariants
-}
-
-structure GetCatalogueItemVariant {
-    @required
-    catalogueItemVariantID: UUID
-    sku: String
-    label: String
-    description: String
-    @required
-    attributes: CatalogueItemVariantAttributes
-    price: CatalogueItemVariantPriceRequest
-    @required
-    sellingUnit: CatalogueItemVariantSaleUnitRequest
-    @required
-    status: CatalogueItemVariantStatus
-}
-
-list GetCatalogueItemVariants {
-    member: GetCatalogueItemVariant
+    variantsInsert: CatalogueItemVariantsInsert
 }
 
 structure CatalogueItemGetResponse {
@@ -196,44 +228,12 @@ structure CatalogueItemGetResponse {
     status: CatalogueItemStatus
     imageNormalizedUrl: String
     @required
-    variants: GetCatalogueItemVariants
-}
-
-structure GetCatalogueItemVariantSummary {
-    @required
-    catalogueItemVariantID: UUID
-    sku: String
-    label: String
-    price: CatalogueItemVariantPriceRequest
-    @required
-    sellingUnit: CatalogueItemVariantSaleUnitRequest
-    @required
-    status: CatalogueItemVariantStatus
-}
-
-list GetCatalogueItemVariantSummaries {
-    member: GetCatalogueItemVariantSummary
-}
-
-structure GetCatalogueItem {
-    @required
-    catalogueItemID: UUID
-    @required
-    name: String
-    @required
-    status: CatalogueItemStatus
-    imageNormalizedUrl: String
-    @required
-    variants: GetCatalogueItemVariantSummaries
-}
-
-list GetCatalogueItems {
-    member: GetCatalogueItem
+    variants: CatalogueItemVariants
 }
 
 structure CatalogueItemSummaryGetResponse {
     @required
-    catalogueItems: GetCatalogueItems
+    catalogueItemSummaries: CatalogueItemSummaries
 }
 
 structure CatalogueItemUniquenessGetResponse {
