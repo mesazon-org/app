@@ -56,7 +56,7 @@ trait CatalogueRepositoryV2 {
       organizationID: OrganizationID
   ): IO[ServiceError, List[CatalogueItemSummaryRowV2]]
 
-  def getCatalogueItemSummariesActive(
+  def getCatalogueItemSummariesEnabled(
       organizationID: OrganizationID,
       catalogueItemIDs: NonEmptyChunk[CatalogueItemID],
   ): IO[ServiceError, List[CatalogueItemSummaryRowV2]]
@@ -393,11 +393,20 @@ object CatalogueRepositoryV2 {
           )
         )
 
-    override def getCatalogueItemSummariesActive(
+    override def getCatalogueItemSummariesEnabled(
         organizationID: OrganizationID,
         catalogueItemIDs: NonEmptyChunk[CatalogueItemID],
     ): IO[ServiceError, List[CatalogueItemSummaryRowV2]] =
-      ZIO.die(new NotImplementedError("getCatalogueItemSummariesActive"))
+      database
+        .transactionOrWiden(
+          catalogueQueries.getCatalogueItemSummaryRowsV2EnabledByIDs(organizationID, catalogueItemIDs)
+        )
+        .mapError(e =>
+          ServiceError.InternalServerError.RepositoryError(
+            s"Failed to get catalogue item summaries for organization ID: [$organizationID], catalogue item IDs: [${catalogueItemIDs.mkString(", ")}]",
+            e,
+          )
+        )
 
     override def isUniqueCatalogueItemName(
         organizationID: OrganizationID,

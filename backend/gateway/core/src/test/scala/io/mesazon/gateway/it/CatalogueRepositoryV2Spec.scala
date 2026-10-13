@@ -2543,6 +2543,398 @@ class CatalogueRepositoryV2Spec extends ZWordSpecBase, CatalogueRepositoryV2Arbi
       }
     }
 
+    "getCatalogueItemSummariesEnabled" should {
+      "return the requested enabled catalogue items oldest created first regardless of request order, each with only its enabled variants oldest created first, excluding disabled variants and catalogue items not requested" in new TestContext {
+        val organizationID    = arbitrarySample[OrganizationID]
+        val catalogueItemRow1 = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          createdAt = CreatedAt(instantNow.minusSeconds(2)),
+        )
+        val catalogueItemRow2 = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          createdAt = CreatedAt(instantNow.minusSeconds(1)),
+        )
+        val catalogueItemRowNotRequested = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+        )
+        val catalogueItemVariantRowEnabled1a = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow1.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          createdAt = CreatedAt(instantNow.minusSeconds(2)),
+        )
+        val catalogueItemVariantRowEnabled1b = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow1.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          createdAt = CreatedAt(instantNow.minusSeconds(1)),
+        )
+        val catalogueItemVariantRowDisabled1 = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow1.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+        )
+        val catalogueItemVariantRowEnabled2a = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow2.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          createdAt = CreatedAt(instantNow.minusSeconds(2)),
+        )
+        val catalogueItemVariantRowEnabled2b = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow2.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          createdAt = CreatedAt(instantNow.minusSeconds(1)),
+        )
+        val catalogueItemVariantRowDisabled2 = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow2.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+        )
+        val catalogueItemVariantRowOfItemNotRequested = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRowNotRequested.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+        )
+
+        val catalogueItemSummaryRowV2Expected1 = CatalogueItemSummaryRowV2(
+          catalogueItemID = catalogueItemRow1.catalogueItemID,
+          name = catalogueItemRow1.name,
+          imageAsset = catalogueItemRow1.imageAsset,
+          status = catalogueItemRow1.status,
+          catalogueItemVariantSummaryRows = NonEmptyChunk(
+            CatalogueItemVariantSummaryRow(
+              catalogueItemVariantID = catalogueItemVariantRowEnabled1a.catalogueItemVariantID,
+              sku = catalogueItemVariantRowEnabled1a.sku,
+              label = catalogueItemVariantRowEnabled1a.label,
+              price = catalogueItemVariantRowEnabled1a.price,
+              sellingUnit = catalogueItemVariantRowEnabled1a.sellingUnit,
+              status = catalogueItemVariantRowEnabled1a.status,
+            ),
+            CatalogueItemVariantSummaryRow(
+              catalogueItemVariantID = catalogueItemVariantRowEnabled1b.catalogueItemVariantID,
+              sku = catalogueItemVariantRowEnabled1b.sku,
+              label = catalogueItemVariantRowEnabled1b.label,
+              price = catalogueItemVariantRowEnabled1b.price,
+              sellingUnit = catalogueItemVariantRowEnabled1b.sellingUnit,
+              status = catalogueItemVariantRowEnabled1b.status,
+            ),
+          ),
+        )
+        val catalogueItemSummaryRowV2Expected2 = CatalogueItemSummaryRowV2(
+          catalogueItemID = catalogueItemRow2.catalogueItemID,
+          name = catalogueItemRow2.name,
+          imageAsset = catalogueItemRow2.imageAsset,
+          status = catalogueItemRow2.status,
+          catalogueItemVariantSummaryRows = NonEmptyChunk(
+            CatalogueItemVariantSummaryRow(
+              catalogueItemVariantID = catalogueItemVariantRowEnabled2a.catalogueItemVariantID,
+              sku = catalogueItemVariantRowEnabled2a.sku,
+              label = catalogueItemVariantRowEnabled2a.label,
+              price = catalogueItemVariantRowEnabled2a.price,
+              sellingUnit = catalogueItemVariantRowEnabled2a.sellingUnit,
+              status = catalogueItemVariantRowEnabled2a.status,
+            ),
+            CatalogueItemVariantSummaryRow(
+              catalogueItemVariantID = catalogueItemVariantRowEnabled2b.catalogueItemVariantID,
+              sku = catalogueItemVariantRowEnabled2b.sku,
+              label = catalogueItemVariantRowEnabled2b.label,
+              price = catalogueItemVariantRowEnabled2b.price,
+              sellingUnit = catalogueItemVariantRowEnabled2b.sellingUnit,
+              status = catalogueItemVariantRowEnabled2b.status,
+            ),
+          ),
+        )
+
+        catalogueItemSummaryRowV2Expected1.name shouldNot equal(catalogueItemSummaryRowV2Expected2.name)
+        Set(
+          catalogueItemRow1.catalogueItemID,
+          catalogueItemRow2.catalogueItemID,
+          catalogueItemRowNotRequested.catalogueItemID,
+        ).size shouldBe 3
+        Set(
+          catalogueItemVariantRowEnabled1a.catalogueItemVariantID,
+          catalogueItemVariantRowEnabled1b.catalogueItemVariantID,
+          catalogueItemVariantRowDisabled1.catalogueItemVariantID,
+          catalogueItemVariantRowEnabled2a.catalogueItemVariantID,
+          catalogueItemVariantRowEnabled2b.catalogueItemVariantID,
+          catalogueItemVariantRowDisabled2.catalogueItemVariantID,
+          catalogueItemVariantRowOfItemNotRequested.catalogueItemVariantID,
+        ).size shouldBe 7
+
+        postgresClient
+          .executeQuery(
+            catalogueQueries.insertCatalogueItemRowsV2(
+              List(catalogueItemRow2, catalogueItemRowNotRequested, catalogueItemRow1)
+            )
+          )
+          .zioValue
+        postgresClient
+          .executeQuery(
+            catalogueQueries.insertCatalogueItemVariantRows(
+              List(
+                catalogueItemVariantRowEnabled2b,
+                catalogueItemVariantRowEnabled1b,
+                catalogueItemVariantRowDisabled1,
+                catalogueItemVariantRowOfItemNotRequested,
+                catalogueItemVariantRowEnabled2a,
+                catalogueItemVariantRowDisabled2,
+                catalogueItemVariantRowEnabled1a,
+              )
+            )
+          )
+          .zioValue
+
+        catalogueRepository
+          .getCatalogueItemSummariesEnabled(
+            organizationID,
+            NonEmptyChunk(catalogueItemRow2.catalogueItemID, catalogueItemRow1.catalogueItemID),
+          )
+          .zioValue shouldBe List(catalogueItemSummaryRowV2Expected1, catalogueItemSummaryRowV2Expected2)
+      }
+
+      "exclude a requested catalogue item that is disabled, even though it has enabled variants" in new TestContext {
+        val organizationID   = arbitrarySample[OrganizationID]
+        val catalogueItemRow = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+        )
+        val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.disabled)),
+        )
+        val catalogueItemVariantRowEnabled = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+        )
+        val catalogueItemVariantRowOfItemDisabled = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRowDisabled.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+        )
+
+        val catalogueItemSummaryRowV2Expected = CatalogueItemSummaryRowV2(
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          name = catalogueItemRow.name,
+          imageAsset = catalogueItemRow.imageAsset,
+          status = catalogueItemRow.status,
+          catalogueItemVariantSummaryRows = NonEmptyChunk(
+            CatalogueItemVariantSummaryRow(
+              catalogueItemVariantID = catalogueItemVariantRowEnabled.catalogueItemVariantID,
+              sku = catalogueItemVariantRowEnabled.sku,
+              label = catalogueItemVariantRowEnabled.label,
+              price = catalogueItemVariantRowEnabled.price,
+              sellingUnit = catalogueItemVariantRowEnabled.sellingUnit,
+              status = catalogueItemVariantRowEnabled.status,
+            )
+          ),
+        )
+
+        catalogueItemRow.catalogueItemID shouldNot equal(catalogueItemRowDisabled.catalogueItemID)
+        catalogueItemRow.name shouldNot equal(catalogueItemRowDisabled.name)
+        catalogueItemVariantRowEnabled.catalogueItemVariantID shouldNot equal(
+          catalogueItemVariantRowOfItemDisabled.catalogueItemVariantID
+        )
+
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemRowsV2(List(catalogueItemRow, catalogueItemRowDisabled)))
+          .zioValue
+        postgresClient
+          .executeQuery(
+            catalogueQueries.insertCatalogueItemVariantRows(
+              List(catalogueItemVariantRowEnabled, catalogueItemVariantRowOfItemDisabled)
+            )
+          )
+          .zioValue
+
+        catalogueRepository
+          .getCatalogueItemSummariesEnabled(
+            organizationID,
+            NonEmptyChunk(catalogueItemRow.catalogueItemID, catalogueItemRowDisabled.catalogueItemID),
+          )
+          .zioValue shouldBe List(catalogueItemSummaryRowV2Expected)
+      }
+
+      "exclude a requested catalogue item ID that does not exist or belongs to another organization" in new TestContext {
+        val organizationID         = arbitrarySample[OrganizationID]
+        val organizationIDForeign  = arbitrarySample[OrganizationID]
+        val catalogueItemIDMissing = arbitrarySample[CatalogueItemID]
+        val catalogueItemRow       = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+        )
+        val catalogueItemRowForeign = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationIDForeign,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+        )
+        val catalogueItemVariantRowEnabled = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+        )
+        val catalogueItemVariantRowForeign = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationIDForeign,
+          catalogueItemID = catalogueItemRowForeign.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+        )
+
+        val catalogueItemSummaryRowV2Expected = CatalogueItemSummaryRowV2(
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          name = catalogueItemRow.name,
+          imageAsset = catalogueItemRow.imageAsset,
+          status = catalogueItemRow.status,
+          catalogueItemVariantSummaryRows = NonEmptyChunk(
+            CatalogueItemVariantSummaryRow(
+              catalogueItemVariantID = catalogueItemVariantRowEnabled.catalogueItemVariantID,
+              sku = catalogueItemVariantRowEnabled.sku,
+              label = catalogueItemVariantRowEnabled.label,
+              price = catalogueItemVariantRowEnabled.price,
+              sellingUnit = catalogueItemVariantRowEnabled.sellingUnit,
+              status = catalogueItemVariantRowEnabled.status,
+            )
+          ),
+        )
+
+        organizationID shouldNot equal(organizationIDForeign)
+        Set(
+          catalogueItemRow.catalogueItemID,
+          catalogueItemRowForeign.catalogueItemID,
+          catalogueItemIDMissing,
+        ).size shouldBe 3
+        catalogueItemVariantRowEnabled.catalogueItemVariantID shouldNot equal(
+          catalogueItemVariantRowForeign.catalogueItemVariantID
+        )
+
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemRowsV2(List(catalogueItemRow, catalogueItemRowForeign)))
+          .zioValue
+        postgresClient
+          .executeQuery(
+            catalogueQueries.insertCatalogueItemVariantRows(
+              List(catalogueItemVariantRowEnabled, catalogueItemVariantRowForeign)
+            )
+          )
+          .zioValue
+
+        catalogueRepository
+          .getCatalogueItemSummariesEnabled(
+            organizationID,
+            NonEmptyChunk(
+              catalogueItemRow.catalogueItemID,
+              catalogueItemIDMissing,
+              catalogueItemRowForeign.catalogueItemID,
+            ),
+          )
+          .zioValue shouldBe List(catalogueItemSummaryRowV2Expected)
+      }
+
+      "exclude a requested enabled catalogue item whose variants are all disabled" in new TestContext {
+        val organizationID   = arbitrarySample[OrganizationID]
+        val catalogueItemRow = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+        )
+        val catalogueItemRowWithVariantsDisabled = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+        )
+        val catalogueItemVariantRowEnabled = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+        )
+        val catalogueItemVariantRowDisabled1 = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRowWithVariantsDisabled.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+        )
+        val catalogueItemVariantRowDisabled2 = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRowWithVariantsDisabled.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+        )
+
+        val catalogueItemSummaryRowV2Expected = CatalogueItemSummaryRowV2(
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          name = catalogueItemRow.name,
+          imageAsset = catalogueItemRow.imageAsset,
+          status = catalogueItemRow.status,
+          catalogueItemVariantSummaryRows = NonEmptyChunk(
+            CatalogueItemVariantSummaryRow(
+              catalogueItemVariantID = catalogueItemVariantRowEnabled.catalogueItemVariantID,
+              sku = catalogueItemVariantRowEnabled.sku,
+              label = catalogueItemVariantRowEnabled.label,
+              price = catalogueItemVariantRowEnabled.price,
+              sellingUnit = catalogueItemVariantRowEnabled.sellingUnit,
+              status = catalogueItemVariantRowEnabled.status,
+            )
+          ),
+        )
+
+        catalogueItemRow.catalogueItemID shouldNot equal(catalogueItemRowWithVariantsDisabled.catalogueItemID)
+        catalogueItemRow.name shouldNot equal(catalogueItemRowWithVariantsDisabled.name)
+        Set(
+          catalogueItemVariantRowEnabled.catalogueItemVariantID,
+          catalogueItemVariantRowDisabled1.catalogueItemVariantID,
+          catalogueItemVariantRowDisabled2.catalogueItemVariantID,
+        ).size shouldBe 3
+
+        postgresClient
+          .executeQuery(
+            catalogueQueries.insertCatalogueItemRowsV2(List(catalogueItemRow, catalogueItemRowWithVariantsDisabled))
+          )
+          .zioValue
+        postgresClient
+          .executeQuery(
+            catalogueQueries.insertCatalogueItemVariantRows(
+              List(catalogueItemVariantRowEnabled, catalogueItemVariantRowDisabled1, catalogueItemVariantRowDisabled2)
+            )
+          )
+          .zioValue
+
+        catalogueRepository
+          .getCatalogueItemSummariesEnabled(
+            organizationID,
+            NonEmptyChunk(catalogueItemRow.catalogueItemID, catalogueItemRowWithVariantsDisabled.catalogueItemID),
+          )
+          .zioValue shouldBe List(catalogueItemSummaryRowV2Expected)
+      }
+
+      "return an empty list when none of the requested catalogue item IDs match an enabled catalogue item" in new TestContext {
+        val organizationID           = arbitrarySample[OrganizationID]
+        val catalogueItemIDMissing   = arbitrarySample[CatalogueItemID]
+        val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.disabled)),
+        )
+        val catalogueItemVariantRowOfItemDisabled = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRowDisabled.catalogueItemID,
+          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+        )
+
+        catalogueItemIDMissing shouldNot equal(catalogueItemRowDisabled.catalogueItemID)
+
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemRowsV2(List(catalogueItemRowDisabled)))
+          .zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowOfItemDisabled)))
+          .zioValue
+
+        catalogueRepository
+          .getCatalogueItemSummariesEnabled(
+            organizationID,
+            NonEmptyChunk(catalogueItemRowDisabled.catalogueItemID, catalogueItemIDMissing),
+          )
+          .zioValue shouldBe Nil
+      }
+    }
+
     "isUniqueCatalogueItemName" should {
       "return false if an active catalogue item with the given name already exists in the organization" in new TestContext {
         val organizationID    = arbitrarySample[OrganizationID]

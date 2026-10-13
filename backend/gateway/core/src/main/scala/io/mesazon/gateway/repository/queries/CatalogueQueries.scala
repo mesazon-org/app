@@ -475,6 +475,21 @@ final class CatalogueQueries(
   def getAllCatalogueItemSummaryRowsV2Enabled(
       organizationID: OrganizationID
   ): TranzactIO[List[CatalogueItemSummaryRowV2]] =
+    getCatalogueItemSummaryRowsV2EnabledWhere(organizationID, Nil)
+
+  def getCatalogueItemSummaryRowsV2EnabledByIDs(
+      organizationID: OrganizationID,
+      catalogueItemIDs: NonEmptyChunk[CatalogueItemID],
+  ): TranzactIO[List[CatalogueItemSummaryRowV2]] =
+    getCatalogueItemSummaryRowsV2EnabledWhere(
+      organizationID,
+      List(in(fr"i.catalogue_item_id", NonEmptyList(catalogueItemIDs.head, catalogueItemIDs.tail.toList))),
+    )
+
+  private def getCatalogueItemSummaryRowsV2EnabledWhere(
+      organizationID: OrganizationID,
+      frCatalogueItemConditions: List[Fragment],
+  ): TranzactIO[List[CatalogueItemSummaryRowV2]] =
     tzio {
       val q =
         fr"SELECT" ++ frCatalogueItemSummaryWithVariantSummaryJoinedSelectFields ++
@@ -485,7 +500,7 @@ final class CatalogueQueries(
           fr0"AND v.status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr")" ++
           whereAnd(
             fr"i.organization_id = $organizationID",
-            fr0"i.status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")",
+            (fr0"i.status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")") :: frCatalogueItemConditions*
           ) ++
           fr"ORDER BY i.created_at ASC, i.catalogue_item_id ASC, v.created_at ASC, v.catalogue_item_variant_id ASC"
 
