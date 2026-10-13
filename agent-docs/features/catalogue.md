@@ -125,7 +125,7 @@ Agreed design for the [Catalogue epic](../../pages/epics/06-catalogue.md). Not b
 |---|---|---|
 | Docs (K1) | This section | — |
 | Domain (K2–K3) | — | Enums, value types, newtypes |
-| Endpoints (K4) | — | Smithy swap, seventh operation, forced compile stubs |
+| Endpoints (K4) | Staging contract `CatalogueServiceV2` (eight operations), unwired | Cutover: replace V1 contract, wire service |
 | Failing tests (K5–K7) | — | Validator, service, repository |
 | Implementation | — | Validation, schema, repository, service, acceptance |
 
@@ -149,12 +149,12 @@ Edited in place in `V2025.05.27__init.sql`; no new migration, no data migration.
 
 ### Domain
 
-- Enums, one file each: `Currency` (`EUR`, `USD`, `GBP`), `MeasurementUnit` (`Gram`, `Kilogram`, `Millilitre`, `Litre`, `Millimetre`, `Centimetre`, `Metre`, `SquareMetre`), `PackageType` (`Pack`, `Box`, `Bag`, `Bottle`, `Can`, `Jar`, `Crate`, `Carton`, `Roll`, `Other`), `CatalogueItemVariantStatus` (`Active`, `Inactive`, `OutOfStock`, `Archived`). `CatalogueItemStatus` stays `Active`/`Archived`.
-- `Price(amount: PriceAmount, currency: Currency)`; `PriceCurrency` is removed. Owner wrapper `CatalogueItemVariantPrice` (`Pure[Price]`) replaces `CatalogueItemPrice`.
-- `Measurement(value: MeasurementValue, unit: MeasurementUnit)`; `SaleQuantity` Scala enum: `Counted(count: SaleQuantityCount, eachMeasurement: Option[Measurement])`, `FixedMeasurement(measurement)`, `VariableMeasurement(unit)`; `SellingUnit(quantity: SaleQuantity, packageType: Option[PackageType])`.
-- Newtypes (Catalogue group): `CatalogueItemDescription`, `CatalogueItemVariantID`, `CatalogueItemVariantSku`, `CatalogueItemVariantLabel`, `CatalogueItemVariantDescription`, `CatalogueItemVariantOptionName`, `CatalogueItemVariantOptionValue` (text ones `NonEmptyTrimmed`), `SaleQuantityCount` (`Long`), `MeasurementValue` (`BigDecimal`). `CatalogueItemUnit` is removed.
-- Options: `Map[CatalogueItemVariantOptionName, CatalogueItemVariantOptionValue]`. Duplicate JSON keys are resolved last-wins by the decoder, so names are unique by type; duplicates in the raw body are not rejected.
-- Update: `UpdateCatalogueItemPutRequest.variants: List[UpdateCatalogueItemVariant]`, a Scala enum `Change(catalogueItemVariantID, ...Opt fields)` / `Add(price, sellingUnit, status, ...)`. Clearable fields (item description; variant SKU, label, description) are `Option[Option[X]]`: outer `None` keeps, `Some(None)` clears.
+- Enums: `CatalogueItemVariantStatus` (`Active`, `Inactive`, `OutOfStock`, `Archived`); `CatalogueItemStatus` stays `Active`/`Archived`. `CatalogueItemVariantUnit` is a sealed trait over three enums: `UnitSize` (`Gram`, `Kilogram`, `Millilitre`, `Litre`, `Millimetre`, `Centimetre`, `Metre`, `SquareMetre`), `PackageUnit` (`Pack`, `Box`), `PerUnit` (`Bag`, `Bottle`, `Can`, `Jar`, `Piece`).
+- Price: the existing `Price(amount: PriceAmount, currency: PriceCurrency)` is reused unchanged (`PriceCurrency` is a free-text `NonEmptyTrimmed` code, as for the V1 item price). Owner wrapper `CatalogueItemVariantPrice` (`Pure[Price]`), optional on a variant.
+- Selling unit (required on every variant): `CatalogueItemVariantSaleUnit(quantity: CatalogueItemVariantQuantity, perUnit: Option[CatalogueItemVariantPerUnit], unitSize: Option[CatalogueItemVariantUnitSize])`. `CatalogueItemVariantQuantity(value, unit: CatalogueItemVariantUnit)` takes any unit; `CatalogueItemVariantPerUnit(value, unit: CatalogueItemVariantUnit.PerUnit)` and `CatalogueItemVariantUnitSize(value, unit: CatalogueItemVariantUnit.UnitSize)` are restricted. The three value newtypes are `BigDecimal` refined `Positive & LessEqual[99999]`.
+- Newtypes (Catalogue group): `CatalogueItemDescription`, `CatalogueItemVariantID`, `CatalogueItemVariantSku`, `CatalogueItemVariantLabel`, `CatalogueItemVariantDescription`, `CatalogueItemVariantAttributeName`, `CatalogueItemVariantAttributeValue` (text ones `NonEmptyTrimmed`), `CatalogueItemVariantQuantityValue`, `CatalogueItemVariantPerUnitValue`, `CatalogueItemVariantUnitSizeValue`.
+- Attributes: free-form `Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]`, no fixed vocabulary. Duplicate JSON keys are resolved last-wins by the decoder, so names are unique by type; duplicates in the raw body are not rejected.
+- Update: the wire carries one `variants` list (`catalogueItemVariantID` present = change, absent = add); the service splits it into the repository's `UpdateCatalogueItemVariantInput` and `InsertCatalogueItemVariantInput` lists. Clearable fields (item description; variant SKU, label, description, price) are `Option[Option[X]]`: outer `None` keeps, `Some(None)` clears. Attributes, selling unit, and status are plain `Option[X]`: replaced whole, never cleared.
 
 ### Validation
 
@@ -164,15 +164,37 @@ Edited in place in `V2025.05.27__init.sql`; no new migration, no data migration.
 - `SaleQuantityRequest`: exactly one of `counted`, `fixedMeasurement`, `variableMeasurement`, otherwise a named `VALIDATION_ERROR`.
 - Insert item: at least one variant. Update `Add`: price and selling unit required. Update status `Archived` is rejected.
 - Error naming: variants use `validateAllNested("catalogueItemVariant", ...)` inside each item; batch nests under `catalogueItem`. Each error names the item index, then the variant index, then the field.
-- **Open (Q5, user decision pending):** whether `currency`, `measurement unit`, and `packageType` are Smithy enums on the request wire (an unknown value then becomes a decode-time 400 that names neither the item nor the variant) or `String` validated into the domain enums (a named `VALIDATION_ERROR`, as the epic's non-functional requirement 4 asks). Variant `status` in update is a full four-case Smithy enum either way.
+- **Decided (Q5):** the three unit fields are closed Smithy enums on the wire, so an unknown unit is a decode-time 400 that names neither the item nor the variant. `currency` stays a `String` on the wire; whether it is narrowed to a closed set is a validation-layer decision. Variant `status` in update is the full four-case Smithy enum; `Archived` is rejected by the validator.
 
 ### Endpoints
 
-Seven Smithy operations plus the unchanged image upload. New: `ArchiveCatalogueItemVariantPut`, `PUT /archive/catalogue-item-variant`, `Owner|Admin`, body `ArchiveCatalogueItemVariantPutRequest{catalogueItemID, catalogueItemVariantID}`, `204`, errors `BadRequest, Unauthorized, Forbidden, InternalServerError` (`Forbidden` includes the last-enabled-variant `InvalidAction` rejection).
+Staging contract: `CatalogueServiceV2.smithy` + `domain/CatalogueV2.smithy` in the temporary namespace `io.mesazon.gateway.smithy.v2` (generated package `io.mesazon.gateway.smithy.v2`), because every V2 operation and shape name collides with V1 in `io.mesazon.gateway.smithy`. Shared shapes (`OrganizationScopedInput`, `organizationUserRolesAllowed`, `completedOnboardStage`, HTTP errors, `CatalogueItemStatus`) are imported from `io.mesazon.gateway.smithy`. It is not wired into `Main`/`HttpApp`/swagger and V1 is untouched; at cutover the V1 files are deleted, the V2 files take the V1 file names, service name, and namespace, and Scala references move from `smithy.v2.` to `smithy.`.
 
-Shapes in `domain/Catalogue.smithy`: value shapes `PriceRequest`, `SellingUnitRequest`, `SaleQuantityRequest`, `CountedQuantityRequest`, `MeasurementRequest` (reused by requests and responses, as `CatalogueItemPriceRequest` is today); entries `InsertCatalogueItemVariant(s)`, `UpdateCatalogueItemVariant(s)`, `GetCatalogueItemVariant(s)`. Members: `description`, `variants`, `sku`, `label`, `options`, `price`, `sellingUnit`, `quantity`, `packageType`, `count`, `eachMeasurement`, `value`, `unit`, `status`, `catalogueItemVariantID`; list entry `GetCatalogueItem` gains `description`, `fromPrices` (`@required`), and `variantCount`. Request lists `@default([])`; insert `options` `@default({})`; update `options` optional (absent keeps, `{}` clears all). Update `description`, `sku`, `label`, and variant `description` carry `@alloy#nullable` (smithy4s `Option[Nullable[String]]`): absent keeps, `null` clears.
+Eight Smithy operations plus the unchanged image upload. Service: `@simpleRestJson`, `@completedOnboardStage`, `@httpBearerAuth`; every operation mixes `OrganizationScopedInput`.
 
-`GatewayClient`: hand-written jsoniter codecs for every new enum (like `OnboardStage`/`CustomerType`), a hand-written null-emitting codec for the nullable members (new pattern), and encoding that keeps `options: {}` on update so clearing all options is possible.
+| Operation | Method / URI | Roles | Code | Errors |
+|---|---|---|---|---|
+| `InsertCatalogueItemPost` | `POST /insert/catalogue-item` | Owner, Admin | 200 | BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError |
+| `InsertCatalogueItemsPost` | `POST /insert/catalogue-items` | Owner, Admin | 200 | same as above |
+| `UpdateCatalogueItemPut` | `PUT /update/catalogue-item` | Owner, Admin | 204 | same as above; a named variant that does not resolve is the repository's 500 |
+| `ArchiveCatalogueItemPut` | `PUT /archive/catalogue-item` | Owner, Admin | 204 | BadRequest, Unauthorized, Forbidden, InternalServerError |
+| `ArchiveCatalogueItemVariantPut` | `PUT /archive/catalogue-item-variant` | Owner, Admin | 204 | same as above; `Forbidden` includes the last-enabled-variant `InvalidAction` |
+| `GetCatalogueItemGet` | `GET /get/catalogue-item/{catalogueItemID}` | Owner, Admin, User | 200 | BadRequest, Unauthorized, Forbidden, InternalServerError |
+| `GetCatalogueItemsGet` | `GET /get/catalogue-items` | Owner, Admin, User | 200 | same as above |
+| `GetCatalogueItemsByIDsGet` | `GET /get/catalogue-items-by-ids?catalogueItemIDs=…` (repeated query key) | Owner, Admin, User | 200 | BadRequest, ValidationError, Unauthorized, Forbidden, InternalServerError; an empty ID list is a validator `VALIDATION_ERROR` |
+
+Shapes in `domain/CatalogueV2.smithy`:
+
+- Enums: `CatalogueItemVariantStatus` (four cases); `CatalogueItemVariantUnit` (all 15 unit cases, for `quantity.unit`); `CatalogueItemVariantUnitUnitSize` (8) and `CatalogueItemVariantUnitPerUnit` (5) for `unitSize.unit`/`perUnit.unit`. Smithy has no sealed-trait-of-enums, so the combined enum flattens the domain's three groups while the narrow enums mirror `CatalogueItemVariantUnit.UnitSize`/`.PerUnit`; the wire stays a plain unit string.
+- Value shapes reused by requests and responses: `CatalogueItemVariantPriceRequest{amount: BigDecimal, currency: String}`, `CatalogueItemVariantSaleUnitRequest{quantity (required), perUnit, unitSize}`, `CatalogueItemVariantQuantityRequest`/`PerUnitRequest`/`UnitSizeRequest{value: BigDecimal, unit}`, `map CatalogueItemVariantAttributes {String: String}`.
+- Insert: `InsertCatalogueItemPostRequest{name, description, variants}`; `InsertCatalogueItemVariant{sku, label, description, attributes @default({}), price, sellingUnit (required)}`, no status (the service stores `Active`). Batch `InsertCatalogueItemsPostRequest{catalogueItems}`. Responses return the created IDs: `InsertCatalogueItemPostResponse{catalogueItemID}` and `InsertCatalogueItemsPostResponse{catalogueItemIDs}`, the latter in request order (the repository's `NonEmptyChunk[CatalogueItemID]` order). `list CatalogueItemIDs` (UUID) serves both this response and the by-IDs query parameter.
+- Update: `UpdateCatalogueItemPutRequest{catalogueItemID (required), name, description @nullable, variants}`; `UpdateCatalogueItemVariant{catalogueItemVariantID, sku/label/description/price @nullable, attributes, sellingUnit, status}`. `@alloy#nullable` generates `Option[Nullable[X]]`: absent keeps, `null` clears. `attributes` has no default: absent keeps, `{}` clears all.
+- Archive: `ArchiveCatalogueItemPutRequest{catalogueItemID}`, `ArchiveCatalogueItemVariantPutRequest{catalogueItemID, catalogueItemVariantID}`.
+- Detail: `GetCatalogueItemGetResponse{catalogueItemID, name, description, status, imageNormalizedUrl, variants}`; `GetCatalogueItemVariant{catalogueItemVariantID, sku, label, description, attributes (required), price, sellingUnit (required), status (required)}`.
+- Lists: `GetCatalogueItemsGetResponse.catalogueItems: GetCatalogueItem{catalogueItemID, name, status, imageNormalizedUrl, fromPrices (required), variantCount (required)}`; `GetCatalogueItemsByIDsGetResponse.catalogueItems: GetCatalogueItemByIDs` with the same members. Each operation owns its entry and `fromPrices` list shapes. `fromPrices`/`variantCount` are computed in the service from the repository's raw variant summaries.
+- Request lists `@default([])`; response lists and maps `@required`.
+
+`GatewayClient`: hand-written jsoniter codecs for every new enum (like `OnboardStage`/`CustomerType`), a hand-written null-emitting codec for the nullable members (new pattern), and encoding that keeps `attributes: {}` on update so clearing all attributes is possible.
 
 ### Repository and transactions
 

@@ -55,6 +55,7 @@ Like the customer book, these are not a single journey. They are the things that
 5. [User Updates an Item](#5-user-updates-an-item)
 6. [User Archives an Item](#6-user-archives-an-item)
 7. [User Archives a Variant](#7-user-archives-a-variant)
+8. [User Looks Up Chosen Items](#8-user-looks-up-chosen-items)
 
 ### Prerequisites
 
@@ -94,7 +95,7 @@ Like the customer book, these are not a single journey. They are the things that
 | Loose tomatoes, priced per kg | 1 kilogram | — | — |
 | A box of 100 screws | 1 box | 100 piece | — |
 
-**Price** — optional on every variant. When given, it is an exact amount plus a currency, always together: a price is given in full or left out entirely. Only EUR, USD and GBP are accepted; any other currency is refused. Every amount is kept with exactly two decimal places. Every rule is in **Price** in [step 1](#1-user-adds-an-item).
+**Price** — optional on every variant. When given, it is an exact amount plus a currency, always together: a price is given in full or left out entirely. Which currencies are accepted is not settled yet — see [gap 2](#2-which-currencies-a-price-may-use-is-not-settled). Every amount is kept with exactly two decimal places. Every rule is in **Price** in [step 1](#1-user-adds-an-item).
 
 ### 1. User Adds an Item
 
@@ -135,7 +136,7 @@ These shapes are used throughout this epic.
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Amount | `BigDecimal` | Non-negative; at most 12 integer digits; at most 2 decimal places; never rounded | ✅ | The exact amount |
-| Currency | `Currency` | `EUR`, `USD` or `GBP` | ✅ | Which currency the amount is in |
+| Currency | `String` | Not settled yet: either only `EUR`, `USD` or `GBP`, or any ISO currency code — see [gap 2](#2-which-currencies-a-price-may-use-is-not-settled) | ✅ | Which currency the amount is in |
 
 **CatalogueItemVariantSaleUnit**
 
@@ -197,9 +198,19 @@ These shapes are used throughout this epic.
 | --- | --- | --- | --- | --- |
 | Catalogue Items | `CatalogueItem[]` | Empty by default. Each entry has the shape above | ❌ | The items to add, all together or not at all |
 
-**Response**
+**Response — adding one item**
 
-Response is empty. A successful add answers with nothing but a success status. It does not return an identifier for the item or its variants.
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Identifies the new item, used to open it, change it, archive it, or upload its image |
+
+**Response — adding several at once**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Catalogue Item IDs | `UUID[]` | Canonical 36-character form each; one per item added, in the same order as the request | ✅ | Identifies each new item |
+
+Only item identifiers are returned. Variant identifiers are not; they are seen by opening the item, as in [step 4](#4-user-opens-an-item).
 
 **Outcome**
 
@@ -428,7 +439,7 @@ Nothing changes. This step only reads.
 | 7. User renames an item to a name another active item already has | - Rejected as a conflict |
 | 8. User gives a variant a SKU that another non-archived variant already has | - Rejected as a conflict |
 | 9. User changes an item that has been archived, or does not exist | - Nothing happens, and it is reported as successful — the same gap as [Customer Book gap 2]({{ site.baseurl }}{% link epics/05-customer-book.md %}#2-changes-to-an-archived-customer-are-silently-discarded) |
-| 10. User names a variant that does not exist, belongs to another item, or is archived | - The whole update is refused, naming the variant, and nothing is stored |
+| 10. User names a variant that does not exist, belongs to another item, or is archived | - The whole update is refused as a server error, and nothing is stored - One message covers all three causes; they are not told apart |
 | 11. A member with the ordinary user role tries to make a change | - Rejected |
 
 #### Requirements
@@ -478,12 +489,12 @@ Response is empty. A successful change answers with nothing but a success status
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the variant each belongs to - A variant status of `Archived` was sent - A new variant is missing its selling unit - A named variant does not exist, belongs to another item, or is archived |
+| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the variant each belongs to - A variant status of `Archived` was sent - A new variant is missing its selling unit |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - An active item already has that name - A non-archived variant already has that SKU |
-| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+| 500 | `INTERNAL_SERVER_ERROR` | - A named variant does not exist, belongs to another item, or is archived (one message for all three) - The person does not belong to the organization - Unexpected error |
 
 ### 6. User Archives an Item
 
@@ -580,6 +591,56 @@ Response is empty, whether the variant was archived just now, was already archiv
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes - The variant is the item's last non-archived one; archive the item instead |
 | 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
 
+### 8. User Looks Up Chosen Items
+
+**Who can reach this step: any member of the organization.**
+
+- The user already knows which items they want, by their identifiers, and gets just those items back in the same summary form as [browsing the catalogue](#3-user-browses-the-catalogue).
+
+#### Business Scenarios
+
+| **Scenarios** | **Requirements** |
+| --- | --- |
+| 1. User asks for several active items | - Each is returned with the same name, status, picture, "from" prices and variant count as in [step 3](#3-user-browses-the-catalogue) |
+| 2. Some of the identifiers do not exist, belong to an archived item, or belong to another organization | - Those items are simply left out; the rest are returned - There is no error and no sign that anything was left out |
+| 3. None of the identifiers match an active item | - An empty list is returned |
+| 4. User sends the same identifier more than once, or in any order | - Each item appears once - The list follows the order the items were added to the catalogue, oldest first, not the order of the request |
+| 5. User sends no identifiers | - Rejected as invalid |
+
+#### Requirements
+
+1. Any member may look up items, whatever their role.
+2. At least one identifier must be sent.
+3. Only active items of this organization are returned. Their "from" prices and variant count follow the same rules as in [step 3](#3-user-browses-the-catalogue).
+
+#### Request / Response / Outcome
+
+**Request**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Catalogue Item IDs | `UUID[]` | At least one entry; canonical 36-character form each; sent in the address as a repeated `catalogueItemIDs` key, such as `?catalogueItemIDs=a&catalogueItemIDs=b` | ✅ | Which items to look up |
+
+**Response**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Catalogue Items | `CatalogueItemSummary[]` | Only the requested items that are active in this organization; each at most once; oldest first; may be empty | ✅ | The requested items. See **CatalogueItemSummary** in step 3 |
+
+**Outcome**
+
+Nothing changes. This step only reads.
+
+#### Http Error Responses
+
+| **Http Code** | **Code** | **Description** |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | - No item identifiers were sent |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
+| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
+| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+
 ### Known gaps and open questions
 
 Everything above describes the agreed product. Nothing in this section has been decided yet, and each item needs a product answer before it can be built.
@@ -589,5 +650,11 @@ Everything above describes the agreed product. Nothing in this section has been 
 Naming an item that does not exist, belongs to another organization, or has been archived is refused as a server error. Picking an item a colleague just archived, or following a stale link, is ordinary, not a failure on our side.
 
 **To decide:** whether this should be a plain refusal instead, naming what was wrong with the item.
+
+#### 2. Which currencies a price may use is not settled
+
+This page earlier said a price accepts only EUR, USD or GBP. The planned design carries the currency as free text, the same way today's item price does, and today's item price accepts any ISO currency code. The rule will be fixed when the checks on incoming prices are built.
+
+**To decide:** whether a price accepts only EUR, USD or GBP, or any ISO currency code — and, if any code, whether every amount still has exactly two decimal places.
 
 {% include abbreviations.md %}
