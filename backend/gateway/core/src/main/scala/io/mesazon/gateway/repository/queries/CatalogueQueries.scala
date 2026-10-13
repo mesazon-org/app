@@ -160,6 +160,23 @@ final class CatalogueQueries(
         |v.updated_at
          """.stripMargin
 
+  private val frCatalogueItemSummaryWithVariantSummaryJoinedSelectFields =
+    fr"""
+        |i.catalogue_item_id,
+        |i.name,
+        |i.image_original_s3_bucket_key,
+        |i.image_normalized_s3_bucket_key,
+        |i.image_original_file_name,
+        |i.status::text,
+        |v.catalogue_item_variant_id,
+        |v.sku,
+        |v.label,
+        |v.price_amount,
+        |v.price_currency,
+        |v.selling_unit,
+        |v.status::text
+         """.stripMargin
+
   private def insertRowWith[Row](
       frTable: Fragment,
       frFields: Fragment,
@@ -455,6 +472,47 @@ final class CatalogueQueries(
         )
     }
 
+  def getAllCatalogueItemSummaryRowsV2Enabled(
+      organizationID: OrganizationID
+  ): TranzactIO[List[CatalogueItemSummaryRowV2]] =
+    tzio {
+      val q =
+        fr"SELECT" ++ frCatalogueItemSummaryWithVariantSummaryJoinedSelectFields ++
+          fr"FROM" ++ frCatalogueItemTable ++ fr"AS i" ++
+          fr"INNER JOIN" ++ frCatalogueItemVariantTable ++ fr"AS v" ++
+          fr"ON v.organization_id = i.organization_id" ++
+          fr"AND v.catalogue_item_id = i.catalogue_item_id" ++
+          fr0"AND v.status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr")" ++
+          whereAnd(
+            fr"i.organization_id = $organizationID",
+            fr0"i.status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")",
+          ) ++
+          fr"ORDER BY i.created_at ASC, i.catalogue_item_id ASC, v.created_at ASC, v.catalogue_item_variant_id ASC"
+
+      q.query[CatalogueItemSummaryWithVariantSummaryJoinedRow]
+        .to[List]
+        .map { catalogueItemSummaryWithVariantSummaryJoinedRows =>
+          val catalogueItemIDs = catalogueItemSummaryWithVariantSummaryJoinedRows.map(_.catalogueItemID).distinct
+          val catalogueItemSummaryWithVariantSummaryJoinedRowsByCatalogueItemID =
+            catalogueItemSummaryWithVariantSummaryJoinedRows.groupBy(_.catalogueItemID)
+
+          catalogueItemIDs.flatMap(catalogueItemID =>
+            catalogueItemSummaryWithVariantSummaryJoinedRowsByCatalogueItemID
+              .get(catalogueItemID)
+              .flatMap(NonEmptyChunk.fromIterableOption)
+              .map(catalogueItemSummaryWithVariantSummaryJoinedRowsNonEmpty =>
+                catalogueItemSummaryWithVariantSummaryJoinedRowsNonEmpty.head
+                  .into[CatalogueItemSummaryRowV2]
+                  .withFieldConst(
+                    _.catalogueItemVariantSummaryRows,
+                    catalogueItemSummaryWithVariantSummaryJoinedRowsNonEmpty.map(_.catalogueItemVariantSummaryRow),
+                  )
+                  .transform
+              )
+          )
+        }
+    }
+
   private val frCatalogueItemEnabledStatuses: Fragment =
     NonEmptyList
       .fromListUnsafe(CatalogueItemStatus.enabled)
@@ -535,6 +593,14 @@ object CatalogueQueries {
       status: CatalogueItemVariantStatus,
       createdAt: CreatedAt,
       updatedAt: UpdatedAt,
+  )
+
+  private case class CatalogueItemSummaryWithVariantSummaryJoinedRow(
+      catalogueItemID: CatalogueItemID,
+      name: CatalogueItemName,
+      imageAsset: Option[CatalogueItemImageAsset],
+      status: CatalogueItemStatus,
+      catalogueItemVariantSummaryRow: CatalogueItemVariantSummaryRow,
   )
 
   val live = ZLayer.derive[CatalogueQueries]

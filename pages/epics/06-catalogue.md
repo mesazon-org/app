@@ -287,7 +287,7 @@ Response is empty. A successful upload answers with nothing but a success status
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User opens the catalogue | - Every active item in the organization is returned, each with its name, description if any, status, picture if any, "from" prices, and number of variants |
+| 1. User opens the catalogue | - Every active item in the organization is returned, each with its name, status, picture if any, "from" prices, and number of variants |
 | 2. An item's priced variants all use one currency | - One "from" price is shown: the lowest price among its non-archived variants |
 | 3. An item's priced variants use more than one currency | - One "from" price is shown for each currency, each the lowest price in that currency |
 | 4. Some of an item's variants are `Inactive` or `OutOfStock` | - They still count toward the "from" prices and the variant count |
@@ -322,7 +322,6 @@ Request is empty apart from naming the organization.
 | --- | --- | --- | --- | --- |
 | Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Identifies the item, used to open it |
 | Name | `String` | — | ✅ | The item's name |
-| Description | `String` | — | ❌ | Present only if the item has one |
 | Status | `CatalogueItemStatus` | `Active` or `Archived` | ✅ | Always `Active` here, since only active items are listed |
 | Image URL | `String` | A working link, present only if the item has an image | ❌ | A picture of the item |
 | From Prices | `Price[]` | One entry per currency used by the item's priced, non-archived variants; each is the lowest price in that currency; empty when none of them has a price | ✅ | What the item costs, at least |

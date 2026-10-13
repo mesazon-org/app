@@ -52,7 +52,7 @@ trait CatalogueRepositoryV2 {
       catalogueItemID: CatalogueItemID,
   ): IO[ServiceError, Option[CatalogueItemWithVariantsRow]]
 
-  def getAllCatalogueItemSummariesActive(
+  def getAllCatalogueItemSummariesEnabled(
       organizationID: OrganizationID
   ): IO[ServiceError, List[CatalogueItemSummaryRowV2]]
 
@@ -381,10 +381,17 @@ object CatalogueRepositoryV2 {
           )
         )
 
-    override def getAllCatalogueItemSummariesActive(
+    override def getAllCatalogueItemSummariesEnabled(
         organizationID: OrganizationID
     ): IO[ServiceError, List[CatalogueItemSummaryRowV2]] =
-      ZIO.die(new NotImplementedError("getAllCatalogueItemSummariesActive"))
+      database
+        .transactionOrWiden(catalogueQueries.getAllCatalogueItemSummaryRowsV2Enabled(organizationID))
+        .mapError(e =>
+          ServiceError.InternalServerError.RepositoryError(
+            s"Failed to get catalogue item summaries for organization ID: [$organizationID]",
+            e,
+          )
+        )
 
     override def getCatalogueItemSummariesActive(
         organizationID: OrganizationID,
