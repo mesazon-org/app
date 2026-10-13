@@ -18,7 +18,7 @@ For Tapir, define the typed endpoint inputs/outputs/errors and OpenAPI metadata 
 - Service auth: `@httpBearerAuth` for access-token endpoints, `@httpBasicAuth` for credentials, none for public; never both.
 - Completed-onboarding service: `@completedOnboardStage` plus sole service doc `/// **Required Onboard Stage:** COMPLETED`.
 - Body: `input := { @required @httpPayload request: <Operation>Request }`.
-- GET/bodyless path values use `@httpLabel`.
+- Path values: addressed-resource IDs are `@required @httpLabel` on every method per [Resource paths](../../standards/smithy.md#resource-paths); legacy verb-first contracts label only GET/bodyless paths.
 - Success: `200` with output; `204` without output.
 - Trait order: role/custom traits, then `@http` immediately above `operation`.
 - Swagger gate markers are literal:

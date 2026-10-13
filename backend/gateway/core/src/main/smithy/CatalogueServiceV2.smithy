@@ -22,113 +22,127 @@ use io.mesazon.gateway.smithy#organizationUserRolesAllowed
 service CatalogueServiceV2 {
     version: "1.0.0",
     operations: [
-        InsertCatalogueItemPost
-        InsertCatalogueItemsPost
+        CatalogueItemPost
+        CatalogueItemBatchPost
 
-        UpdateCatalogueItemPut
+        CatalogueItemPut
 
-        ArchiveCatalogueItemPut
-        ArchiveCatalogueItemVariantPut
+        CatalogueItemArchivePut
+        CatalogueItemVariantArchivePut
 
-        GetCatalogueItemGet
-        GetCatalogueItemsGet
-        GetCatalogueItemsByIDsGet
+        CatalogueItemGet
+        CatalogueItemSummaryGet
+
+        CatalogueItemUniquenessGet
     ]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "POST", uri: "/insert/catalogue-item", code: 200)
-operation InsertCatalogueItemPost {
+@http(method: "POST", uri: "/catalogue/item", code: 200)
+operation CatalogueItemPost {
     input := with [OrganizationScopedInput] {
         @required
         @httpPayload
-        request: InsertCatalogueItemPostRequest
+        request: CatalogueItemPostRequest
     }
-    output: InsertCatalogueItemPostResponse
+    output: CatalogueItemPostResponse
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "POST", uri: "/insert/catalogue-items", code: 200)
-operation InsertCatalogueItemsPost {
+@http(method: "POST", uri: "/catalogue/item/batch", code: 200)
+operation CatalogueItemBatchPost {
     input := with [OrganizationScopedInput] {
         @required
         @httpPayload
-        request: InsertCatalogueItemsPostRequest
+        request: CatalogueItemBatchPostRequest
     }
-    output: InsertCatalogueItemsPostResponse
+    output: CatalogueItemBatchPostResponse
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "PUT", uri: "/update/catalogue-item", code: 204)
-operation UpdateCatalogueItemPut {
+@http(method: "PUT", uri: "/catalogue/item/{catalogueItemID}", code: 204)
+operation CatalogueItemPut {
     input := with [OrganizationScopedInput] {
         @required
+        @httpLabel
+        catalogueItemID: UUID
+
+        @required
         @httpPayload
-        request: UpdateCatalogueItemPutRequest
+        request: CatalogueItemPutRequest
     }
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "PUT", uri: "/archive/catalogue-item", code: 204)
-operation ArchiveCatalogueItemPut {
-    input := with [OrganizationScopedInput] {
-        @required
-        @httpPayload
-        request: ArchiveCatalogueItemPutRequest
-    }
-    errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
-}
-
-/// **Required Organization User Roles:** [`Owner`, `Admin`]
-@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "PUT", uri: "/archive/catalogue-item-variant", code: 204)
-operation ArchiveCatalogueItemVariantPut {
-    input := with [OrganizationScopedInput] {
-        @required
-        @httpPayload
-        request: ArchiveCatalogueItemVariantPutRequest
-    }
-    errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
-}
-
-/// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
-@organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
-@http(method: "GET", uri: "/get/catalogue-item/{catalogueItemID}", code: 200)
-operation GetCatalogueItemGet {
+@http(method: "PUT", uri: "/catalogue/item/{catalogueItemID}/archive", code: 204)
+operation CatalogueItemArchivePut {
     input := with [OrganizationScopedInput] {
         @required
         @httpLabel
         catalogueItemID: UUID
     }
-    output: GetCatalogueItemGetResponse
+    errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
+}
+
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
+@http(method: "PUT", uri: "/catalogue/item/{catalogueItemID}/variant/{catalogueItemVariantID}/archive", code: 204)
+operation CatalogueItemVariantArchivePut {
+    input := with [OrganizationScopedInput] {
+        @required
+        @httpLabel
+        catalogueItemID: UUID
+
+        @required
+        @httpLabel
+        catalogueItemVariantID: UUID
+    }
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
-@http(method: "GET", uri: "/get/catalogue-items", code: 200)
-operation GetCatalogueItemsGet {
-    input := with [OrganizationScopedInput] {}
-    output: GetCatalogueItemsGetResponse
+@http(method: "GET", uri: "/catalogue/item/{catalogueItemID}", code: 200)
+operation CatalogueItemGet {
+    input := with [OrganizationScopedInput] {
+        @required
+        @httpLabel
+        catalogueItemID: UUID
+    }
+    output: CatalogueItemGetResponse
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
-@http(method: "GET", uri: "/get/catalogue-items-by-ids", code: 200)
-operation GetCatalogueItemsByIDsGet {
+@http(method: "GET", uri: "/catalogue/item/summary", code: 200)
+operation CatalogueItemSummaryGet {
     input := with [OrganizationScopedInput] {
         @default([])
         @httpQuery("catalogueItemIDs")
         catalogueItemIDs: CatalogueItemIDs
     }
-    output: GetCatalogueItemsByIDsGetResponse
+    output: CatalogueItemSummaryGetResponse
+    errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
+}
+
+/// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
+@http(method: "GET", uri: "/catalogue/item/uniqueness", code: 200)
+operation CatalogueItemUniquenessGet {
+    input := with [OrganizationScopedInput] {
+        @httpQuery("name")
+        name: String
+        @httpQuery("sku")
+        sku: String
+    }
+    output: CatalogueItemUniquenessGetResponse
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, InternalServerError]
 }

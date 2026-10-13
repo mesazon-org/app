@@ -32,7 +32,7 @@ enum CatalogueItemVariantUnit {
     Piece
 }
 
-enum CatalogueItemVariantUnitSize {
+enum CatalogueItemVariantUnitUnitSize {
     Gram
     Kilogram
     Millilitre
@@ -43,7 +43,7 @@ enum CatalogueItemVariantUnitSize {
     SquareMetre
 }
 
-enum CatalogueItemVariantPerUnit {
+enum CatalogueItemVariantUnitPerUnit {
     Bag
     Bottle
     Can
@@ -69,14 +69,14 @@ structure CatalogueItemVariantPerUnitRequest {
     @required
     value: BigDecimal
     @required
-    unit: CatalogueItemVariantPerUnit
+    unit: CatalogueItemVariantUnitPerUnit
 }
 
 structure CatalogueItemVariantUnitSizeRequest {
     @required
     value: BigDecimal
     @required
-    unit: CatalogueItemVariantUnitSize
+    unit: CatalogueItemVariantUnitUnitSize
 }
 
 structure CatalogueItemVariantSaleUnitRequest {
@@ -106,7 +106,7 @@ list InsertCatalogueItemVariants {
     member: InsertCatalogueItemVariant
 }
 
-structure InsertCatalogueItemPostRequest {
+structure CatalogueItemPostRequest {
     @required
     name: String
     description: String
@@ -115,10 +115,10 @@ structure InsertCatalogueItemPostRequest {
 }
 
 list InsertCatalogueItems {
-    member: InsertCatalogueItemPostRequest
+    member: CatalogueItemPostRequest
 }
 
-structure InsertCatalogueItemsPostRequest {
+structure CatalogueItemBatchPostRequest {
     @default([])
     catalogueItems: InsertCatalogueItems
 }
@@ -127,17 +127,18 @@ list CatalogueItemIDs {
     member: UUID
 }
 
-structure InsertCatalogueItemPostResponse {
+structure CatalogueItemPostResponse {
     @required
     catalogueItemID: UUID
 }
 
-structure InsertCatalogueItemsPostResponse {
+structure CatalogueItemBatchPostResponse {
     @required
     catalogueItemIDs: CatalogueItemIDs
 }
 
 structure UpdateCatalogueItemVariant {
+    @required
     catalogueItemVariantID: UUID
     @nullable
     sku: String
@@ -156,26 +157,14 @@ list UpdateCatalogueItemVariants {
     member: UpdateCatalogueItemVariant
 }
 
-structure UpdateCatalogueItemPutRequest {
-    @required
-    catalogueItemID: UUID
+structure CatalogueItemPutRequest {
     name: String
     @nullable
     description: String
     @default([])
-    variants: UpdateCatalogueItemVariants
-}
-
-structure ArchiveCatalogueItemPutRequest {
-    @required
-    catalogueItemID: UUID
-}
-
-structure ArchiveCatalogueItemVariantPutRequest {
-    @required
-    catalogueItemID: UUID
-    @required
-    catalogueItemVariantID: UUID
+    updateVariants: UpdateCatalogueItemVariants
+    @default([])
+    insertVariants: InsertCatalogueItemVariants
 }
 
 structure GetCatalogueItemVariant {
@@ -197,7 +186,7 @@ list GetCatalogueItemVariants {
     member: GetCatalogueItemVariant
 }
 
-structure GetCatalogueItemGetResponse {
+structure CatalogueItemGetResponse {
     @required
     catalogueItemID: UUID
     @required
@@ -210,8 +199,20 @@ structure GetCatalogueItemGetResponse {
     variants: GetCatalogueItemVariants
 }
 
-list GetCatalogueItemFromPrices {
-    member: CatalogueItemVariantPriceRequest
+structure GetCatalogueItemVariantSummary {
+    @required
+    catalogueItemVariantID: UUID
+    sku: String
+    label: String
+    price: CatalogueItemVariantPriceRequest
+    @required
+    sellingUnit: CatalogueItemVariantSaleUnitRequest
+    @required
+    status: CatalogueItemVariantStatus
+}
+
+list GetCatalogueItemVariantSummaries {
+    member: GetCatalogueItemVariantSummary
 }
 
 structure GetCatalogueItem {
@@ -223,43 +224,19 @@ structure GetCatalogueItem {
     status: CatalogueItemStatus
     imageNormalizedUrl: String
     @required
-    fromPrices: GetCatalogueItemFromPrices
-    @required
-    variantCount: Integer
+    variants: GetCatalogueItemVariantSummaries
 }
 
 list GetCatalogueItems {
     member: GetCatalogueItem
 }
 
-structure GetCatalogueItemsGetResponse {
+structure CatalogueItemSummaryGetResponse {
     @required
     catalogueItems: GetCatalogueItems
 }
 
-list GetCatalogueItemByIDsFromPrices {
-    member: CatalogueItemVariantPriceRequest
-}
-
-structure GetCatalogueItemByIDs {
-    @required
-    catalogueItemID: UUID
-    @required
-    name: String
-    @required
-    status: CatalogueItemStatus
-    imageNormalizedUrl: String
-    @required
-    fromPrices: GetCatalogueItemByIDsFromPrices
-    @required
-    variantCount: Integer
-}
-
-list GetCatalogueItemsByIDs {
-    member: GetCatalogueItemByIDs
-}
-
-structure GetCatalogueItemsByIDsGetResponse {
-    @required
-    catalogueItems: GetCatalogueItemsByIDs
+structure CatalogueItemUniquenessGetResponse {
+    isNameUnique: Boolean
+    isSkuUnique: Boolean
 }

@@ -56,6 +56,7 @@ Like the customer book, these are not a single journey. They are the things that
 6. [User Archives an Item](#6-user-archives-an-item)
 7. [User Archives a Variant](#7-user-archives-a-variant)
 8. [User Looks Up Chosen Items](#8-user-looks-up-chosen-items)
+9. [User Checks a Name or SKU Is Free](#9-user-checks-a-name-or-sku-is-free)
 
 ### Prerequisites
 
@@ -103,6 +104,7 @@ Like the customer book, these are not a single journey. They are the things that
 
 - The user gives the item a name, optionally a description, and at least one variant. Each variant has a selling unit and, optionally, a price.
 - Several items can be added in one go.
+- Before adding, the user can check whether a name or SKU is still free, as in [step 9](#9-user-checks-a-name-or-sku-is-free).
 
 #### Business Scenarios
 
@@ -424,7 +426,7 @@ Nothing changes. This step only reads.
 
 - The user changes an item's name or description.
 - The user changes existing variants by their identifier, including moving a variant between `Active`, `Inactive` and `OutOfStock`.
-- The user adds new variants.
+- The user adds new variants. They are sent in a separate list from the variants being changed.
 
 #### Business Scenarios
 
@@ -432,14 +434,14 @@ Nothing changes. This step only reads.
 | --- | --- |
 | 1. User changes an active item's name or description | - The change is saved - Fields left out of the request are left as they were |
 | 2. User clears the item's description, or a variant's price, SKU, label or description | - That value is removed; a variant whose price is cleared has no set price |
-| 3. User changes an existing variant's price, selling unit, attributes or status | - The change is saved for that variant only - Variants not mentioned are left exactly as they were |
+| 3. User changes an existing variant's price, selling unit, attributes or status, listing it with its identifier among the variants to change | - The change is saved for that variant only - Variants not mentioned are left exactly as they were |
 | 4. User marks a variant `OutOfStock` or `Inactive`, and later `Active` again | - Each move is saved; any move among these three statuses is allowed |
 | 5. User tries to set a variant to `Archived` through an update | - Rejected; variants are archived only through [step 7](#7-user-archives-a-variant) |
-| 6. User adds a new variant to an active item | - Stored with the status given (`Active`, `Inactive` or `OutOfStock`), or `Active` if none is given |
+| 6. User adds a new variant to an active item, listing it, with no identifier, among the new variants | - Stored with the status given (`Active`, `Inactive` or `OutOfStock`), or `Active` if none is given - Stored with no set price if none is given |
 | 7. User renames an item to a name another active item already has | - Rejected as a conflict |
 | 8. User gives a variant a SKU that another non-archived variant already has | - Rejected as a conflict |
 | 9. User changes an item that has been archived, or does not exist | - Nothing happens, and it is reported as successful — the same gap as [Customer Book gap 2]({{ site.baseurl }}{% link epics/05-customer-book.md %}#2-changes-to-an-archived-customer-are-silently-discarded) |
-| 10. User names a variant that does not exist, belongs to another item, or is archived | - The whole update is refused as a server error, and nothing is stored - One message covers all three causes; they are not told apart |
+| 10. Among the variants to change, user names one that does not exist, belongs to another item, or is archived | - The whole update is refused as a server error, and nothing is stored - One message covers all three causes; they are not told apart |
 | 11. A member with the ordinary user role tries to make a change | - Rejected |
 
 #### Requirements
@@ -450,6 +452,7 @@ Nothing changes. This step only reads.
 4. A variant's status can be set only to `Active`, `Inactive` or `OutOfStock`.
 5. A new variant needs a selling unit, and its price is optional, just like one added in [step 1](#1-user-adds-an-item).
 6. A rename must leave the item name unique among active items, and every SKU unique among non-archived variants.
+7. Variants to change and variants to add are sent in two separate lists. Every variant to change is named by its identifier; a new variant has no identifier, since it does not exist yet.
 
 #### Request / Response / Outcome
 
@@ -460,20 +463,33 @@ Nothing changes. This step only reads.
 | Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Which item to change |
 | Name | `String` | 1–255 characters, trimmed; unique among active items | ❌ | Leave out to keep the current name |
 | Description | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current description; can be cleared |
-| Variants | `CatalogueItemVariantUpdate[]` | Empty by default | ❌ | Variants to change or add; variants not listed stay as they are |
+| Variants | `CatalogueItemVariantUpdate[]` | Empty by default; existing variants only | ❌ | Changes to existing variants; variants not listed stay as they are |
+| New Variants | `NewCatalogueItemVariant[]` | Empty by default; no upper limit | ❌ | Variants to add to the item |
 
 **CatalogueItemVariantUpdate**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ❌ | Given: change that variant. Left out: add a new variant |
+| Catalogue Item Variant ID | `UUID` | Canonical 36-character form; a non-archived variant of this item | ✅ | Which existing variant to change |
 | SKU | `String` | Same as in **CatalogueItemVariant** | ❌ | Leave out to keep; can be cleared |
 | Label | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep; can be cleared |
 | Description | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep; can be cleared |
 | Attributes | `Map<String, String>` | Same as in **CatalogueItemVariant** | ❌ | Leave out to keep; when given, replaces all attributes |
-| Price | `Price` | See **Price** in step 1 | ❌ | Leave out to keep the current price; can be cleared. A new variant left without one has no set price |
-| Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1; must be given when adding a new variant | ❌ | Leave out to keep the current selling unit |
-| Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ❌ | Leave out to keep the current status. For a new variant, the status it starts with; left out, it starts `Active` |
+| Price | `Price` | See **Price** in step 1 | ❌ | Leave out to keep the current price; can be cleared |
+| Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ❌ | Leave out to keep the current selling unit |
+| Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ❌ | Leave out to keep the current status |
+
+**NewCatalogueItemVariant**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| SKU | `String` | Same as in **CatalogueItemVariant** | ❌ | The business's own stock code |
+| Label | `String` | 1–255 characters, trimmed | ❌ | A short label for this variant |
+| Description | `String` | 1–255 characters, trimmed | ❌ | A longer description of this variant |
+| Attributes | `Map<String, String>` | Same as in **CatalogueItemVariant** | ❌ | What sets this variant apart |
+| Price | `Price` | See **Price** in step 1 | ❌ | The full price of the quantity its selling unit states. Left out means the variant has no set price |
+| Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ✅ | How this variant is sold |
+| Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ❌ | The status the variant starts with; left out, it starts `Active` |
 
 **Response**
 
@@ -494,7 +510,7 @@ Response is empty. A successful change answers with nothing but a success status
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - An active item already has that name - A non-archived variant already has that SKU |
-| 500 | `INTERNAL_SERVER_ERROR` | - A named variant does not exist, belongs to another item, or is archived (one message for all three) - The person does not belong to the organization - Unexpected error |
+| 500 | `INTERNAL_SERVER_ERROR` | - A variant to change does not exist, belongs to another item, or is archived (one message for all three) - The person does not belong to the organization - Unexpected error |
 
 ### 6. User Archives an Item
 
@@ -636,6 +652,61 @@ Nothing changes. This step only reads.
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - No item identifiers were sent |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
+| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
+| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+
+### 9. User Checks a Name or SKU Is Free
+
+**Who can reach this step: any member of the organization.**
+
+- While filling in an item, for example as they type, the user checks whether a name or a SKU is still free before adding or changing anything.
+- This lets them fix a clash early, instead of having the add or update refused as a conflict.
+
+#### Business Scenarios
+
+| **Scenarios** | **Requirements** |
+| --- | --- |
+| 1. User checks both a name and a SKU | - An answer comes back for each |
+| 2. User checks only a name, or only a SKU | - An answer comes back for that one only |
+| 3. User checks neither | - Rejected as invalid |
+| 4. The name belongs to an active item | - Reported as taken |
+| 5. The SKU belongs to a non-archived variant, including an `Inactive` or `OutOfStock` one | - Reported as taken |
+| 6. The name or SKU is not used anywhere in the organization | - Reported as free |
+| 7. The name belongs only to an archived item, or the SKU only to an archived variant or a variant of an archived item | - Reported as free, the same way adding an item treats it |
+
+#### Requirements
+
+1. Any member may check, whatever their role.
+2. At least one of a name and a SKU must be given.
+3. A name counts as taken only if an active item of this organization has it. A SKU counts as taken only if a non-archived variant of this organization has it. These are the same rules adding and updating an item apply.
+
+#### Request / Response / Outcome
+
+**Request**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Name | `String` | 1–255 characters, trimmed; sent in the address as `name` | ❌ | The item name to check. Give this, the SKU, or both |
+| SKU | `String` | 1–255 characters, trimmed; case-sensitive; sent in the address as `sku` | ❌ | The variant SKU to check. Give this, the name, or both |
+
+**Response**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Is Name Unique | `Boolean` | Present only when a name was checked | ❌ | `true` if the name is free; `false` if an active item already has it |
+| Is SKU Unique | `Boolean` | Present only when a SKU was checked | ❌ | `true` if the SKU is free; `false` if a non-archived variant already has it |
+
+**Outcome**
+
+Nothing changes, and nothing is reserved. A name or SKU reported free can still be taken before the user adds or changes the item, and that request is then refused as a conflict as usual.
+
+#### Http Error Responses
+
+| **Http Code** | **Code** | **Description** |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | - Neither a name nor a SKU was given - A name or SKU was given but is invalid, such as blank |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
