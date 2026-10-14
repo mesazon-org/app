@@ -4,7 +4,7 @@ title: Catalogue
 
 # Catalogue
 
-> **Planned change — not built yet.** This page describes the agreed catalogue with variants and selling units. Until that work ships, the product still behaves as before: each item has a free-text unit and one optional price in any ISO currency, and items are only `Active` or `Archived`. The engineering description of today's behavior is kept in the Catalogue feature doc until the change ships.
+> **Planned change — not built yet.** This page describes the agreed catalogue with variants and selling units. Until that work ships, the product still behaves as before: each item has a free-text unit and one optional price in any ISO currency, and items are only `Active` or `Archived`. That existing price behavior stays unchanged until the catalogue change replaces it; the variant price rule below applies after cutover. The engineering description of today's behavior is kept in the Catalogue feature doc until the change ships.
 
 ### Overview
 
@@ -96,7 +96,7 @@ Like the customer book, these are not a single journey. They are the things that
 | Loose tomatoes, priced per kg | 1 kilogram | — | — |
 | A box of 100 screws | 1 box | 100 piece | — |
 
-**Price** — optional on every variant. When given, it is an exact amount plus a currency, always together: a price is given in full or left out entirely. Which currencies are accepted is not settled yet — see [gap 2](#2-which-currencies-a-price-may-use-is-not-settled). Every amount is kept with exactly two decimal places. Every rule is in **Price** in [step 1](#1-user-adds-an-item).
+**Price** — optional on every variant. When given, it is an exact amount plus a currency, always together: a price is given in full or left out entirely. After cutover, the currency must be exactly the uppercase code `EUR`, `USD` or `GBP`; lowercase, surrounding-space, and other spellings are rejected without trimming or uppercasing. An amount may have at most two decimal places when sent; fewer decimal places are kept by appending zeroes until it has exactly two, and no amount is rounded. Every rule is in **Price** in [step 1](#1-user-adds-an-item).
 
 ### 1. User Adds an Item
 
@@ -137,8 +137,8 @@ These shapes are used throughout this epic.
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Amount | `BigDecimal` | Non-negative; at most 12 integer digits; at most 2 decimal places; never rounded | ✅ | The exact amount |
-| Currency | `String` | Not settled yet: either only `EUR`, `USD` or `GBP`, or any ISO currency code — see [gap 2](#2-which-currencies-a-price-may-use-is-not-settled) | ✅ | Which currency the amount is in |
+| Amount | `BigDecimal` | Non-negative; at most 12 integer digits; 0–2 decimal places on input; stored with exactly 2 decimal places by appending zeroes; never rounded | ✅ | The exact amount |
+| Currency | `String` | Exactly `EUR`, `USD` or `GBP` in uppercase; no surrounding whitespace; no trimming or case conversion | ✅ | Which currency the amount is in |
 
 **CatalogueItemVariantSaleUnit**
 
@@ -721,11 +721,5 @@ Everything above describes the agreed product. Nothing in this section has been 
 Naming an item that does not exist, belongs to another organization, or has been archived is refused as a server error. Picking an item a colleague just archived, or following a stale link, is ordinary, not a failure on our side.
 
 **To decide:** whether this should be a plain refusal instead, naming what was wrong with the item.
-
-#### 2. Which currencies a price may use is not settled
-
-This page earlier said a price accepts only EUR, USD or GBP. The planned design carries the currency as free text, the same way today's item price does, and today's item price accepts any ISO currency code. The rule will be fixed when the checks on incoming prices are built.
-
-**To decide:** whether a price accepts only EUR, USD or GBP, or any ISO currency code — and, if any code, whether every amount still has exactly two decimal places.
 
 {% include abbreviations.md %}
