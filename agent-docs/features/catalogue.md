@@ -77,7 +77,7 @@ Errors: `TapirServerError` has no validation variant, so every 400 here is `BAD_
 
 ## Status
 
-Planned, not built yet: catalogue items with variants and selling units, as described in [Catalogue epic](../../pages/epics/06-catalogue.md). Until that ships, every other section of this document describes today's behaviour: a free-text unit and one optional price on the item. The agreed engineering design is in [Planned: variants and selling units](#planned-variants-and-selling-units).
+Staged but not shipped: catalogue items with variants and selling units, as described in [Catalogue epic](../../pages/epics/06-catalogue.md). The schema, domain types, repository, and Smithy contract are present, but the V2 endpoints are not wired. Until cutover, every other section of this document describes today's behaviour: a free-text unit and one optional price on the item. The agreed engineering design is in [Planned: variants and selling units](#planned-variants-and-selling-units).
 
 Complete: six Smithy operations plus the Tapir `POST /upload/catalogue-item/image` endpoint, request validation and shared ISO price validation, schema/enum/index, full repository (`CatalogueItemRow`/`CatalogueItemSummaryRow`), and service wiring including presigned-URL resolution on both GET endpoints. Unit, functional, integration, and acceptance tests cover every slice; see [Completed proof](#completed-proof) and [Acceptance proof](#acceptance-proof) below.
 
@@ -117,35 +117,35 @@ Both GET operations depend on `S3ClientOrganizationMedia.genMediaUrl` to resolve
 
 ## Planned: variants and selling units
 
-Agreed design for the [Catalogue epic](../../pages/epics/06-catalogue.md). Not built yet; when it ships it replaces the item `unit`/price model above, and the sections above are rewritten to match. No deployed client uses today's contract, so the contract and schema change is breaking by agreement.
+Agreed design for the [Catalogue epic](../../pages/epics/06-catalogue.md). Staging code is partly built but not wired; at cutover it replaces the item `unit`/price model above, and the sections above are rewritten to match. No deployed client uses today's contract, so the contract and schema change is breaking by agreement.
 
 ### Delivery status
 
 | Slice | Done | Remaining |
 |---|---|---|
 | Docs (K1) | This section | — |
-| Domain (K2–K3) | — | Enums, value types, newtypes |
+| Domain (K2–K3) | Variant enums, selling-unit types, and newtypes | Validated V2 request models |
 | Endpoints (K4) | Staging contract `CatalogueServiceV2` (eight operations), unwired | Cutover: replace V1 contract, wire service |
-| Failing tests (K5–K7) | — | Validator, service, repository |
-| Implementation | — | Validation, schema, repository, service, acceptance |
+| Failing tests (K5–K7) | Repository integration tests | Validator, service, acceptance |
+| Implementation | Variant schema and `CatalogueRepositoryV2` | V2 validation, service, cutover, acceptance |
 
 ### Schema
 
 Edited in place in `V2025.05.27__init.sql`; no new migration, no data migration. Dev Flyway runs `clean, migrate`.
 
-`catalogue_item`: drop `unit`, `price_amount`, `price_currency`; add `description text null`. `uq_catalogue_item_name` is unchanged.
+`catalogue_item`: `unit` is nullable during staging, the old optional price columns remain, and `description text null` is added. The final cutover removes the V1-only columns. `uq_catalogue_item_name` is unchanged.
 
 `catalogue_item_variant`:
 
 - `organization_id uuid`, `catalogue_item_variant_id uuid`, `catalogue_item_id uuid`, PK `(organization_id, catalogue_item_variant_id)` so a variant can be found by ID alone (needed to detect "belongs to another item").
 - FK `(organization_id, catalogue_item_id)` → `catalogue_item` `on delete restrict`; `idx_catalogue_item_variant_item` on `(organization_id, catalogue_item_id)`.
-- `sku`, `label`, `description` nullable `text`; `options jsonb not null` (JSON object, name → value).
-- `price_amount numeric not null`, `price_currency text not null`.
-- Selling unit: `sale_quantity_type text not null` (`Counted`/`FixedMeasurement`/`VariableMeasurement`), `sale_quantity_count bigint`, `measurement_value numeric`, `measurement_unit text`, `package_type text`. Check constraints tie column presence to `sale_quantity_type`: Counted has a count, and value + unit are both present or both absent; FixedMeasurement has value + unit and no count; VariableMeasurement has a unit only. No DB check on currency, unit, or package-type values; the domain enums guard them.
+- `sku`, `label`, `description` nullable `text`; `attributes jsonb not null` (JSON object, name → value).
+- `price_amount numeric` and `price_currency text` are jointly optional, enforced by `chk_catalogue_item_variant_price`.
+- `selling_unit jsonb not null` stores the quantity, optional per-unit part, and optional unit-size part. The domain and validator enforce their value and unit rules.
 - `status catalogue_item_variant_status not null`: native PG enum (`Active`, `Inactive`, `OutOfStock`, `Archived`), the same documented exception as `catalogue_item_status`; qualified casts as for the item.
 - `created_at`, `updated_at timestamptz not null`.
 - `uq_catalogue_item_variant_sku`: partial unique `(organization_id, sku) where status <> 'Archived' and sku is not null`; case-sensitive; mapped to 409, including duplicates within one request.
-- Config: `RepositoryConfig.catalogueItemVariantTable` + `allTableNames`, both `application.conf` files, local `init.sql` grants/truncate if needed.
+- Config: `RepositoryConfig.catalogueItemVariantTable` + `allTableNames` and both `application.conf` files are updated.
 
 ### Domain
 
@@ -158,13 +158,13 @@ Edited in place in `V2025.05.27__init.sql`; no new migration, no data migration.
 
 ### Validation
 
-- Price (`PriceDomainValidator`, narrowed in place; Catalogue is its only caller): currency is `EUR`/`USD`/`GBP` only; amount non-negative, at most 12 integer digits, **at most 2 decimals on input, stored with exactly 2** by appending zeros (`1` → `1.00`); never rounded. The ISO `java.util.Currency` lookup is removed.
-- Measurement value (private checks in `CatalogueRequestValidator`, proven in `CatalogueRequestValidatorSpec`): greater than 0, at most 3 decimals, at most 12 integer digits, scale kept as given, never rounded.
-- Count: 1 through 999,999,999,999.
-- `SaleQuantityRequest`: exactly one of `counted`, `fixedMeasurement`, `variableMeasurement`, otherwise a named `VALIDATION_ERROR`.
+- Staging types live in `CatalogueV2.scala`, `CatalogueV2RequestValidator`, and `CatalogueV2PriceValidator` so the live V1 validator and requests remain unchanged. The V2 request validator handles the single insert, batch insert, item update, and name/SKU uniqueness check; archive and ID-only reads need no request validator. At cutover the staging validator takes the canonical Catalogue name.
+- V2 variant price uses a separate validator from V1's `PriceDomainValidator`; V1 keeps its ISO currency behavior until cutover. V2 accepts only the exact uppercase codes `EUR`, `USD`, and `GBP`, without trimming or case conversion. Amounts are non-negative, have at most 12 integer digits and at most two decimal places on input, and are stored at exactly two decimal places by appending zeros; never round. Guard the integer-digit check against compact extreme exponents before calling `setScale`.
+- Quantity, per-unit, and unit-size values are each greater than 0 and at most 99,999; validation preserves their supplied decimal places without rounding or a separate scale cap. Extremely precise values can pass validation yet exceed PostgreSQL `jsonb`'s numeric range when persisted; this is a known cutover risk accepted for this rule.
 - Insert item: at least one variant. Update `variantsInsert` entries: selling unit required (Smithy `@required`); price optional, as on insert (absent = no set price). Update status `Archived` is rejected.
 - Error naming: variants use `validateAllNested("catalogueItemVariant", ...)` inside each item; batch nests under `catalogueItem`. Each error names the item index, then the variant index, then the field.
-- **Decided (Q5):** the three unit fields are closed Smithy enums on the wire, so an unknown unit is a decode-time 400 that names neither the item nor the variant. `currency` stays a `String` on the wire; whether it is narrowed to a closed set is a validation-layer decision. Variant `status` in update is the full four-case Smithy enum; `Archived` is rejected by the validator.
+- The three unit fields are closed Smithy enums on the wire, so an unknown unit is a decode-time 400 that names neither the item nor the variant. `currency` stays a `String` on the wire and is checked by V2 validation. Variant `status` in update is the full four-case Smithy enum; `Archived` is rejected by the validator.
+- `CatalogueV2PriceValidatorSpec` proves currency, monetary boundaries, and exact scale. `CatalogueV2RequestValidatorSpec` proves each fallible request's round-trip and ordered error accumulation, including variant and batch indexes. V2 test arbitraries generate valid prices from the three allowed currencies without changing V1's ISO generators.
 
 ### Endpoints
 
@@ -200,8 +200,8 @@ Shapes in `domain/CatalogueV2.smithy`:
 
 ### Repository and transactions
 
-- `CatalogueItemQueries` (item) and new `CatalogueItemVariantQueries` (variant); `GatewayItContext` exposes both.
-- `CatalogueItemRow` drops `unit`/`price` and adds `description`; new `CatalogueItemVariantRow` with composite `price` and `sellingUnit` codecs across their adjacent columns.
+- `CatalogueQueries` contains the V2 item and variant queries; `CatalogueRepositoryV2Spec` exercises them against PostgreSQL.
+- `CatalogueItemRowV2` has `description` instead of V1's `unit`/price; `CatalogueItemVariantRow` stores optional price and the JSONB selling unit.
 - Insert (single and batch): item plus its variants in one transaction, all-or-nothing; variants start `Active`.
 - `updateCatalogueItem(organizationID, catalogueItemID, nameOptUpdate, descriptionOptUpdate, imageAssetOptUpdate, updateCatalogueItemVariantInputs, insertCatalogueItemVariantInputs)` is the single item update; there is no separate image-asset method, so `FileService` calls it with only `imageAssetOptUpdate` set and empty variant lists. One transaction. It first runs the item `UPDATE` filtered to `CatalogueItemStatus.enabled` (currently only `Active`); that `UPDATE` takes the item row lock implicitly (no explicit `SELECT ... FOR UPDATE`; `CatalogueRepositoryV2Spec` proves it serializes two concurrent updates of the same variant, so neither change is lost), and 0 affected rows (item missing, archived, or in another organization) means silent no-op success, even with bogus variant IDs. Every named variant must exist, belong to this item, and be non-archived; one query fetches the named variants scoped to the item and `CatalogueItemVariantStatus.enabled` (`Active`, `Inactive`, `OutOfStock`), and if fewer come back than were requested, the repository fails before any variant write (the transaction rolls back the item `UPDATE`) with a single `InternalServerError.UnexpectedError` whose message names the item ID, the requested variant IDs, and the enabled variant rows found (the three causes — missing, another item's, archived — are not distinguished). Then apply the item and variant changes and insert `Add` variants with the given status (default `Active`).
 - `archiveCatalogueItem`: one transaction. The item `UPDATE` to `Archived`, filtered to `CatalogueItemStatus.enabled`, is both the gate and the implicit item row lock (same mechanism as `updateCatalogueItem`). 0 affected rows (missing, already archived, or another organization) is a silent no-op. Otherwise every variant of the item in `CatalogueItemVariantStatus.enabled` is set `Archived` with the same `updatedAt`; already-archived variants keep their `updatedAt`. Errors map to `InternalServerError.RepositoryError` (status-only, no unique constraint). `CatalogueRepositoryV2Spec` covers the cascade, the untouched already-archived variant and sibling item, each no-op leaving the item's variants untouched, and an `archiveCatalogueItem`/`updateCatalogueItem` race (archive in parallel with an update adding a variant) proving the item never ends archived with an enabled variant.
@@ -210,7 +210,7 @@ Shapes in `domain/CatalogueV2.smithy`:
 - `getCatalogueItemWithVariantsActive(organizationID, catalogueItemID)` → `Option[CatalogueItemWithVariantsRow]` (item row + `NonEmptyChunk` of variant rows): one SQL statement, item `INNER JOIN` variant on `(organization_id, catalogue_item_id)`, selecting only the explicitly listed, alias-qualified columns both rows need (the variant's `organization_id`/`catalogue_item_id` are not re-selected; they come from the item). The item must be in `CatalogueItemStatus.enabled` and the variants in `CatalogueItemVariantStatus.enabled`, so archived variants are never returned. Variants are ordered oldest first: `created_at ASC`, then `catalogue_item_variant_id ASC` (UUIDv7) as a tiebreaker, because variants inserted together share one `created_at`. `None` when the item is missing, archived, or in another organization. An active item with no enabled variants also gives `None`, because the `INNER JOIN` matches nothing; the write paths already prevent that state. Errors map to `InternalServerError.RepositoryError`. `CatalogueRepositoryV2Spec` covers the success case (exact oldest-first order with variants inserted out of order; archived and sibling-item variants excluded), each `None` case, and the only-archived-variants case.
 - `getAllCatalogueItemSummariesEnabled(organizationID)` → `List[CatalogueItemSummaryRowV2]` (`catalogueItemID`, `name`, `imageAsset`, `status`, plus a `NonEmptyChunk` of `CatalogueItemVariantSummaryRow`: `catalogueItemVariantID`, `sku`, `label`, `price`, `sellingUnit`, `status`): one SQL statement, item `INNER JOIN` variant on `(organization_id, catalogue_item_id)`, selecting only the alias-qualified columns those two summary rows need (no `organization_id`, item `description`, variant `description`/`attributes`, or timestamps). Only items in `CatalogueItemStatus.enabled` and variants in `CatalogueItemVariantStatus.enabled` are returned, so disabled items and disabled variants never appear; there is no paging or filtering. Order is contractual: items oldest first (`i.created_at ASC`, then `i.catalogue_item_id ASC`), and each item's variants oldest first (`v.created_at ASC`, then `v.catalogue_item_variant_id ASC`), because batch-inserted rows share one `created_at`. `created_at` orders rather than name or ID alone, since PostgreSQL's collation and byte-wise UUID comparison do not match Scala's ordering, so tests could not state the expected order. The joined rows are grouped by `catalogueItemID` in Scala, keeping SQL order. An enabled item with no enabled variants matches nothing in the `INNER JOIN` and is left out; the write paths already prevent that state. The repository returns raw enabled variant rows, and `CatalogueItemSummaryGet` returns them as variant summaries; no from-prices or variant count is computed. Errors map to `InternalServerError.RepositoryError`. `CatalogueRepositoryV2Spec` covers the success case (exact item and variant order with rows inserted out of order; disabled variants, a disabled item, and another organization's item excluded), the empty organization, the only-disabled-items case, and an enabled item with only disabled variants being left out.
 - `getCatalogueItemSummariesEnabled(organizationID, catalogueItemIDs: NonEmptyChunk[CatalogueItemID])` → `List[CatalogueItemSummaryRowV2]`: the same query as `getAllCatalogueItemSummariesEnabled` (shared private helper in `CatalogueQueries`, same join, columns, enabled filters, contractual created-first ordering, and Scala grouping) plus `i.catalogue_item_id IN (...)`. Request order and duplicates in `catalogueItemIDs` do not affect the result; it follows the item `created_at` order. Requested IDs that match no enabled item with at least one enabled variant (missing, disabled, in another organization, or with only disabled variants) are simply absent, never an error. Errors map to `InternalServerError.RepositoryError`. `CatalogueRepositoryV2Spec` covers the success case (exact order with IDs requested in reverse and rows inserted out of order; disabled variants and an unrequested enabled item excluded), a requested disabled item, requested missing and other-organization IDs, a requested item with only disabled variants, and no requested ID matching.
-- Reads: `getCatalogueItem` unchanged in role; new `getCatalogueItemVariantsNonArchived(organizationID, catalogueItemID)` ordered by `catalogue_item_variant_id` (UUIDv7, so insertion order).
+- Reads: V2 provides `getCatalogueItemWithVariantsActive` and the all/selected enabled-summary queries described above.
 - Unique mapping adds `uq_catalogue_item_variant_sku` → 409.
 
 ## Open decisions
