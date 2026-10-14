@@ -13,7 +13,7 @@ class CatalogueItemVariantSaleUnitValidatorSpec extends ZWordSpecBase {
   "CatalogueItemVariantSaleUnitValidator" should {
     "accept every quantity unit and leave optional parts absent" in {
       val unitsSmithy = smithy.v2.CatalogueItemVariantUnit.values
-      val saleUnits = unitsSmithy.map(unitSmithy =>
+      val saleUnits   = unitsSmithy.map(unitSmithy =>
         validator
           .validate(
             smithy.v2.CatalogueItemVariantSaleUnit(
@@ -76,7 +76,7 @@ class CatalogueItemVariantSaleUnitValidatorSpec extends ZWordSpecBase {
     "accept the product bounds and preserve every supplied decimal place" in {
       val smallest = BigDecimal("0.00000000000000000001")
       val largest  = BigDecimal("99999.0000")
-      val result = validator
+      val result   = validator
         .validate(
           smithy.v2.CatalogueItemVariantSaleUnit(
             smithy.v2.CatalogueItemVariantQuantity(smallest, smithy.v2.CatalogueItemVariantUnit.Piece),

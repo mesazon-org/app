@@ -138,7 +138,7 @@ These shapes are used throughout this epic.
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Amount | `BigDecimal` | Non-negative; at most 12 integer digits; 0–2 decimal places on input; stored with exactly 2 decimal places by appending zeroes; never rounded | ✅ | The exact amount |
-| Currency | `String` | Exactly `EUR`, `USD` or `GBP` in uppercase; no surrounding whitespace; no trimming or case conversion | ✅ | Which currency the amount is in |
+| Currency | `Currency` | `EUR`, `USD` or `GBP` | ✅ | Which currency the amount is in |
 
 **CatalogueItemVariantSaleUnit**
 
@@ -437,7 +437,7 @@ Nothing changes. This step only reads.
 | 3. User changes an existing variant's price, selling unit, attributes or status, listing it with its identifier among the variants to change | - The change is saved for that variant only - Variants not mentioned are left exactly as they were |
 | 4. User marks a variant `OutOfStock` or `Inactive`, and later `Active` again | - Each move is saved; any move among these three statuses is allowed |
 | 5. User tries to set a variant to `Archived` through an update | - Rejected; variants are archived only through [step 7](#7-user-archives-a-variant) |
-| 6. User adds a new variant to an active item, listing it, with no identifier, among the new variants | - Stored with the status given (`Active`, `Inactive` or `OutOfStock`), or `Active` if none is given - Stored with no set price if none is given |
+| 6. User adds a new variant to an active item, listing it, with no identifier, among the new variants | - Stored as `Active` - Stored with no set price if none is given |
 | 7. User renames an item to a name another active item already has | - Rejected as a conflict |
 | 8. User gives a variant a SKU that another non-archived variant already has | - Rejected as a conflict |
 | 9. User changes an item that has been archived, or does not exist | - Nothing happens, and it is reported as successful — the same gap as [Customer Book gap 2]({{ site.baseurl }}{% link epics/05-customer-book.md %}#2-changes-to-an-archived-customer-are-silently-discarded) |

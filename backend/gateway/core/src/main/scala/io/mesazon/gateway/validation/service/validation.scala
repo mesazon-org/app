@@ -5,6 +5,7 @@ import cats.data.*
 import cats.syntax.all.*
 import io.mesazon.domain.gateway.ServiceError
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import smithy4s.Nullable
 import zio.*
 
 import scala.util.chaining.scalaUtilChainingOps
@@ -110,3 +111,13 @@ private[validation] def validateOptionalFields[A: Show, T](
       )
   }
   .toValidatedNec
+
+private[validation] def validateNullableField[[A: Show, T](
+    fieldName: String,
+    valueRaw: Option[Nullable[A]],
+    constructor: String => Either[String, T],
+): Validated[NonEmptyChain[InvalidFieldError], Option[Option[T]]] =
+  valueRaw match {
+    case None                        => none[Option[T]].validNec
+    case Some(value)         => validateOptionalField(fieldName, value.toOption, constructor).map(_.some)
+  }

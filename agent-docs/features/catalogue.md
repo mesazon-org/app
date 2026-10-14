@@ -124,10 +124,10 @@ Agreed design for the [Catalogue epic](../../pages/epics/06-catalogue.md). Stagi
 | Slice | Done | Remaining |
 |---|---|---|
 | Docs (K1) | This section | — |
-| Domain (K2–K3) | Variant enums, selling-unit types, and newtypes | Validated V2 request models |
+| Domain (K2–K3) | Variant enums, selling-unit types, newtypes, and validated V2 request models | — |
 | Endpoints (K4) | Staging contract `CatalogueServiceV2` (eight operations), unwired | Cutover: replace V1 contract, wire service |
-| Failing tests (K5–K7) | Repository integration tests | Validator, service, acceptance |
-| Implementation | Variant schema and `CatalogueRepositoryV2` | V2 validation, service, cutover, acceptance |
+| Failing tests (K5–K7) | Repository integration and V2 validator unit tests | Service, acceptance |
+| Implementation | Variant schema, `CatalogueRepositoryV2`, and V2 validators | Service, cutover, acceptance |
 
 ### Schema
 
@@ -161,10 +161,10 @@ Edited in place in `V2025.05.27__init.sql`; no new migration, no data migration.
 - Staging types live in `CatalogueV2.scala`, `CatalogueV2RequestValidator`, and `CatalogueV2PriceValidator` so the live V1 validator and requests remain unchanged. The V2 request validator handles the single insert, batch insert, item update, and name/SKU uniqueness check; archive and ID-only reads need no request validator. At cutover the staging validator takes the canonical Catalogue name.
 - V2 variant price uses a separate validator from V1's `PriceDomainValidator`; V1 keeps its ISO currency behavior until cutover. V2 accepts only the exact uppercase codes `EUR`, `USD`, and `GBP`, without trimming or case conversion. Amounts are non-negative, have at most 12 integer digits and at most two decimal places on input, and are stored at exactly two decimal places by appending zeros; never round. Guard the integer-digit check against compact extreme exponents before calling `setScale`.
 - Quantity, per-unit, and unit-size values are each greater than 0 and at most 99,999; validation preserves their supplied decimal places without rounding or a separate scale cap. Extremely precise values can pass validation yet exceed PostgreSQL `jsonb`'s numeric range when persisted; this is a known cutover risk accepted for this rule.
-- `CatalogueItemVariantSaleUnitValidator` maps the closed Smithy unit enums to the domain's quantity, per-unit, and unit-size types and accumulates invalid numeric values in that order. `CatalogueItemVariantSaleUnitValidatorSpec` covers all unit cases, optional parts, exact decimal preservation, boundaries, and ordered errors. The V2 request validator will delegate to it when that layer is implemented.
+- `CatalogueItemVariantSaleUnitValidator` maps the closed Smithy unit enums to the domain's quantity, per-unit, and unit-size types and accumulates invalid numeric values in that order. `CatalogueItemVariantSaleUnitValidatorSpec` covers all unit cases, optional parts, exact decimal preservation, boundaries, and ordered errors. The V2 request validator delegates to it and to `CatalogueV2PriceValidator`.
 - Insert item: at least one variant. Update `variantsInsert` entries: selling unit required (Smithy `@required`); price optional, as on insert (absent = no set price). Update status `Archived` is rejected.
 - Error naming: variants use `validateAllNested("catalogueItemVariant", ...)` inside each item; batch nests under `catalogueItem`. Each error names the item index, then the variant index, then the field.
-- The three unit fields are closed Smithy enums on the wire, so an unknown unit is a decode-time 400 that names neither the item nor the variant. `currency` stays a `String` on the wire and is checked by V2 validation. Variant `status` in update is the full four-case Smithy enum; `Archived` is rejected by the validator.
+- The three unit fields and `currency` are closed Smithy enums on the wire, so an unknown unit or currency is a decode-time 400 that names neither the item nor the variant. Variant `status` in update is the full four-case Smithy enum; `Archived` is rejected by the validator.
 - `CatalogueV2PriceValidatorSpec` proves currency, monetary boundaries, and exact scale. `CatalogueV2RequestValidatorSpec` proves each fallible request's round-trip and ordered error accumulation, including variant and batch indexes. V2 test arbitraries generate valid prices from the three allowed currencies without changing V1's ISO generators.
 
 ### Endpoints
