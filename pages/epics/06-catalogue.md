@@ -670,7 +670,7 @@ Nothing changes. This step only reads.
 | --- | --- |
 | 1. User checks both a name and a SKU | - An answer comes back for each |
 | 2. User checks only a name, or only a SKU | - An answer comes back for that one only |
-| 3. User checks neither | - Rejected as invalid |
+| 3. User checks neither | - Rejected as invalid, with separate errors for the missing name and SKU |
 | 4. The name belongs to an active item | - Reported as taken |
 | 5. The SKU belongs to a non-archived variant, including an `Inactive` or `OutOfStock` one | - Reported as taken |
 | 6. The name or SKU is not used anywhere in the organization | - Reported as free |
@@ -706,7 +706,7 @@ Nothing changes, and nothing is reserved. A name or SKU reported free can still 
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - Neither a name nor a SKU was given - A name or SKU was given but is invalid, such as blank |
+| 400 | `VALIDATION_ERROR` | - Neither a name nor a SKU was given; both fields are named in the errors - A name or SKU was given but is invalid, such as blank |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |

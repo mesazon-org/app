@@ -2,6 +2,7 @@ package io.mesazon.testkit.base
 
 import io.mesazon.domain.gateway.*
 import org.scalacheck.*
+import zio.NonEmptyChunk
 
 trait CatalogueDomainArbitraries extends GatewayArbitraries {
 
@@ -79,12 +80,17 @@ trait CatalogueDomainArbitraries extends GatewayArbitraries {
 
   given arbCatalogueItemPostRequest: Arbitrary[CatalogueItemPostRequest] = Arbitrary(
     for {
-      name        <- Arbitrary.arbitrary[CatalogueItemName]
-      description <- Arbitrary.arbitrary[Option[CatalogueItemDescription]]
-      variants    <- Gen
-        .choose(1, 10)
+      catalogueItemName               <- Arbitrary.arbitrary[CatalogueItemName]
+      catalogueItemDescriptionOpt     <- Arbitrary.arbitrary[Option[CatalogueItemDescription]]
+      catalogueItemVariantInsertHead  <- Arbitrary.arbitrary[CatalogueItemVariantInsert]
+      catalogueItemVariantInsertsTail <- Gen
+        .choose(0, 9)
         .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemVariantInsert]))
-    } yield CatalogueItemPostRequest(name, description, variants)
+      catalogueItemVariantInserts = NonEmptyChunk.fromIterable(
+        catalogueItemVariantInsertHead,
+        catalogueItemVariantInsertsTail,
+      )
+    } yield CatalogueItemPostRequest(catalogueItemName, catalogueItemDescriptionOpt, catalogueItemVariantInserts)
   )
 
   given arbCatalogueItemBatchPostRequest: Arbitrary[CatalogueItemBatchPostRequest] = Arbitrary(

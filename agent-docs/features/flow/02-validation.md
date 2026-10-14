@@ -42,6 +42,7 @@ Reuse `validation/service/validation.scala`:
 - `toValidatedRequestIO`: accumulated `ValidatedNec` → typed `ValidationError`.
 - `validateAll`: validates a flat list and stamps failures with item `index`.
 - `validateAllNested`: collapses a composite item's errors under the outer field while preserving inner indexes.
+- `validateNonEmptyNested`: applies `validateAllNested` and converts a valid non-empty result to `NonEmptyChunk`; an empty input fails on the supplied singular field name with `At least one <fieldName> must be provided`.
 - `validateSingleDefault`: a non-empty defaultable list must have exactly one default; chain after item validation with `.andThen`.
 
 Use concrete reusable domain validators such as `EmailValidator`, `PhoneNumberDomainValidator`, or `PriceValidator` for effectful/non-trivial fields, then wrap the result in the feature newtype. The live V1 catalogue still uses `PriceDomainValidator` for free-text ISO input. Do not make new domain validators extend the legacy generic `DomainValidator`; keep their concrete `validate` API. Shared helpers are `private[validation]`. New features use one feature request validator; legacy `ServiceValidator`/`DomainValidator` remains only for untouched old code (`WahaServiceValidator` is the last user).
@@ -56,6 +57,7 @@ File: `validation/service/<Feature>RequestValidator.scala`.
 - Compose fields in declaration order with `ValidatedNec` + `mapN`; clients must receive all errors in stable field order.
 - Put every constructor argument in the tuple, in the target's declaration order, and finish with `.mapN(Target.apply)`. Wrap an infallible value in `Validated.validNec(...)` rather than capturing it in a lambda; enum conversion follows the [Chimney enum standard](../../standards/chimney.md#enums) (see `validation/domain/AddressValidator.scala`).
 - `fieldName` exactly equals the Smithy member, except a `validateAllNested` batch wrapper uses the singular item concept because the error represents one indexed element.
+- When a new request requires at least one of several optional fields, validate each supplied field first. If all are absent, return one `InvalidFieldError` for each participating field in declaration order, using its own transport member name and an empty submitted-value list. Do not invent a combined field name such as `nameOrSku`. Supplied invalid values keep their own field errors.
 - Singular, batch, and combined requests reuse private per-item/per-field validation; never duplicate field lists.
 - A batch error identifies one failed element, so pass the singular item concept to `validateAllNested` (for example `catalogueItem`, not the plural request member `catalogueItems`). Preserve the source index and return no error for valid elements between failures.
 - For an optional composite, validate mandatory inner members in declaration order, accumulate their errors under the outer field, then wrap the valid case class in its contextual newtype.
@@ -71,6 +73,8 @@ File: `unit/validation/service/<Feature>RequestValidatorSpec.scala`; extend `ZWo
 2. **Failure accumulation:** sample a valid transport request, replace all targeted fields with invalid values, and assert the exact ordered `List[InvalidFieldError]`, including nested indexes.
 
 The accumulation test exists to prove one thing: every field that can fail is collected and reported together, in order. Make each fallible field fail once in that single test, and stop there.
+
+For an at-least-one-of-fields rule, assert that an all-absent request returns a separate error for every participating field in declaration order. The Catalogue V2 uniqueness request is the reference case: absent `name` and `sku` produce two errors, not a `nameOrSku` error.
 
 Never re-test a validator that already has its own spec. When a request validator delegates to a shared domain validator (`EmailValidator`, `PhoneNumberDomainValidator`, `AddressValidator`, `PriceValidator`), that validator's edge cases — bad parts, allowed combinations, formats, boundaries — are proven once in `unit/validation/domain/<Validator>Spec.scala`. The request validator spec does not repeat them and adds no separate "reject when …" test for a delegated rule. For a delegated field, the accumulation test carries one dummy invalid value, written by hand (for addresses: a single `ShippingAndBilling` entry with `city = ""`), just to show the delegated errors are accumulated with the others. The round-trip test already proves the wiring.
 

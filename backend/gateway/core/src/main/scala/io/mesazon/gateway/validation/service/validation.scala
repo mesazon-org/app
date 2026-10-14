@@ -53,6 +53,18 @@ private[validation] def validateAllNested[A, B](
     }
     .map(_.sequence)
 
+private[validation] def validateNonEmptyNested[A, B](
+    fieldName: String,
+    items: List[A],
+)(validate: A => UIO[ValidatedNec[InvalidFieldError, B]]): UIO[ValidatedNec[InvalidFieldError, NonEmptyChunk[B]]] =
+  validateAllNested(fieldName, items)(validate).map(
+    _.andThen(validatedItems =>
+      NonEmptyChunk
+        .fromIterableOption(validatedItems)
+        .toValidNec(InvalidFieldError(fieldName, s"At least one $fieldName must be provided", Seq.empty))
+    )
+  )
+
 private[validation] def validateSingleDefault[A](
     fieldName: String,
     items: List[A],

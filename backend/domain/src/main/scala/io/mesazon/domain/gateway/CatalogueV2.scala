@@ -1,5 +1,7 @@
 package io.mesazon.domain.gateway
 
+import zio.NonEmptyChunk
+
 case class CatalogueItemVariantInsert(
     sku: Option[CatalogueItemVariantSku],
     label: Option[CatalogueItemVariantLabel],
@@ -23,7 +25,7 @@ case class CatalogueItemVariantUpdate(
 case class CatalogueItemPostRequest(
     name: CatalogueItemName,
     description: Option[CatalogueItemDescription],
-    variants: List[CatalogueItemVariantInsert],
+    variants: NonEmptyChunk[CatalogueItemVariantInsert],
 )
 
 case class CatalogueItemBatchPostRequest(

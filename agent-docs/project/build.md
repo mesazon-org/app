@@ -24,7 +24,7 @@ Versions: sbt 2.0.4; Scala 3 metabuild; application Scala 3.8.4; Temurin JDK 25.
 - Location `backend/<module>` or `backend/<root>/<sub>`; ID `<root>-<sub>`; always use `createBackendModule(root)(subOpt)`.
 - Service pattern: aggregate `<name>` → dockerized `<name>-core` + acceptance-only `<name>-it`.
 - Lazy vals: `backend<Name>Module` or `backend<Service>Module{Root,Core,It}`.
-- Infrastructure modules: `domain` (pure Iron/Cats), `clock`, `generator`, `test-kit` (all test libraries), `postgresql-test`, `s3-test`, `wiremock`, `schemas` (Flyway only).
+- Infrastructure modules: `domain` (Iron/Cats/ZIO core for non-empty domain collections), `clock`, `generator`, `test-kit` (all test libraries), `postgresql-test`, `s3-test`, `wiremock`, `schemas` (Flyway only).
 - `.dependsOn` wires modules (one per line; `% Test` where appropriate); `.withDependencies(Dependencies.x, ...)` adds libraries. Version vals are `<lib>V`, grouped by ecosystem comment in `Dependencies.scala`.
 - `Test / fork := true`; forked suites run in parallel except gateway-it's explicitly sequential shared stack.
 
