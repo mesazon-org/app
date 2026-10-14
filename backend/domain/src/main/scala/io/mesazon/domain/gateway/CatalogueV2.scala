@@ -1,0 +1,43 @@
+package io.mesazon.domain.gateway
+
+case class CatalogueItemVariantInsert(
+    sku: Option[CatalogueItemVariantSku],
+    label: Option[CatalogueItemVariantLabel],
+    description: Option[CatalogueItemVariantDescription],
+    attributes: Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue],
+    price: Option[CatalogueItemVariantPrice],
+    sellingUnit: CatalogueItemVariantSaleUnit,
+)
+
+case class CatalogueItemVariantUpdate(
+    catalogueItemVariantID: CatalogueItemVariantID,
+    sku: Option[Option[CatalogueItemVariantSku]],
+    label: Option[Option[CatalogueItemVariantLabel]],
+    description: Option[Option[CatalogueItemVariantDescription]],
+    attributes: Option[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]],
+    price: Option[Option[CatalogueItemVariantPrice]],
+    sellingUnit: Option[CatalogueItemVariantSaleUnit],
+    status: Option[CatalogueItemVariantStatus],
+)
+
+case class CatalogueItemPostRequest(
+    name: CatalogueItemName,
+    description: Option[CatalogueItemDescription],
+    variants: List[CatalogueItemVariantInsert],
+)
+
+case class CatalogueItemBatchPostRequest(
+    catalogueItems: List[CatalogueItemPostRequest]
+)
+
+case class CatalogueItemPutRequest(
+    name: Option[CatalogueItemName],
+    description: Option[Option[CatalogueItemDescription]],
+    variantsUpdate: List[CatalogueItemVariantUpdate],
+    variantsInsert: List[CatalogueItemVariantInsert],
+)
+
+case class CatalogueItemUniquenessGetRequest(
+    name: Option[CatalogueItemName],
+    sku: Option[CatalogueItemVariantSku],
+)
