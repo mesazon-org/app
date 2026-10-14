@@ -165,7 +165,7 @@ Edited in place in `V2025.05.27__init.sql`; no new migration, no data migration.
 - Insert item: at least one variant. Update `variantsInsert` entries: selling unit required (Smithy `@required`); price optional, as on insert (absent = no set price). Update status `Archived` is rejected.
 - Error naming: variants use `validateAllNested("catalogueItemVariant", ...)` inside each item; batch nests under `catalogueItem`. Each error names the item index, then the variant index, then the field.
 - The three unit fields and `currency` are closed Smithy enums on the wire, so an unknown unit or currency is a decode-time 400 that names neither the item nor the variant. Variant `status` in update is the full four-case Smithy enum; `Archived` is rejected by the validator.
-- `CatalogueV2PriceValidatorSpec` proves currency, monetary boundaries, and exact scale. `CatalogueV2RequestValidatorSpec` proves each fallible request's round-trip and ordered error accumulation, including variant and batch indexes. V2 test arbitraries generate valid prices from the three allowed currencies without changing V1's ISO generators.
+- `CatalogueV2PriceValidatorSpec` proves currency, monetary boundaries, and exact scale. `CatalogueV2RequestValidatorSpec` proves each fallible request's round-trip and ordered error accumulation, including variant and batch indexes. The shared `Price` arbitrary generates valid EUR, USD, and GBP prices; both catalogue price wrappers reuse it. V1's ISO validator behavior remains unchanged and its explicit tests still cover other currencies.
 
 ### Endpoints
 

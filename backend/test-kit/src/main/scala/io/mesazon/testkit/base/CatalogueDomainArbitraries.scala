@@ -37,6 +37,16 @@ trait CatalogueDomainArbitraries extends GatewayArbitraries {
   given arbCatalogueItemVariantSaleUnit: Arbitrary[CatalogueItemVariantSaleUnit] =
     Arbitrary(Gen.resultOf(CatalogueItemVariantSaleUnit.apply))
 
+  given arbCatalogueItemVariantInsert: Arbitrary[CatalogueItemVariantInsert] =
+    Arbitrary(Gen.resultOf(CatalogueItemVariantInsert.apply))
+
+  given arbCatalogueItemVariantUpdate: Arbitrary[CatalogueItemVariantUpdate] = Arbitrary(
+    for {
+      update <- Gen.resultOf(CatalogueItemVariantUpdate.apply)
+      status <- Gen.option(Gen.oneOf(CatalogueItemVariantStatus.enabled))
+    } yield update.copy(status = status)
+  )
+
   given arbCatalogueItemVariantAttributes
       : Arbitrary[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]] = Arbitrary(
     Gen
@@ -65,5 +75,47 @@ trait CatalogueDomainArbitraries extends GatewayArbitraries {
 
   given arbUpdateCatalogueItemPutRequest: Arbitrary[UpdateCatalogueItemPutRequest] = Arbitrary(
     Gen.resultOf(UpdateCatalogueItemPutRequest.apply)
+  )
+
+  given arbCatalogueItemPostRequest: Arbitrary[CatalogueItemPostRequest] = Arbitrary(
+    for {
+      name        <- Arbitrary.arbitrary[CatalogueItemName]
+      description <- Arbitrary.arbitrary[Option[CatalogueItemDescription]]
+      variants    <- Gen
+        .choose(1, 10)
+        .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemVariantInsert]))
+    } yield CatalogueItemPostRequest(name, description, variants)
+  )
+
+  given arbCatalogueItemBatchPostRequest: Arbitrary[CatalogueItemBatchPostRequest] = Arbitrary(
+    Gen
+      .choose(0, 10)
+      .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemPostRequest]))
+      .map(CatalogueItemBatchPostRequest.apply)
+  )
+
+  given arbCatalogueItemPutRequest: Arbitrary[CatalogueItemPutRequest] = Arbitrary(
+    for {
+      name           <- Arbitrary.arbitrary[Option[CatalogueItemName]]
+      description    <- Arbitrary.arbitrary[Option[Option[CatalogueItemDescription]]]
+      variantsUpdate <- Gen
+        .choose(0, 10)
+        .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemVariantUpdate]))
+      variantsInsert <- Gen
+        .choose(0, 10)
+        .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemVariantInsert]))
+    } yield CatalogueItemPutRequest(name, description, variantsUpdate, variantsInsert)
+  )
+
+  given arbCatalogueItemUniquenessGetRequest: Arbitrary[CatalogueItemUniquenessGetRequest] = Arbitrary(
+    for {
+      name    <- Arbitrary.arbitrary[CatalogueItemName]
+      sku     <- Arbitrary.arbitrary[CatalogueItemVariantSku]
+      request <- Gen.oneOf(
+        CatalogueItemUniquenessGetRequest(Some(name), None),
+        CatalogueItemUniquenessGetRequest(None, Some(sku)),
+        CatalogueItemUniquenessGetRequest(Some(name), Some(sku)),
+      )
+    } yield request
   )
 }
