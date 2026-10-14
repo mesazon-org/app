@@ -11,7 +11,7 @@ import smithy4s.Nullable
 import zio.*
 
 final class CatalogueV2RequestValidator(
-    priceValidator: PriceValidator,
+    priceValidator: PriceValidator
 ) {
   private def validateAttributes(
       attributesRaw: Map[String, String]
@@ -19,13 +19,12 @@ final class CatalogueV2RequestValidator(
     InvalidFieldError,
     Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue],
   ] =
-    attributesRaw.toList
-      .traverse { case (nameRaw, valueRaw) =>
-        (
-          validateRequiredField("attributeName", nameRaw, CatalogueItemVariantAttributeName.either),
-          validateRequiredField("attributeValue", valueRaw, CatalogueItemVariantAttributeValue.either),
-        ).mapN((_, _))
-      }
+    attributesRaw.toList.traverse { case (nameRaw, valueRaw) =>
+      (
+        validateRequiredField("attributeName", nameRaw, CatalogueItemVariantAttributeName.either),
+        validateRequiredField("attributeValue", valueRaw, CatalogueItemVariantAttributeValue.either),
+      ).mapN((_, _))
+    }
       .map(_.toMap)
 
   private def validatePrice(
@@ -57,8 +56,8 @@ final class CatalogueV2RequestValidator(
       priceSmithy: Option[Nullable[smithy.v2.CatalogueItemVariantPrice]]
   ): UIO[ValidatedNec[InvalidFieldError, Option[Option[CatalogueItemVariantPrice]]]] =
     priceSmithy match {
-      case None                       => ZIO.succeed(none[Option[CatalogueItemVariantPrice]].validNec)
-      case Some(Nullable.Null)        => ZIO.succeed(none[CatalogueItemVariantPrice].some.validNec)
+      case None                        => ZIO.succeed(none[Option[CatalogueItemVariantPrice]].validNec)
+      case Some(Nullable.Null)         => ZIO.succeed(none[CatalogueItemVariantPrice].some.validNec)
       case Some(Nullable.Value(price)) => validatePrice(price).map(_.map(_.some.some))
     }
 
@@ -105,14 +104,16 @@ final class CatalogueV2RequestValidator(
   private def validateVariantInsert(
       variantSmithy: smithy.v2.CatalogueItemVariantInsert
   ): UIO[ValidatedNec[InvalidFieldError, CatalogueItemVariantInsert]] =
-    validateOptionalPrice(variantSmithy.price).map(price => (
-      validateOptionalField("sku", variantSmithy.sku, CatalogueItemVariantSku.either),
-      validateOptionalField("label", variantSmithy.label, CatalogueItemVariantLabel.either),
-      validateOptionalField("description", variantSmithy.description, CatalogueItemVariantDescription.either),
-      validateAttributes(variantSmithy.attributes),
-      price,
-      validateSaleUnit(variantSmithy.sellingUnit),
-    ).mapN(CatalogueItemVariantInsert.apply))
+    validateOptionalPrice(variantSmithy.price).map(price =>
+      (
+        validateOptionalField("sku", variantSmithy.sku, CatalogueItemVariantSku.either),
+        validateOptionalField("label", variantSmithy.label, CatalogueItemVariantLabel.either),
+        validateOptionalField("description", variantSmithy.description, CatalogueItemVariantDescription.either),
+        validateAttributes(variantSmithy.attributes),
+        price,
+        validateSaleUnit(variantSmithy.sellingUnit),
+      ).mapN(CatalogueItemVariantInsert.apply)
+    )
 
   private def validateVariantInserts(
       variantsSmithy: List[smithy.v2.CatalogueItemVariantInsert]
@@ -151,16 +152,18 @@ final class CatalogueV2RequestValidator(
   private def validateVariantUpdate(
       variantSmithy: smithy.v2.CatalogueItemVariantUpdate
   ): UIO[ValidatedNec[InvalidFieldError, CatalogueItemVariantUpdate]] =
-    validateNullablePrice(variantSmithy.price).map(price => (
-      CatalogueItemVariantID(variantSmithy.catalogueItemVariantID).validNec,
-      validateNullableField("sku", variantSmithy.sku, CatalogueItemVariantSku.either),
-      validateNullableField("label", variantSmithy.label, CatalogueItemVariantLabel.either),
-      validateNullableField("description", variantSmithy.description, CatalogueItemVariantDescription.either),
-      variantSmithy.attributes.traverse(validateAttributes),
-      price,
-      variantSmithy.sellingUnit.traverse(validateSaleUnit),
-      validateVariantStatus(variantSmithy.status),
-    ).mapN(CatalogueItemVariantUpdate.apply))
+    validateNullablePrice(variantSmithy.price).map(price =>
+      (
+        CatalogueItemVariantID(variantSmithy.catalogueItemVariantID).validNec,
+        validateNullableField("sku", variantSmithy.sku, CatalogueItemVariantSku.either),
+        validateNullableField("label", variantSmithy.label, CatalogueItemVariantLabel.either),
+        validateNullableField("description", variantSmithy.description, CatalogueItemVariantDescription.either),
+        variantSmithy.attributes.traverse(validateAttributes),
+        price,
+        variantSmithy.sellingUnit.traverse(validateSaleUnit),
+        validateVariantStatus(variantSmithy.status),
+      ).mapN(CatalogueItemVariantUpdate.apply)
+    )
 
   def validatedCatalogueItemPostRequest(
       requestSmithy: smithy.v2.CatalogueItemPostRequest

@@ -2,7 +2,9 @@
 
 For dependencies, modules, tasks, plugins, Docker packaging, aliases, Scala/JDK versions, or CI build wiring, read [sbt](../standards/sbt.md) and this file.
 
-Versions: sbt 2.0.4; Scala 3 metabuild; application Scala 3.8.4; Temurin JDK 25.
+Versions: sbt 2.1.0-RC1; Scala 3.9.0 metabuild and application; Temurin JDK 25.
+
+sbt is pinned to a release candidate for the upstream [SemanticDB cache-restoration fix](https://github.com/sbt/sbt/pull/9878), absent from stable 2.0.10. Run `sbt "clean; runLint"` once after upgrading to remove outputs linked by older versions. Move to a stable release containing this fix when available; see [known issues](../known-issues.md#sbt-2-compile-cannot-overwrite-a-cache-linked-semanticdb-file).
 
 ## Ownership
 
@@ -31,7 +33,7 @@ Versions: sbt 2.0.4; Scala 3 metabuild; application Scala 3.8.4; Temurin JDK 25.
 ## sbt 2 invariants
 
 - Top-level bare settings apply to every subproject; never reintroduce `ThisBuild /`.
-- `test` is incremental; `testFull` is uncached and bypasses the cache that survives `clean`. Never replace `test` with `Def.sequential`.
+- `test` is incremental; `testFull` is uncached. In sbt 2.1, `clean` also invalidates the scoped cache for the next command. Never replace `test` with `Def.sequential`.
 - Docker-dependent tests use `Settings.testAfterDockerPublish`, wrapping `test`, `testQuick`, `testOnly`, `testFull` through `.dependsOn`. Preserve input completion with `InputTask.mapTask`; `Def.task`/`Def.sequential` self-reference causes `RuntimeUndefined`; keep `testFull` `Def.uncached`.
 - Side-effecting tasks are `Def.uncached`.
 - `Classpath`/`mappings` contain `xsbti.HashedVirtualFileRef`, not `File`; use `fileConverter.value.toVirtualFile(path)`.

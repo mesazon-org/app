@@ -58,7 +58,7 @@ class CatalogueV2RequestValidatorSpec extends ZWordSpecBase, CatalogueV2SmithyAr
       "preserve every quantity unit with optional selling-unit parts absent" in {
         val requestSmithy = arbitrarySample[smithy.v2.CatalogueItemPostRequest]
         val unitsSmithy   = smithy.v2.CatalogueItemVariantUnit.values
-        val saleUnits = unitsSmithy.map(unitSmithy =>
+        val saleUnits     = unitsSmithy.map(unitSmithy =>
           validatedSaleUnit(
             requestSmithy,
             smithy.v2.CatalogueItemVariantSaleUnit(
@@ -108,7 +108,7 @@ class CatalogueV2RequestValidatorSpec extends ZWordSpecBase, CatalogueV2SmithyAr
         val requestSmithy = arbitrarySample[smithy.v2.CatalogueItemPostRequest]
         val smallest      = BigDecimal("0.00000000000000000001")
         val largest       = BigDecimal("99999.0000")
-        val result = validatedSaleUnit(
+        val result        = validatedSaleUnit(
           requestSmithy,
           smithy.v2.CatalogueItemVariantSaleUnit(
             smithy.v2.CatalogueItemVariantQuantity(smallest, smithy.v2.CatalogueItemVariantUnit.Piece),
@@ -126,19 +126,21 @@ class CatalogueV2RequestValidatorSpec extends ZWordSpecBase, CatalogueV2SmithyAr
       }
 
       "fail with a ValidationError for invalid selling-unit values in field order" in {
-        val requestSmithy = arbitrarySample[smithy.v2.CatalogueItemPostRequest]
-        val quantity      = BigDecimal(0)
-        val perUnit       = BigDecimal("-0.1")
-        val unitSize      = BigDecimal("99999.0001")
+        val requestSmithy  = arbitrarySample[smithy.v2.CatalogueItemPostRequest]
+        val quantity       = BigDecimal(0)
+        val perUnit        = BigDecimal("-0.1")
+        val unitSize       = BigDecimal("99999.0001")
         val saleUnitSmithy = smithy.v2.CatalogueItemVariantSaleUnit(
           smithy.v2.CatalogueItemVariantQuantity(quantity, smithy.v2.CatalogueItemVariantUnit.Box),
           Some(smithy.v2.CatalogueItemVariantPerUnit(perUnit, smithy.v2.CatalogueItemVariantUnitPerUnit.Bag)),
           Some(smithy.v2.CatalogueItemVariantUnitSize(unitSize, smithy.v2.CatalogueItemVariantUnitUnitSize.Gram)),
         )
 
-        validator.validatedCatalogueItemPostRequest(
-          requestSmithy.copy(variants = List(requestSmithy.variants.head.copy(sellingUnit = saleUnitSmithy)))
-        ).zioError shouldBe ServiceError.BadRequestError.ValidationError(
+        validator
+          .validatedCatalogueItemPostRequest(
+            requestSmithy.copy(variants = List(requestSmithy.variants.head.copy(sellingUnit = saleUnitSmithy)))
+          )
+          .zioError shouldBe ServiceError.BadRequestError.ValidationError(
           List(
             nestedError(
               "variant",
@@ -166,7 +168,7 @@ class CatalogueV2RequestValidatorSpec extends ZWordSpecBase, CatalogueV2SmithyAr
       "fail with a ValidationError containing item and variant fields in declaration order" in {
         val invalidPriceAmount = BigDecimal("-1")
         val invalidPriceInner  = InvalidFieldError("amount", "Amount must be non-negative", List("-1"))
-        val invalidPrice = InvalidFieldError(
+        val invalidPrice       = InvalidFieldError(
           "price",
           s"Failed with invalid fields [$invalidPriceInner]",
           List("-1", "EUR"),
@@ -259,10 +261,10 @@ class CatalogueV2RequestValidatorSpec extends ZWordSpecBase, CatalogueV2SmithyAr
       }
 
       "fail with a ValidationError preserving item and variant indexes" in {
-        val validItem = arbitrarySample[smithy.v2.CatalogueItemPostRequest]
-        val invalidName = validItem.copy(name = "")
+        val validItem      = arbitrarySample[smithy.v2.CatalogueItemPostRequest]
+        val invalidName    = validItem.copy(name = "")
         val invalidVariant = validItem.copy(variants = List(validItem.variants.head.copy(sku = Some(""))))
-        val request = smithy.v2.CatalogueItemBatchPostRequest(
+        val request        = smithy.v2.CatalogueItemBatchPostRequest(
           List(validItem, invalidName, validItem, invalidVariant)
         )
 
@@ -319,7 +321,8 @@ class CatalogueV2RequestValidatorSpec extends ZWordSpecBase, CatalogueV2SmithyAr
           val request = smithy.v2.CatalogueItemPutRequest(
             name = None,
             description = None,
-            variantsUpdate = List(variant.copy(status = Some(status.transformInto[smithy.v2.CatalogueItemVariantStatus]))),
+            variantsUpdate =
+              List(variant.copy(status = Some(status.transformInto[smithy.v2.CatalogueItemVariantStatus]))),
             variantsInsert = Nil,
           )
 
@@ -388,7 +391,8 @@ class CatalogueV2RequestValidatorSpec extends ZWordSpecBase, CatalogueV2SmithyAr
           val request = smithy.v2.CatalogueItemPutRequest(
             name = None,
             description = None,
-            variantsUpdate = List(variant.copy(status = Some(status.transformInto[smithy.v2.CatalogueItemVariantStatus]))),
+            variantsUpdate =
+              List(variant.copy(status = Some(status.transformInto[smithy.v2.CatalogueItemVariantStatus]))),
             variantsInsert = Nil,
           )
 
@@ -413,7 +417,7 @@ class CatalogueV2RequestValidatorSpec extends ZWordSpecBase, CatalogueV2SmithyAr
     "validatedCatalogueItemUniquenessGetRequest" should {
       "return a validated name or SKU uniqueness request" in {
         val request = arbitrarySample[CatalogueItemUniquenessGetRequest]
-        val input = smithy.v2.CatalogueItemUniquenessGetInput(
+        val input   = smithy.v2.CatalogueItemUniquenessGetInput(
           organizationID = arbitrarySample[OrganizationID].value,
           name = request.name.map(_.value),
           sku = request.sku.map(_.value),
@@ -425,9 +429,11 @@ class CatalogueV2RequestValidatorSpec extends ZWordSpecBase, CatalogueV2SmithyAr
       "fail with a ValidationError for invalid supplied name and SKU" in {
         val organizationID = arbitrarySample[OrganizationID].value
 
-        validator.validatedCatalogueItemUniquenessGetRequest(
-          smithy.v2.CatalogueItemUniquenessGetInput(organizationID, Some(""), Some(""))
-        ).zioError shouldBe ServiceError.BadRequestError.ValidationError(
+        validator
+          .validatedCatalogueItemUniquenessGetRequest(
+            smithy.v2.CatalogueItemUniquenessGetInput(organizationID, Some(""), Some(""))
+          )
+          .zioError shouldBe ServiceError.BadRequestError.ValidationError(
           List(
             InvalidFieldError("name", invalidTextMessage, List("")),
             InvalidFieldError("sku", invalidTextMessage, List("")),
@@ -438,9 +444,11 @@ class CatalogueV2RequestValidatorSpec extends ZWordSpecBase, CatalogueV2SmithyAr
       "fail with a ValidationError naming both absent uniqueness fields" in {
         val organizationID = arbitrarySample[OrganizationID].value
 
-        validator.validatedCatalogueItemUniquenessGetRequest(
-          smithy.v2.CatalogueItemUniquenessGetInput(organizationID, None, None)
-        ).zioError shouldBe ServiceError.BadRequestError.ValidationError(
+        validator
+          .validatedCatalogueItemUniquenessGetRequest(
+            smithy.v2.CatalogueItemUniquenessGetInput(organizationID, None, None)
+          )
+          .zioError shouldBe ServiceError.BadRequestError.ValidationError(
           List(
             InvalidFieldError("name", "At least one of name or sku must be provided", Seq.empty),
             InvalidFieldError("sku", "At least one of name or sku must be provided", Seq.empty),
