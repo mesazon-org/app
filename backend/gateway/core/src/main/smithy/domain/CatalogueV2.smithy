@@ -7,6 +7,12 @@ use alloy#UUID
 use alloy#nullable
 use io.mesazon.gateway.smithy#CatalogueItemStatus
 
+enum Currency {
+    EUR
+    USD
+    GBP
+}
+
 enum CatalogueItemVariantStatus {
     Active
     Inactive
@@ -55,7 +61,7 @@ structure CatalogueItemVariantPrice {
     @required
     amount: BigDecimal
     @required
-    currency: String
+    currency: Currency
 }
 
 structure CatalogueItemVariantQuantity {
