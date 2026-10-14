@@ -38,7 +38,7 @@ object Dependencies {
   lazy val springCoreV          = "7.0.9"
   lazy val bouncyCastleV        = "1.86"
   lazy val uuidCreatorV         = "6.1.1"
-  lazy val scalamockV           = "7.5.5"
+  lazy val scalamockV           = "7.6.0"
   lazy val scrimageV            = "4.6.8"
   lazy val tikaV                = "4.1.0"
   lazy val awssdkV              = "2.55.11"
@@ -96,6 +96,7 @@ object Dependencies {
   lazy val testcontainers               = "org.testcontainers" % "testcontainers"                 % testcontainersV
   lazy val testcontainersScalaScalatest = "com.dimafeng"      %% "testcontainers-scala-scalatest" % testcontainersScalaV
   lazy val scalamock                    = "org.scalamock"     %% "scalamock"                      % scalamockV
+  lazy val scalamockScalaTest           = "org.scalamock"     %% "scalamock-scalatest"            % scalamockV
   lazy val scalamockZIO                 = "org.scalamock"     %% "scalamock-zio"                  % scalamockV
 
   // Chimney
