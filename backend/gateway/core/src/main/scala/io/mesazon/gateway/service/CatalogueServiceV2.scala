@@ -215,7 +215,23 @@ object CatalogueServiceV2 {
         name: Option[String],
         sku: Option[String],
     ): ServiceTask[smithy.v2.CatalogueItemUniquenessGetResponse] =
-      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemUniquenessGet"))
+      for {
+        catalogueItemUniquenessGetRequest <- catalogueV2RequestValidator.validatedCatalogueItemUniquenessGetRequest(
+          smithy.v2.CatalogueItemUniquenessGetInput(organizationID, name, sku)
+        )
+        isNameUniqueOpt <- ZIO.foreach(catalogueItemUniquenessGetRequest.name)(catalogueItemName =>
+          catalogueRepositoryV2.isUniqueCatalogueItemName(
+            OrganizationID(organizationID),
+            catalogueItemName,
+          )
+        )
+        isSkuUniqueOpt <- ZIO.foreach(catalogueItemUniquenessGetRequest.sku)(catalogueItemVariantSku =>
+          catalogueRepositoryV2.isUniqueCatalogueItemVariantSKU(
+            OrganizationID(organizationID),
+            catalogueItemVariantSku,
+          )
+        )
+      } yield smithy.v2.CatalogueItemUniquenessGetResponse(isNameUniqueOpt, isSkuUniqueOpt)
   }
 
   private def observed(service: smithy.v2.CatalogueServiceV2[ServiceTask]): smithy.v2.CatalogueServiceV2[Task] =

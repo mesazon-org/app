@@ -201,9 +201,9 @@ Shapes in `domain/CatalogueV2.smithy`:
 
 `GatewayClient`: hand-written jsoniter codecs for every new enum (like `OnboardStage`/`CustomerType`), a hand-written null-emitting codec for the nullable members (new pattern), and encoding that keeps `attributes: {}` on update so clearing all attributes is possible.
 
-### Service implementation plan — slice 8 awaiting review
+### Service implementation plan — slice 9 awaiting review
 
-The V2 contract, validation, repository, and callable service skeleton are now present. Slices 2 through 8 implement `catalogueItemPost`, `catalogueItemBatchPost`, `catalogueItemPut`, `catalogueItemArchivePut`, `catalogueItemVariantArchivePut`, `catalogueItemGet`, and `catalogueItemSummaryGet`: they validate before repository access where required, map inserted variants to `Active`, preserve input order, preserve keep/set/clear update semantics, forward archive IDs directly, map complete ordered detail and summary responses, and sign only present images. The focused summary command ran 6 tests and all 6 passed; 29 implementation scenarios now pass, while the remaining 9 service scenarios still stop at the uniqueness operation stub. `sbt 'runLint'` passed. Production route wiring, deletion of V1, and canonical renaming follow in the cutover phase. The service remains explicitly unshipped until cutover and HTTP acceptance proof are complete.
+The V2 contract, validation, repository, and callable service skeleton are now present. Slices 2 through 9 implement all eight operations: they validate before repository access where required, map inserted variants to `Active`, preserve input order, preserve keep/set/clear update semantics, forward archive IDs directly, map complete ordered detail and summary responses, sign only present images, and query only supplied uniqueness fields in name-before-SKU order. All 38 implementation scenarios now pass. `sbt 'runLint'` passed. Production route wiring, deletion of V1, and canonical renaming follow in the cutover phase. The service remains explicitly unshipped until cutover and HTTP acceptance proof are complete.
 
 Complexity: **MEDIUM**. This phase follows the existing Catalogue service pattern and delegates transactions, tenant filtering, uniqueness, and the last-enabled-variant rule to the completed repository. It adds no schema or authentication-policy changes.
 
@@ -229,8 +229,8 @@ Ordered review slices, each at most three hand-written files:
 5. Implement `catalogueItemArchivePut`. **Complete and committed with user approval:** the focused archive spec ran 2 tests and all 2 passed.
 6. Implement `catalogueItemVariantArchivePut`, including unchanged `InvalidAction` propagation. **Complete and committed with user approval:** the focused variant archive spec ran 3 tests and all 3 passed.
 7. Implement `catalogueItemGet`, including missing-item and image branches. **Complete and committed with user approval:** the focused detail spec ran 5 tests and all 5 passed.
-8. Implement `catalogueItemSummaryGet`, including both repository-selection branches. **Awaiting review:** the focused summary spec ran 6 tests and all 6 passed; 29 implementation scenarios now pass and 9 remain at the uniqueness stub.
-9. Implement `catalogueItemUniquenessGet`, including optional-field call sequencing.
+8. Implement `catalogueItemSummaryGet`, including both repository-selection branches. **Complete and committed with user approval:** the focused summary spec ran 6 tests and all 6 passed.
+9. Implement `catalogueItemUniquenessGet`, including optional-field call sequencing. **Awaiting review:** the focused uniqueness spec ran 9 tests and all 9 passed; the full V2 service spec ran 38 tests and all 38 passed; the existing V1 `CatalogueServiceSpec` regression ran 19 tests and all 19 passed.
 
 Each implementation slice changes the service, its spec as needed, and this feature doc's delivery status. Functional cases prove service-owned branches and exact mappings; database atomicity, filtering, conflict semantics, and archive races reuse existing repository proof rather than mocked simulations. Run focused scenarios for each slice and `sbt "runLint"`; at the completed service phase run its full functional suite and the existing Catalogue service regression suite. Cutover needs a separate reviewed slice plan for application wiring, image-upload repository integration, removal/renaming, schema cleanup, and the real HTTP acceptance matrix.
 

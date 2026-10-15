@@ -40,7 +40,7 @@ Every request in this epic names the organization it applies to, and only touche
 1. Every request needs a signed-in person who has finished personal onboarding and belongs to the organization named in the request. Someone outside the organization is refused with a server error — the same gap as [Organization Onboarding gap 3]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}#3-not-belonging-to-an-organization-is-reported-as-a-server-error).
 2. Owners, admins and ordinary members can all read. Only owners and admins can add, change, archive, or upload an image.
 3. Prices and the numbers in a selling unit are exact and never rounded. A price is kept with exactly two decimal places. The numbers in a selling unit keep exactly the decimal places they were given.
-4. When a request contains several problems at once, all of them are reported together. Each problem names the exact item, and the exact variant within it, that caused it.
+4. When a request contains several validation problems at once, all of them are reported together. Each problem names the exact item, and the exact variant within it, that caused it. A currency that is not exactly the uppercase code `EUR`, `USD` or `GBP` is rejected as a bad request during request decoding, before field validation and accumulation.
 5. Adding several items at once is all-or-nothing. If any one of them fails, none of them are stored.
 6. A missing, invalid, or expired access token is refused with the same error code used everywhere else in the product for a rejected access token.
 
@@ -119,10 +119,11 @@ Like the customer book, these are not a single journey. They are the things that
 | 7. User adds several items at once | - All are stored together or none are |
 | 8. User adds an item whose name is already taken by an active item | - Rejected as a conflict, naming what clashed |
 | 9. User gives a SKU that a non-archived variant already has, in this request or already in the catalogue | - Rejected as a conflict, naming what clashed |
-| 10. User breaks a rule in **Price**, **Selling unit**, or the attribute rules below | - Rejected, naming the item, the variant, and the part at fault |
-| 11. User submits several bad entries at once | - Every problem is reported together, each tied to its item and variant |
-| 12. A member with the ordinary user role tries to add an item | - Rejected |
-| 13. User submits a batch with no items | - Rejected as invalid; nothing is stored |
+| 10. User gives an invalid price amount or breaks a rule in **Selling unit** or the attribute rules below | - Rejected, naming the item, the variant, and the part at fault |
+| 11. User gives a currency other than the exact uppercase codes `EUR`, `USD` or `GBP` | - Rejected as a bad request before field validation |
+| 12. User submits several entries with validation problems at once | - Every validation problem is reported together, each tied to its item and variant |
+| 13. A member with the ordinary user role tries to add an item | - Rejected |
+| 14. User submits a batch with no items | - Rejected as invalid; nothing is stored |
 
 #### Requirements
 
@@ -227,7 +228,7 @@ Only item identifiers are returned. Variant identifiers are not; they are seen b
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - A batch contains no items - One or more fields are invalid, reported together with the item and variant each belongs to |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request - The price currency was not exactly `EUR`, `USD` or `GBP` in uppercase |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - An active item already has that name - A non-archived variant already has that SKU |
@@ -508,7 +509,7 @@ Response is empty. A successful change answers with nothing but a success status
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the variant each belongs to - A variant status of `Archived` was sent - A new variant is missing its selling unit |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request - The price currency was not exactly `EUR`, `USD` or `GBP` in uppercase |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - An active item already has that name - A non-archived variant already has that SKU |
