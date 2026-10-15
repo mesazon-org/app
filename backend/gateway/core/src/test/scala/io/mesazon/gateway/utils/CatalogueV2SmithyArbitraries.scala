@@ -2,6 +2,7 @@ package io.mesazon.gateway.utils
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.smithy
+import io.mesazon.gateway.transform.given
 import io.mesazon.testkit.base.*
 import io.scalaland.chimney.Transformer
 import io.scalaland.chimney.dsl.*
@@ -23,13 +24,6 @@ trait CatalogueV2SmithyArbitraries extends CatalogueDomainArbitraries, IronRefin
   ): Transformer[Option[Source], Nullable[Target]] =
     value => Nullable.fromOption(value.map(transformer.transform))
 
-  given catalogueItemPostRequestTransformer: Transformer[CatalogueItemPostRequest, smithy.v2.CatalogueItemPostRequest] =
-    catalogueItemPostRequest =>
-      catalogueItemPostRequest
-        .into[smithy.v2.CatalogueItemPostRequest]
-        .withFieldComputed(_.variants, _.variants.toList.transformInto[List[smithy.v2.CatalogueItemVariantInsert]])
-        .transform
-
   given arbCatalogueItemVariantInsertSmithy: Arbitrary[smithy.v2.CatalogueItemVariantInsert] = Arbitrary(
     Arbitrary.arbitrary[CatalogueItemVariantInsert].map(_.transformInto[smithy.v2.CatalogueItemVariantInsert])
   )
@@ -41,17 +35,6 @@ trait CatalogueV2SmithyArbitraries extends CatalogueDomainArbitraries, IronRefin
   given arbCatalogueItemPostRequestSmithy: Arbitrary[smithy.v2.CatalogueItemPostRequest] = Arbitrary(
     Arbitrary.arbitrary[CatalogueItemPostRequest].map(_.transformInto[smithy.v2.CatalogueItemPostRequest])
   )
-
-  given catalogueItemBatchPostRequestTransformer
-      : Transformer[CatalogueItemBatchPostRequest, smithy.v2.CatalogueItemBatchPostRequest] =
-    catalogueItemBatchPostRequest =>
-      catalogueItemBatchPostRequest
-        .into[smithy.v2.CatalogueItemBatchPostRequest]
-        .withFieldComputed(
-          _.catalogueItems,
-          _.catalogueItems.toList.transformInto[List[smithy.v2.CatalogueItemPostRequest]],
-        )
-        .transform
 
   given arbCatalogueItemBatchPostRequestSmithy: Arbitrary[smithy.v2.CatalogueItemBatchPostRequest] = Arbitrary(
     Arbitrary.arbitrary[CatalogueItemBatchPostRequest].map(_.transformInto[smithy.v2.CatalogueItemBatchPostRequest])

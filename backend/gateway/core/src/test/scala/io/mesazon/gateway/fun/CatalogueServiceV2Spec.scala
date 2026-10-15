@@ -8,6 +8,7 @@ import io.mesazon.gateway.repository.CatalogueRepositoryV2.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.{CatalogueServiceV2, ServiceTask}
 import io.mesazon.gateway.smithy
+import io.mesazon.gateway.transform.given
 import io.mesazon.gateway.utils.{CatalogueRepositoryV2Arbitraries, CatalogueV2SmithyArbitraries}
 import io.mesazon.gateway.validation.domain.PriceValidator
 import io.mesazon.gateway.validation.service.CatalogueV2RequestValidator
@@ -235,8 +236,8 @@ class CatalogueServiceV2Spec extends ZWordSpecBase, CatalogueV2SmithyArbitraries
         )
         val catalogueItemBatchPostRequestSmithy = smithy.v2.CatalogueItemBatchPostRequest(
           List(
-            catalogueItemPostRequest1.transformInto,
-            catalogueItemPostRequest2.transformInto,
+            catalogueItemPostRequest1.transformInto[smithy.v2.CatalogueItemPostRequest],
+            catalogueItemPostRequest2.transformInto[smithy.v2.CatalogueItemPostRequest],
           )
         )
 
@@ -307,7 +308,10 @@ class CatalogueServiceV2Spec extends ZWordSpecBase, CatalogueV2SmithyArbitraries
         val catalogueItemPostRequest1           = arbitrarySample[CatalogueItemPostRequest]
         val catalogueItemPostRequest2           = arbitrarySample[CatalogueItemPostRequest]
         val catalogueItemBatchPostRequestSmithy = smithy.v2.CatalogueItemBatchPostRequest(
-          List(catalogueItemPostRequest1.transformInto, catalogueItemPostRequest2.transformInto)
+          List(
+            catalogueItemPostRequest1.transformInto[smithy.v2.CatalogueItemPostRequest],
+            catalogueItemPostRequest2.transformInto[smithy.v2.CatalogueItemPostRequest],
+          )
         )
 
         catalogueRepositoryV2Mock.insertCatalogueItems

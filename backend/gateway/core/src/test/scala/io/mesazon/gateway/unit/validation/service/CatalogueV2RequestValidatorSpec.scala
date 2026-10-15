@@ -3,6 +3,7 @@ package io.mesazon.gateway.unit.validation.service
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.gateway.smithy
+import io.mesazon.gateway.transform.given
 import io.mesazon.gateway.utils.CatalogueV2SmithyArbitraries
 import io.mesazon.gateway.validation.domain.PriceValidator
 import io.mesazon.gateway.validation.service.CatalogueV2RequestValidator
