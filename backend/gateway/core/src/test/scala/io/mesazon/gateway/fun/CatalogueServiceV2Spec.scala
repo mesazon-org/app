@@ -227,7 +227,7 @@ class CatalogueServiceV2Spec extends ZWordSpecBase, CatalogueV2SmithyArbitraries
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemID1 = arbitrarySample[CatalogueItemID]
         val catalogueItemID2 = arbitrarySample[CatalogueItemID]
-        
+
         catalogueItemID1 should not be catalogueItemID2
 
         val catalogueItemPostRequest1 = arbitrarySample[CatalogueItemPostRequest].copy(
@@ -388,6 +388,48 @@ class CatalogueServiceV2Spec extends ZWordSpecBase, CatalogueV2SmithyArbitraries
             None,
             List(toUpdateCatalogueItemVariantInput(catalogueItemVariantUpdate)),
             List(toInsertCatalogueItemVariantInput(catalogueItemVariantInsert)),
+          )
+          .returningZIO(())
+          .once()
+
+        val catalogueServiceV2 = buildCatalogueService
+
+        catalogueServiceV2
+          .catalogueItemPut(organizationID.value, catalogueItemID.value, catalogueItemPutRequestSmithy)
+          .zioValue shouldBe ()
+      }
+
+      "clear the item description and nullable variant fields" in new TestContext {
+        val organizationID               = arbitrarySample[OrganizationID]
+        val catalogueItemID              = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantIDUpdate = arbitrarySample[CatalogueItemVariantID]
+        val catalogueItemVariantUpdate   = arbitrarySample[CatalogueItemVariantUpdate].copy(
+          catalogueItemVariantID = catalogueItemVariantIDUpdate,
+          sku = Some(None),
+          label = Some(None),
+          description = Some(None),
+          attributes = None,
+          price = Some(None),
+          sellingUnit = None,
+          status = None,
+        )
+        val catalogueItemPutRequest = CatalogueItemPutRequest(
+          name = None,
+          description = Some(None),
+          variantsUpdate = List(catalogueItemVariantUpdate),
+          variantsInsert = Nil,
+        )
+        val catalogueItemPutRequestSmithy = catalogueItemPutRequest.transformInto[smithy.v2.CatalogueItemPutRequest]
+
+        catalogueRepositoryV2Mock.updateCatalogueItem
+          .expects(
+            organizationID,
+            catalogueItemID,
+            None,
+            Some(None),
+            None,
+            List(toUpdateCatalogueItemVariantInput(catalogueItemVariantUpdate)),
+            Nil,
           )
           .returningZIO(())
           .once()

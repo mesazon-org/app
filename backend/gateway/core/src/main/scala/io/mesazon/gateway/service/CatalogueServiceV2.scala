@@ -72,7 +72,23 @@ object CatalogueServiceV2 {
         catalogueItemID: UUID,
         request: smithy.v2.CatalogueItemPutRequest,
     ): ServiceTask[Unit] =
-      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemPut"))
+      for {
+        catalogueItemPutRequest <- catalogueV2RequestValidator.validatedCatalogueItemPutRequest(request)
+        _                       <- catalogueRepositoryV2.updateCatalogueItem(
+          organizationID = OrganizationID(organizationID),
+          catalogueItemID = CatalogueItemID(catalogueItemID),
+          nameOptUpdate = catalogueItemPutRequest.name,
+          descriptionOptUpdate = catalogueItemPutRequest.description,
+          imageAssetOptUpdate = None,
+          updateCatalogueItemVariantInputs = catalogueItemPutRequest.variantsUpdate
+            .transformInto[List[UpdateCatalogueItemVariantInput]],
+          insertCatalogueItemVariantInputs = catalogueItemPutRequest.variantsInsert.map(
+            _.into[InsertCatalogueItemVariantInput]
+              .withFieldConst(_.status, CatalogueItemVariantStatus.Active)
+              .transform
+          ),
+        )
+      } yield ()
 
     override def catalogueItemArchivePut(
         organizationID: UUID,
