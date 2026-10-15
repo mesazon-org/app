@@ -1,9 +1,12 @@
 package io.mesazon.gateway.service
 
+import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.repository.CatalogueRepositoryV2
+import io.mesazon.gateway.repository.CatalogueRepositoryV2.*
 import io.mesazon.gateway.validation.service.CatalogueV2RequestValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
+import io.scalaland.chimney.dsl.*
 import zio.*
 
 import java.util.UUID
@@ -12,8 +15,8 @@ import scala.annotation.unused
 object CatalogueServiceV2 {
 
   private final class CatalogueServiceV2Impl(
-      @unused catalogueV2RequestValidator: CatalogueV2RequestValidator,
-      @unused catalogueRepositoryV2: CatalogueRepositoryV2,
+      catalogueV2RequestValidator: CatalogueV2RequestValidator,
+      catalogueRepositoryV2: CatalogueRepositoryV2,
       @unused s3ClientOrganizationMedia: S3ClientOrganizationMedia,
   ) extends smithy.v2.CatalogueServiceV2[ServiceTask] {
 
@@ -21,7 +24,23 @@ object CatalogueServiceV2 {
         organizationID: UUID,
         request: smithy.v2.CatalogueItemPostRequest,
     ): ServiceTask[smithy.v2.CatalogueItemPostResponse] =
-      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemPost"))
+      for {
+        catalogueItemPostRequest <- catalogueV2RequestValidator.validatedCatalogueItemPostRequest(request)
+        catalogueItemID          <- catalogueRepositoryV2.insertCatalogueItem(
+          OrganizationID(organizationID),
+          catalogueItemPostRequest
+            .into[InsertCatalogueItemInput]
+            .withFieldComputed(
+              _.variants,
+              _.variants.map(
+                _.into[InsertCatalogueItemVariantInput]
+                  .withFieldConst(_.status, CatalogueItemVariantStatus.Active)
+                  .transform
+              ),
+            )
+            .transform,
+        )
+      } yield smithy.v2.CatalogueItemPostResponse(catalogueItemID.value)
 
     override def catalogueItemBatchPost(
         organizationID: UUID,

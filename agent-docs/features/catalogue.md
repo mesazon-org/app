@@ -201,9 +201,9 @@ Shapes in `domain/CatalogueV2.smithy`:
 
 `GatewayClient`: hand-written jsoniter codecs for every new enum (like `OnboardStage`/`CustomerType`), a hand-written null-emitting codec for the nullable members (new pattern), and encoding that keeps `attributes: {}` on update so clearing all attributes is possible.
 
-### Service implementation plan — slice 1 awaiting review
+### Service implementation plan — slice 2 awaiting review
 
-Today the V2 contract, validation, and repository exist without a service implementation. The current slice adds staged `service/CatalogueServiceV2.scala`, implementing the callable `smithy.v2.CatalogueServiceV2` seam with `.local` and `.live` layers, and `fun/CatalogueServiceV2Spec.scala` with operation-grouped functional scenarios. The callable bodies are intentionally unimplemented; `sbt 'gateway-core/testOnly io.mesazon.gateway.fun.CatalogueServiceV2Spec'` ran 37 tests with 37 failures, all at the corresponding `NotImplementedError` stubs. `sbt 'gateway-core/Test/compile'` and `sbt 'runLint'` both passed. Production route wiring, deletion of V1, and canonical renaming follow in the cutover phase. The service remains explicitly unshipped until cutover and HTTP acceptance proof are complete.
+The V2 contract, validation, repository, and callable service skeleton are now present. Slice 2 implements `catalogueItemPost`: it validates before repository access, maps every inserted variant to `Active`, performs one repository insert, and returns the created item ID. The focused command `sbt 'gateway-core/testOnly io.mesazon.gateway.fun.CatalogueServiceV2Spec -- -z catalogueItemPost'` ran 3 tests and all 3 passed; the remaining 34 service scenarios still stop at the seven intentionally unimplemented operation stubs. `sbt 'runLint'` passed. Production route wiring, deletion of V1, and canonical renaming follow in the cutover phase. The service remains explicitly unshipped until cutover and HTTP acceptance proof are complete.
 
 Complexity: **MEDIUM**. This phase follows the existing Catalogue service pattern and delegates transactions, tenant filtering, uniqueness, and the last-enabled-variant rule to the completed repository. It adds no schema or authentication-policy changes.
 
@@ -222,8 +222,8 @@ Use the existing `.local` / `.observed` / `.live` pattern with `CatalogueV2Reque
 
 Ordered review slices, each at most three hand-written files:
 
-1. Add the callable service skeleton and operation-grouped functional tests for the outcomes above; use real validators and strict repository/S3 mocks, establish the intended red result, and stop for review. **Awaiting review:** the callable `.local`/`.live` seam and 37 scenario tests are present; the focused spec ran 37 tests and all 37 failed at the intentionally unimplemented service seam.
-2. Implement `catalogueItemPost` and verify its focused scenarios.
+1. Add the callable service skeleton and operation-grouped functional tests for the outcomes above; use real validators and strict repository/S3 mocks, establish the intended red result, and stop for review. **Complete and committed with user approval:** the callable `.local`/`.live` seam and 37 scenario tests are present; the initial focused spec ran 37 tests and all 37 failed at the intentionally unimplemented service seam.
+2. Implement `catalogueItemPost` and verify its focused scenarios. **Awaiting review:** the focused spec ran 3 tests and all 3 passed; 34 scenarios remain red at the seven operation stubs.
 3. Implement `catalogueItemBatchPost`, including empty-batch validation before repository access and ordered IDs.
 4. Implement `catalogueItemPut`, including nullable fields and new-variant status.
 5. Implement `catalogueItemArchivePut`.
