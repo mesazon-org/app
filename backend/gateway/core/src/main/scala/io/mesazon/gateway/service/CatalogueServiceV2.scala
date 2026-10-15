@@ -160,7 +160,55 @@ object CatalogueServiceV2 {
         organizationID: UUID,
         catalogueItemIDs: List[UUID],
     ): ServiceTask[smithy.v2.CatalogueItemSummaryGetResponse] =
-      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemSummaryGet"))
+      for {
+        catalogueItemSummaryRows <- catalogueItemIDs match {
+          case Nil => catalogueRepositoryV2.getAllCatalogueItemSummariesEnabled(OrganizationID(organizationID))
+          case catalogueItemID :: remainingCatalogueItemIDs =>
+            catalogueRepositoryV2.getCatalogueItemSummariesEnabled(
+              OrganizationID(organizationID),
+              NonEmptyChunk.fromIterable(
+                CatalogueItemID(catalogueItemID),
+                remainingCatalogueItemIDs.map(CatalogueItemID.apply),
+              ),
+            )
+        }
+        catalogueItemSummaries <- ZIO.foreach(catalogueItemSummaryRows) { catalogueItemSummaryRow =>
+          ZIO
+            .foreach(catalogueItemSummaryRow.imageAsset)(catalogueItemImageAsset =>
+              s3ClientOrganizationMedia
+                .genMediaUrl(catalogueItemImageAsset.value.imageNormalizedS3BucketKey.to[S3BucketKey])
+            )
+            .map(imageNormalizedUrlOpt =>
+              catalogueItemSummaryRow
+                .into[smithy.v2.CatalogueItemSummary]
+                .withFieldConst(_.imageNormalizedUrl, imageNormalizedUrlOpt.map(_.value))
+                .withFieldComputed(
+                  _.variants,
+                  _ =>
+                    catalogueItemSummaryRow.catalogueItemVariantSummaryRows.toList.map {
+                      catalogueItemVariantSummaryRow =>
+                        catalogueItemVariantSummaryRow
+                          .into[smithy.v2.CatalogueItemVariantSummary]
+                          .withFieldComputed(
+                            _.price,
+                            _.price.map(catalogueItemVariantPrice =>
+                              catalogueItemVariantPrice.value
+                                .into[smithy.v2.CatalogueItemVariantPrice]
+                                .enableInheritedAccessors
+                                .withFieldComputed(
+                                  _.currency,
+                                  price => Currency.valueOf(price.currency.value).transformInto[smithy.v2.Currency],
+                                )
+                                .transform
+                            ),
+                          )
+                          .transform
+                    },
+                )
+                .transform
+            )
+        }
+      } yield smithy.v2.CatalogueItemSummaryGetResponse(catalogueItemSummaries)
 
     override def catalogueItemUniquenessGet(
         organizationID: UUID,
