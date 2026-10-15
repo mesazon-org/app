@@ -41,7 +41,7 @@ object FileService {
   private final class FileServiceImpl(
       fileServiceConfig: FileServiceConfig,
       organizationManagementRepository: OrganizationManagementRepository,
-      catalogueRepository: CatalogueRepository,
+      catalogueRepositoryV2: CatalogueRepositoryV2,
       fileScanner: FileScanner,
       imageProcessing: ImageProcessing,
       spreadsheetTool: SpreadsheetTool,
@@ -187,23 +187,13 @@ object FileService {
         catalogueItemImageByteStream: ZStream[Any, Throwable, Byte],
     ): ServiceTask[Unit] = ZIO
       .scoped(for {
-        catalogueItemRow <- catalogueRepository
-          .getCatalogueItem(organizationID, catalogueItemID)
+        _ <- catalogueRepositoryV2
+          .getCatalogueItemWithVariantsActive(organizationID, catalogueItemID)
           .someOrFail(
             ServiceError.InternalServerError.UnexpectedError(
               s"Catalogue item not found: catalogueItemID=[$catalogueItemID]"
             )
           )
-        _ <-
-          if (catalogueItemRow.status != CatalogueItemStatus.Active) {
-            ZIO.fail(
-              ServiceError.InternalServerError.UnexpectedError(
-                s"Catalogue item is not active: catalogueItemID=[$catalogueItemID], status=[${catalogueItemRow.status}]"
-              )
-            )
-          } else {
-            ZIO.unit
-          }
         catalogueItemImageScanOutput <- fileScanner.scan(
           catalogueItemImageByteStream,
           catalogueItemImageOriginalFileName.value,
@@ -234,10 +224,14 @@ object FileService {
               s"Failed to construct CatalogueItemImageAsset: [$e]"
             )
           )
-        _ <- catalogueRepository.updateCatalogueItem(
+        _ <- catalogueRepositoryV2.updateCatalogueItem(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
+          nameOptUpdate = None,
+          descriptionOptUpdate = None,
           imageAssetOptUpdate = Some(catalogueItemImageAsset),
+          updateCatalogueItemVariantInputs = Nil,
+          insertCatalogueItemVariantInputs = Nil,
         )
       } yield ())
 

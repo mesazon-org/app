@@ -76,6 +76,7 @@ object Main extends ZIOAppDefault {
       OrganizationManagementRepository.live,
       CustomerBookRepository.live,
       CatalogueRepository.live,
+      CatalogueRepositoryV2.live,
 
       // Queries
       WahaQueries.live,
@@ -88,6 +89,7 @@ object Main extends ZIOAppDefault {
       OrganizationUserQueries.live,
       CustomerBookQueries.live,
       CatalogueItemQueries.live,
+      CatalogueQueries.live,
 
       // State
       AuthState.live,
