@@ -65,7 +65,7 @@ Like the customer book, these are not a single journey. They are the things that
 **Variant status** — a variant is `Active`, `Inactive`, `OutOfStock` or `Archived`. Variants added with a new item start out `Active`. A variant added to an existing item starts with the status given — `Active`, `Inactive` or `OutOfStock` — or `Active` if none is given.
 - Owners and admins can move a variant freely between `Active`, `Inactive` and `OutOfStock`, in any direction, by updating the item.
 - `Archived` is reached only by archiving, and it is one-way.
-- `Inactive` and `OutOfStock` variants are still shown everywhere an `Active` one is. They count toward the item's variant count and "from" prices, and they keep their SKU reserved.
+- `Inactive` and `OutOfStock` variants are still shown in item details and catalogue summaries, and they keep their SKU reserved.
 - An item's status never turns into `Inactive` or `OutOfStock`. Only variants carry those statuses.
 
 **Attributes** — words the business chooses itself to tell variants apart, written as a name and a value: `Colour: Red`, `Size: M`, `Flavour: Peanut`. There is no fixed list. Two variants of the same item may have identical attributes.
@@ -297,40 +297,38 @@ Response is empty. A successful upload answers with nothing but a success status
 
 **Who can reach this step: any member of the organization.**
 
-- User opens the catalogue and sees every active item, with what it costs at a glance.
+- User opens the catalogue and sees every active item with its non-archived variants.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User opens the catalogue | - Every active item in the organization is returned, each with its name, status, picture if any, "from" prices, and number of variants |
-| 2. An item's priced variants all use one currency | - One "from" price is shown: the lowest price among its non-archived variants |
-| 3. An item's priced variants use more than one currency | - One "from" price is shown for each currency, each the lowest price in that currency |
-| 4. Some of an item's variants are `Inactive` or `OutOfStock` | - They still count toward the "from" prices and the variant count |
-| 5. Some of an item's variants are archived | - They do not count toward the "from" prices or the variant count |
-| 6. Some of an item's variants have no price | - They are left out of the "from" prices, but still count toward the variant count |
-| 7. None of an item's non-archived variants has a price | - The item is listed with no "from" prices |
-| 8. An item has no image | - It appears in the list with nothing in place of a picture |
-| 9. The organization has archived items | - They do not appear, and there is no way to list them again — the same gap as [Customer Book gap 3]({{ site.baseurl }}{% link epics/05-customer-book.md %}#3-archiving-is-final-and-archived-customers-cannot-be-found-again) |
-| 10. The organization has no items yet | - An empty list is returned |
+| 1. User opens the catalogue | - Every active item in the organization is returned, each with its name, status, picture if any, and non-archived variants |
+| 2. A variant has a price | - That variant keeps its price and currency in the summary |
+| 3. A variant has no price | - That variant is returned with no price |
+| 4. Some of an item's variants are `Inactive` or `OutOfStock` | - They are included with their status |
+| 5. Some of an item's variants are archived | - They are left out |
+| 6. An item has no image | - It appears in the list with nothing in place of a picture |
+| 7. The organization has archived items | - They do not appear, and there is no way to list them again — the same gap as [Customer Book gap 3]({{ site.baseurl }}{% link epics/05-customer-book.md %}#3-archiving-is-final-and-archived-customers-cannot-be-found-again) |
+| 8. The organization has no items yet | - An empty list is returned |
 
 #### Requirements
 
 1. Any member may browse the catalogue, whatever their role.
 2. The list contains only active items.
-3. Each entry shows the lowest price in each currency among its non-archived variants that have a price, plus the number of non-archived variants, priced or not. The variants themselves are not listed.
+3. Each entry shows its active item fields and every non-archived variant's summary fields in catalogue order. Archived variants are not listed.
 
 #### Request / Response / Outcome
 
 **Request**
 
-Request is empty apart from naming the organization.
+Request is empty apart from naming the organization. The optional identifier filter is described in step 8; without it, all active items are returned.
 
 **Response**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Items | `CatalogueItemSummary[]` | Every active item | ✅ | The catalogue |
+| Catalogue Items | `CatalogueItemSummary[]` | Every active item, oldest first, with its non-archived variants oldest first; may be empty | ✅ | The catalogue |
 
 **CatalogueItemSummary**
 
@@ -340,8 +338,18 @@ Request is empty apart from naming the organization.
 | Name | `String` | — | ✅ | The item's name |
 | Status | `CatalogueItemStatus` | `Active` or `Archived` | ✅ | Always `Active` here, since only active items are listed |
 | Image URL | `String` | A working link, present only if the item has an image | ❌ | A picture of the item |
-| From Prices | `Price[]` | One entry per currency used by the item's priced, non-archived variants; each is the lowest price in that currency; empty when none of them has a price | ✅ | What the item costs, at least |
-| Variant Count | `Int` | 1 or more | ✅ | How many non-archived variants the item has, with or without a price |
+| Variants | `CatalogueItemVariantSummary[]` | Every non-archived variant, at least one, in catalogue order | ✅ | The versions of the item that are sold |
+
+**CatalogueItemVariantSummary**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ✅ | Identifies the variant |
+| SKU | `String` | 1–255 characters, trimmed; case-sensitive | ❌ | The business's stock code |
+| Label | `String` | 1–255 characters, trimmed | ❌ | A short label for the variant |
+| Price | `Price` | See **Price** in step 1 | ❌ | The full price of the variant's selling unit |
+| Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ✅ | How this variant is sold |
+| Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ✅ | The variant's current status |
 
 **Outcome**
 
@@ -614,23 +622,23 @@ Response is empty, whether the variant was archived just now, was already archiv
 
 **Who can reach this step: any member of the organization.**
 
-- The user already knows which items they want, by their identifiers, and gets just those items back in the same summary form as [browsing the catalogue](#3-user-browses-the-catalogue).
+- This is the same summary operation as [browsing the catalogue](#3-user-browses-the-catalogue). The user may supply item identifiers to filter its response; leaving the identifiers absent or empty returns every active item.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User asks for several active items | - Each is returned with the same name, status, picture, "from" prices and variant count as in [step 3](#3-user-browses-the-catalogue) |
+| 1. User asks for several active items | - Each is returned with the same item and non-archived-variant summaries as in [step 3](#3-user-browses-the-catalogue) |
 | 2. Some of the identifiers do not exist, belong to an archived item, or belong to another organization | - Those items are simply left out; the rest are returned - There is no error and no sign that anything was left out |
 | 3. None of the identifiers match an active item | - An empty list is returned |
 | 4. User sends the same identifier more than once, or in any order | - Each item appears once - The list follows the order the items were added to the catalogue, oldest first, not the order of the request |
-| 5. User sends no identifiers | - Rejected as invalid |
+| 5. User sends no identifiers or an empty identifier list | - Every active item is returned, in the same summary form as [step 3](#3-user-browses-the-catalogue) |
 
 #### Requirements
 
 1. Any member may look up items, whatever their role.
-2. At least one identifier must be sent.
-3. Only active items of this organization are returned. Their "from" prices and variant count follow the same rules as in [step 3](#3-user-browses-the-catalogue).
+2. The identifiers are optional. When none are sent, every active item of this organization is returned; when some are sent, only matching active items are returned.
+3. Returned items use the same item and non-archived-variant summaries as in [step 3](#3-user-browses-the-catalogue).
 
 #### Request / Response / Outcome
 
@@ -638,13 +646,13 @@ Response is empty, whether the variant was archived just now, was already archiv
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Item IDs | `UUID[]` | At least one entry; canonical 36-character form each; sent in the address as a repeated `catalogueItemIDs` key, such as `?catalogueItemIDs=a&catalogueItemIDs=b` | ✅ | Which items to look up |
+| Catalogue Item IDs | `UUID[]` | Zero or more entries; canonical 36-character form each; sent in the address as a repeated `catalogueItemIDs` key, such as `?catalogueItemIDs=a&catalogueItemIDs=b` | ❌ | Optional filter of which items to look up |
 
 **Response**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Items | `CatalogueItemSummary[]` | Only the requested items that are active in this organization; each at most once; oldest first; may be empty | ✅ | The requested items. See **CatalogueItemSummary** in step 3 |
+| Catalogue Items | `CatalogueItemSummary[]` | Every active item when no IDs are sent; otherwise only the requested items that are active in this organization; each at most once; oldest first; may be empty | ✅ | The catalogue or the requested items. See **CatalogueItemSummary** in step 3 |
 
 **Outcome**
 
@@ -654,7 +662,6 @@ Nothing changes. This step only reads.
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - No item identifiers were sent |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
