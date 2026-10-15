@@ -94,7 +94,10 @@ object CatalogueServiceV2 {
         organizationID: UUID,
         catalogueItemID: UUID,
     ): ServiceTask[Unit] =
-      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemArchivePut"))
+      catalogueRepositoryV2.archiveCatalogueItem(
+        OrganizationID(organizationID),
+        CatalogueItemID(catalogueItemID),
+      )
 
     override def catalogueItemVariantArchivePut(
         organizationID: UUID,
