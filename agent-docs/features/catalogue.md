@@ -234,6 +234,23 @@ Ordered review slices, each at most three hand-written files:
 
 Each implementation slice changes the service, its spec as needed, and this feature doc's delivery status. Functional cases prove service-owned branches and exact mappings; database atomicity, filtering, conflict semantics, and archive races reuse existing repository proof rather than mocked simulations. Run focused scenarios for each slice and `sbt "runLint"`; at the completed service phase run its full functional suite and the existing Catalogue service regression suite. Cutover needs a separate reviewed slice plan for application wiring, image-upload repository integration, removal/renaming, schema cleanup, and the real HTTP acceptance matrix.
 
+### Cutover preparation — item lookup plan awaiting approval
+
+The summary contract is settled. The next prerequisite is the item-only read used by image uploads. Today `FileService` reads any-status items through V1 `CatalogueRepository.getCatalogueItem`, distinguishes missing from archived items before scanning bytes, and saves image metadata through the same repository. V2 currently exposes only an enabled-item read joined to enabled variants; substituting that read would collapse the archived-item branch and make image lookup depend on variants.
+
+Proposed scope: add `CatalogueRepositoryV2.getCatalogueItem(organizationID, catalogueItemID): IO[ServiceError, Option[CatalogueItemRowV2]]`, backed by `CatalogueQueries.getCatalogueItemRowV2`. Read only the item table, preserve every row field, scope by both IDs, and apply no status filter or variant join. Missing and foreign-organization items return `None`; archived rows remain available for the upload service's existing status check. Map database failures to `InternalServerError.RepositoryError`, following V1's existing read boundary. This prerequisite does not wire the new repository into production.
+
+Complexity: **MEDIUM** for this prerequisite: one established tenant-scoped read, no schema, authentication, transaction-lifecycle, or public-contract change. The later replacement of the public contract and canonical names is a separate **HIGH** phase because it changes application wiring, client codecs, tests, and schema consumers together; its exact slices need review before that work starts.
+
+Ordered review slices, each at most three hand-written files:
+
+1. **Callable skeleton and red proof:** add the repository signature and an implementation that dies with a named `NotImplementedError`; add four real-PostgreSQL cases for complete active and archived rows, missing IDs, and a row belonging to another organization. Arrange item rows directly without variants so the read's independence from the join is proven. Cover present and absent image metadata across the successful cases. Files: `repository/CatalogueRepositoryV2.scala`, `it/CatalogueRepositoryV2Spec.scala`, and this document. Run the focused `getCatalogueItem` cases, confirm four failures at the stub, run lint, and stop for review.
+2. **Read implementation and green proof:** add the query using the existing item select-field fragment and positional row codec; replace the repository stub with the transactional query and error mapping. Files: `repository/queries/CatalogueQueries.scala`, `repository/CatalogueRepositoryV2.scala`, and this document. Run the four focused cases, the complete `CatalogueRepositoryV2Spec`, and lint; stop for review.
+
+Use the existing repository test harness, strict clock/ID mocks, direct query arrangement, and complete-row assertions. The read needs no clock or ID-generator calls. Expected proof commands are `sbt 'gateway-core/testOnly io.mesazon.gateway.it.CatalogueRepositoryV2Spec -- -z getCatalogueItem'`, the full repository spec, and `sbt 'runLint'`; the focused filter may also select the existing `getCatalogueItemWithVariantsActive` cases, so report their counts separately from the four new cases.
+
+After this prerequisite, prepare the next reviewed plan for switching `FileService`, its existing functional tests, and the application layers to V2, preserving the upload's existing messages, status check, streaming behavior, and image-only update with empty variant lists. Subsequent plans cover HTTP client codecs and acceptance scenarios, route/docs wiring, canonical Smithy/domain/validator/service/repository names, V1 removal, and final schema cleanup. The already agreed pre-release init-schema edit needs no data migration; dev reset remains limited to disposable databases. Production cutover remains unshipped until the applicable real HTTP matrix passes.
+
 ### Repository and transactions
 
 - `CatalogueQueries` contains the V2 item and variant queries; `CatalogueRepositoryV2Spec` exercises them against PostgreSQL.
