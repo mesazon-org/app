@@ -201,9 +201,9 @@ Shapes in `domain/CatalogueV2.smithy`:
 
 `GatewayClient`: hand-written jsoniter codecs for every new enum (like `OnboardStage`/`CustomerType`), a hand-written null-emitting codec for the nullable members (new pattern), and encoding that keeps `attributes: {}` on update so clearing all attributes is possible.
 
-### Service implementation plan — slice 6 awaiting review
+### Service implementation plan — slice 7 awaiting review
 
-The V2 contract, validation, repository, and callable service skeleton are now present. Slices 2 through 6 implement `catalogueItemPost`, `catalogueItemBatchPost`, `catalogueItemPut`, `catalogueItemArchivePut`, and `catalogueItemVariantArchivePut`: they validate before repository access where required, map inserted variants to `Active`, preserve input order, preserve keep/set/clear update semantics, and forward archive IDs directly while preserving repository outcomes and typed errors. The focused variant archive command ran 3 tests and all 3 passed; 18 implementation scenarios now pass, while the remaining 20 service scenarios still stop at the three intentionally unimplemented operation stubs. `sbt 'runLint'` passed. Production route wiring, deletion of V1, and canonical renaming follow in the cutover phase. The service remains explicitly unshipped until cutover and HTTP acceptance proof are complete.
+The V2 contract, validation, repository, and callable service skeleton are now present. Slices 2 through 7 implement `catalogueItemPost`, `catalogueItemBatchPost`, `catalogueItemPut`, `catalogueItemArchivePut`, `catalogueItemVariantArchivePut`, and `catalogueItemGet`: they validate before repository access where required, map inserted variants to `Active`, preserve input order, preserve keep/set/clear update semantics, forward archive IDs directly, map complete ordered detail responses, and sign only present images. The focused detail command ran 5 tests and all 5 passed; 23 implementation scenarios now pass, while the remaining 15 service scenarios still stop at the two intentionally unimplemented operation stubs. `sbt 'runLint'` passed. Production route wiring, deletion of V1, and canonical renaming follow in the cutover phase. The service remains explicitly unshipped until cutover and HTTP acceptance proof are complete.
 
 Complexity: **MEDIUM**. This phase follows the existing Catalogue service pattern and delegates transactions, tenant filtering, uniqueness, and the last-enabled-variant rule to the completed repository. It adds no schema or authentication-policy changes.
 
@@ -227,8 +227,8 @@ Ordered review slices, each at most three hand-written files:
 3. Implement `catalogueItemBatchPost`, including empty-batch validation before repository access and ordered IDs. **Complete and committed with user approval:** the focused batch spec ran 4 tests and all 4 passed; the post regression ran 3 tests and all 3 passed.
 4. Implement `catalogueItemPut`, including nullable fields and new-variant status. **Complete and committed with user approval:** one clear-fields scenario was added, bringing the service cases to 38; the focused PUT spec ran 6 tests and all 6 passed.
 5. Implement `catalogueItemArchivePut`. **Complete and committed with user approval:** the focused archive spec ran 2 tests and all 2 passed.
-6. Implement `catalogueItemVariantArchivePut`, including unchanged `InvalidAction` propagation. **Awaiting review:** the focused variant archive spec ran 3 tests and all 3 passed; 18 implementation scenarios now pass and 20 remain at the three operation stubs.
-7. Implement `catalogueItemGet`, including missing-item and image branches.
+6. Implement `catalogueItemVariantArchivePut`, including unchanged `InvalidAction` propagation. **Complete and committed with user approval:** the focused variant archive spec ran 3 tests and all 3 passed.
+7. Implement `catalogueItemGet`, including missing-item and image branches. **Awaiting review:** the focused detail spec ran 5 tests and all 5 passed; 23 implementation scenarios now pass and 15 remain at the two operation stubs.
 8. Implement `catalogueItemSummaryGet`, including both repository-selection branches.
 9. Implement `catalogueItemUniquenessGet`, including optional-field call sequencing.
 

@@ -638,7 +638,8 @@ class CatalogueServiceV2Spec extends ZWordSpecBase, CatalogueV2SmithyArbitraries
         val catalogueItemVariantID1 = arbitrarySample[CatalogueItemVariantID]
         val catalogueItemVariantID2 = arbitrarySample[CatalogueItemVariantID]
         catalogueItemVariantID1 should not be catalogueItemVariantID2
-        val catalogueItemRowV2 = arbitrarySample[CatalogueItemRowV2].copy(
+        val catalogueItemVariantPrice = arbitrarySample[CatalogueItemVariantPrice]
+        val catalogueItemRowV2        = arbitrarySample[CatalogueItemRowV2].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
           imageAsset = Some(arbitrarySample[CatalogueItemImageAsset]),
@@ -648,12 +649,14 @@ class CatalogueServiceV2Spec extends ZWordSpecBase, CatalogueV2SmithyArbitraries
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
           catalogueItemVariantID = catalogueItemVariantID1,
+          price = Some(catalogueItemVariantPrice),
           status = CatalogueItemVariantStatus.Active,
         )
         val catalogueItemVariantRow2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
           catalogueItemVariantID = catalogueItemVariantID2,
+          price = None,
           status = CatalogueItemVariantStatus.OutOfStock,
         )
         val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(

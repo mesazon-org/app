@@ -2,6 +2,7 @@ package io.mesazon.gateway.service
 
 import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
+import io.mesazon.domain.to
 import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.repository.CatalogueRepositoryV2
 import io.mesazon.gateway.repository.CatalogueRepositoryV2.*
@@ -12,14 +13,13 @@ import io.scalaland.chimney.dsl.*
 import zio.*
 
 import java.util.UUID
-import scala.annotation.unused
 
 object CatalogueServiceV2 {
 
   private final class CatalogueServiceV2Impl(
       catalogueV2RequestValidator: CatalogueV2RequestValidator,
       catalogueRepositoryV2: CatalogueRepositoryV2,
-      @unused s3ClientOrganizationMedia: S3ClientOrganizationMedia,
+      s3ClientOrganizationMedia: S3ClientOrganizationMedia,
   ) extends smithy.v2.CatalogueServiceV2[ServiceTask] {
 
     override def catalogueItemPost(
@@ -114,7 +114,47 @@ object CatalogueServiceV2 {
         organizationID: UUID,
         catalogueItemID: UUID,
     ): ServiceTask[smithy.v2.CatalogueItemGetResponse] =
-      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemGet"))
+      for {
+        catalogueItemWithVariantsRow <- catalogueRepositoryV2
+          .getCatalogueItemWithVariantsActive(
+            OrganizationID(organizationID),
+            CatalogueItemID(catalogueItemID),
+          )
+          .someOrFail(
+            ServiceError.InternalServerError
+              .UnexpectedError(s"Catalogue item not found for catalogueItemID: [$catalogueItemID]")
+          )
+        imageNormalizedUrlOpt <- ZIO.foreach(catalogueItemWithVariantsRow.catalogueItemRowV2.imageAsset)(
+          catalogueItemImageAsset =>
+            s3ClientOrganizationMedia
+              .genMediaUrl(catalogueItemImageAsset.value.imageNormalizedS3BucketKey.to[S3BucketKey])
+        )
+      } yield catalogueItemWithVariantsRow.catalogueItemRowV2
+        .into[smithy.v2.CatalogueItemGetResponse]
+        .withFieldConst(_.imageNormalizedUrl, imageNormalizedUrlOpt.map(_.value))
+        .withFieldComputed(
+          _.variants,
+          _ =>
+            catalogueItemWithVariantsRow.catalogueItemVariantRows.toList.map { catalogueItemVariantRow =>
+              catalogueItemVariantRow
+                .into[smithy.v2.CatalogueItemVariant]
+                .withFieldComputed(
+                  _.price,
+                  _.price.map(catalogueItemVariantPrice =>
+                    catalogueItemVariantPrice.value
+                      .into[smithy.v2.CatalogueItemVariantPrice]
+                      .enableInheritedAccessors
+                      .withFieldComputed(
+                        _.currency,
+                        price => Currency.valueOf(price.currency.value).transformInto[smithy.v2.Currency],
+                      )
+                      .transform
+                  ),
+                )
+                .transform
+            },
+        )
+        .transform
 
     override def catalogueItemSummaryGet(
         organizationID: UUID,
