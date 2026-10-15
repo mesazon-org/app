@@ -42,6 +42,17 @@ trait CatalogueV2SmithyArbitraries extends CatalogueDomainArbitraries, IronRefin
     Arbitrary.arbitrary[CatalogueItemPostRequest].map(_.transformInto[smithy.v2.CatalogueItemPostRequest])
   )
 
+  given catalogueItemBatchPostRequestTransformer
+      : Transformer[CatalogueItemBatchPostRequest, smithy.v2.CatalogueItemBatchPostRequest] =
+    catalogueItemBatchPostRequest =>
+      catalogueItemBatchPostRequest
+        .into[smithy.v2.CatalogueItemBatchPostRequest]
+        .withFieldComputed(
+          _.catalogueItems,
+          _.catalogueItems.toList.transformInto[List[smithy.v2.CatalogueItemPostRequest]],
+        )
+        .transform
+
   given arbCatalogueItemBatchPostRequestSmithy: Arbitrary[smithy.v2.CatalogueItemBatchPostRequest] = Arbitrary(
     Arbitrary.arbitrary[CatalogueItemBatchPostRequest].map(_.transformInto[smithy.v2.CatalogueItemBatchPostRequest])
   )

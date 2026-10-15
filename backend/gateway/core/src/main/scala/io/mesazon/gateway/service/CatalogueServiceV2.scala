@@ -1,0 +1,131 @@
+package io.mesazon.gateway.service
+
+import io.mesazon.gateway.clients.S3ClientOrganizationMedia
+import io.mesazon.gateway.repository.CatalogueRepositoryV2
+import io.mesazon.gateway.validation.service.CatalogueV2RequestValidator
+import io.mesazon.gateway.{smithy, HttpErrorHandler}
+import zio.*
+
+import java.util.UUID
+import scala.annotation.unused
+
+object CatalogueServiceV2 {
+
+  private final class CatalogueServiceV2Impl(
+      @unused catalogueV2RequestValidator: CatalogueV2RequestValidator,
+      @unused catalogueRepositoryV2: CatalogueRepositoryV2,
+      @unused s3ClientOrganizationMedia: S3ClientOrganizationMedia,
+  ) extends smithy.v2.CatalogueServiceV2[ServiceTask] {
+
+    override def catalogueItemPost(
+        organizationID: UUID,
+        request: smithy.v2.CatalogueItemPostRequest,
+    ): ServiceTask[smithy.v2.CatalogueItemPostResponse] =
+      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemPost"))
+
+    override def catalogueItemBatchPost(
+        organizationID: UUID,
+        request: smithy.v2.CatalogueItemBatchPostRequest,
+    ): ServiceTask[smithy.v2.CatalogueItemBatchPostResponse] =
+      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemBatchPost"))
+
+    override def catalogueItemPut(
+        organizationID: UUID,
+        catalogueItemID: UUID,
+        request: smithy.v2.CatalogueItemPutRequest,
+    ): ServiceTask[Unit] =
+      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemPut"))
+
+    override def catalogueItemArchivePut(
+        organizationID: UUID,
+        catalogueItemID: UUID,
+    ): ServiceTask[Unit] =
+      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemArchivePut"))
+
+    override def catalogueItemVariantArchivePut(
+        organizationID: UUID,
+        catalogueItemID: UUID,
+        catalogueItemVariantID: UUID,
+    ): ServiceTask[Unit] =
+      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemVariantArchivePut"))
+
+    override def catalogueItemGet(
+        organizationID: UUID,
+        catalogueItemID: UUID,
+    ): ServiceTask[smithy.v2.CatalogueItemGetResponse] =
+      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemGet"))
+
+    override def catalogueItemSummaryGet(
+        organizationID: UUID,
+        catalogueItemIDs: List[UUID],
+    ): ServiceTask[smithy.v2.CatalogueItemSummaryGetResponse] =
+      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemSummaryGet"))
+
+    override def catalogueItemUniquenessGet(
+        organizationID: UUID,
+        name: Option[String],
+        sku: Option[String],
+    ): ServiceTask[smithy.v2.CatalogueItemUniquenessGetResponse] =
+      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemUniquenessGet"))
+  }
+
+  private def observed(service: smithy.v2.CatalogueServiceV2[ServiceTask]): smithy.v2.CatalogueServiceV2[Task] =
+    new smithy.v2.CatalogueServiceV2[Task] {
+      override def catalogueItemPost(
+          organizationID: UUID,
+          request: smithy.v2.CatalogueItemPostRequest,
+      ): Task[smithy.v2.CatalogueItemPostResponse] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemPost(organizationID, request))
+
+      override def catalogueItemBatchPost(
+          organizationID: UUID,
+          request: smithy.v2.CatalogueItemBatchPostRequest,
+      ): Task[smithy.v2.CatalogueItemBatchPostResponse] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemBatchPost(organizationID, request))
+
+      override def catalogueItemPut(
+          organizationID: UUID,
+          catalogueItemID: UUID,
+          request: smithy.v2.CatalogueItemPutRequest,
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemPut(organizationID, catalogueItemID, request))
+
+      override def catalogueItemArchivePut(
+          organizationID: UUID,
+          catalogueItemID: UUID,
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemArchivePut(organizationID, catalogueItemID))
+
+      override def catalogueItemVariantArchivePut(
+          organizationID: UUID,
+          catalogueItemID: UUID,
+          catalogueItemVariantID: UUID,
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(
+          service.catalogueItemVariantArchivePut(organizationID, catalogueItemID, catalogueItemVariantID)
+        )
+
+      override def catalogueItemGet(
+          organizationID: UUID,
+          catalogueItemID: UUID,
+      ): Task[smithy.v2.CatalogueItemGetResponse] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemGet(organizationID, catalogueItemID))
+
+      override def catalogueItemSummaryGet(
+          organizationID: UUID,
+          catalogueItemIDs: List[UUID],
+      ): Task[smithy.v2.CatalogueItemSummaryGetResponse] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemSummaryGet(organizationID, catalogueItemIDs))
+
+      override def catalogueItemUniquenessGet(
+          organizationID: UUID,
+          name: Option[String],
+          sku: Option[String],
+      ): Task[smithy.v2.CatalogueItemUniquenessGetResponse] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemUniquenessGet(organizationID, name, sku))
+    }
+
+  val local = ZLayer.derive[CatalogueServiceV2Impl].project[smithy.v2.CatalogueServiceV2[ServiceTask]](identity)
+
+  val live = local >>> ZLayer.fromFunction(observed)
+}

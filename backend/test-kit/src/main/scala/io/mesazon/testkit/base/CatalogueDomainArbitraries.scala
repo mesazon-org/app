@@ -94,10 +94,16 @@ trait CatalogueDomainArbitraries extends GatewayArbitraries {
   )
 
   given arbCatalogueItemBatchPostRequest: Arbitrary[CatalogueItemBatchPostRequest] = Arbitrary(
-    Gen
-      .choose(0, 10)
-      .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemPostRequest]))
-      .map(CatalogueItemBatchPostRequest.apply)
+    for {
+      catalogueItemPostRequestHead <- Arbitrary.arbitrary[CatalogueItemPostRequest]
+      catalogueItemPostRequestTail <- Gen
+        .choose(0, 9)
+        .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemPostRequest]))
+      catalogueItemPostRequests = NonEmptyChunk.fromIterable(
+        catalogueItemPostRequestHead,
+        catalogueItemPostRequestTail,
+      )
+    } yield CatalogueItemBatchPostRequest(catalogueItemPostRequests)
   )
 
   given arbCatalogueItemPutRequest: Arbitrary[CatalogueItemPutRequest] = Arbitrary(

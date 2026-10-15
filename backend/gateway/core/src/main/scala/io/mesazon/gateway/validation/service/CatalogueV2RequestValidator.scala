@@ -174,7 +174,7 @@ final class CatalogueV2RequestValidator(
       requestSmithy: smithy.v2.CatalogueItemBatchPostRequest
   ): IO[ServiceError.BadRequestError.ValidationError, CatalogueItemBatchPostRequest] =
     toValidatedRequestIO(
-      validateAllNested("catalogueItem", requestSmithy.catalogueItems)(validateItemPost)
+      validateNonEmptyNested("catalogueItem", requestSmithy.catalogueItems)(validateItemPost)
         .map(_.map(CatalogueItemBatchPostRequest.apply))
     )
 

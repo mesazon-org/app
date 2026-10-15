@@ -29,7 +29,7 @@ case class CatalogueItemPostRequest(
 )
 
 case class CatalogueItemBatchPostRequest(
-    catalogueItems: List[CatalogueItemPostRequest]
+    catalogueItems: NonEmptyChunk[CatalogueItemPostRequest]
 )
 
 case class CatalogueItemPutRequest(

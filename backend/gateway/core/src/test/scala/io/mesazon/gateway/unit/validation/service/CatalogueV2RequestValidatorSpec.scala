@@ -254,10 +254,13 @@ class CatalogueV2RequestValidatorSpec extends ZWordSpecBase, CatalogueV2SmithyAr
           .zioValue shouldBe request
       }
 
-      "accept an empty batch" in {
+      "fail with a ValidationError when the batch has no catalogue items" in {
         validator
           .validatedCatalogueItemBatchPostRequest(smithy.v2.CatalogueItemBatchPostRequest(Nil))
-          .zioValue shouldBe CatalogueItemBatchPostRequest(Nil)
+          .zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            List(InvalidFieldError("catalogueItem", "At least one catalogueItem must be provided", Seq.empty))
+          )
       }
 
       "fail with a ValidationError preserving item and variant indexes" in {

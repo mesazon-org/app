@@ -122,12 +122,14 @@ Like the customer book, these are not a single journey. They are the things that
 | 10. User breaks a rule in **Price**, **Selling unit**, or the attribute rules below | - Rejected, naming the item, the variant, and the part at fault |
 | 11. User submits several bad entries at once | - Every problem is reported together, each tied to its item and variant |
 | 12. A member with the ordinary user role tries to add an item | - Rejected |
+| 13. User submits a batch with no items | - Rejected as invalid; nothing is stored |
 
 #### Requirements
 
 1. An item needs a name and at least one variant. The description is optional.
 2. Every variant needs a selling unit. The price, SKU, label, description and attributes are optional.
 3. Every price, selling unit and attribute must follow the rules in the tables below.
+4. A batch must contain at least one item.
 
 #### Request / Response / Outcome
 
@@ -224,7 +226,7 @@ Only item identifiers are returned. Variant identifiers are not; they are seen b
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the item and variant each belongs to |
+| 400 | `VALIDATION_ERROR` | - A batch contains no items - One or more fields are invalid, reported together with the item and variant each belongs to |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |

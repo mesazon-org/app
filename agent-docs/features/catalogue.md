@@ -163,6 +163,7 @@ Edited in place in `V2025.05.27__init.sql`; no new migration, no data migration.
 - Quantity, per-unit, and unit-size values are each greater than 0 and at most 99,999; validation preserves their supplied decimal places without rounding or a separate scale cap. Extremely precise values can pass validation yet exceed PostgreSQL `jsonb`'s numeric range when persisted; this is a known cutover risk accepted for this rule.
 - `CatalogueV2RequestValidator` validates selling-unit quantity, per-unit, and unit-size values directly, mapping their closed Smithy enums through Chimney and accumulating invalid numbers in field order. Its spec covers all unit cases, optional parts, exact decimal preservation, boundaries, and ordered errors. Variant prices delegate to `PriceValidator`.
 - Insert item: at least one variant. The validated `CatalogueItemPostRequest.variants` is a `NonEmptyChunk`, built by shared `validateNonEmptyNested`; an empty input reports `InvalidFieldError("variant", "At least one variant must be provided", Seq.empty)`. Update `variantsInsert` entries: selling unit required (Smithy `@required`); price optional, as on insert (absent = no set price). Update rejects every status in `CatalogueItemVariantStatus.disabled` (currently `Archived`).
+- Batch insert: at least one catalogue item. `CatalogueItemBatchPostRequest.catalogueItems` is a `NonEmptyChunk`, built by `validateNonEmptyNested("catalogueItem", ...)`; empty or omitted wire lists produce `InvalidFieldError("catalogueItem", "At least one catalogueItem must be provided", Seq.empty)`. Non-empty input retains item order and accumulated nested item/variant errors. Domain and Smithy arbitraries follow the same non-empty invariant.
 - Error naming: indexed variant errors and the empty-variant error both use `variant`; batch nests under `catalogueItem`. Each error names the item index, then the variant index, then the field.
 - Uniqueness: when both optional query fields are absent, return two ordered `InvalidFieldError`s, one for `name` and one for `sku`, each with an empty submitted-value list and the at-least-one-required message. Supplied invalid values retain their own field errors.
 - The three unit fields and `currency` are closed Smithy enums on the wire, so an unknown unit or currency is a decode-time 400 that names neither the item nor the variant. Variant `status` in update is the full four-case Smithy enum; `Archived` is rejected by the validator.
@@ -200,9 +201,9 @@ Shapes in `domain/CatalogueV2.smithy`:
 
 `GatewayClient`: hand-written jsoniter codecs for every new enum (like `OnboardStage`/`CustomerType`), a hand-written null-emitting codec for the nullable members (new pattern), and encoding that keeps `attributes: {}` on update so clearing all attributes is possible.
 
-### Service implementation plan — awaiting approval
+### Service implementation plan — slice 1 awaiting review
 
-Today the V2 contract, validation, and repository exist without a service implementation. This phase adds staged `service/CatalogueServiceV2.scala`, implementing `smithy.v2.CatalogueServiceV2`, and `fun/CatalogueServiceV2Spec.scala`. Production route wiring, deletion of V1, and canonical renaming follow in the cutover phase. The service remains explicitly unshipped until cutover and HTTP acceptance proof are complete.
+Today the V2 contract, validation, and repository exist without a service implementation. The current slice adds staged `service/CatalogueServiceV2.scala`, implementing the callable `smithy.v2.CatalogueServiceV2` seam with `.local` and `.live` layers, and `fun/CatalogueServiceV2Spec.scala` with operation-grouped functional scenarios. The callable bodies are intentionally unimplemented; `sbt 'gateway-core/testOnly io.mesazon.gateway.fun.CatalogueServiceV2Spec'` ran 37 tests with 37 failures, all at the corresponding `NotImplementedError` stubs. `sbt 'gateway-core/Test/compile'` and `sbt 'runLint'` both passed. Production route wiring, deletion of V1, and canonical renaming follow in the cutover phase. The service remains explicitly unshipped until cutover and HTTP acceptance proof are complete.
 
 Complexity: **MEDIUM**. This phase follows the existing Catalogue service pattern and delegates transactions, tenant filtering, uniqueness, and the last-enabled-variant rule to the completed repository. It adds no schema or authentication-policy changes.
 
@@ -211,7 +212,7 @@ Use the existing `.local` / `.observed` / `.live` pattern with `CatalogueV2Reque
 | Operation | Service behavior and functional proof |
 |---|---|
 | `catalogueItemPost` | Validate before repository access; every inserted variant gets `Active`; return the created item ID; validation touches no repository; repository failures propagate unchanged. |
-| `catalogueItemBatchPost` | Validate the whole batch first; an empty batch returns an empty ID list without a repository call, preserving the existing validator's accepted empty case; a non-empty batch makes one `NonEmptyChunk` repository call and preserves returned ID order; invalid entries prevent all writes; repository failures propagate unchanged. |
+| `catalogueItemBatchPost` | Validate the whole batch first, rejecting an empty batch before repository access; validated items are a `NonEmptyChunk` passed in one repository call; preserve returned ID order; invalid entries prevent all writes; repository failures propagate unchanged. |
 | `catalogueItemPut` | Preserve absent/set/clear semantics and map both variant lists; inserted variants get `Active`; pass no image update; invalid requests prevent repository access; repository failures propagate unchanged. Missing-item no-ops and invalid referenced variants remain repository-owned. |
 | `catalogueItemArchivePut` | Forward organization/item IDs once and return no content; preserve repository success/no-op and failures unchanged. |
 | `catalogueItemVariantArchivePut` | Forward organization/item/variant IDs once and return no content; preserve repository success/no-op, `ForbiddenError.InvalidAction`, and other failures unchanged. |
@@ -221,9 +222,9 @@ Use the existing `.local` / `.observed` / `.live` pattern with `CatalogueV2Reque
 
 Ordered review slices, each at most three hand-written files:
 
-1. Add the callable service skeleton and operation-grouped functional tests for the outcomes above; use real validators and strict repository/S3 mocks, establish the intended red result, and stop for review.
+1. Add the callable service skeleton and operation-grouped functional tests for the outcomes above; use real validators and strict repository/S3 mocks, establish the intended red result, and stop for review. **Awaiting review:** the callable `.local`/`.live` seam and 37 scenario tests are present; the focused spec ran 37 tests and all 37 failed at the intentionally unimplemented service seam.
 2. Implement `catalogueItemPost` and verify its focused scenarios.
-3. Implement `catalogueItemBatchPost`, including the empty-batch branch and ordered IDs.
+3. Implement `catalogueItemBatchPost`, including empty-batch validation before repository access and ordered IDs.
 4. Implement `catalogueItemPut`, including nullable fields and new-variant status.
 5. Implement `catalogueItemArchivePut`.
 6. Implement `catalogueItemVariantArchivePut`, including unchanged `InvalidAction` propagation.
