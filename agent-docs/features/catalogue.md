@@ -200,6 +200,39 @@ Shapes in `domain/CatalogueV2.smithy`:
 
 `GatewayClient`: hand-written jsoniter codecs for every new enum (like `OnboardStage`/`CustomerType`), a hand-written null-emitting codec for the nullable members (new pattern), and encoding that keeps `attributes: {}` on update so clearing all attributes is possible.
 
+### Service implementation plan — awaiting approval
+
+Today the V2 contract, validation, and repository exist without a service implementation. This phase adds staged `service/CatalogueServiceV2.scala`, implementing `smithy.v2.CatalogueServiceV2`, and `fun/CatalogueServiceV2Spec.scala`. Production route wiring, deletion of V1, and canonical renaming follow in the cutover phase. The service remains explicitly unshipped until cutover and HTTP acceptance proof are complete.
+
+Complexity: **MEDIUM**. This phase follows the existing Catalogue service pattern and delegates transactions, tenant filtering, uniqueness, and the last-enabled-variant rule to the completed repository. It adds no schema or authentication-policy changes.
+
+Use the existing `.local` / `.observed` / `.live` pattern with `CatalogueV2RequestValidator`, `CatalogueRepositoryV2`, and `S3ClientOrganizationMedia`. The generated organization header is converted to `OrganizationID` on every repository call. Request-to-input and row-to-response mappings use Chimney, with inline customization for inserted variant status, differently named nested row fields, and presigned URLs. No transaction or lifecycle rules move into the service.
+
+| Operation | Service behavior and functional proof |
+|---|---|
+| `catalogueItemPost` | Validate before repository access; every inserted variant gets `Active`; return the created item ID; validation touches no repository; repository failures propagate unchanged. |
+| `catalogueItemBatchPost` | Validate the whole batch first; an empty batch returns an empty ID list without a repository call, preserving the existing validator's accepted empty case; a non-empty batch makes one `NonEmptyChunk` repository call and preserves returned ID order; invalid entries prevent all writes; repository failures propagate unchanged. |
+| `catalogueItemPut` | Preserve absent/set/clear semantics and map both variant lists; inserted variants get `Active`; pass no image update; invalid requests prevent repository access; repository failures propagate unchanged. Missing-item no-ops and invalid referenced variants remain repository-owned. |
+| `catalogueItemArchivePut` | Forward organization/item IDs once and return no content; preserve repository success/no-op and failures unchanged. |
+| `catalogueItemVariantArchivePut` | Forward organization/item/variant IDs once and return no content; preserve repository success/no-op, `ForbiddenError.InvalidAction`, and other failures unchanged. |
+| `catalogueItemGet` | Read the active item with variants; `None` produces the existing Catalogue missing-item `UnexpectedError` message; map the complete detail response and preserve variant order; sign the normalized image only when present; propagate repository/S3 failures unchanged. |
+| `catalogueItemSummaryGet` | Empty IDs call the all-enabled repository method; non-empty IDs become a `NonEmptyChunk` for the selected method; preserve item/variant order and complete variant summaries; resolve only present images; empty results need no S3 calls; propagate repository/S3 failures unchanged. Follow the current V2 Smithy response; the documented epic/from-price mismatch remains a cutover gap. |
+| `catalogueItemUniquenessGet` | Validate before reads; check only supplied fields, name before SKU when both are supplied; return each supplied field's optional Boolean, including `false`; invalid inputs touch no repository; failures propagate unchanged and prevent later calls. |
+
+Ordered review slices, each at most three hand-written files:
+
+1. Add the callable service skeleton and operation-grouped functional tests for the outcomes above; use real validators and strict repository/S3 mocks, establish the intended red result, and stop for review.
+2. Implement `catalogueItemPost` and verify its focused scenarios.
+3. Implement `catalogueItemBatchPost`, including the empty-batch branch and ordered IDs.
+4. Implement `catalogueItemPut`, including nullable fields and new-variant status.
+5. Implement `catalogueItemArchivePut`.
+6. Implement `catalogueItemVariantArchivePut`, including unchanged `InvalidAction` propagation.
+7. Implement `catalogueItemGet`, including missing-item and image branches.
+8. Implement `catalogueItemSummaryGet`, including both repository-selection branches.
+9. Implement `catalogueItemUniquenessGet`, including optional-field call sequencing.
+
+Each implementation slice changes the service, its spec as needed, and this feature doc's delivery status. Functional cases prove service-owned branches and exact mappings; database atomicity, filtering, conflict semantics, and archive races reuse existing repository proof rather than mocked simulations. Run focused scenarios for each slice and `sbt "runLint"`; at the completed service phase run its full functional suite and the existing Catalogue service regression suite. Cutover needs a separate reviewed slice plan for application wiring, image-upload repository integration, removal/renaming, schema cleanup, and the real HTTP acceptance matrix.
+
 ### Repository and transactions
 
 - `CatalogueQueries` contains the V2 item and variant queries; `CatalogueRepositoryV2Spec` exercises them against PostgreSQL.
