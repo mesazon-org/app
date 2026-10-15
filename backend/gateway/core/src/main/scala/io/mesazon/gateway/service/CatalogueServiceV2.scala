@@ -1,9 +1,11 @@
 package io.mesazon.gateway.service
 
+import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.repository.CatalogueRepositoryV2
 import io.mesazon.gateway.repository.CatalogueRepositoryV2.*
+import io.mesazon.gateway.transform.given
 import io.mesazon.gateway.validation.service.CatalogueV2RequestValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import io.scalaland.chimney.dsl.*
@@ -46,7 +48,24 @@ object CatalogueServiceV2 {
         organizationID: UUID,
         request: smithy.v2.CatalogueItemBatchPostRequest,
     ): ServiceTask[smithy.v2.CatalogueItemBatchPostResponse] =
-      ZIO.die(new NotImplementedError("CatalogueServiceV2.catalogueItemBatchPost"))
+      for {
+        catalogueItemBatchPostRequest <- catalogueV2RequestValidator.validatedCatalogueItemBatchPostRequest(request)
+        catalogueItemIDs              <- catalogueRepositoryV2.insertCatalogueItems(
+          OrganizationID(organizationID),
+          catalogueItemBatchPostRequest.catalogueItems.map(
+            _.into[InsertCatalogueItemInput]
+              .withFieldComputed(
+                _.variants,
+                _.variants.map(
+                  _.into[InsertCatalogueItemVariantInput]
+                    .withFieldConst(_.status, CatalogueItemVariantStatus.Active)
+                    .transform
+                ),
+              )
+              .transform
+          ),
+        )
+      } yield smithy.v2.CatalogueItemBatchPostResponse(catalogueItemIDs.transformInto[List[UUID]])
 
     override def catalogueItemPut(
         organizationID: UUID,

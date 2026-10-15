@@ -227,7 +227,9 @@ class CatalogueServiceV2Spec extends ZWordSpecBase, CatalogueV2SmithyArbitraries
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemID1 = arbitrarySample[CatalogueItemID]
         val catalogueItemID2 = arbitrarySample[CatalogueItemID]
+        
         catalogueItemID1 should not be catalogueItemID2
+
         val catalogueItemPostRequest1 = arbitrarySample[CatalogueItemPostRequest].copy(
           name = CatalogueItemName.assume("first catalogue item")
         )
