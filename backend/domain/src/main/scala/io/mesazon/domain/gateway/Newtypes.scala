@@ -186,6 +186,9 @@ type CatalogueItemID = CatalogueItemID.T
 object CatalogueItemName extends RefinedType[String, NonEmptyTrimmed]
 type CatalogueItemName = CatalogueItemName.T
 
+object CatalogueItemDescription extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemDescription = CatalogueItemDescription.T
+
 object CatalogueItemUnit extends RefinedType[String, NonEmptyTrimmed]
 type CatalogueItemUnit = CatalogueItemUnit.T
 
@@ -194,3 +197,33 @@ type CatalogueItemPrice = CatalogueItemPrice.T
 
 object CatalogueItemImageAsset extends RefinedType[ImageAsset, Pure]
 type CatalogueItemImageAsset = CatalogueItemImageAsset.T
+
+object CatalogueItemVariantID extends RefinedTypeUUID
+type CatalogueItemVariantID = CatalogueItemVariantID.T
+
+object CatalogueItemVariantSku extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemVariantSku = CatalogueItemVariantSku.T
+
+object CatalogueItemVariantLabel extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemVariantLabel = CatalogueItemVariantLabel.T
+
+object CatalogueItemVariantDescription extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemVariantDescription = CatalogueItemVariantDescription.T
+
+object CatalogueItemVariantAttributeName extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemVariantAttributeName = CatalogueItemVariantAttributeName.T
+
+object CatalogueItemVariantAttributeValue extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemVariantAttributeValue = CatalogueItemVariantAttributeValue.T
+
+object CatalogueItemVariantPrice extends RefinedType[Price, Pure]
+type CatalogueItemVariantPrice = CatalogueItemVariantPrice.T
+
+object CatalogueItemVariantQuantityValue extends RefinedType[BigDecimal, Positive & LessEqual[99999]]
+type CatalogueItemVariantQuantityValue = CatalogueItemVariantQuantityValue.T
+
+object CatalogueItemVariantPerUnitValue extends RefinedType[BigDecimal, Positive & LessEqual[99999]]
+type CatalogueItemVariantPerUnitValue = CatalogueItemVariantPerUnitValue.T
+
+object CatalogueItemVariantUnitSizeValue extends RefinedType[BigDecimal, Positive & LessEqual[99999]]
+type CatalogueItemVariantUnitSizeValue = CatalogueItemVariantUnitSizeValue.T

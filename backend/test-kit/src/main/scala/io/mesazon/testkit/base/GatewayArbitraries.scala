@@ -4,8 +4,6 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.domain.waha
 import org.scalacheck.*
 
-import java.util.Currency
-
 trait GatewayArbitraries extends IronRefinedTypeArbitraries {
 
   given arbPhoneNumber: Arbitrary[PhoneNumber] = Arbitrary(
@@ -45,10 +43,12 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
 
   given arbAddressType: Arbitrary[AddressType] = Arbitrary(Gen.oneOf(AddressType.values.toIndexedSeq))
 
+  given arbCurrency: Arbitrary[Currency] = Arbitrary(Gen.oneOf(Currency.values.toIndexedSeq))
+
   given arbPrice: Arbitrary[Price] = Arbitrary(
     for {
-      priceCurrencyCode <- Gen.oneOf("JPY", "USD", "KWD")
-      priceFractionDigits = Currency.getInstance(priceCurrencyCode).getDefaultFractionDigits
+      currency <- Arbitrary.arbitrary[Currency]
+      priceFractionDigits = currency.decimalPoints.getOrElse(0)
       priceScaleFactor    = BigInt(10).pow(priceFractionDigits)
       priceWhole    <- Gen.choose(0L, 999_999_999_999L)
       priceFraction <- Gen.choose(0L, (priceScaleFactor - 1).toLong)
@@ -56,7 +56,7 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
       PriceAmount.assume(
         BigDecimal(BigInt(priceWhole) * priceScaleFactor + BigInt(priceFraction), priceFractionDigits)
       ),
-      PriceCurrency.assume(priceCurrencyCode),
+      PriceCurrency.assume(currency.toString),
     )
   )
 

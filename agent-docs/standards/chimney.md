@@ -15,6 +15,7 @@ Reusable model-transformation rules. Related: [Scala](scala.md), [Smithy](smithy
 - Transform a Scala collection directly when every element uses automatic derivation: `values.transformInto[List[Target]]`, never `values.map(_.transformInto[Target])`.
 - Keep `.map` when each element needs its own Chimney customization or when the method belongs to a different container operation, such as ScalaCheck `Arbitrary.map`.
 - Prefer transforming the complete owning product when Chimney can derive it, rather than transforming one of its collection fields separately.
+- For gateway `NonEmptyChunk[Source]` → `List[Target]` conversions, import `io.mesazon.gateway.transform.given`. The shared transformer in `transform/transform.scala` preserves element order and uses the element transformer; complete owning products derive without per-field `.toList` customizations or request-specific transformers.
 
 ## Enums
 

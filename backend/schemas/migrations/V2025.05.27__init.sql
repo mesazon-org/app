@@ -144,7 +144,8 @@ create table catalogue_item
     organization_id                uuid                  not null,
     catalogue_item_id              uuid                  not null,
     name                           text                  not null,
-    unit                           text                  not null,
+    description                    text,
+    unit                           text,
     price_amount                   numeric,
     price_currency                 text,
     image_original_s3_bucket_key   text,
@@ -160,6 +161,37 @@ create unique index uq_catalogue_item_name
     on catalogue_item (organization_id, name)
     where status = 'Active';
 
+create type catalogue_item_variant_status as enum ('Active', 'Inactive', 'OutOfStock', 'Archived');
+
+create table catalogue_item_variant
+(
+    organization_id           uuid                          not null,
+    catalogue_item_variant_id uuid                          not null,
+    catalogue_item_id         uuid                          not null,
+    sku                       text,
+    label                     text,
+    description               text,
+    attributes                jsonb                         not null,
+    price_amount              numeric,
+    price_currency            text,
+    selling_unit              jsonb                         not null,
+    status                    catalogue_item_variant_status not null,
+    created_at                timestamptz                   not null,
+    updated_at                timestamptz                   not null,
+    primary key (organization_id, catalogue_item_variant_id),
+    constraint chk_catalogue_item_variant_price
+        check ((price_amount is null) = (price_currency is null)),
+    foreign key (organization_id, catalogue_item_id)
+        references catalogue_item (organization_id, catalogue_item_id)
+        on delete restrict
+);
+
+create index idx_catalogue_item_variant_item
+    on catalogue_item_variant (organization_id, catalogue_item_id);
+
+create unique index uq_catalogue_item_variant_sku
+    on catalogue_item_variant (organization_id, sku)
+    where status <> 'Archived' and sku is not null;
 
 create table waha_user
 (
