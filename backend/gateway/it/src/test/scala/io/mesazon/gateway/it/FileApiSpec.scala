@@ -14,7 +14,12 @@ import zio.*
 import zio.stream.ZStream
 
 @DoNotDiscover
-class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryArbitraries, IronRefinedTypeTransformer {
+class FileApiSpec
+    extends GatewayAcceptanceTest,
+      SmithyArbitraries,
+      RepositoryArbitraries,
+      CatalogueRepositoryV2Arbitraries,
+      IronRefinedTypeTransformer {
 
   // Mirrors the gateway container's s3-client-organization-media config (application.conf)
   private val organizationMediaBucket            = "organization-media"
@@ -356,13 +361,20 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         context =>
           import context.*
 
-          val catalogueItemRowActive = arbitrarySample[CatalogueItemRow]
+          val catalogueItemRowV2 = arbitrarySample[CatalogueItemRowV2]
             .copy(
               imageAsset = None,
               status = CatalogueItemStatus.Active,
             )
-
-          postgresClient.executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRowActive)).zioValue
+          val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+            organizationID = catalogueItemRowV2.organizationID,
+            catalogueItemID = catalogueItemRowV2.catalogueItemID,
+            status = CatalogueItemVariantStatus.Active,
+          )
+          postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowV2)).zioValue
+          postgresClient
+            .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+            .zioValue
 
           val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
           val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
@@ -371,7 +383,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
           val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
-            organizationID = catalogueItemRowActive.organizationID,
+            organizationID = catalogueItemRowV2.organizationID,
             userID = userDetailsRow.userID,
             userRole = organizationUserRoleAllowed,
           )
@@ -381,8 +393,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
           val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
-          val organizationID                     = catalogueItemRowActive.organizationID
-          val catalogueItemID                    = catalogueItemRowActive.catalogueItemID
+          val organizationID                     = catalogueItemRowV2.organizationID
+          val catalogueItemID                    = catalogueItemRowV2.catalogueItemID
           val imageBytes                         =
             ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
@@ -414,17 +426,35 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           imageOriginalObjectBytes shouldBe imageBytes
           imageNormalizedObjectBytes.size should be > 0
 
-          val catalogueItemRowUpdated = postgresClient
-            .executeQuery(catalogueItemQueries.getCatalogueItemRow(organizationID, catalogueItemID))
+          val catalogueItemRowsV2Updated = postgresClient
+            .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
             .zioValue
 
-          val catalogueItemRowUpdatedValue = catalogueItemRowUpdated.value
-          val catalogueItemImageAssetValue = catalogueItemRowUpdatedValue.imageAsset.value.value
+          catalogueItemRowsV2Updated should have size 1
 
-          catalogueItemImageAssetValue.imageOriginalFileName shouldBe catalogueItemImageOriginalFileName
-          catalogueItemImageAssetValue.imageOriginalS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/original"
-          catalogueItemImageAssetValue.imageNormalizedS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/normalized"
-          catalogueItemRowUpdatedValue.status shouldBe CatalogueItemStatus.Active
+          val catalogueItemRowV2Updated = catalogueItemRowsV2Updated.head
+          catalogueItemRowV2Updated.copy(
+            imageAsset = None,
+            updatedAt = catalogueItemRowV2.updatedAt,
+          ) shouldBe catalogueItemRowV2
+          catalogueItemRowV2Updated.updatedAt should not be catalogueItemRowV2.updatedAt
+
+          val catalogueItemVariantRowsUpdated = postgresClient
+            .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+            .zioValue
+
+          catalogueItemVariantRowsUpdated shouldBe List(catalogueItemVariantRow)
+
+          val catalogueItemImageAssetExpected = CatalogueItemImageAsset.assume(
+            ImageAsset(
+              imageOriginalS3BucketKey = ImageOriginalS3BucketKey.assume(s"$expectedBucketKeyPrefix/original"),
+              imageNormalizedS3BucketKey = ImageNormalizedS3BucketKey.assume(s"$expectedBucketKeyPrefix/normalized"),
+              imageOriginalFileName = catalogueItemImageOriginalFileName,
+            )
+          )
+
+          catalogueItemRowV2Updated.imageAsset shouldBe Some(catalogueItemImageAssetExpected)
+          catalogueItemRowV2Updated.status shouldBe CatalogueItemStatus.Active
       }
 
       "fail with BadRequest when the catalogue item ID header is missing" in withContext { context =>
@@ -443,7 +473,22 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt          = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val catalogueItemRowV2 = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationUserRow.organizationID,
+          imageAsset = None,
+          status = CatalogueItemStatus.Active,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = catalogueItemRowV2.organizationID,
+          catalogueItemID = catalogueItemRowV2.catalogueItemID,
+          status = CatalogueItemVariantStatus.Active,
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowV2)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+          .zioValue
 
         val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
@@ -460,6 +505,27 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         uploadCatalogueItemImageResponse.code shouldBe StatusCode.BadRequest
         uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.BadRequest()
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue shouldBe List(catalogueItemRowV2)
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue shouldBe List(catalogueItemVariantRow)
+
+        val expectedBucketKeyPrefix =
+          s"$catalogueItemImageBucketPathPrefix/${catalogueItemRowV2.organizationID.value}/${catalogueItemRowV2.catalogueItemID.value}"
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
+          .zioEither
+          .isLeft shouldBe true
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioEither
+          .isLeft shouldBe true
+
       }
 
       "fail with BadRequest when the file name header is missing" in withContext { context =>
@@ -478,7 +544,22 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt          = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val catalogueItemRowV2 = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationUserRow.organizationID,
+          imageAsset = None,
+          status = CatalogueItemStatus.Active,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = catalogueItemRowV2.organizationID,
+          catalogueItemID = catalogueItemRowV2.catalogueItemID,
+          status = CatalogueItemVariantStatus.Active,
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowV2)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+          .zioValue
 
         val catalogueItemID = arbitrarySample[CatalogueItemID]
         val imageBytes      = ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect.zioValue
@@ -495,6 +576,27 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         uploadCatalogueItemImageResponse.code shouldBe StatusCode.BadRequest
         uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.BadRequest()
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue shouldBe List(catalogueItemRowV2)
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue shouldBe List(catalogueItemVariantRow)
+
+        val expectedBucketKeyPrefix =
+          s"$catalogueItemImageBucketPathPrefix/${catalogueItemRowV2.organizationID.value}/${catalogueItemRowV2.catalogueItemID.value}"
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
+          .zioEither
+          .isLeft shouldBe true
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioEither
+          .isLeft shouldBe true
+
       }
 
       "fail with BadRequest when the organization id header is missing" in withContext { context =>
@@ -505,7 +607,21 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt          = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val catalogueItemRowV2 = arbitrarySample[CatalogueItemRowV2].copy(
+          imageAsset = None,
+          status = CatalogueItemStatus.Active,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = catalogueItemRowV2.organizationID,
+          catalogueItemID = catalogueItemRowV2.catalogueItemID,
+          status = CatalogueItemVariantStatus.Active,
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowV2)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+          .zioValue
 
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
@@ -523,6 +639,102 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         uploadCatalogueItemImageResponse.code shouldBe StatusCode.BadRequest
         uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.BadRequest()
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue shouldBe List(catalogueItemRowV2)
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue shouldBe List(catalogueItemVariantRow)
+
+        val expectedBucketKeyPrefix =
+          s"$catalogueItemImageBucketPathPrefix/${catalogueItemRowV2.organizationID.value}/${catalogueItemRowV2.catalogueItemID.value}"
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
+          .zioEither
+          .isLeft shouldBe true
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioEither
+          .isLeft shouldBe true
+
+      }
+
+      "fail with BadRequest when the uploaded file does not match its image filename" in withContext { context =>
+        import context.*
+
+        val catalogueItemRowV2 = arbitrarySample[CatalogueItemRowV2]
+          .copy(
+            imageAsset = None,
+            status = CatalogueItemStatus.Active,
+          )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = catalogueItemRowV2.organizationID,
+          catalogueItemID = catalogueItemRowV2.catalogueItemID,
+          status = CatalogueItemVariantStatus.Active,
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowV2)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+          .zioValue
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
+          organizationID = catalogueItemRowV2.organizationID,
+          userID = userDetailsRow.userID,
+          userRole = organizationUserRoleAllowed,
+        )
+
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-malformed-it-1.png")
+        val organizationID                     = catalogueItemRowV2.organizationID
+        val catalogueItemID                    = catalogueItemRowV2.catalogueItemID
+        val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
+
+        val uploadCatalogueItemImageResponse = gatewayClient
+          .uploadCatalogueItemImagePost[smithy.BadRequest](
+            Some(organizationID),
+            Some(catalogueItemID),
+            Some(catalogueItemImageOriginalFileName),
+            imageBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        uploadCatalogueItemImageResponse.code shouldBe StatusCode.BadRequest
+        uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.BadRequest()
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue shouldBe List(catalogueItemRowV2)
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue shouldBe List(catalogueItemVariantRow)
+
+        val expectedBucketKeyPrefix =
+          s"$catalogueItemImageBucketPathPrefix/${organizationID.value}/${catalogueItemID.value}"
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
+          .zioEither
+          .isLeft shouldBe true
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioEither
+          .isLeft shouldBe true
       }
 
       "fail with Unauthorized when access token is missing" in withContext { context =>
@@ -532,6 +744,21 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
+        val catalogueItemRowV2 = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          imageAsset = None,
+          status = CatalogueItemStatus.Active,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = catalogueItemRowV2.organizationID,
+          catalogueItemID = catalogueItemRowV2.catalogueItemID,
+          status = CatalogueItemVariantStatus.Active,
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowV2)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+          .zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
           .uploadCatalogueItemImagePost[smithy.Unauthorized](
@@ -545,6 +772,27 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         uploadCatalogueItemImageResponse.code shouldBe StatusCode.Unauthorized
         uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.Unauthorized()
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue shouldBe List(catalogueItemRowV2)
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue shouldBe List(catalogueItemVariantRow)
+
+        val expectedBucketKeyPrefix =
+          s"$catalogueItemImageBucketPathPrefix/${catalogueItemRowV2.organizationID.value}/${catalogueItemRowV2.catalogueItemID.value}"
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
+          .zioEither
+          .isLeft shouldBe true
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioEither
+          .isLeft shouldBe true
+
       }
 
       "fail with Unauthorized when access token is invalid" in withContext { context =>
@@ -554,6 +802,21 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
+        val catalogueItemRowV2 = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          imageAsset = None,
+          status = CatalogueItemStatus.Active,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = catalogueItemRowV2.organizationID,
+          catalogueItemID = catalogueItemRowV2.catalogueItemID,
+          status = CatalogueItemVariantStatus.Active,
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowV2)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+          .zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
           .uploadCatalogueItemImagePost[smithy.Unauthorized](
@@ -567,6 +830,27 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         uploadCatalogueItemImageResponse.code shouldBe StatusCode.Unauthorized
         uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.Unauthorized()
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue shouldBe List(catalogueItemRowV2)
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue shouldBe List(catalogueItemVariantRow)
+
+        val expectedBucketKeyPrefix =
+          s"$catalogueItemImageBucketPathPrefix/${catalogueItemRowV2.organizationID.value}/${catalogueItemRowV2.catalogueItemID.value}"
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
+          .zioEither
+          .isLeft shouldBe true
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioEither
+          .isLeft shouldBe true
+
       }
 
       "fail with Forbidden when the user is assigned to the organization with a disallowed role" in withContext {
@@ -593,24 +877,60 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val catalogueItemRowV2 = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationUserRow.organizationID,
+          imageAsset = None,
+          status = CatalogueItemStatus.Active,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = catalogueItemRowV2.organizationID,
+          catalogueItemID = catalogueItemRowV2.catalogueItemID,
+          status = CatalogueItemVariantStatus.Active,
+        )
 
-          val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-          val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
-          val imageBytes                         =
-            ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowV2)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+          .zioValue
 
-          val uploadCatalogueItemImageResponse = gatewayClient
-            .uploadCatalogueItemImagePost[smithy.Forbidden](
-              Some(organizationUserRow.organizationID),
-              Some(catalogueItemID),
-              Some(catalogueItemImageOriginalFileName),
-              imageBytes,
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
+        val catalogueItemID                    = arbitrarySample[CatalogueItemID]
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
+        val imageBytes                         =
+          ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
-          uploadCatalogueItemImageResponse.code shouldBe StatusCode.Forbidden
-          uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.Forbidden()
+        val uploadCatalogueItemImageResponse = gatewayClient
+          .uploadCatalogueItemImagePost[smithy.Forbidden](
+            Some(organizationUserRow.organizationID),
+            Some(catalogueItemID),
+            Some(catalogueItemImageOriginalFileName),
+            imageBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        uploadCatalogueItemImageResponse.code shouldBe StatusCode.Forbidden
+        uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.Forbidden()
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue shouldBe List(catalogueItemRowV2)
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue shouldBe List(catalogueItemVariantRow)
+
+        val expectedBucketKeyPrefix =
+          s"$catalogueItemImageBucketPathPrefix/${catalogueItemRowV2.organizationID.value}/${catalogueItemRowV2.catalogueItemID.value}"
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
+          .zioEither
+          .isLeft shouldBe true
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioEither
+          .isLeft shouldBe true
+
       }
 
       "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
@@ -622,12 +942,35 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt          = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val catalogueItemID    = arbitrarySample[CatalogueItemID]
+        val organizationID     = arbitrarySample[OrganizationID]
+        val catalogueItemRowV2 = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          imageAsset = None,
+          status = CatalogueItemStatus.Active,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = catalogueItemRowV2.organizationID,
+          catalogueItemID = catalogueItemRowV2.catalogueItemID,
+          status = CatalogueItemVariantStatus.Active,
+        )
+        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+          organizationID = organizationID,
+          userID = userDetailsRow.userID,
+          userRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head,
+        )
 
-        val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val organizationID                     = arbitrarySample[OrganizationID]
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowV2)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+          .zioValue
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
         val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
-        val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
+        val imageBytes                         =
+          ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
         val uploadCatalogueItemImageResponse = gatewayClient
           .uploadCatalogueItemImagePost[smithy.Forbidden](
@@ -641,6 +984,96 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         uploadCatalogueItemImageResponse.code shouldBe StatusCode.Forbidden
         uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.Forbidden()
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue shouldBe List(catalogueItemRowV2)
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue shouldBe List(catalogueItemVariantRow)
+
+        val expectedBucketKeyPrefix =
+          s"$catalogueItemImageBucketPathPrefix/${catalogueItemRowV2.organizationID.value}/${catalogueItemRowV2.catalogueItemID.value}"
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
+          .zioEither
+          .isLeft shouldBe true
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioEither
+          .isLeft shouldBe true
+      }
+
+      "fail with an InternalServerError when user details do not exist" in withContext { context =>
+        import context.*
+
+        val userID                             = arbitrarySample[UserID]
+        val organizationID                     = arbitrarySample[OrganizationID]
+        val catalogueItemID                    = arbitrarySample[CatalogueItemID]
+        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
+        val imageBytes                         =
+          ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
+
+        val catalogueItemRowV2 = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          imageAsset = None,
+          status = CatalogueItemStatus.Active,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          status = CatalogueItemVariantStatus.Active,
+        )
+        val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+          organizationID = organizationID,
+          userID = userID,
+          userRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head,
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowV2)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+          .zioValue
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userID).zioValue
+
+        val uploadCatalogueItemImageResponse = gatewayClient
+          .uploadCatalogueItemImagePost[smithy.InternalServerError](
+            Some(organizationID),
+            Some(catalogueItemID),
+            Some(catalogueItemImageOriginalFileName),
+            imageBytes,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        uploadCatalogueItemImageResponse.code shouldBe StatusCode.InternalServerError
+        uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.InternalServerError()
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue shouldBe List(catalogueItemRowV2)
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue shouldBe List(catalogueItemVariantRow)
+
+        val expectedBucketKeyPrefix =
+          s"$catalogueItemImageBucketPathPrefix/${catalogueItemRowV2.organizationID.value}/${catalogueItemRowV2.catalogueItemID.value}"
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
+          .zioEither
+          .isLeft shouldBe true
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioEither
+          .isLeft shouldBe true
       }
 
       "fail with InternalServerError when the user is not assigned to the organization" in withContext { context =>
@@ -651,10 +1084,26 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val accessJwt          = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+        val catalogueItemID    = arbitrarySample[CatalogueItemID]
+        val organizationID     = arbitrarySample[OrganizationID]
+        val catalogueItemRowV2 = arbitrarySample[CatalogueItemRowV2].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          imageAsset = None,
+          status = CatalogueItemStatus.Active,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = catalogueItemRowV2.organizationID,
+          catalogueItemID = catalogueItemRowV2.catalogueItemID,
+          status = CatalogueItemVariantStatus.Active,
+        )
 
-        val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val organizationID                     = arbitrarySample[OrganizationID]
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowV2)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+          .zioValue
+
         val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
         val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
 
@@ -670,6 +1119,27 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         uploadCatalogueItemImageResponse.code shouldBe StatusCode.InternalServerError
         uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.InternalServerError()
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue shouldBe List(catalogueItemRowV2)
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue shouldBe List(catalogueItemVariantRow)
+
+        val expectedBucketKeyPrefix =
+          s"$catalogueItemImageBucketPathPrefix/${catalogueItemRowV2.organizationID.value}/${catalogueItemRowV2.catalogueItemID.value}"
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
+          .zioEither
+          .isLeft shouldBe true
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioEither
+          .isLeft shouldBe true
+
       }
 
       "fail with InternalServerError when the catalogue item is missing" in withContext { context =>
@@ -706,18 +1176,49 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         uploadCatalogueItemImageResponse.code shouldBe StatusCode.InternalServerError
         uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.InternalServerError()
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue shouldBe Nil
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue shouldBe Nil
+
+        val expectedBucketKeyPrefix =
+          s"$catalogueItemImageBucketPathPrefix/${organizationUserRow.organizationID.value}/${catalogueItemID.value}"
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
+          .zioEither
+          .isLeft shouldBe true
+
+        s3TestClient
+          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
+          .zioEither
+          .isLeft shouldBe true
+
       }
 
       "fail with InternalServerError when the catalogue item is archived" in withContext { context =>
         import context.*
 
-        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow]
+        val catalogueItemRowV2Archived = arbitrarySample[CatalogueItemRowV2]
           .copy(
             status = CatalogueItemStatus.Archived,
             imageAsset = None,
           )
+        val catalogueItemVariantRowArchivedItem = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = catalogueItemRowV2Archived.organizationID,
+          catalogueItemID = catalogueItemRowV2Archived.catalogueItemID,
+          status = CatalogueItemVariantStatus.Active,
+        )
 
-        postgresClient.executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRowArchived)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowV2Archived))
+          .zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowArchivedItem)))
+          .zioValue
 
         val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
@@ -726,7 +1227,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
         val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
-          organizationID = catalogueItemRowArchived.organizationID,
+          organizationID = catalogueItemRowV2Archived.organizationID,
           userID = userDetailsRow.userID,
           userRole = organizationUserRoleAllowed,
         )
@@ -740,8 +1241,8 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val uploadCatalogueItemImageResponse = gatewayClient
           .uploadCatalogueItemImagePost[smithy.InternalServerError](
-            Some(catalogueItemRowArchived.organizationID),
-            Some(catalogueItemRowArchived.catalogueItemID),
+            Some(catalogueItemRowV2Archived.organizationID),
+            Some(catalogueItemRowV2Archived.catalogueItemID),
             Some(catalogueItemImageOriginalFileName),
             imageBytes,
             Some(accessJwt.accessToken),
@@ -752,7 +1253,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.InternalServerError()
 
         val expectedBucketKeyPrefix =
-          s"$catalogueItemImageBucketPathPrefix/${catalogueItemRowArchived.organizationID.value}/${catalogueItemRowArchived.catalogueItemID.value}"
+          s"$catalogueItemImageBucketPathPrefix/${catalogueItemRowV2Archived.organizationID.value}/${catalogueItemRowV2Archived.catalogueItemID.value}"
 
         s3TestClient
           .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
@@ -763,84 +1264,37 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
           .zioEither
           .isLeft shouldBe true
-      }
 
-      "fail with BadRequest when the uploaded file does not match its image filename" in withContext { context =>
-        import context.*
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+          .zioValue shouldBe List(catalogueItemRowV2Archived)
 
-        val catalogueItemRowActive = arbitrarySample[CatalogueItemRow]
-          .copy(
-            imageAsset = None,
-            status = CatalogueItemStatus.Active,
-          )
-
-        postgresClient.executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRowActive)).zioValue
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
-          organizationID = catalogueItemRowActive.organizationID,
-          userID = userDetailsRow.userID,
-          userRole = organizationUserRoleAllowed,
-        )
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-malformed-it-1.png")
-        val organizationID                     = catalogueItemRowActive.organizationID
-        val catalogueItemID                    = catalogueItemRowActive.catalogueItemID
-        val imageBytes = ZStream.fromResource(s"assets/${catalogueItemImageOriginalFileName.value}").runCollect.zioValue
-
-        val uploadCatalogueItemImageResponse = gatewayClient
-          .uploadCatalogueItemImagePost[smithy.BadRequest](
-            Some(organizationID),
-            Some(catalogueItemID),
-            Some(catalogueItemImageOriginalFileName),
-            imageBytes,
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        uploadCatalogueItemImageResponse.code shouldBe StatusCode.BadRequest
-        uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.BadRequest()
-
-        val catalogueItemRowUpdated = postgresClient
-          .executeQuery(catalogueItemQueries.getCatalogueItemRow(organizationID, catalogueItemID))
-          .zioValue
-
-        catalogueItemRowUpdated.value.imageAsset shouldBe None
-
-        val expectedBucketKeyPrefix =
-          s"$catalogueItemImageBucketPathPrefix/${organizationID.value}/${catalogueItemID.value}"
-
-        s3TestClient
-          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
-          .zioEither
-          .isLeft shouldBe true
-
-        s3TestClient
-          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
-          .zioEither
-          .isLeft shouldBe true
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue shouldBe List(catalogueItemVariantRowArchivedItem)
       }
 
       "fail with InternalServerError when the catalogue item belongs to a different organization" in withContext {
         context =>
           import context.*
 
-          val catalogueItemRowOrgA = arbitrarySample[CatalogueItemRow]
+          val catalogueItemRowV2OrgA = arbitrarySample[CatalogueItemRowV2]
             .copy(
               imageAsset = None,
               status = CatalogueItemStatus.Active,
             )
+          val catalogueItemVariantRowOrgA = arbitrarySample[CatalogueItemVariantRow].copy(
+            organizationID = catalogueItemRowV2OrgA.organizationID,
+            catalogueItemID = catalogueItemRowV2OrgA.catalogueItemID,
+            status = CatalogueItemVariantStatus.Active,
+          )
 
-          postgresClient.executeQuery(catalogueItemQueries.insertCatalogueItemRow(catalogueItemRowOrgA)).zioValue
+          postgresClient
+            .executeQuery(catalogueQueries.insertCatalogueItemRowV2(catalogueItemRowV2OrgA))
+            .zioValue
+          postgresClient
+            .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowOrgA)))
+            .zioValue
 
           val onboardStage     = Random.shuffle(OnboardStage.completedStages).zioValue.head
           val userDetailsRow   = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
@@ -866,7 +1320,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           val uploadCatalogueItemImageResponse = gatewayClient
             .uploadCatalogueItemImagePost[smithy.InternalServerError](
               Some(organizationOrgB),
-              Some(catalogueItemRowOrgA.catalogueItemID),
+              Some(catalogueItemRowV2OrgA.catalogueItemID),
               Some(catalogueItemImageOriginalFileName),
               imageBytes,
               Some(accessJwt.accessToken),
@@ -877,7 +1331,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           uploadCatalogueItemImageResponse.body.left.value shouldBe smithy.InternalServerError()
 
           val expectedBucketKeyPrefix =
-            s"$catalogueItemImageBucketPathPrefix/${organizationOrgB.value}/${catalogueItemRowOrgA.catalogueItemID.value}"
+            s"$catalogueItemImageBucketPathPrefix/${organizationOrgB.value}/${catalogueItemRowV2OrgA.catalogueItemID.value}"
 
           s3TestClient
             .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
@@ -888,6 +1342,14 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
             .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
             .zioEither
             .isLeft shouldBe true
+
+          postgresClient
+            .executeQuery(catalogueQueries.getAllCatalogueItemRowsV2Testing)
+            .zioValue shouldBe List(catalogueItemRowV2OrgA)
+
+          postgresClient
+            .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+            .zioValue shouldBe List(catalogueItemVariantRowOrgA)
       }
 
       // Oversized-upload rejection is covered at the unit level (FileScannerSpec) and the functional level

@@ -13,7 +13,7 @@ trait RepositoryArbitraries
       CustomerBookDomainArbitraries,
       IronRefinedTypeArbitraries {
 
-  given arbCatalogueItemStatus: Arbitrary[CatalogueItemStatus] =
+  given arbCatalogueRepositoryCatalogueItemStatus: Arbitrary[CatalogueItemStatus] =
     Arbitrary(Gen.oneOf(CatalogueItemStatus.values.toIndexedSeq))
 
   given arbUserDetailsRow: Arbitrary[UserDetailsRow] = Arbitrary(Gen.resultOf(UserDetailsRow.apply))
@@ -45,10 +45,10 @@ trait RepositoryArbitraries
   given arbCatalogueItemSummaryRow: Arbitrary[CatalogueItemSummaryRow] =
     Arbitrary(Gen.resultOf(CatalogueItemSummaryRow.apply))
 
-  given arbInsertCatalogueItemInput: Arbitrary[InsertCatalogueItemInput] =
+  given arbCatalogueRepositoryInsertCatalogueItemInput: Arbitrary[InsertCatalogueItemInput] =
     Arbitrary(Gen.resultOf(InsertCatalogueItemInput.apply))
 
-  given arbInsertCatalogueItemInputs: Arbitrary[List[InsertCatalogueItemInput]] = Arbitrary(
+  given arbCatalogueRepositoryInsertCatalogueItemInputs: Arbitrary[List[InsertCatalogueItemInput]] = Arbitrary(
     Gen
       .choose(0, 50)
       .flatMap(numberOfCatalogueItems =>

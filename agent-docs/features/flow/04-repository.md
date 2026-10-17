@@ -73,7 +73,7 @@ When changing the transactor, pool, SQL logging, or database test-client runtime
 
 ## Required proof: real PostgreSQL
 
-Every query and repository method added or changed in this PR is tested in `gateway/core/.../it/<Entity>RepositorySpec`; every DB constraint gets its own isolated test. Never mock/H2 the database.
+Every production query and repository method added or changed in this PR is tested in `gateway/core/.../it/<Entity>RepositorySpec`; every DB constraint gets its own isolated test. Testing-only readback queries do not get dedicated tests; they support assertions in the production behavior tests. Never mock/H2 the database.
 
 Harness:
 

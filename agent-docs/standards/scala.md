@@ -82,8 +82,8 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 
 ### Arbitraries
 
-- Reuse arbitrary traits through direct test-class inheritance (`extends ...Arbitraries`). Never instantiate an arbitrary trait in a `val`, anonymous class, or helper object to import selected givens. Resolve clashes by removing unused arbitrary mixins and retaining only the named generators the test needs; do not hide an instance behind selective imports.
-- Name every `Arbitrary` given `arb<ExactTypeName>`; plural/list givens use the exact plural type name. Never use anonymous `given Arbitrary[...]` declarations.
+- Reuse arbitrary traits through direct test-class inheritance (`extends ...Arbitraries`) and compose shared traits there or in the owning arbitrary trait. Never instantiate an arbitrary trait in a `val`, anonymous class, or helper object to import selected givens. Do not copy existing shared generators into specs to work around inheritance clashes; resolve the clashes in the owning traits.
+- Name every `Arbitrary` given `arb<ExactTypeName>`; plural/list givens use the exact plural type name. When distinct nested types share a simple name, include their owning type in the given name so the traits can be composed. Never use anonymous `given Arbitrary[...]` declarations.
 - Prefer `Arbitrary(Gen.resultOf(ExactType.apply))` when fields are independent and their existing givens already generate valid values. Use an explicit generator when fields must be correlated, normalized, bounded, or otherwise preserve a cross-field invariant.
 - When a test needs broader optional-field presence combinations than the shared arbitrary provides, define an arbitrary locally in that test rather than changing the shared generator. For an at-least-one-field scenario, vary every optional field and exclude only the all-absent case.
 - Construct scenario-valid values directly rather than using `suchThat` or rejection filtering, which can exhaust generation retries. For an at-least-one-field scenario, choose a non-empty subset of fields and populate it. Share a scenario-specific arbitrary within the spec only when multiple tests need it.

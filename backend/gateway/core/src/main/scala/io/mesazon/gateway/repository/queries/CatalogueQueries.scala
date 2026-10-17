@@ -591,6 +591,55 @@ final class CatalogueQueries(
       val q = fr"SELECT" ++ frCatalogueItemVariantSelectFields ++ fr"FROM" ++ frCatalogueItemVariantTable
       q.query[CatalogueItemVariantRow].to[List]
     }
+
+  def getAllCatalogueItemWithVariantsRowsTesting: TranzactIO[List[CatalogueItemWithVariantsRow]] =
+    tzio {
+      val q =
+        fr"SELECT" ++ frCatalogueItemWithVariantJoinedSelectFields ++
+          fr"FROM" ++ frCatalogueItemTable ++ fr"AS i" ++
+          fr"INNER JOIN" ++ frCatalogueItemVariantTable ++ fr"AS v" ++
+          fr"ON v.organization_id = i.organization_id" ++
+          fr"AND v.catalogue_item_id = i.catalogue_item_id" ++
+          fr"ORDER BY i.organization_id ASC, i.catalogue_item_id ASC," ++
+          fr"v.created_at ASC, v.catalogue_item_variant_id ASC"
+
+      q.query[CatalogueItemWithVariantJoinedRow]
+        .to[List]
+        .map { catalogueItemWithVariantJoinedRows =>
+          val catalogueItemOwnerships = catalogueItemWithVariantJoinedRows
+            .map(catalogueItemWithVariantJoinedRow =>
+              (
+                catalogueItemWithVariantJoinedRow.catalogueItemRowV2.organizationID,
+                catalogueItemWithVariantJoinedRow.catalogueItemRowV2.catalogueItemID,
+              )
+            )
+            .distinct
+          val catalogueItemWithVariantJoinedRowsByOwnership =
+            catalogueItemWithVariantJoinedRows.groupBy(catalogueItemWithVariantJoinedRow =>
+              (
+                catalogueItemWithVariantJoinedRow.catalogueItemRowV2.organizationID,
+                catalogueItemWithVariantJoinedRow.catalogueItemRowV2.catalogueItemID,
+              )
+            )
+
+          catalogueItemOwnerships.flatMap { case (organizationID, catalogueItemID) =>
+            catalogueItemWithVariantJoinedRowsByOwnership
+              .get((organizationID, catalogueItemID))
+              .flatMap(NonEmptyChunk.fromIterableOption)
+              .map(catalogueItemWithVariantJoinedRowsNonEmpty =>
+                CatalogueItemWithVariantsRow(
+                  catalogueItemWithVariantJoinedRowsNonEmpty.head.catalogueItemRowV2,
+                  catalogueItemWithVariantJoinedRowsNonEmpty.map(
+                    _.into[CatalogueItemVariantRow]
+                      .withFieldConst(_.organizationID, organizationID)
+                      .withFieldConst(_.catalogueItemID, catalogueItemID)
+                      .transform
+                  ),
+                )
+              )
+          }
+        }
+    }
 }
 
 object CatalogueQueries {
