@@ -56,7 +56,7 @@ final class CatalogueQueries(
         |updated_at
          """.stripMargin
 
-  private def frCatalogueItemValues(row: CatalogueItemRowV2): Fragment =
+  private def frCatalogueItemValues(row: CatalogueItemRow): Fragment =
     fr0"(" ++ List(
       fr0"${row.organizationID}",
       fr0"${row.catalogueItemID}",
@@ -210,11 +210,11 @@ final class CatalogueQueries(
       }
     }
 
-  def insertCatalogueItemRowV2(catalogueItemRowV2: CatalogueItemRowV2): TranzactIO[Unit] =
-    insertRowWith(frCatalogueItemTable, frCatalogueItemInsertFields, frCatalogueItemValues, catalogueItemRowV2)
+  def insertCatalogueItemRow(catalogueItemRow: CatalogueItemRow): TranzactIO[Unit] =
+    insertRowWith(frCatalogueItemTable, frCatalogueItemInsertFields, frCatalogueItemValues, catalogueItemRow)
 
-  def insertCatalogueItemRowsV2(catalogueItemRowsV2: List[CatalogueItemRowV2]): TranzactIO[Unit] =
-    insertRowsWith(frCatalogueItemTable, frCatalogueItemInsertFields, frCatalogueItemValues, catalogueItemRowsV2)
+  def insertCatalogueItemRows(catalogueItemRows: List[CatalogueItemRow]): TranzactIO[Unit] =
+    insertRowsWith(frCatalogueItemTable, frCatalogueItemInsertFields, frCatalogueItemValues, catalogueItemRows)
 
   def insertCatalogueItemVariantRows(catalogueItemVariantRows: List[CatalogueItemVariantRow]): TranzactIO[Unit] =
     insertRowsWith(
@@ -224,7 +224,7 @@ final class CatalogueQueries(
       catalogueItemVariantRows,
     )
 
-  def updateCatalogueItemRowV2(
+  def updateCatalogueItemRow(
       organizationID: OrganizationID,
       catalogueItemID: CatalogueItemID,
       updatedAt: UpdatedAt,
@@ -460,7 +460,7 @@ final class CatalogueQueries(
             .fromIterableOption(catalogueItemWithVariantJoinedRows)
             .map(catalogueItemWithVariantJoinedRowsNonEmpty =>
               CatalogueItemWithVariantsRow(
-                catalogueItemWithVariantJoinedRowsNonEmpty.head.catalogueItemRowV2,
+                catalogueItemWithVariantJoinedRowsNonEmpty.head.catalogueItemRow,
                 catalogueItemWithVariantJoinedRowsNonEmpty.map(
                   _.into[CatalogueItemVariantRow]
                     .withFieldConst(_.organizationID, organizationID)
@@ -472,24 +472,24 @@ final class CatalogueQueries(
         )
     }
 
-  def getAllCatalogueItemSummaryRowsV2Enabled(
+  def getAllCatalogueItemSummaryRowsEnabled(
       organizationID: OrganizationID
-  ): TranzactIO[List[CatalogueItemSummaryRowV2]] =
-    getCatalogueItemSummaryRowsV2EnabledWhere(organizationID, Nil)
+  ): TranzactIO[List[CatalogueItemSummaryRow]] =
+    getCatalogueItemSummaryRowsEnabledWhere(organizationID, Nil)
 
-  def getCatalogueItemSummaryRowsV2EnabledByIDs(
+  def getCatalogueItemSummaryRowsEnabledByIDs(
       organizationID: OrganizationID,
       catalogueItemIDs: NonEmptyChunk[CatalogueItemID],
-  ): TranzactIO[List[CatalogueItemSummaryRowV2]] =
-    getCatalogueItemSummaryRowsV2EnabledWhere(
+  ): TranzactIO[List[CatalogueItemSummaryRow]] =
+    getCatalogueItemSummaryRowsEnabledWhere(
       organizationID,
       List(in(fr"i.catalogue_item_id", NonEmptyList(catalogueItemIDs.head, catalogueItemIDs.tail.toList))),
     )
 
-  private def getCatalogueItemSummaryRowsV2EnabledWhere(
+  private def getCatalogueItemSummaryRowsEnabledWhere(
       organizationID: OrganizationID,
       frCatalogueItemConditions: List[Fragment],
-  ): TranzactIO[List[CatalogueItemSummaryRowV2]] =
+  ): TranzactIO[List[CatalogueItemSummaryRow]] =
     tzio {
       val q =
         fr"SELECT" ++ frCatalogueItemSummaryWithVariantSummaryJoinedSelectFields ++
@@ -517,7 +517,7 @@ final class CatalogueQueries(
               .flatMap(NonEmptyChunk.fromIterableOption)
               .map(catalogueItemSummaryWithVariantSummaryJoinedRowsNonEmpty =>
                 catalogueItemSummaryWithVariantSummaryJoinedRowsNonEmpty.head
-                  .into[CatalogueItemSummaryRowV2]
+                  .into[CatalogueItemSummaryRow]
                   .withFieldConst(
                     _.catalogueItemVariantSummaryRows,
                     catalogueItemSummaryWithVariantSummaryJoinedRowsNonEmpty.map(_.catalogueItemVariantSummaryRow),
@@ -580,10 +580,10 @@ final class CatalogueQueries(
     )
 
   // Testing
-  def getAllCatalogueItemRowsV2Testing: TranzactIO[List[CatalogueItemRowV2]] =
+  def getAllCatalogueItemRowsTesting: TranzactIO[List[CatalogueItemRow]] =
     tzio {
       val q = fr"SELECT" ++ frCatalogueItemSelectFields ++ fr"FROM" ++ frCatalogueItemTable
-      q.query[CatalogueItemRowV2].to[List]
+      q.query[CatalogueItemRow].to[List]
     }
 
   def getAllCatalogueItemVariantRowsTesting: TranzactIO[List[CatalogueItemVariantRow]] =
@@ -609,16 +609,16 @@ final class CatalogueQueries(
           val catalogueItemOwnerships = catalogueItemWithVariantJoinedRows
             .map(catalogueItemWithVariantJoinedRow =>
               (
-                catalogueItemWithVariantJoinedRow.catalogueItemRowV2.organizationID,
-                catalogueItemWithVariantJoinedRow.catalogueItemRowV2.catalogueItemID,
+                catalogueItemWithVariantJoinedRow.catalogueItemRow.organizationID,
+                catalogueItemWithVariantJoinedRow.catalogueItemRow.catalogueItemID,
               )
             )
             .distinct
           val catalogueItemWithVariantJoinedRowsByOwnership =
             catalogueItemWithVariantJoinedRows.groupBy(catalogueItemWithVariantJoinedRow =>
               (
-                catalogueItemWithVariantJoinedRow.catalogueItemRowV2.organizationID,
-                catalogueItemWithVariantJoinedRow.catalogueItemRowV2.catalogueItemID,
+                catalogueItemWithVariantJoinedRow.catalogueItemRow.organizationID,
+                catalogueItemWithVariantJoinedRow.catalogueItemRow.catalogueItemID,
               )
             )
 
@@ -628,7 +628,7 @@ final class CatalogueQueries(
               .flatMap(NonEmptyChunk.fromIterableOption)
               .map(catalogueItemWithVariantJoinedRowsNonEmpty =>
                 CatalogueItemWithVariantsRow(
-                  catalogueItemWithVariantJoinedRowsNonEmpty.head.catalogueItemRowV2,
+                  catalogueItemWithVariantJoinedRowsNonEmpty.head.catalogueItemRow,
                   catalogueItemWithVariantJoinedRowsNonEmpty.map(
                     _.into[CatalogueItemVariantRow]
                       .withFieldConst(_.organizationID, organizationID)
@@ -646,7 +646,7 @@ object CatalogueQueries {
 
   // The variant's organization_id/catalogue_item_id are not re-selected from the join; they equal the item's.
   private case class CatalogueItemWithVariantJoinedRow(
-      catalogueItemRowV2: CatalogueItemRowV2,
+      catalogueItemRow: CatalogueItemRow,
       catalogueItemVariantID: CatalogueItemVariantID,
       sku: Option[CatalogueItemVariantSku],
       label: Option[CatalogueItemVariantLabel],

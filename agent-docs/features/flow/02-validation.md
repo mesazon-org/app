@@ -16,7 +16,7 @@ Validators check supplied values unchanged. Do not trim, normalize, or filter in
 ## Domain modeling
 
 - Name reusable value concepts without a feature prefix (`PriceAmount`, `PriceCurrency`, `Price`, `ImageOriginalS3BucketKey`, `ImageNormalizedS3BucketKey`, `ImageOriginalFileName`, `ImageAsset`).
-- When a shared value shape has a distinct feature meaning, wrap it in an owner-specific `Pure` newtype named for the owning entity (`CatalogueItemPrice`, `CatalogueItemImageAsset`).
+- When a shared value shape has a distinct feature meaning, wrap it in an owner-specific `Pure` newtype named for the owning entity (`CatalogueItemVariantPrice`, `CatalogueItemImageAsset`).
 - Represent coupled optional fields as one `Option` around a composite case class whose members are mandatory. Never expose parallel `Option` fields that permit half-present domain values.
 
 ## Arbitraries
@@ -45,7 +45,7 @@ Reuse `validation/service/validation.scala`:
 - `validateNonEmptyNested`: applies `validateAllNested` and converts a valid non-empty result to `NonEmptyChunk`; an empty input fails on the supplied singular field name with `At least one <fieldName> must be provided`.
 - `validateSingleDefault`: a non-empty defaultable list must have exactly one default; chain after item validation with `.andThen`.
 
-Use concrete reusable domain validators such as `EmailValidator`, `PhoneNumberDomainValidator`, or `PriceValidator` for effectful/non-trivial fields, then wrap the result in the feature newtype. The live V1 catalogue still uses `PriceDomainValidator` for free-text ISO input. Do not make new domain validators extend the legacy generic `DomainValidator`; keep their concrete `validate` API. Shared helpers are `private[validation]`. New features use one feature request validator; legacy `ServiceValidator`/`DomainValidator` remains only for untouched old code (`WahaServiceValidator` is the last user).
+Use concrete reusable domain validators such as `EmailValidator`, `PhoneNumberDomainValidator`, or `PriceValidator` for effectful/non-trivial fields, then wrap the result in the feature newtype. Do not make new domain validators extend the legacy generic `DomainValidator`; keep their concrete `validate` API. Shared helpers are `private[validation]`. New features use one feature request validator; legacy `ServiceValidator`/`DomainValidator` remains only for untouched old code (`WahaServiceValidator` is the last user).
 
 ## Feature validator
 
@@ -61,7 +61,7 @@ File: `validation/service/<Feature>RequestValidator.scala`.
 - Singular, batch, and combined requests reuse private per-item/per-field validation; never duplicate field lists.
 - A batch error identifies one failed element, so pass the singular item concept to `validateAllNested` (for example `catalogueItem`, not the plural request member `catalogueItems`). Preserve the source index and return no error for valid elements between failures.
 - For an optional composite, validate mandatory inner members in declaration order, accumulate their errors under the outer field, then wrap the valid case class in its contextual newtype.
-- Existing ISO monetary validation uses `PriceDomainValidator` with JDK `Currency`: normalize trim/uppercase ISO codes, reject unsupported or no-fixed-fraction currencies, and require non-negative amounts with at most 12 integer digits (equivalent to `[0, 1,000,000,000,000)`) and supplied scale no greater than the currency fraction digits. For non-zero amounts, check the integer-digit bound with widened `precision - scale` arithmetic before normalization so compact extreme-exponent inputs cannot cause unbounded allocation; zero bypasses that representation-derived bound because its exponent does not change its value. Normalize valid lower-scale amounts upward to the exact currency scale by appending zeros; never round or remove supplied precision. Catalogue V2 variant prices use `PriceValidator` with the typed `Currency` enum for exact uppercase `EUR`/`USD`/`GBP` and exactly two stored decimal places; the request validator wraps the validated `Price` in `CatalogueItemVariantPrice`. V1 behavior stays unchanged until cutover; see [Catalogue validation](../catalogue.md#validation).
+- Monetary validation uses `PriceValidator` with the typed `Currency` enum. Catalogue accepts exact uppercase `EUR`/`USD`/`GBP` through closed Smithy enums. Amounts must be non-negative with at most 12 integer digits. For non-zero amounts, check widened `precision - scale` before normalization so compact extreme exponents cannot cause unbounded allocation; zero bypasses that representation-derived bound. `Currency.decimalPoints = Some(n)` rejects supplied scales above `n` and pads lower scales to exactly `n` without rounding; `None` preserves the supplied amount without a scale restriction. The current three currencies use `Some(2)`. The request validator wraps the validated `Price` in `CatalogueItemVariantPrice`; see [Catalogue validation](../catalogue.md#validation).
 - Pure fields use required/optional helpers with `.either`; effectful fields use domain validators.
 - Expose `val live = ZLayer.derive[...]`; Slice 5 wires it into the service graph.
 
@@ -74,7 +74,7 @@ File: `unit/validation/service/<Feature>RequestValidatorSpec.scala`; extend `ZWo
 
 The accumulation test exists to prove one thing: every field that can fail is collected and reported together, in order. Make each fallible field fail once in that single test, and stop there.
 
-For an at-least-one-of-fields rule, assert that an all-absent request returns a separate error for every participating field in declaration order. The Catalogue V2 uniqueness request is the reference case: absent `name` and `sku` produce two errors, not a `nameOrSku` error.
+For an at-least-one-of-fields rule, assert that an all-absent request returns a separate error for every participating field in declaration order. The Catalogue uniqueness request is the reference case: absent `name` and `sku` produce two errors, not a `nameOrSku` error.
 
 Never re-test a validator that already has its own spec. When a request validator delegates to a shared domain validator (`EmailValidator`, `PhoneNumberDomainValidator`, `AddressValidator`, `PriceValidator`), that validator's edge cases — bad parts, allowed combinations, formats, boundaries — are proven once in `unit/validation/domain/<Validator>Spec.scala`. The request validator spec does not repeat them and adds no separate "reject when …" test for a delegated rule. For a delegated field, the accumulation test carries one dummy invalid value, written by hand (for addresses: a single `ShippingAndBilling` entry with `city = ""`), just to show the delegated errors are accumulated with the others. The round-trip test already proves the wiring.
 
