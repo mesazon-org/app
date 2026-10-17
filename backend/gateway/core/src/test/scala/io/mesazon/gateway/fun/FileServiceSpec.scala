@@ -22,10 +22,8 @@ class FileServiceSpec
     extends ZWordSpecBase,
       SmithyArbitraries,
       TokenArbitraries,
-      OrganizationManagementDomainArbitraries {
-
-  private val catalogueRepositoryV2Arbitraries = new CatalogueRepositoryV2Arbitraries {}
-  import catalogueRepositoryV2Arbitraries.{arbCatalogueItemRowV2, arbCatalogueItemVariantRow}
+      OrganizationManagementDomainArbitraries,
+      CatalogueRepositoryV2Arbitraries {
 
   given arbOrganizationDetailsRow: Arbitrary[OrganizationDetailsRow] =
     Arbitrary(Gen.resultOf(OrganizationDetailsRow.apply))
