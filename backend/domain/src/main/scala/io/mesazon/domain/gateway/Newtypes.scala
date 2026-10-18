@@ -189,12 +189,6 @@ type CatalogueItemName = CatalogueItemName.T
 object CatalogueItemDescription extends RefinedType[String, NonEmptyTrimmed]
 type CatalogueItemDescription = CatalogueItemDescription.T
 
-object CatalogueItemUnit extends RefinedType[String, NonEmptyTrimmed]
-type CatalogueItemUnit = CatalogueItemUnit.T
-
-object CatalogueItemPrice extends RefinedType[Price, Pure]
-type CatalogueItemPrice = CatalogueItemPrice.T
-
 object CatalogueItemImageAsset extends RefinedType[ImageAsset, Pure]
 type CatalogueItemImageAsset = CatalogueItemImageAsset.T
 

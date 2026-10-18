@@ -6,14 +6,16 @@ import io.mesazon.gateway.repository.CustomerBookRepository.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.testkit.base.*
 import org.scalacheck.*
+import zio.NonEmptyChunk
 
 trait RepositoryArbitraries
     extends GatewayArbitraries,
       OrganizationManagementDomainArbitraries,
       CustomerBookDomainArbitraries,
+      CatalogueDomainArbitraries,
       IronRefinedTypeArbitraries {
 
-  given arbCatalogueRepositoryCatalogueItemStatus: Arbitrary[CatalogueItemStatus] =
+  given arbCatalogueItemStatus: Arbitrary[CatalogueItemStatus] =
     Arbitrary(Gen.oneOf(CatalogueItemStatus.values.toIndexedSeq))
 
   given arbUserDetailsRow: Arbitrary[UserDetailsRow] = Arbitrary(Gen.resultOf(UserDetailsRow.apply))
@@ -42,18 +44,66 @@ trait RepositoryArbitraries
 
   given arbCatalogueItemRow: Arbitrary[CatalogueItemRow] = Arbitrary(Gen.resultOf(CatalogueItemRow.apply))
 
+  given arbCatalogueItemVariantRow: Arbitrary[CatalogueItemVariantRow] =
+    Arbitrary(Gen.resultOf(CatalogueItemVariantRow.apply))
+
+  given arbCatalogueItemVariantRows: Arbitrary[NonEmptyChunk[CatalogueItemVariantRow]] = Arbitrary(
+    for {
+      catalogueItemVariantRowHead  <- Arbitrary.arbitrary[CatalogueItemVariantRow]
+      catalogueItemVariantRowsTail <- Gen
+        .choose(0, 9)
+        .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemVariantRow]))
+    } yield NonEmptyChunk.fromIterable(catalogueItemVariantRowHead, catalogueItemVariantRowsTail)
+  )
+
+  given arbCatalogueItemWithVariantsRow: Arbitrary[CatalogueItemWithVariantsRow] =
+    Arbitrary(Gen.resultOf(CatalogueItemWithVariantsRow.apply))
+
+  given arbCatalogueItemVariantSummaryRow: Arbitrary[CatalogueItemVariantSummaryRow] =
+    Arbitrary(Gen.resultOf(CatalogueItemVariantSummaryRow.apply))
+
+  given arbCatalogueItemVariantSummaryRows: Arbitrary[NonEmptyChunk[CatalogueItemVariantSummaryRow]] = Arbitrary(
+    for {
+      catalogueItemVariantSummaryRowHead  <- Arbitrary.arbitrary[CatalogueItemVariantSummaryRow]
+      catalogueItemVariantSummaryRowsTail <- Gen
+        .choose(0, 9)
+        .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemVariantSummaryRow]))
+    } yield NonEmptyChunk.fromIterable(catalogueItemVariantSummaryRowHead, catalogueItemVariantSummaryRowsTail)
+  )
+
   given arbCatalogueItemSummaryRow: Arbitrary[CatalogueItemSummaryRow] =
     Arbitrary(Gen.resultOf(CatalogueItemSummaryRow.apply))
 
-  given arbCatalogueRepositoryInsertCatalogueItemInput: Arbitrary[InsertCatalogueItemInput] =
+  given arbInsertCatalogueItemVariantInput: Arbitrary[InsertCatalogueItemVariantInput] = Arbitrary(
+    for {
+      insertCatalogueItemVariantInput <- Gen.resultOf(InsertCatalogueItemVariantInput.apply)
+      enabledStatus                   <- Gen.oneOf(CatalogueItemVariantStatus.enabled)
+    } yield insertCatalogueItemVariantInput.copy(status = enabledStatus)
+  )
+
+  given arbInsertCatalogueItemVariantInputs: Arbitrary[NonEmptyChunk[InsertCatalogueItemVariantInput]] = Arbitrary(
+    for {
+      insertCatalogueItemVariantInputHead  <- Arbitrary.arbitrary[InsertCatalogueItemVariantInput]
+      insertCatalogueItemVariantInputsTail <- Gen
+        .choose(0, 9)
+        .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[InsertCatalogueItemVariantInput]))
+    } yield NonEmptyChunk.fromIterable(insertCatalogueItemVariantInputHead, insertCatalogueItemVariantInputsTail)
+  )
+
+  given arbInsertCatalogueItemInput: Arbitrary[InsertCatalogueItemInput] =
     Arbitrary(Gen.resultOf(InsertCatalogueItemInput.apply))
 
-  given arbCatalogueRepositoryInsertCatalogueItemInputs: Arbitrary[List[InsertCatalogueItemInput]] = Arbitrary(
+  given arbInsertCatalogueItemInputs: Arbitrary[List[InsertCatalogueItemInput]] = Arbitrary(
     Gen
-      .choose(0, 50)
-      .flatMap(numberOfCatalogueItems =>
-        Gen.listOfN(numberOfCatalogueItems, Arbitrary.arbitrary[InsertCatalogueItemInput])
-      )
+      .choose(0, 10)
+      .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[InsertCatalogueItemInput]))
+  )
+
+  given arbUpdateCatalogueItemVariantInput: Arbitrary[UpdateCatalogueItemVariantInput] = Arbitrary(
+    for {
+      updateCatalogueItemVariantInput <- Gen.resultOf(UpdateCatalogueItemVariantInput.apply)
+      enabledStatusOpt                <- Gen.option(Gen.oneOf(CatalogueItemVariantStatus.enabled))
+    } yield updateCatalogueItemVariantInput.copy(status = enabledStatusOpt)
   )
 
   given arbCustomerEmailEntryInput: Arbitrary[CustomerEmailEntryInput] = Arbitrary(

@@ -4,7 +4,7 @@ title: Catalogue
 
 # Catalogue
 
-> **Planned change — not built yet.** This page describes the agreed catalogue with variants and selling units. Until that work ships, the product still behaves as before: each item has a free-text unit and one optional price in any ISO currency, and items are only `Active` or `Archived`. That existing price behavior stays unchanged until the catalogue change replaces it; the variant price rule below applies after cutover. The engineering description of today's behavior is kept in the Catalogue feature doc until the change ships.
+> **Implementation and verification in progress — not released.** The catalogue with variants and selling units replaces the old item-only catalogue. Final checks will be completed one operation at a time; item-image upload checks already pass.
 
 ### Overview
 
@@ -62,7 +62,7 @@ Like the customer book, these are not a single journey. They are the things that
 
 **Item status** — an item is either `Active` or `Archived`. New items start out `Active`. Archiving is one-way.
 
-**Variant status** — a variant is `Active`, `Inactive`, `OutOfStock` or `Archived`. Variants added with a new item start out `Active`. A variant added to an existing item starts with the status given — `Active`, `Inactive` or `OutOfStock` — or `Active` if none is given.
+**Variant status** — a variant is `Active`, `Inactive`, `OutOfStock` or `Archived`. Every new variant starts out `Active`, including one added to an existing item.
 - Owners and admins can move a variant freely between `Active`, `Inactive` and `OutOfStock`, in any direction, by updating the item.
 - `Archived` is reached only by archiving, and it is one-way.
 - `Inactive` and `OutOfStock` variants are still shown in item details and catalogue summaries, and they keep their SKU reserved.
@@ -96,7 +96,7 @@ Like the customer book, these are not a single journey. They are the things that
 | Loose tomatoes, priced per kg | 1 kilogram | — | — |
 | A box of 100 screws | 1 box | 100 piece | — |
 
-**Price** — optional on every variant. When given, it is an exact amount plus a currency, always together: a price is given in full or left out entirely. After cutover, the currency must be exactly the uppercase code `EUR`, `USD` or `GBP`; lowercase, surrounding-space, and other spellings are rejected without trimming or uppercasing. An amount may have at most two decimal places when sent; fewer decimal places are kept by appending zeroes until it has exactly two, and no amount is rounded. Every rule is in **Price** in [step 1](#1-user-adds-an-item).
+**Price** — optional on every variant. When given, it is an exact amount plus a currency, always together: a price is given in full or left out entirely. The currency must be exactly the uppercase code `EUR`, `USD` or `GBP`; lowercase, surrounding-space, and other spellings are rejected without trimming or uppercasing. An amount may have at most two decimal places when sent; fewer decimal places are kept by appending zeroes until it has exactly two, and no amount is rounded. Every rule is in **Price** in [step 1](#1-user-adds-an-item).
 
 ### 1. User Adds an Item
 
@@ -163,14 +163,14 @@ These shapes are used throughout this epic.
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Value | `BigDecimal` | Greater than 0; at most 99999; never rounded | ✅ | How many in each sold unit |
-| Unit | `PerUnit` | See **PerUnit** | ✅ | What kind of container or piece |
+| Unit | `CatalogueItemVariantUnitPerUnit` | See **PerUnit** | ✅ | What kind of container or piece |
 
 **CatalogueItemVariantUnitSize**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Value | `BigDecimal` | Greater than 0; at most 99999; never rounded | ✅ | The size |
-| Unit | `UnitSize` | See **UnitSize** | ✅ | What it is measured in |
+| Unit | `CatalogueItemVariantUnitUnitSize` | See **UnitSize** | ✅ | What it is measured in |
 
 **UnitSize** — `Gram`, `Kilogram`, `Millilitre`, `Litre`, `Millimetre`, `Centimetre`, `Metre` or `SquareMetre`.
 
@@ -184,9 +184,9 @@ These shapes are used throughout this epic.
 | --- | --- | --- | --- | --- |
 | Name | `String` | 1–255 characters, trimmed; unique among active items | ✅ | The item's name |
 | Description | `String` | 1–255 characters, trimmed | ❌ | A longer description of the item |
-| Variants | `CatalogueItemVariant[]` | At least one entry; no upper limit | ✅ | The versions of the item that are sold |
+| Variants | `CatalogueItemVariantInsert[]` | At least one entry; no upper limit | ✅ | The versions of the item that are sold |
 
-**CatalogueItemVariant**
+**CatalogueItemVariantInsert**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
@@ -194,14 +194,14 @@ These shapes are used throughout this epic.
 | Label | `String` | 1–255 characters, trimmed | ❌ | A short label for this variant, such as "1L Lemon bottle" for the item "COKE" |
 | Description | `String` | 1–255 characters, trimmed | ❌ | A longer description of this variant |
 | Attributes | `Map<String, String>` | Empty by default; each name and value 1–255 characters, trimmed; names unique within the variant; no limit on how many | ❌ | What sets this variant apart, such as colour and size |
-| Price | `Price` | See **Price** | ❌ | The full price of the quantity its selling unit states. Left out means the variant has no set price |
+| Price | `CatalogueItemVariantPrice` | See **Price** | ❌ | The full price of the quantity its selling unit states. Left out means the variant has no set price |
 | Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** | ✅ | How this variant is sold |
 
 **Request — adding several at once**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Items | `CatalogueItem[]` | Empty by default. Each entry has the shape above | ❌ | The items to add, all together or not at all |
+| Catalogue Items | `CatalogueItemPostRequest[]` | At least one entry. Each entry has the shape above | ❌ | The items to add, all together or not at all |
 
 **Response — adding one item**
 
@@ -228,7 +228,7 @@ Only item identifiers are returned. Variant identifiers are not; they are seen b
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - A batch contains no items - One or more fields are invalid, reported together with the item and variant each belongs to |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request - The price currency was not exactly `EUR`, `USD` or `GBP` in uppercase |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request - The price currency was not exactly `EUR`, `USD` or `GBP` in uppercase - A variant is missing its required selling unit |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - An active item already has that name - A non-archived variant already has that SKU |
@@ -347,7 +347,7 @@ Request is empty apart from naming the organization. The optional identifier fil
 | Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ✅ | Identifies the variant |
 | SKU | `String` | 1–255 characters, trimmed; case-sensitive | ❌ | The business's stock code |
 | Label | `String` | 1–255 characters, trimmed | ❌ | A short label for the variant |
-| Price | `Price` | See **Price** in step 1 | ❌ | The full price of the variant's selling unit |
+| Price | `CatalogueItemVariantPrice` | See **Price** in step 1 | ❌ | The full price of the variant's selling unit |
 | Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ✅ | How this variant is sold |
 | Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ✅ | The variant's current status |
 
@@ -402,10 +402,10 @@ Nothing changes. This step only reads.
 | Name | `String` | — | ✅ | The item's name |
 | Description | `String` | — | ❌ | Present only if the item has one |
 | Status | `CatalogueItemStatus` | `Active` or `Archived` | ✅ | Always `Active` here, since only active items can be opened |
-| Variants | `CatalogueItemVariantDetails[]` | Non-archived variants only; at least one entry | ✅ | The versions of the item on offer |
+| Variants | `CatalogueItemVariant[]` | Non-archived variants only; at least one entry | ✅ | The versions of the item on offer |
 | Image URL | `String` | A working link | ❌ | Present only if the item has an image |
 
-**CatalogueItemVariantDetails**
+**CatalogueItemVariant**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
@@ -414,7 +414,7 @@ Nothing changes. This step only reads.
 | Label | `String` | — | ❌ | Present only if the variant has one |
 | Description | `String` | — | ❌ | Present only if the variant has one |
 | Attributes | `Map<String, String>` | May be empty | ✅ | What sets this variant apart |
-| Price | `Price` | See **Price** in step 1 | ❌ | Present only if the variant has a price |
+| Price | `CatalogueItemVariantPrice` | See **Price** in step 1 | ❌ | Present only if the variant has a price |
 | Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ✅ | How this variant is sold |
 | Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ✅ | Whether the variant is on sale, paused, or out of stock |
 
@@ -475,32 +475,22 @@ Nothing changes. This step only reads.
 | Name | `String` | 1–255 characters, trimmed; unique among active items | ❌ | Leave out to keep the current name |
 | Description | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current description; can be cleared |
 | Variants | `CatalogueItemVariantUpdate[]` | Empty by default; existing variants only | ❌ | Changes to existing variants; variants not listed stay as they are |
-| New Variants | `NewCatalogueItemVariant[]` | Empty by default; no upper limit | ❌ | Variants to add to the item |
+| New Variants | `CatalogueItemVariantInsert[]` | Empty by default; no upper limit | ❌ | Variants to add to the item |
 
 **CatalogueItemVariantUpdate**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Catalogue Item Variant ID | `UUID` | Canonical 36-character form; a non-archived variant of this item | ✅ | Which existing variant to change |
-| SKU | `String` | Same as in **CatalogueItemVariant** | ❌ | Leave out to keep; can be cleared |
+| SKU | `String` | Same as in **CatalogueItemVariantInsert** | ❌ | Leave out to keep; can be cleared |
 | Label | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep; can be cleared |
 | Description | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep; can be cleared |
-| Attributes | `Map<String, String>` | Same as in **CatalogueItemVariant** | ❌ | Leave out to keep; when given, replaces all attributes |
-| Price | `Price` | See **Price** in step 1 | ❌ | Leave out to keep the current price; can be cleared |
+| Attributes | `Map<String, String>` | Same as in **CatalogueItemVariantInsert** | ❌ | Leave out to keep; when given, replaces all attributes |
+| Price | `CatalogueItemVariantPrice` | See **Price** in step 1 | ❌ | Leave out to keep the current price; can be cleared |
 | Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ❌ | Leave out to keep the current selling unit |
 | Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ❌ | Leave out to keep the current status |
 
-**NewCatalogueItemVariant**
-
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| SKU | `String` | Same as in **CatalogueItemVariant** | ❌ | The business's own stock code |
-| Label | `String` | 1–255 characters, trimmed | ❌ | A short label for this variant |
-| Description | `String` | 1–255 characters, trimmed | ❌ | A longer description of this variant |
-| Attributes | `Map<String, String>` | Same as in **CatalogueItemVariant** | ❌ | What sets this variant apart |
-| Price | `Price` | See **Price** in step 1 | ❌ | The full price of the quantity its selling unit states. Left out means the variant has no set price |
-| Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ✅ | How this variant is sold |
-| Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ❌ | The status the variant starts with; left out, it starts `Active` |
+New variants use **CatalogueItemVariantInsert**, defined in step 1.
 
 **Response**
 
@@ -508,7 +498,7 @@ Response is empty. A successful change answers with nothing but a success status
 
 **Outcome**
 
-- For an active item, the named fields and variants are changed, new variants are added with the status given (or `Active`), and nothing else changes.
+- For an active item, the named fields and variants are changed, new variants are added as `Active`, and nothing else changes.
 - For an archived or missing item nothing is stored, and the answer is the same as success.
 - If anything is refused, nothing at all is stored.
 
@@ -516,8 +506,8 @@ Response is empty. A successful change answers with nothing but a success status
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the variant each belongs to - A variant status of `Archived` was sent - A new variant is missing its selling unit |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request - The price currency was not exactly `EUR`, `USD` or `GBP` in uppercase |
+| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the variant each belongs to - A variant status of `Archived` was sent |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request - The price currency was not exactly `EUR`, `USD` or `GBP` in uppercase - A new variant is missing its required selling unit |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - An active item already has that name - A non-archived variant already has that SKU |

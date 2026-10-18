@@ -4,7 +4,7 @@ Reusable Smithy rules. Related: [Mesazon endpoints](../features/flow/01-endpoint
 
 ## Reference implementation
 
-`CatalogueServiceV2.smithy` + `domain/CatalogueV2.smithy` (under `backend/gateway/core/src/main/smithy/`) are the canonical reference for the resource-oriented convention this standard describes: operation and shape names, resource paths and labels, the tenant mixin, role markers, error lists, and list defaults. Read both files alongside this standard before building a new endpoint. At cutover they take the V1 file names (`CatalogueService.smithy`, `domain/Catalogue.smithy`) and stay the reference.
+`CatalogueService.smithy` + `domain/Catalogue.smithy` (under `backend/gateway/core/src/main/smithy/`) are the canonical reference for the resource-oriented convention this standard describes: operation and shape names, resource paths and labels, the tenant mixin, role markers, error lists, and list defaults. Read both files alongside this standard before building a new endpoint.
 
 Every other live service (e.g. `CustomerBookService.smithy`) still uses the legacy verb-first style. Read it only to maintain that service; never copy it into a new or reworked contract.
 
@@ -85,7 +85,7 @@ Applies to new and reworked contracts; see [Reference implementation](#reference
 - A read over several resources takes no `/batch`; it filters on its plain path with an optional `@default([])` ID-list query param, where empty means all (`GET /catalogue/item/summary?catalogueItemIDs=…`).
 - A static segment may sit next to an `{id}` label at the same depth; smithy4s routes the static one first (`HttpEndpoint.moreSpecific`), so `/catalogue/item/summary` never reaches `{catalogueItemID}`.
 
-Applied in `CatalogueServiceV2.smithy`; operation names derive from the paths per [Names](#names):
+Applied in `CatalogueService.smithy`; operation names derive from the paths per [Names](#names):
 
 | Purpose | Method | Path | Operation |
 |---|---|---|---|

@@ -41,7 +41,7 @@ object FileService {
   private final class FileServiceImpl(
       fileServiceConfig: FileServiceConfig,
       organizationManagementRepository: OrganizationManagementRepository,
-      catalogueRepositoryV2: CatalogueRepositoryV2,
+      catalogueRepository: CatalogueRepository,
       fileScanner: FileScanner,
       imageProcessing: ImageProcessing,
       spreadsheetTool: SpreadsheetTool,
@@ -187,7 +187,7 @@ object FileService {
         catalogueItemImageByteStream: ZStream[Any, Throwable, Byte],
     ): ServiceTask[Unit] = ZIO
       .scoped(for {
-        _ <- catalogueRepositoryV2
+        _ <- catalogueRepository
           .getCatalogueItemWithVariantsActive(organizationID, catalogueItemID)
           .someOrFail(
             ServiceError.InternalServerError.UnexpectedError(
@@ -224,7 +224,7 @@ object FileService {
               s"Failed to construct CatalogueItemImageAsset: [$e]"
             )
           )
-        _ <- catalogueRepositoryV2.updateCatalogueItem(
+        _ <- catalogueRepository.updateCatalogueItem(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
           nameOptUpdate = None,

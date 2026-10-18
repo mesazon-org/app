@@ -41,7 +41,7 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
       ZLayer.succeed(mock[ImageProcessing]),
       SpreadsheetTool.live,
       ZLayer.succeed(mock[OrganizationManagementRepository]),
-      ZLayer.succeed(mock[CatalogueRepositoryV2]),
+      ZLayer.succeed(mock[CatalogueRepository]),
       ZLayer.succeed(mock[S3ClientOrganizationMedia]),
       AIClientDataExtraction.live,
       ZLayer.succeed(

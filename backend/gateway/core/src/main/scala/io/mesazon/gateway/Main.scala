@@ -76,7 +76,6 @@ object Main extends ZIOAppDefault {
       OrganizationManagementRepository.live,
       CustomerBookRepository.live,
       CatalogueRepository.live,
-      CatalogueRepositoryV2.live,
 
       // Queries
       WahaQueries.live,
@@ -88,7 +87,6 @@ object Main extends ZIOAppDefault {
       OrganizationDetailsQueries.live,
       OrganizationUserQueries.live,
       CustomerBookQueries.live,
-      CatalogueItemQueries.live,
       CatalogueQueries.live,
 
       // State
@@ -123,7 +121,7 @@ object Main extends ZIOAppDefault {
       EmailValidator.live,
       PhoneNumberDomainValidator.live,
       AddressValidator.live,
-      PriceDomainValidator.live,
+      PriceValidator.live,
       WahaPhoneNumberDomainValidator.live,
 
       // Service validators

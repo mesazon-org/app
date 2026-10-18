@@ -4,7 +4,17 @@ Known-missing acceptance coverage, found by reading the epics in `pages/epics/` 
 
 This is a backlog, not a guide — write the tests per [Acceptance testing](project/acceptance-testing.md), then delete the entry. An entry left here after its test lands is worse than no list.
 
-Established 2026-09-03 from a review of `01-user-onboarding`, `02-forgot-password`, `03-sign-in`, `04-organization-onboarding`, `05-customer-book`, and `06-catalogue`. All six of Catalogue's Smithy endpoints have acceptance blocks in `CatalogueApiSpec`, so that review turned up no new entry. Token Refresh has not been audited and may hold gaps of its own.
+Established 2026-09-03 from a review of `01-user-onboarding`, `02-forgot-password`, `03-sign-in`, `04-organization-onboarding`, `05-customer-book`, and `06-catalogue`. At that review all six legacy Catalogue Smithy endpoints had acceptance blocks; their replacement with the item/variant contract introduces the Catalogue gap below. Token Refresh has not been audited and may hold gaps of its own.
+
+## Catalogue contract replacement
+
+The 2026-10-17 cleanup removes the six legacy JSON operations and their 62-case `CatalogueApiSpec`. The eight replacement operations are implemented and wired, but their HTTP acceptance coverage is pending. The user requested finishing **one endpoint at a time**, starting with `POST /catalogue/item`; do not add one test for every endpoint in a single slice. The 35-case `FileApiSpec`, including the 14 item-image cases, remains separate.
+
+**Behaviour:** [Catalogue](../pages/epics/06-catalogue.md), adding one/several items, updating, archiving items/variants, opening, listing selected/all items, and checking name/SKU uniqueness.
+
+**Where:** rebuild `CatalogueApiSpec` and its suite registration through the existing shared harness. Each endpoint needs its applicable success, validation/conflict, middleware, tenant/lifecycle, and rejected-state cases from [Acceptance testing](project/acceptance-testing.md). Prove exact enum strings, required empty-list encoding, and omitted/null/set PUT fields including an empty attributes map. Verify static summary/uniqueness routes reach their operations instead of the UUID detail route. Existing validator, service, and real repository tests remain and do not substitute for this HTTP proof. Remove covered operations from this entry as they are completed.
+
+Pending operations: `CatalogueItemPost`, `CatalogueItemBatchPost`, `CatalogueItemPut`, `CatalogueItemArchivePut`, `CatalogueItemVariantArchivePut`, `CatalogueItemGet`, `CatalogueItemSummaryGet`, `CatalogueItemUniquenessGet`.
 
 ## Blocked on harness work
 

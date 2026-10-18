@@ -5,8 +5,8 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.domain.to
 import io.mesazon.gateway.clients.S3ClientOrganizationMedia
 import io.mesazon.gateway.repository.CatalogueRepository
-import io.mesazon.gateway.repository.CatalogueRepository.InsertCatalogueItemInput
-import io.mesazon.gateway.utils.given
+import io.mesazon.gateway.repository.CatalogueRepository.*
+import io.mesazon.gateway.transform.given
 import io.mesazon.gateway.validation.service.CatalogueRequestValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import io.scalaland.chimney.dsl.*
@@ -22,155 +22,272 @@ object CatalogueService {
       s3ClientOrganizationMedia: S3ClientOrganizationMedia,
   ) extends smithy.CatalogueService[ServiceTask] {
 
-    /** HTTP POST /insert/catalogue-item */
-    override def insertCatalogueItemPost(
+    override def catalogueItemPost(
         organizationID: UUID,
-        insertCatalogueItemPostRequestSmithy: smithy.InsertCatalogueItemPostRequest,
-    ): ServiceTask[Unit] = for {
-      insertCatalogueItemPostRequest <- catalogueRequestValidator.validatedInsertCatalogueItemPostRequest(
-        insertCatalogueItemPostRequestSmithy
-      )
-      _ <- catalogueRepository.insertCatalogueItem(
-        OrganizationID(organizationID),
-        insertCatalogueItemPostRequest.transformInto[InsertCatalogueItemInput],
-      )
-    } yield ()
-
-    /** HTTP POST /insert/catalogue-items */
-    override def insertCatalogueItemsPost(
-        organizationID: UUID,
-        insertCatalogueItemsPostRequestSmithy: smithy.InsertCatalogueItemsPostRequest,
-    ): ServiceTask[Unit] = for {
-      insertCatalogueItemsPostRequest <- catalogueRequestValidator.validatedInsertCatalogueItemsPostRequest(
-        insertCatalogueItemsPostRequestSmithy
-      )
-      _ <- catalogueRepository.insertCatalogueItems(
-        OrganizationID(organizationID),
-        insertCatalogueItemsPostRequest.catalogueItems.transformInto[List[InsertCatalogueItemInput]],
-      )
-    } yield ()
-
-    /** HTTP PUT /update/catalogue-item */
-    override def updateCatalogueItemPut(
-        organizationID: UUID,
-        updateCatalogueItemPutRequestSmithy: smithy.UpdateCatalogueItemPutRequest,
-    ): ServiceTask[Unit] = for {
-      updateCatalogueItemPutRequest <- catalogueRequestValidator.validatedUpdateCatalogueItemPutRequest(
-        updateCatalogueItemPutRequestSmithy
-      )
-      _ <- catalogueRepository.updateCatalogueItem(
-        organizationID = OrganizationID(organizationID),
-        catalogueItemID = updateCatalogueItemPutRequest.catalogueItemID,
-        nameOptUpdate = updateCatalogueItemPutRequest.name,
-        unitOptUpdate = updateCatalogueItemPutRequest.unit,
-        priceOptUpdate = updateCatalogueItemPutRequest.price,
-      )
-    } yield ()
-
-    /** HTTP PUT /archive/catalogue-item */
-    override def archiveCatalogueItemPut(
-        organizationID: UUID,
-        archiveCatalogueItemPutRequestSmithy: smithy.ArchiveCatalogueItemPutRequest,
-    ): ServiceTask[Unit] =
-      catalogueRepository
-        .archiveCatalogueItem(
+        request: smithy.CatalogueItemPostRequest,
+    ): ServiceTask[smithy.CatalogueItemPostResponse] =
+      for {
+        catalogueItemPostRequest <- catalogueRequestValidator.validatedCatalogueItemPostRequest(request)
+        catalogueItemID          <- catalogueRepository.insertCatalogueItem(
           OrganizationID(organizationID),
-          CatalogueItemID(archiveCatalogueItemPutRequestSmithy.catalogueItemID),
+          catalogueItemPostRequest
+            .into[InsertCatalogueItemInput]
+            .withFieldComputed(
+              _.variants,
+              _.variants.map(
+                _.into[InsertCatalogueItemVariantInput]
+                  .withFieldConst(_.status, CatalogueItemVariantStatus.Active)
+                  .transform
+              ),
+            )
+            .transform,
         )
-        .unit
+      } yield smithy.CatalogueItemPostResponse(catalogueItemID.value)
 
-    /** HTTP GET /get/catalogue-item/{catalogueItemID} */
-    override def getCatalogueItemGet(
+    override def catalogueItemBatchPost(
+        organizationID: UUID,
+        request: smithy.CatalogueItemBatchPostRequest,
+    ): ServiceTask[smithy.CatalogueItemBatchPostResponse] =
+      for {
+        catalogueItemBatchPostRequest <- catalogueRequestValidator.validatedCatalogueItemBatchPostRequest(request)
+        catalogueItemIDs              <- catalogueRepository.insertCatalogueItems(
+          OrganizationID(organizationID),
+          catalogueItemBatchPostRequest.catalogueItems.map(
+            _.into[InsertCatalogueItemInput]
+              .withFieldComputed(
+                _.variants,
+                _.variants.map(
+                  _.into[InsertCatalogueItemVariantInput]
+                    .withFieldConst(_.status, CatalogueItemVariantStatus.Active)
+                    .transform
+                ),
+              )
+              .transform
+          ),
+        )
+      } yield smithy.CatalogueItemBatchPostResponse(catalogueItemIDs.transformInto[List[UUID]])
+
+    override def catalogueItemPut(
         organizationID: UUID,
         catalogueItemID: UUID,
-    ): ServiceTask[smithy.GetCatalogueItemGetResponse] = for {
-      catalogueItemRow <- catalogueRepository
-        .getCatalogueItem(OrganizationID(organizationID), CatalogueItemID(catalogueItemID))
-        .someOrFail(
-          ServiceError.InternalServerError
-            .UnexpectedError(s"Catalogue item not found for catalogueItemID: [$catalogueItemID]")
+        request: smithy.CatalogueItemPutRequest,
+    ): ServiceTask[Unit] =
+      for {
+        catalogueItemPutRequest <- catalogueRequestValidator.validatedCatalogueItemPutRequest(request)
+        _                       <- catalogueRepository.updateCatalogueItem(
+          organizationID = OrganizationID(organizationID),
+          catalogueItemID = CatalogueItemID(catalogueItemID),
+          nameOptUpdate = catalogueItemPutRequest.name,
+          descriptionOptUpdate = catalogueItemPutRequest.description,
+          imageAssetOptUpdate = None,
+          updateCatalogueItemVariantInputs = catalogueItemPutRequest.variantsUpdate
+            .transformInto[List[UpdateCatalogueItemVariantInput]],
+          insertCatalogueItemVariantInputs = catalogueItemPutRequest.variantsInsert.map(
+            _.into[InsertCatalogueItemVariantInput]
+              .withFieldConst(_.status, CatalogueItemVariantStatus.Active)
+              .transform
+          ),
         )
-      imageNormalizedUrlOpt <- ZIO.foreach(catalogueItemRow.imageAsset)(catalogueItemImageAsset =>
-        s3ClientOrganizationMedia
-          .genMediaUrl(catalogueItemImageAsset.value.imageNormalizedS3BucketKey.to[S3BucketKey])
-          .map(_.value)
-      )
-    } yield catalogueItemRow
-      .into[smithy.GetCatalogueItemGetResponse]
-      .withFieldConst(_.imageNormalizedUrl, imageNormalizedUrlOpt)
-      .transform
+      } yield ()
 
-    /** HTTP GET /get/catalogue-items */
-    override def getCatalogueItemsGet(
-        organizationID: UUID
-    ): ServiceTask[smithy.GetCatalogueItemsGetResponse] = for {
-      catalogueItemSummaryRows <- catalogueRepository.getCatalogueItemSummariesActive(OrganizationID(organizationID))
-      catalogueItems           <- ZIO.foreach(catalogueItemSummaryRows)(catalogueItemSummaryRow =>
-        ZIO
-          .foreach(catalogueItemSummaryRow.imageAsset)(catalogueItemImageAsset =>
+    override def catalogueItemArchivePut(
+        organizationID: UUID,
+        catalogueItemID: UUID,
+    ): ServiceTask[Unit] =
+      catalogueRepository.archiveCatalogueItem(
+        OrganizationID(organizationID),
+        CatalogueItemID(catalogueItemID),
+      )
+
+    override def catalogueItemVariantArchivePut(
+        organizationID: UUID,
+        catalogueItemID: UUID,
+        catalogueItemVariantID: UUID,
+    ): ServiceTask[Unit] =
+      catalogueRepository.archiveCatalogueItemVariant(
+        OrganizationID(organizationID),
+        CatalogueItemID(catalogueItemID),
+        CatalogueItemVariantID(catalogueItemVariantID),
+      )
+
+    override def catalogueItemGet(
+        organizationID: UUID,
+        catalogueItemID: UUID,
+    ): ServiceTask[smithy.CatalogueItemGetResponse] =
+      for {
+        catalogueItemWithVariantsRow <- catalogueRepository
+          .getCatalogueItemWithVariantsActive(
+            OrganizationID(organizationID),
+            CatalogueItemID(catalogueItemID),
+          )
+          .someOrFail(
+            ServiceError.InternalServerError
+              .UnexpectedError(s"Catalogue item not found for catalogueItemID: [$catalogueItemID]")
+          )
+        imageNormalizedUrlOpt <- ZIO.foreach(catalogueItemWithVariantsRow.catalogueItemRow.imageAsset)(
+          catalogueItemImageAsset =>
             s3ClientOrganizationMedia
               .genMediaUrl(catalogueItemImageAsset.value.imageNormalizedS3BucketKey.to[S3BucketKey])
-              .map(_.value)
+        )
+      } yield catalogueItemWithVariantsRow.catalogueItemRow
+        .into[smithy.CatalogueItemGetResponse]
+        .withFieldConst(_.imageNormalizedUrl, imageNormalizedUrlOpt.map(_.value))
+        .withFieldComputed(
+          _.variants,
+          _ =>
+            catalogueItemWithVariantsRow.catalogueItemVariantRows.toList.map { catalogueItemVariantRow =>
+              catalogueItemVariantRow
+                .into[smithy.CatalogueItemVariant]
+                .withFieldComputed(
+                  _.price,
+                  _.price.map(catalogueItemVariantPrice =>
+                    catalogueItemVariantPrice.value
+                      .into[smithy.CatalogueItemVariantPrice]
+                      .enableInheritedAccessors
+                      .withFieldComputed(
+                        _.currency,
+                        price => Currency.valueOf(price.currency.value).transformInto[smithy.Currency],
+                      )
+                      .transform
+                  ),
+                )
+                .transform
+            },
+        )
+        .transform
+
+    override def catalogueItemSummaryGet(
+        organizationID: UUID,
+        catalogueItemIDs: List[UUID],
+    ): ServiceTask[smithy.CatalogueItemSummaryGetResponse] =
+      for {
+        catalogueItemSummaryRows <- catalogueItemIDs match {
+          case Nil => catalogueRepository.getAllCatalogueItemSummariesEnabled(OrganizationID(organizationID))
+          case catalogueItemID :: remainingCatalogueItemIDs =>
+            catalogueRepository.getCatalogueItemSummariesEnabled(
+              OrganizationID(organizationID),
+              NonEmptyChunk.fromIterable(
+                CatalogueItemID(catalogueItemID),
+                remainingCatalogueItemIDs.map(CatalogueItemID.apply),
+              ),
+            )
+        }
+        catalogueItemSummaries <- ZIO.foreach(catalogueItemSummaryRows) { catalogueItemSummaryRow =>
+          ZIO
+            .foreach(catalogueItemSummaryRow.imageAsset)(catalogueItemImageAsset =>
+              s3ClientOrganizationMedia
+                .genMediaUrl(catalogueItemImageAsset.value.imageNormalizedS3BucketKey.to[S3BucketKey])
+            )
+            .map(imageNormalizedUrlOpt =>
+              catalogueItemSummaryRow
+                .into[smithy.CatalogueItemSummary]
+                .withFieldConst(_.imageNormalizedUrl, imageNormalizedUrlOpt.map(_.value))
+                .withFieldComputed(
+                  _.variants,
+                  _ =>
+                    catalogueItemSummaryRow.catalogueItemVariantSummaryRows.toList.map {
+                      catalogueItemVariantSummaryRow =>
+                        catalogueItemVariantSummaryRow
+                          .into[smithy.CatalogueItemVariantSummary]
+                          .withFieldComputed(
+                            _.price,
+                            _.price.map(catalogueItemVariantPrice =>
+                              catalogueItemVariantPrice.value
+                                .into[smithy.CatalogueItemVariantPrice]
+                                .enableInheritedAccessors
+                                .withFieldComputed(
+                                  _.currency,
+                                  price => Currency.valueOf(price.currency.value).transformInto[smithy.Currency],
+                                )
+                                .transform
+                            ),
+                          )
+                          .transform
+                    },
+                )
+                .transform
+            )
+        }
+      } yield smithy.CatalogueItemSummaryGetResponse(catalogueItemSummaries)
+
+    override def catalogueItemUniquenessGet(
+        organizationID: UUID,
+        name: Option[String],
+        sku: Option[String],
+    ): ServiceTask[smithy.CatalogueItemUniquenessGetResponse] =
+      for {
+        catalogueItemUniquenessGetRequest <- catalogueRequestValidator.validatedCatalogueItemUniquenessGetRequest(
+          smithy.CatalogueItemUniquenessGetInput(organizationID, name, sku)
+        )
+        isNameUniqueOpt <- ZIO.foreach(catalogueItemUniquenessGetRequest.name)(catalogueItemName =>
+          catalogueRepository.isUniqueCatalogueItemName(
+            OrganizationID(organizationID),
+            catalogueItemName,
           )
-          .map(imageNormalizedUrlOpt =>
-            catalogueItemSummaryRow
-              .into[smithy.GetCatalogueItem]
-              .withFieldConst(_.imageNormalizedUrl, imageNormalizedUrlOpt)
-              .transform
+        )
+        isSkuUniqueOpt <- ZIO.foreach(catalogueItemUniquenessGetRequest.sku)(catalogueItemVariantSku =>
+          catalogueRepository.isUniqueCatalogueItemVariantSKU(
+            OrganizationID(organizationID),
+            catalogueItemVariantSku,
           )
-      )
-    } yield smithy.GetCatalogueItemsGetResponse(catalogueItems)
+        )
+      } yield smithy.CatalogueItemUniquenessGetResponse(isNameUniqueOpt, isSkuUniqueOpt)
   }
 
   private def observed(service: smithy.CatalogueService[ServiceTask]): smithy.CatalogueService[Task] =
     new smithy.CatalogueService[Task] {
-
-      /** HTTP POST /insert/catalogue-item */
-      override def insertCatalogueItemPost(
+      override def catalogueItemPost(
           organizationID: UUID,
-          insertCatalogueItemPostRequestSmithy: smithy.InsertCatalogueItemPostRequest,
-      ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(
-          service.insertCatalogueItemPost(organizationID, insertCatalogueItemPostRequestSmithy)
-        )
+          request: smithy.CatalogueItemPostRequest,
+      ): Task[smithy.CatalogueItemPostResponse] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemPost(organizationID, request))
 
-      /** HTTP POST /insert/catalogue-items */
-      override def insertCatalogueItemsPost(
+      override def catalogueItemBatchPost(
           organizationID: UUID,
-          insertCatalogueItemsPostRequestSmithy: smithy.InsertCatalogueItemsPostRequest,
-      ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(
-          service.insertCatalogueItemsPost(organizationID, insertCatalogueItemsPostRequestSmithy)
-        )
+          request: smithy.CatalogueItemBatchPostRequest,
+      ): Task[smithy.CatalogueItemBatchPostResponse] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemBatchPost(organizationID, request))
 
-      /** HTTP PUT /update/catalogue-item */
-      override def updateCatalogueItemPut(
-          organizationID: UUID,
-          updateCatalogueItemPutRequestSmithy: smithy.UpdateCatalogueItemPutRequest,
-      ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(
-          service.updateCatalogueItemPut(organizationID, updateCatalogueItemPutRequestSmithy)
-        )
-
-      /** HTTP PUT /archive/catalogue-item */
-      override def archiveCatalogueItemPut(
-          organizationID: UUID,
-          archiveCatalogueItemPutRequestSmithy: smithy.ArchiveCatalogueItemPutRequest,
-      ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(
-          service.archiveCatalogueItemPut(organizationID, archiveCatalogueItemPutRequestSmithy)
-        )
-
-      /** HTTP GET /get/catalogue-item/{catalogueItemID} */
-      override def getCatalogueItemGet(
+      override def catalogueItemPut(
           organizationID: UUID,
           catalogueItemID: UUID,
-      ): Task[smithy.GetCatalogueItemGetResponse] =
-        HttpErrorHandler.errorResponseHandler(service.getCatalogueItemGet(organizationID, catalogueItemID))
+          request: smithy.CatalogueItemPutRequest,
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemPut(organizationID, catalogueItemID, request))
 
-      /** HTTP GET /get/catalogue-items */
-      override def getCatalogueItemsGet(organizationID: UUID): Task[smithy.GetCatalogueItemsGetResponse] =
-        HttpErrorHandler.errorResponseHandler(service.getCatalogueItemsGet(organizationID))
+      override def catalogueItemArchivePut(
+          organizationID: UUID,
+          catalogueItemID: UUID,
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemArchivePut(organizationID, catalogueItemID))
+
+      override def catalogueItemVariantArchivePut(
+          organizationID: UUID,
+          catalogueItemID: UUID,
+          catalogueItemVariantID: UUID,
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(
+          service.catalogueItemVariantArchivePut(organizationID, catalogueItemID, catalogueItemVariantID)
+        )
+
+      override def catalogueItemGet(
+          organizationID: UUID,
+          catalogueItemID: UUID,
+      ): Task[smithy.CatalogueItemGetResponse] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemGet(organizationID, catalogueItemID))
+
+      override def catalogueItemSummaryGet(
+          organizationID: UUID,
+          catalogueItemIDs: List[UUID],
+      ): Task[smithy.CatalogueItemSummaryGetResponse] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemSummaryGet(organizationID, catalogueItemIDs))
+
+      override def catalogueItemUniquenessGet(
+          organizationID: UUID,
+          name: Option[String],
+          sku: Option[String],
+      ): Task[smithy.CatalogueItemUniquenessGetResponse] =
+        HttpErrorHandler.errorResponseHandler(service.catalogueItemUniquenessGet(organizationID, name, sku))
     }
 
   val local = ZLayer.derive[CatalogueServiceImpl].project[smithy.CatalogueService[ServiceTask]](identity)
