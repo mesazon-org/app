@@ -323,7 +323,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
     }
 
     "uploadCatalogueItemImage" should {
-      "successfully scan, normalize, upload and persist the catalogue item image" in new TestContext {
+      "successfully upload a catalogue item's image" in new TestContext {
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
@@ -332,12 +332,12 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
         val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
           catalogueItemRow,
@@ -366,7 +366,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
         )
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItemWithVariantsActive
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
             .returningZIO(Some(catalogueItemWithVariantsRow))
             .once(),
@@ -402,6 +402,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
               None,
               None,
               Some(catalogueItemImageAsset),
+              None,
               Nil,
               Nil,
             )
@@ -430,7 +431,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItemWithVariantsActive
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
             .returningZIO(None)
             .once()
@@ -463,7 +464,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
         )
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItemWithVariantsActive
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
             .failingZIO(repositoryError)
             .once()
@@ -492,12 +493,12 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
         val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
           catalogueItemRow,
@@ -507,7 +508,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
         val scanError = ServiceError.InternalServerError.UnexpectedError("Failed to scan catalogue item image")
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItemWithVariantsActive
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
             .returningZIO(Some(catalogueItemWithVariantsRow))
             .once(),
@@ -545,12 +546,12 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
         val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
           catalogueItemRow,
@@ -561,7 +562,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
           ServiceError.InternalServerError.UnexpectedError("Failed to normalize catalogue item image")
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItemWithVariantsActive
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
             .returningZIO(Some(catalogueItemWithVariantsRow))
             .once(),
@@ -611,12 +612,12 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
         val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
           catalogueItemRow,
@@ -632,7 +633,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
           ServiceError.InternalServerError.UnexpectedError("Failed to upload catalogue item image to S3")
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItemWithVariantsActive
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
             .returningZIO(Some(catalogueItemWithVariantsRow))
             .once(),
@@ -686,12 +687,12 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
         val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
           catalogueItemRow,
@@ -722,7 +723,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
         val updateError = ServiceError.InternalServerError.UnexpectedError("Failed to persist catalogue item image")
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItemWithVariantsActive
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
             .returningZIO(Some(catalogueItemWithVariantsRow))
             .once(),
@@ -758,6 +759,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
               None,
               None,
               Some(catalogueItemImageAsset),
+              None,
               Nil,
               Nil,
             )

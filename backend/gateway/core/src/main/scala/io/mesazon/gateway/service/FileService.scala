@@ -188,7 +188,7 @@ object FileService {
     ): ServiceTask[Unit] = ZIO
       .scoped(for {
         _ <- catalogueRepository
-          .getCatalogueItemWithVariantsActive(organizationID, catalogueItemID)
+          .getCatalogueItemWithVariants(organizationID, catalogueItemID)
           .someOrFail(
             ServiceError.InternalServerError.UnexpectedError(
               s"Catalogue item not found: catalogueItemID=[$catalogueItemID]"
@@ -230,6 +230,7 @@ object FileService {
           nameOptUpdate = None,
           descriptionOptUpdate = None,
           imageAssetOptUpdate = Some(catalogueItemImageAsset),
+          statusOptUpdate = None,
           updateCatalogueItemVariantInputs = Nil,
           insertCatalogueItemVariantInputs = Nil,
         )

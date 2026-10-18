@@ -358,13 +358,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val catalogueItemRow = arbitrarySample[CatalogueItemRow]
             .copy(
-              imageAsset = None,
-              status = CatalogueItemStatus.Active,
+              isArchived = false
             )
           val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
             organizationID = catalogueItemRow.organizationID,
             catalogueItemID = catalogueItemRow.catalogueItemID,
-            status = CatalogueItemVariantStatus.Active,
+            isArchived = false,
           )
           postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
           postgresClient
@@ -429,7 +428,7 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
           val catalogueItemRowUpdated = catalogueItemRowsUpdated.head
           catalogueItemRowUpdated.copy(
-            imageAsset = None,
+            imageAsset = catalogueItemRow.imageAsset,
             updatedAt = catalogueItemRow.updatedAt,
           ) shouldBe catalogueItemRow
           catalogueItemRowUpdated.updatedAt should not be catalogueItemRow.updatedAt
@@ -449,7 +448,6 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           )
 
           catalogueItemRowUpdated.imageAsset shouldBe Some(catalogueItemImageAssetExpected)
-          catalogueItemRowUpdated.status shouldBe CatalogueItemStatus.Active
       }
 
       "fail with BadRequest when the catalogue item ID header is missing" in withContext { context =>
@@ -472,12 +470,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationUserRow.organizationID,
           imageAsset = None,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = catalogueItemRow.organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -543,12 +541,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationUserRow.organizationID,
           imageAsset = None,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = catalogueItemRow.organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -605,12 +603,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val accessJwt        = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           imageAsset = None,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = catalogueItemRow.organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -663,12 +661,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val catalogueItemRow = arbitrarySample[CatalogueItemRow]
           .copy(
             imageAsset = None,
-            status = CatalogueItemStatus.Active,
+            isArchived = false,
           )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = catalogueItemRow.organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -742,12 +740,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           imageAsset = None,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = catalogueItemRow.organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -800,12 +798,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           imageAsset = None,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = catalogueItemRow.organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -875,12 +873,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationUserRow.organizationID,
           imageAsset = None,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = catalogueItemRow.organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -944,12 +942,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
           imageAsset = None,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = catalogueItemRow.organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
         val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
           organizationID = organizationID,
@@ -1015,12 +1013,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
           imageAsset = None,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
         val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
           organizationID = organizationID,
@@ -1086,12 +1084,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
           imageAsset = None,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = catalogueItemRow.organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -1199,13 +1197,13 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
 
         val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow]
           .copy(
-            status = CatalogueItemStatus.Archived,
+            isArchived = true,
             imageAsset = None,
           )
         val catalogueItemVariantRowArchivedItem = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = catalogueItemRowArchived.organizationID,
           catalogueItemID = catalogueItemRowArchived.catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
 
         postgresClient
@@ -1276,12 +1274,12 @@ class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryAr
           val catalogueItemRowOrgA = arbitrarySample[CatalogueItemRow]
             .copy(
               imageAsset = None,
-              status = CatalogueItemStatus.Active,
+              isArchived = false,
             )
           val catalogueItemVariantRowOrgA = arbitrarySample[CatalogueItemVariantRow].copy(
             organizationID = catalogueItemRowOrgA.organizationID,
             catalogueItemID = catalogueItemRowOrgA.catalogueItemID,
-            status = CatalogueItemVariantStatus.Active,
+            isArchived = false,
           )
 
           postgresClient
