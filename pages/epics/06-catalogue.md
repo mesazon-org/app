@@ -67,7 +67,7 @@ Like the customer book, these are not a single journey. They are the things that
 - `Inactive` and `OutOfStock` variants are still shown in item details and catalogue summaries, and they keep their SKU reserved.
 - An `Inactive` item remains visible and editable while it is not archived.
 
-**Archiving** — `isArchived` is a separate flag on both items and variants. New items and variants have `isArchived = false`. Archiving sets the flag to `true`, preserves the item's or variant's status, and cannot be undone. Archiving an item sets the flag on all of its variants while preserving each variant's status. Only the flag determines whether an item or variant is archived.
+**Archiving** — `isArchived` is a separate flag on both items and variants. New items and variants have `isArchived = false`. Only archiving can set this flag to `true`; changing fields or business status preserves it. Archiving preserves the item's or variant's status and cannot be undone. Archiving an item sets the flag on all of its variants while preserving each variant's status. Only the flag determines whether an item or variant is archived.
 
 **Attributes** — words the business chooses itself to tell variants apart, written as a name and a value: `Colour: Red`, `Size: M`, `Flavour: Peanut`. There is no fixed list. Two variants of the same item may have identical attributes.
 

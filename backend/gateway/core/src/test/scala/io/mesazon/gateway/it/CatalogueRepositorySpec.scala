@@ -1248,7 +1248,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
     }
 
     "archiveCatalogueItem" should {
-      "archive the catalogue item and every enabled variant of it, leaving other catalogue items untouched" in new TestContext {
+      "archive the catalogue item and every non-archived variant of it, preserving business statuses and leaving other catalogue items untouched" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
@@ -1299,16 +1299,13 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue shouldBe (())
 
         val catalogueItemRowExpected = catalogueItemRow.copy(
-          status = CatalogueItemStatus.Archived,
-          updatedAt = UpdatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow)
         )
         val catalogueItemVariantRowExpected1 = catalogueItemVariantRow1.copy(
-          status = CatalogueItemVariantStatus.Archived,
-          updatedAt = UpdatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow)
         )
         val catalogueItemVariantRowExpected2 = catalogueItemVariantRow2.copy(
-          status = CatalogueItemVariantStatus.Archived,
-          updatedAt = UpdatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow)
         )
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue.toSet shouldBe
@@ -1546,7 +1543,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
     }
 
     "archiveCatalogueItemVariant" should {
-      "archive only the given variant, leaving its catalogue item, its other variants, and other catalogue items untouched" in new TestContext {
+      "archive only the given non-archived variant, preserving business statuses and leaving its catalogue item, its other variants, and other catalogue items untouched" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
@@ -1613,8 +1610,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue shouldBe (())
 
         val catalogueItemVariantRowExpected1 = catalogueItemVariantRow1.copy(
-          status = CatalogueItemVariantStatus.Archived,
-          updatedAt = UpdatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow)
         )
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue.toSet shouldBe
