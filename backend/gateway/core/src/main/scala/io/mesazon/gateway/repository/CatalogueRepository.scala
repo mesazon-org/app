@@ -506,9 +506,9 @@ object CatalogueRepository {
         input.description,
         None,
         CatalogueItemStatus.Active,
-        false,
-        CreatedAt(instantNow),
-        UpdatedAt(instantNow),
+        isArchived = false,
+        createdAt = CreatedAt(instantNow),
+        updatedAt = UpdatedAt(instantNow),
       )
 
     private def buildCatalogueItemVariantRow(
@@ -529,9 +529,9 @@ object CatalogueRepository {
         input.price,
         input.sellingUnit,
         input.status,
-        false,
-        CreatedAt(instantNow),
-        UpdatedAt(instantNow),
+        isArchived = false,
+        createdAt = CreatedAt(instantNow),
+        updatedAt = UpdatedAt(instantNow),
       )
   }
 

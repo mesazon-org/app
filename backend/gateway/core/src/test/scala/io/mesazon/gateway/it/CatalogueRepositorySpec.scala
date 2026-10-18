@@ -14,7 +14,6 @@ import io.mesazon.generator.IDGenerator
 import io.mesazon.test.postgresql.*
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.testkit.base.*
-import org.scalacheck.Gen
 import zio.*
 
 import java.time.Instant
@@ -75,8 +74,9 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           insertCatalogueItemInput.description,
           None,
           CatalogueItemStatus.Active,
-          CreatedAt(instantNow),
-          UpdatedAt(instantNow),
+          isArchived = false,
+          createdAt = CreatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow),
         )
         val catalogueItemVariantRowExpected = CatalogueItemVariantRow(
           organizationID,
@@ -89,8 +89,9 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           insertCatalogueItemVariantInput.price,
           insertCatalogueItemVariantInput.sellingUnit,
           insertCatalogueItemVariantInput.status,
-          CreatedAt(instantNow),
-          UpdatedAt(instantNow),
+          isArchived = false,
+          createdAt = CreatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow),
         )
 
         catalogueRepository.insertCatalogueItem(organizationID, insertCatalogueItemInput).zioValue shouldBe
@@ -140,8 +141,9 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           insertCatalogueItemVariantInput1.price,
           insertCatalogueItemVariantInput1.sellingUnit,
           insertCatalogueItemVariantInput1.status,
-          CreatedAt(instantNow),
-          UpdatedAt(instantNow),
+          isArchived = false,
+          createdAt = CreatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow),
         )
         val catalogueItemVariantRowExpected2 = catalogueItemVariantRowExpected1.copy(
           catalogueItemVariantID = catalogueItemVariantID2,
@@ -174,19 +176,19 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           Set(catalogueItemVariantRowExpected1, catalogueItemVariantRowExpected2, catalogueItemVariantRowExpected3)
       }
 
-      "insert a catalogue item whose name matches a disabled catalogue item's name, because the partial unique index excludes disabled rows" in new TestContext {
-        val organizationID         = arbitrarySample[OrganizationID]
-        val catalogueItemIDEnabled = arbitrarySample[CatalogueItemID]
-        val catalogueItemVariantID = arbitrarySample[CatalogueItemVariantID]
-        val sharedName             = arbitrarySample[CatalogueItemName]
+      "insert a catalogue item whose name matches an archived catalogue item's name, because the partial unique index excludes archived rows" in new TestContext {
+        val organizationID             = arbitrarySample[OrganizationID]
+        val catalogueItemIDNonArchived = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantID     = arbitrarySample[CatalogueItemVariantID]
+        val sharedName                 = arbitrarySample[CatalogueItemName]
 
-        val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           name = sharedName,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.disabled)),
+          isArchived = true,
         )
 
-        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowDisabled)).zioValue
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowArchived)).zioValue
 
         val insertCatalogueItemVariantInput = arbitrarySample[InsertCatalogueItemVariantInput]
         val insertCatalogueItemInput        = arbitrarySample[InsertCatalogueItemInput]
@@ -194,43 +196,43 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         inSequence(
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
-          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemIDEnabled.value).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemIDNonArchived.value).once(),
           (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemVariantID.value).once(),
         )
 
         catalogueRepository.insertCatalogueItem(organizationID, insertCatalogueItemInput).zioValue shouldBe
-          catalogueItemIDEnabled
+          catalogueItemIDNonArchived
 
         postgresClient
           .executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting)
           .zioValue
           .map(_.catalogueItemID)
-          .toSet shouldBe Set(catalogueItemRowDisabled.catalogueItemID, catalogueItemIDEnabled)
+          .toSet shouldBe Set(catalogueItemRowArchived.catalogueItemID, catalogueItemIDNonArchived)
       }
 
-      "insert a catalogue item variant whose SKU matches a disabled variant's SKU, because the partial unique index excludes disabled rows" in new TestContext {
-        val organizationID                 = arbitrarySample[OrganizationID]
-        val catalogueItemIDDisabled        = arbitrarySample[CatalogueItemID]
-        val catalogueItemVariantIDDisabled = arbitrarySample[CatalogueItemVariantID]
-        val catalogueItemIDEnabled         = arbitrarySample[CatalogueItemID]
-        val catalogueItemVariantIDEnabled  = arbitrarySample[CatalogueItemVariantID]
-        val sharedSku                      = arbitrarySample[CatalogueItemVariantSku]
+      "insert a catalogue item variant whose SKU matches an archived variant's SKU, because the partial unique index excludes archived rows" in new TestContext {
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val catalogueItemIDArchived           = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantIDArchived    = arbitrarySample[CatalogueItemVariantID]
+        val catalogueItemIDNonArchived        = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantIDNonArchived = arbitrarySample[CatalogueItemVariantID]
+        val sharedSku                         = arbitrarySample[CatalogueItemVariantSku]
 
-        val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemIDDisabled,
+          catalogueItemID = catalogueItemIDArchived,
         )
-        val catalogueItemVariantRowDisabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemIDDisabled,
-          catalogueItemVariantID = catalogueItemVariantIDDisabled,
+          catalogueItemID = catalogueItemIDArchived,
+          catalogueItemVariantID = catalogueItemVariantIDArchived,
           sku = Some(sharedSku),
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          isArchived = true,
         )
 
-        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowDisabled)).zioValue
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowArchived)).zioValue
         postgresClient
-          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowDisabled)))
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowArchived)))
           .zioValue
 
         val insertCatalogueItemVariantInput = arbitrarySample[InsertCatalogueItemVariantInput]
@@ -240,18 +242,18 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         inSequence(
           (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
-          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemIDEnabled.value).once(),
-          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemVariantIDEnabled.value).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemIDNonArchived.value).once(),
+          (() => idGeneratorMock.generateID).expects().returningZIO(catalogueItemVariantIDNonArchived.value).once(),
         )
 
         catalogueRepository.insertCatalogueItem(organizationID, insertCatalogueItemInput).zioValue shouldBe
-          catalogueItemIDEnabled
+          catalogueItemIDNonArchived
 
         postgresClient
           .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
           .zioValue
           .map(_.catalogueItemVariantID)
-          .toSet shouldBe Set(catalogueItemVariantIDDisabled, catalogueItemVariantIDEnabled)
+          .toSet shouldBe Set(catalogueItemVariantIDArchived, catalogueItemVariantIDNonArchived)
       }
 
       "fail with a UniqueConstraintViolation when a variant SKU already exists in the organization, rolling back the second item" in new TestContext {
@@ -386,8 +388,9 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           insertCatalogueItemInput1.description,
           None,
           CatalogueItemStatus.Active,
-          CreatedAt(instantNow),
-          UpdatedAt(instantNow),
+          isArchived = false,
+          createdAt = CreatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow),
         )
         val catalogueItemRowExpected2 = catalogueItemRowExpected1.copy(
           catalogueItemID = catalogueItemID2,
@@ -405,8 +408,9 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           insertCatalogueItemVariantInput1a.price,
           insertCatalogueItemVariantInput1a.sellingUnit,
           insertCatalogueItemVariantInput1a.status,
-          CreatedAt(instantNow),
-          UpdatedAt(instantNow),
+          isArchived = false,
+          createdAt = CreatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow),
         )
         val catalogueItemVariantRowExpected1b = catalogueItemVariantRowExpected1a.copy(
           catalogueItemVariantID = catalogueItemVariantID1b,
@@ -569,8 +573,9 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           insertCatalogueItemInputExisting.description,
           None,
           CatalogueItemStatus.Active,
-          CreatedAt(instantNow),
-          UpdatedAt(instantNow),
+          isArchived = false,
+          createdAt = CreatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow),
         )
         val catalogueItemVariantRowExistingExpected = CatalogueItemVariantRow(
           organizationID,
@@ -583,8 +588,9 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           insertCatalogueItemVariantInputExisting.price,
           insertCatalogueItemVariantInputExisting.sellingUnit,
           insertCatalogueItemVariantInputExisting.status,
-          CreatedAt(instantNow),
-          UpdatedAt(instantNow),
+          isArchived = false,
+          createdAt = CreatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow),
         )
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
@@ -595,16 +601,16 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
     }
 
     "updateCatalogueItem" should {
-      "update only the catalogue item's own fields when no variant changes are requested" in new TestContext {
+      "update only the catalogue item's own fields and preserve its status when status is omitted" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -647,12 +653,12 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -692,34 +698,46 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           List(catalogueItemVariantRowExpected)
       }
 
-      "update multiple catalogue item variants in one batched call, each keeping its own unspecified fields" in new TestContext {
+      "update multiple variants in one batch, each keeping unspecified fields" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRow1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRow2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
+        )
+        val catalogueItemVariantRow3 = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          isArchived = false,
         )
 
-        catalogueItemVariantRow1.catalogueItemVariantID shouldNot equal(catalogueItemVariantRow2.catalogueItemVariantID)
+        Set(
+          catalogueItemVariantRow1.catalogueItemVariantID,
+          catalogueItemVariantRow2.catalogueItemVariantID,
+          catalogueItemVariantRow3.catalogueItemVariantID,
+        ) should have size 3
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
         postgresClient
           .executeQuery(
-            catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow1, catalogueItemVariantRow2))
+            catalogueQueries.insertCatalogueItemVariantRows(
+              List(catalogueItemVariantRow1, catalogueItemVariantRow2, catalogueItemVariantRow3)
+            )
           )
           .zioValue
 
-        val skuUpdate   = arbitrarySample[CatalogueItemVariantSku]
-        val labelUpdate = arbitrarySample[CatalogueItemVariantLabel]
+        val skuUpdate         = arbitrarySample[CatalogueItemVariantSku]
+        val labelUpdate       = arbitrarySample[CatalogueItemVariantLabel]
+        val descriptionUpdate = arbitrarySample[CatalogueItemVariantDescription]
 
         val updateCatalogueItemVariantInput1 = UpdateCatalogueItemVariantInput(
           catalogueItemVariantID = catalogueItemVariantRow1.catalogueItemVariantID,
@@ -741,6 +759,16 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           sellingUnit = None,
           status = None,
         )
+        val updateCatalogueItemVariantInput3 = UpdateCatalogueItemVariantInput(
+          catalogueItemVariantID = catalogueItemVariantRow3.catalogueItemVariantID,
+          sku = None,
+          label = None,
+          description = Some(Some(descriptionUpdate)),
+          attributes = None,
+          price = None,
+          sellingUnit = None,
+          status = None,
+        )
 
         (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once()
 
@@ -748,7 +776,11 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .updateCatalogueItem(
             organizationID,
             catalogueItemRow.catalogueItemID,
-            updateCatalogueItemVariantInputs = List(updateCatalogueItemVariantInput1, updateCatalogueItemVariantInput2),
+            updateCatalogueItemVariantInputs = List(
+              updateCatalogueItemVariantInput1,
+              updateCatalogueItemVariantInput2,
+              updateCatalogueItemVariantInput3,
+            ),
             insertCatalogueItemVariantInputs = Nil,
           )
           .zioValue shouldBe (())
@@ -761,21 +793,25 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           label = Some(labelUpdate),
           updatedAt = UpdatedAt(instantNow),
         )
+        val catalogueItemVariantRowExpected3 = catalogueItemVariantRow3.copy(
+          description = Some(descriptionUpdate),
+          updatedAt = UpdatedAt(instantNow),
+        )
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue.toSet shouldBe
-          Set(catalogueItemVariantRowExpected1, catalogueItemVariantRowExpected2)
+          Set(catalogueItemVariantRowExpected1, catalogueItemVariantRowExpected2, catalogueItemVariantRowExpected3)
       }
 
       "insert new variants while also updating an existing variant, within the same transaction" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -826,8 +862,9 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           insertCatalogueItemVariantInput.price,
           insertCatalogueItemVariantInput.sellingUnit,
           insertCatalogueItemVariantInput.status,
-          CreatedAt(instantNow),
-          UpdatedAt(instantNow),
+          isArchived = false,
+          createdAt = CreatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow),
         )
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue.toSet shouldBe
@@ -843,14 +880,14 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           val organizationID   = arbitrarySample[OrganizationID]
           val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
             organizationID = organizationID,
-            status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+            isArchived = false,
           )
           val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
             organizationID = organizationID,
             catalogueItemID = catalogueItemRow.catalogueItemID,
             label = None,
             price = None,
-            status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+            isArchived = false,
           )
           (
             catalogueItemRow = catalogueItemRow,
@@ -962,7 +999,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val organizationID           = arbitrarySample[OrganizationID]
         val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.disabled)),
+          isArchived = true,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowArchived)).zioValue
@@ -991,7 +1028,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         val catalogueItemRowForeign = arbitrarySample[CatalogueItemRow].copy(
           organizationID = otherOrganizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowForeign)).zioValue
@@ -1016,7 +1053,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -1039,7 +1076,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioError
 
         serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
-          s"Failed to update catalogue item with ID: [${catalogueItemRow.catalogueItemID}]. Some catalogue item variant IDs do not exist, belong to another catalogue item, or are disabled. Requested: [${List(missingCatalogueItemVariantID)}], Found: [List()]"
+          s"Failed to update catalogue item with ID: [${catalogueItemRow.catalogueItemID}]. Some catalogue item variant IDs do not exist, belong to another catalogue item, or are archived. Requested: [${List(missingCatalogueItemVariantID)}], Found: [List()]"
         )
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
@@ -1051,11 +1088,11 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val organizationID    = arbitrarySample[OrganizationID]
         val catalogueItemRowA = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemRowB = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
 
         catalogueItemRowA.catalogueItemID shouldNot equal(catalogueItemRowB.catalogueItemID)
@@ -1063,7 +1100,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val catalogueItemVariantRowB = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRowB.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowA)).zioValue
@@ -1089,7 +1126,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioError
 
         serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
-          s"Failed to update catalogue item with ID: [${catalogueItemRowA.catalogueItemID}]. Some catalogue item variant IDs do not exist, belong to another catalogue item, or are disabled. Requested: [${List(catalogueItemVariantRowB.catalogueItemVariantID)}], Found: [List()]"
+          s"Failed to update catalogue item with ID: [${catalogueItemRowA.catalogueItemID}]. Some catalogue item variant IDs do not exist, belong to another catalogue item, or are archived. Requested: [${List(catalogueItemVariantRowB.catalogueItemVariantID)}], Found: [List()]"
         )
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue.toSet shouldBe
@@ -1102,12 +1139,12 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRowArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          isArchived = true,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -1132,7 +1169,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioError
 
         serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
-          s"Failed to update catalogue item with ID: [${catalogueItemRow.catalogueItemID}]. Some catalogue item variant IDs do not exist, belong to another catalogue item, or are disabled. Requested: [${List(catalogueItemVariantRowArchived.catalogueItemVariantID)}], Found: [List()]"
+          s"Failed to update catalogue item with ID: [${catalogueItemRow.catalogueItemID}]. Some catalogue item variant IDs do not exist, belong to another catalogue item, or are archived. Requested: [${List(catalogueItemVariantRowArchived.catalogueItemVariantID)}], Found: [List()]"
         )
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
@@ -1145,14 +1182,14 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val sharedSku               = arbitrarySample[CatalogueItemVariantSku]
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
           sku = Some(sharedSku),
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -1191,15 +1228,15 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           List(catalogueItemVariantRow)
       }
 
-      "fail with a UniqueConstraintViolation and roll back the whole transaction when the new name matches another active catalogue item's name" in new TestContext {
+      "fail with a UniqueConstraintViolation and roll back the whole transaction when the new name matches another non-archived catalogue item's name" in new TestContext {
         val organizationID    = arbitrarySample[OrganizationID]
         val catalogueItemRowA = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemRowB = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
 
         catalogueItemRowA.catalogueItemID shouldNot equal(catalogueItemRowB.catalogueItemID)
@@ -1208,12 +1245,12 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val catalogueItemVariantRowA = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRowA.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRowB = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRowB.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowA)).zioValue
@@ -1252,26 +1289,26 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRow1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRow2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemRowOther = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRowOther = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRowOther.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         catalogueItemRow.catalogueItemID shouldNot equal(catalogueItemRowOther.catalogueItemID)
@@ -1299,13 +1336,16 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue shouldBe (())
 
         val catalogueItemRowExpected = catalogueItemRow.copy(
-          updatedAt = UpdatedAt(instantNow)
+          isArchived = true,
+          updatedAt = UpdatedAt(instantNow),
         )
         val catalogueItemVariantRowExpected1 = catalogueItemVariantRow1.copy(
-          updatedAt = UpdatedAt(instantNow)
+          isArchived = true,
+          updatedAt = UpdatedAt(instantNow),
         )
         val catalogueItemVariantRowExpected2 = catalogueItemVariantRow2.copy(
-          updatedAt = UpdatedAt(instantNow)
+          isArchived = true,
+          updatedAt = UpdatedAt(instantNow),
         )
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue.toSet shouldBe
@@ -1318,29 +1358,29 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowEnabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowDisabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          isArchived = true,
         )
 
-        catalogueItemVariantRowEnabled.catalogueItemVariantID shouldNot equal(
-          catalogueItemVariantRowDisabled.catalogueItemVariantID
+        catalogueItemVariantRowNonArchived.catalogueItemVariantID shouldNot equal(
+          catalogueItemVariantRowArchived.catalogueItemVariantID
         )
-        catalogueItemVariantRowDisabled.updatedAt shouldNot equal(UpdatedAt(instantNow))
+        catalogueItemVariantRowArchived.updatedAt shouldNot equal(UpdatedAt(instantNow))
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
         postgresClient
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
-              List(catalogueItemVariantRowEnabled, catalogueItemVariantRowDisabled)
+              List(catalogueItemVariantRowNonArchived, catalogueItemVariantRowArchived)
             )
           )
           .zioValue
@@ -1352,47 +1392,47 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue shouldBe (())
 
         val catalogueItemRowExpected = catalogueItemRow.copy(
-          status = CatalogueItemStatus.Archived,
+          isArchived = true,
           updatedAt = UpdatedAt(instantNow),
         )
-        val catalogueItemVariantRowEnabledExpected = catalogueItemVariantRowEnabled.copy(
-          status = CatalogueItemVariantStatus.Archived,
+        val catalogueItemVariantRowNonArchivedExpected = catalogueItemVariantRowNonArchived.copy(
+          isArchived = true,
           updatedAt = UpdatedAt(instantNow),
         )
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
           List(catalogueItemRowExpected)
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue.toSet shouldBe
-          Set(catalogueItemVariantRowEnabledExpected, catalogueItemVariantRowDisabled)
+          Set(catalogueItemVariantRowNonArchivedExpected, catalogueItemVariantRowArchived)
       }
 
       "silently do nothing when the catalogue item is already archived, leaving its variants untouched" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
-        val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.disabled)),
+          isArchived = true,
         )
-        val catalogueItemVariantRowEnabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowDisabled.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          catalogueItemID = catalogueItemRowArchived.catalogueItemID,
+          isArchived = false,
         )
 
-        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowDisabled)).zioValue
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowArchived)).zioValue
         postgresClient
-          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowEnabled)))
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowNonArchived)))
           .zioValue
 
         (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once()
 
         catalogueRepository
-          .archiveCatalogueItem(organizationID, catalogueItemRowDisabled.catalogueItemID)
+          .archiveCatalogueItem(organizationID, catalogueItemRowArchived.catalogueItemID)
           .zioValue shouldBe (())
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
-          List(catalogueItemRowDisabled)
+          List(catalogueItemRowArchived)
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe
-          List(catalogueItemVariantRowEnabled)
+          List(catalogueItemVariantRowNonArchived)
       }
 
       "silently do nothing when the catalogue item does not exist" in new TestContext {
@@ -1415,12 +1455,12 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         val catalogueItemRowForeign = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationIDForeign,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRowForeign = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationIDForeign,
           catalogueItemID = catalogueItemRowForeign.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowForeign)).zioValue
@@ -1442,19 +1482,19 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
     }
 
     "archiveCatalogueItem and updateCatalogueItem" should {
-      "never leave an enabled variant on an archived catalogue item when an archive and a variant-adding update run concurrently" in new TestContext {
+      "never leave a non-archived variant on an archived catalogue item when an archive and a variant-adding update run concurrently" in new TestContext {
         val iterations = 50
 
         val catalogueItemRowsWithVariantRowAndInsertInput = List.fill(iterations) {
           val organizationID   = arbitrarySample[OrganizationID]
           val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
             organizationID = organizationID,
-            status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+            isArchived = false,
           )
           val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
             organizationID = organizationID,
             catalogueItemID = catalogueItemRow.catalogueItemID,
-            status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+            isArchived = false,
           )
           (
             catalogueItemRow = catalogueItemRow,
@@ -1511,14 +1551,14 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val catalogueItemRowsExpected =
           catalogueItemRowsWithVariantRowAndInsertInput.map(catalogueItemRowWithVariantRowAndInsertInput =>
             catalogueItemRowWithVariantRowAndInsertInput.catalogueItemRow.copy(
-              status = CatalogueItemStatus.Archived,
+              isArchived = true,
               updatedAt = UpdatedAt(instantNow),
             )
           )
         val catalogueItemVariantRowsExistingExpected =
           catalogueItemRowsWithVariantRowAndInsertInput.map(catalogueItemRowWithVariantRowAndInsertInput =>
             catalogueItemRowWithVariantRowAndInsertInput.catalogueItemVariantRow.copy(
-              status = CatalogueItemVariantStatus.Archived,
+              isArchived = true,
               updatedAt = UpdatedAt(instantNow),
             )
           )
@@ -1538,7 +1578,14 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
             catalogueItemVariantIDsExisting.contains(catalogueItemVariantRow.catalogueItemVariantID)
           )
           .toSet shouldBe catalogueItemVariantRowsExistingExpected.toSet
-        every(catalogueItemVariantRowsAdded.map(_.status)) shouldBe CatalogueItemVariantStatus.Archived
+        every(catalogueItemVariantRowsAdded.map(_.isArchived)) shouldBe true
+        catalogueItemVariantRowsAdded.foreach { catalogueItemVariantRowAdded =>
+          val input = catalogueItemRowsWithVariantRowAndInsertInput
+            .find(_.catalogueItemRow.catalogueItemID == catalogueItemVariantRowAdded.catalogueItemID)
+            .value
+            .insertCatalogueItemVariantInput
+          catalogueItemVariantRowAdded.status shouldBe input.status
+        }
       }
     }
 
@@ -1547,31 +1594,31 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRow1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRow2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRow3 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemRowOther = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRowOther = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRowOther.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         catalogueItemRow.catalogueItemID shouldNot equal(catalogueItemRowOther.catalogueItemID)
@@ -1610,7 +1657,8 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue shouldBe (())
 
         val catalogueItemVariantRowExpected1 = catalogueItemVariantRow1.copy(
-          updatedAt = UpdatedAt(instantNow)
+          isArchived = true,
+          updatedAt = UpdatedAt(instantNow),
         )
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue.toSet shouldBe
@@ -1624,32 +1672,32 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           )
       }
 
-      "fail with InvalidAction and change nothing when the variant is the last enabled variant of its catalogue item" in new TestContext {
+      "fail with InvalidAction and change nothing when the variant is the last non-archived variant of its catalogue item" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowEnabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowDisabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          isArchived = true,
         )
 
-        catalogueItemVariantRowEnabled.catalogueItemVariantID shouldNot equal(
-          catalogueItemVariantRowDisabled.catalogueItemVariantID
+        catalogueItemVariantRowNonArchived.catalogueItemVariantID shouldNot equal(
+          catalogueItemVariantRowArchived.catalogueItemVariantID
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
         postgresClient
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
-              List(catalogueItemVariantRowEnabled, catalogueItemVariantRowDisabled)
+              List(catalogueItemVariantRowNonArchived, catalogueItemVariantRowArchived)
             )
           )
           .zioValue
@@ -1660,41 +1708,41 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .archiveCatalogueItemVariant(
             organizationID,
             catalogueItemRow.catalogueItemID,
-            catalogueItemVariantRowEnabled.catalogueItemVariantID,
+            catalogueItemVariantRowNonArchived.catalogueItemVariantID,
           )
           .zioError shouldBe ServiceError.ForbiddenError.InvalidAction(
           "archiveCatalogueItemVariant",
-          s"Catalogue item variant [${catalogueItemVariantRowEnabled.catalogueItemVariantID}] is the last enabled variant of catalogue item [${catalogueItemRow.catalogueItemID}]; archive the catalogue item instead",
+          s"Catalogue item variant [${catalogueItemVariantRowNonArchived.catalogueItemVariantID}] is the last non-archived variant of catalogue item [${catalogueItemRow.catalogueItemID}]; archive the catalogue item instead",
         )
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
           List(catalogueItemRow)
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue.toSet shouldBe
-          Set(catalogueItemVariantRowEnabled, catalogueItemVariantRowDisabled)
+          Set(catalogueItemVariantRowNonArchived, catalogueItemVariantRowArchived)
       }
 
-      "allow exactly one of two concurrent archives of a catalogue item's last two enabled variants, rejecting the other with InvalidAction" in new TestContext {
-        // Each archive counts the item's enabled variants, then archives a different row. Without the item row lock
-        // serializing the two transactions, both see two enabled variants and both succeed, leaving none enabled.
+      "allow exactly one of two concurrent archives of a catalogue item's last two non-archived variants, rejecting the other with InvalidAction" in new TestContext {
+        // Each archive counts the item's non-archived variants, then archives a different row. Without the item row lock
+        // serializing the two transactions, both see two non-archived variants and both succeed, leaving none non-archived.
         val iterations = 50
 
         val catalogueItemRowsWithVariantRows = List.fill(iterations) {
           val organizationID   = arbitrarySample[OrganizationID]
           val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
             organizationID = organizationID,
-            status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+            isArchived = false,
           )
           (
             catalogueItemRow = catalogueItemRow,
             catalogueItemVariantRow1 = arbitrarySample[CatalogueItemVariantRow].copy(
               organizationID = organizationID,
               catalogueItemID = catalogueItemRow.catalogueItemID,
-              status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+              isArchived = false,
             ),
             catalogueItemVariantRow2 = arbitrarySample[CatalogueItemVariantRow].copy(
               organizationID = organizationID,
               catalogueItemID = catalogueItemRow.catalogueItemID,
-              status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+              isArchived = false,
             ),
           )
         }
@@ -1756,13 +1804,13 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           val invalidActionVariant1: Either[ServiceError, Unit] = Left(
             ServiceError.ForbiddenError.InvalidAction(
               "archiveCatalogueItemVariant",
-              s"Catalogue item variant [${catalogueItemRowWithVariantRows.catalogueItemVariantRow1.catalogueItemVariantID}] is the last enabled variant of catalogue item [$catalogueItemID]; archive the catalogue item instead",
+              s"Catalogue item variant [${catalogueItemRowWithVariantRows.catalogueItemVariantRow1.catalogueItemVariantID}] is the last non-archived variant of catalogue item [$catalogueItemID]; archive the catalogue item instead",
             )
           )
           val invalidActionVariant2: Either[ServiceError, Unit] = Left(
             ServiceError.ForbiddenError.InvalidAction(
               "archiveCatalogueItemVariant",
-              s"Catalogue item variant [${catalogueItemRowWithVariantRows.catalogueItemVariantRow2.catalogueItemVariantID}] is the last enabled variant of catalogue item [$catalogueItemID]; archive the catalogue item instead",
+              s"Catalogue item variant [${catalogueItemRowWithVariantRows.catalogueItemVariantRow2.catalogueItemVariantID}] is the last non-archived variant of catalogue item [$catalogueItemID]; archive the catalogue item instead",
             )
           )
 
@@ -1790,7 +1838,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
                   )
               List(
                 catalogueItemVariantRowsWinnerAndLoser.winner.copy(
-                  status = CatalogueItemVariantStatus.Archived,
+                  isArchived = true,
                   updatedAt = UpdatedAt(instantNow),
                 ),
                 catalogueItemVariantRowsWinnerAndLoser.loser,
@@ -1807,36 +1855,40 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowEnabled1 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowEnabled2 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowDisabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          isArchived = true,
         )
 
         Set(
-          catalogueItemVariantRowEnabled1.catalogueItemVariantID,
-          catalogueItemVariantRowEnabled2.catalogueItemVariantID,
-          catalogueItemVariantRowDisabled.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived1.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived2.catalogueItemVariantID,
+          catalogueItemVariantRowArchived.catalogueItemVariantID,
         ).size shouldBe 3
-        catalogueItemVariantRowDisabled.updatedAt shouldNot equal(UpdatedAt(instantNow))
+        catalogueItemVariantRowArchived.updatedAt shouldNot equal(UpdatedAt(instantNow))
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
         postgresClient
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
-              List(catalogueItemVariantRowEnabled1, catalogueItemVariantRowEnabled2, catalogueItemVariantRowDisabled)
+              List(
+                catalogueItemVariantRowNonArchived1,
+                catalogueItemVariantRowNonArchived2,
+                catalogueItemVariantRowArchived,
+              )
             )
           )
           .zioValue
@@ -1847,31 +1899,31 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .archiveCatalogueItemVariant(
             organizationID,
             catalogueItemRow.catalogueItemID,
-            catalogueItemVariantRowDisabled.catalogueItemVariantID,
+            catalogueItemVariantRowArchived.catalogueItemVariantID,
           )
           .zioValue shouldBe (())
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
           List(catalogueItemRow)
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue.toSet shouldBe
-          Set(catalogueItemVariantRowEnabled1, catalogueItemVariantRowEnabled2, catalogueItemVariantRowDisabled)
+          Set(catalogueItemVariantRowNonArchived1, catalogueItemVariantRowNonArchived2, catalogueItemVariantRowArchived)
       }
 
       "silently do nothing when the variant does not exist" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRow1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRow2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantIDMissing = arbitrarySample[CatalogueItemVariantID]
 
@@ -1904,26 +1956,26 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemRowOther = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRowOther1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRowOther.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRowOther2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRowOther.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         catalogueItemRow.catalogueItemID shouldNot equal(catalogueItemRowOther.catalogueItemID)
@@ -1969,17 +2021,17 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         val catalogueItemRowForeign = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationIDForeign,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRowForeign1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationIDForeign,
           catalogueItemID = catalogueItemRowForeign.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRowForeign2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationIDForeign,
           catalogueItemID = catalogueItemRowForeign.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         catalogueItemVariantRowForeign1.catalogueItemVariantID shouldNot equal(
@@ -2013,30 +2065,30 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
       "silently do nothing when the catalogue item is archived, leaving its variants untouched" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
-        val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.disabled)),
+          isArchived = true,
         )
-        val catalogueItemVariantRowEnabled1 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowDisabled.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          catalogueItemID = catalogueItemRowArchived.catalogueItemID,
+          isArchived = false,
         )
-        val catalogueItemVariantRowEnabled2 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowDisabled.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          catalogueItemID = catalogueItemRowArchived.catalogueItemID,
+          isArchived = false,
         )
 
-        catalogueItemVariantRowEnabled1.catalogueItemVariantID shouldNot equal(
-          catalogueItemVariantRowEnabled2.catalogueItemVariantID
+        catalogueItemVariantRowNonArchived1.catalogueItemVariantID shouldNot equal(
+          catalogueItemVariantRowNonArchived2.catalogueItemVariantID
         )
 
-        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowDisabled)).zioValue
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowArchived)).zioValue
         postgresClient
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
-              List(catalogueItemVariantRowEnabled1, catalogueItemVariantRowEnabled2)
+              List(catalogueItemVariantRowNonArchived1, catalogueItemVariantRowNonArchived2)
             )
           )
           .zioValue
@@ -2046,65 +2098,65 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         catalogueRepository
           .archiveCatalogueItemVariant(
             organizationID,
-            catalogueItemRowDisabled.catalogueItemID,
-            catalogueItemVariantRowEnabled1.catalogueItemVariantID,
+            catalogueItemRowArchived.catalogueItemID,
+            catalogueItemVariantRowNonArchived1.catalogueItemVariantID,
           )
           .zioValue shouldBe (())
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
-          List(catalogueItemRowDisabled)
+          List(catalogueItemRowArchived)
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue.toSet shouldBe
-          Set(catalogueItemVariantRowEnabled1, catalogueItemVariantRowEnabled2)
+          Set(catalogueItemVariantRowNonArchived1, catalogueItemVariantRowNonArchived2)
       }
     }
 
-    "getCatalogueItemWithVariantsActive" should {
-      "return the active catalogue item with only its enabled variants, oldest created first, excluding its archived variants and other catalogue items' variants" in new TestContext {
+    "getCatalogueItemWithVariants" should {
+      "return an item with its non-archived variants, oldest created first" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowEnabled1 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(3)),
         )
-        val catalogueItemVariantRowEnabled2 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(2)),
         )
-        val catalogueItemVariantRowEnabled3 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived3 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(1)),
         )
-        val catalogueItemVariantRowDisabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          isArchived = true,
         )
         val catalogueItemRowOther = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRowOther = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRowOther.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         catalogueItemRow.catalogueItemID shouldNot equal(catalogueItemRowOther.catalogueItemID)
         catalogueItemRow.name shouldNot equal(catalogueItemRowOther.name)
         Set(
-          catalogueItemVariantRowEnabled1.catalogueItemVariantID,
-          catalogueItemVariantRowEnabled2.catalogueItemVariantID,
-          catalogueItemVariantRowEnabled3.catalogueItemVariantID,
-          catalogueItemVariantRowDisabled.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived1.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived2.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived3.catalogueItemVariantID,
+          catalogueItemVariantRowArchived.catalogueItemVariantID,
           catalogueItemVariantRowOther.catalogueItemVariantID,
         ).size shouldBe 5
 
@@ -2115,10 +2167,10 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
               List(
-                catalogueItemVariantRowEnabled3,
-                catalogueItemVariantRowEnabled1,
-                catalogueItemVariantRowDisabled,
-                catalogueItemVariantRowEnabled2,
+                catalogueItemVariantRowNonArchived3,
+                catalogueItemVariantRowNonArchived1,
+                catalogueItemVariantRowArchived,
+                catalogueItemVariantRowNonArchived2,
                 catalogueItemVariantRowOther,
               )
             )
@@ -2126,14 +2178,14 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue
 
         catalogueRepository
-          .getCatalogueItemWithVariantsActive(organizationID, catalogueItemRow.catalogueItemID)
+          .getCatalogueItemWithVariants(organizationID, catalogueItemRow.catalogueItemID)
           .zioValue shouldBe Some(
           CatalogueItemWithVariantsRow(
             catalogueItemRow,
             NonEmptyChunk(
-              catalogueItemVariantRowEnabled1,
-              catalogueItemVariantRowEnabled2,
-              catalogueItemVariantRowEnabled3,
+              catalogueItemVariantRowNonArchived1,
+              catalogueItemVariantRowNonArchived2,
+              catalogueItemVariantRowNonArchived3,
             ),
           )
         )
@@ -2144,42 +2196,42 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val catalogueItemID = arbitrarySample[CatalogueItemID]
 
         catalogueRepository
-          .getCatalogueItemWithVariantsActive(organizationID, catalogueItemID)
+          .getCatalogueItemWithVariants(organizationID, catalogueItemID)
           .zioValue shouldBe None
       }
 
-      "return None when the catalogue item is archived, even though it has enabled variants" in new TestContext {
+      "return None when the catalogue item is archived, even though it has non-archived variants" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
-        val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.disabled)),
+          isArchived = true,
         )
-        val catalogueItemVariantRowEnabled1 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowDisabled.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          catalogueItemID = catalogueItemRowArchived.catalogueItemID,
+          isArchived = false,
         )
-        val catalogueItemVariantRowEnabled2 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowDisabled.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          catalogueItemID = catalogueItemRowArchived.catalogueItemID,
+          isArchived = false,
         )
 
-        catalogueItemVariantRowEnabled1.catalogueItemVariantID shouldNot equal(
-          catalogueItemVariantRowEnabled2.catalogueItemVariantID
+        catalogueItemVariantRowNonArchived1.catalogueItemVariantID shouldNot equal(
+          catalogueItemVariantRowNonArchived2.catalogueItemVariantID
         )
 
-        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowDisabled)).zioValue
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowArchived)).zioValue
         postgresClient
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
-              List(catalogueItemVariantRowEnabled1, catalogueItemVariantRowEnabled2)
+              List(catalogueItemVariantRowNonArchived1, catalogueItemVariantRowNonArchived2)
             )
           )
           .zioValue
 
         catalogueRepository
-          .getCatalogueItemWithVariantsActive(organizationID, catalogueItemRowDisabled.catalogueItemID)
+          .getCatalogueItemWithVariants(organizationID, catalogueItemRowArchived.catalogueItemID)
           .zioValue shouldBe None
       }
 
@@ -2191,17 +2243,17 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         val catalogueItemRowForeign = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationIDForeign,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRowForeign1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationIDForeign,
           catalogueItemID = catalogueItemRowForeign.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRowForeign2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationIDForeign,
           catalogueItemID = catalogueItemRowForeign.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         catalogueItemVariantRowForeign1.catalogueItemVariantID shouldNot equal(
@@ -2218,111 +2270,111 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue
 
         catalogueRepository
-          .getCatalogueItemWithVariantsActive(organizationID, catalogueItemRowForeign.catalogueItemID)
+          .getCatalogueItemWithVariants(organizationID, catalogueItemRowForeign.catalogueItemID)
           .zioValue shouldBe None
       }
 
-      "return None when the active catalogue item has only archived variants" in new TestContext {
+      "return None when the non-archived catalogue item has only archived variants" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowDisabled1 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          isArchived = true,
         )
-        val catalogueItemVariantRowDisabled2 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          isArchived = true,
         )
 
-        catalogueItemVariantRowDisabled1.catalogueItemVariantID shouldNot equal(
-          catalogueItemVariantRowDisabled2.catalogueItemVariantID
+        catalogueItemVariantRowArchived1.catalogueItemVariantID shouldNot equal(
+          catalogueItemVariantRowArchived2.catalogueItemVariantID
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
         postgresClient
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
-              List(catalogueItemVariantRowDisabled1, catalogueItemVariantRowDisabled2)
+              List(catalogueItemVariantRowArchived1, catalogueItemVariantRowArchived2)
             )
           )
           .zioValue
 
         catalogueRepository
-          .getCatalogueItemWithVariantsActive(organizationID, catalogueItemRow.catalogueItemID)
+          .getCatalogueItemWithVariants(organizationID, catalogueItemRow.catalogueItemID)
           .zioValue shouldBe None
       }
     }
 
-    "getAllCatalogueItemSummariesEnabled" should {
-      "return every enabled catalogue item in the organization oldest created first, each with only its enabled variants oldest created first, excluding disabled catalogue items, disabled variants, and other organizations' catalogue items" in new TestContext {
+    "getAllCatalogueItemSummaries" should {
+      "return non-archived items with only non-archived variants, excluding archived records and other organizations" in new TestContext {
         val organizationID        = arbitrarySample[OrganizationID]
         val organizationIDForeign = arbitrarySample[OrganizationID]
         val catalogueItemRow1     = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(2)),
         )
         val catalogueItemRow2 = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(1)),
         )
-        val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.disabled)),
+          isArchived = true,
         )
         val catalogueItemRowForeign = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationIDForeign,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowEnabled1a = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived1a = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow1.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(2)),
         )
-        val catalogueItemVariantRowEnabled1b = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived1b = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow1.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(1)),
         )
-        val catalogueItemVariantRowDisabled1 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow1.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          isArchived = true,
         )
-        val catalogueItemVariantRowEnabled2a = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived2a = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow2.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(2)),
         )
-        val catalogueItemVariantRowEnabled2b = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived2b = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow2.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(1)),
         )
-        val catalogueItemVariantRowDisabled2 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow2.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          isArchived = true,
         )
-        val catalogueItemVariantRowOfItemDisabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowOfItemArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowDisabled.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          catalogueItemID = catalogueItemRowArchived.catalogueItemID,
+          isArchived = false,
         )
         val catalogueItemVariantRowForeign = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationIDForeign,
           catalogueItemID = catalogueItemRowForeign.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         val catalogueItemSummaryRowExpected1 = CatalogueItemSummaryRow(
@@ -2332,20 +2384,20 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           status = catalogueItemRow1.status,
           catalogueItemVariantSummaryRows = NonEmptyChunk(
             CatalogueItemVariantSummaryRow(
-              catalogueItemVariantID = catalogueItemVariantRowEnabled1a.catalogueItemVariantID,
-              sku = catalogueItemVariantRowEnabled1a.sku,
-              label = catalogueItemVariantRowEnabled1a.label,
-              price = catalogueItemVariantRowEnabled1a.price,
-              sellingUnit = catalogueItemVariantRowEnabled1a.sellingUnit,
-              status = catalogueItemVariantRowEnabled1a.status,
+              catalogueItemVariantID = catalogueItemVariantRowNonArchived1a.catalogueItemVariantID,
+              sku = catalogueItemVariantRowNonArchived1a.sku,
+              label = catalogueItemVariantRowNonArchived1a.label,
+              price = catalogueItemVariantRowNonArchived1a.price,
+              sellingUnit = catalogueItemVariantRowNonArchived1a.sellingUnit,
+              status = catalogueItemVariantRowNonArchived1a.status,
             ),
             CatalogueItemVariantSummaryRow(
-              catalogueItemVariantID = catalogueItemVariantRowEnabled1b.catalogueItemVariantID,
-              sku = catalogueItemVariantRowEnabled1b.sku,
-              label = catalogueItemVariantRowEnabled1b.label,
-              price = catalogueItemVariantRowEnabled1b.price,
-              sellingUnit = catalogueItemVariantRowEnabled1b.sellingUnit,
-              status = catalogueItemVariantRowEnabled1b.status,
+              catalogueItemVariantID = catalogueItemVariantRowNonArchived1b.catalogueItemVariantID,
+              sku = catalogueItemVariantRowNonArchived1b.sku,
+              label = catalogueItemVariantRowNonArchived1b.label,
+              price = catalogueItemVariantRowNonArchived1b.price,
+              sellingUnit = catalogueItemVariantRowNonArchived1b.sellingUnit,
+              status = catalogueItemVariantRowNonArchived1b.status,
             ),
           ),
         )
@@ -2356,20 +2408,20 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           status = catalogueItemRow2.status,
           catalogueItemVariantSummaryRows = NonEmptyChunk(
             CatalogueItemVariantSummaryRow(
-              catalogueItemVariantID = catalogueItemVariantRowEnabled2a.catalogueItemVariantID,
-              sku = catalogueItemVariantRowEnabled2a.sku,
-              label = catalogueItemVariantRowEnabled2a.label,
-              price = catalogueItemVariantRowEnabled2a.price,
-              sellingUnit = catalogueItemVariantRowEnabled2a.sellingUnit,
-              status = catalogueItemVariantRowEnabled2a.status,
+              catalogueItemVariantID = catalogueItemVariantRowNonArchived2a.catalogueItemVariantID,
+              sku = catalogueItemVariantRowNonArchived2a.sku,
+              label = catalogueItemVariantRowNonArchived2a.label,
+              price = catalogueItemVariantRowNonArchived2a.price,
+              sellingUnit = catalogueItemVariantRowNonArchived2a.sellingUnit,
+              status = catalogueItemVariantRowNonArchived2a.status,
             ),
             CatalogueItemVariantSummaryRow(
-              catalogueItemVariantID = catalogueItemVariantRowEnabled2b.catalogueItemVariantID,
-              sku = catalogueItemVariantRowEnabled2b.sku,
-              label = catalogueItemVariantRowEnabled2b.label,
-              price = catalogueItemVariantRowEnabled2b.price,
-              sellingUnit = catalogueItemVariantRowEnabled2b.sellingUnit,
-              status = catalogueItemVariantRowEnabled2b.status,
+              catalogueItemVariantID = catalogueItemVariantRowNonArchived2b.catalogueItemVariantID,
+              sku = catalogueItemVariantRowNonArchived2b.sku,
+              label = catalogueItemVariantRowNonArchived2b.label,
+              price = catalogueItemVariantRowNonArchived2b.price,
+              sellingUnit = catalogueItemVariantRowNonArchived2b.sellingUnit,
+              status = catalogueItemVariantRowNonArchived2b.status,
             ),
           ),
         )
@@ -2379,24 +2431,24 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         Set(
           catalogueItemRow1.catalogueItemID,
           catalogueItemRow2.catalogueItemID,
-          catalogueItemRowDisabled.catalogueItemID,
+          catalogueItemRowArchived.catalogueItemID,
           catalogueItemRowForeign.catalogueItemID,
         ).size shouldBe 4
         Set(
-          catalogueItemVariantRowEnabled1a.catalogueItemVariantID,
-          catalogueItemVariantRowEnabled1b.catalogueItemVariantID,
-          catalogueItemVariantRowDisabled1.catalogueItemVariantID,
-          catalogueItemVariantRowEnabled2a.catalogueItemVariantID,
-          catalogueItemVariantRowEnabled2b.catalogueItemVariantID,
-          catalogueItemVariantRowDisabled2.catalogueItemVariantID,
-          catalogueItemVariantRowOfItemDisabled.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived1a.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived1b.catalogueItemVariantID,
+          catalogueItemVariantRowArchived1.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived2a.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived2b.catalogueItemVariantID,
+          catalogueItemVariantRowArchived2.catalogueItemVariantID,
+          catalogueItemVariantRowOfItemArchived.catalogueItemVariantID,
           catalogueItemVariantRowForeign.catalogueItemVariantID,
         ).size shouldBe 8
 
         postgresClient
           .executeQuery(
             catalogueQueries.insertCatalogueItemRows(
-              List(catalogueItemRow2, catalogueItemRowDisabled, catalogueItemRow1, catalogueItemRowForeign)
+              List(catalogueItemRow2, catalogueItemRowArchived, catalogueItemRow1, catalogueItemRowForeign)
             )
           )
           .zioValue
@@ -2404,95 +2456,95 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
               List(
-                catalogueItemVariantRowEnabled2b,
-                catalogueItemVariantRowEnabled1b,
-                catalogueItemVariantRowDisabled1,
-                catalogueItemVariantRowOfItemDisabled,
-                catalogueItemVariantRowEnabled2a,
-                catalogueItemVariantRowDisabled2,
-                catalogueItemVariantRowEnabled1a,
+                catalogueItemVariantRowNonArchived2b,
+                catalogueItemVariantRowNonArchived1b,
+                catalogueItemVariantRowArchived1,
+                catalogueItemVariantRowOfItemArchived,
+                catalogueItemVariantRowNonArchived2a,
+                catalogueItemVariantRowArchived2,
+                catalogueItemVariantRowNonArchived1a,
                 catalogueItemVariantRowForeign,
               )
             )
           )
           .zioValue
 
-        catalogueRepository.getAllCatalogueItemSummariesEnabled(organizationID).zioValue shouldBe
+        catalogueRepository.getAllCatalogueItemSummaries(organizationID).zioValue shouldBe
           List(catalogueItemSummaryRowExpected1, catalogueItemSummaryRowExpected2)
       }
 
       "return an empty list when the organization has no catalogue items" in new TestContext {
         val organizationID = arbitrarySample[OrganizationID]
 
-        catalogueRepository.getAllCatalogueItemSummariesEnabled(organizationID).zioValue shouldBe Nil
+        catalogueRepository.getAllCatalogueItemSummaries(organizationID).zioValue shouldBe Nil
       }
 
-      "return an empty list when the organization's only catalogue items are disabled, even though they have enabled variants" in new TestContext {
+      "return an empty list when the organization's only catalogue items are archived, even though they have non-archived variants" in new TestContext {
         val organizationID            = arbitrarySample[OrganizationID]
-        val catalogueItemRowDisabled1 = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRowArchived1 = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.disabled)),
+          isArchived = true,
         )
-        val catalogueItemRowDisabled2 = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRowArchived2 = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.disabled)),
+          isArchived = true,
         )
-        val catalogueItemVariantRowEnabled1 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowDisabled1.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          catalogueItemID = catalogueItemRowArchived1.catalogueItemID,
+          isArchived = false,
         )
-        val catalogueItemVariantRowEnabled2 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowDisabled2.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          catalogueItemID = catalogueItemRowArchived2.catalogueItemID,
+          isArchived = false,
         )
 
-        catalogueItemRowDisabled1.catalogueItemID shouldNot equal(catalogueItemRowDisabled2.catalogueItemID)
-        catalogueItemVariantRowEnabled1.catalogueItemVariantID shouldNot equal(
-          catalogueItemVariantRowEnabled2.catalogueItemVariantID
+        catalogueItemRowArchived1.catalogueItemID shouldNot equal(catalogueItemRowArchived2.catalogueItemID)
+        catalogueItemVariantRowNonArchived1.catalogueItemVariantID shouldNot equal(
+          catalogueItemVariantRowNonArchived2.catalogueItemVariantID
         )
 
         postgresClient
           .executeQuery(
-            catalogueQueries.insertCatalogueItemRows(List(catalogueItemRowDisabled1, catalogueItemRowDisabled2))
+            catalogueQueries.insertCatalogueItemRows(List(catalogueItemRowArchived1, catalogueItemRowArchived2))
           )
           .zioValue
         postgresClient
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
-              List(catalogueItemVariantRowEnabled1, catalogueItemVariantRowEnabled2)
+              List(catalogueItemVariantRowNonArchived1, catalogueItemVariantRowNonArchived2)
             )
           )
           .zioValue
 
-        catalogueRepository.getAllCatalogueItemSummariesEnabled(organizationID).zioValue shouldBe Nil
+        catalogueRepository.getAllCatalogueItemSummaries(organizationID).zioValue shouldBe Nil
       }
 
-      "exclude an enabled catalogue item whose variants are all disabled" in new TestContext {
+      "exclude a non-archived catalogue item whose variants are all archived" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemRowWithVariantsDisabled = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRowWithVariantsArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowEnabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowDisabled1 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowWithVariantsDisabled.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          catalogueItemID = catalogueItemRowWithVariantsArchived.catalogueItemID,
+          isArchived = true,
         )
-        val catalogueItemVariantRowDisabled2 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowWithVariantsDisabled.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          catalogueItemID = catalogueItemRowWithVariantsArchived.catalogueItemID,
+          isArchived = true,
         )
 
         val catalogueItemSummaryRowExpected = CatalogueItemSummaryRow(
@@ -2502,97 +2554,101 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           status = catalogueItemRow.status,
           catalogueItemVariantSummaryRows = NonEmptyChunk(
             CatalogueItemVariantSummaryRow(
-              catalogueItemVariantID = catalogueItemVariantRowEnabled.catalogueItemVariantID,
-              sku = catalogueItemVariantRowEnabled.sku,
-              label = catalogueItemVariantRowEnabled.label,
-              price = catalogueItemVariantRowEnabled.price,
-              sellingUnit = catalogueItemVariantRowEnabled.sellingUnit,
-              status = catalogueItemVariantRowEnabled.status,
+              catalogueItemVariantID = catalogueItemVariantRowNonArchived.catalogueItemVariantID,
+              sku = catalogueItemVariantRowNonArchived.sku,
+              label = catalogueItemVariantRowNonArchived.label,
+              price = catalogueItemVariantRowNonArchived.price,
+              sellingUnit = catalogueItemVariantRowNonArchived.sellingUnit,
+              status = catalogueItemVariantRowNonArchived.status,
             )
           ),
         )
 
-        catalogueItemRow.catalogueItemID shouldNot equal(catalogueItemRowWithVariantsDisabled.catalogueItemID)
-        catalogueItemRow.name shouldNot equal(catalogueItemRowWithVariantsDisabled.name)
+        catalogueItemRow.catalogueItemID shouldNot equal(catalogueItemRowWithVariantsArchived.catalogueItemID)
+        catalogueItemRow.name shouldNot equal(catalogueItemRowWithVariantsArchived.name)
         Set(
-          catalogueItemVariantRowEnabled.catalogueItemVariantID,
-          catalogueItemVariantRowDisabled1.catalogueItemVariantID,
-          catalogueItemVariantRowDisabled2.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived.catalogueItemVariantID,
+          catalogueItemVariantRowArchived1.catalogueItemVariantID,
+          catalogueItemVariantRowArchived2.catalogueItemVariantID,
         ).size shouldBe 3
 
         postgresClient
           .executeQuery(
-            catalogueQueries.insertCatalogueItemRows(List(catalogueItemRow, catalogueItemRowWithVariantsDisabled))
+            catalogueQueries.insertCatalogueItemRows(List(catalogueItemRow, catalogueItemRowWithVariantsArchived))
           )
           .zioValue
         postgresClient
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
-              List(catalogueItemVariantRowEnabled, catalogueItemVariantRowDisabled1, catalogueItemVariantRowDisabled2)
+              List(
+                catalogueItemVariantRowNonArchived,
+                catalogueItemVariantRowArchived1,
+                catalogueItemVariantRowArchived2,
+              )
             )
           )
           .zioValue
 
-        catalogueRepository.getAllCatalogueItemSummariesEnabled(organizationID).zioValue shouldBe
+        catalogueRepository.getAllCatalogueItemSummaries(organizationID).zioValue shouldBe
           List(catalogueItemSummaryRowExpected)
       }
     }
 
-    "getCatalogueItemSummariesEnabled" should {
-      "return the requested enabled catalogue items oldest created first regardless of request order, each with only its enabled variants oldest created first, excluding disabled variants and catalogue items not requested" in new TestContext {
+    "getCatalogueItemSummaries" should {
+      "return the requested non-archived catalogue items oldest created first regardless of request order, each with only its non-archived variants oldest created first, excluding archived variants and catalogue items not requested" in new TestContext {
         val organizationID    = arbitrarySample[OrganizationID]
         val catalogueItemRow1 = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(2)),
         )
         val catalogueItemRow2 = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(1)),
         )
         val catalogueItemRowNotRequested = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowEnabled1a = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived1a = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow1.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(2)),
         )
-        val catalogueItemVariantRowEnabled1b = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived1b = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow1.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(1)),
         )
-        val catalogueItemVariantRowDisabled1 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow1.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          isArchived = true,
         )
-        val catalogueItemVariantRowEnabled2a = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived2a = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow2.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(2)),
         )
-        val catalogueItemVariantRowEnabled2b = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived2b = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow2.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
           createdAt = CreatedAt(instantNow.minusSeconds(1)),
         )
-        val catalogueItemVariantRowDisabled2 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow2.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          isArchived = true,
         )
         val catalogueItemVariantRowOfItemNotRequested = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRowNotRequested.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         val catalogueItemSummaryRowExpected1 = CatalogueItemSummaryRow(
@@ -2602,20 +2658,20 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           status = catalogueItemRow1.status,
           catalogueItemVariantSummaryRows = NonEmptyChunk(
             CatalogueItemVariantSummaryRow(
-              catalogueItemVariantID = catalogueItemVariantRowEnabled1a.catalogueItemVariantID,
-              sku = catalogueItemVariantRowEnabled1a.sku,
-              label = catalogueItemVariantRowEnabled1a.label,
-              price = catalogueItemVariantRowEnabled1a.price,
-              sellingUnit = catalogueItemVariantRowEnabled1a.sellingUnit,
-              status = catalogueItemVariantRowEnabled1a.status,
+              catalogueItemVariantID = catalogueItemVariantRowNonArchived1a.catalogueItemVariantID,
+              sku = catalogueItemVariantRowNonArchived1a.sku,
+              label = catalogueItemVariantRowNonArchived1a.label,
+              price = catalogueItemVariantRowNonArchived1a.price,
+              sellingUnit = catalogueItemVariantRowNonArchived1a.sellingUnit,
+              status = catalogueItemVariantRowNonArchived1a.status,
             ),
             CatalogueItemVariantSummaryRow(
-              catalogueItemVariantID = catalogueItemVariantRowEnabled1b.catalogueItemVariantID,
-              sku = catalogueItemVariantRowEnabled1b.sku,
-              label = catalogueItemVariantRowEnabled1b.label,
-              price = catalogueItemVariantRowEnabled1b.price,
-              sellingUnit = catalogueItemVariantRowEnabled1b.sellingUnit,
-              status = catalogueItemVariantRowEnabled1b.status,
+              catalogueItemVariantID = catalogueItemVariantRowNonArchived1b.catalogueItemVariantID,
+              sku = catalogueItemVariantRowNonArchived1b.sku,
+              label = catalogueItemVariantRowNonArchived1b.label,
+              price = catalogueItemVariantRowNonArchived1b.price,
+              sellingUnit = catalogueItemVariantRowNonArchived1b.sellingUnit,
+              status = catalogueItemVariantRowNonArchived1b.status,
             ),
           ),
         )
@@ -2626,20 +2682,20 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           status = catalogueItemRow2.status,
           catalogueItemVariantSummaryRows = NonEmptyChunk(
             CatalogueItemVariantSummaryRow(
-              catalogueItemVariantID = catalogueItemVariantRowEnabled2a.catalogueItemVariantID,
-              sku = catalogueItemVariantRowEnabled2a.sku,
-              label = catalogueItemVariantRowEnabled2a.label,
-              price = catalogueItemVariantRowEnabled2a.price,
-              sellingUnit = catalogueItemVariantRowEnabled2a.sellingUnit,
-              status = catalogueItemVariantRowEnabled2a.status,
+              catalogueItemVariantID = catalogueItemVariantRowNonArchived2a.catalogueItemVariantID,
+              sku = catalogueItemVariantRowNonArchived2a.sku,
+              label = catalogueItemVariantRowNonArchived2a.label,
+              price = catalogueItemVariantRowNonArchived2a.price,
+              sellingUnit = catalogueItemVariantRowNonArchived2a.sellingUnit,
+              status = catalogueItemVariantRowNonArchived2a.status,
             ),
             CatalogueItemVariantSummaryRow(
-              catalogueItemVariantID = catalogueItemVariantRowEnabled2b.catalogueItemVariantID,
-              sku = catalogueItemVariantRowEnabled2b.sku,
-              label = catalogueItemVariantRowEnabled2b.label,
-              price = catalogueItemVariantRowEnabled2b.price,
-              sellingUnit = catalogueItemVariantRowEnabled2b.sellingUnit,
-              status = catalogueItemVariantRowEnabled2b.status,
+              catalogueItemVariantID = catalogueItemVariantRowNonArchived2b.catalogueItemVariantID,
+              sku = catalogueItemVariantRowNonArchived2b.sku,
+              label = catalogueItemVariantRowNonArchived2b.label,
+              price = catalogueItemVariantRowNonArchived2b.price,
+              sellingUnit = catalogueItemVariantRowNonArchived2b.sellingUnit,
+              status = catalogueItemVariantRowNonArchived2b.status,
             ),
           ),
         )
@@ -2651,12 +2707,12 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           catalogueItemRowNotRequested.catalogueItemID,
         ).size shouldBe 3
         Set(
-          catalogueItemVariantRowEnabled1a.catalogueItemVariantID,
-          catalogueItemVariantRowEnabled1b.catalogueItemVariantID,
-          catalogueItemVariantRowDisabled1.catalogueItemVariantID,
-          catalogueItemVariantRowEnabled2a.catalogueItemVariantID,
-          catalogueItemVariantRowEnabled2b.catalogueItemVariantID,
-          catalogueItemVariantRowDisabled2.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived1a.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived1b.catalogueItemVariantID,
+          catalogueItemVariantRowArchived1.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived2a.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived2b.catalogueItemVariantID,
+          catalogueItemVariantRowArchived2.catalogueItemVariantID,
           catalogueItemVariantRowOfItemNotRequested.catalogueItemVariantID,
         ).size shouldBe 7
 
@@ -2671,45 +2727,45 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
               List(
-                catalogueItemVariantRowEnabled2b,
-                catalogueItemVariantRowEnabled1b,
-                catalogueItemVariantRowDisabled1,
+                catalogueItemVariantRowNonArchived2b,
+                catalogueItemVariantRowNonArchived1b,
+                catalogueItemVariantRowArchived1,
                 catalogueItemVariantRowOfItemNotRequested,
-                catalogueItemVariantRowEnabled2a,
-                catalogueItemVariantRowDisabled2,
-                catalogueItemVariantRowEnabled1a,
+                catalogueItemVariantRowNonArchived2a,
+                catalogueItemVariantRowArchived2,
+                catalogueItemVariantRowNonArchived1a,
               )
             )
           )
           .zioValue
 
         catalogueRepository
-          .getCatalogueItemSummariesEnabled(
+          .getCatalogueItemSummaries(
             organizationID,
             NonEmptyChunk(catalogueItemRow2.catalogueItemID, catalogueItemRow1.catalogueItemID),
           )
           .zioValue shouldBe List(catalogueItemSummaryRowExpected1, catalogueItemSummaryRowExpected2)
       }
 
-      "exclude a requested catalogue item that is disabled, even though it has enabled variants" in new TestContext {
+      "exclude a requested catalogue item that is archived, even though it has non-archived variants" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.disabled)),
+          isArchived = true,
         )
-        val catalogueItemVariantRowEnabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowOfItemDisabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowOfItemArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowDisabled.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          catalogueItemID = catalogueItemRowArchived.catalogueItemID,
+          isArchived = false,
         )
 
         val catalogueItemSummaryRowExpected = CatalogueItemSummaryRow(
@@ -2719,37 +2775,37 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           status = catalogueItemRow.status,
           catalogueItemVariantSummaryRows = NonEmptyChunk(
             CatalogueItemVariantSummaryRow(
-              catalogueItemVariantID = catalogueItemVariantRowEnabled.catalogueItemVariantID,
-              sku = catalogueItemVariantRowEnabled.sku,
-              label = catalogueItemVariantRowEnabled.label,
-              price = catalogueItemVariantRowEnabled.price,
-              sellingUnit = catalogueItemVariantRowEnabled.sellingUnit,
-              status = catalogueItemVariantRowEnabled.status,
+              catalogueItemVariantID = catalogueItemVariantRowNonArchived.catalogueItemVariantID,
+              sku = catalogueItemVariantRowNonArchived.sku,
+              label = catalogueItemVariantRowNonArchived.label,
+              price = catalogueItemVariantRowNonArchived.price,
+              sellingUnit = catalogueItemVariantRowNonArchived.sellingUnit,
+              status = catalogueItemVariantRowNonArchived.status,
             )
           ),
         )
 
-        catalogueItemRow.catalogueItemID shouldNot equal(catalogueItemRowDisabled.catalogueItemID)
-        catalogueItemRow.name shouldNot equal(catalogueItemRowDisabled.name)
-        catalogueItemVariantRowEnabled.catalogueItemVariantID shouldNot equal(
-          catalogueItemVariantRowOfItemDisabled.catalogueItemVariantID
+        catalogueItemRow.catalogueItemID shouldNot equal(catalogueItemRowArchived.catalogueItemID)
+        catalogueItemRow.name shouldNot equal(catalogueItemRowArchived.name)
+        catalogueItemVariantRowNonArchived.catalogueItemVariantID shouldNot equal(
+          catalogueItemVariantRowOfItemArchived.catalogueItemVariantID
         )
 
         postgresClient
-          .executeQuery(catalogueQueries.insertCatalogueItemRows(List(catalogueItemRow, catalogueItemRowDisabled)))
+          .executeQuery(catalogueQueries.insertCatalogueItemRows(List(catalogueItemRow, catalogueItemRowArchived)))
           .zioValue
         postgresClient
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
-              List(catalogueItemVariantRowEnabled, catalogueItemVariantRowOfItemDisabled)
+              List(catalogueItemVariantRowNonArchived, catalogueItemVariantRowOfItemArchived)
             )
           )
           .zioValue
 
         catalogueRepository
-          .getCatalogueItemSummariesEnabled(
+          .getCatalogueItemSummaries(
             organizationID,
-            NonEmptyChunk(catalogueItemRow.catalogueItemID, catalogueItemRowDisabled.catalogueItemID),
+            NonEmptyChunk(catalogueItemRow.catalogueItemID, catalogueItemRowArchived.catalogueItemID),
           )
           .zioValue shouldBe List(catalogueItemSummaryRowExpected)
       }
@@ -2760,21 +2816,21 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         val catalogueItemIDMissing = arbitrarySample[CatalogueItemID]
         val catalogueItemRow       = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemRowForeign = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationIDForeign,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowEnabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
         val catalogueItemVariantRowForeign = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationIDForeign,
           catalogueItemID = catalogueItemRowForeign.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
 
         val catalogueItemSummaryRowExpected = CatalogueItemSummaryRow(
@@ -2784,12 +2840,12 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           status = catalogueItemRow.status,
           catalogueItemVariantSummaryRows = NonEmptyChunk(
             CatalogueItemVariantSummaryRow(
-              catalogueItemVariantID = catalogueItemVariantRowEnabled.catalogueItemVariantID,
-              sku = catalogueItemVariantRowEnabled.sku,
-              label = catalogueItemVariantRowEnabled.label,
-              price = catalogueItemVariantRowEnabled.price,
-              sellingUnit = catalogueItemVariantRowEnabled.sellingUnit,
-              status = catalogueItemVariantRowEnabled.status,
+              catalogueItemVariantID = catalogueItemVariantRowNonArchived.catalogueItemVariantID,
+              sku = catalogueItemVariantRowNonArchived.sku,
+              label = catalogueItemVariantRowNonArchived.label,
+              price = catalogueItemVariantRowNonArchived.price,
+              sellingUnit = catalogueItemVariantRowNonArchived.sellingUnit,
+              status = catalogueItemVariantRowNonArchived.status,
             )
           ),
         )
@@ -2800,7 +2856,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           catalogueItemRowForeign.catalogueItemID,
           catalogueItemIDMissing,
         ).size shouldBe 3
-        catalogueItemVariantRowEnabled.catalogueItemVariantID shouldNot equal(
+        catalogueItemVariantRowNonArchived.catalogueItemVariantID shouldNot equal(
           catalogueItemVariantRowForeign.catalogueItemVariantID
         )
 
@@ -2810,13 +2866,13 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         postgresClient
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
-              List(catalogueItemVariantRowEnabled, catalogueItemVariantRowForeign)
+              List(catalogueItemVariantRowNonArchived, catalogueItemVariantRowForeign)
             )
           )
           .zioValue
 
         catalogueRepository
-          .getCatalogueItemSummariesEnabled(
+          .getCatalogueItemSummaries(
             organizationID,
             NonEmptyChunk(
               catalogueItemRow.catalogueItemID,
@@ -2827,30 +2883,30 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue shouldBe List(catalogueItemSummaryRowExpected)
       }
 
-      "exclude a requested enabled catalogue item whose variants are all disabled" in new TestContext {
+      "exclude a requested non-archived catalogue item whose variants are all archived" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemRowWithVariantsDisabled = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRowWithVariantsArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowEnabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowNonArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          isArchived = false,
         )
-        val catalogueItemVariantRowDisabled1 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowWithVariantsDisabled.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          catalogueItemID = catalogueItemRowWithVariantsArchived.catalogueItemID,
+          isArchived = true,
         )
-        val catalogueItemVariantRowDisabled2 = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowWithVariantsDisabled.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          catalogueItemID = catalogueItemRowWithVariantsArchived.catalogueItemID,
+          isArchived = true,
         )
 
         val catalogueItemSummaryRowExpected = CatalogueItemSummaryRow(
@@ -2860,85 +2916,89 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           status = catalogueItemRow.status,
           catalogueItemVariantSummaryRows = NonEmptyChunk(
             CatalogueItemVariantSummaryRow(
-              catalogueItemVariantID = catalogueItemVariantRowEnabled.catalogueItemVariantID,
-              sku = catalogueItemVariantRowEnabled.sku,
-              label = catalogueItemVariantRowEnabled.label,
-              price = catalogueItemVariantRowEnabled.price,
-              sellingUnit = catalogueItemVariantRowEnabled.sellingUnit,
-              status = catalogueItemVariantRowEnabled.status,
+              catalogueItemVariantID = catalogueItemVariantRowNonArchived.catalogueItemVariantID,
+              sku = catalogueItemVariantRowNonArchived.sku,
+              label = catalogueItemVariantRowNonArchived.label,
+              price = catalogueItemVariantRowNonArchived.price,
+              sellingUnit = catalogueItemVariantRowNonArchived.sellingUnit,
+              status = catalogueItemVariantRowNonArchived.status,
             )
           ),
         )
 
-        catalogueItemRow.catalogueItemID shouldNot equal(catalogueItemRowWithVariantsDisabled.catalogueItemID)
-        catalogueItemRow.name shouldNot equal(catalogueItemRowWithVariantsDisabled.name)
+        catalogueItemRow.catalogueItemID shouldNot equal(catalogueItemRowWithVariantsArchived.catalogueItemID)
+        catalogueItemRow.name shouldNot equal(catalogueItemRowWithVariantsArchived.name)
         Set(
-          catalogueItemVariantRowEnabled.catalogueItemVariantID,
-          catalogueItemVariantRowDisabled1.catalogueItemVariantID,
-          catalogueItemVariantRowDisabled2.catalogueItemVariantID,
+          catalogueItemVariantRowNonArchived.catalogueItemVariantID,
+          catalogueItemVariantRowArchived1.catalogueItemVariantID,
+          catalogueItemVariantRowArchived2.catalogueItemVariantID,
         ).size shouldBe 3
 
         postgresClient
           .executeQuery(
-            catalogueQueries.insertCatalogueItemRows(List(catalogueItemRow, catalogueItemRowWithVariantsDisabled))
+            catalogueQueries.insertCatalogueItemRows(List(catalogueItemRow, catalogueItemRowWithVariantsArchived))
           )
           .zioValue
         postgresClient
           .executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(
-              List(catalogueItemVariantRowEnabled, catalogueItemVariantRowDisabled1, catalogueItemVariantRowDisabled2)
+              List(
+                catalogueItemVariantRowNonArchived,
+                catalogueItemVariantRowArchived1,
+                catalogueItemVariantRowArchived2,
+              )
             )
           )
           .zioValue
 
         catalogueRepository
-          .getCatalogueItemSummariesEnabled(
+          .getCatalogueItemSummaries(
             organizationID,
-            NonEmptyChunk(catalogueItemRow.catalogueItemID, catalogueItemRowWithVariantsDisabled.catalogueItemID),
+            NonEmptyChunk(catalogueItemRow.catalogueItemID, catalogueItemRowWithVariantsArchived.catalogueItemID),
           )
           .zioValue shouldBe List(catalogueItemSummaryRowExpected)
       }
 
-      "return an empty list when none of the requested catalogue item IDs match an enabled catalogue item" in new TestContext {
+      "return an empty list when none of the requested catalogue item IDs match a non-archived catalogue item" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
         val catalogueItemIDMissing   = arbitrarySample[CatalogueItemID]
-        val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.disabled)),
+          isArchived = true,
         )
-        val catalogueItemVariantRowOfItemDisabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowOfItemArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
-          catalogueItemID = catalogueItemRowDisabled.catalogueItemID,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled)),
+          catalogueItemID = catalogueItemRowArchived.catalogueItemID,
+          isArchived = false,
         )
 
-        catalogueItemIDMissing shouldNot equal(catalogueItemRowDisabled.catalogueItemID)
+        catalogueItemIDMissing shouldNot equal(catalogueItemRowArchived.catalogueItemID)
 
         postgresClient
-          .executeQuery(catalogueQueries.insertCatalogueItemRows(List(catalogueItemRowDisabled)))
+          .executeQuery(catalogueQueries.insertCatalogueItemRows(List(catalogueItemRowArchived)))
           .zioValue
         postgresClient
-          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowOfItemDisabled)))
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowOfItemArchived)))
           .zioValue
 
         catalogueRepository
-          .getCatalogueItemSummariesEnabled(
+          .getCatalogueItemSummaries(
             organizationID,
-            NonEmptyChunk(catalogueItemRowDisabled.catalogueItemID, catalogueItemIDMissing),
+            NonEmptyChunk(catalogueItemRowArchived.catalogueItemID, catalogueItemIDMissing),
           )
           .zioValue shouldBe Nil
       }
     }
 
     "isUniqueCatalogueItemName" should {
-      "return false if an active catalogue item with the given name already exists in the organization" in new TestContext {
+      "return false if a non-archived catalogue item with the given name already exists" in new TestContext {
         val organizationID    = arbitrarySample[OrganizationID]
         val catalogueItemName = arbitrarySample[CatalogueItemName]
 
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           name = catalogueItemName,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.enabled)),
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -2953,34 +3013,35 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
         catalogueRepository.isUniqueCatalogueItemName(organizationID, catalogueItemName).zioValue shouldBe true
       }
 
-      "return true if the only catalogue item with the given name in the organization is disabled" in new TestContext {
+      "return true if the only catalogue item with the given name in the organization is archived" in new TestContext {
         val organizationID    = arbitrarySample[OrganizationID]
         val catalogueItemName = arbitrarySample[CatalogueItemName]
 
-        val catalogueItemRowDisabled = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           name = catalogueItemName,
-          status = arbitrarySample(Gen.oneOf(CatalogueItemStatus.disabled)),
+          isArchived = true,
         )
 
-        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowDisabled)).zioValue
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowArchived)).zioValue
 
         catalogueRepository.isUniqueCatalogueItemName(organizationID, catalogueItemName).zioValue shouldBe true
       }
     }
 
     "isUniqueCatalogueItemVariantSKU" should {
-      "return false if an enabled catalogue item variant with the given SKU already exists in the organization" in new TestContext {
+      "return false if a non-archived catalogue item variant with the given SKU already exists" in new TestContext {
         val organizationID          = arbitrarySample[OrganizationID]
         val catalogueItemVariantSku = arbitrarySample[CatalogueItemVariantSku]
-        val enabledStatus           = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.enabled))
-
-        val catalogueItemRow        = arbitrarySample[CatalogueItemRow].copy(organizationID = organizationID)
+        val catalogueItemRow        = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationID,
+          isArchived = false,
+        )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
           sku = Some(catalogueItemVariantSku),
-          status = enabledStatus,
+          isArchived = false,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
@@ -3002,21 +3063,21 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue shouldBe true
       }
 
-      "return true if the only catalogue item variant with the given SKU in the organization is disabled" in new TestContext {
+      "return true if the only catalogue item variant with the given SKU in the organization is archived" in new TestContext {
         val organizationID          = arbitrarySample[OrganizationID]
         val catalogueItemVariantSku = arbitrarySample[CatalogueItemVariantSku]
 
         val catalogueItemRow                = arbitrarySample[CatalogueItemRow].copy(organizationID = organizationID)
-        val catalogueItemVariantRowDisabled = arbitrarySample[CatalogueItemVariantRow].copy(
+        val catalogueItemVariantRowArchived = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemRow.catalogueItemID,
           sku = Some(catalogueItemVariantSku),
-          status = arbitrarySample(Gen.oneOf(CatalogueItemVariantStatus.disabled)),
+          isArchived = true,
         )
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
         postgresClient
-          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowDisabled)))
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowArchived)))
           .zioValue
 
         catalogueRepository

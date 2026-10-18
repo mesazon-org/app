@@ -368,13 +368,13 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           attributes = Some(Map.empty),
           price = Some(None),
           sellingUnit = Some(arbitrarySample[CatalogueItemVariantSaleUnit]),
-          status = Some(CatalogueItemVariantStatus.Inactive),
+          status = Some(arbitrarySample[CatalogueItemVariantStatus]),
         )
         val catalogueItemVariantInsert = arbitrarySample[CatalogueItemVariantInsert]
         val catalogueItemPutRequest    = CatalogueItemPutRequest(
           name = Some(catalogueItemName),
           description = Some(Some(catalogueItemDescription)),
-          status = Some(CatalogueItemStatus.Inactive),
+          status = Some(arbitrarySample[CatalogueItemStatus]),
           variantsUpdate = List(catalogueItemVariantUpdate),
           variantsInsert = List(catalogueItemVariantInsert),
         )
@@ -387,7 +387,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
             Some(catalogueItemName),
             Some(Some(catalogueItemDescription)),
             None,
-            Some(CatalogueItemStatus.Inactive),
+            catalogueItemPutRequest.status,
             List(toUpdateCatalogueItemVariantInput(catalogueItemVariantUpdate)),
             List(toInsertCatalogueItemVariantInput(catalogueItemVariantInsert)),
           )
@@ -618,7 +618,6 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
           imageAsset = Some(arbitrarySample[CatalogueItemImageAsset]),
-          status = CatalogueItemStatus.Inactive,
           isArchived = false,
         )
         val catalogueItemVariantRow1 = arbitrarySample[CatalogueItemVariantRow].copy(
@@ -626,7 +625,6 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           catalogueItemID = catalogueItemID,
           catalogueItemVariantID = catalogueItemVariantID1,
           price = Some(catalogueItemVariantPrice),
-          status = CatalogueItemVariantStatus.Active,
           isArchived = false,
         )
         val catalogueItemVariantRow2 = arbitrarySample[CatalogueItemVariantRow].copy(
@@ -634,7 +632,6 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           catalogueItemID = catalogueItemID,
           catalogueItemVariantID = catalogueItemVariantID2,
           price = None,
-          status = CatalogueItemVariantStatus.OutOfStock,
           isArchived = false,
         )
         val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
@@ -780,7 +777,6 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val catalogueItemSummaryRow = arbitrarySample[CatalogueItemSummaryRow].copy(
           catalogueItemID = catalogueItemID,
           imageAsset = None,
-          status = CatalogueItemStatus.Inactive,
           catalogueItemVariantSummaryRows = NonEmptyChunk.single(
             arbitrarySample[CatalogueItemVariantSummaryRow]
           ),
