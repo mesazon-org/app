@@ -64,8 +64,8 @@ Like the customer book, these are not a single journey. They are the things that
 
 **Variant status** — a variant is `Active`, `Inactive` or `OutOfStock`. Every new variant starts out `Active`, including one added to an existing item.
 - Owners and admins can move a variant freely between `Active`, `Inactive` and `OutOfStock`, in any direction, by updating the item.
-- `Inactive` and `OutOfStock` variants are still shown in item details and catalogue summaries, and they keep their SKU reserved.
-- An `Inactive` item remains visible and editable while it is not archived.
+- Every item and variant status remains available for reading and editing while the record is not archived. Item image upload follows the same rule. Status does not disable a record.
+- Non-archived items reserve their names, and non-archived variants reserve their SKUs, whatever their status.
 
 **Archiving** — `isArchived` is a separate flag on both items and variants. New items and variants have `isArchived = false`. Only archiving can set this flag to `true`; changing fields or business status preserves it. Archiving preserves the item's or variant's status and cannot be undone. Archiving an item sets the flag on all of its variants while preserving each variant's status. Only the flag determines whether an item or variant is archived.
 

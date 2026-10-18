@@ -41,7 +41,7 @@ Migration rules:
 
 ## Historical data
 
-- Parent owning financial/audit history: soft-delete via application-set lifecycle enum (`Active`/`Archived` style), no DB default; active-only reads by default. Pure children with no history may hard-delete.
+- Parent owning financial/audit history: soft-archive with an explicit application-set archive flag such as `is_archived`, separate from business status, with no DB default. Non-archived reads are the default. Business statuses such as `Inactive` do not disable or archive a record. Do not introduce enabled/disabled enum groups for this purpose. Existing features that still encode archive in a lifecycle enum keep their current contract until an explicitly scoped migration; do not copy that legacy model into new work. Pure children with no history may hard-delete.
 - Historical rows: append-only; cancellation/refund/reversal changes status, never deletes.
 - Snapshot relevant parent fields onto history in addition to FK.
 - History→parent FK: `on delete restrict`, never cascade.

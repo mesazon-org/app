@@ -63,8 +63,10 @@ Build the cases for each endpoint before writing code. Cross out only cases that
 |---|---|
 | Validated organization write | happy/no-op edges; `400 ValidationError`; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role; every `409 Conflict`; `500` missing user details; `500` missing membership; dependency `503` if declared |
 | UUID-only organization write | happy/no-op edges; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role; `500` missing user details; `500` missing membership; dependency `503` if declared |
-| Organization read by ID | happy for every visible lifecycle state; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role only when constructible; `500` referenced entity missing; `500` missing user details; `500` missing membership; dependency `503` if declared |
+| Organization read by ID | happy for each distinct visibility rule; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role only when constructible; `500` referenced entity missing; `500` missing user details; `500` missing membership; dependency `503` if declared |
 | Organization list read | happy empty/non-empty/filter/order behavior; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role only when constructible; `500` missing user details; `500` missing membership; dependency `503` if declared |
+
+Business statuses that share the same visibility/editability rules use arbitrary fixture statuses in the ordinary happy path. Do not duplicate an endpoint success for `Active`, `Inactive`, or another equivalent business status. Keep separate cases for real policy boundaries such as archived versus non-archived, and for status transitions when changing status is itself the requirement.
 
 Batch writes additionally prove empty-batch behavior when valid, stable validation indexes, atomic conflict rollback, complete output order when contractual, and no partial rows after any rejection.
 
