@@ -83,7 +83,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
   ): smithy.CatalogueItemVariantPrice =
     smithy.CatalogueItemVariantPrice(
       amount = catalogueItemVariantPrice.value.amount.value,
-      currency = Currency.valueOf(catalogueItemVariantPrice.value.currency.value).transformInto[smithy.Currency],
+      currency = catalogueItemVariantPrice.value.currency.transformInto[smithy.Currency],
     )
 
   private def toCatalogueItemVariantSaleUnitResponse(

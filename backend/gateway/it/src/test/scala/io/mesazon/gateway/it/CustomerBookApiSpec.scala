@@ -7,8 +7,8 @@ import io.mesazon.gateway.it.harness.GatewayAcceptanceTest
 import io.mesazon.gateway.repository.CustomerBookRepository.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.smithy
+import io.mesazon.gateway.transform.given
 import io.mesazon.gateway.utils.*
-import io.mesazon.gateway.utils.given
 import io.scalaland.chimney.dsl.*
 import org.scalatest.DoNotDiscover
 import sttp.model.*

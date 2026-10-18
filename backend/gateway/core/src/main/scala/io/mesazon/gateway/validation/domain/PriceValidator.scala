@@ -11,9 +11,7 @@ final class PriceValidator {
   def validate(priceRaw: PriceValidator.PriceRaw): UIO[ValidatedNec[InvalidFieldError, Price]] =
     ZIO.succeed {
       val (amountRaw, currency) = priceRaw
-      validateAmount(amountRaw, currency).map(priceAmount =>
-        Price(priceAmount, PriceCurrency.assume(currency.toString))
-      )
+      validateAmount(amountRaw, currency).map(priceAmount => Price(priceAmount, currency))
     }
 
   private def validateAmount(

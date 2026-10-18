@@ -2,13 +2,13 @@
 
 Organization-scoped items with variants, exact prices, selling units, and item images. Orders, paging/search, unarchive, and variant-specific images remain outside this feature.
 
-## Planned currency and archive changes
+## Currency and planned archive changes
 
-The product-doc slice is approved in `8483f6ec`. The following delta is agreed but not implemented; the implementation sections below still describe the current code until their slices land.
+The product-doc slice is approved in `8483f6ec`. The currency transition is implemented and verified by the slice evidence below. The archive/status delta remains planned; the implementation sections below retain its current behavior until that slice lands.
 
 | Concern | Current code | Agreed target |
 |---|---|---|
-| Price currency | `Price.currency: PriceCurrency`, a string newtype | `Price.currency: Currency`; remove the obsolete newtype and string-based model conversions. Keep EUR/USD/GBP and all amount/scale rules. |
+| Price currency | `Price.currency: Currency` | Implemented: removed the obsolete string newtype and string-based model conversions. EUR/USD/GBP and all amount/scale rules are preserved. |
 | Item status | `Active`, `Archived` | `Active`, `Inactive`; optional item `status` on PUT, absent keeps the stored value. |
 | Variant status | `Active`, `Inactive`, `OutOfStock`, `Archived` | `Active`, `Inactive`, `OutOfStock`; all cases accepted for status updates. |
 | Archive state | Encoded in status and enabled/disabled lists | Required `isArchived: Boolean` on item/variant rows and detail/summary responses; remove both enums' enabled/disabled lists. |
@@ -57,7 +57,13 @@ The operation declarations in `CatalogueService.smithy`, `GatewayClient`'s gener
 
 ### Slice evidence
 
-Slice 1 changes only the existing valid-price test's currency expectation to the domain enum values, preserving all amount/scale assertions. `runLint` passed. The focused `PriceValidatorSpec` executed all five cases: four passed and the intended currency assertion failed with `List("EUR", "USD", "GBP") was not equal to List(EUR, USD, GBP)`. This is the expected red proof against the current string-backed `Price`; production currency and archive changes remain pending. The next slice is the seven-file currency transition after review.
+Slice 1, committed in `0f621b1a`, changed only the existing valid-price test's currency expectation to the domain enum values, preserving all amount/scale assertions. `runLint` passed. The focused `PriceValidatorSpec` executed all five cases: four passed and the intended currency assertion failed with `List("EUR", "USD", "GBP") was not equal to List(EUR, USD, GBP)`. This recorded the expected red proof against the former string-backed `Price`.
+
+Slice 2 implements the seven-file currency transition. `PriceValidator` and `arbPrice` retain the enum directly. Catalogue response mappings derive complete variant collections; the shared Smithy arbitrary trait and its consumers import `transform.given` for the generic refined-product, collection, and nullable transformations. A separate Catalogue price transformer is unnecessary. Service-test expected prices remain independently field-built. No price-level `withFieldComputed`, string conversion, or obsolete currency newtype remains in backend code.
+
+Initial currency verification passed: `runLint`; main/core test compilation; gateway-it test compilation; and all 118 tests across `PriceValidatorSpec` (5), `CatalogueRequestValidatorSpec` (18), `CatalogueServiceSpec` (38), and real-PostgreSQL `CatalogueRepositorySpec` (57), with four suites completed and none aborted. The clean build recovered the documented stale generated-type failure. Backend obsolete-currency-symbol and diff checks passed. Archive/status implementation and the JSON Catalogue HTTP acceptance matrix remain pending. The next slice is the archive status-preservation red proof after review.
+
+The user-requested placement corrections move the unchanged `ironRefinedTypeToTargetTransformer` and `optionNullableTransformer` into main `transform/transform.scala` alongside `nonEmptyChunkToListTransformer`, delete `utils/IronChimney.scala`, and update every named/wildcard consumer import to `io.mesazon.gateway.transform`. The redundant `catalogueItemVariantPriceTransformer` is removed from `CatalogueSmithyArbitraries`. No export or compatibility alias is introduced. After the first relocation, `runLint`, main/core test compilation, and gateway-it test compilation passed; seven Price/Catalogue/Customer Book/Organization Management validator and service suites passed all 118 tests through the established direct ScalaTest runner. The normal test task stopped before executing tests because its WireMock image hook could not resolve Docker Hub. After the nullable-transformer move and price-delegate removal, `runLint` again passed, including core main/test and acceptance compilation; the focused Catalogue request-validator and service suites passed all 56 tests through the direct runner. The earlier 57-case PostgreSQL result remains the persistence proof; these mechanical moves change no SQL or row codec.
 
 ## Status and cleanup
 
@@ -122,7 +128,7 @@ Edited in place in `V2025.05.27__init.sql`; no new migration, no data migration.
 ## Domain
 
 - Enums: `CatalogueItemVariantStatus` (`Active`, `Inactive`, `OutOfStock`, `Archived`); `CatalogueItemStatus` stays `Active`/`Archived`. `CatalogueItemVariantUnit` is a sealed trait over three enums: `UnitSize` (`Gram`, `Kilogram`, `Millilitre`, `Litre`, `Millimetre`, `Centimetre`, `Metre`, `SquareMetre`), `PackageUnit` (`Pack`, `Box`), `PerUnit` (`Bag`, `Bottle`, `Can`, `Jar`, `Piece`).
-- Price: `Price(amount: PriceAmount, currency: PriceCurrency)` stores an exact decimal and a `NonEmptyTrimmed` currency code; the validator selects the rules through the typed `Currency` enum. Owner wrapper `CatalogueItemVariantPrice` (`Pure[Price]`), optional on a variant.
+- Price: `Price(amount: PriceAmount, currency: Currency)` stores an exact decimal and the typed currency enum. `PriceValidator` preserves the supplied enum and applies its decimal-place rule. The shared arbitrary reuses `arbCurrency`; Smithy transformations derive mirrored enums directly, and persistence reuses the generic enum-as-text codecs for `price_currency`. Owner wrapper `CatalogueItemVariantPrice` (`Pure[Price]`), optional on a variant.
 - Selling unit (required on every variant): `CatalogueItemVariantSaleUnit(quantity: CatalogueItemVariantQuantity, perUnit: Option[CatalogueItemVariantPerUnit], unitSize: Option[CatalogueItemVariantUnitSize])`. `CatalogueItemVariantQuantity(value, unit: CatalogueItemVariantUnit)` takes any unit; `CatalogueItemVariantPerUnit(value, unit: CatalogueItemVariantUnit.PerUnit)` and `CatalogueItemVariantUnitSize(value, unit: CatalogueItemVariantUnit.UnitSize)` are restricted. The three value newtypes are `BigDecimal` refined `Positive & LessEqual[99999]`.
 - Newtypes (Catalogue group): `CatalogueItemDescription`, `CatalogueItemVariantID`, `CatalogueItemVariantSku`, `CatalogueItemVariantLabel`, `CatalogueItemVariantDescription`, `CatalogueItemVariantAttributeName`, `CatalogueItemVariantAttributeValue` (text ones `NonEmptyTrimmed`), `CatalogueItemVariantQuantityValue`, `CatalogueItemVariantPerUnitValue`, `CatalogueItemVariantUnitSizeValue`.
 - Attributes: free-form `Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]`, no fixed vocabulary. Duplicate JSON keys are resolved last-wins by the decoder, so names are unique by type; duplicates in the raw body are not rejected.

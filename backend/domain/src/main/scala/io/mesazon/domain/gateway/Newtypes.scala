@@ -27,9 +27,6 @@ type FullName = FullName.T
 object PriceAmount extends RefinedType[BigDecimal, Pure]
 type PriceAmount = PriceAmount.T
 
-object PriceCurrency extends RefinedType[String, NonEmptyTrimmed]
-type PriceCurrency = PriceCurrency.T
-
 object ImageOriginalS3BucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
 type ImageOriginalS3BucketKey = ImageOriginalS3BucketKey.T
 

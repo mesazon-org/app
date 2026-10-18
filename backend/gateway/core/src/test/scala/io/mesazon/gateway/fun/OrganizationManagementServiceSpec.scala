@@ -8,8 +8,8 @@ import io.mesazon.gateway.repository.{OrganizationManagementRepository, UserDeta
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.state.AuthState
+import io.mesazon.gateway.transform.given
 import io.mesazon.gateway.utils.*
-import io.mesazon.gateway.utils.given
 import io.mesazon.gateway.validation.domain.*
 import io.mesazon.gateway.validation.service.*
 import io.mesazon.testkit.base.ZWordSpecBase

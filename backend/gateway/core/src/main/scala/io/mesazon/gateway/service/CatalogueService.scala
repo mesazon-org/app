@@ -132,27 +132,9 @@ object CatalogueService {
       } yield catalogueItemWithVariantsRow.catalogueItemRow
         .into[smithy.CatalogueItemGetResponse]
         .withFieldConst(_.imageNormalizedUrl, imageNormalizedUrlOpt.map(_.value))
-        .withFieldComputed(
+        .withFieldConst(
           _.variants,
-          _ =>
-            catalogueItemWithVariantsRow.catalogueItemVariantRows.toList.map { catalogueItemVariantRow =>
-              catalogueItemVariantRow
-                .into[smithy.CatalogueItemVariant]
-                .withFieldComputed(
-                  _.price,
-                  _.price.map(catalogueItemVariantPrice =>
-                    catalogueItemVariantPrice.value
-                      .into[smithy.CatalogueItemVariantPrice]
-                      .enableInheritedAccessors
-                      .withFieldComputed(
-                        _.currency,
-                        price => Currency.valueOf(price.currency.value).transformInto[smithy.Currency],
-                      )
-                      .transform
-                  ),
-                )
-                .transform
-            },
+          catalogueItemWithVariantsRow.catalogueItemVariantRows.transformInto[List[smithy.CatalogueItemVariant]],
         )
         .transform
 
@@ -184,26 +166,7 @@ object CatalogueService {
                 .withFieldConst(_.imageNormalizedUrl, imageNormalizedUrlOpt.map(_.value))
                 .withFieldComputed(
                   _.variants,
-                  _ =>
-                    catalogueItemSummaryRow.catalogueItemVariantSummaryRows.toList.map {
-                      catalogueItemVariantSummaryRow =>
-                        catalogueItemVariantSummaryRow
-                          .into[smithy.CatalogueItemVariantSummary]
-                          .withFieldComputed(
-                            _.price,
-                            _.price.map(catalogueItemVariantPrice =>
-                              catalogueItemVariantPrice.value
-                                .into[smithy.CatalogueItemVariantPrice]
-                                .enableInheritedAccessors
-                                .withFieldComputed(
-                                  _.currency,
-                                  price => Currency.valueOf(price.currency.value).transformInto[smithy.Currency],
-                                )
-                                .transform
-                            ),
-                          )
-                          .transform
-                    },
+                  _.catalogueItemVariantSummaryRows.transformInto[List[smithy.CatalogueItemVariantSummary]],
                 )
                 .transform
             )

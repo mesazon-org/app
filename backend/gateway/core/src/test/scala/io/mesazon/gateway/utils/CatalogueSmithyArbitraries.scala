@@ -4,24 +4,10 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.transform.given
 import io.mesazon.testkit.base.*
-import io.scalaland.chimney.Transformer
 import io.scalaland.chimney.dsl.*
 import org.scalacheck.*
-import smithy4s.Nullable
 
 trait CatalogueSmithyArbitraries extends CatalogueDomainArbitraries, IronRefinedTypeTransformer {
-
-  given catalogueItemVariantPriceTransformer: Transformer[CatalogueItemVariantPrice, smithy.CatalogueItemVariantPrice] =
-    price =>
-      smithy.CatalogueItemVariantPrice(
-        amount = price.value.amount.value,
-        currency = Currency.valueOf(price.value.currency.value).transformInto[smithy.Currency],
-      )
-
-  given optionNullableTransformer[Source, Target](using
-      transformer: Transformer[Source, Target]
-  ): Transformer[Option[Source], Nullable[Target]] =
-    value => Nullable.fromOption(value.map(transformer.transform))
 
   given arbCatalogueItemVariantInsertSmithy: Arbitrary[smithy.CatalogueItemVariantInsert] = Arbitrary(
     Arbitrary.arbitrary[CatalogueItemVariantInsert].map(_.transformInto[smithy.CatalogueItemVariantInsert])

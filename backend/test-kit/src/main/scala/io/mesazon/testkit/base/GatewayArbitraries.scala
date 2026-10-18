@@ -56,7 +56,7 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
       PriceAmount.assume(
         BigDecimal(BigInt(priceWhole) * priceScaleFactor + BigInt(priceFraction), priceFractionDigits)
       ),
-      PriceCurrency.assume(currency.toString),
+      currency,
     )
   )
 
