@@ -52,6 +52,7 @@ final class CatalogueQueries(
         |image_normalized_s3_bucket_key,
         |image_original_file_name,
         |status,
+        |is_archived,
         |created_at,
         |updated_at
          """.stripMargin
@@ -66,6 +67,7 @@ final class CatalogueQueries(
       fr0"${row.imageAsset.map(_.value.imageNormalizedS3BucketKey)}",
       fr0"${row.imageAsset.map(_.value.imageOriginalFileName)}",
       fr0"${row.status}::" ++ frCatalogueItemStatusType,
+      fr0"${row.isArchived}",
       fr0"${row.createdAt}",
       fr0"${row.updatedAt}",
     ).intercalate(fr",") ++ fr0")"
@@ -80,6 +82,7 @@ final class CatalogueQueries(
         |image_normalized_s3_bucket_key,
         |image_original_file_name,
         |status::text,
+        |is_archived,
         |created_at,
         |updated_at
          """.stripMargin
@@ -97,6 +100,7 @@ final class CatalogueQueries(
         |price_currency,
         |selling_unit,
         |status,
+        |is_archived,
         |created_at,
         |updated_at
          """.stripMargin
@@ -114,6 +118,7 @@ final class CatalogueQueries(
       fr0"${row.price.map(_.value.currency)}",
       fr0"${row.sellingUnit}",
       fr0"${row.status}::" ++ frCatalogueItemVariantStatusType,
+      fr0"${row.isArchived}",
       fr0"${row.createdAt}",
       fr0"${row.updatedAt}",
     ).intercalate(fr",") ++ fr0")"
@@ -131,6 +136,7 @@ final class CatalogueQueries(
         |price_currency,
         |selling_unit,
         |status::text,
+        |is_archived,
         |created_at,
         |updated_at
          """.stripMargin
@@ -145,6 +151,7 @@ final class CatalogueQueries(
         |i.image_normalized_s3_bucket_key,
         |i.image_original_file_name,
         |i.status::text,
+        |i.is_archived,
         |i.created_at,
         |i.updated_at,
         |v.catalogue_item_variant_id,
@@ -156,6 +163,7 @@ final class CatalogueQueries(
         |v.price_currency,
         |v.selling_unit,
         |v.status::text,
+        |v.is_archived,
         |v.created_at,
         |v.updated_at
          """.stripMargin
@@ -231,6 +239,7 @@ final class CatalogueQueries(
       nameOptUpdate: Option[CatalogueItemName] = None,
       descriptionOptUpdate: Option[Option[CatalogueItemDescription]] = None,
       imageAssetOptUpdate: Option[CatalogueItemImageAsset] = None,
+      statusOptUpdate: Option[CatalogueItemStatus] = None,
   ): TranzactIO[Int] = {
     val updates = NonEmptyList.of(
       fr"updated_at = $updatedAt"
@@ -240,6 +249,7 @@ final class CatalogueQueries(
       imageAssetOptUpdate.map(v => fr"image_original_s3_bucket_key = ${v.value.imageOriginalS3BucketKey}"),
       imageAssetOptUpdate.map(v => fr"image_normalized_s3_bucket_key = ${v.value.imageNormalizedS3BucketKey}"),
       imageAssetOptUpdate.map(v => fr"image_original_file_name = ${v.value.imageOriginalFileName}"),
+      statusOptUpdate.map(v => fr0"status = $v::" ++ frCatalogueItemStatusType ++ fr0" "),
     ).flatten
 
     tzio {
@@ -249,7 +259,7 @@ final class CatalogueQueries(
           whereAnd(
             fr"organization_id = $organizationID",
             fr"catalogue_item_id = $catalogueItemID",
-            fr0"status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")",
+            fr"is_archived = false",
           )
 
       q.update.run
@@ -265,13 +275,13 @@ final class CatalogueQueries(
       val q =
         fr"UPDATE" ++ frCatalogueItemTable ++
           set(
-            fr0"status = ${CatalogueItemStatus.Archived}::" ++ frCatalogueItemStatusType,
+            fr"is_archived = true",
             fr"updated_at = $updatedAt",
           ) ++
           whereAnd(
             fr"organization_id = $organizationID",
             fr"catalogue_item_id = $catalogueItemID",
-            fr0"status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")",
+            fr"is_archived = false",
           )
 
       q.update.run
@@ -290,7 +300,7 @@ final class CatalogueQueries(
             fr"organization_id = $organizationID",
             fr"catalogue_item_id = $catalogueItemID",
             in(fr"catalogue_item_variant_id", catalogueItemVariantIDs),
-            fr0"status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr0")",
+            fr"is_archived = false",
           )
 
       q.query[CatalogueItemVariantRow].to[List]
@@ -351,7 +361,7 @@ final class CatalogueQueries(
             fr"t.catalogue_item_variant_id = v.catalogue_item_variant_id",
             fr"t.organization_id = $organizationID",
             fr"t.catalogue_item_id = $catalogueItemID",
-            fr0"t.status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr0")",
+            fr"t.is_archived = false",
           )
 
       q.update.run.void
@@ -366,13 +376,13 @@ final class CatalogueQueries(
       val q =
         fr"UPDATE" ++ frCatalogueItemVariantTable ++
           set(
-            fr0"status = ${CatalogueItemVariantStatus.Archived}::" ++ frCatalogueItemVariantStatusType,
+            fr"is_archived = true",
             fr"updated_at = $updatedAt",
           ) ++
           whereAnd(
             fr"organization_id = $organizationID",
             fr"catalogue_item_id = $catalogueItemID",
-            fr0"status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr0")",
+            fr"is_archived = false",
           )
 
       q.update.run.void
@@ -388,14 +398,14 @@ final class CatalogueQueries(
           whereAnd(
             fr"organization_id = $organizationID",
             fr"catalogue_item_id = $catalogueItemID",
-            fr0"status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")",
+            fr"is_archived = false",
           ) ++
           fr"FOR NO KEY UPDATE"
 
       q.query[CatalogueItemID].option.map(_.isDefined)
     }
 
-  def getCatalogueItemVariantIDsEnabled(
+  def getCatalogueItemVariantIDs(
       organizationID: OrganizationID,
       catalogueItemID: CatalogueItemID,
   ): TranzactIO[List[CatalogueItemVariantID]] =
@@ -405,7 +415,7 @@ final class CatalogueQueries(
           whereAnd(
             fr"organization_id = $organizationID",
             fr"catalogue_item_id = $catalogueItemID",
-            fr0"status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr0")",
+            fr"is_archived = false",
           )
 
       q.query[CatalogueItemVariantID].to[List]
@@ -421,20 +431,20 @@ final class CatalogueQueries(
       val q =
         fr"UPDATE" ++ frCatalogueItemVariantTable ++
           set(
-            fr0"status = ${CatalogueItemVariantStatus.Archived}::" ++ frCatalogueItemVariantStatusType,
+            fr"is_archived = true",
             fr"updated_at = $updatedAt",
           ) ++
           whereAnd(
             fr"organization_id = $organizationID",
             fr"catalogue_item_id = $catalogueItemID",
             fr"catalogue_item_variant_id = $catalogueItemVariantID",
-            fr0"status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr0")",
+            fr"is_archived = false",
           )
 
       q.update.run.void
     }
 
-  def getCatalogueItemWithVariantsRowEnabled(
+  def getCatalogueItemWithVariantsRow(
       organizationID: OrganizationID,
       catalogueItemID: CatalogueItemID,
   ): TranzactIO[Option[CatalogueItemWithVariantsRow]] =
@@ -445,11 +455,11 @@ final class CatalogueQueries(
           fr"INNER JOIN" ++ frCatalogueItemVariantTable ++ fr"AS v" ++
           fr"ON v.organization_id = i.organization_id" ++
           fr"AND v.catalogue_item_id = i.catalogue_item_id" ++
-          fr0"AND v.status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr")" ++
+          fr"AND v.is_archived = false" ++
           whereAnd(
             fr"i.organization_id = $organizationID",
             fr"i.catalogue_item_id = $catalogueItemID",
-            fr0"i.status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")",
+            fr"i.is_archived = false",
           ) ++
           fr"ORDER BY v.created_at ASC, v.catalogue_item_variant_id ASC"
 
@@ -472,21 +482,21 @@ final class CatalogueQueries(
         )
     }
 
-  def getAllCatalogueItemSummaryRowsEnabled(
+  def getAllCatalogueItemSummaryRows(
       organizationID: OrganizationID
   ): TranzactIO[List[CatalogueItemSummaryRow]] =
-    getCatalogueItemSummaryRowsEnabledWhere(organizationID, Nil)
+    getCatalogueItemSummaryRowsWhere(organizationID, Nil)
 
-  def getCatalogueItemSummaryRowsEnabledByIDs(
+  def getCatalogueItemSummaryRowsByIDs(
       organizationID: OrganizationID,
       catalogueItemIDs: NonEmptyChunk[CatalogueItemID],
   ): TranzactIO[List[CatalogueItemSummaryRow]] =
-    getCatalogueItemSummaryRowsEnabledWhere(
+    getCatalogueItemSummaryRowsWhere(
       organizationID,
       List(in(fr"i.catalogue_item_id", NonEmptyList(catalogueItemIDs.head, catalogueItemIDs.tail.toList))),
     )
 
-  private def getCatalogueItemSummaryRowsEnabledWhere(
+  private def getCatalogueItemSummaryRowsWhere(
       organizationID: OrganizationID,
       frCatalogueItemConditions: List[Fragment],
   ): TranzactIO[List[CatalogueItemSummaryRow]] =
@@ -497,10 +507,10 @@ final class CatalogueQueries(
           fr"INNER JOIN" ++ frCatalogueItemVariantTable ++ fr"AS v" ++
           fr"ON v.organization_id = i.organization_id" ++
           fr"AND v.catalogue_item_id = i.catalogue_item_id" ++
-          fr0"AND v.status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr")" ++
+          fr"AND v.is_archived = false" ++
           whereAnd(
             fr"i.organization_id = $organizationID",
-            (fr0"i.status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")") :: frCatalogueItemConditions*
+            fr"i.is_archived = false" :: frCatalogueItemConditions*
           ) ++
           fr"ORDER BY i.created_at ASC, i.catalogue_item_id ASC, v.created_at ASC, v.catalogue_item_variant_id ASC"
 
@@ -528,25 +538,11 @@ final class CatalogueQueries(
         }
     }
 
-  private val frCatalogueItemEnabledStatuses: Fragment =
-    NonEmptyList
-      .fromListUnsafe(CatalogueItemStatus.enabled)
-      .map(enabledStatus => fr0"${enabledStatus}::" ++ frCatalogueItemStatusType)
-      .toList
-      .intercalate(fr",")
-
-  private val frCatalogueItemVariantEnabledStatuses: Fragment =
-    NonEmptyList
-      .fromListUnsafe(CatalogueItemVariantStatus.enabled)
-      .map(enabledStatus => fr0"${enabledStatus}::" ++ frCatalogueItemVariantStatusType)
-      .toList
-      .intercalate(fr",")
-
   private def isUniqueWith(
       frTable: Fragment,
       organizationID: OrganizationID,
       frFieldPredicate: Fragment,
-      frStatusPredicate: Fragment,
+      frArchivePredicate: Fragment,
   ): TranzactIO[Boolean] =
     tzio {
       val q =
@@ -554,7 +550,7 @@ final class CatalogueQueries(
           whereAnd(
             fr"organization_id = $organizationID",
             frFieldPredicate,
-            frStatusPredicate,
+            frArchivePredicate,
           )
 
       q.query[Int].option.map(_.isEmpty)
@@ -565,7 +561,7 @@ final class CatalogueQueries(
       frCatalogueItemTable,
       organizationID,
       fr"name = $name",
-      fr0"status IN (" ++ frCatalogueItemEnabledStatuses ++ fr0")",
+      fr"is_archived = false",
     )
 
   def isUniqueCatalogueItemVariantSKU(
@@ -576,7 +572,7 @@ final class CatalogueQueries(
       frCatalogueItemVariantTable,
       organizationID,
       fr"sku = $sku",
-      fr0"status IN (" ++ frCatalogueItemVariantEnabledStatuses ++ fr0")",
+      fr"is_archived = false",
     )
 
   // Testing
@@ -655,6 +651,7 @@ object CatalogueQueries {
       price: Option[CatalogueItemVariantPrice],
       sellingUnit: CatalogueItemVariantSaleUnit,
       status: CatalogueItemVariantStatus,
+      isArchived: Boolean,
       createdAt: CreatedAt,
       updatedAt: UpdatedAt,
   )

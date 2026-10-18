@@ -134,21 +134,6 @@ final class CatalogueRequestValidator(
       ).mapN(CatalogueItemPostRequest.apply)
     )
 
-  private def validateVariantStatus(
-      statusSmithy: Option[smithy.CatalogueItemVariantStatus]
-  ): ValidatedNec[InvalidFieldError, Option[CatalogueItemVariantStatus]] =
-    statusSmithy
-      .map(_.transformInto[CatalogueItemVariantStatus])
-      .traverse { status =>
-        if (CatalogueItemVariantStatus.disabled.contains(status))
-          InvalidFieldError(
-            "status",
-            "Disabled status is not allowed for catalogue item variant updates",
-            List(status.toString),
-          ).invalidNec
-        else status.validNec
-      }
-
   private def validateVariantUpdate(
       variantSmithy: smithy.CatalogueItemVariantUpdate
   ): UIO[ValidatedNec[InvalidFieldError, CatalogueItemVariantUpdate]] =
@@ -161,7 +146,7 @@ final class CatalogueRequestValidator(
         variantSmithy.attributes.traverse(validateAttributes),
         price,
         variantSmithy.sellingUnit.traverse(validateSaleUnit),
-        validateVariantStatus(variantSmithy.status),
+        variantSmithy.status.map(_.transformInto[CatalogueItemVariantStatus]).validNec,
       ).mapN(CatalogueItemVariantUpdate.apply)
     )
 
@@ -188,6 +173,7 @@ final class CatalogueRequestValidator(
       } yield (
         validateOptionalField("name", requestSmithy.name, CatalogueItemName.either),
         validateNullableField("description", requestSmithy.description, CatalogueItemDescription.either),
+        requestSmithy.status.map(_.transformInto[CatalogueItemStatus]).validNec,
         variantsUpdate,
         variantsInsert,
       ).mapN(CatalogueItemPutRequest.apply)

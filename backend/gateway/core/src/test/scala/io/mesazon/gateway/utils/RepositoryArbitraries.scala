@@ -15,9 +15,6 @@ trait RepositoryArbitraries
       CatalogueDomainArbitraries,
       IronRefinedTypeArbitraries {
 
-  given arbCatalogueItemStatus: Arbitrary[CatalogueItemStatus] =
-    Arbitrary(Gen.oneOf(CatalogueItemStatus.values.toIndexedSeq))
-
   given arbUserDetailsRow: Arbitrary[UserDetailsRow] = Arbitrary(Gen.resultOf(UserDetailsRow.apply))
 
   given arbWahaUserRow: Arbitrary[WahaUserRow] = Arbitrary(Gen.resultOf(WahaUserRow.apply))
@@ -74,12 +71,8 @@ trait RepositoryArbitraries
   given arbCatalogueItemSummaryRow: Arbitrary[CatalogueItemSummaryRow] =
     Arbitrary(Gen.resultOf(CatalogueItemSummaryRow.apply))
 
-  given arbInsertCatalogueItemVariantInput: Arbitrary[InsertCatalogueItemVariantInput] = Arbitrary(
-    for {
-      insertCatalogueItemVariantInput <- Gen.resultOf(InsertCatalogueItemVariantInput.apply)
-      enabledStatus                   <- Gen.oneOf(CatalogueItemVariantStatus.enabled)
-    } yield insertCatalogueItemVariantInput.copy(status = enabledStatus)
-  )
+  given arbInsertCatalogueItemVariantInput: Arbitrary[InsertCatalogueItemVariantInput] =
+    Arbitrary(Gen.resultOf(InsertCatalogueItemVariantInput.apply))
 
   given arbInsertCatalogueItemVariantInputs: Arbitrary[NonEmptyChunk[InsertCatalogueItemVariantInput]] = Arbitrary(
     for {
@@ -99,12 +92,8 @@ trait RepositoryArbitraries
       .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[InsertCatalogueItemInput]))
   )
 
-  given arbUpdateCatalogueItemVariantInput: Arbitrary[UpdateCatalogueItemVariantInput] = Arbitrary(
-    for {
-      updateCatalogueItemVariantInput <- Gen.resultOf(UpdateCatalogueItemVariantInput.apply)
-      enabledStatusOpt                <- Gen.option(Gen.oneOf(CatalogueItemVariantStatus.enabled))
-    } yield updateCatalogueItemVariantInput.copy(status = enabledStatusOpt)
-  )
+  given arbUpdateCatalogueItemVariantInput: Arbitrary[UpdateCatalogueItemVariantInput] =
+    Arbitrary(Gen.resultOf(UpdateCatalogueItemVariantInput.apply))
 
   given arbCustomerEmailEntryInput: Arbitrary[CustomerEmailEntryInput] = Arbitrary(
     Gen.resultOf(CustomerEmailEntryInput.apply)

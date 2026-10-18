@@ -13,6 +13,7 @@ case class CatalogueItemVariantRow(
     price: Option[CatalogueItemVariantPrice],
     sellingUnit: CatalogueItemVariantSaleUnit,
     status: CatalogueItemVariantStatus,
+    isArchived: Boolean,
     createdAt: CreatedAt,
     updatedAt: UpdatedAt,
 )

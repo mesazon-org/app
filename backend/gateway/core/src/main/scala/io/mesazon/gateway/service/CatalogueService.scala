@@ -80,6 +80,7 @@ object CatalogueService {
           nameOptUpdate = catalogueItemPutRequest.name,
           descriptionOptUpdate = catalogueItemPutRequest.description,
           imageAssetOptUpdate = None,
+          statusOptUpdate = catalogueItemPutRequest.status,
           updateCatalogueItemVariantInputs = catalogueItemPutRequest.variantsUpdate
             .transformInto[List[UpdateCatalogueItemVariantInput]],
           insertCatalogueItemVariantInputs = catalogueItemPutRequest.variantsInsert.map(
@@ -116,7 +117,7 @@ object CatalogueService {
     ): ServiceTask[smithy.CatalogueItemGetResponse] =
       for {
         catalogueItemWithVariantsRow <- catalogueRepository
-          .getCatalogueItemWithVariantsActive(
+          .getCatalogueItemWithVariants(
             OrganizationID(organizationID),
             CatalogueItemID(catalogueItemID),
           )
@@ -144,9 +145,9 @@ object CatalogueService {
     ): ServiceTask[smithy.CatalogueItemSummaryGetResponse] =
       for {
         catalogueItemSummaryRows <- catalogueItemIDs match {
-          case Nil => catalogueRepository.getAllCatalogueItemSummariesEnabled(OrganizationID(organizationID))
+          case Nil => catalogueRepository.getAllCatalogueItemSummaries(OrganizationID(organizationID))
           case catalogueItemID :: remainingCatalogueItemIDs =>
-            catalogueRepository.getCatalogueItemSummariesEnabled(
+            catalogueRepository.getCatalogueItemSummaries(
               OrganizationID(organizationID),
               NonEmptyChunk.fromIterable(
                 CatalogueItemID(catalogueItemID),

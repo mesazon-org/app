@@ -318,10 +318,16 @@ class CatalogueRequestValidatorSpec extends ZWordSpecBase, CatalogueSmithyArbitr
         validated.variantsUpdate.head.price shouldBe Some(None)
       }
 
-      "accept every enabled variant status" in {
+      "accept every item and variant business status" in {
         val variant = arbitrarySample[smithy.CatalogueItemVariantUpdate]
 
-        CatalogueItemVariantStatus.enabled.foreach { status =>
+        CatalogueItemStatus.values.foreach { status =>
+          val request = smithy.CatalogueItemPutRequest(status = Some(status.transformInto[smithy.CatalogueItemStatus]))
+
+          validator.validatedCatalogueItemPutRequest(request).zioValue.status shouldBe Some(status)
+        }
+
+        CatalogueItemVariantStatus.values.foreach { status =>
           val request = smithy.CatalogueItemPutRequest(
             name = None,
             description = None,
@@ -333,7 +339,7 @@ class CatalogueRequestValidatorSpec extends ZWordSpecBase, CatalogueSmithyArbitr
         }
       }
 
-      "fail with a ValidationError containing update fields and a disabled variant status" in {
+      "fail with a ValidationError containing every fallible update field" in {
         val variant = arbitrarySample[smithy.CatalogueItemVariantUpdate].copy(
           sku = Some(Nullable.Value("")),
           label = Some(Nullable.Value("")),
@@ -347,7 +353,7 @@ class CatalogueRequestValidatorSpec extends ZWordSpecBase, CatalogueSmithyArbitr
               None,
             )
           ),
-          status = Some(smithy.CatalogueItemVariantStatus.Archived),
+          status = None,
         )
         val request = smithy.CatalogueItemPutRequest(
           name = Some(""),
@@ -376,44 +382,12 @@ class CatalogueRequestValidatorSpec extends ZWordSpecBase, CatalogueSmithyArbitr
                   CatalogueItemVariantQuantityValue.either(BigDecimal(0)).left.value,
                   List("0"),
                 ),
-                InvalidFieldError(
-                  "status",
-                  "Disabled status is not allowed for catalogue item variant updates",
-                  List("Archived"),
-                ),
               ),
               nestedError("variant", 0, InvalidFieldError("sku", invalidTextMessage, List(""))),
             )
           )
       }
 
-      "fail with a ValidationError for every disabled variant status" in {
-        val variant = arbitrarySample[smithy.CatalogueItemVariantUpdate]
-
-        CatalogueItemVariantStatus.disabled.foreach { status =>
-          val request = smithy.CatalogueItemPutRequest(
-            name = None,
-            description = None,
-            variantsUpdate = List(variant.copy(status = Some(status.transformInto[smithy.CatalogueItemVariantStatus]))),
-            variantsInsert = Nil,
-          )
-
-          validator.validatedCatalogueItemPutRequest(request).zioError shouldBe
-            ServiceError.BadRequestError.ValidationError(
-              List(
-                nestedError(
-                  "variant",
-                  0,
-                  InvalidFieldError(
-                    "status",
-                    "Disabled status is not allowed for catalogue item variant updates",
-                    List(status.toString),
-                  ),
-                )
-              )
-            )
-        }
-      }
     }
 
     "validatedCatalogueItemUniquenessGetRequest" should {

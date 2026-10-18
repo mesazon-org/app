@@ -343,7 +343,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val catalogueItemPutRequestSmithy = smithy.CatalogueItemPutRequest()
 
         catalogueRepositoryMock.updateCatalogueItem
-          .expects(organizationID, catalogueItemID, None, None, None, Nil, Nil)
+          .expects(organizationID, catalogueItemID, None, None, None, None, Nil, Nil)
           .returningZIO(())
           .once()
 
@@ -374,6 +374,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val catalogueItemPutRequest    = CatalogueItemPutRequest(
           name = Some(catalogueItemName),
           description = Some(Some(catalogueItemDescription)),
+          status = Some(CatalogueItemStatus.Inactive),
           variantsUpdate = List(catalogueItemVariantUpdate),
           variantsInsert = List(catalogueItemVariantInsert),
         )
@@ -386,6 +387,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
             Some(catalogueItemName),
             Some(Some(catalogueItemDescription)),
             None,
+            Some(CatalogueItemStatus.Inactive),
             List(toUpdateCatalogueItemVariantInput(catalogueItemVariantUpdate)),
             List(toInsertCatalogueItemVariantInput(catalogueItemVariantInsert)),
           )
@@ -416,6 +418,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val catalogueItemPutRequest = CatalogueItemPutRequest(
           name = None,
           description = Some(None),
+          status = None,
           variantsUpdate = List(catalogueItemVariantUpdate),
           variantsInsert = Nil,
         )
@@ -427,6 +430,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
             catalogueItemID,
             None,
             Some(None),
+            None,
             None,
             List(toUpdateCatalogueItemVariantInput(catalogueItemVariantUpdate)),
             Nil,
@@ -463,36 +467,6 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           )
       }
 
-      "fail with a ValidationError before repository access when an update disables a variant" in new TestContext {
-        val organizationID                   = arbitrarySample[OrganizationID]
-        val catalogueItemID                  = arbitrarySample[CatalogueItemID]
-        val catalogueItemVariantUpdateSmithy = arbitrarySample[smithy.CatalogueItemVariantUpdate].copy(
-          status = Some(smithy.CatalogueItemVariantStatus.Archived)
-        )
-        val catalogueItemPutRequestSmithy = smithy.CatalogueItemPutRequest(
-          variantsUpdate = List(catalogueItemVariantUpdateSmithy)
-        )
-
-        val catalogueService = buildCatalogueService
-
-        catalogueService
-          .catalogueItemPut(organizationID.value, catalogueItemID.value, catalogueItemPutRequestSmithy)
-          .zioError shouldBe
-          ServiceError.BadRequestError.ValidationError(
-            List(
-              nestedError(
-                "variant",
-                0,
-                ServiceError.BadRequestError.InvalidFieldError(
-                  "status",
-                  "Disabled status is not allowed for catalogue item variant updates",
-                  List("Archived"),
-                ),
-              )
-            )
-          )
-      }
-
       "fail with a RepositoryError when the update repository rejects the change" in new TestContext {
         val organizationID                = arbitrarySample[OrganizationID]
         val catalogueItemID               = arbitrarySample[CatalogueItemID]
@@ -507,6 +481,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
             catalogueItemPutRequest.name,
             catalogueItemPutRequest.description,
             None,
+            catalogueItemPutRequest.status,
             catalogueItemPutRequest.variantsUpdate.map(toUpdateCatalogueItemVariantInput),
             catalogueItemPutRequest.variantsInsert.map(toInsertCatalogueItemVariantInput),
           )
@@ -577,7 +552,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           .zioValue shouldBe ()
       }
 
-      "fail with an InvalidAction when the repository rejects the last enabled variant archive" in new TestContext {
+      "fail with an InvalidAction when the repository rejects the last non-archived variant archive" in new TestContext {
         val organizationID         = arbitrarySample[OrganizationID]
         val catalogueItemID        = arbitrarySample[CatalogueItemID]
         val catalogueItemVariantID = arbitrarySample[CatalogueItemVariantID]
@@ -588,7 +563,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
             ZIO.fail(
               ServiceError.ForbiddenError.InvalidAction(
                 "archiveCatalogueItemVariant",
-                "Cannot archive the last enabled catalogue item variant",
+                "Cannot archive the last non-archived catalogue item variant",
               )
             )
           )
@@ -605,7 +580,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           .zioError shouldBe
           ServiceError.ForbiddenError.InvalidAction(
             "archiveCatalogueItemVariant",
-            "Cannot archive the last enabled catalogue item variant",
+            "Cannot archive the last non-archived catalogue item variant",
           )
       }
 
@@ -643,7 +618,8 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
           imageAsset = Some(arbitrarySample[CatalogueItemImageAsset]),
-          status = CatalogueItemStatus.Active,
+          status = CatalogueItemStatus.Inactive,
+          isArchived = false,
         )
         val catalogueItemVariantRow1 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
@@ -651,6 +627,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           catalogueItemVariantID = catalogueItemVariantID1,
           price = Some(catalogueItemVariantPrice),
           status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow2 = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
@@ -658,6 +635,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           catalogueItemVariantID = catalogueItemVariantID2,
           price = None,
           status = CatalogueItemVariantStatus.OutOfStock,
+          isArchived = false,
         )
         val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
           catalogueItemRow,
@@ -666,7 +644,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val imageNormalizedUrl = arbitrarySample[S3MediaUrl]
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItemWithVariantsActive
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
             .returningZIO(Some(catalogueItemWithVariantsRow))
             .once(),
@@ -692,19 +670,19 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
           imageAsset = None,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
         val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
           catalogueItemRow,
           NonEmptyChunk.single(catalogueItemVariantRow),
         )
 
-        catalogueRepositoryMock.getCatalogueItemWithVariantsActive
+        catalogueRepositoryMock.getCatalogueItemWithVariants
           .expects(organizationID, catalogueItemID)
           .returningZIO(Some(catalogueItemWithVariantsRow))
           .once()
@@ -721,7 +699,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val organizationID  = arbitrarySample[OrganizationID]
         val catalogueItemID = arbitrarySample[CatalogueItemID]
 
-        catalogueRepositoryMock.getCatalogueItemWithVariantsActive
+        catalogueRepositoryMock.getCatalogueItemWithVariants
           .expects(organizationID, catalogueItemID)
           .returningZIO(None)
           .once()
@@ -740,7 +718,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val organizationID  = arbitrarySample[OrganizationID]
         val catalogueItemID = arbitrarySample[CatalogueItemID]
 
-        catalogueRepositoryMock.getCatalogueItemWithVariantsActive
+        catalogueRepositoryMock.getCatalogueItemWithVariants
           .expects(organizationID, catalogueItemID)
           .returns(ZIO.fail(repositoryError))
           .once()
@@ -760,13 +738,13 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
           imageAsset = Some(arbitrarySample[CatalogueItemImageAsset]),
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
         )
         val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
           catalogueItemVariantID = catalogueItemVariantID,
-          status = CatalogueItemVariantStatus.Active,
+          isArchived = false,
         )
         val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
           catalogueItemRow,
@@ -774,7 +752,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         )
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItemWithVariantsActive
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
             .returningZIO(Some(catalogueItemWithVariantsRow))
             .once(),
@@ -796,16 +774,19 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
     }
 
     "catalogueItemSummaryGet" should {
-      "return all enabled catalogue item summaries when no IDs are supplied" in new TestContext {
+      "return all non-archived catalogue item summaries when no IDs are supplied" in new TestContext {
         val organizationID          = arbitrarySample[OrganizationID]
         val catalogueItemID         = arbitrarySample[CatalogueItemID]
         val catalogueItemSummaryRow = arbitrarySample[CatalogueItemSummaryRow].copy(
           catalogueItemID = catalogueItemID,
           imageAsset = None,
-          status = CatalogueItemStatus.Active,
+          status = CatalogueItemStatus.Inactive,
+          catalogueItemVariantSummaryRows = NonEmptyChunk.single(
+            arbitrarySample[CatalogueItemVariantSummaryRow]
+          ),
         )
 
-        catalogueRepositoryMock.getAllCatalogueItemSummariesEnabled
+        catalogueRepositoryMock.getAllCatalogueItemSummaries
           .expects(organizationID)
           .returningZIO(List(catalogueItemSummaryRow))
           .once()
@@ -837,7 +818,6 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val catalogueItemSummaryRow1                   = arbitrarySample[CatalogueItemSummaryRow].copy(
           catalogueItemID = catalogueItemID1,
           imageAsset = Some(arbitrarySample[CatalogueItemImageAsset]),
-          status = CatalogueItemStatus.Active,
           catalogueItemVariantSummaryRows = NonEmptyChunk.fromIterable(
             catalogueItemVariantSummaryRowWithPrice,
             List(catalogueItemVariantSummaryRowWithoutPrice),
@@ -846,7 +826,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val catalogueItemSummaryRow2 = arbitrarySample[CatalogueItemSummaryRow].copy(
           catalogueItemID = catalogueItemID2,
           imageAsset = None,
-          status = CatalogueItemStatus.Active,
+          catalogueItemVariantSummaryRows = NonEmptyChunk.single(arbitrarySample[CatalogueItemVariantSummaryRow]),
         )
         val catalogueItemIDsSelected = NonEmptyChunk.fromIterable(
           catalogueItemSummaryRow1.catalogueItemID,
@@ -855,7 +835,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val catalogueItemImageNormalizedUrl = arbitrarySample[S3MediaUrl]
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItemSummariesEnabled
+          catalogueRepositoryMock.getCatalogueItemSummaries
             .expects(organizationID, catalogueItemIDsSelected)
             .returningZIO(List(catalogueItemSummaryRow1, catalogueItemSummaryRow2))
             .once(),
@@ -886,7 +866,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
       "return no summaries and make no image calls when the repository is empty" in new TestContext {
         val organizationID = arbitrarySample[OrganizationID]
 
-        catalogueRepositoryMock.getAllCatalogueItemSummariesEnabled
+        catalogueRepositoryMock.getAllCatalogueItemSummaries
           .expects(organizationID)
           .returningZIO(Nil)
           .once()
@@ -902,7 +882,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
       "fail with a RepositoryError when the all-summaries repository rejects the read" in new TestContext {
         val organizationID = arbitrarySample[OrganizationID]
 
-        catalogueRepositoryMock.getAllCatalogueItemSummariesEnabled
+        catalogueRepositoryMock.getAllCatalogueItemSummaries
           .expects(organizationID)
           .returns(ZIO.fail(repositoryError))
           .once()
@@ -918,7 +898,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val organizationID  = arbitrarySample[OrganizationID]
         val catalogueItemID = arbitrarySample[CatalogueItemID]
 
-        catalogueRepositoryMock.getCatalogueItemSummariesEnabled
+        catalogueRepositoryMock.getCatalogueItemSummaries
           .expects(organizationID, NonEmptyChunk.single(catalogueItemID))
           .returns(ZIO.fail(repositoryError))
           .once()
@@ -934,11 +914,11 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val organizationID          = arbitrarySample[OrganizationID]
         val catalogueItemSummaryRow = arbitrarySample[CatalogueItemSummaryRow].copy(
           imageAsset = Some(arbitrarySample[CatalogueItemImageAsset]),
-          status = CatalogueItemStatus.Active,
+          catalogueItemVariantSummaryRows = NonEmptyChunk.single(arbitrarySample[CatalogueItemVariantSummaryRow]),
         )
 
         inSequence(
-          catalogueRepositoryMock.getAllCatalogueItemSummariesEnabled
+          catalogueRepositoryMock.getAllCatalogueItemSummaries
             .expects(organizationID)
             .returningZIO(List(catalogueItemSummaryRow))
             .once(),

@@ -31,6 +31,7 @@ trait CatalogueRepository {
       nameOptUpdate: Option[CatalogueItemName] = None,
       descriptionOptUpdate: Option[Option[CatalogueItemDescription]] = None,
       imageAssetOptUpdate: Option[CatalogueItemImageAsset] = None,
+      statusOptUpdate: Option[CatalogueItemStatus] = None,
       updateCatalogueItemVariantInputs: List[UpdateCatalogueItemVariantInput],
       insertCatalogueItemVariantInputs: List[InsertCatalogueItemVariantInput],
   ): IO[ServiceError, Unit]
@@ -46,16 +47,16 @@ trait CatalogueRepository {
       catalogueItemVariantID: CatalogueItemVariantID,
   ): IO[ServiceError, Unit]
 
-  def getCatalogueItemWithVariantsActive(
+  def getCatalogueItemWithVariants(
       organizationID: OrganizationID,
       catalogueItemID: CatalogueItemID,
   ): IO[ServiceError, Option[CatalogueItemWithVariantsRow]]
 
-  def getAllCatalogueItemSummariesEnabled(
+  def getAllCatalogueItemSummaries(
       organizationID: OrganizationID
   ): IO[ServiceError, List[CatalogueItemSummaryRow]]
 
-  def getCatalogueItemSummariesEnabled(
+  def getCatalogueItemSummaries(
       organizationID: OrganizationID,
       catalogueItemIDs: NonEmptyChunk[CatalogueItemID],
   ): IO[ServiceError, List[CatalogueItemSummaryRow]]
@@ -211,6 +212,7 @@ object CatalogueRepository {
         nameOptUpdate: Option[CatalogueItemName],
         descriptionOptUpdate: Option[Option[CatalogueItemDescription]],
         imageAssetOptUpdate: Option[CatalogueItemImageAsset],
+        statusOptUpdate: Option[CatalogueItemStatus],
         updateCatalogueItemVariantInputs: List[UpdateCatalogueItemVariantInput],
         insertCatalogueItemVariantInputs: List[InsertCatalogueItemVariantInput],
     ): IO[ServiceError, Unit] = for {
@@ -234,13 +236,14 @@ object CatalogueRepository {
             nameOptUpdate,
             descriptionOptUpdate,
             imageAssetOptUpdate,
+            statusOptUpdate,
           )
           _ <-
             if (affectedItemRows == 0) ZIO.unit
             else
               for {
                 updateCatalogueItemVariantInputsOptNonEmpty = NonEmptyList.fromList(updateCatalogueItemVariantInputs)
-                catalogueItemVariantRowsOptEnabled <- ZIO.foreach(
+                catalogueItemVariantRowsOpt <- ZIO.foreach(
                   updateCatalogueItemVariantInputsOptNonEmpty
                 )(updateCatalogueItemVariantInputsNonEmpty =>
                   catalogueQueries.getCatalogueItemVariantRowsByIDs(
@@ -249,20 +252,20 @@ object CatalogueRepository {
                     updateCatalogueItemVariantInputsNonEmpty.map(_.catalogueItemVariantID),
                   )
                 )
-                _ <- catalogueItemVariantRowsOptEnabled match {
-                  case None                                  => ZIO.unit
-                  case Some(catalogueItemVariantRowsEnabled) =>
-                    if (catalogueItemVariantRowsEnabled.size != updateCatalogueItemVariantInputs.size)
+                _ <- catalogueItemVariantRowsOpt match {
+                  case None                           => ZIO.unit
+                  case Some(catalogueItemVariantRows) =>
+                    if (catalogueItemVariantRows.size != updateCatalogueItemVariantInputs.size)
                       ZIO.fail(
                         ServiceError.InternalServerError.UnexpectedError(
-                          s"Failed to update catalogue item with ID: [$catalogueItemID]. Some catalogue item variant IDs do not exist, belong to another catalogue item, or are disabled. Requested: [${updateCatalogueItemVariantInputs.map(_.catalogueItemVariantID)}], Found: [${catalogueItemVariantRowsEnabled}]"
+                          s"Failed to update catalogue item with ID: [$catalogueItemID]. Some catalogue item variant IDs do not exist, belong to another catalogue item, or are archived. Requested: [${updateCatalogueItemVariantInputs.map(_.catalogueItemVariantID)}], Found: [${catalogueItemVariantRows}]"
                         )
                       )
                     else ZIO.unit
                 }
                 catalogueItemVariantRowsOptUpdated = mergeUpdateCatalogueItemVariantInputs(
                   updateCatalogueItemVariantInputsOptNonEmpty,
-                  catalogueItemVariantRowsOptEnabled.getOrElse(Nil),
+                  catalogueItemVariantRowsOpt.getOrElse(Nil),
                   updatedAt,
                 )
                 _ <- ZIO.foreach(catalogueItemVariantRowsOptUpdated)(catalogueItemVariantRowsUpdated =>
@@ -335,17 +338,17 @@ object CatalogueRepository {
             if (!isCatalogueItemRowLocked) ZIO.unit
             else
               for {
-                catalogueItemVariantIDsEnabled <- catalogueQueries.getCatalogueItemVariantIDsEnabled(
+                catalogueItemVariantIDs <- catalogueQueries.getCatalogueItemVariantIDs(
                   organizationID,
                   catalogueItemID,
                 )
                 _ <-
-                  if (!catalogueItemVariantIDsEnabled.contains(catalogueItemVariantID)) ZIO.unit
-                  else if (catalogueItemVariantIDsEnabled == List(catalogueItemVariantID))
+                  if (!catalogueItemVariantIDs.contains(catalogueItemVariantID)) ZIO.unit
+                  else if (catalogueItemVariantIDs == List(catalogueItemVariantID))
                     ZIO.fail(
                       ServiceError.ForbiddenError.InvalidAction(
                         "archiveCatalogueItemVariant",
-                        s"Catalogue item variant [$catalogueItemVariantID] is the last enabled variant of catalogue item [$catalogueItemID]; archive the catalogue item instead",
+                        s"Catalogue item variant [$catalogueItemVariantID] is the last non-archived variant of catalogue item [$catalogueItemID]; archive the catalogue item instead",
                       )
                     )
                   else
@@ -367,12 +370,12 @@ object CatalogueRepository {
       }
     } yield ()
 
-    override def getCatalogueItemWithVariantsActive(
+    override def getCatalogueItemWithVariants(
         organizationID: OrganizationID,
         catalogueItemID: CatalogueItemID,
     ): IO[ServiceError, Option[CatalogueItemWithVariantsRow]] =
       database
-        .transactionOrWiden(catalogueQueries.getCatalogueItemWithVariantsRowEnabled(organizationID, catalogueItemID))
+        .transactionOrWiden(catalogueQueries.getCatalogueItemWithVariantsRow(organizationID, catalogueItemID))
         .mapError(e =>
           ServiceError.InternalServerError.RepositoryError(
             s"Failed to get catalogue item with ID: [$catalogueItemID]",
@@ -380,11 +383,11 @@ object CatalogueRepository {
           )
         )
 
-    override def getAllCatalogueItemSummariesEnabled(
+    override def getAllCatalogueItemSummaries(
         organizationID: OrganizationID
     ): IO[ServiceError, List[CatalogueItemSummaryRow]] =
       database
-        .transactionOrWiden(catalogueQueries.getAllCatalogueItemSummaryRowsEnabled(organizationID))
+        .transactionOrWiden(catalogueQueries.getAllCatalogueItemSummaryRows(organizationID))
         .mapError(e =>
           ServiceError.InternalServerError.RepositoryError(
             s"Failed to get catalogue item summaries for organization ID: [$organizationID]",
@@ -392,13 +395,13 @@ object CatalogueRepository {
           )
         )
 
-    override def getCatalogueItemSummariesEnabled(
+    override def getCatalogueItemSummaries(
         organizationID: OrganizationID,
         catalogueItemIDs: NonEmptyChunk[CatalogueItemID],
     ): IO[ServiceError, List[CatalogueItemSummaryRow]] =
       database
         .transactionOrWiden(
-          catalogueQueries.getCatalogueItemSummaryRowsEnabledByIDs(organizationID, catalogueItemIDs)
+          catalogueQueries.getCatalogueItemSummaryRowsByIDs(organizationID, catalogueItemIDs)
         )
         .mapError(e =>
           ServiceError.InternalServerError.RepositoryError(
@@ -503,6 +506,7 @@ object CatalogueRepository {
         input.description,
         None,
         CatalogueItemStatus.Active,
+        false,
         CreatedAt(instantNow),
         UpdatedAt(instantNow),
       )
@@ -525,6 +529,7 @@ object CatalogueRepository {
         input.price,
         input.sellingUnit,
         input.status,
+        false,
         CreatedAt(instantNow),
         UpdatedAt(instantNow),
       )
