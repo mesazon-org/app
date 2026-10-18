@@ -9,7 +9,7 @@ Reusable refined-newtype rules. Related: [validation](../features/flow/02-valida
 
 ## Naming a refined newtype
 
-- Form: `{{Owner}}{{Entity}}` when the meaning is owner-specific; owner first. A genuinely reusable value concept uses its semantic name without a feature owner (`PriceAmount`, `PriceCurrency`).
+- Form: `{{Owner}}{{Entity}}` when the meaning is owner-specific; owner first. A genuinely reusable value concept uses its semantic name without a feature owner (`PriceAmount`).
 - An identifier type is named after **the entity it identifies**, suffixed `ID`. Never a context-free identifier type.
 - ✅ `PhoneRegion`, `PhoneNumberE164`, `OrganizationLogoImageAsset`, `UserID`, `CustomerID`, `SubscriptionID`
 - ❌ `phoneRegion` (not `UpperCamelCase`), `id` (no entity, no owner), `OrgLogoName` (abbreviated), `ID`, `EntityID`, `Identifier`
@@ -39,4 +39,4 @@ Reusable refined-newtype rules. Related: [validation](../features/flow/02-valida
 - Shared refined-base generators live in `IronRefinedTypeArbitraries` and are explicitly named.
 - Exact `BigDecimal :| Pure` values are non-negative, use a whole component from `0` through `999,999,999,999`, never pass through `Double`, and may cover broad scales for non-monetary refined values. This base arbitrary alone does not prove a valid `Price`.
 - Monetary validation preserves and checks the supplied `BigDecimal` through `PriceValidator` and the typed `Currency` enum. Require a non-negative amount with at most 12 integer digits. For non-zero amounts, check widened `precision - scale` before normalization so compact extreme exponents cannot trigger unbounded allocation; zero bypasses that representation-derived bound. `decimalPoints = Some(n)` rejects a supplied scale above `n` and pads lower scales to exactly `n` without rounding or downscaling. `None` preserves the supplied amount with no scale restriction. The current `EUR`, `USD`, and `GBP` cases use `Some(2)`. See [Catalogue validation](../features/catalogue.md#validation).
-- Generate valid canonical `Price` values as one correlated arbitrary: choose the ISO currency first, then generate a realistically bounded non-negative amount at exactly its fraction-digit scale. Do not combine independent `PriceAmount` and `PriceCurrency` arbitraries with `Gen.resultOf`.
+- Generate valid canonical `Price` values as one correlated arbitrary: choose the typed `Currency` through the shared `arbCurrency` first, then generate a realistically bounded non-negative amount respecting its `decimalPoints`. The current currencies require exactly two stored decimal places. Do not derive `Price` from independent amount and currency fields with `Gen.resultOf`.

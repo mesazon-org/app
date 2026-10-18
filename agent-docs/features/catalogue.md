@@ -85,6 +85,10 @@ The user chose to retain `getCatalogueItemWithVariants` before upload, preservin
 
 Verification: `runLint` passed, including core and acceptance compilation. All 114 tests passed across `CatalogueServiceSpec` (37), `FileServiceSpec` (19), and real-PostgreSQL `CatalogueRepositorySpec` (58), with three suites completed and none aborted. A fresh gateway image built successfully, and the nested `FileApiSpec` passed all 35 cases with nine suites completed and none aborted. The invalid-target rejection cases remain covered. Diff and relative documentation-link checks passed. JSON Catalogue endpoint acceptance remains pending.
 
+### Documentation completion
+
+Slice 5 removes the deleted `PriceCurrency` example from the Iron and validation-flow guides and aligns their monetary arbitrary guidance with `Price.currency: Currency` and shared `arbCurrency`. The Scala examples were already corrected during lifecycle review. The existing `Price`, `Currency`, and `arbPrice` declarations were checked directly; no application behavior changes. Obsolete-example, relative-link, and diff checks passed. The remaining JSON acceptance work starts with `POST /catalogue/item` and stays one endpoint per review slice.
+
 ## Status and cleanup
 
 The user approved canonical cleanup before completing JSON acceptance tests, including one coordinated slice beyond the three-file cap. Cleanup is complete and verified by the checks below. The previous item-only implementation is replaced by the implemented item/variant contract; temporary V2 names and namespace, old service/repository/query/validator code, parent unit/price columns, generators, codecs, and V1-only tests are removed together. Shared price/image types and the item status enum remain.
