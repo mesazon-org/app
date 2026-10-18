@@ -17,7 +17,7 @@ class PriceValidatorSpec extends ZWordSpecBase {
         validator.validate((amountRaw = BigDecimal("12.34"), currency = Currency.GBP)).zioValue,
       ).map(_.toOption.value)
 
-      prices.map(_.currency.value) shouldBe List("EUR", "USD", "GBP")
+      prices.map(_.currency) shouldBe List(Currency.EUR, Currency.USD, Currency.GBP)
       prices.map(_.amount.value) shouldBe List(BigDecimal("12.00"), BigDecimal("12.30"), BigDecimal("12.34"))
       prices.map(_.amount.value.scale) shouldBe List(2, 2, 2)
     }

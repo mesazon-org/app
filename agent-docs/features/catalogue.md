@@ -32,7 +32,7 @@ Risk: mismatched archive predicates could hide inactive records or allow duplica
 
 ### Ordered review slices
 
-No implementation starts before this plan is approved. The shared-type transitions below require two explicit exceptions to the three-file cap; approval of the previous cleanup exception does not cover them. Each transition keeps main and test sources compilable without temporary aliases, legacy enum cases, or unused compatibility fields. Feature-doc evidence is updated with each delivered slice.
+The user approved this plan in `487ccf22` and instructed work to continue. Its two coordinated shared-type transitions exceed the three-file cap as described below. Each transition keeps main and test sources compilable without temporary aliases, legacy enum cases, or unused compatibility fields. Feature-doc evidence is updated with each delivered slice.
 
 | Slice | Hand-written scope | Proof / review boundary |
 |---|---|---|
@@ -54,6 +54,10 @@ Lifecycle transition files:
 - Proof/support: test-kit `CatalogueDomainArbitraries.scala`; core-test `RepositoryArbitraries.scala`, `CatalogueRequestValidatorSpec.scala`, `CatalogueRepositorySpec.scala`, `CatalogueServiceSpec.scala`, `FileServiceSpec.scala`; acceptance `FileApiSpec.scala`.
 
 The operation declarations in `CatalogueService.smithy`, `GatewayClient`'s generic status codec, and the owning `CatalogueItemWithVariantsRow` container need no change for this delta. The status-agnostic joined testing query remains an inspection tool, without separate tests of that testing query.
+
+### Slice evidence
+
+Slice 1 changes only the existing valid-price test's currency expectation to the domain enum values, preserving all amount/scale assertions. `runLint` passed. The focused `PriceValidatorSpec` executed all five cases: four passed and the intended currency assertion failed with `List("EUR", "USD", "GBP") was not equal to List(EUR, USD, GBP)`. This is the expected red proof against the current string-backed `Price`; production currency and archive changes remain pending. The next slice is the seven-file currency transition after review.
 
 ## Status and cleanup
 
