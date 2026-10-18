@@ -2,6 +2,59 @@
 
 Organization-scoped items with variants, exact prices, selling units, and item images. Orders, paging/search, unarchive, and variant-specific images remain outside this feature.
 
+## Planned currency and archive changes
+
+The product-doc slice is approved in `8483f6ec`. The following delta is agreed but not implemented; the implementation sections below still describe the current code until their slices land.
+
+| Concern | Current code | Agreed target |
+|---|---|---|
+| Price currency | `Price.currency: PriceCurrency`, a string newtype | `Price.currency: Currency`; remove the obsolete newtype and string-based model conversions. Keep EUR/USD/GBP and all amount/scale rules. |
+| Item status | `Active`, `Archived` | `Active`, `Inactive`; optional item `status` on PUT, absent keeps the stored value. |
+| Variant status | `Active`, `Inactive`, `OutOfStock`, `Archived` | `Active`, `Inactive`, `OutOfStock`; all cases accepted for status updates. |
+| Archive state | Encoded in status and enabled/disabled lists | Required `isArchived: Boolean` on item/variant rows and detail/summary responses; remove both enums' enabled/disabled lists. |
+| Creation | Item and inserted variants start `Active` | Keep `Active` and explicitly store `isArchived = false`; clients do not supply the archive flag on create/update. |
+| Eligibility | Status-derived filters | Only `isArchived = false`; `Active` and `Inactive` items are both returned by detail GET and summary GET, accept PUT updates and image uploads, and reserve names. All non-archived variant statuses are returned and editable, reserve SKUs, and count toward the last non-archived variant guard. |
+| Archive operations | Replace status with `Archived` | Set `isArchived = true`, preserving status. Keep item-to-variant cascade, retained data/images, idempotent no-ops, tenant scope, irreversibility, and the last non-archived variant prohibition. |
+
+Complexity: **HIGH** — this changes shared price typing and the catalogue contract, positional SQL codecs, uniqueness predicates, and archive transactions together.
+
+### Implementation approach and proof
+
+- Reuse the existing `Currency` enum, generic enum-as-text Doobie codecs, and direct Chimney enum transformations. Keep `price_currency` as text; no currency cases, library, or runtime dependency is added.
+- Continue the agreed pre-release init-migration policy. Add required `is_archived boolean` columns beside status in both tables, with application-supplied values. Keep the documented native PostgreSQL status-enum exception, replacing the item enum cases and removing the variant's `Archived` case. Change both partial unique indexes to non-archived predicates while preserving names, tenant keys, and case-sensitive SKU semantics.
+- Keep row, joined/projection, insert, select, and update column orders aligned. General item/variant updates cannot write archive flags. Add `statusOptUpdate` through item validation, service, repository, and query; image upload explicitly preserves status.
+- Rename catalogue methods and bindings that currently say `Active`, `Enabled`, or `Disabled` when they mean archive eligibility to `NonArchived`/`Archived`. Preserve the existing API operation names, status-only meaning of actual `Active` values, status-agnostic testing join, transaction boundaries, and parent lock for variant archive.
+- Adapt existing tests only for the agreed behavior change. Explicitly seed `Inactive` non-archived items to prove detail GET, summary GET, PUT updates, image eligibility, and name reservation; exercise every non-archived variant status for visibility, editing, SKU reservation, and the last-variant guard. Prove both item-status transitions and omitted status, default archive flags, and status-preserving archive cascades. Keep exact full-row assertions, strict mock arguments, tenant isolation, rollback, ordering, nullable updates, and shared arbitrary inheritance.
+- Start with a focused failing `PriceValidatorSpec` assertion that the returned currency is the enum. Verify amount/scale regression tests after the price change. Regenerate Smithy and compile main, core tests, and acceptance tests after connected model changes; run `runLint` and affected unit, functional, real-PostgreSQL, and File API acceptance suites against a fresh gateway image.
+- JSON Catalogue acceptance remains incomplete and continues one endpoint at a time after these model changes. Do not describe lower-layer checks or File API checks as proof of the new item PUT HTTP contract or of all eight JSON endpoints.
+
+Risk: mismatched archive predicates could hide inactive records or allow duplicate reserved names/SKUs; positional row drift could misdecode joined data; replacing status during archive could lose business state. Real-PostgreSQL tests must prove these boundaries. This is a breaking pre-release schema/response change. Rollback restores the source/schema together and recreates only disposable development/test databases; no deployed-data conversion is planned.
+
+### Ordered review slices
+
+No implementation starts before this plan is approved. The shared-type transitions below require two explicit exceptions to the three-file cap; approval of the previous cleanup exception does not cover them. Each transition keeps main and test sources compilable without temporary aliases, legacy enum cases, or unused compatibility fields. Feature-doc evidence is updated with each delivered slice.
+
+| Slice | Hand-written scope | Proof / review boundary |
+|---|---|---|
+| 1. Currency red proof | `unit/validation/domain/PriceValidatorSpec.scala` | Change the existing valid-price assertion to expect the actual `Currency` enum values; observe the intended failure against the string-backed model, preserving all amount/scale assertions. Stop for review. |
+| 2. Currency transition | Seven connected files listed below, plus this feature doc | Store the enum directly, delete `PriceCurrency`, reuse the enum arbitrary, and derive enum transformations directly. Run price/request validator and Catalogue service tests, compile core/acceptance tests, and lint. Stop for review. |
+| 3. Archive red proof | `it/CatalogueRepositorySpec.scala` | Adapt the existing item/variant archive expectations to require preserved business statuses; observe the intended failure against current archive SQL. Stop for review. |
+| 4. Lifecycle transition | Twenty-one connected files listed below, plus this feature doc | Add the independent flags and item status update through every layer; update full-state tests and strict mocks. Run clean Smithy generation/compilation, affected unit/service/PostgreSQL suites, lint, and fresh-image File API acceptance including an inactive-item upload. Stop for review. |
+| 5. Documentation completion | `standards/scala.md`, `standards/iron.md`, `features/flow/02-validation.md` | Replace deleted-newtype and enabled/disabled example references with surviving types/enums; check diffs and local links. |
+| 6. Delivery evidence | This feature doc and `pages/epics/06-catalogue.md` | Record actual proof, remove the planned marker only for implemented rules, and retain the pending JSON acceptance matrix. Technical and product completion review. |
+
+Currency transition files: domain `Price.scala` and `Newtypes.scala`; `validation/domain/PriceValidator.scala`; test-kit `GatewayArbitraries.scala`; `service/CatalogueService.scala`; `utils/CatalogueSmithyArbitraries.scala` and `fun/CatalogueServiceSpec.scala` in core tests. The prior red slice already removes the validator spec's dependency on `.currency.value`. Generic Doobie enum codecs already cover the text column.
+
+Lifecycle transition files:
+
+- Domain: `Catalogue.scala`, `CatalogueItemStatus.scala`, `CatalogueItemVariantStatus.scala`.
+- Contract/schema: Smithy `domain/Catalogue.smithy` and `V2025.05.27__init.sql`.
+- Persistence: `CatalogueItemRow.scala`, `CatalogueItemVariantRow.scala`, `CatalogueItemSummaryRow.scala`, `CatalogueItemVariantSummaryRow.scala`, `CatalogueQueries.scala`, `CatalogueRepository.scala`.
+- Application: `CatalogueRequestValidator.scala`, `CatalogueService.scala`, `FileService.scala`.
+- Proof/support: test-kit `CatalogueDomainArbitraries.scala`; core-test `RepositoryArbitraries.scala`, `CatalogueRequestValidatorSpec.scala`, `CatalogueRepositorySpec.scala`, `CatalogueServiceSpec.scala`, `FileServiceSpec.scala`; acceptance `FileApiSpec.scala`.
+
+The operation declarations in `CatalogueService.smithy`, `GatewayClient`'s generic status codec, and the owning `CatalogueItemWithVariantsRow` container need no change for this delta. The status-agnostic joined testing query remains an inspection tool, without separate tests of that testing query.
+
 ## Status and cleanup
 
 The user approved canonical cleanup before completing JSON acceptance tests, including one coordinated slice beyond the three-file cap. Cleanup is complete and verified by the checks below. The previous item-only implementation is replaced by the implemented item/variant contract; temporary V2 names and namespace, old service/repository/query/validator code, parent unit/price columns, generators, codecs, and V1-only tests are removed together. Shared price/image types and the item status enum remain.
