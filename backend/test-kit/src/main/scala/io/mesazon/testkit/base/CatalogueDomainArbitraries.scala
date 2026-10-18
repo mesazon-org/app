@@ -6,6 +6,9 @@ import zio.NonEmptyChunk
 
 trait CatalogueDomainArbitraries extends GatewayArbitraries {
 
+  given arbCatalogueItemStatus: Arbitrary[CatalogueItemStatus] =
+    Arbitrary(Gen.oneOf(CatalogueItemStatus.values.toIndexedSeq))
+
   given arbCatalogueItemVariantPrice: Arbitrary[CatalogueItemVariantPrice] = Arbitrary(
     Arbitrary.arbitrary[Price].map(CatalogueItemVariantPrice.apply)
   )
@@ -37,12 +40,8 @@ trait CatalogueDomainArbitraries extends GatewayArbitraries {
   given arbCatalogueItemVariantInsert: Arbitrary[CatalogueItemVariantInsert] =
     Arbitrary(Gen.resultOf(CatalogueItemVariantInsert.apply))
 
-  given arbCatalogueItemVariantUpdate: Arbitrary[CatalogueItemVariantUpdate] = Arbitrary(
-    for {
-      update <- Gen.resultOf(CatalogueItemVariantUpdate.apply)
-      status <- Gen.option(Gen.oneOf(CatalogueItemVariantStatus.enabled))
-    } yield update.copy(status = status)
-  )
+  given arbCatalogueItemVariantUpdate: Arbitrary[CatalogueItemVariantUpdate] =
+    Arbitrary(Gen.resultOf(CatalogueItemVariantUpdate.apply))
 
   given arbCatalogueItemVariantAttributes
       : Arbitrary[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]] = Arbitrary(
@@ -91,13 +90,14 @@ trait CatalogueDomainArbitraries extends GatewayArbitraries {
     for {
       name           <- Arbitrary.arbitrary[Option[CatalogueItemName]]
       description    <- Arbitrary.arbitrary[Option[Option[CatalogueItemDescription]]]
+      status         <- Arbitrary.arbitrary[Option[CatalogueItemStatus]]
       variantsUpdate <- Gen
         .choose(0, 10)
         .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemVariantUpdate]))
       variantsInsert <- Gen
         .choose(0, 10)
         .flatMap(size => Gen.listOfN(size, Arbitrary.arbitrary[CatalogueItemVariantInsert]))
-    } yield CatalogueItemPutRequest(name, description, variantsUpdate, variantsInsert)
+    } yield CatalogueItemPutRequest(name, description, status, variantsUpdate, variantsInsert)
   )
 
   given arbCatalogueItemUniquenessGetRequest: Arbitrary[CatalogueItemUniquenessGetRequest] = Arbitrary(

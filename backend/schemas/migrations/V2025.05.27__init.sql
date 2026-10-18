@@ -137,7 +137,7 @@ create table customer_business_contact
         references customer (organization_id, customer_id)
 );
 
-create type catalogue_item_status as enum ('Active', 'Archived');
+create type catalogue_item_status as enum ('Active', 'Inactive');
 
 create table catalogue_item
 (
@@ -149,6 +149,7 @@ create table catalogue_item
     image_normalized_s3_bucket_key text,
     image_original_file_name       text,
     status                         catalogue_item_status not null,
+    is_archived                    boolean               not null,
     created_at                     timestamptz           not null,
     updated_at                     timestamptz           not null,
     primary key (organization_id, catalogue_item_id)
@@ -156,9 +157,9 @@ create table catalogue_item
 
 create unique index uq_catalogue_item_name
     on catalogue_item (organization_id, name)
-    where status = 'Active';
+    where is_archived = false;
 
-create type catalogue_item_variant_status as enum ('Active', 'Inactive', 'OutOfStock', 'Archived');
+create type catalogue_item_variant_status as enum ('Active', 'Inactive', 'OutOfStock');
 
 create table catalogue_item_variant
 (
@@ -173,6 +174,7 @@ create table catalogue_item_variant
     price_currency            text,
     selling_unit              jsonb                         not null,
     status                    catalogue_item_variant_status not null,
+    is_archived               boolean                       not null,
     created_at                timestamptz                   not null,
     updated_at                timestamptz                   not null,
     primary key (organization_id, catalogue_item_variant_id),
@@ -188,7 +190,7 @@ create index idx_catalogue_item_variant_item
 
 create unique index uq_catalogue_item_variant_sku
     on catalogue_item_variant (organization_id, sku)
-    where status <> 'Archived' and sku is not null;
+    where is_archived = false and sku is not null;
 
 create table waha_user
 (

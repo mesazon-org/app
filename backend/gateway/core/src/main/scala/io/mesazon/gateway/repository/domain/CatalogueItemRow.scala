@@ -9,6 +9,7 @@ case class CatalogueItemRow(
     description: Option[CatalogueItemDescription],
     imageAsset: Option[CatalogueItemImageAsset],
     status: CatalogueItemStatus,
+    isArchived: Boolean,
     createdAt: CreatedAt,
     updatedAt: UpdatedAt,
 )

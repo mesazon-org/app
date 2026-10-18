@@ -7,7 +7,7 @@ use alloy#nullable
 
 enum CatalogueItemStatus {
     Active
-    Archived
+    Inactive
 }
 
 enum Currency {
@@ -20,7 +20,6 @@ enum CatalogueItemVariantStatus {
     Active
     Inactive
     OutOfStock
-    Archived
 }
 
 enum CatalogueItemVariantUnit {
@@ -221,6 +220,7 @@ structure CatalogueItemPutRequest {
     name: String
     @nullable
     description: String
+    status: CatalogueItemStatus
     @default([])
     variantsUpdate: CatalogueItemVariantsUpdate
     @default([])

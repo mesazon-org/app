@@ -4,7 +4,7 @@ title: Catalogue
 
 # Catalogue
 
-> **Implementation and verification in progress — not released.** The catalogue with variants and selling units replaces the old item-only catalogue. Final checks will be completed one operation at a time; item-image upload checks already pass. The separate status and `isArchived` rules described below are planned and are not implemented yet.
+> **Implementation and verification in progress — not released.** The catalogue with variants and selling units replaces the old item-only catalogue. Final checks will be completed one operation at a time; item-image upload checks already pass. The separate status and archive rules are implemented; their repository, service, validation and image-upload checks pass.
 
 ### Overview
 
@@ -339,7 +339,6 @@ Request is empty apart from naming the organization. The optional identifier fil
 | Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Identifies the item, used to open it |
 | Name | `String` | — | ✅ | The item's name |
 | Status | `CatalogueItemStatus` | `Active` or `Inactive` | ✅ | The item's current status |
-| Is Archived | `Boolean` | Always `false` here, since only non-archived items are listed | ✅ | Whether the item is archived |
 | Image URL | `String` | A working link, present only if the item has an image | ❌ | A picture of the item |
 | Variants | `CatalogueItemVariantSummary[]` | Every non-archived variant, at least one, in catalogue order | ✅ | The versions of the item that are sold |
 
@@ -353,7 +352,6 @@ Request is empty apart from naming the organization. The optional identifier fil
 | Price | `CatalogueItemVariantPrice` | See **Price** in step 1 | ❌ | The full price of the variant's selling unit |
 | Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ✅ | How this variant is sold |
 | Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ✅ | The variant's current status |
-| Is Archived | `Boolean` | Always `false` here, since only non-archived variants are listed | ✅ | Whether the variant is archived |
 
 **Outcome**
 
@@ -406,7 +404,6 @@ Nothing changes. This step only reads.
 | Name | `String` | — | ✅ | The item's name |
 | Description | `String` | — | ❌ | Present only if the item has one |
 | Status | `CatalogueItemStatus` | `Active` or `Inactive` | ✅ | The item's current status |
-| Is Archived | `Boolean` | Always `false` here, since only non-archived items can be opened | ✅ | Whether the item is archived |
 | Variants | `CatalogueItemVariant[]` | Non-archived variants only; at least one entry | ✅ | The versions of the item on offer |
 | Image URL | `String` | A working link | ❌ | Present only if the item has an image |
 
@@ -422,7 +419,6 @@ Nothing changes. This step only reads.
 | Price | `CatalogueItemVariantPrice` | See **Price** in step 1 | ❌ | Present only if the variant has a price |
 | Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ✅ | How this variant is sold |
 | Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ✅ | Whether the variant is on sale, paused, or out of stock |
-| Is Archived | `Boolean` | Always `false` here, since only non-archived variants are listed | ✅ | Whether the variant is archived |
 
 **Outcome**
 

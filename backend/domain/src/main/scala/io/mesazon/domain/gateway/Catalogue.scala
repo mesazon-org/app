@@ -35,6 +35,7 @@ case class CatalogueItemBatchPostRequest(
 case class CatalogueItemPutRequest(
     name: Option[CatalogueItemName],
     description: Option[Option[CatalogueItemDescription]],
+    status: Option[CatalogueItemStatus],
     variantsUpdate: List[CatalogueItemVariantUpdate],
     variantsInsert: List[CatalogueItemVariantInsert],
 )
