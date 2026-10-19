@@ -8,13 +8,15 @@ Established 2026-09-03 from a review of `01-user-onboarding`, `02-forgot-passwor
 
 ## Catalogue contract replacement
 
-The 2026-10-17 cleanup removes the six legacy JSON operations and their 62-case `CatalogueApiSpec`. The eight replacement operations are implemented and wired, but their HTTP acceptance coverage is pending. The user requested finishing **one endpoint at a time**, starting with `POST /catalogue/item`; do not add one test for every endpoint in a single slice. The 35-case `FileApiSpec`, including the 14 item-image cases, remains separate.
+The 2026-10-17 cleanup removes the six legacy JSON operations and their 62-case `CatalogueApiSpec`. The eight replacement operations are implemented and wired. `POST /catalogue/item` now has 12 passing HTTP acceptance cases; the other seven operations remain pending. The user requested finishing **one endpoint at a time**; do not add one test for every endpoint in a single slice. The 35-case `FileApiSpec`, including the 14 item-image cases, remains separate.
 
 **Behaviour:** [Catalogue](../pages/epics/06-catalogue.md), adding one/several items, updating, archiving items/variants, opening, listing selected/all items, and checking name/SKU uniqueness.
 
-**Where:** rebuild `CatalogueApiSpec` and its suite registration through the existing shared harness. Each endpoint needs its applicable success, validation/conflict, middleware, tenant/lifecycle, and rejected-state cases from [Acceptance testing](project/acceptance-testing.md). Prove exact enum strings, required empty-list encoding, and omitted/null/set PUT fields including an empty attributes map. Verify static summary/uniqueness routes reach their operations instead of the UUID detail route. Existing validator, service, and real repository tests remain and do not substitute for this HTTP proof. Remove covered operations from this entry as they are completed.
+**Where:** continue the registered `CatalogueApiSpec` through the existing shared harness. Each endpoint needs its applicable success, validation/conflict, middleware, tenant/lifecycle, and rejected-state cases from [Acceptance testing](project/acceptance-testing.md). Prove exact enum strings, required empty-list encoding, and omitted/null/set PUT fields including an empty attributes map. Verify static summary/uniqueness routes reach their operations instead of the UUID detail route. Existing validator, service, and real repository tests remain and do not substitute for this HTTP proof. Remove covered operations from this entry as they are completed.
 
-Pending operations: `CatalogueItemPost`, `CatalogueItemBatchPost`, `CatalogueItemPut`, `CatalogueItemArchivePut`, `CatalogueItemVariantArchivePut`, `CatalogueItemGet`, `CatalogueItemSummaryGet`, `CatalogueItemUniquenessGet`.
+Completed `CatalogueItemPost` coverage proves generated multi-variant data, enum strings, empty variants, ordered public validation fields, every applicable auth/organization gate, exact name/SKU conflicts, and complete state/rollback assertions. The two raw-payload decoding cases were removed following review; acceptance uses the typed client only. Both revised focused runs passed all 12 cases with no aborted suites.
+
+Pending operations: `CatalogueItemBatchPost`, `CatalogueItemPut`, `CatalogueItemArchivePut`, `CatalogueItemVariantArchivePut`, `CatalogueItemGet`, `CatalogueItemSummaryGet`, `CatalogueItemUniquenessGet`.
 
 ## Blocked on harness work
 
@@ -148,7 +150,7 @@ The repository and functional layers do cover these, so this is about transport,
 
 `addressType` is a Smithy enum; the address object and type remain required, so these malformed bodies fail while the request is decoded, before any validator runs. No test sends such a body: the typed `GatewayClient` cannot express an unknown enum value or a missing required member, and a raw-JSON client method was deliberately not added. The exact status body for a decode failure is therefore unproven. Missing text fields reach validation normally; an all-missing address produces the indexed `address` error. Blank, whitespace-only, untrimmed and over-long parts are covered in `AddressValidatorSpec`, and the request validator specs prove the entry index. Deterministic HTTP coverage for partial and all-empty addresses remains missing.
 
-**Where:** `OrganizationManagementApiSpec` and `CustomerBookApiSpec`. Needs a raw-body request method on `GatewayClient`; pin the real status and body, and assert nothing was stored.
+**Where:** `OrganizationManagementApiSpec` and `CustomerBookApiSpec`. Unknown enum values and omitted required members remain a documented decoding coverage limitation under the [typed-request standard](project/acceptance-testing.md#typed-requests-only); do not add a raw-body client to cover them. Add the representable partial/all-empty address cases through the typed client and assert the complete response and stored/unchanged state.
 
 ## Behaviour that only a live AI run can show
 

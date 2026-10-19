@@ -83,6 +83,83 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     override def nullValue: smithy.CustomerType = null
   }
 
+  given JsonValueCodec[smithy.Currency] = new JsonValueCodec[smithy.Currency] {
+    override def decodeValue(in: JsonReader, default: smithy.Currency): smithy.Currency = {
+      val currencyRaw = in.readString(null)
+      smithy.Currency
+        .fromString(currencyRaw)
+        .getOrElse(in.decodeError(s"Unknown Currency: [$currencyRaw]"))
+    }
+
+    override def encodeValue(currency: smithy.Currency, out: JsonWriter): Unit =
+      out.writeVal(currency.stringValue)
+
+    override def nullValue: smithy.Currency = null
+  }
+
+  given JsonValueCodec[smithy.CatalogueItemVariantUnit] = new JsonValueCodec[smithy.CatalogueItemVariantUnit] {
+    override def decodeValue(
+        in: JsonReader,
+        default: smithy.CatalogueItemVariantUnit,
+    ): smithy.CatalogueItemVariantUnit = {
+      val catalogueItemVariantUnitRaw = in.readString(null)
+      smithy.CatalogueItemVariantUnit
+        .fromString(catalogueItemVariantUnitRaw)
+        .getOrElse(in.decodeError(s"Unknown CatalogueItemVariantUnit: [$catalogueItemVariantUnitRaw]"))
+    }
+
+    override def encodeValue(catalogueItemVariantUnit: smithy.CatalogueItemVariantUnit, out: JsonWriter): Unit =
+      out.writeVal(catalogueItemVariantUnit.stringValue)
+
+    override def nullValue: smithy.CatalogueItemVariantUnit = null
+  }
+
+  given JsonValueCodec[smithy.CatalogueItemVariantUnitPerUnit] =
+    new JsonValueCodec[smithy.CatalogueItemVariantUnitPerUnit] {
+      override def decodeValue(
+          in: JsonReader,
+          default: smithy.CatalogueItemVariantUnitPerUnit,
+      ): smithy.CatalogueItemVariantUnitPerUnit = {
+        val catalogueItemVariantUnitPerUnitRaw = in.readString(null)
+        smithy.CatalogueItemVariantUnitPerUnit
+          .fromString(catalogueItemVariantUnitPerUnitRaw)
+          .getOrElse(
+            in.decodeError(s"Unknown CatalogueItemVariantUnitPerUnit: [$catalogueItemVariantUnitPerUnitRaw]")
+          )
+      }
+
+      override def encodeValue(
+          catalogueItemVariantUnitPerUnit: smithy.CatalogueItemVariantUnitPerUnit,
+          out: JsonWriter,
+      ): Unit =
+        out.writeVal(catalogueItemVariantUnitPerUnit.stringValue)
+
+      override def nullValue: smithy.CatalogueItemVariantUnitPerUnit = null
+    }
+
+  given JsonValueCodec[smithy.CatalogueItemVariantUnitUnitSize] =
+    new JsonValueCodec[smithy.CatalogueItemVariantUnitUnitSize] {
+      override def decodeValue(
+          in: JsonReader,
+          default: smithy.CatalogueItemVariantUnitUnitSize,
+      ): smithy.CatalogueItemVariantUnitUnitSize = {
+        val catalogueItemVariantUnitUnitSizeRaw = in.readString(null)
+        smithy.CatalogueItemVariantUnitUnitSize
+          .fromString(catalogueItemVariantUnitUnitSizeRaw)
+          .getOrElse(
+            in.decodeError(s"Unknown CatalogueItemVariantUnitUnitSize: [$catalogueItemVariantUnitUnitSizeRaw]")
+          )
+      }
+
+      override def encodeValue(
+          catalogueItemVariantUnitUnitSize: smithy.CatalogueItemVariantUnitUnitSize,
+          out: JsonWriter,
+      ): Unit =
+        out.writeVal(catalogueItemVariantUnitUnitSize.stringValue)
+
+      override def nullValue: smithy.CatalogueItemVariantUnitUnitSize = null
+    }
+
   given JsonValueCodec[smithy.CatalogueItemStatus] = new JsonValueCodec[smithy.CatalogueItemStatus] {
     override def decodeValue(in: JsonReader, default: smithy.CatalogueItemStatus): smithy.CatalogueItemStatus = {
       val catalogueItemStatusRaw = in.readString(null)
@@ -127,12 +204,15 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     JsonCodecMaker.make[smithy.RemoveCustomerBusinessContactsPutRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.ArchiveCustomerPutRequest] =
     JsonCodecMaker.make[smithy.ArchiveCustomerPutRequest]
+  given JsonValueCodec[smithy.CatalogueItemPostRequest] =
+    JsonCodecMaker.make[smithy.CatalogueItemPostRequest](CodecMakerConfig.withTransientEmpty(false))
 
   given JsonValueCodec[smithy.GetCustomerIndividualGetResponse] =
     JsonCodecMaker.make[smithy.GetCustomerIndividualGetResponse]
   given JsonValueCodec[smithy.GetCustomerBusinessGetResponse] =
     JsonCodecMaker.make[smithy.GetCustomerBusinessGetResponse]
   given JsonValueCodec[smithy.GetCustomersGetResponse]        = JsonCodecMaker.make[smithy.GetCustomersGetResponse]
+  given JsonValueCodec[smithy.CatalogueItemPostResponse]      = JsonCodecMaker.make[smithy.CatalogueItemPostResponse]
   given JsonValueCodec[smithy.SignUpEmailPostResponse]        = JsonCodecMaker.make[smithy.SignUpEmailPostResponse]
   given JsonValueCodec[smithy.CreateOrganizationPostResponse] =
     JsonCodecMaker.make[smithy.CreateOrganizationPostResponse]
@@ -439,6 +519,27 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
         )
       )
       .response(asJsonEitherOrFail[E, smithy.InsertCustomerIndividualPostResponse])
+      .send(sttpBackend)
+
+  def catalogueItemPost[E: JsonValueCodec](
+      catalogueItemPostRequest: smithy.CatalogueItemPostRequest,
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, smithy.CatalogueItemPostResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("catalogue", "item"))
+      .body(asJson(catalogueItemPostRequest))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonEitherOrFail[E, smithy.CatalogueItemPostResponse])
       .send(sttpBackend)
 
   def insertCustomerIndividualsPost[E: JsonValueCodec](

@@ -74,6 +74,12 @@ Updates additionally prove absent optional members retain stored values, require
 
 Archive/delete operations prove the documented missing/already-completed behavior and retained/deleted dependent rows.
 
+## String fixtures
+
+Use simple, distinct hardcoded strings when acceptance setup needs different valid names, SKUs, or similar text values. Sample the surrounding models through their existing arbitraries and override only those fixture fields. For optional strings, preserve generated presence with `Gen.option(Gen.const(...))`, for example `arbitrarySample(Gen.option(Gen.const(CatalogueItemVariantSku.assume("sku1"))))` and a second fixture using `"sku2"`.
+
+Do not build random prefixes/suffixes, repeat length/trim rules, or assert that these fixture strings differ. Their constants establish the setup; string validation and generator correctness belong to lower-level tests. This is an acceptance-specific exception to the general arbitrary-data and fixture-distinctness assertion rules. Keep arbitrary business statuses and other unrelated fields. Endpoint conflict scenarios still assert the actual uniqueness rejection and unchanged state required by their contract.
+
 ## Test layout
 
 Keep the phases visually separate:
@@ -182,6 +188,13 @@ Assert the exact empty/unchanged feature state after each rejection. Do not rely
 
 `GatewayClient` owns the typed method and JSON codecs for every tested endpoint. Its error type parameter is the expected error shape for the current case.
 
+### Typed requests only
+
+- Acceptance tests call the endpoint's typed `GatewayClient` method with its generated Smithy request model.
+- Do not add raw-body methods such as `catalogueItemPostRaw`, construct JSON strings, or mutate serialized JSON to manufacture invalid payloads.
+- Unknown closed-enum values and omitted required members cannot be represented by the typed request. Record that decoding coverage limitation in the feature doc rather than bypassing the model with raw JSON, `null`, or casts.
+- Keep validation cases that the typed model can express, such as empty required lists, invalid text, and out-of-range numbers. Preserve the normal codecs so those inputs reach the intended validation layer.
+
 Required-list request codecs must use:
 
 ```scala
@@ -240,6 +253,7 @@ Before completion, inspect the spec from top to bottom and confirm:
 - the feature spec is registered in `GatewayAcceptanceSpec`;
 - required Queries/clients are built in `GatewayItContext`;
 - `GatewayClient` methods and codecs cover every endpoint;
+- requests use typed client methods, with no raw-body methods or serialized-JSON mutation;
 - the feature doc lists exact completed and remaining acceptance cases.
 
 ## Verification
