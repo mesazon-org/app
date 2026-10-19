@@ -8,7 +8,7 @@ Established 2026-09-03 from a review of `01-user-onboarding`, `02-forgot-passwor
 
 ## Catalogue contract replacement
 
-The 2026-10-17 cleanup removes the six legacy JSON operations and their 62-case `CatalogueApiSpec`. The eight replacement operations are implemented and wired. `POST /catalogue/item` now has 12 passing HTTP acceptance cases; the other seven operations remain pending. The user requested finishing **one endpoint at a time**; do not add one test for every endpoint in a single slice. The 35-case `FileApiSpec`, including the 14 item-image cases, remains separate.
+The 2026-10-17 cleanup removes the six legacy JSON operations and their 62-case `CatalogueApiSpec`. The eight replacement operations are implemented and wired. `POST /catalogue/item` and `POST /catalogue/item/batch` each have 12 passing HTTP acceptance cases; the other six operations remain pending. The user requested finishing **one endpoint at a time**; do not add one test for every endpoint in a single slice. The 35-case `FileApiSpec`, including the 14 item-image cases, remains separate.
 
 **Behaviour:** [Catalogue](../pages/epics/06-catalogue.md), adding one/several items, updating, archiving items/variants, opening, listing selected/all items, and checking name/SKU uniqueness.
 
@@ -16,7 +16,9 @@ The 2026-10-17 cleanup removes the six legacy JSON operations and their 62-case 
 
 Completed `CatalogueItemPost` coverage proves generated multi-variant data, enum strings, empty variants, ordered public validation fields, every applicable auth/organization gate, exact name/SKU conflicts, and complete state/rollback assertions. The two raw-payload decoding cases were removed following review; acceptance uses the typed client only. Both revised focused runs passed all 12 cases with no aborted suites.
 
-Pending operations: `CatalogueItemBatchPost`, `CatalogueItemPut`, `CatalogueItemArchivePut`, `CatalogueItemVariantArchivePut`, `CatalogueItemGet`, `CatalogueItemSummaryGet`, `CatalogueItemUniquenessGet`.
+Completed `CatalogueItemBatchPost` coverage proves ordered returned IDs, complete persisted items/variants and creation/audit defaults, empty batches, accumulated public validation fields, every applicable auth/organization gate, and atomic rollback for an existing-name conflict and a SKU duplicated across batch items. Exact nested indexes remain validator-level proof because HTTP errors expose only field names. Two focused runs each passed all 24 Catalogue cases with no aborted suites.
+
+Pending operations: `CatalogueItemPut`, `CatalogueItemArchivePut`, `CatalogueItemVariantArchivePut`, `CatalogueItemGet`, `CatalogueItemSummaryGet`, `CatalogueItemUniquenessGet`.
 
 ## Blocked on harness work
 
