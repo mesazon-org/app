@@ -632,6 +632,26 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .response(asJsonErrorUnit[E])
       .send(sttpBackend)
 
+  def catalogueItemArchivePut[E: JsonValueCodec](
+      catalogueItemID: CatalogueItemID,
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, Unit]]] =
+    basicRequest
+      .put(externalUri.addPath("catalogue", "item", catalogueItemID.value.toString, "archive"))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonErrorUnit[E])
+      .send(sttpBackend)
+
   def insertCustomerIndividualsPost[E: JsonValueCodec](
       insertCustomerIndividualsPostRequest: smithy.InsertCustomerIndividualsPostRequest,
       organizationIDOpt: Option[OrganizationID],
