@@ -6,7 +6,7 @@ Organization-scoped items with variants, exact prices, selling units, and item i
 
 Business status describes the item or variant; every defined status is usable while `isArchived = false`. `Inactive` is a business label, not disabled state. The former status-based enabled/disabled lists conflated business state with archiving and were an incorrect model for Catalogue; do not restore that classification or its test matrix. The archive flag alone controls visibility, updates, uploads, uniqueness reservation, and last-variant counting.
 
-The product-doc slice is approved in `8483f6ec`. The currency transition is implemented and verified by the slice evidence below. The coordinated archive/status implementation passed its earlier checks. The review corrections simplify status-independent fixtures and retain the existing image-upload lookup. Lint, all 114 affected core tests, and all 35 fresh-image File API acceptance cases pass. `POST /catalogue/item`, `POST /catalogue/item/batch`, `PUT /catalogue/item/{catalogueItemID}`, and item archive HTTP acceptance are covered below; the other four JSON operations remain pending.
+The product-doc slice is approved in `8483f6ec`. The currency transition is implemented and verified by the slice evidence below. The coordinated archive/status implementation passed its earlier checks. The review corrections simplify status-independent fixtures and retain the existing image-upload lookup. Lint, all 114 affected core tests, and all 35 fresh-image File API acceptance cases pass. `POST /catalogue/item`, `POST /catalogue/item/batch`, `PUT /catalogue/item/{catalogueItemID}`, item archive, and variant archive HTTP acceptance are covered below; the other three JSON operations remain pending.
 
 | Concern | Current code | Agreed target |
 |---|---|---|
@@ -245,7 +245,7 @@ Cleanup verification passed:
 
 Manual AI extraction specs received only reference updates and compiled; they were not executed.
 
-JSON Catalogue HTTP acceptance covers single POST (12 cases), batch POST (12), item PUT (16), and item archive (8). Continue one endpoint at a time, reviewing each endpoint's coverage before the next. Each endpoint needs its applicable acceptance cases from the acceptance guide, including auth/organization gates, exact validation/conflict responses, and complete state assertions. Nullable PUT updates now have HTTP proof; static summary/uniqueness routes versus the UUID detail route and the other remaining endpoints still require it. Keep the product epic's verification status explicit until that work is complete.
+JSON Catalogue HTTP acceptance covers single POST (12 cases), batch POST (12), item PUT (16), item archive (8), and variant archive (9). Continue one endpoint at a time, reviewing each endpoint's coverage before the next. Each endpoint needs its applicable acceptance cases from the acceptance guide, including auth/organization gates, exact validation/conflict responses, and complete state assertions. Nullable PUT updates now have HTTP proof; static summary/uniqueness routes versus the UUID detail route and the other remaining endpoints still require it. Keep the product epic's verification status explicit until that work is complete.
 
 ### POST /catalogue/item acceptance slice
 
@@ -273,11 +273,19 @@ Verification: after retaining exactly two PUT successes and all 14 failure cases
 
 ### PUT /catalogue/item/{catalogueItemID}/archive acceptance slice
 
-This slice adds the bodiless typed `GatewayClient.catalogueItemArchivePut` and its section immediately after item update, matching Smithy order. Hand-written scope is the client, `CatalogueApiSpec`, and this feature doc; the earlier uncommitted acceptance-backlog documentation remains a separate slice. Complexity: **MEDIUM** — this adds HTTP proof of existing behavior without changing the contract, persistence, or application code.
+This slice adds the bodiless typed `GatewayClient.catalogueItemArchivePut` and its section immediately after item update, matching Smithy order. Hand-written scope is the client, `CatalogueApiSpec`, and this feature doc; the earlier acceptance-backlog documentation was delivered as a separate slice. Complexity: **MEDIUM** — this adds HTTP proof of existing behavior without changing the contract, persistence, or application code.
 
 The eight cases include one simple success with generated non-archived item/variant rows: both flags are archived while all business fields/statuses and creation times are retained, with the same update time. The seven explicit authentication/organization rejections assert exact responses and empty Catalogue state. No raw payloads, shared auth helpers, or success/no-op matrix are added. Missing/already-archived/foreign-parent no-op behavior remains documented and covered at lower layers; this slice does not claim HTTP proof for those cases.
 
 Verification: `runLint` passed, including acceptance compilation. The focused real-gateway/PostgreSQL run passed all 48 Catalogue cases (12 single POST, 12 batch POST, 16 item PUT, 8 item archive), with ten suites completed and none aborted. The existing verified gateway image was reused because production code is unchanged. Prior endpoint blocks remain unchanged; diff and relative-link checks passed. After this endpoint, continue only on review with variant archive, item detail, summaries, then uniqueness. The acceptance-gap backlog update follows in its own documentation slice to keep the three-file limit.
+
+### PUT /catalogue/item/{catalogueItemID}/variant/{catalogueItemVariantID}/archive acceptance slice
+
+Hand-written scope is `GatewayClient`, `CatalogueApiSpec`, and this feature doc. Complexity: **MEDIUM** — add HTTP coverage of the existing variant archive contract without application, schema, or harness changes. The bodiless typed client and endpoint section follow item archive in Smithy order.
+
+The nine cases include one simple success: archiving the requested variant of a generated non-archived item with two non-archived variants preserves the complete parent and sibling and the target’s business fields/status/creation time. The last non-archived variant is a separate `Forbidden` failure with complete unchanged rows. The seven authentication/organization failures assert exact responses and empty Catalogue state. Business statuses and timestamps remain arbitrary. Other successful no-op combinations stay outside this HTTP slice; their production behavior is unchanged.
+
+Verification: `runLint` passed, including acceptance compilation. The focused real-gateway/PostgreSQL run passed all 57 Catalogue cases, including the nine variant-archive cases, with ten suites completed and none aborted. The existing verified gateway image was reused because production code is unchanged. Prior endpoint blocks remain unchanged; diff and relative-link checks passed. Stop for review before item detail, summaries, and uniqueness. Update the acceptance-gap backlog separately to retain the three-file limit.
 
 ## Open decisions
 
