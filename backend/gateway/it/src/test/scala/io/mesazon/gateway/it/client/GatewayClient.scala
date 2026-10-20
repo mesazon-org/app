@@ -11,6 +11,7 @@ import io.mesazon.gateway.json.tapir.given
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.transform.given
 import io.scalaland.chimney.dsl.*
+import smithy4s.Nullable
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.client4.jsoniter.*
@@ -174,6 +175,46 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     override def nullValue: smithy.CatalogueItemStatus = null
   }
 
+  given JsonValueCodec[smithy.CatalogueItemVariantStatus] = new JsonValueCodec[smithy.CatalogueItemVariantStatus] {
+    override def decodeValue(
+        in: JsonReader,
+        default: smithy.CatalogueItemVariantStatus,
+    ): smithy.CatalogueItemVariantStatus = {
+      val catalogueItemVariantStatusRaw = in.readString(null)
+      smithy.CatalogueItemVariantStatus
+        .fromString(catalogueItemVariantStatusRaw)
+        .getOrElse(in.decodeError(s"Unknown CatalogueItemVariantStatus: [$catalogueItemVariantStatusRaw]"))
+    }
+
+    override def encodeValue(
+        catalogueItemVariantStatus: smithy.CatalogueItemVariantStatus,
+        out: JsonWriter,
+    ): Unit =
+      out.writeVal(catalogueItemVariantStatus.stringValue)
+
+    override def nullValue: smithy.CatalogueItemVariantStatus = null
+  }
+
+  inline given nullableJsonValueCodec[A]: JsonValueCodec[Nullable[A]] = {
+    val optionJsonValueCodec =
+      JsonCodecMaker.make[Option[A]](CodecMakerConfig.withTransientEmpty(false))
+
+    nullableJsonValueCodec(optionJsonValueCodec)
+  }
+
+  private def nullableJsonValueCodec[A](
+      optionJsonValueCodec: JsonValueCodec[Option[A]]
+  ): JsonValueCodec[Nullable[A]] =
+    new JsonValueCodec[Nullable[A]] {
+      override def decodeValue(in: JsonReader, default: Nullable[A]): Nullable[A] =
+        Nullable.fromOption(optionJsonValueCodec.decodeValue(in, None))
+
+      override def encodeValue(nullable: Nullable[A], out: JsonWriter): Unit =
+        optionJsonValueCodec.encodeValue(nullable.toOption, out)
+
+      override def nullValue: Nullable[A] = Nullable.Null
+    }
+
   given JsonValueCodec[smithy.InsertCustomerIndividualPostRequest] =
     JsonCodecMaker.make[smithy.InsertCustomerIndividualPostRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.InsertCustomerIndividualsPostRequest] =
@@ -208,6 +249,8 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     JsonCodecMaker.make[smithy.CatalogueItemPostRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.CatalogueItemBatchPostRequest] =
     JsonCodecMaker.make[smithy.CatalogueItemBatchPostRequest](CodecMakerConfig.withTransientEmpty(false))
+  given JsonValueCodec[smithy.CatalogueItemPutRequest] =
+    JsonCodecMaker.make[smithy.CatalogueItemPutRequest](CodecMakerConfig.withTransientEmpty(false))
 
   given JsonValueCodec[smithy.GetCustomerIndividualGetResponse] =
     JsonCodecMaker.make[smithy.GetCustomerIndividualGetResponse]
@@ -565,6 +608,28 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
         )
       )
       .response(asJsonEitherOrFail[E, smithy.CatalogueItemBatchPostResponse])
+      .send(sttpBackend)
+
+  def catalogueItemPut[E: JsonValueCodec](
+      catalogueItemPutRequest: smithy.CatalogueItemPutRequest,
+      catalogueItemID: CatalogueItemID,
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, Unit]]] =
+    basicRequest
+      .put(externalUri.addPath("catalogue", "item", catalogueItemID.value.toString))
+      .body(asJson(catalogueItemPutRequest))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonErrorUnit[E])
       .send(sttpBackend)
 
   def insertCustomerIndividualsPost[E: JsonValueCodec](
