@@ -31,7 +31,7 @@ Every request in this epic names the organization it applies to, and only touche
 4. A variant's price, when given, is the full price of exactly the quantity its selling unit states, including everything inside it. "2 caramels" is its own variant with its own price, not twice the price of one. A pack of 6 bottles is priced as the whole pack. Loose tomatoes sold as "1 kilogram" are priced per kilogram.
 5. Each priced variant has its own currency, as part of its price. Variants of the same item may use different currencies. A variant with no price has no currency.
 6. An item's name must be unique among the organization's non-archived items. Archiving an item frees its name for reuse.
-7. A SKU, when given, must be unique among all of the organization's non-archived variants, across every item. Upper and lower case count as different. Archiving the variant, or its item, frees the SKU for reuse.
+7. A SKU, when given, must be unique among all of the organization's non-archived variants, across every item. Upper and lower case identify the same SKU. This comparison change is pending implementation. Archiving the variant, or its item, frees the SKU for reuse.
 8. Items and variants are **archived**, never deleted. Archiving an item also archives all of its variants. An item's last non-archived variant cannot be archived on its own; to retire it, archive the item.
 9. An item may carry one image. Uploading a new one replaces it.
 
@@ -191,7 +191,7 @@ These shapes are used throughout this epic.
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| SKU | `String` | 1–255 characters, trimmed; case-sensitive; unique among the organization's non-archived variants | ❌ | The business's own stock code |
+| SKU | `String` | 1–255 characters, trimmed; case-insensitive uniqueness (pending); unique among the organization's non-archived variants | ❌ | The business's own stock code |
 | Label | `String` | 1–255 characters, trimmed | ❌ | A short label for this variant, such as "1L Lemon bottle" for the item "COKE" |
 | Description | `String` | 1–255 characters, trimmed | ❌ | A longer description of this variant |
 | Attributes | `Map<String, String>` | Empty by default; each name and value 1–255 characters, trimmed; names unique within the variant; no limit on how many | ❌ | What sets this variant apart, such as colour and size |
@@ -347,7 +347,7 @@ Request is empty apart from naming the organization. The optional identifier fil
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ✅ | Identifies the variant |
-| SKU | `String` | 1–255 characters, trimmed; case-sensitive | ❌ | The business's stock code |
+| SKU | `String` | 1–255 characters, trimmed; case-insensitive uniqueness (pending) | ❌ | The business's stock code |
 | Label | `String` | 1–255 characters, trimmed | ❌ | A short label for the variant |
 | Price | `CatalogueItemVariantPrice` | See **Price** in step 1 | ❌ | The full price of the variant's selling unit |
 | Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ✅ | How this variant is sold |
@@ -674,7 +674,7 @@ Nothing changes. This step only reads.
 | 2. User checks only a name, or only a SKU | - An answer comes back for that one only |
 | 3. User checks neither | - Rejected as invalid, with separate errors for the missing name and SKU |
 | 4. The name belongs to a non-archived item | - Reported as taken |
-| 5. The SKU belongs to a non-archived variant, including an `Inactive` or `OutOfStock` one | - Reported as taken |
+| 5. The SKU belongs to a non-archived variant, including an `Inactive` or `OutOfStock` one | - Reported as taken even when letter case differs; case-insensitive comparison is pending implementation |
 | 6. The name or SKU is not used anywhere in the organization | - Reported as free |
 | 7. The name belongs only to an archived item, or the SKU only to an archived variant or a variant of an archived item | - Reported as free, the same way adding an item treats it |
 
@@ -691,7 +691,7 @@ Nothing changes. This step only reads.
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Name | `String` | 1–255 characters, trimmed; sent in the address as `name` | ❌ | The item name to check. Give this, the SKU, or both |
-| SKU | `String` | 1–255 characters, trimmed; case-sensitive; sent in the address as `sku` | ❌ | The variant SKU to check. Give this, the name, or both |
+| SKU | `String` | 1–255 characters, trimmed; case-insensitive uniqueness (pending); sent in the address as `sku` | ❌ | The variant SKU to check. Give this, the name, or both |
 
 **Response**
 
