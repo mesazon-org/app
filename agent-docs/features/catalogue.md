@@ -6,7 +6,7 @@ Organization-scoped items with variants, exact prices, selling units, and item i
 
 Business status describes the item or variant; every defined status is usable while `isArchived = false`. `Inactive` is a business label, not disabled state. The former status-based enabled/disabled lists conflated business state with archiving and were an incorrect model for Catalogue; do not restore that classification or its test matrix. The archive flag alone controls visibility, updates, uploads, uniqueness reservation, and last-variant counting.
 
-The product-doc slice is approved in `8483f6ec`. The currency transition is implemented and verified by the slice evidence below. The coordinated archive/status implementation passed its earlier checks. The review corrections simplify status-independent fixtures and retain the existing image-upload lookup. Lint, all 114 affected core tests, and all 35 fresh-image File API acceptance cases pass. `POST /catalogue/item`, `POST /catalogue/item/batch`, `PUT /catalogue/item/{catalogueItemID}`, item archive, and variant archive HTTP acceptance are covered below; the other three JSON operations remain pending.
+The product-doc slice is approved in `8483f6ec`. The currency transition is implemented and verified by the slice evidence below. The coordinated archive/status implementation passed its earlier checks. The review corrections simplify status-independent fixtures and retain the existing image-upload lookup. Lint, all 114 affected core tests, and all 35 fresh-image File API acceptance cases pass. `POST /catalogue/item`, `POST /catalogue/item/batch`, `PUT /catalogue/item/{catalogueItemID}`, item archive, variant archive, and item detail GET HTTP acceptance are covered below; summaries and uniqueness remain pending.
 
 | Concern | Current code | Agreed target |
 |---|---|---|
@@ -245,7 +245,7 @@ Cleanup verification passed:
 
 Manual AI extraction specs received only reference updates and compiled; they were not executed.
 
-JSON Catalogue HTTP acceptance covers single POST (12 cases), batch POST (12), item PUT (16), item archive (8), and variant archive (9). Continue one endpoint at a time, reviewing each endpoint's coverage before the next. Each endpoint needs its applicable acceptance cases from the acceptance guide, including auth/organization gates, exact validation/conflict responses, and complete state assertions. Nullable PUT updates now have HTTP proof; static summary/uniqueness routes versus the UUID detail route and the other remaining endpoints still require it. Keep the product epic's verification status explicit until that work is complete.
+JSON Catalogue HTTP acceptance covers single POST (12 cases), batch POST (12), item PUT (16), item archive (8), variant archive (9), and item detail GET (10). Continue one endpoint at a time, reviewing each endpoint's coverage before the next. Each endpoint needs its applicable acceptance cases from the acceptance guide, including auth/organization gates, exact validation/conflict responses, and complete state assertions. Nullable PUT updates now have HTTP proof; static summary/uniqueness routes versus the UUID detail route and the other remaining endpoints still require it. Keep the product epic's verification status explicit until that work is complete.
 
 ### POST /catalogue/item acceptance slice
 
@@ -286,6 +286,14 @@ Hand-written scope is `GatewayClient`, `CatalogueApiSpec`, and this feature doc.
 The nine cases include one simple success: archiving the requested variant of a generated non-archived item with two non-archived variants preserves the complete parent and sibling and the target’s business fields/status/creation time. The last non-archived variant is a separate `Forbidden` failure with complete unchanged rows. The seven authentication/organization failures assert exact responses and empty Catalogue state. Business statuses and timestamps remain arbitrary. Other successful no-op combinations stay outside this HTTP slice; their production behavior is unchanged.
 
 Verification: `runLint` passed, including acceptance compilation. The focused real-gateway/PostgreSQL run passed all 57 Catalogue cases, including the nine variant-archive cases, with ten suites completed and none aborted. The existing verified gateway image was reused because production code is unchanged. Prior endpoint blocks remain unchanged; diff and relative-link checks passed. Stop for review before item detail, summaries, and uniqueness. Update the acceptance-gap backlog separately to retain the three-file limit.
+
+### GET /catalogue/item/{catalogueItemID} acceptance slice
+
+Hand-written scope is the typed `GatewayClient.catalogueItemGet`, its response codec, `CatalogueApiSpec`, and this feature doc (three files). Complexity: **MEDIUM** — HTTP proof of existing read behavior, without production or harness changes. The endpoint section follows variant archive in Smithy order.
+
+The ordinary success uses generated item/variant business statuses, a non-archived item without an image, one non-archived variant, and one archived variant. It asserts the complete independently constructed Smithy response, excludes the archived variant, and retains complete database state. Missing, archived, and foreign-organization items each return the existing `InternalServerError` without writes. The six applicable authentication/organization rejection cases assert exact errors and empty Catalogue state. All defined organization roles are permitted, so no disallowed-role request is constructible. Image URL signing remains functional-test proof; this HTTP slice exercises the explicit no-image branch and does not claim the signed-image branch.
+
+Verification: final `runLint` passed after the lambda naming correction, including acceptance compilation. The focused real-gateway/PostgreSQL run passed all 67 Catalogue cases, including ten detail-GET cases, with ten suites completed and none aborted. The existing verified gateway image was reused because production code is unchanged. Prior endpoint blocks remain unchanged; diff and relative-link checks passed. Stop for review before summaries and uniqueness. Update the acceptance-gap backlog separately to retain the three-file limit.
 
 ## Open decisions
 

@@ -260,6 +260,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.CatalogueItemPostResponse]      = JsonCodecMaker.make[smithy.CatalogueItemPostResponse]
   given JsonValueCodec[smithy.CatalogueItemBatchPostResponse] =
     JsonCodecMaker.make[smithy.CatalogueItemBatchPostResponse]
+  given JsonValueCodec[smithy.CatalogueItemGetResponse]       = JsonCodecMaker.make[smithy.CatalogueItemGetResponse]
   given JsonValueCodec[smithy.SignUpEmailPostResponse]        = JsonCodecMaker.make[smithy.SignUpEmailPostResponse]
   given JsonValueCodec[smithy.CreateOrganizationPostResponse] =
     JsonCodecMaker.make[smithy.CreateOrganizationPostResponse]
@@ -680,6 +681,26 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
         )
       )
       .response(asJsonErrorUnit[E])
+      .send(sttpBackend)
+
+  def catalogueItemGet[E: JsonValueCodec](
+      catalogueItemID: CatalogueItemID,
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, smithy.CatalogueItemGetResponse]]] =
+    basicRequest
+      .get(externalUri.addPath("catalogue", "item", catalogueItemID.value.toString))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonEitherOrFail[E, smithy.CatalogueItemGetResponse])
       .send(sttpBackend)
 
   def insertCustomerIndividualsPost[E: JsonValueCodec](
