@@ -2826,5 +2826,614 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
             List(catalogueItemVariantRowForeign)
       }
     }
+
+    "GET /catalogue/item/summary" should {
+      "successfully return an empty list when the catalogue is empty" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val catalogueItemSummaryGetResponse = gatewayClient
+          .catalogueItemSummaryGet[smithy.InternalServerError](
+            Nil,
+            Some(organizationUserRow.organizationID),
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        catalogueItemSummaryGetResponse.code shouldBe StatusCode.Ok
+        catalogueItemSummaryGetResponse.body.value shouldBe smithy.CatalogueItemSummaryGetResponse(Nil)
+
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe Nil
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe Nil
+      }
+
+      "successfully return all catalogue item summaries in item and variant order when no IDs are supplied" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
+          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+          val createdAtBaseline           = arbitrarySample[CreatedAt]
+          val createdAtOrderOffsetSeconds = 1L
+          val catalogueItemRow1           = arbitrarySample[CatalogueItemRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            name = CatalogueItemName.assume("summary-item-1"),
+            imageAsset = None,
+            isArchived = false,
+            createdAt = createdAtBaseline,
+          )
+          val catalogueItemRow2 = arbitrarySample[CatalogueItemRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            name = CatalogueItemName.assume("summary-item-2"),
+            imageAsset = None,
+            isArchived = false,
+            createdAt = CreatedAt(createdAtBaseline.value.plusSeconds(createdAtOrderOffsetSeconds)),
+          )
+          val catalogueItemVariantRow1 = arbitrarySample[CatalogueItemVariantRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            catalogueItemID = catalogueItemRow1.catalogueItemID,
+            sku = arbitrarySample(Gen.option(Gen.const(CatalogueItemVariantSku.assume("summary-sku-1")))),
+            isArchived = false,
+            createdAt = createdAtBaseline,
+          )
+          val catalogueItemVariantRow2 = arbitrarySample[CatalogueItemVariantRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            catalogueItemID = catalogueItemRow1.catalogueItemID,
+            sku = arbitrarySample(Gen.option(Gen.const(CatalogueItemVariantSku.assume("summary-sku-2")))),
+            isArchived = false,
+            createdAt = CreatedAt(createdAtBaseline.value.plusSeconds(createdAtOrderOffsetSeconds)),
+          )
+          val catalogueItemVariantRow3 = arbitrarySample[CatalogueItemVariantRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            catalogueItemID = catalogueItemRow2.catalogueItemID,
+            sku = arbitrarySample(Gen.option(Gen.const(CatalogueItemVariantSku.assume("summary-sku-3")))),
+            isArchived = false,
+          )
+
+          postgresClient
+            .executeQuery(catalogueQueries.insertCatalogueItemRows(List(catalogueItemRow2, catalogueItemRow1)))
+            .zioValue
+          postgresClient
+            .executeQuery(
+              catalogueQueries.insertCatalogueItemVariantRows(
+                List(catalogueItemVariantRow3, catalogueItemVariantRow2, catalogueItemVariantRow1)
+              )
+            )
+            .zioValue
+
+          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+          val catalogueItemSummaryGetResponse = gatewayClient
+            .catalogueItemSummaryGet[smithy.InternalServerError](
+              Nil,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+          catalogueItemSummaryGetResponse.code shouldBe StatusCode.Ok
+
+          val catalogueItemRowsWithVariantRows = List(
+            catalogueItemRow1 -> List(catalogueItemVariantRow1, catalogueItemVariantRow2),
+            catalogueItemRow2 -> List(catalogueItemVariantRow3),
+          )
+          val catalogueItemSummariesExpected = catalogueItemRowsWithVariantRows.map {
+            case (catalogueItemRow, catalogueItemVariantRows) =>
+              smithy.CatalogueItemSummary(
+                catalogueItemID = catalogueItemRow.catalogueItemID.value,
+                name = catalogueItemRow.name.value,
+                status = catalogueItemRow.status.transformInto[smithy.CatalogueItemStatus],
+                imageNormalizedUrl = None,
+                variants = catalogueItemVariantRows.map(catalogueItemVariantRow =>
+                  smithy.CatalogueItemVariantSummary(
+                    catalogueItemVariantID = catalogueItemVariantRow.catalogueItemVariantID.value,
+                    sku = catalogueItemVariantRow.sku.map(_.value),
+                    label = catalogueItemVariantRow.label.map(_.value),
+                    price = catalogueItemVariantRow.price.map(catalogueItemVariantPrice =>
+                      smithy.CatalogueItemVariantPrice(
+                        amount = catalogueItemVariantPrice.value.amount.value,
+                        currency = catalogueItemVariantPrice.value.currency.transformInto[smithy.Currency],
+                      )
+                    ),
+                    sellingUnit = smithy.CatalogueItemVariantSaleUnit(
+                      quantity = smithy.CatalogueItemVariantQuantity(
+                        value = catalogueItemVariantRow.sellingUnit.quantity.value.value,
+                        unit = catalogueItemVariantRow.sellingUnit.quantity.unit
+                          .transformInto[smithy.CatalogueItemVariantUnit],
+                      ),
+                      perUnit = catalogueItemVariantRow.sellingUnit.perUnit.map(catalogueItemVariantPerUnit =>
+                        smithy.CatalogueItemVariantPerUnit(
+                          value = catalogueItemVariantPerUnit.value.value,
+                          unit = catalogueItemVariantPerUnit.unit
+                            .transformInto[smithy.CatalogueItemVariantUnitPerUnit],
+                        )
+                      ),
+                      unitSize = catalogueItemVariantRow.sellingUnit.unitSize.map(catalogueItemVariantUnitSize =>
+                        smithy.CatalogueItemVariantUnitSize(
+                          value = catalogueItemVariantUnitSize.value.value,
+                          unit = catalogueItemVariantUnitSize.unit
+                            .transformInto[smithy.CatalogueItemVariantUnitUnitSize],
+                        )
+                      ),
+                    ),
+                    status = catalogueItemVariantRow.status.transformInto[smithy.CatalogueItemVariantStatus],
+                  )
+                ),
+              )
+          }
+
+          catalogueItemSummaryGetResponse.body.value shouldBe
+            smithy.CatalogueItemSummaryGetResponse(catalogueItemSummariesExpected)
+
+          postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue.toSet shouldBe
+            Set(catalogueItemRow1, catalogueItemRow2)
+          postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue.toSet shouldBe
+            Set(catalogueItemVariantRow1, catalogueItemVariantRow2, catalogueItemVariantRow3)
+      }
+
+      "successfully return selected summaries in catalogue order and ignore duplicate and missing IDs" in withContext {
+        context =>
+          import context.*
+
+          val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+          val userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
+          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+          val createdAtBaseline           = arbitrarySample[CreatedAt]
+          val createdAtOrderOffsetSeconds = 1L
+          val catalogueItemRow1           = arbitrarySample[CatalogueItemRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            name = CatalogueItemName.assume("selected-item-1"),
+            imageAsset = None,
+            isArchived = false,
+            createdAt = createdAtBaseline,
+          )
+          val catalogueItemRow2 = arbitrarySample[CatalogueItemRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            name = CatalogueItemName.assume("selected-item-2"),
+            imageAsset = None,
+            isArchived = false,
+            createdAt = CreatedAt(createdAtBaseline.value.plusSeconds(createdAtOrderOffsetSeconds)),
+          )
+          val catalogueItemRowUnselected = arbitrarySample[CatalogueItemRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            name = CatalogueItemName.assume("selected-item-unselected"),
+            imageAsset = None,
+            isArchived = false,
+          )
+          val catalogueItemVariantRow1 = arbitrarySample[CatalogueItemVariantRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            catalogueItemID = catalogueItemRow1.catalogueItemID,
+            sku = arbitrarySample(Gen.option(Gen.const(CatalogueItemVariantSku.assume("selected-sku-1")))),
+            isArchived = false,
+          )
+          val catalogueItemVariantRow2 = arbitrarySample[CatalogueItemVariantRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            catalogueItemID = catalogueItemRow2.catalogueItemID,
+            sku = arbitrarySample(Gen.option(Gen.const(CatalogueItemVariantSku.assume("selected-sku-2")))),
+            isArchived = false,
+          )
+          val catalogueItemVariantRowUnselected = arbitrarySample[CatalogueItemVariantRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            catalogueItemID = catalogueItemRowUnselected.catalogueItemID,
+            sku = arbitrarySample(Gen.option(Gen.const(CatalogueItemVariantSku.assume("selected-sku-unselected")))),
+            isArchived = false,
+          )
+          val catalogueItemIDMissing = arbitrarySample[CatalogueItemID]
+
+          Set(
+            catalogueItemRow1.catalogueItemID,
+            catalogueItemRow2.catalogueItemID,
+            catalogueItemRowUnselected.catalogueItemID,
+          ) should not contain catalogueItemIDMissing
+
+          postgresClient
+            .executeQuery(
+              catalogueQueries.insertCatalogueItemRows(
+                List(catalogueItemRowUnselected, catalogueItemRow2, catalogueItemRow1)
+              )
+            )
+            .zioValue
+          postgresClient
+            .executeQuery(
+              catalogueQueries.insertCatalogueItemVariantRows(
+                List(catalogueItemVariantRowUnselected, catalogueItemVariantRow2, catalogueItemVariantRow1)
+              )
+            )
+            .zioValue
+
+          val catalogueItemIDs = List(
+            catalogueItemRow2.catalogueItemID,
+            catalogueItemRow1.catalogueItemID,
+            catalogueItemRow2.catalogueItemID,
+            catalogueItemIDMissing,
+          )
+          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+          val catalogueItemSummaryGetResponse = gatewayClient
+            .catalogueItemSummaryGet[smithy.InternalServerError](
+              catalogueItemIDs,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+            .zioValue
+
+          catalogueItemSummaryGetResponse.code shouldBe StatusCode.Ok
+
+          val catalogueItemRowsWithVariantRows = List(
+            catalogueItemRow1 -> List(catalogueItemVariantRow1),
+            catalogueItemRow2 -> List(catalogueItemVariantRow2),
+          )
+          val catalogueItemSummariesExpected = catalogueItemRowsWithVariantRows.map {
+            case (catalogueItemRow, catalogueItemVariantRows) =>
+              smithy.CatalogueItemSummary(
+                catalogueItemID = catalogueItemRow.catalogueItemID.value,
+                name = catalogueItemRow.name.value,
+                status = catalogueItemRow.status.transformInto[smithy.CatalogueItemStatus],
+                imageNormalizedUrl = None,
+                variants = catalogueItemVariantRows.map(catalogueItemVariantRow =>
+                  smithy.CatalogueItemVariantSummary(
+                    catalogueItemVariantID = catalogueItemVariantRow.catalogueItemVariantID.value,
+                    sku = catalogueItemVariantRow.sku.map(_.value),
+                    label = catalogueItemVariantRow.label.map(_.value),
+                    price = catalogueItemVariantRow.price.map(catalogueItemVariantPrice =>
+                      smithy.CatalogueItemVariantPrice(
+                        amount = catalogueItemVariantPrice.value.amount.value,
+                        currency = catalogueItemVariantPrice.value.currency.transformInto[smithy.Currency],
+                      )
+                    ),
+                    sellingUnit = smithy.CatalogueItemVariantSaleUnit(
+                      quantity = smithy.CatalogueItemVariantQuantity(
+                        value = catalogueItemVariantRow.sellingUnit.quantity.value.value,
+                        unit = catalogueItemVariantRow.sellingUnit.quantity.unit
+                          .transformInto[smithy.CatalogueItemVariantUnit],
+                      ),
+                      perUnit = catalogueItemVariantRow.sellingUnit.perUnit.map(catalogueItemVariantPerUnit =>
+                        smithy.CatalogueItemVariantPerUnit(
+                          value = catalogueItemVariantPerUnit.value.value,
+                          unit = catalogueItemVariantPerUnit.unit
+                            .transformInto[smithy.CatalogueItemVariantUnitPerUnit],
+                        )
+                      ),
+                      unitSize = catalogueItemVariantRow.sellingUnit.unitSize.map(catalogueItemVariantUnitSize =>
+                        smithy.CatalogueItemVariantUnitSize(
+                          value = catalogueItemVariantUnitSize.value.value,
+                          unit = catalogueItemVariantUnitSize.unit
+                            .transformInto[smithy.CatalogueItemVariantUnitUnitSize],
+                        )
+                      ),
+                    ),
+                    status = catalogueItemVariantRow.status.transformInto[smithy.CatalogueItemVariantStatus],
+                  )
+                ),
+              )
+          }
+
+          catalogueItemSummaryGetResponse.body.value shouldBe
+            smithy.CatalogueItemSummaryGetResponse(catalogueItemSummariesExpected)
+
+          postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue.toSet shouldBe
+            Set(catalogueItemRow1, catalogueItemRow2, catalogueItemRowUnselected)
+          postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue.toSet shouldBe
+            Set(catalogueItemVariantRow1, catalogueItemVariantRow2, catalogueItemVariantRowUnselected)
+      }
+
+      "successfully exclude archived and foreign catalogue items and archived variants" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+        val organizationIDForeign = arbitrarySample[OrganizationID]
+
+        organizationIDForeign shouldNot equal(organizationUserRow.organizationID)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationUserRow.organizationID,
+          name = CatalogueItemName.assume("filtered-item"),
+          imageAsset = None,
+          isArchived = false,
+        )
+        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationUserRow.organizationID,
+          name = CatalogueItemName.assume("filtered-item-archived"),
+          imageAsset = None,
+          isArchived = true,
+        )
+        val catalogueItemRowForeign = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationIDForeign,
+          name = CatalogueItemName.assume("filtered-item-foreign"),
+          imageAsset = None,
+          isArchived = false,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationUserRow.organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          sku = arbitrarySample(Gen.option(Gen.const(CatalogueItemVariantSku.assume("filtered-sku")))),
+          isArchived = false,
+        )
+        val catalogueItemVariantRowArchived = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationUserRow.organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          sku = arbitrarySample(Gen.option(Gen.const(CatalogueItemVariantSku.assume("filtered-sku-archived")))),
+          isArchived = true,
+        )
+        val catalogueItemVariantRowForArchivedItem = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationUserRow.organizationID,
+          catalogueItemID = catalogueItemRowArchived.catalogueItemID,
+          sku = arbitrarySample(Gen.option(Gen.const(CatalogueItemVariantSku.assume("filtered-sku-parent-archived")))),
+          isArchived = true,
+        )
+        val catalogueItemVariantRowForeign = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationIDForeign,
+          catalogueItemID = catalogueItemRowForeign.catalogueItemID,
+          sku = arbitrarySample(Gen.option(Gen.const(CatalogueItemVariantSku.assume("filtered-sku-foreign")))),
+          isArchived = false,
+        )
+
+        postgresClient
+          .executeQuery(
+            catalogueQueries.insertCatalogueItemRows(
+              List(catalogueItemRowForeign, catalogueItemRowArchived, catalogueItemRow)
+            )
+          )
+          .zioValue
+        postgresClient
+          .executeQuery(
+            catalogueQueries.insertCatalogueItemVariantRows(
+              List(
+                catalogueItemVariantRowForeign,
+                catalogueItemVariantRowForArchivedItem,
+                catalogueItemVariantRowArchived,
+                catalogueItemVariantRow,
+              )
+            )
+          )
+          .zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val catalogueItemSummaryGetResponse = gatewayClient
+          .catalogueItemSummaryGet[smithy.InternalServerError](
+            Nil,
+            Some(organizationUserRow.organizationID),
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        catalogueItemSummaryGetResponse.code shouldBe StatusCode.Ok
+        catalogueItemSummaryGetResponse.body.value shouldBe smithy.CatalogueItemSummaryGetResponse(
+          List(
+            smithy.CatalogueItemSummary(
+              catalogueItemID = catalogueItemRow.catalogueItemID.value,
+              name = catalogueItemRow.name.value,
+              status = catalogueItemRow.status.transformInto[smithy.CatalogueItemStatus],
+              imageNormalizedUrl = None,
+              variants = List(
+                smithy.CatalogueItemVariantSummary(
+                  catalogueItemVariantID = catalogueItemVariantRow.catalogueItemVariantID.value,
+                  sku = catalogueItemVariantRow.sku.map(_.value),
+                  label = catalogueItemVariantRow.label.map(_.value),
+                  price = catalogueItemVariantRow.price.map(catalogueItemVariantPrice =>
+                    smithy.CatalogueItemVariantPrice(
+                      amount = catalogueItemVariantPrice.value.amount.value,
+                      currency = catalogueItemVariantPrice.value.currency.transformInto[smithy.Currency],
+                    )
+                  ),
+                  sellingUnit = smithy.CatalogueItemVariantSaleUnit(
+                    quantity = smithy.CatalogueItemVariantQuantity(
+                      value = catalogueItemVariantRow.sellingUnit.quantity.value.value,
+                      unit = catalogueItemVariantRow.sellingUnit.quantity.unit
+                        .transformInto[smithy.CatalogueItemVariantUnit],
+                    ),
+                    perUnit = catalogueItemVariantRow.sellingUnit.perUnit.map(catalogueItemVariantPerUnit =>
+                      smithy.CatalogueItemVariantPerUnit(
+                        value = catalogueItemVariantPerUnit.value.value,
+                        unit = catalogueItemVariantPerUnit.unit.transformInto[smithy.CatalogueItemVariantUnitPerUnit],
+                      )
+                    ),
+                    unitSize = catalogueItemVariantRow.sellingUnit.unitSize.map(catalogueItemVariantUnitSize =>
+                      smithy.CatalogueItemVariantUnitSize(
+                        value = catalogueItemVariantUnitSize.value.value,
+                        unit = catalogueItemVariantUnitSize.unit
+                          .transformInto[smithy.CatalogueItemVariantUnitUnitSize],
+                      )
+                    ),
+                  ),
+                  status = catalogueItemVariantRow.status.transformInto[smithy.CatalogueItemVariantStatus],
+                )
+              ),
+            )
+          )
+        )
+
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue.toSet shouldBe
+          Set(catalogueItemRow, catalogueItemRowArchived, catalogueItemRowForeign)
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue.toSet shouldBe
+          Set(
+            catalogueItemVariantRow,
+            catalogueItemVariantRowArchived,
+            catalogueItemVariantRowForArchivedItem,
+            catalogueItemVariantRowForeign,
+          )
+      }
+
+      "fail with a BadRequest when the organization id header is missing" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val catalogueItemSummaryGetResponse = gatewayClient
+          .catalogueItemSummaryGet[smithy.BadRequest](
+            Nil,
+            None,
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        catalogueItemSummaryGetResponse.code shouldBe StatusCode.BadRequest
+        catalogueItemSummaryGetResponse.body.left.value shouldBe smithy.BadRequest()
+
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe Nil
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe Nil
+      }
+
+      "fail with an Unauthorized when the access token is missing" in withContext { context =>
+        import context.*
+
+        val organizationID = arbitrarySample[OrganizationID]
+
+        val catalogueItemSummaryGetResponse = gatewayClient
+          .catalogueItemSummaryGet[smithy.Unauthorized](
+            Nil,
+            Some(organizationID),
+            None,
+          )
+          .zioValue
+
+        catalogueItemSummaryGetResponse.code shouldBe StatusCode.Unauthorized
+        catalogueItemSummaryGetResponse.body.left.value shouldBe smithy.Unauthorized()
+
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe Nil
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe Nil
+      }
+
+      "fail with an Unauthorized when the access token is invalid" in withContext { context =>
+        import context.*
+
+        val organizationID = arbitrarySample[OrganizationID]
+
+        val catalogueItemSummaryGetResponse = gatewayClient
+          .catalogueItemSummaryGet[smithy.Unauthorized](
+            Nil,
+            Some(organizationID),
+            Some(AccessToken("invalidtoken")),
+          )
+          .zioValue
+
+        catalogueItemSummaryGetResponse.code shouldBe StatusCode.Unauthorized
+        catalogueItemSummaryGetResponse.body.left.value shouldBe smithy.Unauthorized()
+
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe Nil
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe Nil
+      }
+
+      "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
+        import context.*
+
+        val onboardStageInvalid =
+          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStageInvalid)
+        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
+        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val catalogueItemSummaryGetResponse = gatewayClient
+          .catalogueItemSummaryGet[smithy.Forbidden](
+            Nil,
+            Some(organizationUserRow.organizationID),
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        catalogueItemSummaryGetResponse.code shouldBe StatusCode.Forbidden
+        catalogueItemSummaryGetResponse.body.left.value shouldBe smithy.Forbidden()
+
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe Nil
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe Nil
+      }
+
+      "fail with an InternalServerError when the user details do not exist" in withContext { context =>
+        import context.*
+
+        val userID         = arbitrarySample[UserID]
+        val organizationID = arbitrarySample[OrganizationID]
+        val accessJwt      = jwtService.generateAccessToken(userID).zioValue
+
+        val catalogueItemSummaryGetResponse = gatewayClient
+          .catalogueItemSummaryGet[smithy.InternalServerError](
+            Nil,
+            Some(organizationID),
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        catalogueItemSummaryGetResponse.code shouldBe StatusCode.InternalServerError
+        catalogueItemSummaryGetResponse.body.left.value shouldBe smithy.InternalServerError()
+
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe Nil
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe Nil
+      }
+
+      "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
+        import context.*
+
+        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow = arbitrarySample[UserDetailsRow]
+          .copy(onboardStage = onboardStage)
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+
+        val organizationID = arbitrarySample[OrganizationID]
+        val accessJwt      = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val catalogueItemSummaryGetResponse = gatewayClient
+          .catalogueItemSummaryGet[smithy.InternalServerError](
+            Nil,
+            Some(organizationID),
+            Some(accessJwt.accessToken),
+          )
+          .zioValue
+
+        catalogueItemSummaryGetResponse.code shouldBe StatusCode.InternalServerError
+        catalogueItemSummaryGetResponse.body.left.value shouldBe smithy.InternalServerError()
+
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe Nil
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe Nil
+      }
+    }
   }
 }
