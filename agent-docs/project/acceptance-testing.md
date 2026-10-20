@@ -43,6 +43,7 @@ Use one explicit section per endpoint:
 }
 ```
 
+- Order endpoint sections exactly as the operations appear in the owning Smithy service’s `operations` list. For Catalogue, single insert comes first, batch insert second, then update, archive operations, reads, and uniqueness. Insert new endpoint sections at their contract position.
 - Never parameterize endpoint cases or a shared middleware matrix. Route wiring can differ even when policy is identical; every result must name the endpoint and failing condition in test output.
 - Put happy `200`/`204` and successful no-op/business-edge cases first. Order failures by HTTP status: `400`, `401`, `403`, `409`, `500`, `503`.
 - Success descriptions state the observable outcome. Failure descriptions start `fail with a[n] <ConcreteError>` and state the cause; include the rejected-side-effect proof when it is the scenario's important outcome.
@@ -239,6 +240,7 @@ An endpoint that calls out to an external/AI client with server-owned request co
 Before completion, inspect the spec from top to bottom and confirm:
 
 - every endpoint appears exactly once as a `should` section;
+- endpoint sections follow the owning Smithy service’s operation order;
 - every case invokes only that endpoint;
 - happy/no-op cases precede `400`, `401`, `403`, `409`, `500`, `503`;
 - every organization-scoped endpoint contains the applicable middleware matrix explicitly;
