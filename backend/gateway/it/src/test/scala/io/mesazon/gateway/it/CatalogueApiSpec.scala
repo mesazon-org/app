@@ -3742,7 +3742,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
           List(catalogueItemVariantRowForeign)
       }
 
-      "successfully report a SKU that differs only in case as reserved" in withContext { context =>
+      "successfully report a non-archived variant's case-insensitive SKU as reserved" in withContext { context =>
         import context.*
 
         val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head

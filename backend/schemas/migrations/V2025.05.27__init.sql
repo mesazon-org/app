@@ -189,7 +189,7 @@ create index idx_catalogue_item_variant_item
     on catalogue_item_variant (organization_id, catalogue_item_id);
 
 create unique index uq_catalogue_item_variant_sku
-    on catalogue_item_variant (organization_id, sku)
+    on catalogue_item_variant (organization_id, lower(sku))
     where is_archived = false and sku is not null;
 
 create table waha_user

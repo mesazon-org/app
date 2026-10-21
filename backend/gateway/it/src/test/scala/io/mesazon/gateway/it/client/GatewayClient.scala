@@ -263,6 +263,8 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.CatalogueItemGetResponse]        = JsonCodecMaker.make[smithy.CatalogueItemGetResponse]
   given JsonValueCodec[smithy.CatalogueItemSummaryGetResponse] =
     JsonCodecMaker.make[smithy.CatalogueItemSummaryGetResponse]
+  given JsonValueCodec[smithy.CatalogueItemUniquenessGetResponse] =
+    JsonCodecMaker.make[smithy.CatalogueItemUniquenessGetResponse]
   given JsonValueCodec[smithy.SignUpEmailPostResponse]        = JsonCodecMaker.make[smithy.SignUpEmailPostResponse]
   given JsonValueCodec[smithy.CreateOrganizationPostResponse] =
     JsonCodecMaker.make[smithy.CreateOrganizationPostResponse]
@@ -727,6 +729,34 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
         )
       )
       .response(asJsonEitherOrFail[E, smithy.CatalogueItemSummaryGetResponse])
+      .send(sttpBackend)
+  }
+
+  def catalogueItemUniquenessGet[E: JsonValueCodec](
+      nameOpt: Option[String],
+      skuOpt: Option[String],
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, smithy.CatalogueItemUniquenessGetResponse]]] = {
+    val catalogueItemUniquenessUriWithName = nameOpt.fold(
+      externalUri.addPath("catalogue", "item", "uniqueness")
+    )(name => externalUri.addPath("catalogue", "item", "uniqueness").addParam("name", name))
+    val catalogueItemUniquenessUri =
+      skuOpt.fold(catalogueItemUniquenessUriWithName)(sku => catalogueItemUniquenessUriWithName.addParam("sku", sku))
+
+    basicRequest
+      .get(catalogueItemUniquenessUri)
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonEitherOrFail[E, smithy.CatalogueItemUniquenessGetResponse])
       .send(sttpBackend)
   }
 

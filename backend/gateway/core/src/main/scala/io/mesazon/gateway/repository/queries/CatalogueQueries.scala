@@ -571,7 +571,7 @@ final class CatalogueQueries(
     isUniqueWith(
       frCatalogueItemVariantTable,
       organizationID,
-      fr"sku = $sku",
+      fr"lower(sku) = lower($sku)",
       fr"is_archived = false",
     )
 
