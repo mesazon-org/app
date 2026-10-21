@@ -4,7 +4,6 @@ import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.repository.CustomerBookRepository
 import io.mesazon.gateway.repository.CustomerBookRepository.*
-import io.mesazon.gateway.utils.ironRefinedTypeToTargetTransformer
 import io.mesazon.gateway.validation.service.CustomerBookRequestValidator
 import io.mesazon.gateway.{smithy, HttpErrorHandler}
 import io.scalaland.chimney.dsl.*

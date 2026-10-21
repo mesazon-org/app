@@ -187,23 +187,13 @@ object FileService {
         catalogueItemImageByteStream: ZStream[Any, Throwable, Byte],
     ): ServiceTask[Unit] = ZIO
       .scoped(for {
-        catalogueItemRow <- catalogueRepository
-          .getCatalogueItem(organizationID, catalogueItemID)
+        _ <- catalogueRepository
+          .getCatalogueItemWithVariants(organizationID, catalogueItemID)
           .someOrFail(
             ServiceError.InternalServerError.UnexpectedError(
               s"Catalogue item not found: catalogueItemID=[$catalogueItemID]"
             )
           )
-        _ <-
-          if (catalogueItemRow.status != CatalogueItemStatus.Active) {
-            ZIO.fail(
-              ServiceError.InternalServerError.UnexpectedError(
-                s"Catalogue item is not active: catalogueItemID=[$catalogueItemID], status=[${catalogueItemRow.status}]"
-              )
-            )
-          } else {
-            ZIO.unit
-          }
         catalogueItemImageScanOutput <- fileScanner.scan(
           catalogueItemImageByteStream,
           catalogueItemImageOriginalFileName.value,
@@ -237,7 +227,12 @@ object FileService {
         _ <- catalogueRepository.updateCatalogueItem(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
+          nameOptUpdate = None,
+          descriptionOptUpdate = None,
           imageAssetOptUpdate = Some(catalogueItemImageAsset),
+          statusOptUpdate = None,
+          updateCatalogueItemVariantInputs = Nil,
+          insertCatalogueItemVariantInputs = Nil,
         )
       } yield ())
 

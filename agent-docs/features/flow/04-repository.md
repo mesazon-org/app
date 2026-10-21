@@ -73,13 +73,13 @@ When changing the transactor, pool, SQL logging, or database test-client runtime
 
 ## Required proof: real PostgreSQL
 
-Every query and repository method added or changed in this PR is tested in `gateway/core/.../it/<Entity>RepositorySpec`; every DB constraint gets its own isolated test. Never mock/H2 the database.
+Every production query and repository method added or changed in this PR is tested in `gateway/core/.../it/<Entity>RepositorySpec`; every DB constraint gets its own isolated test. Testing-only readback queries do not get dedicated tests; they support assertions in the production behavior tests. Never mock/H2 the database.
 
 Harness:
 
 - Extend `ZWordSpecBase, RepositoryArbitraries, DockerComposeBase`.
 - `src/test/resources/compose/repository.yaml` starts PostgreSQL plus one-shot Flyway. `backend/schemas/local/postgres/init.sql` supplies schema/role and `TRUNCATE`; add only new role/grant needs.
-- Wait for `checkIfTableExists`; truncate every touched table before each test.
+- Check every configured table in `beforeAll` and reset every touched table in `beforeEach`. For new specs, iterate `repositoryConfig.allTableNames` for `checkIfTableExists` and `truncateTable`; the config already omits empty table names. Do not assume a primary-table check validates its children or that `TRUNCATE ... CASCADE` reaches every table the spec uses. Existing specs may keep explicit calls when they cover the complete fixture state.
 - `PostgreSQLTestClient.live` exposes `databaseLive`; `executeQuery` arranges/reads via Queries outside the repository under test.
 - The test client uses `PGSimpleDataSource` (not Hikari/scoped pooling), reuses production `DbContext`, runs `executeQuery(ConnectionIO|TranzactIO)` through `transactionOrDie`, and resolves the Testcontainers `postgres:5432` mapping with `PostgreSQLTestClientConfig.from`.
 - Each test uses a fresh `TestContext` with container-derived config, Queries/repository layers, and fresh mocked `TimeProvider`/`IDGenerator`. Batch expectations cover one call per item in order.

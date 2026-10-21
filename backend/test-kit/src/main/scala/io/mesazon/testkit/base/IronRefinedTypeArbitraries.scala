@@ -1,7 +1,7 @@
 package io.mesazon.testkit.base
 
 import io.github.iltotore.iron.*
-import io.github.iltotore.iron.constraint.all.Positive
+import io.github.iltotore.iron.constraint.all.{LessEqual, Positive}
 import io.mesazon.domain.*
 import org.scalacheck.*
 
@@ -25,6 +25,16 @@ trait IronRefinedTypeArbitraries {
       scaleFactor = BigInt(10).pow(scale)
       fraction <- Gen.choose(0L, (scaleFactor - 1).toLong)
     } yield BigDecimal(BigInt(whole) * scaleFactor + BigInt(fraction), scale).refineUnsafe[Pure]
+  }
+
+  given arbBigDecimalPositiveLessEqual99999: Arbitrary[BigDecimal :| (Positive & LessEqual[99999])] = Arbitrary {
+    val valueMaximum = 99999L
+    val scaleMaximum = 3
+    for {
+      scale <- Gen.choose(0, scaleMaximum)
+      scaleFactor = BigInt(10).pow(scale)
+      unscaledValue <- Gen.choose(1L, (BigInt(valueMaximum) * scaleFactor).toLong)
+    } yield BigDecimal(BigInt(unscaledValue), scale).refineUnsafe[Positive & LessEqual[99999]]
   }
 
   given arbUUIDPure: Arbitrary[UUID :| Pure] = Arbitrary(Gen.uuid.map(_.refineUnsafe[Pure]))

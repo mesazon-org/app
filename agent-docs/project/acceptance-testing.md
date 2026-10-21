@@ -43,6 +43,7 @@ Use one explicit section per endpoint:
 }
 ```
 
+- Order endpoint sections exactly as the operations appear in the owning Smithy service’s `operations` list. For Catalogue, single insert comes first, batch insert second, then update, archive operations, reads, and uniqueness. Insert new endpoint sections at their contract position.
 - Never parameterize endpoint cases or a shared middleware matrix. Route wiring can differ even when policy is identical; every result must name the endpoint and failing condition in test output.
 - Put happy `200`/`204` and successful no-op/business-edge cases first. Order failures by HTTP status: `400`, `401`, `403`, `409`, `500`, `503`.
 - Success descriptions state the observable outcome. Failure descriptions start `fail with a[n] <ConcreteError>` and state the cause; include the rejected-side-effect proof when it is the scenario's important outcome.
@@ -63,14 +64,22 @@ Build the cases for each endpoint before writing code. Cross out only cases that
 |---|---|
 | Validated organization write | happy/no-op edges; `400 ValidationError`; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role; every `409 Conflict`; `500` missing user details; `500` missing membership; dependency `503` if declared |
 | UUID-only organization write | happy/no-op edges; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role; `500` missing user details; `500` missing membership; dependency `503` if declared |
-| Organization read by ID | happy for every visible lifecycle state; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role only when constructible; `500` referenced entity missing; `500` missing user details; `500` missing membership; dependency `503` if declared |
+| Organization read by ID | happy for each distinct visibility rule; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role only when constructible; `500` referenced entity missing; `500` missing user details; `500` missing membership; dependency `503` if declared |
 | Organization list read | happy empty/non-empty/filter/order behavior; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role only when constructible; `500` missing user details; `500` missing membership; dependency `503` if declared |
+
+Business statuses that share the same visibility/editability rules use arbitrary fixture statuses in the ordinary happy path. Do not duplicate an endpoint success for `Active`, `Inactive`, or another equivalent business status. Keep separate cases for real policy boundaries such as archived versus non-archived, and for status transitions when changing status is itself the requirement.
 
 Batch writes additionally prove empty-batch behavior when valid, stable validation indexes, atomic conflict rollback, complete output order when contractual, and no partial rows after any rejection.
 
 Updates additionally prove absent optional members retain stored values, required members overwrite as documented, missing/archived target behavior, tenant isolation, uniqueness conflicts, and complete final rows.
 
 Archive/delete operations prove the documented missing/already-completed behavior and retained/deleted dependent rows.
+
+## String fixtures
+
+Use simple, distinct hardcoded strings when acceptance setup needs different valid names, SKUs, or similar text values. Sample the surrounding models through their existing arbitraries and override only those fixture fields. For optional strings, preserve generated presence with `Gen.option(Gen.const(...))`, for example `arbitrarySample(Gen.option(Gen.const(CatalogueItemVariantSku.assume("sku1"))))` and a second fixture using `"sku2"`.
+
+Do not build random prefixes/suffixes, repeat length/trim rules, or assert that these fixture strings differ. Their constants establish the setup; string validation and generator correctness belong to lower-level tests. This is an acceptance-specific exception to the general arbitrary-data and fixture-distinctness assertion rules. Keep arbitrary business statuses and other unrelated fields. Endpoint conflict scenarios still assert the actual uniqueness rejection and unchanged state required by their contract.
 
 ## Test layout
 
@@ -180,6 +189,13 @@ Assert the exact empty/unchanged feature state after each rejection. Do not rely
 
 `GatewayClient` owns the typed method and JSON codecs for every tested endpoint. Its error type parameter is the expected error shape for the current case.
 
+### Typed requests only
+
+- Acceptance tests call the endpoint's typed `GatewayClient` method with its generated Smithy request model.
+- Do not add raw-body methods such as `catalogueItemPostRaw`, construct JSON strings, or mutate serialized JSON to manufacture invalid payloads.
+- Unknown closed-enum values and omitted required members cannot be represented by the typed request. Record that decoding coverage limitation in the feature doc rather than bypassing the model with raw JSON, `null`, or casts.
+- Keep validation cases that the typed model can express, such as empty required lists, invalid text, and out-of-range numbers. Preserve the normal codecs so those inputs reach the intended validation layer.
+
 Required-list request codecs must use:
 
 ```scala
@@ -224,6 +240,7 @@ An endpoint that calls out to an external/AI client with server-owned request co
 Before completion, inspect the spec from top to bottom and confirm:
 
 - every endpoint appears exactly once as a `should` section;
+- endpoint sections follow the owning Smithy service’s operation order;
 - every case invokes only that endpoint;
 - happy/no-op cases precede `400`, `401`, `403`, `409`, `500`, `503`;
 - every organization-scoped endpoint contains the applicable middleware matrix explicitly;
@@ -238,6 +255,7 @@ Before completion, inspect the spec from top to bottom and confirm:
 - the feature spec is registered in `GatewayAcceptanceSpec`;
 - required Queries/clients are built in `GatewayItContext`;
 - `GatewayClient` methods and codecs cover every endpoint;
+- requests use typed client methods, with no raw-body methods or serialized-JSON mutation;
 - the feature doc lists exact completed and remaining acceptance cases.
 
 ## Verification

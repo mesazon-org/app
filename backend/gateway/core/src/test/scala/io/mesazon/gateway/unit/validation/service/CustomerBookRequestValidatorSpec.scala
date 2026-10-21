@@ -1,11 +1,11 @@
 package io.mesazon.gateway.unit.validation.service
 
+import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.gateway.config.PhoneNumberValidatorConfig
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
-import io.mesazon.gateway.utils.given
 import io.mesazon.gateway.validation.domain.*
 import io.mesazon.gateway.validation.service.*
 import io.mesazon.testkit.base.*

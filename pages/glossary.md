@@ -13,6 +13,7 @@ Words and short forms used across the epics. Anywhere an acronym appears in an e
 | JWT | JSON Web Token | The format of the tokens that keep someone signed in. A signed piece of text the app can check without looking anything up. |
 | OTP | One-Time Passcode | A short code we send to someone to prove they own an email address or a phone number. It works once, and stops working after it expires. |
 | RFC | Request for Comments | An internet standards document. We use them to say exactly what counts as a valid email address, rather than inventing our own rule. |
+| SKU | Stock-Keeping Unit | The business's own code for one variant of a catalogue item, such as a flavour or a size. Optional, and unique among the organization's variants that are not archived. |
 | SMS | Short Message Service | A text message to a mobile phone. How we send a passcode when verifying a phone number. |
 | UUID | Universally Unique Identifier | A long random id, written as 36 characters, used to point at one specific thing without anyone being able to guess it. |
 

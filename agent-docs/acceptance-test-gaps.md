@@ -4,7 +4,21 @@ Known-missing acceptance coverage, found by reading the epics in `pages/epics/` 
 
 This is a backlog, not a guide — write the tests per [Acceptance testing](project/acceptance-testing.md), then delete the entry. An entry left here after its test lands is worse than no list.
 
-Established 2026-09-03 from a review of `01-user-onboarding`, `02-forgot-password`, `03-sign-in`, `04-organization-onboarding`, `05-customer-book`, and `06-catalogue`. All six of Catalogue's Smithy endpoints have acceptance blocks in `CatalogueApiSpec`, so that review turned up no new entry. Token Refresh has not been audited and may hold gaps of its own.
+Established 2026-09-03 from a review of `01-user-onboarding`, `02-forgot-password`, `03-sign-in`, `04-organization-onboarding`, `05-customer-book`, and `06-catalogue`. Token Refresh has not been audited and may hold gaps of its own.
+
+## Catalogue remaining coverage
+
+All eight JSON operations have acceptance sections. Current coverage and verified runs are recorded in the [Catalogue feature doc](features/catalogue.md#tests-and-verification). The remaining HTTP gaps are below; reduced-scope and typed-client limits are recorded separately.
+
+**Accepted decimal precision limitation:** rounding beyond 34 significant digits in HTTP and database JSON decoding is documented in the [Catalogue review](features/catalogue.md#known-issues-edge-cases-and-larger-follow-ups). The user deferred codec changes and dedicated precision tests because such values are outside expected business use. This is not pending acceptance work for the current scope. If the business needs greater precision later, use typed requests and independent exact database/response assertions; the acceptance client's current rounding codec must not hide the result.
+
+**Behaviour:** [Catalogue](../pages/epics/06-catalogue.md), opening an item and browsing all/chosen items with an image. The detail and summary acceptance successes currently use absent images. Presigned image URLs are covered by functional tests, but their HTTP response branches remain untested.
+
+**Where:** the detail and summary sections of the registered `CatalogueApiSpec`. A response-mapping or wire-codec regression in the populated-image branch could pass the current no-image HTTP cases. Add coverage only in a separately agreed endpoint slice, following [Acceptance testing](project/acceptance-testing.md).
+
+**Deliberately reduced HTTP scope:** at the user’s request, PUT has exactly two simple successes (name update and clearing the item description) plus 14 failures. Dedicated omitted-field and missing/archived/foreign-parent no-op successes, mixed variant insertion, exhaustive field/status replacement, variant nullable clearing, and empty attributes-map replacement are excluded. Item/variant archive no-op combinations are also outside the current HTTP suite. Their production rules remain documented and lower-layer coverage remains; do not claim HTTP proof or restore the removed cases without agreement. Ordinary business statuses share one policy and use arbitraries, rather than duplicate per-status successes.
+
+**Typed-model limit:** unknown closed-enum strings and omitted required transport members cannot be constructed through the approved typed clients. These decoding cases are outside HTTP coverage. Do not add raw JSON clients or mutate serialized payloads to cover them. Representable invalid strings, numbers and empty collections still use typed requests. Exact nested validation indexes remain validator-level proof because HTTP errors expose ordered field names only.
 
 ## Blocked on harness work
 
@@ -138,7 +152,7 @@ The repository and functional layers do cover these, so this is about transport,
 
 `addressType` is a Smithy enum; the address object and type remain required, so these malformed bodies fail while the request is decoded, before any validator runs. No test sends such a body: the typed `GatewayClient` cannot express an unknown enum value or a missing required member, and a raw-JSON client method was deliberately not added. The exact status body for a decode failure is therefore unproven. Missing text fields reach validation normally; an all-missing address produces the indexed `address` error. Blank, whitespace-only, untrimmed and over-long parts are covered in `AddressValidatorSpec`, and the request validator specs prove the entry index. Deterministic HTTP coverage for partial and all-empty addresses remains missing.
 
-**Where:** `OrganizationManagementApiSpec` and `CustomerBookApiSpec`. Needs a raw-body request method on `GatewayClient`; pin the real status and body, and assert nothing was stored.
+**Where:** `OrganizationManagementApiSpec` and `CustomerBookApiSpec`. Unknown enum values and omitted required members remain a documented decoding coverage limitation under the [typed-request standard](project/acceptance-testing.md#typed-requests-only); do not add a raw-body client to cover them. Add the representable partial/all-empty address cases through the typed client and assert the complete response and stored/unchanged state.
 
 ## Behaviour that only a live AI run can show
 

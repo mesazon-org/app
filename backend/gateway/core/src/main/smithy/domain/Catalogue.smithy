@@ -3,61 +3,177 @@ $version: "2.0"
 namespace io.mesazon.gateway.smithy
 
 use alloy#UUID
+use alloy#nullable
 
 enum CatalogueItemStatus {
     Active
-    Archived
+    Inactive
 }
 
-structure CatalogueItemPriceRequest {
+enum Currency {
+    EUR
+    USD
+    GBP
+}
+
+enum CatalogueItemVariantStatus {
+    Active
+    Inactive
+    OutOfStock
+}
+
+enum CatalogueItemVariantUnit {
+    Piece
+    Pack
+    Box
+    Bag
+    Bottle
+    Can
+    Jar
+    Gram
+    Kilogram
+    Millilitre
+    Litre
+    Millimetre
+    Centimetre
+    Metre
+    SquareMetre
+}
+
+enum CatalogueItemVariantUnitUnitSize {
+    Gram
+    Kilogram
+    Millilitre
+    Litre
+    Millimetre
+    Centimetre
+    Metre
+    SquareMetre
+}
+
+enum CatalogueItemVariantUnitPerUnit {
+    Bag
+    Bottle
+    Can
+    Jar
+    Piece
+}
+
+structure CatalogueItemVariantPrice {
     @required
     amount: BigDecimal
     @required
-    currency: String
+    currency: Currency
 }
 
-structure InsertCatalogueItemPostRequest {
+structure CatalogueItemVariantQuantity {
     @required
-    name: String
+    value: BigDecimal
     @required
-    unit: String
-    price: CatalogueItemPriceRequest
+    unit: CatalogueItemVariantUnit
 }
 
-list InsertCatalogueItems {
-    member: InsertCatalogueItemPostRequest
+structure CatalogueItemVariantPerUnit {
+    @required
+    value: BigDecimal
+    @required
+    unit: CatalogueItemVariantUnitPerUnit
 }
 
-structure InsertCatalogueItemsPostRequest {
-    @default([])
-    catalogueItems: InsertCatalogueItems
+structure CatalogueItemVariantUnitSize {
+    @required
+    value: BigDecimal
+    @required
+    unit: CatalogueItemVariantUnitUnitSize
 }
 
-structure UpdateCatalogueItemPutRequest {
+structure CatalogueItemVariantSaleUnit {
     @required
-    catalogueItemID: UUID
-    name: String
-    unit: String
-    price: CatalogueItemPriceRequest
+    quantity: CatalogueItemVariantQuantity
+    perUnit: CatalogueItemVariantPerUnit
+    unitSize: CatalogueItemVariantUnitSize
 }
 
-structure ArchiveCatalogueItemPutRequest {
-    @required
-    catalogueItemID: UUID
+map CatalogueItemVariantAttributes {
+    key: String
+    value: String
 }
 
-structure GetCatalogueItemGetResponse {
-    @required
-    catalogueItemID: UUID
-    @required
-    name: String
-    @required
-    unit: String
-    price: CatalogueItemPriceRequest
-    imageNormalizedUrl: String
+list CatalogueItemIDs {
+    member: UUID
 }
 
-structure GetCatalogueItem {
+structure CatalogueItemVariantInsert {
+    sku: String
+    label: String
+    description: String
+    @default({})
+    attributes: CatalogueItemVariantAttributes
+    price: CatalogueItemVariantPrice
+    @required
+    sellingUnit: CatalogueItemVariantSaleUnit
+}
+
+list CatalogueItemVariantsInsert {
+    member: CatalogueItemVariantInsert
+}
+
+structure CatalogueItemVariantUpdate {
+    @required
+    catalogueItemVariantID: UUID
+    @nullable
+    sku: String
+    @nullable
+    label: String
+    @nullable
+    description: String
+    attributes: CatalogueItemVariantAttributes
+    @nullable
+    price: CatalogueItemVariantPrice
+    sellingUnit: CatalogueItemVariantSaleUnit
+    status: CatalogueItemVariantStatus
+}
+
+list CatalogueItemVariantsUpdate {
+    member: CatalogueItemVariantUpdate
+}
+
+structure CatalogueItemVariant {
+    @required
+    catalogueItemVariantID: UUID
+    sku: String
+    label: String
+    description: String
+    @required
+    attributes: CatalogueItemVariantAttributes
+    price: CatalogueItemVariantPrice
+    @required
+    sellingUnit: CatalogueItemVariantSaleUnit
+    @required
+    status: CatalogueItemVariantStatus
+}
+
+list CatalogueItemVariants {
+    member: CatalogueItemVariant
+}
+
+structure CatalogueItemVariantSummary {
+    @required
+    catalogueItemVariantID: UUID
+    sku: String
+    label: String
+    price: CatalogueItemVariantPrice
+    @required
+    sellingUnit: CatalogueItemVariantSaleUnit
+    @required
+    status: CatalogueItemVariantStatus
+}
+
+list CatalogueItemVariantSummaries {
+    member: CatalogueItemVariantSummary
+}
+
+structure CatalogueItemSummary {
     @required
     catalogueItemID: UUID
     @required
@@ -65,13 +181,71 @@ structure GetCatalogueItem {
     @required
     status: CatalogueItemStatus
     imageNormalizedUrl: String
-}
-
-list GetCatalogueItems {
-    member: GetCatalogueItem
-}
-
-structure GetCatalogueItemsGetResponse {
     @required
-    catalogueItems: GetCatalogueItems
+    variants: CatalogueItemVariantSummaries
+}
+
+list CatalogueItemSummaries {
+    member: CatalogueItemSummary
+}
+
+structure CatalogueItemPostRequest {
+    @required
+    name: String
+    description: String
+    @default([])
+    variants: CatalogueItemVariantsInsert
+}
+
+list CatalogueItemsInsert {
+    member: CatalogueItemPostRequest
+}
+
+structure CatalogueItemPostResponse {
+    @required
+    catalogueItemID: UUID
+}
+
+structure CatalogueItemBatchPostRequest {
+    @default([])
+    catalogueItems: CatalogueItemsInsert
+}
+
+structure CatalogueItemBatchPostResponse {
+    @required
+    catalogueItemIDs: CatalogueItemIDs
+}
+
+structure CatalogueItemPutRequest {
+    name: String
+    @nullable
+    description: String
+    status: CatalogueItemStatus
+    @default([])
+    variantsUpdate: CatalogueItemVariantsUpdate
+    @default([])
+    variantsInsert: CatalogueItemVariantsInsert
+}
+
+structure CatalogueItemGetResponse {
+    @required
+    catalogueItemID: UUID
+    @required
+    name: String
+    description: String
+    @required
+    status: CatalogueItemStatus
+    imageNormalizedUrl: String
+    @required
+    variants: CatalogueItemVariants
+}
+
+structure CatalogueItemSummaryGetResponse {
+    @required
+    catalogueItemSummaries: CatalogueItemSummaries
+}
+
+structure CatalogueItemUniquenessGetResponse {
+    isNameUnique: Boolean
+    isSkuUnique: Boolean
 }

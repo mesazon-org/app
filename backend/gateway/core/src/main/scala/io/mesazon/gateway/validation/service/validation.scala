@@ -5,6 +5,7 @@ import cats.data.*
 import cats.syntax.all.*
 import io.mesazon.domain.gateway.ServiceError
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
+import smithy4s.Nullable
 import zio.*
 
 import scala.util.chaining.scalaUtilChainingOps
@@ -51,6 +52,18 @@ private[validation] def validateAllNested[A, B](
       )
     }
     .map(_.sequence)
+
+private[validation] def validateNonEmptyNested[A, B](
+    fieldName: String,
+    items: List[A],
+)(validate: A => UIO[ValidatedNec[InvalidFieldError, B]]): UIO[ValidatedNec[InvalidFieldError, NonEmptyChunk[B]]] =
+  validateAllNested(fieldName, items)(validate).map(
+    _.andThen(validatedItems =>
+      NonEmptyChunk
+        .fromIterableOption(validatedItems)
+        .toValidNec(InvalidFieldError(fieldName, s"At least one $fieldName must be provided", Seq.empty))
+    )
+  )
 
 private[validation] def validateSingleDefault[A](
     fieldName: String,
@@ -110,3 +123,13 @@ private[validation] def validateOptionalFields[A: Show, T](
       )
   }
   .toValidatedNec
+
+private[validation] def validateNullableField[A: Show, T](
+    fieldName: String,
+    valueRaw: Option[Nullable[A]],
+    constructor: A => Either[String, T],
+): ValidatedNec[InvalidFieldError, Option[Option[T]]] =
+  valueRaw match {
+    case None        => none[Option[T]].validNec
+    case Some(value) => validateOptionalField(fieldName, value.toOption, constructor).map(_.some)
+  }

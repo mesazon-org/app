@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import scala.jdk.CollectionConverters.*
 
-class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitraries, TokenArbitraries {
+class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries, RepositoryArbitraries {
 
   "FileService" when {
     "uploadOrganizationLogo" should {
@@ -323,16 +323,25 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
     }
 
     "uploadCatalogueItemImage" should {
-      "successfully scan, normalize, upload and persist the catalogue item image" in new TestContext {
+      "successfully upload a catalogue item's image" in new TestContext {
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
-        val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          isArchived = false,
+        )
+        val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
+          catalogueItemRow,
+          NonEmptyChunk.single(catalogueItemVariantRow),
         )
 
         val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/catalogue-image-test-1.jpeg"))
@@ -357,9 +366,9 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         )
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItem
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
-            .returningZIO(Some(catalogueItemRowActive))
+            .returningZIO(Some(catalogueItemWithVariantsRow))
             .once(),
           fileScannerMock.scan
             .expects(
@@ -392,10 +401,12 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
               catalogueItemID,
               None,
               None,
-              None,
               Some(catalogueItemImageAsset),
+              None,
+              Nil,
+              Nil,
             )
-            .returningZIO(Some(catalogueItemRowActive))
+            .returningZIO(())
             .once(),
         )
 
@@ -420,7 +431,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItem
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
             .returningZIO(None)
             .once()
@@ -437,25 +448,25 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           )
           .zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
+          s"Catalogue item not found: catalogueItemID=[$catalogueItemID]"
+        )
       }
 
-      "fail with InternalServerError when the catalogue item is archived" in new TestContext {
+      "fail with a RepositoryError before scanning when the catalogue item lookup fails" in new TestContext {
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
-
-        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
-          organizationID = organizationID,
-          catalogueItemID = catalogueItemID,
-          status = CatalogueItemStatus.Archived,
+        val repositoryError                    = ServiceError.InternalServerError.RepositoryError(
+          "repository failure",
+          new RuntimeException("boom"),
         )
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItem
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
-            .returningZIO(Some(catalogueItemRowArchived))
+            .failingZIO(repositoryError)
             .once()
         )
 
@@ -470,34 +481,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           )
           .zioError
 
-        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
-      }
-
-      "fail with InternalServerError when the catalogue item is not found (foreign organization isolation)" in new TestContext {
-        val organizationID                     = arbitrarySample[OrganizationID]
-        val catalogueItemID                    = arbitrarySample[CatalogueItemID]
-        val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
-
-        inSequence(
-          catalogueRepositoryMock.getCatalogueItem
-            .expects(organizationID, catalogueItemID)
-            .returningZIO(None)
-            .once()
-        )
-
-        val fileService = buildFileService(aiClientDataExtractionMock)
-
-        val serviceError = fileService
-          .uploadCatalogueItemImage(
-            organizationID = organizationID,
-            catalogueItemID = catalogueItemID,
-            catalogueItemImageOriginalFileName = catalogueItemImageOriginalFileName,
-            catalogueItemImageByteStream = catalogueItemImageByteStream,
-          )
-          .zioError
-
-        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError shouldBe repositoryError
       }
 
       "fail and stop the pipeline with InternalServerError when scanning the catalogue item image fails" in new TestContext {
@@ -506,18 +490,27 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
-        val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          isArchived = false,
+        )
+        val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
+          catalogueItemRow,
+          NonEmptyChunk.single(catalogueItemVariantRow),
         )
 
         val scanError = ServiceError.InternalServerError.UnexpectedError("Failed to scan catalogue item image")
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItem
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
-            .returningZIO(Some(catalogueItemRowActive))
+            .returningZIO(Some(catalogueItemWithVariantsRow))
             .once(),
           fileScannerMock.scan
             .expects(
@@ -550,19 +543,28 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
-        val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          isArchived = false,
+        )
+        val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
+          catalogueItemRow,
+          NonEmptyChunk.single(catalogueItemVariantRow),
         )
 
         val normalizeError =
           ServiceError.InternalServerError.UnexpectedError("Failed to normalize catalogue item image")
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItem
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
-            .returningZIO(Some(catalogueItemRowActive))
+            .returningZIO(Some(catalogueItemWithVariantsRow))
             .once(),
           fileScannerMock.scan
             .expects(
@@ -607,10 +609,19 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
-        val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          isArchived = false,
+        )
+        val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
+          catalogueItemRow,
+          NonEmptyChunk.single(catalogueItemVariantRow),
         )
 
         val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/catalogue-image-test-1.jpeg"))
@@ -622,9 +633,9 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
           ServiceError.InternalServerError.UnexpectedError("Failed to upload catalogue item image to S3")
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItem
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
-            .returningZIO(Some(catalogueItemRowActive))
+            .returningZIO(Some(catalogueItemWithVariantsRow))
             .once(),
           fileScannerMock.scan
             .expects(
@@ -673,10 +684,19 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
         val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
 
-        val catalogueItemRowActive = arbitrarySample[CatalogueItemRow].copy(
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
           catalogueItemID = catalogueItemID,
-          status = CatalogueItemStatus.Active,
+          isArchived = false,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          isArchived = false,
+        )
+        val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
+          catalogueItemRow,
+          NonEmptyChunk.single(catalogueItemVariantRow),
         )
 
         val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/catalogue-image-test-1.jpeg"))
@@ -703,9 +723,9 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
         val updateError = ServiceError.InternalServerError.UnexpectedError("Failed to persist catalogue item image")
 
         inSequence(
-          catalogueRepositoryMock.getCatalogueItem
+          catalogueRepositoryMock.getCatalogueItemWithVariants
             .expects(organizationID, catalogueItemID)
-            .returningZIO(Some(catalogueItemRowActive))
+            .returningZIO(Some(catalogueItemWithVariantsRow))
             .once(),
           fileScannerMock.scan
             .expects(
@@ -738,8 +758,10 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, RepositoryArbitr
               catalogueItemID,
               None,
               None,
-              None,
               Some(catalogueItemImageAsset),
+              None,
+              Nil,
+              Nil,
             )
             .failingZIO(updateError)
             .once(),

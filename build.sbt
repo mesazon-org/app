@@ -49,6 +49,7 @@ lazy val backendDomainModule = createBackendModule("domain")(None)
   .withDependencies(
     Dependencies.iron,
     Dependencies.cats,
+    Dependencies.zio,
   )
 
 lazy val backendClockModule = createBackendModule("clock")(None)

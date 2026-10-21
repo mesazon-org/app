@@ -5,77 +5,200 @@ import cats.syntax.all.*
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.gateway.smithy
-import io.mesazon.gateway.validation.domain.PriceDomainValidator
+import io.mesazon.gateway.validation.domain.PriceValidator
+import io.scalaland.chimney.dsl.*
+import smithy4s.Nullable
 import zio.*
 
 final class CatalogueRequestValidator(
-    priceDomainValidator: PriceDomainValidator
+    priceValidator: PriceValidator
 ) {
-
-  def validatedInsertCatalogueItemPostRequest(
-      insertCatalogueItemPostRequestSmithy: smithy.InsertCatalogueItemPostRequest
-  ): IO[ServiceError.BadRequestError.ValidationError, InsertCatalogueItemPostRequest] =
-    toValidatedRequestIO(validateInsertCatalogueItem(insertCatalogueItemPostRequestSmithy))
-
-  def validatedInsertCatalogueItemsPostRequest(
-      insertCatalogueItemsPostRequestSmithy: smithy.InsertCatalogueItemsPostRequest
-  ): IO[ServiceError.BadRequestError.ValidationError, InsertCatalogueItemsPostRequest] =
-    toValidatedRequestIO(
-      validateAllNested("catalogueItem", insertCatalogueItemsPostRequestSmithy.catalogueItems)(
-        validateInsertCatalogueItem
-      )
-        .map(_.map(InsertCatalogueItemsPostRequest.apply))
-    )
-
-  def validatedUpdateCatalogueItemPutRequest(
-      updateCatalogueItemPutRequestSmithy: smithy.UpdateCatalogueItemPutRequest
-  ): IO[ServiceError.BadRequestError.ValidationError, UpdateCatalogueItemPutRequest] =
-    toValidatedRequestIO(validateOptionalCatalogueItemPrice(updateCatalogueItemPutRequestSmithy.price).map {
-      catalogueItemPriceValidatedOpt =>
-        (
-          CatalogueItemID(updateCatalogueItemPutRequestSmithy.catalogueItemID).validNec,
-          validateOptionalField("name", updateCatalogueItemPutRequestSmithy.name, CatalogueItemName.either),
-          validateOptionalField("unit", updateCatalogueItemPutRequestSmithy.unit, CatalogueItemUnit.either),
-          catalogueItemPriceValidatedOpt,
-        ).mapN(UpdateCatalogueItemPutRequest.apply)
-    })
-
-  private def validateInsertCatalogueItem(
-      insertCatalogueItemPostRequestSmithy: smithy.InsertCatalogueItemPostRequest
-  ): UIO[ValidatedNec[InvalidFieldError, InsertCatalogueItemPostRequest]] =
-    validateOptionalCatalogueItemPrice(insertCatalogueItemPostRequestSmithy.price).map { catalogueItemPriceValidatedOpt =>
+  private def validateAttributes(
+      attributesRaw: Map[String, String]
+  ): ValidatedNec[
+    InvalidFieldError,
+    Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue],
+  ] =
+    attributesRaw.toList.traverse { case (nameRaw, valueRaw) =>
       (
-        validateRequiredField("name", insertCatalogueItemPostRequestSmithy.name, CatalogueItemName.either),
-        validateRequiredField("unit", insertCatalogueItemPostRequestSmithy.unit, CatalogueItemUnit.either),
-        catalogueItemPriceValidatedOpt,
-      ).mapN(InsertCatalogueItemPostRequest.apply)
+        validateRequiredField("attributeName", nameRaw, CatalogueItemVariantAttributeName.either),
+        validateRequiredField("attributeValue", valueRaw, CatalogueItemVariantAttributeValue.either),
+      ).mapN((_, _))
     }
+      .map(_.toMap)
 
-  private def validateOptionalCatalogueItemPrice(
-      catalogueItemPriceRequestSmithyOpt: Option[smithy.CatalogueItemPriceRequest]
-  ): UIO[ValidatedNec[InvalidFieldError, Option[CatalogueItemPrice]]] =
-    catalogueItemPriceRequestSmithyOpt match {
-      case None                                  => ZIO.succeed(none[CatalogueItemPrice].validNec)
-      case Some(catalogueItemPriceRequestSmithy) =>
-        priceDomainValidator
-          .validate(
-            (
-              amountRaw = catalogueItemPriceRequestSmithy.amount,
-              currencyRaw = catalogueItemPriceRequestSmithy.currency,
+  private def validatePrice(
+      priceSmithy: smithy.CatalogueItemVariantPrice
+  ): UIO[ValidatedNec[InvalidFieldError, CatalogueItemVariantPrice]] =
+    priceValidator
+      .validate((amountRaw = priceSmithy.amount, currency = priceSmithy.currency.transformInto[Currency]))
+      .map(
+        _.leftMap(errors =>
+          NonEmptyChain.one(
+            InvalidFieldError(
+              "price",
+              s"Failed with invalid fields ${errors.toNonEmptyList.toList.mkString("[", ", ", "]")}",
+              List(priceSmithy.amount.toString, priceSmithy.currency.stringValue),
             )
           )
-          .map(
-            _.leftMap(invalidFields =>
-              NonEmptyChain.one(
-                InvalidFieldError(
-                  "price",
-                  s"Failed with invalid fields ${invalidFields.toNonEmptyList.toList.mkString("[", ", ", "]")}",
-                  List(catalogueItemPriceRequestSmithy.amount.toString, catalogueItemPriceRequestSmithy.currency),
-                )
-              )
-            ).map(price => CatalogueItemPrice(price).some)
-          )
+        ).map(CatalogueItemVariantPrice.apply)
+      )
+
+  private def validateOptionalPrice(
+      priceSmithy: Option[smithy.CatalogueItemVariantPrice]
+  ): UIO[ValidatedNec[InvalidFieldError, Option[CatalogueItemVariantPrice]]] =
+    priceSmithy match {
+      case None        => ZIO.succeed(none[CatalogueItemVariantPrice].validNec)
+      case Some(price) => validatePrice(price).map(_.map(_.some))
     }
+
+  private def validateNullablePrice(
+      priceSmithy: Option[Nullable[smithy.CatalogueItemVariantPrice]]
+  ): UIO[ValidatedNec[InvalidFieldError, Option[Option[CatalogueItemVariantPrice]]]] =
+    priceSmithy match {
+      case None                        => ZIO.succeed(none[Option[CatalogueItemVariantPrice]].validNec)
+      case Some(Nullable.Null)         => ZIO.succeed(none[CatalogueItemVariantPrice].some.validNec)
+      case Some(Nullable.Value(price)) => validatePrice(price).map(_.map(_.some.some))
+    }
+
+  private def validateSaleUnit(
+      saleUnitSmithy: smithy.CatalogueItemVariantSaleUnit
+  ): ValidatedNec[InvalidFieldError, CatalogueItemVariantSaleUnit] =
+    (
+      validateRequiredField(
+        "quantity",
+        saleUnitSmithy.quantity.value,
+        CatalogueItemVariantQuantityValue.either,
+      ).map(value =>
+        CatalogueItemVariantQuantity(
+          value,
+          saleUnitSmithy.quantity.unit.transformInto[CatalogueItemVariantUnit],
+        )
+      ),
+      saleUnitSmithy.perUnit.traverse(perUnitSmithy =>
+        validateRequiredField(
+          "perUnit",
+          perUnitSmithy.value,
+          CatalogueItemVariantPerUnitValue.either,
+        ).map(value =>
+          CatalogueItemVariantPerUnit(
+            value,
+            perUnitSmithy.unit.transformInto[CatalogueItemVariantUnit.PerUnit],
+          )
+        )
+      ),
+      saleUnitSmithy.unitSize.traverse(unitSizeSmithy =>
+        validateRequiredField(
+          "unitSize",
+          unitSizeSmithy.value,
+          CatalogueItemVariantUnitSizeValue.either,
+        ).map(value =>
+          CatalogueItemVariantUnitSize(
+            value,
+            unitSizeSmithy.unit.transformInto[CatalogueItemVariantUnit.UnitSize],
+          )
+        )
+      ),
+    ).mapN(CatalogueItemVariantSaleUnit.apply)
+
+  private def validateVariantInsert(
+      variantSmithy: smithy.CatalogueItemVariantInsert
+  ): UIO[ValidatedNec[InvalidFieldError, CatalogueItemVariantInsert]] =
+    validateOptionalPrice(variantSmithy.price).map(price =>
+      (
+        validateOptionalField("sku", variantSmithy.sku, CatalogueItemVariantSku.either),
+        validateOptionalField("label", variantSmithy.label, CatalogueItemVariantLabel.either),
+        validateOptionalField("description", variantSmithy.description, CatalogueItemVariantDescription.either),
+        validateAttributes(variantSmithy.attributes),
+        price,
+        validateSaleUnit(variantSmithy.sellingUnit),
+      ).mapN(CatalogueItemVariantInsert.apply)
+    )
+
+  private def validateVariantInserts(
+      variantsSmithy: List[smithy.CatalogueItemVariantInsert]
+  ): UIO[ValidatedNec[InvalidFieldError, List[CatalogueItemVariantInsert]]] =
+    validateAllNested("variant", variantsSmithy)(validateVariantInsert)
+
+  private def validateItemPost(
+      requestSmithy: smithy.CatalogueItemPostRequest
+  ): UIO[ValidatedNec[InvalidFieldError, CatalogueItemPostRequest]] =
+    validateNonEmptyNested(
+      "variant",
+      requestSmithy.variants,
+    )(validateVariantInsert).map(variants =>
+      (
+        validateRequiredField("name", requestSmithy.name, CatalogueItemName.either),
+        validateOptionalField("description", requestSmithy.description, CatalogueItemDescription.either),
+        variants,
+      ).mapN(CatalogueItemPostRequest.apply)
+    )
+
+  private def validateVariantUpdate(
+      variantSmithy: smithy.CatalogueItemVariantUpdate
+  ): UIO[ValidatedNec[InvalidFieldError, CatalogueItemVariantUpdate]] =
+    validateNullablePrice(variantSmithy.price).map(price =>
+      (
+        CatalogueItemVariantID(variantSmithy.catalogueItemVariantID).validNec,
+        validateNullableField("sku", variantSmithy.sku, CatalogueItemVariantSku.either),
+        validateNullableField("label", variantSmithy.label, CatalogueItemVariantLabel.either),
+        validateNullableField("description", variantSmithy.description, CatalogueItemVariantDescription.either),
+        variantSmithy.attributes.traverse(validateAttributes),
+        price,
+        variantSmithy.sellingUnit.traverse(validateSaleUnit),
+        variantSmithy.status.map(_.transformInto[CatalogueItemVariantStatus]).validNec,
+      ).mapN(CatalogueItemVariantUpdate.apply)
+    )
+
+  def validatedCatalogueItemPostRequest(
+      requestSmithy: smithy.CatalogueItemPostRequest
+  ): IO[ServiceError.BadRequestError.ValidationError, CatalogueItemPostRequest] =
+    toValidatedRequestIO(validateItemPost(requestSmithy))
+
+  def validatedCatalogueItemBatchPostRequest(
+      requestSmithy: smithy.CatalogueItemBatchPostRequest
+  ): IO[ServiceError.BadRequestError.ValidationError, CatalogueItemBatchPostRequest] =
+    toValidatedRequestIO(
+      validateNonEmptyNested("catalogueItem", requestSmithy.catalogueItems)(validateItemPost)
+        .map(_.map(CatalogueItemBatchPostRequest.apply))
+    )
+
+  def validatedCatalogueItemPutRequest(
+      requestSmithy: smithy.CatalogueItemPutRequest
+  ): IO[ServiceError.BadRequestError.ValidationError, CatalogueItemPutRequest] =
+    toValidatedRequestIO(
+      for {
+        variantsUpdate <- validateAllNested("variant", requestSmithy.variantsUpdate)(validateVariantUpdate)
+        variantsInsert <- validateVariantInserts(requestSmithy.variantsInsert)
+      } yield (
+        validateOptionalField("name", requestSmithy.name, CatalogueItemName.either),
+        validateNullableField("description", requestSmithy.description, CatalogueItemDescription.either),
+        requestSmithy.status.map(_.transformInto[CatalogueItemStatus]).validNec,
+        variantsUpdate,
+        variantsInsert,
+      ).mapN(CatalogueItemPutRequest.apply)
+    )
+
+  def validatedCatalogueItemUniquenessGetRequest(
+      inputSmithy: smithy.CatalogueItemUniquenessGetInput
+  ): IO[ServiceError.BadRequestError.ValidationError, CatalogueItemUniquenessGetRequest] =
+    toValidatedRequestIO(
+      ZIO.succeed(
+        (
+          validateOptionalField("name", inputSmithy.name, CatalogueItemName.either),
+          validateOptionalField("sku", inputSmithy.sku, CatalogueItemVariantSku.either),
+        ).mapN(CatalogueItemUniquenessGetRequest.apply).andThen { request =>
+          if (request.name.nonEmpty || request.sku.nonEmpty) request.validNec
+          else
+            NonEmptyChain
+              .of(
+                InvalidFieldError("name", "At least one of name or sku must be provided", Seq.empty),
+                InvalidFieldError("sku", "At least one of name or sku must be provided", Seq.empty),
+              )
+              .invalid
+        }
+      )
+    )
 }
 
 object CatalogueRequestValidator {
