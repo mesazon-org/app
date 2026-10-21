@@ -711,7 +711,7 @@ One upload carries whichever source the user has — an image, a CSV file, or an
 | File Name | `String` | 1–255 characters, trimmed; supported extension matching the actual content | ✅ | The source file name; it is not stored |
 | Processing Message | `String` | Single line; up to 2,000 characters, trimmed plain text | ❌ | Optional best-effort guidance for interpreting the uploaded source |
 
-**Response — `ExtractCatalogueItemsPostResponse`**
+**Response — `CatalogueFileExtractPostResponse`**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
