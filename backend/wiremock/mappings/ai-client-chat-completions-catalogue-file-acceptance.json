@@ -1,0 +1,22 @@
+{
+  "priority": 2,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "contains": "Return exactly one CatalogueFileAIExtract JSON object"
+      },
+      {
+        "contains": "json_schema"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"chatcmpl-catalogue-file-acceptance\",\"object\":\"chat.completion\",\"created\":1700000000,\"model\":\"test-model\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"entriesIdentified\\\":1,\\\"entriesProcessed\\\":1,\\\"candidates\\\":[{\\\"name\\\":\\\"Bolt\\\",\\\"description\\\":null,\\\"variants\\\":[{\\\"sku\\\":\\\"BOLT-1\\\",\\\"label\\\":null,\\\"description\\\":null,\\\"attributes\\\":[{\\\"name\\\":\\\"Color\\\",\\\"value\\\":\\\"Silver\\\"}],\\\"price\\\":null,\\\"sellingUnit\\\":{\\\"quantity\\\":{\\\"value\\\":1,\\\"unit\\\":\\\"Piece\\\"},\\\"perUnit\\\":null,\\\"unitSize\\\":null},\\\"missingRequiredSaleUnit\\\":false,\\\"skuIsDuplicate\\\":false,\\\"extractionNotes\\\":[]}],\\\"atLeastOneVariant\\\":false,\\\"nameIsDuplicate\\\":false,\\\"extractionNotes\\\":[]}],\\\"emptyEntryRows\\\":[],\\\"unidentifiedEntryRows\\\":[],\\\"extractionNotes\\\":[]}\"}}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}"
+  }
+}

@@ -22,13 +22,6 @@ trait FileService[F[_]] {
       organizationLogoImageByteStream: ZStream[Any, Throwable, Byte],
   ): F[Unit]
 
-  def uploadCatalogueItemImage(
-      organizationID: OrganizationID,
-      catalogueItemID: CatalogueItemID,
-      catalogueItemImageOriginalFileName: ImageOriginalFileName,
-      catalogueItemImageByteStream: ZStream[Any, Throwable, Byte],
-  ): F[Unit]
-
   def extractCustomers(
       organizationID: OrganizationID,
       extractCustomersFileName: ExtractCustomersFileName,
@@ -41,7 +34,6 @@ object FileService {
   private final class FileServiceImpl(
       fileServiceConfig: FileServiceConfig,
       organizationManagementRepository: OrganizationManagementRepository,
-      catalogueRepository: CatalogueRepository,
       fileScanner: FileScanner,
       imageProcessing: ImageProcessing,
       spreadsheetTool: SpreadsheetTool,
@@ -180,62 +172,6 @@ object FileService {
         )
     } yield ())
 
-    override def uploadCatalogueItemImage(
-        organizationID: OrganizationID,
-        catalogueItemID: CatalogueItemID,
-        catalogueItemImageOriginalFileName: ImageOriginalFileName,
-        catalogueItemImageByteStream: ZStream[Any, Throwable, Byte],
-    ): ServiceTask[Unit] = ZIO
-      .scoped(for {
-        _ <- catalogueRepository
-          .getCatalogueItemWithVariants(organizationID, catalogueItemID)
-          .someOrFail(
-            ServiceError.InternalServerError.UnexpectedError(
-              s"Catalogue item not found: catalogueItemID=[$catalogueItemID]"
-            )
-          )
-        catalogueItemImageScanOutput <- fileScanner.scan(
-          catalogueItemImageByteStream,
-          catalogueItemImageOriginalFileName.value,
-          SupportedMediaType.images,
-          fileServiceConfig.fileBytesMax,
-        )
-        catalogueItemImageNormalizedResult <- imageProcessing.normalize(
-          FileByteStreamScanned(ZStream.fromPath(catalogueItemImageScanOutput.fileScannedPath.value)),
-          SupportedMediaType.images,
-        )
-        catalogueItemImageUploadedResult <-
-          s3ClientOrganizationMedia
-            .uploadImageCatalogueItem(
-              organizationID,
-              catalogueItemID,
-              catalogueItemImageNormalizedResult.imageOriginalByteStream,
-              catalogueItemImageNormalizedResult.imageNormalizedByteStream,
-            )
-        imageAsset = ImageAsset(
-          imageOriginalS3BucketKey = catalogueItemImageUploadedResult.imageOriginalS3BucketKey,
-          imageNormalizedS3BucketKey = catalogueItemImageUploadedResult.imageNormalizedS3BucketKey,
-          imageOriginalFileName = catalogueItemImageOriginalFileName,
-        )
-        catalogueItemImageAsset <- ZIO
-          .fromEither(CatalogueItemImageAsset.either(imageAsset))
-          .mapError(e =>
-            ServiceError.InternalServerError.UnexpectedError(
-              s"Failed to construct CatalogueItemImageAsset: [$e]"
-            )
-          )
-        _ <- catalogueRepository.updateCatalogueItem(
-          organizationID = organizationID,
-          catalogueItemID = catalogueItemID,
-          nameOptUpdate = None,
-          descriptionOptUpdate = None,
-          imageAssetOptUpdate = Some(catalogueItemImageAsset),
-          statusOptUpdate = None,
-          updateCatalogueItemVariantInputs = Nil,
-          insertCatalogueItemVariantInputs = Nil,
-        )
-      } yield ())
-
     override def extractCustomers(
         organizationID: OrganizationID,
         extractCustomersFileName: ExtractCustomersFileName,
@@ -282,22 +218,6 @@ object FileService {
               organizationID,
               organizationLogoImageOriginalFileName,
               organizationLogoImageByteStream,
-            )
-        )
-
-      override def uploadCatalogueItemImage(
-          organizationID: OrganizationID,
-          catalogueItemID: CatalogueItemID,
-          catalogueItemImageOriginalFileName: ImageOriginalFileName,
-          catalogueItemImageByteStream: ZStream[Any, Throwable, Byte],
-      ): TapirTask[Unit] =
-        HttpErrorHandler.errorResponseHandlerTapir(
-          service
-            .uploadCatalogueItemImage(
-              organizationID,
-              catalogueItemID,
-              catalogueItemImageOriginalFileName,
-              catalogueItemImageByteStream,
             )
         )
 

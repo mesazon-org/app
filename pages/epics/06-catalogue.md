@@ -6,7 +6,7 @@ title: Catalogue
 
 ### Overview
 
-The catalogue records what an organization sells. Each item has one or more variants, and each variant describes how it is sold, its optional price, and the details that distinguish it. People can add, browse, open, update, archive, and check items, and can upload an image for an item.
+The catalogue records what an organization sells. Each item has one or more variants, and each variant describes how it is sold, its optional price, and the details that distinguish it. People can add, browse, open, update, archive, and check items, and can upload an image for an item. The backend can also extract item and variant previews from images, CSV, and Excel files without storing them; client review and submission remain separate work.
 
 ### Related / Out of scope
 
@@ -15,6 +15,7 @@ The catalogue records what an organization sells. Each item has one or more vari
 - **Not built yet** — Orders. Nothing places an order or decides whether an item without a price can be ordered.
 - **Not built yet** — Search, filtering, and paging. Catalogue browsing returns all non-archived items.
 - **Not built yet** — Time-based pricing and images for individual variants.
+- **Client work pending** — Reviewing and submitting catalogue candidates extracted from an image, CSV file, or Excel file. The backend preview route is implemented.
 
 ### Requirements across the epic
 
@@ -51,6 +52,7 @@ These are separate operations on a catalogue rather than one required journey.
 7. [User Archives a Variant](#7-user-archives-a-variant)
 8. [User Looks Up Chosen Items](#8-user-looks-up-chosen-items)
 9. [User Checks a Name or SKU Is Free](#9-user-checks-a-name-or-sku-is-free)
+10. [User Extracts Catalogue Items from an Image or File](#10-user-extracts-catalogue-items-from-an-image-or-file)
 
 ### Prerequisites
 
@@ -180,6 +182,7 @@ Only item identifiers are returned. Variant identifiers are available when the i
 **Who can reach this step: an owner or admin of the organization.**
 
 - The user uploads an image for a non-archived item.
+- Image uploads are available at `POST /catalogue/file/upload/image/item`. The legacy `POST /upload/catalogue-item/image` route has been removed.
 - A later upload replaces the item's existing image.
 
 #### Business Scenarios
@@ -636,6 +639,127 @@ Nothing changes and no name or SKU is reserved.
 | 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete |
 | 500 | `INTERNAL_SERVER_ERROR` | The person does not belong to the organization, or an unexpected error occurs |
 
+### 10. User Extracts Catalogue Items from an Image or File
+
+**Status: Backend preview implemented at `POST /catalogue/file/ai/extract`; client review and submission handling remain separate work.**
+
+**Who can reach this step: an owner or admin of the organization.**
+
+- The user has catalogue information in a product photo, CSV file, or Excel file and wants a quick starting point for the catalogue.
+- An AI model reads the image or file and returns catalogue item candidates for review.
+- The user resolves anything marked for attention before sending a candidate through the normal item-add flow.
+- Nothing is stored by extraction, and an uploaded photo is not attached to an item.
+
+#### Business Scenarios
+
+| **Scenarios** | **Requirements** |
+| --- | --- |
+| 1. User sends an image, CSV file, or Excel file with recognizable catalogue information | - The response contains candidate items with their variants and any readable details, plus processing and review notes |
+| 2. An item has a readable name but some required or uncertain information is missing | - The candidate is retained with `needsAttention: true` for known issues and consolidated review notes - Variants without a selling unit are omitted |
+| 3. No item name can be read for an entry and it has no clear association with a named item | - The entry is not returned as a candidate - The affected spreadsheet row numbers are included in `infoNotes` |
+| 4. The source contains several rows or visible entries that belong to one item | - The AI may group them into one candidate with multiple variants - Uncertain grouping is described in item-level extraction notes |
+| 5. A row has no item name or key but appears to continue the preceding item within the same extraction batch | - It becomes a variant of that item - Any uncertainty is described in extraction notes - It counts as an identified source entry, not as a separate processed item, and is not listed as unidentified |
+| 6. A meaningful source column does not map to a standard item or variant field | - Its value is preserved as a variant attribute |
+| 7. A price has an unsupported or unclear currency | - The price is omitted and the issue is explained in extraction notes |
+| 8. A required selling-unit value or structured unit cannot be read | - The variant is omitted from the insert-ready list - Its item is retained with `needsAttention: true` and a missing-unit note unless covered by the item-level variant issue |
+| 9. Two candidates have item names that match when letter case is ignored | - Both have `needsAttention: true` and a duplicate-name note - They are not merged |
+| 10. The image or file has no recognizable catalogue information | - An empty candidate list is returned - Generated notes explain that nothing usable was detected |
+| 11. A spreadsheet row is completely blank | - It is not counted as an entry - A generated processing note reports how many blank rows were filtered |
+| 12. A non-blank spreadsheet row has no readable item name or clear association with a named item | - It is not returned as a candidate - Generated processing notes identify the affected row numbers |
+| 13. The file name is missing, malformed, unsupported, or does not match the content | - The request is rejected before the file is sent to the AI |
+| 14. The file cannot be read as a CSV or Excel file, or is larger than 20 MB | - The request fails and no candidate result is returned |
+| 15. The AI service has a temporary failure | - The service tries again up to two more times - If every attempt fails, the request fails with no partial result |
+| 16. The AI service rejects the request or sends back an unusable answer | - The request fails without retrying that response |
+| 17. A member without an owner or admin role tries this step | - The request is rejected |
+| 18. The user reads the same image or file again | - The read is allowed and nothing from the previous read is reused or stored |
+| 19. The user sends an Excel workbook with several sheets | - Only the first sheet is read |
+| 20. The user sends a legacy `.xls` file | - It is read in the same way as an `.xlsx` file |
+| 21. The user sends a spreadsheet with many rows | - Every row is read in groups of up to 50, with up to 3 groups at a time - If any group fails, no partial result is returned |
+| 22. The user sends a supported file whose extension uses different letter case | - It is accepted when the extension matches the actual content |
+| 23. The user supplies an extraction message | - The message guides optional field or layout interpretation across the whole upload and every spreadsheet batch |
+| 24. The message is empty, whitespace-only, ambiguous, conflicts with the source, or requests an optional field that cannot be omitted reliably | - Empty messages use the default rules - The message is best-effort guidance - Unresolved instructions or values are reported in extraction notes or the relevant specific flag - The request is not rejected solely for ambiguity |
+| 25. The extraction message is longer than 2,000 characters after trimming | - The request is rejected as a bad request |
+
+#### Requirements
+
+1. PNG, JPEG, and WEBP images, and genuinely readable CSV, `.xls`, and `.xlsx` files, are accepted up to 20 MB. Spreadsheet row count is not capped.
+2. The file name is required, 1–255 trimmed characters, and must have a supported extension matching the actual content, ignoring letter case.
+3. The response contains candidate catalogue items, generated processing summaries in `infoNotes`, and general document comments in top-level `extractionNotes`. Candidate review notes are consolidated on each item; general note lists may be empty. Notes use short, plain wording with one point per entry. Separate observations appear as separate bullets, without semicolons or long combined explanations.
+4. A candidate contains a readable item name, optional description, zero or more usable insert variants, a computed `needsAttention`, and consolidated extraction notes. Retain the item even when all its variants are omitted.
+5. Public variants use the existing insert shape: optional SKU, label, description and price, an attribute map, and a required selling unit. Meaningful unmapped source columns become attributes; repeated attribute names keep the last value. Interpret unit abbreviations, translations, product wording, and nearby context using the closest supported meaning. Accept any language or script, including mixed-language wording, regional shorthand, symbols, and transliterations; map their meaning to the closest supported English value without requiring exact keys or a predefined alias. Parse combined number/unit expressions; a bare unit implies one. Understand the source layout and match labels and values to catalogue fields by meaning, across formats and languages. Keep records and shared sections separate. Check each field independently, then recheck missing-field issues against the source. A blank, unclear, or intentionally omitted field must not invalidate another readable field. Read unit and price columns independently. A blank unit requires review unless the product wording or an explicit shared header or group supplies it; do not copy neighbouring units or assume a typical unit for that product. A request to transform known units does not supply a missing source unit. Keep a readable unit when its price is blank. A blank optional price is omitted without a warning; routine unit translation and an implied quantity of one also need no warning. Translate non-English meaning internally, compare supported English values, and check confidence in the match. Keep a defensible contextual assumption with a note. If no supported meaning fits confidently, report the existing extraction issue; an unresolved required selling unit is missing and its variant is omitted from the public preview. Routine aliases need no warning. Readable prices may use a supported currency inferred from document-wide or supplier context, with a shared assumption noted once; preserve explicit currency and interpret localized digits and number separators from context. Do not invent price amounts or arbitrary identifiers.
+6. The AI reports internal missing-unit, duplicate-name, duplicate-SKU, and variant-presence issue flags. Any true issue flag on an item or its variants makes that candidate’s `needsAttention` true; an absent selling unit also does so. The service translates these issues into fixed review notes. General notes alone do not change attention or alter add-item validation.
+7. Duplicate marking compares candidate item names and all variant SKUs within the current response, ignoring letter case. Duplicate checks never query or compare with items or variants already in the catalogue.
+8. The AI reports `entriesIdentified` and `entriesProcessed` internally. The service uses these reported counts and row findings in summaries; semantic validation of inconsistencies is deferred. `entriesIdentified` includes variant-only rows clearly associated with a named item, while `entriesProcessed` counts resulting candidate items after grouping within each batch. A clearly associated variant-only row does not increase `entriesProcessed`. Blank rows are excluded from both counts; rows without a name or clear association are reported separately.
+9. `infoNotes` begins with one combined summary, such as `Processed 12 of 14 entries`. Add empty-row and unidentified-row summaries, including counts and original row numbers, only when those lists are non-empty. Top-level `extractionNotes` contains general AI document comments.
+10. Nothing is stored: no item, variant, image, file, or extraction response. The normal item-add request remains the only way to create catalogue records, and its existing validation remains unchanged.
+11. Each AI attempt may take up to three minutes by default. Temporary failures are tried again up to two more times; rejected requests and unusable answers are not retried.
+12. Large spreadsheets are read in groups of up to 50 rows, with up to 3 groups at a time. Any failed group fails the whole read and returns no partial candidates.
+13. An optional processing message is trimmed plain text up to 2,000 characters. An empty or whitespace-only message is treated as absent.
+14. The processing message is best-effort guidance for optional field selection and source layout interpretation. It cannot override candidate requirements, selling-unit rules, row counting, duplicate marking, or normal add-item validation. It does not guarantee that an optional field is omitted; when a preference leaves a value unresolved, the response reports it in notes or the relevant specific flag.
+15. One processing message applies to the whole upload and every spreadsheet batch. It is used only for that extraction request and is never stored or returned as catalogue data.
+16. A variant-only row that appears to continue a named item within the same extraction batch may attach to it, with uncertainty described in extraction notes. Candidates from different batches remain separate, with duplicate warnings where applicable. Cross-batch grouping is deferred under [gap 12](#12-one-item-can-be-split-between-extraction-batches).
+17. Each candidate extraction note is concise, plain text with no bullet prefix; the client renders each as a bullet. Combine fixed issue warnings and general AI comments on the item, prefixing variant comments with their original position only when multiple variants were extracted. Notes for a single extracted variant have no variant prefix. When the item-level variant issue is present, omit redundant variant diagnostics. AI comments must not repeat the fixed warnings added by the service.
+
+#### Request / Response / Outcome
+
+One upload carries whichever source the user has — an image, a CSV file, or an Excel file — in the same request shape.
+
+**Request**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Organization ID | `UUID` | Canonical 36-character form | ✅ | The organization whose catalogue is being prepared |
+| File | `Binary` | PNG, JPEG or WEBP; or genuinely readable as CSV or Excel (`.xls` or `.xlsx`); up to 20 MB | ✅ | The image or file to read |
+| File Name | `String` | 1–255 characters, trimmed; supported extension matching the actual content | ✅ | The source file name; it is not stored |
+| Processing Message | `String` | Single line; up to 2,000 characters, trimmed plain text | ❌ | Optional best-effort guidance for interpreting the uploaded source |
+
+**Response — `CatalogueFileAiExtractPostResponse`**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| `candidates` | `CatalogueItemCandidate[]` | May be empty | ✅ | Item candidates for review |
+| `infoNotes` | `String[]` | Always contains a combined processed/identified summary; row summaries only for non-empty row lists | ✅ | Deterministic processing summaries for this source |
+| `extractionNotes` | `String[]` | May be empty; general AI document comments | ✅ | General user-facing review comments for this source |
+
+**CatalogueItemCandidate**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| `name` | `String` | 1–255 characters, trimmed | ✅ | The extracted item name |
+| `description` | `String` | 1–255 characters, trimmed | ❌ | The extracted item description |
+| `variants` | `CatalogueItemVariantInsert[]` | May be empty; each included variant requires a selling unit | ✅ | Usable variants for the normal add-item flow |
+| `needsAttention` | `Boolean` | Computed from this item’s internal issue flags and missing selling units | ✅ | Whether this candidate has a known issue to resolve |
+| `extractionNotes` | `String[]` | May be empty; plain strings without bullet prefixes | ✅ | Fixed issue warnings and general item/variant comments; the client renders each as a bullet |
+
+**CatalogueItemVariantInsert**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| `sku` | `String` | 1–255 characters, trimmed | ❌ | The extracted stock code |
+| `label` | `String` | 1–255 characters, trimmed | ❌ | The extracted variant label |
+| `description` | `String` | 1–255 characters, trimmed | ❌ | The extracted variant description |
+| `attributes` | `Map<String, String>` | May be empty; names and values are 1–255 characters and trimmed | ✅ | Structured or unmapped details that distinguish the variant |
+| `price` | `CatalogueItemVariantPrice` | Present only when the amount and supported currency are resolved | ❌ | The extracted price |
+| `sellingUnit` | `CatalogueItemVariantSaleUnit` | Required for every included variant | ✅ | How the variant is sold |
+
+Examples: `Processed 12 of 14 entries`, `Empty rows (2): [3, 5]`, and `Unidentified rows (2): [7, 11]` are separate `infoNotes` entries. `The source is cropped` belongs in top-level `extractionNotes`. A candidate can contain `Item name is duplicated in this extraction.` and `Variant 1: SKU is present but unclear`. Counts and row numbers come from the current extraction; general comments alone do not set attention.
+
+**Outcome**
+
+- The user receives a preview of catalogue item candidates and processing and review notes.
+- Each candidate has computed attention and consolidated notes explaining known issues and additional extraction observations.
+- Nothing is stored, and an uploaded image is not attached to an item.
+- The user adds resolved candidates through [step 1](#1-user-adds-an-item), where the existing validation and duplicate checks still apply.
+
+#### Http Error Responses
+
+| **Http Code** | **Code** | **Description** |
+| --- | --- | --- |
+| 400 | `BAD_REQUEST_ERROR` | The organization is missing, the file name is missing or malformed, the file name and content do not agree, or the processing message exceeds 2,000 characters after trimming |
+| 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
+| 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete or the person's role does not allow extraction |
+| 500 | `INTERNAL_SERVER_ERROR` | The upload cannot be read, is larger than 20 MB, is not genuinely readable as a CSV or Excel file, the person does not belong to the organization, the AI service fails, or an unexpected error occurs |
+
 ### Known gaps and open questions
 
 #### 1. Uploading for a missing or archived item is reported as a server error
@@ -703,5 +827,11 @@ An update that swaps two variants' existing SKUs can return a conflict even thou
 Numbers with more than 34 significant digits can be rounded while a request or stored selling unit is read. For example, a selling-unit quantity of `0.12345678901234567890123456789012346` can be stored as `0.1234567890123456789012345678901235`. An unrelated variant update can save a value rounded during its read. Some larger numeric representations cannot be read. This falls short of the intended exact-decimal behavior.
 
 **Accepted for now:** business values are not expected to need this many significant digits, so no change is planned. Revisit exact input handling if that expectation changes.
+
+#### 12. One item can be split between extraction batches
+
+When an item's variants fall into different 50-row batches, the preview can contain separate candidates for that item. Matching names are flagged as duplicates. A variant-only row without a named item in its own batch can remain unidentified.
+
+**Deferred:** combining these candidates and linking continuations across batches will be tackled later. Users review the separate candidates for now.
 
 {% include abbreviations.md %}

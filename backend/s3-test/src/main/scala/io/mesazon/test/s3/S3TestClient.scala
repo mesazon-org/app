@@ -53,6 +53,21 @@ case class S3TestClient(
       } yield byte).runCollect
     }
 
+  def listObjectKeys(bucket: String): Task[List[String]] =
+    ZIO.scoped {
+      for {
+        s3Client <- s3ClientScope
+        keys     <- ZIO.attemptBlocking(
+          s3Client
+            .listObjectsV2Paginator(ListObjectsV2Request.builder().bucket(bucket).build())
+            .contents()
+            .asScala
+            .map(_.key())
+            .toList
+        )
+      } yield keys
+    }
+
   def emptyAllBuckets(): Task[Unit] =
     ZIO.scoped {
       for {

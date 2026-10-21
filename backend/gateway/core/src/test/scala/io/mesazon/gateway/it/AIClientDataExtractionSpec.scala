@@ -3,23 +3,30 @@ package io.mesazon.gateway.it
 import com.dimafeng.testcontainers.ExposedService
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
+import io.circe.{parser, Json}
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClientDataExtraction
 import io.mesazon.gateway.config.AIClientDataExtractionConfig
+import io.mesazon.gateway.json.ai.given
 import io.mesazon.gateway.json.{ai, OpenAIJsonSchema}
 import io.mesazon.gateway.utils.FileScannedPath
 import io.mesazon.testkit.base.*
 import io.mesazon.wiremock.WiremockClient
 import io.mesazon.wiremock.WiremockClient.WiremockClientConfig
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
+import sttp.ai.openai.json.OpenAIDerivedCodecs.messageCodec
+import sttp.ai.openai.requests.completions.chat.message.{Content, Message as OpenAIMessage}
+import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
-import sttp.model.StatusCode
+import sttp.client4.jsoniter.*
+import sttp.model.{MediaType, StatusCode}
 import sttp.tapir.Schema
 import zio.*
 import zio.stream.*
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.util.Base64
 
 class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
@@ -60,10 +67,46 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
   case class ExtractedTestResult(value: String)
   case class Context(aiClientDataExtractionConfig: AIClientDataExtractionConfig, wiremockClient: WiremockClient)
+  private case class AIRequestLogResponse(requests: Seq[AIRequestLog])
+  private case class AIRequestLog(request: AIRequestLogged)
+  private case class AIRequestLogged(url: String, loggedDate: Long, body: String)
 
   given extractedTestResultOpenAIJsonSchema: OpenAIJsonSchema[ExtractedTestResult] =
     ai.fromTapir(extractedTestResultSchema)
   given JsonValueCodec[ExtractedTestResult] = JsonCodecMaker.make[ExtractedTestResult]
+  private given aiRequestLogResponseCodec: JsonValueCodec[AIRequestLogResponse] =
+    JsonCodecMaker.make[AIRequestLogResponse]
+
+  private def requestBodies(wiremockClient: WiremockClient): Seq[Json] = {
+    val aiRequestLogResponse = basicRequest
+      .get(wiremockClient.config.baseUri.withPath("__admin", "requests"))
+      .response(asJsonOrFail[AIRequestLogResponse])
+      .send(wiremockClient.backend)
+      .orDie
+      .zioValue
+      .body
+
+    aiRequestLogResponse.requests
+      .filter(_.request.url == "/v1/chat/completions")
+      .sortBy(_.request.loggedDate)
+      .map(aiRequestLog => parser.parse(aiRequestLog.request.body).fold(throw _, identity))
+  }
+
+  private def requestMessages(wiremockClient: WiremockClient): Seq[Seq[OpenAIMessage]] =
+    requestBodies(wiremockClient)
+      .map(_.hcursor.get[Seq[OpenAIMessage]]("messages").fold(throw _, identity))
+
+  private def findPropertySchema(json: Json, propertyName: String): Option[Json] = {
+    val directPropertySchema = json.hcursor.downField("properties").downField(propertyName).focus
+
+    directPropertySchema.orElse(
+      json.arrayOrObject(
+        None,
+        _.iterator.flatMap(findPropertySchema(_, propertyName)).nextOption(),
+        _.values.iterator.flatMap(findPropertySchema(_, propertyName)).nextOption(),
+      )
+    )
+  }
 
   def withContext[A](f: Context => A): A = withContainers { container =>
     val wiremockClientConfig = WiremockClientConfig.from(container)
@@ -86,6 +129,12 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
       sendRetryDelay = Duration.fromMillis(10),
       csvBatchMaxDataRows = 50,
       csvBatchParallelism = 3,
+      imageModel = "test-model",
+      imageReasoningEffort = "medium",
+      csvModel = "test-model",
+      csvReasoningEffort = "medium",
+      noteCompactionModel = "test-model",
+      noteCompactionReasoningEffort = "medium",
     )
 
     f(Context(aiClientDataExtractionConfig, wiremockClient))
@@ -119,6 +168,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
       "successfully extract a structured response from an image" in withContext { context =>
         import context.*
 
+        val instructions           = "AI_CLIENT_SPEC_SUCCESS"
         val aiClientDataExtraction = ZIO
           .service[AIClientDataExtraction]
           .provide(
@@ -132,7 +182,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .extractFromImage[ExtractedTestResult](
             imageScannedPath(),
             SupportedMediaType.JPEG,
-            "AI_CLIENT_SPEC_SUCCESS",
+            instructions,
           )
           .zioValue
 
@@ -146,6 +196,275 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
         extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
         extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
         extractFromImageRequestMappings(0).count shouldBe 1
+
+        val imageSourceContent = Content.ArrayContent(
+          Seq(
+            Content.ContentPart.ImageUrl(
+              Content.ImageUrlDetails(
+                url =
+                  s"data:${SupportedMediaType.JPEG.mimes.head};base64,${Base64.getEncoder.encodeToString(imageBytes)}"
+              )
+            )
+          )
+        )
+        requestMessages(wiremockClient) shouldBe Seq(
+          Seq(
+            OpenAIMessage.System(instructions),
+            OpenAIMessage.User(imageSourceContent),
+          )
+        )
+
+        val requestBody = requestBodies(wiremockClient).loneElement
+        requestBody.hcursor
+          .downField("response_format")
+          .downField("json_schema")
+          .get[Boolean]("strict")
+          .value shouldBe true
+      }
+
+      "decode catalogue candidates with attribute entries using a strict schema" in withContext { context =>
+        import context.*
+
+        val instructions             = "AI_CLIENT_SPEC_CATALOGUE_SUCCESS"
+        val catalogueFileExtractJson =
+          """{
+            |  "entriesIdentified": 1,
+            |  "entriesProcessed": 1,
+            |  "candidates": [
+            |    {
+            |      "name": "Cotton T-Shirt",
+            |      "description": "Classic crew neck",
+            |      "variants": [
+            |        {
+            |          "sku": "TS-RED-M",
+            |          "label": "Red / Medium",
+            |          "description": null,
+            |          "attributes": [{"name": "Color", "value": "Red"}, {"name": "Color", "value": "Red"}, {"name": "Color", "value": "Blue"}, {"name": "Size", "value": "M"}, {"name": "Size", "value": "M"}],
+            |          "price": {"amount": 12.50, "currency": "EUR"},
+            |          "sellingUnit": {
+            |            "quantity": {"value": 1, "unit": "Piece"},
+            |            "perUnit": null,
+            |            "unitSize": null
+            |          },
+            |          "missingRequiredSaleUnit": false,
+            |          "skuIsDuplicate": false,
+            |          "extractionNotes": ["Source label is partly obscured"]
+            |        }
+            |      ],
+            |      "atLeastOneVariant": false,
+            |      "nameIsDuplicate": false,
+            |      "extractionNotes": []
+            |    }
+            |  ],
+            |  "emptyEntryRows": [],
+            |  "unidentifiedEntryRows": [],
+            |  "extractionNotes": ["Image text was clear"]
+            |}""".stripMargin
+        val openAIResponseBody = Json
+          .obj(
+            "id"      -> Json.fromString("chatcmpl-catalogue-file-extract"),
+            "object"  -> Json.fromString("chat.completion"),
+            "created" -> Json.fromLong(1700000000L),
+            "model"   -> Json.fromString("test-model"),
+            "choices" -> Json.arr(
+              Json.obj(
+                "index"         -> Json.fromInt(0),
+                "finish_reason" -> Json.fromString("stop"),
+                "message"       -> Json.obj(
+                  "role"    -> Json.fromString("assistant"),
+                  "content" -> Json.fromString(catalogueFileExtractJson),
+                ),
+              )
+            ),
+            "usage" -> Json.obj(
+              "prompt_tokens"     -> Json.fromInt(10),
+              "completion_tokens" -> Json.fromInt(5),
+              "total_tokens"      -> Json.fromInt(15),
+            ),
+          )
+          .noSpaces
+        val mappingJson = Json
+          .obj(
+            "priority" -> Json.fromInt(1),
+            "request"  -> Json.obj(
+              "method"       -> Json.fromString("POST"),
+              "urlPath"      -> Json.fromString("/v1/chat/completions"),
+              "bodyPatterns" -> Json.arr(
+                Json.obj("contains" -> Json.fromString(instructions))
+              ),
+            ),
+            "response" -> Json.obj(
+              "status"  -> Json.fromInt(200),
+              "headers" -> Json.obj(
+                "Content-Type" -> Json.fromString(MediaType.ApplicationJson.toString)
+              ),
+              "body" -> Json.fromString(openAIResponseBody),
+            ),
+          )
+          .noSpaces
+
+        val mappingResponse = basicRequest
+          .post(wiremockClient.config.baseUri.withPath("__admin", "mappings"))
+          .contentType(MediaType.ApplicationJson)
+          .body(mappingJson)
+          .send(wiremockClient.backend)
+          .orDie
+          .zioValue
+
+        mappingResponse.code shouldBe StatusCode.Created
+
+        val aiClientDataExtraction = ZIO
+          .service[AIClientDataExtraction]
+          .provide(
+            AIClientDataExtraction.live,
+            ZLayer.succeed(aiClientDataExtractionConfig),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val catalogueFileExtract = aiClientDataExtraction
+          .extractFromImage[CatalogueFileAIExtract](
+            imageScannedPath(),
+            SupportedMediaType.JPEG,
+            instructions,
+          )
+          .zioValue
+
+        catalogueFileExtract shouldBe CatalogueFileAIExtract(
+          entriesIdentified = 1L,
+          entriesProcessed = 1L,
+          candidates = List(
+            CatalogueItemAIExtract(
+              name = CatalogueItemName.assume("Cotton T-Shirt"),
+              description = Some(CatalogueItemDescription.assume("Classic crew neck")),
+              variants = List(
+                CatalogueItemVariantAIExtract(
+                  sku = Some(CatalogueItemVariantSku.assume("TS-RED-M")),
+                  label = Some(CatalogueItemVariantLabel.assume("Red / Medium")),
+                  description = None,
+                  attributes = List(
+                    CatalogueItemVariantAttributesAIExtract(
+                      CatalogueItemVariantAttributeName.assume("Color"),
+                      CatalogueItemVariantAttributeValue.assume("Red"),
+                    ),
+                    CatalogueItemVariantAttributesAIExtract(
+                      CatalogueItemVariantAttributeName.assume("Color"),
+                      CatalogueItemVariantAttributeValue.assume("Red"),
+                    ),
+                    CatalogueItemVariantAttributesAIExtract(
+                      CatalogueItemVariantAttributeName.assume("Color"),
+                      CatalogueItemVariantAttributeValue.assume("Blue"),
+                    ),
+                    CatalogueItemVariantAttributesAIExtract(
+                      CatalogueItemVariantAttributeName.assume("Size"),
+                      CatalogueItemVariantAttributeValue.assume("M"),
+                    ),
+                    CatalogueItemVariantAttributesAIExtract(
+                      CatalogueItemVariantAttributeName.assume("Size"),
+                      CatalogueItemVariantAttributeValue.assume("M"),
+                    ),
+                  ),
+                  price = Some(
+                    CatalogueItemVariantPrice.assume(Price(PriceAmount.assume(BigDecimal("12.50")), Currency.EUR))
+                  ),
+                  sellingUnit = Some(
+                    CatalogueItemVariantSaleUnit(
+                      quantity = CatalogueItemVariantQuantity(
+                        value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
+                        unit = CatalogueItemVariantUnit.PerUnit.Piece,
+                      ),
+                      perUnit = None,
+                      unitSize = None,
+                    )
+                  ),
+                  missingRequiredSaleUnit = false,
+                  skuIsDuplicate = false,
+                  extractionNotes = List("Source label is partly obscured"),
+                )
+              ),
+              atLeastOneVariant = false,
+              nameIsDuplicate = false,
+              extractionNotes = List.empty,
+            )
+          ),
+          emptyEntryRows = List.empty,
+          unidentifiedEntryRows = List.empty,
+          extractionNotes = List("Image text was clear"),
+        )
+
+        val requestBody      = requestBodies(wiremockClient).loneElement
+        val jsonSchemaCursor = requestBody.hcursor
+          .downField("response_format")
+          .downField("json_schema")
+
+        jsonSchemaCursor.get[Boolean]("strict").value shouldBe true
+
+        val responseSchema   = jsonSchemaCursor.downField("schema").focus.value
+        val attributesSchema = findPropertySchema(responseSchema, "attributes").value
+        attributesSchema.hcursor.get[String]("type").value shouldBe "array"
+
+        val attributeEntrySchema         = attributesSchema.hcursor.downField("items").focus.value
+        val attributeEntrySchemaResolved =
+          attributeEntrySchema.hcursor.get[String]("$ref").toOption.fold(attributeEntrySchema) { schemaReference =>
+            schemaReference should startWith("#/$defs/")
+            responseSchema.hcursor.downField("$defs").downField(schemaReference.stripPrefix("#/$defs/")).focus.value
+          }
+        attributeEntrySchemaResolved.hcursor.get[Boolean]("additionalProperties").value shouldBe false
+        attributeEntrySchemaResolved.hcursor.get[Set[String]]("required").value shouldBe Set("name", "value")
+        attributeEntrySchemaResolved.hcursor
+          .downField("properties")
+          .downField("name")
+          .get[String]("type")
+          .value shouldBe "string"
+        attributeEntrySchemaResolved.hcursor
+          .downField("properties")
+          .downField("value")
+          .get[String]("type")
+          .value shouldBe "string"
+      }
+
+      "send processing guidance after the image source content" in withContext { context =>
+        import context.*
+
+        val instructions           = "AI_CLIENT_SPEC_SUCCESS"
+        val processingMessage      = "Omit optional prices"
+        val aiClientDataExtraction = ZIO
+          .service[AIClientDataExtraction]
+          .provide(
+            AIClientDataExtraction.live,
+            ZLayer.succeed(aiClientDataExtractionConfig),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val extractedTestResult = aiClientDataExtraction
+          .extractFromImage[ExtractedTestResult](
+            imageScannedPath(),
+            SupportedMediaType.JPEG,
+            instructions,
+            processingMessageOpt = Some(processingMessage),
+          )
+          .zioValue
+
+        extractedTestResult shouldBe ExtractedTestResult("extracted-value")
+
+        val imageSourceContent = Content.ArrayContent(
+          Seq(
+            Content.ContentPart.ImageUrl(
+              Content.ImageUrlDetails(
+                url =
+                  s"data:${SupportedMediaType.JPEG.mimes.head};base64,${Base64.getEncoder.encodeToString(imageBytes)}"
+              )
+            )
+          )
+        )
+        requestMessages(wiremockClient) shouldBe Seq(
+          Seq(
+            OpenAIMessage.System(instructions),
+            OpenAIMessage.User(imageSourceContent),
+            OpenAIMessage.User(Content.TextContent(processingMessage)),
+          )
+        )
       }
 
       "successfully retry a rate-limited request and eventually decode the response" in withContext { context =>
@@ -490,6 +809,68 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
         extractFromCsvRequestMappings.map(_.count).distinct shouldBe Seq(3)
       }
 
+      "send the same processing guidance after every source batch" in withContext { context =>
+        import context.*
+
+        val csvBatchMaxDataRows                      = 2
+        val csvBatchCountExpected                    = 2
+        val aiClientDataExtractionConfigSmallBatches =
+          aiClientDataExtractionConfig.copy(csvBatchMaxDataRows = csvBatchMaxDataRows)
+        val instructions           = "AI_CLIENT_SPEC_CSV_GENERIC_SUCCESS"
+        val processingMessage      = "Omit optional prices"
+        val aiClientDataExtraction = ZIO
+          .service[AIClientDataExtraction]
+          .provide(
+            AIClientDataExtraction.live,
+            ZLayer.succeed(aiClientDataExtractionConfigSmallBatches),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val csvText =
+          "Full Name,Email\n" +
+            "Alice,alice@example.com\n" +
+            "Bob,bob@example.com\n" +
+            "Carol,carol@example.com\n"
+
+        val extractFromCsvResults = ZIO
+          .scoped(
+            aiClientDataExtraction.extractFromCsv[ExtractedTestResult](
+              csvRecordStream(csvText),
+              instructions,
+              processingMessageOpt = Some(processingMessage),
+            )
+          )
+          .zioValue
+
+        extractFromCsvResults.toChunk.toList shouldBe List.fill(csvBatchCountExpected)(
+          ExtractedTestResult("batch-result")
+        )
+
+        val csvBatchMessagesExpected = Set(
+          Seq(
+            OpenAIMessage.System(instructions),
+            OpenAIMessage.User(
+              Content.TextContent(
+                "Row Number,Full Name,Email\r\n2,Alice,alice@example.com\r\n3,Bob,bob@example.com\r\n"
+              )
+            ),
+            OpenAIMessage.User(Content.TextContent(processingMessage)),
+          ),
+          Seq(
+            OpenAIMessage.System(instructions),
+            OpenAIMessage.User(
+              Content.TextContent("Row Number,Full Name,Email\r\n4,Carol,carol@example.com\r\n")
+            ),
+            OpenAIMessage.User(Content.TextContent(processingMessage)),
+          ),
+        )
+        val csvBatchMessages = requestMessages(wiremockClient)
+
+        csvBatchMessages.size shouldBe csvBatchCountExpected
+        csvBatchMessages.toSet shouldBe csvBatchMessagesExpected
+      }
+
       "keep a blank row in its batch instead of excluding it before batching" in withContext { context =>
         import context.*
 
@@ -534,6 +915,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
         context =>
           import context.*
 
+          val instructions           = "AI_CLIENT_SPEC_CSV_ROW_NUMBER_SUCCESS"
           val aiClientDataExtraction = ZIO
             .service[AIClientDataExtraction]
             .provide(
@@ -553,7 +935,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             .scoped(
               aiClientDataExtraction.extractFromCsv[ExtractedTestResult](
                 csvRecordStream(csvText),
-                "AI_CLIENT_SPEC_CSV_ROW_NUMBER_SUCCESS",
+                instructions,
               )
             )
             .zioValue
@@ -567,6 +949,17 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           extractFromCsvRequestMappings(0).mapping.method shouldBe "POST"
           extractFromCsvRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
           extractFromCsvRequestMappings(0).count shouldBe 1
+
+          requestMessages(wiremockClient) shouldBe Seq(
+            Seq(
+              OpenAIMessage.System(instructions),
+              OpenAIMessage.User(
+                Content.TextContent(
+                  "Row Number,Full Name,Email\r\n2,Alice,alice@example.com\r\n3,,\r\n4,Bob,bob@example.com\r\n"
+                )
+              ),
+            )
+          )
       }
 
       "send exactly one batch for a CSV record stream with only a header row" in withContext { context =>

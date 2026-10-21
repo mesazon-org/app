@@ -24,6 +24,14 @@ Reusable Scala code/name/test rules. Boundaries: [Chimney](chimney.md), [Iron](i
 - Recovering from a dependency failure that should not fail the caller (a soft/best-effort fallback) always uses `.catchAllCause`, never bare `.catchAll`, which silently discards the `Cause` and any defect information — logged first via `ZIO.logErrorCause`/`ZIO.logWarningCause` (or `ZIO.logWarning` plus `ZIO.logDebugCause` when only a short summary belongs at a higher level), then the recovery value: `effect.catchAllCause(cause => ZIO.logErrorCause("...", cause) *> ZIO.succeed(fallback))`. See `HealthCheckService.scala`, `OrganizationManagementService.scala`, `UserOnboardService.scala`, and `FileService.scala`'s `noteCompaction` fallback inside `mergeExtractCustomersPostResponses`.
 - Prefer one effectful `for`-comprehension over a pure-merge-then-effectful-enrich split joined only by a throwaway named tuple, when nothing else consumes the intermediate value: `FileService.mergeExtractCustomersPostResponses` builds every merged field and makes its one conditional `noteCompaction` call inside the same `for` block, rather than returning a merged value plus a separate raw-notes list for a second function to enrich.
 
+## Service orchestration
+
+- Keep the public service method readable from top to bottom: fetch or extract, compute derived values, transform, return.
+- Put business computations in small, pure private helpers with clear names such as `computeInfoNotes`, `computeNeedsAttention`, and `computeExtractNotes`. Each helper answers one question without performing I/O.
+- Bind their results to descriptive names such as `infoNotesComputed`, then pass them to the matching response fields. Keep the mapping configuration focused on mapping.
+- When a transformation can omit entries, compute attention and diagnostic notes from the original input first. Filtering must not hide the reason an entry was omitted.
+- These helpers own business rules. Keep a straightforward one-to-one Chimney conversion inline, following the [Chimney standard](chimney.md).
+
 ## Naming
 
 Form: `<concept><source/state><role>`; concept first, qualifiers last.
@@ -57,6 +65,8 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 - A variable representing an entity in a scenario-specific state/role names the entity first and its qualifier as a suffix: `catalogueItemVariantIDArchived`, not `archivedCatalogueItemVariantID`. When a scenario contrasts archived and non-archived records, name both states explicitly. Do not introduce status-derived enabled/disabled classifications into features that use a separate archive flag.
 
 ## Tests
+
+- Add dedicated JSON codec tests only when the user explicitly requests them. Do not create serialization, deserialization, or codec round-trip specs by default.
 
 ### Structure and names
 

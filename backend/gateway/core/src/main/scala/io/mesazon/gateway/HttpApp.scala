@@ -4,7 +4,7 @@ import cats.syntax.all.*
 import fs2.io.net.Network
 import io.mesazon.gateway.config.GatewayServerConfig
 import io.mesazon.gateway.config.GatewayServerConfig.ServerConfig
-import io.mesazon.gateway.service.{AuthorizationService, FileService}
+import io.mesazon.gateway.service.{AuthorizationService, CatalogueFileService, FileService}
 import io.mesazon.gateway.tapir.*
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.EntityLimiter
@@ -73,16 +73,19 @@ object HttpApp {
 
   private def externalTapirAndDocsRoutes(
       enableDocs: Boolean
-  ): ZIO[FileService[TapirTask] & AuthorizationService[TapirTask], Nothing, TapirRoutes] =
+  ): ZIO[FileService[
+    TapirTask
+  ] & CatalogueFileService[TapirTask] & AuthorizationService[TapirTask], Nothing, TapirRoutes] =
     for {
-      endpoints <- FileServiceEndpoints.allRoutesAndDocsEndpoints(enableDocs)
+      fileEndpoints          <- FileServiceEndpoints.allRoutesAndDocsEndpoints(enableDocs)
+      catalogueFileEndpoints <- CatalogueFileServiceEndpoints.allRoutesAndDocsEndpoints(enableDocs)
       streamRoutes: HttpRoutes[Task] =
         ZHttp4sServerInterpreter(tapirServerOptions)
-          .from(endpoints.stream)
+          .from(fileEndpoints.stream ++ catalogueFileEndpoints.stream)
           .toRoutes
-      docsRoutes: Option[HttpRoutes[Task]] = endpoints.docsOpt.map(
+      docsRoutes: Option[HttpRoutes[Task]] = Option.when(enableDocs)(
         ZHttp4sServerInterpreter()
-          .from(_)
+          .from(fileEndpoints.docsOpt.toList ++ catalogueFileEndpoints.docsOpt.toList)
           .toRoutes
       )
     } yield (streamRoutes, docsRoutes)
@@ -102,6 +105,7 @@ object HttpApp {
     smithy.CustomerBookService,
     smithy.CatalogueService,
     FileServiceEndpoints.smithy4sDocsID,
+    CatalogueFileServiceEndpoints.smithy4sDocsID,
   )
 
   private def server(

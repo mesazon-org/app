@@ -612,7 +612,7 @@ This step helps a business move its existing customer list into the product quic
 10. A business candidate may include contacts when the source identifies one, best-effort only and with no required layout.
 11. Only the first sheet of an Excel workbook is read.
 12. A completely blank spreadsheet row is never counted as an entry, but its row number is listed as empty.
-13. Each AI attempt may take up to one minute, and temporary failures are tried again up to two more times, while rejections and unusable answers are not.
+13. Each AI attempt may take up to three minutes by default, and temporary failures are tried again up to two more times, while rejections and unusable answers are not.
 14. Large spreadsheets are read in groups of up to 50 rows, up to 3 groups at a time, and if any group fails the whole read fails with no partial candidates.
 15. When a spreadsheet read in groups has something worth flagging, the person gets one short combined message, and failing to combine the messages never fails the read.
 16. The AI instruction treats missing, null, empty, and whitespace-only address text as empty, and treats any non-whitespace content as present after trimming. It returns each address that has at least one non-empty text field, including partial addresses, and notes missing or unclear fields; it omits each address whose five text fields are all empty. If none remain, the candidate's address list is empty rather than the candidate being dropped.
