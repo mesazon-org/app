@@ -657,7 +657,7 @@ Nothing changes and no name or SKU is reserved.
 | 2. An item has a readable name but some required or uncertain information is missing | - The candidate is returned with `needsAttention: true` and notes explaining what needs review |
 | 3. No item name can be read for an entry and it has no clear association with a named item | - The entry is not returned as a candidate and is counted as unidentified; spreadsheet row numbers are listed |
 | 4. The source contains several rows or visible entries that belong to one item | - The AI may group them into one candidate with multiple variants - `needsAttention` is true when the grouping is uncertain |
-| 5. A row has no item name but is clearly associated with a named item | - It becomes a variant of that item - It counts as an identified source entry, not as a separate processed item, and is not listed as unidentified |
+| 5. A row has no item name or key but appears to continue the preceding item | - It becomes a variant of that item with `needsAttention: true` - It counts as an identified source entry, not as a separate processed item, and is not listed as unidentified |
 | 6. A meaningful source column does not map to a standard item or variant field | - Its value is preserved as a variant attribute |
 | 7. A price has an unsupported or unclear currency | - The price is omitted, the candidate is marked for attention, and the issue is explained in its notes |
 | 8. A required selling-unit value or structured unit cannot be read | - The candidate is returned for review with `needsAttention: true` |
@@ -677,7 +677,7 @@ Nothing changes and no name or SKU is reserved.
 | 22. The user sends a supported file whose extension uses different letter case | - It is accepted when the extension matches the actual content |
 | 23. A candidate has `needsAttention: true` | - The client does not allow it to be sent through the normal item-add request until the user resolves the issue |
 | 24. The user supplies an extraction message | - The message guides optional field or layout interpretation across the whole upload and every spreadsheet batch |
-| 25. The message is empty, whitespace-only, ambiguous, or conflicts with the source | - Empty messages use the default rules - Ambiguous instructions produce the best result with unresolved issues in attention flags or notes - The request is not rejected solely for ambiguity |
+| 25. The message is empty, whitespace-only, ambiguous, conflicts with the source, or requests an optional field that cannot be omitted reliably | - Empty messages use the default rules - The message is best-effort guidance - Unresolved instructions or values are reported in attention flags or notes - The request is not rejected solely for ambiguity |
 | 26. The extraction message is longer than 2,000 characters after trimming | - The request is rejected as a validation error |
 
 #### Requirements
@@ -694,8 +694,9 @@ Nothing changes and no name or SKU is reserved.
 10. Each AI attempt may take up to one minute. Temporary failures are tried again up to two more times; rejected requests and unusable answers are not retried.
 11. Large spreadsheets are read in groups of up to 50 rows, with up to 3 groups at a time. Any failed group fails the whole read and returns no partial candidates.
 12. An optional processing message is trimmed plain text up to 2,000 characters. An empty or whitespace-only message is treated as absent.
-13. The processing message may guide optional field selection and source layout interpretation, but cannot override candidate requirements, selling-unit rules, row counting, duplicate marking, or normal add-item validation. An instruction to omit an optional price leaves it absent and does not alone set `needsAttention`.
+13. The processing message is best-effort guidance for optional field selection and source layout interpretation. It cannot override candidate requirements, selling-unit rules, row counting, duplicate marking, or normal add-item validation. It does not guarantee that an optional field is omitted; when a preference leaves a value unresolved, the response reports it in notes or `needsAttention`.
 14. One processing message applies to the whole upload and every spreadsheet batch. It is used only for that extraction request and is never stored or returned as catalogue data.
+15. A variant-only row with no item name or key that appears to continue the preceding item attaches to that item with `needsAttention: true`. Named rows with the same item name split between 50-row groups merge only when they carry an explicit shared item key or group marker; otherwise they remain separate candidates marked `isDuplicate: true` and `needsAttention: true`.
 
 #### Request / Response / Outcome
 
@@ -708,7 +709,7 @@ One upload carries whichever source the user has — an image, a CSV file, or an
 | Organization ID | `UUID` | Canonical 36-character form | ✅ | The organization whose catalogue is being prepared |
 | File | `Binary` | PNG, JPEG or WEBP; or genuinely readable as CSV or Excel (`.xls` or `.xlsx`); up to 20 MB | ✅ | The image or file to read |
 | File Name | `String` | 1–255 characters, trimmed; supported extension matching the actual content | ✅ | The source file name; it is not stored |
-| Processing Message | `String` | Up to 2,000 characters, trimmed plain text | ❌ | Optional guidance for interpreting the uploaded source |
+| Processing Message | `String` | Single line; up to 2,000 characters, trimmed plain text | ❌ | Optional best-effort guidance for interpreting the uploaded source |
 
 **Response — `ExtractCatalogueItemsPostResponse`**
 
