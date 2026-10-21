@@ -15,6 +15,7 @@ Reusable model-transformation rules. Related: [Scala](scala.md), [Smithy](smithy
 - Transform a Scala collection directly when every element uses automatic derivation: `values.transformInto[List[Target]]`, never `values.map(_.transformInto[Target])`.
 - Keep `.map` when each element needs its own Chimney customization or when the method belongs to a different container operation, such as ScalaCheck `Arbitrary.map`.
 - Prefer transforming the complete owning product when Chimney can derive it, rather than transforming one of its collection fields separately.
+- For gateway `NonEmptyChunk[Source]` → `List[Target]` conversions, import `io.mesazon.gateway.transform.given`. The shared transformer in `transform/transform.scala` preserves element order and uses the element transformer; complete owning products derive without per-field `.toList` customizations or request-specific transformers.
 
 ## Enums
 
@@ -27,7 +28,7 @@ Reusable model-transformation rules. Related: [Scala](scala.md), [Smithy](smithy
 ## Iron refined products
 
 - Import `io.github.iltotore.iron.chimney.given` for Iron's Chimney support.
-- Gateway code that transforms an Iron `RefinedType` whose base is a case class into a different product target also imports `io.mesazon.gateway.utils.ironRefinedTypeToTargetTransformer` (or `io.mesazon.gateway.utils.given` where that package's givens are imported together).
+- Gateway code that transforms an Iron `RefinedType` whose base is a case class into a different product target also imports `io.mesazon.gateway.transform.given` (or the named `io.mesazon.gateway.transform.ironRefinedTypeToTargetTransformer`). Shared gateway transformation givens live together in `transform/transform.scala`.
 - The bridge's `TargetType <: Product` bound lets Chimney derive nested refined-product → product transformations without competing with Iron's primitive transformers.
 - With the bridge in scope, transform the refined value, collection, or complete owning product directly. Do not access `.value`, add a base-type ascription/cast, or define a one-off `Transformer` for the refined product.
 

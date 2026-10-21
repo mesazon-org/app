@@ -111,6 +111,9 @@ object ServiceError {
           s"Invalid onboard stage user id: [$userID] with onboard stage: [$onboardStageUser], allowed: [$onboardStagesAllowed]",
           None,
         )
+
+    case class InvalidAction(action: String, error: String)
+        extends ForbiddenError(s"Invalid action: [$action], error: [$error]", None)
   }
 
   object ConflictError {

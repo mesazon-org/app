@@ -15,8 +15,8 @@ Validators check supplied values unchanged. Do not trim, normalize, or filter in
 
 ## Domain modeling
 
-- Name reusable value concepts without a feature prefix (`PriceAmount`, `PriceCurrency`, `Price`, `ImageOriginalS3BucketKey`, `ImageNormalizedS3BucketKey`, `ImageOriginalFileName`, `ImageAsset`).
-- When a shared value shape has a distinct feature meaning, wrap it in an owner-specific `Pure` newtype named for the owning entity (`CatalogueItemPrice`, `CatalogueItemImageAsset`).
+- Name reusable value concepts without a feature prefix (`PriceAmount`, `Currency`, `Price`, `ImageOriginalS3BucketKey`, `ImageNormalizedS3BucketKey`, `ImageOriginalFileName`, `ImageAsset`).
+- When a shared value shape has a distinct feature meaning, wrap it in an owner-specific `Pure` newtype named for the owning entity (`CatalogueItemVariantPrice`, `CatalogueItemImageAsset`).
 - Represent coupled optional fields as one `Option` around a composite case class whose members are mandatory. Never expose parallel `Option` fields that permit half-present domain values.
 
 ## Arbitraries
@@ -24,7 +24,7 @@ Validators check supplied values unchanged. Do not trim, normalize, or filter in
 Keep feature values out of generic arbitrary traits:
 
 - Shared refined-base generators such as exact `BigDecimal :| Pure` live in `IronRefinedTypeArbitraries`; feature arbitraries reuse them through their newtypes instead of redefining ranges.
-- Shared domain case-class generators such as `Price` and `ImageAsset` live in `GatewayArbitraries`; repository-only traits contain only repository Rows/inputs and persistence-specific enums. A valid canonical `Price` is correlated: generate a supported, fixed-fraction ISO currency first, then a realistically bounded non-negative amount at exactly that currency's fraction-digit scale. Never derive `Price` with independent `Gen.resultOf` fields.
+- Shared domain case-class generators such as `Price` and `ImageAsset` live in `GatewayArbitraries`; repository-only traits contain only repository Rows/inputs and persistence-specific enums. A valid canonical `Price` is correlated: choose the typed `Currency` through the shared `arbCurrency`, then generate a realistically bounded non-negative amount respecting its `decimalPoints`. The current supported currencies use exactly two stored decimal places. Never derive `Price` with independent `Gen.resultOf` fields.
 - `<Feature>DomainArbitraries` in test-kit extends `GatewayArbitraries`; define one explicitly named `given arb<ExactTypeName>` per domain case class. Use `Arbitrary(Gen.resultOf(Type.apply))` when existing field givens independently produce valid instances; write a custom generator only for correlations, normalization, bounds, or cross-field invariants.
 - Smithy route: `<Feature>SmithyArbitraries` in gateway-core test utils extends the domain trait plus `IronRefinedTypeTransformer`. Derive every Smithy arbitrary from the domain arbitrary following the [Chimney standard](../../standards/chimney.md), including its rules for Iron refined products and explicit transformers.
 - Tapir route: derive the typed endpoint-input arbitrary from the same domain arbitrary beside the endpoint tests; the domain generator remains the source of valid data.
@@ -42,9 +42,10 @@ Reuse `validation/service/validation.scala`:
 - `toValidatedRequestIO`: accumulated `ValidatedNec` → typed `ValidationError`.
 - `validateAll`: validates a flat list and stamps failures with item `index`.
 - `validateAllNested`: collapses a composite item's errors under the outer field while preserving inner indexes.
+- `validateNonEmptyNested`: applies `validateAllNested` and converts a valid non-empty result to `NonEmptyChunk`; an empty input fails on the supplied singular field name with `At least one <fieldName> must be provided`.
 - `validateSingleDefault`: a non-empty defaultable list must have exactly one default; chain after item validation with `.andThen`.
 
-Use concrete reusable domain validators such as `EmailValidator`, `PhoneNumberDomainValidator`, or `PriceDomainValidator` for effectful/non-trivial fields, then wrap the result in the feature newtype. Do not make new domain validators extend the legacy generic `DomainValidator`; keep their concrete `validate` API. Shared helpers are `private[validation]`. New features use one feature request validator; legacy `ServiceValidator`/`DomainValidator` remains only for untouched old code (`WahaServiceValidator` is the last user).
+Use concrete reusable domain validators such as `EmailValidator`, `PhoneNumberDomainValidator`, or `PriceValidator` for effectful/non-trivial fields, then wrap the result in the feature newtype. Do not make new domain validators extend the legacy generic `DomainValidator`; keep their concrete `validate` API. Shared helpers are `private[validation]`. New features use one feature request validator; legacy `ServiceValidator`/`DomainValidator` remains only for untouched old code (`WahaServiceValidator` is the last user).
 
 ## Feature validator
 
@@ -56,10 +57,11 @@ File: `validation/service/<Feature>RequestValidator.scala`.
 - Compose fields in declaration order with `ValidatedNec` + `mapN`; clients must receive all errors in stable field order.
 - Put every constructor argument in the tuple, in the target's declaration order, and finish with `.mapN(Target.apply)`. Wrap an infallible value in `Validated.validNec(...)` rather than capturing it in a lambda; enum conversion follows the [Chimney enum standard](../../standards/chimney.md#enums) (see `validation/domain/AddressValidator.scala`).
 - `fieldName` exactly equals the Smithy member, except a `validateAllNested` batch wrapper uses the singular item concept because the error represents one indexed element.
+- When a new request requires at least one of several optional fields, validate each supplied field first. If all are absent, return one `InvalidFieldError` for each participating field in declaration order, using its own transport member name and an empty submitted-value list. Do not invent a combined field name such as `nameOrSku`. Supplied invalid values keep their own field errors.
 - Singular, batch, and combined requests reuse private per-item/per-field validation; never duplicate field lists.
 - A batch error identifies one failed element, so pass the singular item concept to `validateAllNested` (for example `catalogueItem`, not the plural request member `catalogueItems`). Preserve the source index and return no error for valid elements between failures.
 - For an optional composite, validate mandatory inner members in declaration order, accumulate their errors under the outer field, then wrap the valid case class in its contextual newtype.
-- Monetary validation uses `PriceDomainValidator` with JDK `Currency`: normalize trim/uppercase ISO codes, reject unsupported or no-fixed-fraction currencies, and require non-negative amounts with at most 12 integer digits (equivalent to `[0, 1,000,000,000,000)`) and supplied scale no greater than the currency fraction digits. For non-zero amounts, check the integer-digit bound with widened `precision - scale` arithmetic before normalization so compact extreme-exponent inputs cannot cause unbounded allocation; zero bypasses that representation-derived bound because its exponent does not change its value. Normalize valid lower-scale amounts upward to the exact currency scale by appending zeros; never round or remove supplied precision.
+- Monetary validation uses `PriceValidator` with the typed `Currency` enum. Catalogue accepts exact uppercase `EUR`/`USD`/`GBP` through closed Smithy enums. Amounts must be non-negative with at most 12 integer digits. For non-zero amounts, check widened `precision - scale` before normalization so compact extreme exponents cannot cause unbounded allocation; zero bypasses that representation-derived bound. `Currency.decimalPoints = Some(n)` rejects supplied scales above `n` and pads lower scales to exactly `n` without rounding; `None` preserves the supplied amount without a scale restriction. The current three currencies use `Some(2)`. The request validator wraps the validated `Price` in `CatalogueItemVariantPrice`; see [Catalogue validation](../catalogue.md#validation).
 - Pure fields use required/optional helpers with `.either`; effectful fields use domain validators.
 - Expose `val live = ZLayer.derive[...]`; Slice 5 wires it into the service graph.
 
@@ -72,7 +74,9 @@ File: `unit/validation/service/<Feature>RequestValidatorSpec.scala`; extend `ZWo
 
 The accumulation test exists to prove one thing: every field that can fail is collected and reported together, in order. Make each fallible field fail once in that single test, and stop there.
 
-Never re-test a validator that already has its own spec. When a request validator delegates to a shared domain validator (`EmailValidator`, `PhoneNumberDomainValidator`, `AddressValidator`, `PriceDomainValidator`), that validator's edge cases — bad parts, allowed combinations, formats, boundaries — are proven once in `unit/validation/domain/<Validator>Spec.scala`. The request validator spec does not repeat them and adds no separate "reject when …" test for a delegated rule. For a delegated field, the accumulation test carries one dummy invalid value, written by hand (for addresses: a single `ShippingAndBilling` entry with `city = ""`), just to show the delegated errors are accumulated with the others. The round-trip test already proves the wiring.
+For an at-least-one-of-fields rule, assert that an all-absent request returns a separate error for every participating field in declaration order. The Catalogue uniqueness request is the reference case: absent `name` and `sku` produce two errors, not a `nameOrSku` error.
+
+Never re-test a validator that already has its own spec. When a request validator delegates to a shared domain validator (`EmailValidator`, `PhoneNumberDomainValidator`, `AddressValidator`, `PriceValidator`), that validator's edge cases — bad parts, allowed combinations, formats, boundaries — are proven once in `unit/validation/domain/<Validator>Spec.scala`. The request validator spec does not repeat them and adds no separate "reject when …" test for a delegated rule. For a delegated field, the accumulation test carries one dummy invalid value, written by hand (for addresses: a single `ShippingAndBilling` entry with `city = ""`), just to show the delegated errors are accumulated with the others. The round-trip test already proves the wiring.
 
 Use fresh `arbitrarySample` data per test; no shared valid fixtures. Sampling is not free: never generate a batch/list wrapper and then replace its entire expensive collection. In that case, sample the single element model once, derive scenario variants with `.copy(...)`, and construct the one-field wrapper directly from the controlled list. Sample the complete batch only when the generator/round-trip itself is under proof. Add extra cases for list/default/nested behavior when the two required cases cannot prove them.
 

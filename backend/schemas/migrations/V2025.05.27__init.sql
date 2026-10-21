@@ -137,20 +137,19 @@ create table customer_business_contact
         references customer (organization_id, customer_id)
 );
 
-create type catalogue_item_status as enum ('Active', 'Archived');
+create type catalogue_item_status as enum ('Active', 'Inactive');
 
 create table catalogue_item
 (
     organization_id                uuid                  not null,
     catalogue_item_id              uuid                  not null,
     name                           text                  not null,
-    unit                           text                  not null,
-    price_amount                   numeric,
-    price_currency                 text,
+    description                    text,
     image_original_s3_bucket_key   text,
     image_normalized_s3_bucket_key text,
     image_original_file_name       text,
     status                         catalogue_item_status not null,
+    is_archived                    boolean               not null,
     created_at                     timestamptz           not null,
     updated_at                     timestamptz           not null,
     primary key (organization_id, catalogue_item_id)
@@ -158,8 +157,40 @@ create table catalogue_item
 
 create unique index uq_catalogue_item_name
     on catalogue_item (organization_id, name)
-    where status = 'Active';
+    where is_archived = false;
 
+create type catalogue_item_variant_status as enum ('Active', 'Inactive', 'OutOfStock');
+
+create table catalogue_item_variant
+(
+    organization_id           uuid                          not null,
+    catalogue_item_variant_id uuid                          not null,
+    catalogue_item_id         uuid                          not null,
+    sku                       text,
+    label                     text,
+    description               text,
+    attributes                jsonb                         not null,
+    price_amount              numeric,
+    price_currency            text,
+    selling_unit              jsonb                         not null,
+    status                    catalogue_item_variant_status not null,
+    is_archived               boolean                       not null,
+    created_at                timestamptz                   not null,
+    updated_at                timestamptz                   not null,
+    primary key (organization_id, catalogue_item_variant_id),
+    constraint chk_catalogue_item_variant_price
+        check ((price_amount is null) = (price_currency is null)),
+    foreign key (organization_id, catalogue_item_id)
+        references catalogue_item (organization_id, catalogue_item_id)
+        on delete restrict
+);
+
+create index idx_catalogue_item_variant_item
+    on catalogue_item_variant (organization_id, catalogue_item_id);
+
+create unique index uq_catalogue_item_variant_sku
+    on catalogue_item_variant (organization_id, lower(sku))
+    where is_archived = false and sku is not null;
 
 create table waha_user
 (

@@ -1,119 +1,188 @@
 # Catalogue
 
-Tenant-scoped products/services sold by the organization.
+Organization-scoped items with variants, exact prices, selling units, and item images. Product contract: [Catalogue epic](../../pages/epics/06-catalogue.md).
 
-## Scope
+## Status and scope
 
-Owns `catalogue_item`: name, free-text unit, optional exact price/currency, optional image metadata, one-way archival, and the image upload endpoint (see [Image upload](#image-upload)) that writes back the three image columns without changing `CatalogueItemStatus`. Excludes orders/line items and tenant membership/roles.
+| Slice | Current implementation | Remaining |
+|---|---|---|
+| Endpoints | Eight canonical Smithy operations and the Tapir image upload | JSON decimal precision is an accepted limitation; no fix planned for now |
+| Validation | Typed currency, nested validation, non-empty creates, nullable updates | Storage limits and duplicate update IDs are documented below |
+| Schema | Item and variant tables in the pre-release init migration | No conversion for an already deployed database |
+| Repository | Tenant-scoped reads/writes, transactions, archive locks, uniqueness indexes | Known edge cases below |
+| Service | Validation, mappings, image signing, upload integration | Coverage boundaries below; not a release/deployment claim |
 
-## Model and decisions
+Orders, paging/search, unarchive, and variant-specific images are outside this feature. The canonical implementation uses `CatalogueService`, `CatalogueRequestValidator`, `CatalogueRepository`, and `CatalogueQueries`; there is no parallel versioned service.
 
-`catalogue_item`:
-
-- PK `(organization_id, catalogue_item_id)`; all access is tenant-scoped.
-- `name text not null`.
-- `unit text not null`: open vocabulary (`piece`, `kg`, `hour`, bespoke services); rejected enum because new units must not require code/migrations.
-- `price_amount numeric` + `price_currency text`: both null or both present. The application models them as optional `CatalogueItemPrice`, a `Pure` newtype over `Price` with mandatory amount/currency, so a half-price is unrepresentable. `numeric`/Scala `BigDecimal` is exact; never pass through `Double`. New client input is ISO 4217 only: trim and uppercase the code, resolve it through `java.util.Currency`, and reject unsupported codes or currencies whose fraction digits are `-1`.
-- Price validation is shared because amount validity depends on currency. Amounts must be non-negative with at most 12 integer digits (equivalent to `[0, 1,000,000,000,000)`) and their supplied `BigDecimal` scale must satisfy `scale <= currency.getDefaultFractionDigits`; for non-zero amounts, check the integer-digit bound with widened `precision - scale` arithmetic before normalization so a compact extreme exponent cannot cause unbounded allocation. Zero bypasses that representation-derived bound because its exponent does not change its value. Never round or remove supplied precision. After validation, normalize upward to the currency's exact scale by appending zeros. Thus `JPY 1.00` is invalid, `USD 1` becomes `1.00`, `KWD 1.23` becomes `1.230`, zero is valid at any scale, and a non-zero value with a negative scale is valid only within the amount bound and is normalized exactly. Failures are accumulated `InvalidFieldError`s naming field `amount` (negative, more than 12 integer digits, scale above the currency's fraction digits) or `currency` (unknown ISO code, no fixed fraction digits).
-- Smithy encodes `BigDecimal` as a JSON number. If clients cannot preserve exact decimal scale, change wire `amount` to `String` and parse it at validation.
-- Image columns: `image_original_s3_bucket_key`, `image_normalized_s3_bucket_key`, and `image_original_file_name` are jointly optional. The application models them as optional `CatalogueItemImageAsset`, a `Pure` newtype over `ImageAsset` with mandatory original bucket key, normalized bucket key, and original file name, so partial image metadata is unrepresentable. Mirrors the organization-logo upload pipeline (see [Organization Management](organization-management.md#logo-upload)), which builds the same shared `ImageAsset`/`ImageOriginalS3BucketKey`/`ImageNormalizedS3BucketKey`/`ImageOriginalFileName` value newtypes into its own contextual `OrganizationLogoImageAsset` wrapper. Insert/update contain no bytes; GET models expose presigned URL fields, generated on the fly from the stored bucket keys.
-- `status catalogue_item_status` (`Active|Archived`): native PG enum matching Scala case names. Never hard-delete; no unarchive.
-- `uq_catalogue_item_name`: partial unique `(organization_id, name) where status='Active'`; archive frees names. Repository maps its `23505` to 409.
-
-The `numeric` choice is the documented exception to the usual primitive set.
+Business status and archiving are independent. Items have `Active`/`Inactive`; variants have `Active`/`Inactive`/`OutOfStock`. **Every business status is usable while `isArchived = false`.** The archive flag alone controls visibility, updates, uploads, name/SKU reservation, and last-variant counting. Do not reintroduce enabled/disabled status lists or duplicate ordinary test cases per status. Creation starts items and variants `Active` and non-archived; only dedicated archive operations can set the archive flag.
 
 ## Endpoints
 
-`CatalogueService`: bearer + completed onboarding + `X-Organization-ID`. Reads allow `Owner|Admin|User`; writes `Owner|Admin`.
+`CatalogueService.smithy` and `domain/Catalogue.smithy` use namespace `io.mesazon.gateway.smithy`. The service requires `@simpleRestJson`, bearer authentication, and completed onboarding. Every operation mixes `OrganizationScopedInput` (`X-Organization-ID`). Mutations allow Owner/Admin; reads allow Owner/Admin/User. `Main` supplies the layers and `HttpApp` mounts the service and Swagger with the shared middleware.
 
-| Method | Path | Operation | Effect/result |
+| Operation | Method / URI | Success | Additional errors beyond BadRequest, Unauthorized, Forbidden, InternalServerError |
 |---|---|---|---|
-| POST | `/insert/catalogue-item` | `InsertCatalogueItemPost` | create active item |
-| POST | `/insert/catalogue-items` | `InsertCatalogueItemsPost` | atomic batch |
-| PUT | `/update/catalogue-item` | `UpdateCatalogueItemPut` | update name/unit/price |
-| PUT | `/archive/catalogue-item` | `ArchiveCatalogueItemPut` | archive by ID |
-| GET | `/get/catalogue-item/{catalogueItemID}` | `GetCatalogueItemGet` | full item: name, unit, price, normalized image URL only |
-| GET | `/get/catalogue-items` | `GetCatalogueItemsGet` | active-item summaries: name, status, normalized image URL only — no unit/price |
+| `CatalogueItemPost` | `POST /catalogue/item` | 200, item ID | ValidationError, Conflict |
+| `CatalogueItemBatchPost` | `POST /catalogue/item/batch` | 200, item IDs in input order | ValidationError, Conflict |
+| `CatalogueItemPut` | `PUT /catalogue/item/{catalogueItemID}` | 204 | ValidationError, Conflict |
+| `CatalogueItemArchivePut` | `PUT /catalogue/item/{catalogueItemID}/archive` | 204 | — |
+| `CatalogueItemVariantArchivePut` | `PUT /catalogue/item/{catalogueItemID}/variant/{catalogueItemVariantID}/archive` | 204 | Forbidden includes the last-variant rule |
+| `CatalogueItemGet` | `GET /catalogue/item/{catalogueItemID}` | 200, full item and variants | — |
+| `CatalogueItemSummaryGet` | `GET /catalogue/item/summary` | 200, item and variant summaries | — |
+| `CatalogueItemUniquenessGet` | `GET /catalogue/item/uniqueness` | 200, optional uniqueness booleans | ValidationError |
 
-Errors:
+IDs of addressed resources are path labels, never repeated in the body. Archive requests have no body. Static `/summary` and `/uniqueness` paths take precedence over the item-ID route. See [Smithy conventions](../standards/smithy.md) and [authentication](../project/authentication.md) for shared routing/auth rules.
 
-- insert/update: `BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError`.
-- archive/read: `BadRequest, Unauthorized, Forbidden, InternalServerError`; pure UUID cannot validation-fail and archive cannot create a name conflict.
-- Organization gate (all six, per [Authentication](../project/authentication.md#organization-scope)): missing `X-Organization-ID` → 400 `BAD_REQUEST_ERROR`; no membership row → 500 `INTERNAL_SERVER_ERROR`, not 403; disallowed role → 403; missing user details → 500. `CatalogueApiSpec` proves the non-member and missing-details 500s on every endpoint.
+- **Create:** `CatalogueItemPostRequest{name, description?, variants}`; each `CatalogueItemVariantInsert` has optional SKU, label, description and price, default-empty attributes, and required selling unit. No status/archive input. Batch `catalogueItems` reuses the single-create request. Wire lists default to empty; validation requires at least one item/variant.
+- **Update:** optional name, nullable description, optional item status, and default-empty `variantsUpdate`/`variantsInsert`. Existing-variant entries require `catalogueItemVariantID`; SKU, label, description and price are nullable, while attributes, selling unit and status are optional replacements. Insert entries reuse the create shape and default to `Active`. A 204 response contains no newly inserted variant IDs; re-read detail to obtain them.
+- **Detail:** item ID, name, optional description, status, optional `imageNormalizedUrl`, and variants. Each full variant contains its ID, optional SKU/label/description/price, required attributes/selling unit/status. Internal ownership, archive flags, and audit timestamps are omitted.
+- **Summary:** optional repeated `catalogueItemIDs` query key; absent or empty list selects all non-archived items. Response `catalogueItemSummaries` contains item ID/name/status/optional image URL and required variant summaries (ID, optional SKU/label/price, selling unit, status). No descriptions, attributes, archive flags, price aggregation, or variant count. Unknown/archived/foreign IDs are omitted. Duplicate IDs and request order do not affect the result.
+- **Uniqueness:** optional `name`/`sku`, at least one required. Only supplied fields produce `isNameUnique`/`isSkuUnique`. Names compare case-sensitively; SKUs compare case-insensitively. The check reserves nothing; a subsequent write may still conflict.
 
-Contract: `smithy/CatalogueService.smithy`, `smithy/domain/Catalogue.smithy`. Optional `price` is `CatalogueItemPriceRequest`; if present, both `amount` and `currency` are required. Request lists use `@default([])`; response lists use `@required`. `CatalogueItemStatus` is a Smithy enum (`Active`/`Archived`) exposed only on the list response; `GatewayClient`'s jsoniter codec for it must be hand-written like `OnboardStage`/`CustomerType` — smithy4s enums are not native Scala 3 enums, so macro derivation silently produces the wrong wire shape without one.
+Value shapes for price and selling units are shared by requests/responses; operation-specific entity views remain distinct. Request lists use `@default([])`; response lists/maps are required. The combined Smithy quantity-unit enum flattens the domain unit groups; narrow per-unit and unit-size enums retain their restrictions.
+
+## Validation
+
+`CatalogueRequestValidator` exposes validated single-create, batch-create, update, and uniqueness methods. Archive and ID-only reads need no request validator. Errors accumulate in field/input order before repository access.
+
+| Input | Rule |
+|---|---|
+| Item name/description; variant SKU/label/description; attribute names/values | 1–255 characters, trimmed and non-empty; reject rather than normalize |
+| `Price.currency` | Domain `Currency` enum, mirrored by closed Smithy `Currency`: exact uppercase EUR/USD/GBP |
+| `Price.amount` | Non-negative, at most 12 integer digits; currency-specific decimal rule below |
+| Quantity, per-unit, unit-size values | `0 < value <= 99999`; preserve every supplied decimal place, no rounding or scale cap |
+| Quantity unit | Gram, Kilogram, Millilitre, Litre, Millimetre, Centimetre, Metre, SquareMetre, Pack, Box, Bag, Bottle, Can, Jar, Piece |
+| Per-unit unit | Bag, Bottle, Can, Jar, Piece |
+| Unit-size unit | Gram, Kilogram, Millilitre, Litre, Millimetre, Centimetre, Metre, SquareMetre |
+| Attributes | Free-form map; no vocabulary/count limit. Map decoding does not reject repeated raw JSON keys; the HTTP decoder has a separate collection limit below |
+| Create/batch collections | Non-empty; no validator count cap. HTTP decoding applies the collection limit below |
+
+Shared `PriceValidator` returns `Price(amount: PriceAmount, currency: Currency)`; the request validator wraps it in `CatalogueItemVariantPrice` (`Pure[Price]`). `Currency.decimalPoints: Option[Int]` is `Some(2)` for all current currencies. Reject supplied scale above two, including trailing zeroes (`1.230`); pad smaller scales to exactly two without rounding. Future `None` means unrestricted scale and preservation of the supplied amount. For non-zero amounts, widened `precision - scale` is checked before normalization to reject compact huge exponents without expanding them; zero bypasses that representation-derived bound. Price is stored as exact decimal, never floating point.
+
+The feature validator owns selling-unit validation. It maps closed unit/status enums through Chimney and accumulates invalid quantity/per-unit/unit-size errors. Unknown enum strings fail transport decoding (400), before request validation. All current business statuses are valid updates.
+
+`validateNonEmptyNested(fieldName, ...)` delegates entry validation to `validateAllNested` and returns `NonEmptyChunk`. Pass singular `variant` for create variants and `catalogueItem` for batch items; an empty list produces `At least one <fieldName> must be provided`. Nested errors retain item index, variant index and field. Domain models and arbitraries preserve these non-empty invariants. The domain module depends on ZIO core for this collection.
+
+When neither uniqueness parameter is supplied, return two ordered errors, `name` then `sku`, rather than one combined field. Invalid supplied values retain their own errors. HTTP `ValidationError.fields` exposes only ordered field names; nested indexes/messages are validator-level detail.
+
+Nullable update fields use `Option[Option[T]]`: `None` keeps, `Some(None)` clears, `Some(Some(value))` replaces. Attributes/selling unit/status use `Option[T]`: absent keeps, present replaces whole; an empty attributes map clears it. Request validators preserve omission and explicit null rather than applying create defaults.
+
+## Schema and codecs
+
+`backend/schemas/migrations/V2025.05.27__init.sql` is modified in place under the approved **pre-release** policy. This PR contains no deployed-data conversion. Do not run destructive clean/migrate against a database whose data must be retained. See [schema flow](flow/03-schema.md) and [PostgreSQL](../standards/postgres.md).
+
+| Table | Stored columns / constraints |
+|---|---|
+| `catalogue_item` | Composite PK `(organization_id, catalogue_item_id)`; name, optional description, optional original/normalized image keys and original filename (one optional image asset in the domain), native-enum status, required `is_archived`, creation/update timestamps |
+| `catalogue_item_variant` | Composite PK `(organization_id, catalogue_item_variant_id)`; parent item ID; optional SKU/label/description; required attributes JSONB; jointly optional numeric price amount/text currency; required selling-unit JSONB; native-enum status, required `is_archived`, creation/update timestamps |
+
+- Composite variant FK `(organization_id, catalogue_item_id)` references the item with `on delete restrict`. `idx_catalogue_item_variant_item` supports parent lookup.
+- `uq_catalogue_item_name`: unique `(organization_id, name)` where `is_archived = false`.
+- `uq_catalogue_item_variant_sku`: unique `(organization_id, lower(sku))` where `is_archived = false and sku is not null`. Lookup uses the same PostgreSQL `lower` expression; stored spelling is preserved. Archive frees the name/SKU. Stable index names map conflicts to HTTP 409.
+- `chk_catalogue_item_variant_price` requires amount and currency to be present or absent together. There is no corresponding all-or-none image-column CHECK; application writes construct the complete image asset. Domain validation supplies value rules; the schema does not independently enforce every text, monetary, JSON, or non-empty-child rule.
+- `catalogue_item_status` and `catalogue_item_variant_status` are approved native-enum exceptions. Queries cast values to their schema-qualified enum on writes and to text on reads. Currency uses the shared enum-as-text codec.
+- `CatalogueItemImageAsset` wraps `ImageAsset`; `CatalogueItemVariantPrice` wraps `Price`. Generic Iron/composite codecs preserve their positional field order. Explicit joined projections must remain aligned with `Read`/Row order.
+- Attributes use shared refined-string JSON key codecs in `queries.scala`; direct validated-string encoding avoids recursive jsoniter derivation for opaque keys. Selling units use the domain JSON representation. Selling-unit values are decoded through the refined domain codecs, not the request validator. The selling-unit codec uses jsoniter's default decimal precision and read limits. The resulting rounding/read limitation is accepted for expected business values; see issue 12.
+- `RepositoryConfig.catalogueItemTable`/`catalogueItemVariantTable`, `allTableNames`, and both main/acceptance `application.conf` files name the tables.
+
+## Repository and transactions
+
+`CatalogueQueries` owns both tables. `CatalogueRepository` supplies `TimeProvider`, `IDGenerator` and one transaction per operation. UUIDv7 IDs and audit times come from application services, not database defaults.
+
+### Writes and archive
+
+- Single create inserts parent and its non-empty variants atomically. Batch create inserts every item and variant in one transaction and returns item IDs in request order. Any failure rolls back the whole operation.
+- Update first updates/locks the tenant's non-archived parent, including `updated_at`. A missing, archived, or foreign parent yields 204 with no child writes. An otherwise empty update still advances the parent's timestamp.
+- Existing-variant IDs must resolve to non-archived variants of that parent/organization. A count mismatch fails with 500 and rolls back the parent and all child writes. The current check also rejects duplicate IDs in `variantsUpdate` this way.
+- Existing-variant updates merge optional fields into the loaded full rows, then write them together; new variants are inserted in the same transaction. Uniqueness conflicts return 409 and roll back every change. General update SQL and input models cannot set `is_archived`.
+- Item archive marks the non-archived parent and all its non-archived variants archived with the operation timestamp. Business values/statuses and creation times remain. Already archived children are not rewritten. Missing/foreign/already archived parents are no-ops. Images and records remain stored; no unarchive exists.
+- Variant archive locks the non-archived parent with `FOR NO KEY UPDATE`, reads its non-archived variant IDs, and archives only the requested target. Missing/foreign/archived/wrong-parent targets are no-ops. Archiving the last non-archived variant fails with `ForbiddenError.InvalidAction` (403). Successful child archive does not change the parent/siblings. Parent locking serializes competing updates/archive operations so concurrent last-two-variant requests cannot archive both.
+
+### Reads
+
+- `getCatalogueItemWithVariants` uses one tenant-scoped `INNER JOIN`, filtering both archive flags. It returns `Option[CatalogueItemWithVariantsRow]`, whose children form a `NonEmptyChunk`. Children sort by creation time then variant ID. Missing/archived/foreign parents, and anomalous parents without a non-archived child, return `None`.
+- `getAllCatalogueItemSummaries` and `getCatalogueItemSummaries(NonEmptyChunk[CatalogueItemID])` share one projection/grouping path. Items sort by creation time then item ID; variants by creation time then variant ID. Grouping retains SQL order. Parents without a non-archived child disappear. Summary Rows omit archive flags and unused descriptions/attributes.
+- Name/SKU checks use the same tenant/archive predicates as their indexes, regardless of business status. They are advisory reads, not reservations.
+- `getAllCatalogueItemWithVariantsRowsTesting` is a testing-only joined read across organizations/statuses/archive flags. It uses complete Rows and includes archived records; its inner join still omits parents with no variants. It is not a service/repository API and has no dedicated testing-query tests.
+
+## Service and transformations
+
+`CatalogueService.local` exposes typed `ServiceTask`; `.observed` maps errors through `HttpErrorHandler`; `.live` composes them. The service validates before repository calls, maps generated UUIDs to domain IDs, sets inserted variant status to `Active`, forwards archive operations, and maps full Rows/projections back to Smithy.
+
+Detail maps a missing repository result to the existing 500 `UnexpectedError`. Detail/summary sign only present normalized image keys with `S3ClientOrganizationMedia.genMediaUrl`; absent images make no S3 call. Repository and signing failures propagate. Summaries preserve repository order and fail the request if any required signing call fails. Uniqueness checks only supplied fields, name before SKU, stopping on failure.
+
+Shared Chimney givens live in `gateway/transform/transform.scala`: `NonEmptyChunk` to `List`, Iron refined product to target product, and `Option` to Smithy `Nullable`. Import `io.mesazon.gateway.transform.given`; do not add per-price delegates or exports. Mirrored enums and unchanged nested price fields derive automatically. See [Chimney](../standards/chimney.md).
 
 ## Image upload
 
-`POST /upload/catalogue-item/image` is a Tapir streaming endpoint, not Smithy — Smithy JSON routes cap at 5 MB (`HttpApp.SmithyMaxEntitySize`); Tapir streams binary and allows 20 MB (`HttpApp.TapirMaxEntitySize`, kept equal to `file-service.file-bytes-max`). See [Alternate HTTP](../project/alternate-http.md) for the shared Tapir transport mechanics (docs mounting, error model, security wiring) this endpoint follows alongside [Organization Management](organization-management.md#logo-upload)'s logo upload — the two mirror the same pipeline shape, differing only in entity scoping and persistence target.
+`POST /upload/catalogue-item/image` is Tapir streaming transport: binary body, `X-Organization-ID`, `X-Catalogue-Item-ID`, `X-File-Name`, and bearer token. Completed onboarding and Owner/Admin membership are required. Success is 204. See [alternate HTTP](../project/alternate-http.md), [streaming uploads](../project/streaming-uploads.md), and the shared [organization-logo pipeline](organization-management.md#logo-upload).
 
-Binary body; organization in `X-Organization-ID`, catalogue item in `X-Catalogue-Item-ID`, original file name in `X-File-Name`. Security (`AuthorizationService.auth`): valid access JWT, `OnboardStage.completedStages` (= `PhoneVerified`), and the caller must be assigned to the organization as `Owner` or `Admin` (disallowed role → `403`, no membership row → `500`).
+`FileService.uploadCatalogueItemImage` runs in `ZIO.scoped`:
 
-Errors: `TapirServerError` has no validation variant, so every 400 here is `BAD_REQUEST_ERROR` (never `VALIDATION_ERROR`). `HttpErrorHandler.errorResponseHandlerTapir` maps every `ServiceError.BadRequestError` — including `FileScanner`'s `ValidationError` for a missing/unsupported extension or an extension/detected-content mismatch — to `TapirServerError.BadRequestError`; a missing or undecodable `X-Organization-ID`/`X-Catalogue-Item-ID`/`X-File-Name` header goes through `tapir.scala`'s decode-failure handler, also `400 BAD_REQUEST_ERROR`. Missing/archived/foreign item, image decode/processing failure, and over-cap bytes are `500 INTERNAL_SERVER_ERROR`.
+1. Read through `getCatalogueItemWithVariants`; reject missing/archived/foreign/no-non-archived-child targets with 500 before scanning bytes or writing objects. Business status is irrelevant.
+2. `FileScanner.scan` checks filename/extension, spools to a scoped temporary file, detects MIME using Tika, and requires extension/content agreement for PNG/JPEG/WEBP. It drains excess input while retaining at most the cap plus one byte; scoped files are deleted on success/failure.
+3. `ImageProcessing.normalize` detects/decodes with scrimage, bounds dimensions to 640×640, and re-encodes lossless WebP. The original is retained unchanged.
+4. `S3ClientOrganizationMedia.uploadImageCatalogueItem` uploads original then normalized bytes to fixed keys `{catalogueItemImageBucketPathPrefix}/{organizationID}/{catalogueItemID}/{originalFileName|normalizedFileName}`. Later uploads overwrite those keys.
+5. Persist `CatalogueItemImageAsset` with the original filename and returned keys through `updateCatalogueItem`, leaving name/description/status unset and both child lists empty. S3 and PostgreSQL do not share a transaction; see issues below.
 
-`FileService.uploadCatalogueItemImage` runs inside one `ZIO.scoped` block; every intermediate file is a `TempFile.createScoped` (auto-deleted on scope close, even on failure):
+Defaults: Smithy JSON cap 5 MiB (`HttpApp.SmithyMaxEntitySize`), Tapir cap 20 MiB (`TapirMaxEntitySize`), scanner cap `file-service.file-bytes-max = 20971520`; keep upload caps aligned. S3 config uses bucket `organization-media`, catalogue prefix `catalogue/item-images`, filenames `original`/`normalized`, and `url-expires-at-offset = 15 minutes`. `genMediaUrl` returns presigned URLs; the gateway does not serve image bytes. `readiness` uses `HeadBucket`.
 
-1. Load the catalogue item (`CatalogueRepository.getCatalogueItem`) and fail with `InternalServerError` if it's missing or not `Active` (archived items keep their existing image, if any, untouched) — checked before any bytes are read.
-2. `FileScanner.scan` validates the existing declared filename header, spools the incoming `ZStream[Byte]` to a temp file, and drains the entire input even past the byte cap (writing at most `fileBytesMax + 1` bytes, discarding the rest) so an oversized request body isn't abandoned mid-read (rationale: [Streaming uploads](../project/streaming-uploads.md)). It detects the actual MIME type with Apache Tika using the filename as a hint, requires the extension and detected MIME to agree, and rejects anything outside `SupportedMediaType.images` (`PNG`, `JPEG`, `WEBP`).
-3. `ImageProcessing.normalize` re-detects the format with scrimage's `FormatDetector`, decodes, bounds to 640×640 px (`MaxDimensionPixels`), and re-encodes as lossless WebP. Yields the untouched original stream and the normalized variant.
-4. `S3ClientOrganizationMedia.uploadImage` stores both variants at `{catalogueItemImageBucketPathPrefix}/{organizationID}/{catalogueItemID}/{originalFileName|normalizedFileName}` in bucket `organization-media`, returning both bucket keys as an `UploadedImageResult` (`imageOriginalS3BucketKey`/`imageNormalizedS3BucketKey`), from which the service builds a `CatalogueItemImageAsset` (composite `ImageAsset` newtype: original bucket key, normalized bucket key, original file name). `genMediaUrl` takes a single `S3BucketKey` and returns a presigned GET URL (`urlExpiresAtOffset`) as `S3MediaUrl`, shared for both original and normalized variants and across every kind of organization-owned media the client serves — catalogue-item images and (see [Organization Management](organization-management.md#logo-upload)) organization logos alike; images are never served through the gateway. `readiness` does a `HeadBucket` check for the health endpoint.
-5. `CatalogueRepository.updateCatalogueItem`'s `imageAssetOptUpdate` persists the `CatalogueItemImageAsset`. `CatalogueItemStatus` is untouched — unlike the logo upload, this endpoint never transitions the owning row's lifecycle state.
+Tapir errors have no validation variant: missing/malformed required headers, unsupported extensions and content/extension mismatch map to 400 `BAD_REQUEST_ERROR`. Missing/archived/foreign targets and processing failures map to 500; disallowed role to 403; missing membership currently to 500. Scanner over-cap failure is internal, but real HTTP may stall before a response (known issue below).
 
-### Key files (image upload)
+## Key files and config
 
-- Orchestration: `service/FileService.scala` (shared with [Organization Management](organization-management.md#logo-upload)'s logo upload)
-- Pipeline utils (shared): `utils/FileScanner.scala`, `utils/ImageProcessing.scala`, `utils/TempFile.scala`
-- Transport (shared): `tapir/FileServiceEndpoints.scala`, `tapir/tapir.scala`; wiring + entity limits: `HttpApp.scala`
-- S3: `clients/S3ClientOrganizationMedia.scala` (+ `S3ClientOrganizationMediaConfig`)
-- Domain (shared): `backend/domain/src/main/scala/io/mesazon/domain/gateway/SupportedMediaType.scala`
-- Config: `FileServiceConfig` (`file-service.file-bytes-max`, shared with organization logo upload)
+Paths below the gateway core Scala package `backend/gateway/core/src/main/scala/io/mesazon/gateway/`, unless specified:
 
-### Tests (image upload)
+- Contract: `backend/gateway/core/src/main/smithy/CatalogueService.smithy`, `domain/Catalogue.smithy`.
+- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/Catalogue.scala`, status/unit/sale-unit files, `Price.scala`, `Currency.scala`, and Catalogue bindings in `Newtypes.scala`.
+- Validation: `validation/service/CatalogueRequestValidator.scala`, `validation/domain/PriceValidator.scala`, `validation/service/validation.scala`.
+- Persistence: `repository/CatalogueRepository.scala`, `repository/queries/CatalogueQueries.scala`, `repository/domain/Catalogue*Row.scala`, shared codecs in `repository/queries/queries.scala`.
+- Service/wiring: `service/CatalogueService.scala`, `service/FileService.scala`, `Main.scala`, `HttpApp.scala`, `transform/transform.scala`.
+- Upload: `tapir/FileServiceEndpoints.scala`, `tapir/tapir.scala`, `utils/FileScanner.scala`, `utils/ImageProcessing.scala`, `utils/TempFile.scala`, `clients/S3ClientOrganizationMedia.scala` and its config.
+- Arbitraries: test-kit `CatalogueDomainArbitraries`/`GatewayArbitraries`; core-test `CatalogueSmithyArbitraries`/`RepositoryArbitraries`. Specs inherit traits directly.
+- Build: domain includes ZIO core; sbt is pinned to 2.1.0-RC1 for writable SemanticDB restoration. Rationale/reproduction: [known issue](../known-issues.md), [build guide](../project/build.md). No new external service or Terraform requirement.
 
-- Acceptance (see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/FileApiSpec.scala`'s `/upload/catalogue-item/image` block — upload happy path asserting both objects land in S3 and the row's image/status, missing `X-Catalogue-Item-ID`/`X-File-Name`/`X-Organization-ID` headers (400), missing token (401), invalid token (401), disallowed stage (403), non-member (500), disallowed role (403), missing/archived/foreign-organization catalogue item (500), and filename/content mismatch (400). Oversized-upload rejection is **not** covered here over real HTTP — see [known issues](../known-issues.md#oversized-tapir-upload-can-hang-the-request-instead-of-failing-fast).
-- Functional: `fun/FileServiceSpec.scala`'s `uploadCatalogueItemImage` block, including the oversized-file rejection path via a mocked `FileScanner`
-- Unit (shared): `unit/utils/FileScannerSpec.scala` — proves supported filename/content agreement, the size cap (including the one-extra-byte boundary), and mismatch rejection directly against `FileScanner.scan`, independent of HTTP transport
-- Integration: `it/S3ClientOrganizationMediaSpec.scala` against `src/test/resources/compose/s3.yaml`
+## Tests and verification
 
-## Status
+Use the established [Scala test](../standards/scala.md#tests), [functional](../project/functional-testing.md), and [acceptance](../project/acceptance-testing.md) conventions. Ordinary statuses/timestamps come from arbitraries; fixed enums prove actual defaults/transitions/mappings. Boolean constructor arguments are named. Endpoint blocks follow Smithy operation order. Acceptance uses typed generated requests; no raw JSON or payload mutation helpers.
 
-Complete: six Smithy operations plus the Tapir `POST /upload/catalogue-item/image` endpoint, request validation and shared ISO price validation, schema/enum/index, full repository (`CatalogueItemRow`/`CatalogueItemSummaryRow`), and service wiring including presigned-URL resolution on both GET endpoints. Unit, functional, integration, and acceptance tests cover every slice; see [Completed proof](#completed-proof) and [Acceptance proof](#acceptance-proof) below.
+| Layer | Current proof |
+|---|---|
+| Unit | `PriceValidatorSpec`: typed currency, boundaries, scale/exponents. `CatalogueRequestValidatorSpec`: public methods, hierarchy, non-empty collections, nullable mapping, all unit/status enum mappings and ordered accumulated errors |
+| Functional | `CatalogueServiceSpec`: repository inputs, defaults, ordering, error propagation, image signing and omitted-image branches. `FileServiceSpec`: lookup-before-upload, pipeline and failures |
+| PostgreSQL | 60 `CatalogueRepositorySpec` cases: schema/rows, transaction rollback, tenant/archive filters, nullable update, both item-status transitions, ordering, case-insensitive SKU conflicts/reuse, archive concurrency, variant field replacement |
+| Catalogue HTTP | 92 `CatalogueApiSpec` cases: POST 12; batch 12; PUT 16; item archive 8; variant archive 9; detail 10; summary 10; uniqueness 15 |
+| File HTTP | 35 `FileApiSpec` cases overall, including 14 catalogue-image cases: upload success and auth/target/header/content rejection with database/S3 assertions |
+| Shared upload components | `FileScannerSpec` proves the byte cap and one-byte-over boundary without HTTP; `S3ClientOrganizationMediaSpec` uses real test infrastructure |
 
-Details:
+After retaining the default codec and removing the precision regressions, `runLint` and all 60 repository cases passed, including variant field replacement. Extreme decimal precision is intentionally outside the accepted scope. Earlier branch verification passed all 92 Catalogue and 35 File HTTP cases. Build/test entry points are in [repository setup](../../docs/repository-setup.md); [known issues](../known-issues.md) covers local runner/cache failures.
 
-- Shared price types: `PriceAmount` (`BigDecimal`), `PriceCurrency`, and `Price` with mandatory amount/currency. Shared image types: `ImageOriginalS3BucketKey`, `ImageNormalizedS3BucketKey`, `ImageOriginalFileName`, and `ImageAsset` with all three members mandatory. Catalogue owns only the contextual `CatalogueItemPrice` (`Pure[Price]`) and `CatalogueItemImageAsset` (`Pure[ImageAsset]`) wrappers alongside `CatalogueItemID`, `CatalogueItemName`, and `CatalogueItemUnit`; the enum is in `CatalogueItemStatus.scala`.
-- `PriceDomainValidator` owns the reusable ISO currency/amount invariant. `CatalogueRequestValidator` validates single insert, batch insert, and update; UUID-only archive remains outside the feature validator. Batch failures use the singular item field `catalogueItem` and preserve each invalid item's stable source index while omitting valid positions from the error list.
-- Schema/config: `V2025.05.27__init.sql`; `RepositoryConfig.catalogueItemTable`, `allTableNames`, and `catalogue-item-table` in both configs.
-- `CatalogueItemRow.price` spans the adjacent amount/currency columns and `CatalogueItemRow.imageAsset` spans the three adjacent image metadata columns through composite refined codecs. `CatalogueItemSummaryRow` (`catalogueItemID`, `name`, `imageAsset`, `status`) is a lighter projection returned only by `CatalogueRepository.getCatalogueItemSummariesActive`, backed by a dedicated narrower `SELECT`; it deliberately excludes `unit`/`price`/`organizationID`/timestamps, which the list endpoint doesn't need.
-- Validation normalizes ISO currency with trim plus uppercase, accepts amounts in `[0, 1,000,000,000,000)`, rejects values whose supplied scale exceeds the ISO currency's fixed fraction digits, then appends zeros to reach that exact scale without rounding. `XXX` and currencies with `fractionDigits = -1` are rejected.
-- `CatalogueItemQueries`: single/batch insert, dynamic update + returning, archive + returning ID, get any status, `getCatalogueItemRow` (full row), `getCatalogueItemRowsActive` → renamed to and now backed by `getCatalogueItemSummaryRowsActive` (summary projection), test getter. Preserve qualified native-enum write/read casts.
-- Generic refined `Meta[BigDecimal]` provides exact codec; no bespoke codec.
-- `CatalogueRepository`: companion `InsertCatalogueItemInput`, UUIDv7/time generation, named unique mapping. `priceOptUpdate` and `imageAssetOptUpdate` flatten their optional composites across all corresponding columns. `None` means unchanged; clearing price or image is not supported. New item image metadata remains `None`. `getCatalogueItemSummariesActive` returns `List[CatalogueItemSummaryRow]`, not `List[CatalogueItemRow]`.
-- Do not add unused live layers: wire repository/queries with the service because ZIO rejects unused layers.
+### Coverage boundaries
 
-## Completed proof
+- Detail/summary HTTP successes have no image; populated signed URLs are functionally covered. Track the missing HTTP branches in [acceptance gaps](../acceptance-test-gaps.md#catalogue-remaining-coverage).
+- PUT deliberately has exactly two simple HTTP successes (name update and clearing item description) plus 14 failures. Omitted-field/no-op combinations, mixed variant insertion, exhaustive replacement, variant nullable clears, and empty attributes replacement are outside this HTTP scope. Archive no-op combinations are lower-layer proof. Do not restore removed HTTP cases without agreement.
+- Repository tests prove replacement of attributes/selling unit/status with full parent/target/sibling assertions. Dedicated extreme-precision regressions are intentionally excluded under the accepted limitation in issue 12.
+- Unknown closed-enum strings and missing required members cannot be built with typed clients. Decode failures are not HTTP-tested via forbidden raw-body helpers. Nested validation indexes are unit proof because HTTP exposes field names only.
+- Oversized upload HTTP tests are deliberately excluded due to the stall below; scanner tests prove the limit. Manual live-AI extraction harnesses were not run by this Catalogue work.
 
-`PriceDomainValidatorSpec` proves ISO normalization, canonical upward scale normalization, the exclusive monetary upper bound, compact non-zero extreme-exponent rejection, extreme-scale zero acceptance, fixed-fraction boundaries for zero-, two-, and three-digit currencies, pseudo/unsupported currency rejection, negative amounts, zero, and bounded non-zero negative scales. `CatalogueRequestValidatorSpec` proves success round-trips and exact accumulated errors for single insert, indexed batch insert, and update, including absent optional prices.
+## Known issues, edge cases, and larger follow-ups
 
-`CatalogueRepositorySpec` covers every repository method against real PostgreSQL: controlled IDs/timestamps and complete rows sampled from repository arbitraries; absent/present exact ISO-valid prices from the shared correlated generator; absent creation image metadata and composite image updates; tenant scope; active-name conflicts and exact error mapping; batch order, no-op, and rollback; update/no-op semantics; archive/name reuse; active-and-archived reads; and active-only unordered listing of `CatalogueItemSummaryRow`.
+These describe current behavior, not proposed requirements already implemented.
 
-## Acceptance proof
+1. **Missing-resource error semantics:** detail GET and image upload return 500 for missing/archived/foreign targets. Updates/archive return successful no-ops for an unavailable parent. Invalid existing-variant references fail the whole update with 500. Non-member access also returns 500 through shared authorization. A consistent 4xx policy requires an agreed contract/error change across callers and tests.
+2. **Repeated variant update IDs:** the validator accepts repeated IDs; the repository compares distinct loaded rows with input length, so even identical entries produce 500 and rollback. Prefer explicit duplicate-ID validation if this error contract is changed; do not silently pick one update.
+3. **Selling-unit precision exceeds storage:** a compact value such as `1E-20000` satisfies the agreed positive/max rule but may fail JSONB numeric persistence/encoding. PostgreSQL [JSONB numeric restrictions](https://www.postgresql.org/docs/17/datatype-json.html) apply after validation. This is a domain/internal-caller example: the current HTTP decoder rejects this exponent before validation (issue 12). The domain rule deliberately has no storage-derived precision limit. Supporting every accepted domain value end to end needs a representation decision; do not silently restrict validation.
+4. **Image writes are not atomic:** the pre-read does not lock the item across scanning/S3. An archive can commit after the read; upload then writes objects and the final database update no-ops successfully. A second S3 write or database failure can leave changed objects; concurrent uploads can interleave the original/normalized objects at fixed keys. Consider versioned object keys, a conditional database association, and compensation/cleanup as one separately designed change.
+5. **Oversized upload can stall:** real HTTP beyond the entity limit can hang instead of failing promptly. Reproduction and prevention: [known issue](../known-issues.md#oversized-tapir-upload-can-hang-the-request-instead-of-failing-fast). Do not add the destabilizing end-to-end test until transport behavior is fixed.
+6. **Large requests and results:** summary-all returns all eligible items and variants and signs populated images sequentially. Validators have no count caps, but the default Smithy4s decoder rejects arrays/maps over 1,024 entries before validation. Batch nesting can still exceed the [PostgreSQL parameter ceiling](https://www.postgresql.org/docs/17/limits.html) of 65,535: INSERT binds 14 parameters per variant across the whole batch, so 4,682 total variants exceed it (for example, several items with fewer than 1,024 variants each), even when compact JSON fits the body cap. UPDATE binds 10 per variant plus two scope IDs; its 6,554-row SQL ceiling is currently unreachable through one HTTP list but remains relevant to internal callers. Database failure rolls back the operation and returns 500. These thresholds derive from pinned decoder source and SQL construction, not a completed large-request HTTP reproduction. Consider transactional chunking plus explicit request limits; pagination/workload limits are separate product decisions.
+7. **Stored-data assumptions:** an item without a non-archived child is hidden by joined reads; application creation/archive transactions prevent this, but no cross-table database constraint enforces it. Native SQL/manual data changes must preserve this invariant and validated JSON. The testing join also cannot expose a parent with zero total variants.
+8. **Deployment conversion:** editing the init migration does not upgrade an existing database. Before deployment over retained data, design an append-only conversion for item/variant data, statuses/archive flags, currency values and case-insensitive SKU collisions. Disposable-database verification is not migration proof.
 
-`CatalogueApiSpec` follows [Acceptance testing](../project/acceptance-testing.md) and covers all six endpoints over the real gateway and PostgreSQL stack. It proves complete rows/responses, exact validation and conflict bodies, atomic batch rollback and empty batches, update/archive no-ops for missing, archived, or foreign-organization items, archived by-ID visibility, active-only tenant-filtered listing, persisted image-field mapping, and every applicable organization middleware branch. Writes prove that `User` is forbidden. Reads allow every defined role, so the disallowed-role case is structurally impossible and intentionally omitted. Because presigned URLs are generated on the fly (signature + expiry query params), the GET specs assert URL presence/absence rather than exact string equality — `S3ClientOrganizationMediaSpec` is what proves a presigned URL actually serves the uploaded bytes.
+9. **Database-incompatible text:** `NonEmptyTrimmed` accepts an interior U+0000 (for example `a\u0000b`), but PostgreSQL text/JSONB cannot store it. A typed request can pass validation and fail persistence with 500. A shared database-safe text rule needs review across the other features using this predicate; do not add an isolated Catalogue normalization. See [PostgreSQL JSON string restrictions](https://www.postgresql.org/docs/17/datatype-json.html).
+10. **Unicode SKU comparison:** lookup and index agree on database `lower(sku)`, which uses the configured [collation](https://www.postgresql.org/docs/17/collation.html). This is not full Unicode caseless matching: `straße` and `STRASSE` can remain distinct. Current tests prove ASCII case-insensitive SKUs. Define the supported alphabet/collation or a normalization strategy before promising broader equivalence; changing it requires an index/data migration.
 
-`GatewayClient` supplies typed JSON codecs and HTTP methods for all six Catalogue operations, including required-list encoding for batch insert. `GatewayAcceptanceSpec` registers the child spec, and `GatewayItContext` exposes `CatalogueItemQueries` for direct arrangement and complete state assertions.
+11. **SKU swaps/transfers:** the partial expression unique index checks changes immediately. Swapping existing live SKUs A/B in one `variantsUpdate` can return 409 even though the final state would be unique; the whole transaction rolls back. A transfer that clears the old owner in the same statement can also depend on write order. Supporting this needs a deliberate write strategy (for example, coordinated two-phase clearing/reassignment) or a normalized stored key/constraint redesign, with concurrency tests.
 
-See [Image upload](#image-upload) for the `POST /upload/catalogue-item/image` endpoint, its pipeline, and its acceptance matrix.
+12. **JSON decimal precision — accepted limitation:** Smithy4s request decoding, the selling-unit JSONB codec, and the typed acceptance client's default decimal codecs use DECIMAL128 (34 significant digits), a 308-digit limit and an absolute-scale limit of 6,178. Therefore `0.12345678901234567890123456789012346` can become `0.1234567890123456789012345678901235` during request or database decoding; larger representations can fail decoding. A later unrelated variant update can persist a value rounded during its database read. Validator-level exactness does not prove exact input or readback. The user accepted this limitation because business values are not expected to approach this precision; keep the default codec and defer precision changes/tests until that expectation changes. Current prices fit within 34 significant digits. If revisited, assess persistence, the transport compiler/library integration and acceptance-client codecs together, with independent exact read/update and typed HTTP regressions. The pinned Smithy `JsoniterCodecCompiler` exposes no numeric-precision setting.
 
-## Service implementation
-
-`CatalogueService` validates insert/update bodies, maps validated requests into repository-owned insert inputs, preserves the organization ID on every repository call, and maps rows back to Smithy responses. Missing catalogue-item reads become `InternalServerError` with the stable `catalogueItemID` message. Update and archive remain silent `204` no-ops for missing or archived items, matching the repository's active-row mutation semantics.
-
-Both GET operations depend on `S3ClientOrganizationMedia.genMediaUrl` to resolve a real presigned URL from the persisted normalized bucket key — `getCatalogueItemGet` and `getCatalogueItemsGet` each resolve only `imageNormalizedUrl` (`Option[String]`, absent when the item has no image); the original bucket key is persisted (for migrations and user download) but never resolved to a URL in either response. `getCatalogueItemsGet` resolves it per item via `ZIO.foreach` over the repository's `CatalogueItemSummaryRow` list.
-
-`CatalogueServiceSpec` uses real price validation, a strict `CatalogueRepository` mock, and a strict `S3ClientOrganizationMedia` mock. It proves each of the six operations' mapping and response behavior, validation isolation, missing-item policy, no-op mutations, unchanged repository failures, and both the with-image and without-image branches of the GET endpoints' presigned-URL resolution.
-
-## Open decisions
-
-- Exact JSON for JS: keep numeric unless clients require string encoding.
-- No unarchive; any future reactivation maps active-name collision to 409.
+Exact decimals remain JSON numbers. Clients that parse them as binary floating point can lose precision; switching to string encoding is an unresolved client-contract decision. A future unarchive feature must resolve live name/SKU collisions; no unarchive behavior is implied here.

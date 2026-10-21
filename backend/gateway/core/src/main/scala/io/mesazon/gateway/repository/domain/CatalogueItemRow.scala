@@ -6,10 +6,10 @@ case class CatalogueItemRow(
     organizationID: OrganizationID,
     catalogueItemID: CatalogueItemID,
     name: CatalogueItemName,
-    unit: CatalogueItemUnit,
-    price: Option[CatalogueItemPrice],
+    description: Option[CatalogueItemDescription],
     imageAsset: Option[CatalogueItemImageAsset],
     status: CatalogueItemStatus,
+    isArchived: Boolean,
     createdAt: CreatedAt,
     updatedAt: UpdatedAt,
 )

@@ -27,9 +27,6 @@ type FullName = FullName.T
 object PriceAmount extends RefinedType[BigDecimal, Pure]
 type PriceAmount = PriceAmount.T
 
-object PriceCurrency extends RefinedType[String, NonEmptyTrimmed]
-type PriceCurrency = PriceCurrency.T
-
 object ImageOriginalS3BucketKey extends RefinedType[String, NonEmptyTrimmedUnsafe]
 type ImageOriginalS3BucketKey = ImageOriginalS3BucketKey.T
 
@@ -186,11 +183,38 @@ type CatalogueItemID = CatalogueItemID.T
 object CatalogueItemName extends RefinedType[String, NonEmptyTrimmed]
 type CatalogueItemName = CatalogueItemName.T
 
-object CatalogueItemUnit extends RefinedType[String, NonEmptyTrimmed]
-type CatalogueItemUnit = CatalogueItemUnit.T
-
-object CatalogueItemPrice extends RefinedType[Price, Pure]
-type CatalogueItemPrice = CatalogueItemPrice.T
+object CatalogueItemDescription extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemDescription = CatalogueItemDescription.T
 
 object CatalogueItemImageAsset extends RefinedType[ImageAsset, Pure]
 type CatalogueItemImageAsset = CatalogueItemImageAsset.T
+
+object CatalogueItemVariantID extends RefinedTypeUUID
+type CatalogueItemVariantID = CatalogueItemVariantID.T
+
+object CatalogueItemVariantSku extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemVariantSku = CatalogueItemVariantSku.T
+
+object CatalogueItemVariantLabel extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemVariantLabel = CatalogueItemVariantLabel.T
+
+object CatalogueItemVariantDescription extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemVariantDescription = CatalogueItemVariantDescription.T
+
+object CatalogueItemVariantAttributeName extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemVariantAttributeName = CatalogueItemVariantAttributeName.T
+
+object CatalogueItemVariantAttributeValue extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueItemVariantAttributeValue = CatalogueItemVariantAttributeValue.T
+
+object CatalogueItemVariantPrice extends RefinedType[Price, Pure]
+type CatalogueItemVariantPrice = CatalogueItemVariantPrice.T
+
+object CatalogueItemVariantQuantityValue extends RefinedType[BigDecimal, Positive & LessEqual[99999]]
+type CatalogueItemVariantQuantityValue = CatalogueItemVariantQuantityValue.T
+
+object CatalogueItemVariantPerUnitValue extends RefinedType[BigDecimal, Positive & LessEqual[99999]]
+type CatalogueItemVariantPerUnitValue = CatalogueItemVariantPerUnitValue.T
+
+object CatalogueItemVariantUnitSizeValue extends RefinedType[BigDecimal, Positive & LessEqual[99999]]
+type CatalogueItemVariantUnitSizeValue = CatalogueItemVariantUnitSizeValue.T

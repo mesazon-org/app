@@ -3,208 +3,433 @@ package io.mesazon.gateway.unit.validation.service
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.gateway.smithy
+import io.mesazon.gateway.transform.given
 import io.mesazon.gateway.utils.CatalogueSmithyArbitraries
-import io.mesazon.gateway.validation.domain.PriceDomainValidator
+import io.mesazon.gateway.validation.domain.PriceValidator
 import io.mesazon.gateway.validation.service.CatalogueRequestValidator
-import io.mesazon.testkit.base.*
+import io.mesazon.testkit.base.ZWordSpecBase
 import io.scalaland.chimney.dsl.*
+import smithy4s.Nullable
 import zio.*
 
 class CatalogueRequestValidatorSpec extends ZWordSpecBase, CatalogueSmithyArbitraries {
 
-  private val invalidFieldErrorMessageNonEmptyTrimmed =
+  private val invalidTextMessage =
     "Should not have leading or trailing whitespaces & Should have a minimum length of 1 & Should have a maximum length of 255"
 
-  private val catalogueRequestValidator = ZIO
+  private val validator = ZIO
     .service[CatalogueRequestValidator]
-    .provide(CatalogueRequestValidator.live, PriceDomainValidator.live)
+    .provide(
+      CatalogueRequestValidator.live,
+      PriceValidator.live,
+    )
     .zioValue
 
+  private def nestedError(fieldName: String, index: Int, errors: InvalidFieldError*): InvalidFieldError =
+    InvalidFieldError(
+      fieldName,
+      s"Failed with invalid fields ${errors.toList.mkString("[", ", ", "]")}",
+      Seq.empty,
+      index,
+    )
+
+  private def validatedSaleUnit(
+      requestSmithy: smithy.CatalogueItemPostRequest,
+      saleUnitSmithy: smithy.CatalogueItemVariantSaleUnit,
+  ): CatalogueItemVariantSaleUnit =
+    validator
+      .validatedCatalogueItemPostRequest(
+        requestSmithy.copy(variants = List(requestSmithy.variants.head.copy(sellingUnit = saleUnitSmithy)))
+      )
+      .zioValue
+      .variants
+      .head
+      .sellingUnit
+
   "CatalogueRequestValidator" should {
-    "validatedInsertCatalogueItemPostRequest" should {
-      "validate a valid catalogue item round-trip" in {
-        val insertCatalogueItemPostRequest = arbitrarySample[InsertCatalogueItemPostRequest]
-        catalogueRequestValidator
-          .validatedInsertCatalogueItemPostRequest(
-            insertCatalogueItemPostRequest.transformInto[smithy.InsertCatalogueItemPostRequest]
-          )
-          .zioValue shouldBe insertCatalogueItemPostRequest
+    "validatedCatalogueItemPostRequest" should {
+      "return a validated item with its variants" in {
+        val request = arbitrarySample[CatalogueItemPostRequest]
+
+        validator
+          .validatedCatalogueItemPostRequest(request.transformInto[smithy.CatalogueItemPostRequest])
+          .zioValue shouldBe request
       }
 
-      "validate an item without a price" in {
-        val insertCatalogueItemPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemPostRequest].copy(
-          price = None
+      "preserve every quantity unit with optional selling-unit parts absent" in {
+        val requestSmithy = arbitrarySample[smithy.CatalogueItemPostRequest]
+        val unitsSmithy   = smithy.CatalogueItemVariantUnit.values
+        val saleUnits     = unitsSmithy.map(unitSmithy =>
+          validatedSaleUnit(
+            requestSmithy,
+            smithy.CatalogueItemVariantSaleUnit(
+              smithy.CatalogueItemVariantQuantity(BigDecimal(1), unitSmithy),
+              None,
+              None,
+            ),
+          )
         )
 
-        catalogueRequestValidator
-          .validatedInsertCatalogueItemPostRequest(insertCatalogueItemPostRequestSmithy)
-          .zioValue
-          .price shouldBe None
+        saleUnits.map(_.quantity.unit.toString) shouldBe unitsSmithy.map(_.stringValue)
+        saleUnits.map(_.quantity.unit).toSet shouldBe CatalogueItemVariantUnit.values.toSet
+        saleUnits.forall(saleUnit => saleUnit.perUnit.isEmpty && saleUnit.unitSize.isEmpty) shouldBe true
       }
 
-      "fail with a ValidationError accumulating name, unit, and price errors" in {
-        val insertCatalogueItemPostRequestSmithy = arbitrarySample[smithy.InsertCatalogueItemPostRequest].copy(
-          name = "",
-          unit = "",
-          price = Some(smithy.CatalogueItemPriceRequest(BigDecimal(-1), "bad")),
+      "map every permitted per-unit and unit-size enum case" in {
+        val requestSmithy = arbitrarySample[smithy.CatalogueItemPostRequest]
+        val perUnits      = smithy.CatalogueItemVariantUnitPerUnit.values
+        val unitSizes     = smithy.CatalogueItemVariantUnitUnitSize.values
+
+        val perUnitResults = perUnits.map(unit =>
+          validatedSaleUnit(
+            requestSmithy,
+            smithy.CatalogueItemVariantSaleUnit(
+              smithy.CatalogueItemVariantQuantity(BigDecimal(1), smithy.CatalogueItemVariantUnit.Pack),
+              Some(smithy.CatalogueItemVariantPerUnit(BigDecimal(2), unit)),
+              None,
+            ),
+          ).perUnit.value.unit
         )
-        val invalidFieldErrorAmount =
-          InvalidFieldError("amount", "Amount must be non-negative", List("-1"))
-        val invalidFieldErrorCurrency =
-          InvalidFieldError("currency", "Unsupported ISO currency: [bad]", List("bad"))
+        val unitSizeResults = unitSizes.map(unit =>
+          validatedSaleUnit(
+            requestSmithy,
+            smithy.CatalogueItemVariantSaleUnit(
+              smithy.CatalogueItemVariantQuantity(BigDecimal(1), smithy.CatalogueItemVariantUnit.Piece),
+              None,
+              Some(smithy.CatalogueItemVariantUnitSize(BigDecimal(3), unit)),
+            ),
+          ).unitSize.value.unit
+        )
 
-        catalogueRequestValidator
-          .validatedInsertCatalogueItemPostRequest(insertCatalogueItemPostRequestSmithy)
-          .zioError shouldBe
-          ServiceError.BadRequestError.ValidationError(
-            invalidFields = List(
-              InvalidFieldError("name", invalidFieldErrorMessageNonEmptyTrimmed, List("")),
-              InvalidFieldError("unit", invalidFieldErrorMessageNonEmptyTrimmed, List("")),
-              InvalidFieldError(
-                "price",
-                s"Failed with invalid fields [$invalidFieldErrorAmount, $invalidFieldErrorCurrency]",
-                List("-1", "bad"),
-              ),
-            )
-          )
-      }
-    }
-
-    "validatedInsertCatalogueItemsPostRequest" should {
-      "validate a valid batch round-trip" in {
-        val insertCatalogueItemsPostRequest = arbitrarySample[InsertCatalogueItemsPostRequest]
-        catalogueRequestValidator
-          .validatedInsertCatalogueItemsPostRequest(
-            insertCatalogueItemsPostRequest.transformInto[smithy.InsertCatalogueItemsPostRequest]
-          )
-          .zioValue shouldBe insertCatalogueItemsPostRequest
+        perUnitResults shouldBe CatalogueItemVariantUnit.PerUnit.values.toList
+        unitSizeResults shouldBe CatalogueItemVariantUnit.UnitSize.values.toList
       }
 
-      "validate an empty batch" in {
-        val insertCatalogueItemsPostRequestSmithy = smithy.InsertCatalogueItemsPostRequest(Nil)
+      "preserve selling-unit bounds and every supplied decimal place" in {
+        val requestSmithy = arbitrarySample[smithy.CatalogueItemPostRequest]
+        val smallest      = BigDecimal("0.00000000000000000001")
+        val largest       = BigDecimal("99999.0000")
+        val result        = validatedSaleUnit(
+          requestSmithy,
+          smithy.CatalogueItemVariantSaleUnit(
+            smithy.CatalogueItemVariantQuantity(smallest, smithy.CatalogueItemVariantUnit.Piece),
+            Some(smithy.CatalogueItemVariantPerUnit(largest, smithy.CatalogueItemVariantUnitPerUnit.Bottle)),
+            Some(smithy.CatalogueItemVariantUnitSize(smallest, smithy.CatalogueItemVariantUnitUnitSize.Litre)),
+          ),
+        )
 
-        catalogueRequestValidator
-          .validatedInsertCatalogueItemsPostRequest(insertCatalogueItemsPostRequestSmithy)
-          .zioValue shouldBe InsertCatalogueItemsPostRequest(Nil)
+        result.quantity.value.value.scale shouldBe smallest.scale
+        result.perUnit.value.value.value.scale shouldBe largest.scale
+        result.unitSize.value.value.value.scale shouldBe smallest.scale
+        result.quantity.value.value shouldBe smallest
+        result.perUnit.value.value.value shouldBe largest
+        result.unitSize.value.value.value shouldBe smallest
       }
 
-      "fail with a ValidationError for the first, middle, and last invalid catalogue items while accepting the second and fourth" in {
-        val insertCatalogueItemPostRequestSmithy =
-          arbitrarySample[smithy.InsertCatalogueItemPostRequest]
-        val insertCatalogueItemPostRequestSmithy1 =
-          insertCatalogueItemPostRequestSmithy.copy(name = "", price = None)
-        val insertCatalogueItemPostRequestSmithy2 =
-          insertCatalogueItemPostRequestSmithy
-        val insertCatalogueItemPostRequestSmithy3 =
-          insertCatalogueItemPostRequestSmithy.copy(unit = "", price = None)
-        val insertCatalogueItemPostRequestSmithy4 =
-          insertCatalogueItemPostRequestSmithy
-        val insertCatalogueItemPostRequestSmithy5 =
-          insertCatalogueItemPostRequestSmithy.copy(
-            price = Some(smithy.CatalogueItemPriceRequest(BigDecimal(-1), "bad"))
+      "fail with a ValidationError for invalid selling-unit values in field order" in {
+        val requestSmithy  = arbitrarySample[smithy.CatalogueItemPostRequest]
+        val quantity       = BigDecimal(0)
+        val perUnit        = BigDecimal("-0.1")
+        val unitSize       = BigDecimal("99999.0001")
+        val saleUnitSmithy = smithy.CatalogueItemVariantSaleUnit(
+          smithy.CatalogueItemVariantQuantity(quantity, smithy.CatalogueItemVariantUnit.Box),
+          Some(smithy.CatalogueItemVariantPerUnit(perUnit, smithy.CatalogueItemVariantUnitPerUnit.Bag)),
+          Some(smithy.CatalogueItemVariantUnitSize(unitSize, smithy.CatalogueItemVariantUnitUnitSize.Gram)),
+        )
+
+        validator
+          .validatedCatalogueItemPostRequest(
+            requestSmithy.copy(variants = List(requestSmithy.variants.head.copy(sellingUnit = saleUnitSmithy)))
           )
-        val insertCatalogueItemsPostRequestSmithy = smithy.InsertCatalogueItemsPostRequest(
+          .zioError shouldBe ServiceError.BadRequestError.ValidationError(
           List(
-            insertCatalogueItemPostRequestSmithy1,
-            insertCatalogueItemPostRequestSmithy2,
-            insertCatalogueItemPostRequestSmithy3,
-            insertCatalogueItemPostRequestSmithy4,
-            insertCatalogueItemPostRequestSmithy5,
+            nestedError(
+              "variant",
+              0,
+              InvalidFieldError(
+                "quantity",
+                CatalogueItemVariantQuantityValue.either(quantity).left.value,
+                List(quantity.toString),
+              ),
+              InvalidFieldError(
+                "perUnit",
+                CatalogueItemVariantPerUnitValue.either(perUnit).left.value,
+                List(perUnit.toString),
+              ),
+              InvalidFieldError(
+                "unitSize",
+                CatalogueItemVariantUnitSizeValue.either(unitSize).left.value,
+                List(unitSize.toString),
+              ),
+            )
           )
         )
-        val invalidFieldErrorName =
-          InvalidFieldError("name", invalidFieldErrorMessageNonEmptyTrimmed, List(""))
-        val invalidFieldErrorUnit =
-          InvalidFieldError("unit", invalidFieldErrorMessageNonEmptyTrimmed, List(""))
-        val invalidFieldErrorAmount =
-          InvalidFieldError("amount", "Amount must be non-negative", List("-1"))
-        val invalidFieldErrorCurrency =
-          InvalidFieldError("currency", "Unsupported ISO currency: [bad]", List("bad"))
-        val invalidFieldErrorPrice = InvalidFieldError(
+      }
+
+      "fail with a ValidationError containing item and variant fields in declaration order" in {
+        val invalidPriceAmount = BigDecimal("-1")
+        val invalidPriceInner  = InvalidFieldError("amount", "Amount must be non-negative", List("-1"))
+        val invalidPrice       = InvalidFieldError(
           "price",
-          s"Failed with invalid fields [$invalidFieldErrorAmount, $invalidFieldErrorCurrency]",
-          List("-1", "bad"),
+          s"Failed with invalid fields [$invalidPriceInner]",
+          List("-1", "EUR"),
+        )
+        val variant = arbitrarySample[smithy.CatalogueItemVariantInsert].copy(
+          sku = Some(""),
+          label = Some(""),
+          description = Some(""),
+          attributes = Map("" -> ""),
+          price = Some(smithy.CatalogueItemVariantPrice(invalidPriceAmount, smithy.Currency.EUR)),
+          sellingUnit = smithy.CatalogueItemVariantSaleUnit(
+            smithy.CatalogueItemVariantQuantity(BigDecimal(0), smithy.CatalogueItemVariantUnit.Piece),
+            Some(
+              smithy.CatalogueItemVariantPerUnit(
+                BigDecimal(100000),
+                smithy.CatalogueItemVariantUnitPerUnit.Bag,
+              )
+            ),
+            Some(
+              smithy.CatalogueItemVariantUnitSize(
+                BigDecimal(0),
+                smithy.CatalogueItemVariantUnitUnitSize.Gram,
+              )
+            ),
+          ),
+        )
+        val requestSmithy = smithy.CatalogueItemPostRequest(
+          name = "",
+          description = Some(""),
+          variants = List(variant),
         )
 
-        catalogueRequestValidator
-          .validatedInsertCatalogueItemsPostRequest(insertCatalogueItemsPostRequestSmithy)
+        validator.validatedCatalogueItemPostRequest(requestSmithy).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            List(
+              InvalidFieldError("name", invalidTextMessage, List("")),
+              InvalidFieldError("description", invalidTextMessage, List("")),
+              nestedError(
+                "variant",
+                0,
+                InvalidFieldError("sku", invalidTextMessage, List("")),
+                InvalidFieldError("label", invalidTextMessage, List("")),
+                InvalidFieldError("description", invalidTextMessage, List("")),
+                InvalidFieldError("attributeName", invalidTextMessage, List("")),
+                InvalidFieldError("attributeValue", invalidTextMessage, List("")),
+                invalidPrice,
+                InvalidFieldError(
+                  "quantity",
+                  CatalogueItemVariantQuantityValue.either(BigDecimal(0)).left.value,
+                  List("0"),
+                ),
+                InvalidFieldError(
+                  "perUnit",
+                  CatalogueItemVariantPerUnitValue.either(BigDecimal(100000)).left.value,
+                  List("100000"),
+                ),
+                InvalidFieldError(
+                  "unitSize",
+                  CatalogueItemVariantUnitSizeValue.either(BigDecimal(0)).left.value,
+                  List("0"),
+                ),
+              ),
+            )
+          )
+      }
+
+      "fail with a ValidationError when an item has no variants" in {
+        val request = arbitrarySample[smithy.CatalogueItemPostRequest].copy(variants = Nil)
+
+        validator.validatedCatalogueItemPostRequest(request).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            List(InvalidFieldError("variant", "At least one variant must be provided", Seq.empty))
+          )
+      }
+    }
+
+    "validatedCatalogueItemBatchPostRequest" should {
+      "return validated items" in {
+        val request = arbitrarySample[CatalogueItemBatchPostRequest]
+
+        validator
+          .validatedCatalogueItemBatchPostRequest(request.transformInto[smithy.CatalogueItemBatchPostRequest])
+          .zioValue shouldBe request
+      }
+
+      "fail with a ValidationError when the batch has no catalogue items" in {
+        validator
+          .validatedCatalogueItemBatchPostRequest(smithy.CatalogueItemBatchPostRequest(Nil))
           .zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
-            invalidFields = List(
-              InvalidFieldError(
+            List(InvalidFieldError("catalogueItem", "At least one catalogueItem must be provided", Seq.empty))
+          )
+      }
+
+      "fail with a ValidationError preserving item and variant indexes" in {
+        val validItem      = arbitrarySample[smithy.CatalogueItemPostRequest]
+        val invalidName    = validItem.copy(name = "")
+        val invalidVariant = validItem.copy(variants = List(validItem.variants.head.copy(sku = Some(""))))
+        val request        = smithy.CatalogueItemBatchPostRequest(
+          List(validItem, invalidName, validItem, invalidVariant)
+        )
+
+        validator.validatedCatalogueItemBatchPostRequest(request).zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            List(
+              nestedError("catalogueItem", 1, InvalidFieldError("name", invalidTextMessage, List(""))),
+              nestedError(
                 "catalogueItem",
-                s"Failed with invalid fields [$invalidFieldErrorName]",
-                List(),
-                index = 0,
-              ),
-              InvalidFieldError(
-                "catalogueItem",
-                s"Failed with invalid fields [$invalidFieldErrorUnit]",
-                List(),
-                index = 2,
-              ),
-              InvalidFieldError(
-                "catalogueItem",
-                s"Failed with invalid fields [$invalidFieldErrorPrice]",
-                List(),
-                index = 4,
+                3,
+                nestedError("variant", 0, InvalidFieldError("sku", invalidTextMessage, List(""))),
               ),
             )
           )
       }
     }
 
-    "validatedUpdateCatalogueItemPutRequest" should {
-      "validate a valid update round-trip" in {
-        val updateCatalogueItemPutRequest = arbitrarySample[UpdateCatalogueItemPutRequest]
-        catalogueRequestValidator
-          .validatedUpdateCatalogueItemPutRequest(
-            updateCatalogueItemPutRequest.transformInto[smithy.UpdateCatalogueItemPutRequest]
-          )
-          .zioValue shouldBe updateCatalogueItemPutRequest
+    "validatedCatalogueItemPutRequest" should {
+      "return a validated update with an empty insert list" in {
+        val request = arbitrarySample[CatalogueItemPutRequest].copy(variantsInsert = Nil)
+
+        validator
+          .validatedCatalogueItemPutRequest(request.transformInto[smithy.CatalogueItemPutRequest])
+          .zioValue shouldBe request
       }
 
-      "validate an update with omitted optional fields" in {
-        val updateCatalogueItemPutRequestSmithy = arbitrarySample[smithy.UpdateCatalogueItemPutRequest].copy(
+      "preserve nullable keep, clear, and replace values" in {
+        val update = arbitrarySample[CatalogueItemVariantUpdate].copy(
+          sku = None,
+          label = Some(None),
+          description = Some(Some(CatalogueItemVariantDescription.assume("replacement"))),
+          price = Some(None),
+        )
+        val request = smithy.CatalogueItemPutRequest(
           name = None,
-          unit = None,
-          price = None,
+          description = Some(Nullable.Null),
+          variantsUpdate = List(update.transformInto[smithy.CatalogueItemVariantUpdate]),
+          variantsInsert = Nil,
         )
 
-        catalogueRequestValidator
-          .validatedUpdateCatalogueItemPutRequest(updateCatalogueItemPutRequestSmithy)
-          .zioValue shouldBe
-          UpdateCatalogueItemPutRequest(
-            catalogueItemID = CatalogueItemID(updateCatalogueItemPutRequestSmithy.catalogueItemID),
-            name = None,
-            unit = None,
-            price = None,
-          )
+        val validated = validator.validatedCatalogueItemPutRequest(request).zioValue
+
+        validated.description shouldBe Some(None)
+        validated.variantsUpdate.head.sku shouldBe None
+        validated.variantsUpdate.head.label shouldBe Some(None)
+        validated.variantsUpdate.head.description shouldBe update.description
+        validated.variantsUpdate.head.price shouldBe Some(None)
       }
 
-      "fail with a ValidationError accumulating optional field and price boundary errors" in {
-        val updateCatalogueItemPutRequestSmithy = arbitrarySample[smithy.UpdateCatalogueItemPutRequest].copy(
-          name = Some(""),
-          unit = Some(""),
-          price = Some(smithy.CatalogueItemPriceRequest(BigDecimal("1.001"), "USD")),
-        )
-        val invalidFieldErrorAmount =
-          InvalidFieldError("amount", "Amount scale [3] exceeds currency fraction digits [2]", List("1.001"))
+      "accept every item and variant business status" in {
+        val variant = arbitrarySample[smithy.CatalogueItemVariantUpdate]
 
-        catalogueRequestValidator
-          .validatedUpdateCatalogueItemPutRequest(updateCatalogueItemPutRequestSmithy)
-          .zioError shouldBe
+        CatalogueItemStatus.values.foreach { status =>
+          val request = smithy.CatalogueItemPutRequest(status = Some(status.transformInto[smithy.CatalogueItemStatus]))
+
+          validator.validatedCatalogueItemPutRequest(request).zioValue.status shouldBe Some(status)
+        }
+
+        CatalogueItemVariantStatus.values.foreach { status =>
+          val request = smithy.CatalogueItemPutRequest(
+            name = None,
+            description = None,
+            variantsUpdate = List(variant.copy(status = Some(status.transformInto[smithy.CatalogueItemVariantStatus]))),
+            variantsInsert = Nil,
+          )
+
+          validator.validatedCatalogueItemPutRequest(request).zioValue.variantsUpdate.head.status shouldBe Some(status)
+        }
+      }
+
+      "fail with a ValidationError containing every fallible update field" in {
+        val variant = arbitrarySample[smithy.CatalogueItemVariantUpdate].copy(
+          sku = Some(Nullable.Value("")),
+          label = Some(Nullable.Value("")),
+          description = Some(Nullable.Value("")),
+          attributes = Some(Map("" -> "")),
+          price = Some(Nullable.Value(smithy.CatalogueItemVariantPrice(BigDecimal("-1"), smithy.Currency.USD))),
+          sellingUnit = Some(
+            smithy.CatalogueItemVariantSaleUnit(
+              smithy.CatalogueItemVariantQuantity(BigDecimal(0), smithy.CatalogueItemVariantUnit.Box),
+              None,
+              None,
+            )
+          ),
+          status = None,
+        )
+        val request = smithy.CatalogueItemPutRequest(
+          name = Some(""),
+          description = Some(Nullable.Value("")),
+          variantsUpdate = List(variant),
+          variantsInsert = List(arbitrarySample[smithy.CatalogueItemVariantInsert].copy(sku = Some(""))),
+        )
+        val invalidPriceInner = InvalidFieldError("amount", "Amount must be non-negative", List("-1"))
+
+        validator.validatedCatalogueItemPutRequest(request).zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
-            invalidFields = List(
-              InvalidFieldError("name", invalidFieldErrorMessageNonEmptyTrimmed, List("")),
-              InvalidFieldError("unit", invalidFieldErrorMessageNonEmptyTrimmed, List("")),
-              InvalidFieldError(
-                "price",
-                s"Failed with invalid fields [$invalidFieldErrorAmount]",
-                List("1.001", "USD"),
+            List(
+              InvalidFieldError("name", invalidTextMessage, List("")),
+              InvalidFieldError("description", invalidTextMessage, List("")),
+              nestedError(
+                "variant",
+                0,
+                InvalidFieldError("sku", invalidTextMessage, List("")),
+                InvalidFieldError("label", invalidTextMessage, List("")),
+                InvalidFieldError("description", invalidTextMessage, List("")),
+                InvalidFieldError("attributeName", invalidTextMessage, List("")),
+                InvalidFieldError("attributeValue", invalidTextMessage, List("")),
+                InvalidFieldError("price", s"Failed with invalid fields [$invalidPriceInner]", List("-1", "USD")),
+                InvalidFieldError(
+                  "quantity",
+                  CatalogueItemVariantQuantityValue.either(BigDecimal(0)).left.value,
+                  List("0"),
+                ),
               ),
+              nestedError("variant", 0, InvalidFieldError("sku", invalidTextMessage, List(""))),
             )
           )
+      }
+
+    }
+
+    "validatedCatalogueItemUniquenessGetRequest" should {
+      "return a validated name or SKU uniqueness request" in {
+        val request = arbitrarySample[CatalogueItemUniquenessGetRequest]
+        val input   = smithy.CatalogueItemUniquenessGetInput(
+          organizationID = arbitrarySample[OrganizationID].value,
+          name = request.name.map(_.value),
+          sku = request.sku.map(_.value),
+        )
+
+        validator.validatedCatalogueItemUniquenessGetRequest(input).zioValue shouldBe request
+      }
+
+      "fail with a ValidationError for invalid supplied name and SKU" in {
+        val organizationID = arbitrarySample[OrganizationID].value
+
+        validator
+          .validatedCatalogueItemUniquenessGetRequest(
+            smithy.CatalogueItemUniquenessGetInput(organizationID, Some(""), Some(""))
+          )
+          .zioError shouldBe ServiceError.BadRequestError.ValidationError(
+          List(
+            InvalidFieldError("name", invalidTextMessage, List("")),
+            InvalidFieldError("sku", invalidTextMessage, List("")),
+          )
+        )
+      }
+
+      "fail with a ValidationError naming both absent uniqueness fields" in {
+        val organizationID = arbitrarySample[OrganizationID].value
+
+        validator
+          .validatedCatalogueItemUniquenessGetRequest(
+            smithy.CatalogueItemUniquenessGetInput(organizationID, None, None)
+          )
+          .zioError shouldBe ServiceError.BadRequestError.ValidationError(
+          List(
+            InvalidFieldError("name", "At least one of name or sku must be provided", Seq.empty),
+            InvalidFieldError("sku", "At least one of name or sku must be provided", Seq.empty),
+          )
+        )
       }
     }
   }

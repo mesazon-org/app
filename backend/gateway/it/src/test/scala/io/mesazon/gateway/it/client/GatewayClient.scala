@@ -9,8 +9,9 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.json.tapir.given
 import io.mesazon.gateway.smithy
-import io.mesazon.gateway.utils.given
+import io.mesazon.gateway.transform.given
 import io.scalaland.chimney.dsl.*
+import smithy4s.Nullable
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.client4.jsoniter.*
@@ -83,6 +84,83 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     override def nullValue: smithy.CustomerType = null
   }
 
+  given JsonValueCodec[smithy.Currency] = new JsonValueCodec[smithy.Currency] {
+    override def decodeValue(in: JsonReader, default: smithy.Currency): smithy.Currency = {
+      val currencyRaw = in.readString(null)
+      smithy.Currency
+        .fromString(currencyRaw)
+        .getOrElse(in.decodeError(s"Unknown Currency: [$currencyRaw]"))
+    }
+
+    override def encodeValue(currency: smithy.Currency, out: JsonWriter): Unit =
+      out.writeVal(currency.stringValue)
+
+    override def nullValue: smithy.Currency = null
+  }
+
+  given JsonValueCodec[smithy.CatalogueItemVariantUnit] = new JsonValueCodec[smithy.CatalogueItemVariantUnit] {
+    override def decodeValue(
+        in: JsonReader,
+        default: smithy.CatalogueItemVariantUnit,
+    ): smithy.CatalogueItemVariantUnit = {
+      val catalogueItemVariantUnitRaw = in.readString(null)
+      smithy.CatalogueItemVariantUnit
+        .fromString(catalogueItemVariantUnitRaw)
+        .getOrElse(in.decodeError(s"Unknown CatalogueItemVariantUnit: [$catalogueItemVariantUnitRaw]"))
+    }
+
+    override def encodeValue(catalogueItemVariantUnit: smithy.CatalogueItemVariantUnit, out: JsonWriter): Unit =
+      out.writeVal(catalogueItemVariantUnit.stringValue)
+
+    override def nullValue: smithy.CatalogueItemVariantUnit = null
+  }
+
+  given JsonValueCodec[smithy.CatalogueItemVariantUnitPerUnit] =
+    new JsonValueCodec[smithy.CatalogueItemVariantUnitPerUnit] {
+      override def decodeValue(
+          in: JsonReader,
+          default: smithy.CatalogueItemVariantUnitPerUnit,
+      ): smithy.CatalogueItemVariantUnitPerUnit = {
+        val catalogueItemVariantUnitPerUnitRaw = in.readString(null)
+        smithy.CatalogueItemVariantUnitPerUnit
+          .fromString(catalogueItemVariantUnitPerUnitRaw)
+          .getOrElse(
+            in.decodeError(s"Unknown CatalogueItemVariantUnitPerUnit: [$catalogueItemVariantUnitPerUnitRaw]")
+          )
+      }
+
+      override def encodeValue(
+          catalogueItemVariantUnitPerUnit: smithy.CatalogueItemVariantUnitPerUnit,
+          out: JsonWriter,
+      ): Unit =
+        out.writeVal(catalogueItemVariantUnitPerUnit.stringValue)
+
+      override def nullValue: smithy.CatalogueItemVariantUnitPerUnit = null
+    }
+
+  given JsonValueCodec[smithy.CatalogueItemVariantUnitUnitSize] =
+    new JsonValueCodec[smithy.CatalogueItemVariantUnitUnitSize] {
+      override def decodeValue(
+          in: JsonReader,
+          default: smithy.CatalogueItemVariantUnitUnitSize,
+      ): smithy.CatalogueItemVariantUnitUnitSize = {
+        val catalogueItemVariantUnitUnitSizeRaw = in.readString(null)
+        smithy.CatalogueItemVariantUnitUnitSize
+          .fromString(catalogueItemVariantUnitUnitSizeRaw)
+          .getOrElse(
+            in.decodeError(s"Unknown CatalogueItemVariantUnitUnitSize: [$catalogueItemVariantUnitUnitSizeRaw]")
+          )
+      }
+
+      override def encodeValue(
+          catalogueItemVariantUnitUnitSize: smithy.CatalogueItemVariantUnitUnitSize,
+          out: JsonWriter,
+      ): Unit =
+        out.writeVal(catalogueItemVariantUnitUnitSize.stringValue)
+
+      override def nullValue: smithy.CatalogueItemVariantUnitUnitSize = null
+    }
+
   given JsonValueCodec[smithy.CatalogueItemStatus] = new JsonValueCodec[smithy.CatalogueItemStatus] {
     override def decodeValue(in: JsonReader, default: smithy.CatalogueItemStatus): smithy.CatalogueItemStatus = {
       val catalogueItemStatusRaw = in.readString(null)
@@ -96,6 +174,46 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
 
     override def nullValue: smithy.CatalogueItemStatus = null
   }
+
+  given JsonValueCodec[smithy.CatalogueItemVariantStatus] = new JsonValueCodec[smithy.CatalogueItemVariantStatus] {
+    override def decodeValue(
+        in: JsonReader,
+        default: smithy.CatalogueItemVariantStatus,
+    ): smithy.CatalogueItemVariantStatus = {
+      val catalogueItemVariantStatusRaw = in.readString(null)
+      smithy.CatalogueItemVariantStatus
+        .fromString(catalogueItemVariantStatusRaw)
+        .getOrElse(in.decodeError(s"Unknown CatalogueItemVariantStatus: [$catalogueItemVariantStatusRaw]"))
+    }
+
+    override def encodeValue(
+        catalogueItemVariantStatus: smithy.CatalogueItemVariantStatus,
+        out: JsonWriter,
+    ): Unit =
+      out.writeVal(catalogueItemVariantStatus.stringValue)
+
+    override def nullValue: smithy.CatalogueItemVariantStatus = null
+  }
+
+  inline given nullableJsonValueCodec[A]: JsonValueCodec[Nullable[A]] = {
+    val optionJsonValueCodec =
+      JsonCodecMaker.make[Option[A]](CodecMakerConfig.withTransientEmpty(false))
+
+    nullableJsonValueCodec(optionJsonValueCodec)
+  }
+
+  private def nullableJsonValueCodec[A](
+      optionJsonValueCodec: JsonValueCodec[Option[A]]
+  ): JsonValueCodec[Nullable[A]] =
+    new JsonValueCodec[Nullable[A]] {
+      override def decodeValue(in: JsonReader, default: Nullable[A]): Nullable[A] =
+        Nullable.fromOption(optionJsonValueCodec.decodeValue(in, None))
+
+      override def encodeValue(nullable: Nullable[A], out: JsonWriter): Unit =
+        optionJsonValueCodec.encodeValue(nullable.toOption, out)
+
+      override def nullValue: Nullable[A] = Nullable.Null
+    }
 
   given JsonValueCodec[smithy.InsertCustomerIndividualPostRequest] =
     JsonCodecMaker.make[smithy.InsertCustomerIndividualPostRequest](CodecMakerConfig.withTransientEmpty(false))
@@ -127,26 +245,26 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     JsonCodecMaker.make[smithy.RemoveCustomerBusinessContactsPutRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.ArchiveCustomerPutRequest] =
     JsonCodecMaker.make[smithy.ArchiveCustomerPutRequest]
-
-  given JsonValueCodec[smithy.InsertCatalogueItemPostRequest] =
-    JsonCodecMaker.make[smithy.InsertCatalogueItemPostRequest]
-  given JsonValueCodec[smithy.InsertCatalogueItemsPostRequest] =
-    JsonCodecMaker.make[smithy.InsertCatalogueItemsPostRequest](CodecMakerConfig.withTransientEmpty(false))
-  given JsonValueCodec[smithy.UpdateCatalogueItemPutRequest] =
-    JsonCodecMaker.make[smithy.UpdateCatalogueItemPutRequest]
-  given JsonValueCodec[smithy.ArchiveCatalogueItemPutRequest] =
-    JsonCodecMaker.make[smithy.ArchiveCatalogueItemPutRequest]
+  given JsonValueCodec[smithy.CatalogueItemPostRequest] =
+    JsonCodecMaker.make[smithy.CatalogueItemPostRequest](CodecMakerConfig.withTransientEmpty(false))
+  given JsonValueCodec[smithy.CatalogueItemBatchPostRequest] =
+    JsonCodecMaker.make[smithy.CatalogueItemBatchPostRequest](CodecMakerConfig.withTransientEmpty(false))
+  given JsonValueCodec[smithy.CatalogueItemPutRequest] =
+    JsonCodecMaker.make[smithy.CatalogueItemPutRequest](CodecMakerConfig.withTransientEmpty(false))
 
   given JsonValueCodec[smithy.GetCustomerIndividualGetResponse] =
     JsonCodecMaker.make[smithy.GetCustomerIndividualGetResponse]
   given JsonValueCodec[smithy.GetCustomerBusinessGetResponse] =
     JsonCodecMaker.make[smithy.GetCustomerBusinessGetResponse]
-  given JsonValueCodec[smithy.GetCustomersGetResponse]     = JsonCodecMaker.make[smithy.GetCustomersGetResponse]
-  given JsonValueCodec[smithy.GetCatalogueItemGetResponse] =
-    JsonCodecMaker.make[smithy.GetCatalogueItemGetResponse]
-  given JsonValueCodec[smithy.GetCatalogueItemsGetResponse] =
-    JsonCodecMaker.make[smithy.GetCatalogueItemsGetResponse]
-
+  given JsonValueCodec[smithy.GetCustomersGetResponse]        = JsonCodecMaker.make[smithy.GetCustomersGetResponse]
+  given JsonValueCodec[smithy.CatalogueItemPostResponse]      = JsonCodecMaker.make[smithy.CatalogueItemPostResponse]
+  given JsonValueCodec[smithy.CatalogueItemBatchPostResponse] =
+    JsonCodecMaker.make[smithy.CatalogueItemBatchPostResponse]
+  given JsonValueCodec[smithy.CatalogueItemGetResponse]        = JsonCodecMaker.make[smithy.CatalogueItemGetResponse]
+  given JsonValueCodec[smithy.CatalogueItemSummaryGetResponse] =
+    JsonCodecMaker.make[smithy.CatalogueItemSummaryGetResponse]
+  given JsonValueCodec[smithy.CatalogueItemUniquenessGetResponse] =
+    JsonCodecMaker.make[smithy.CatalogueItemUniquenessGetResponse]
   given JsonValueCodec[smithy.SignUpEmailPostResponse]        = JsonCodecMaker.make[smithy.SignUpEmailPostResponse]
   given JsonValueCodec[smithy.CreateOrganizationPostResponse] =
     JsonCodecMaker.make[smithy.CreateOrganizationPostResponse]
@@ -455,6 +573,193 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .response(asJsonEitherOrFail[E, smithy.InsertCustomerIndividualPostResponse])
       .send(sttpBackend)
 
+  def catalogueItemPost[E: JsonValueCodec](
+      catalogueItemPostRequest: smithy.CatalogueItemPostRequest,
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, smithy.CatalogueItemPostResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("catalogue", "item"))
+      .body(asJson(catalogueItemPostRequest))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonEitherOrFail[E, smithy.CatalogueItemPostResponse])
+      .send(sttpBackend)
+
+  def catalogueItemBatchPost[E: JsonValueCodec](
+      catalogueItemBatchPostRequest: smithy.CatalogueItemBatchPostRequest,
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, smithy.CatalogueItemBatchPostResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("catalogue", "item", "batch"))
+      .body(asJson(catalogueItemBatchPostRequest))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonEitherOrFail[E, smithy.CatalogueItemBatchPostResponse])
+      .send(sttpBackend)
+
+  def catalogueItemPut[E: JsonValueCodec](
+      catalogueItemPutRequest: smithy.CatalogueItemPutRequest,
+      catalogueItemID: CatalogueItemID,
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, Unit]]] =
+    basicRequest
+      .put(externalUri.addPath("catalogue", "item", catalogueItemID.value.toString))
+      .body(asJson(catalogueItemPutRequest))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonErrorUnit[E])
+      .send(sttpBackend)
+
+  def catalogueItemArchivePut[E: JsonValueCodec](
+      catalogueItemID: CatalogueItemID,
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, Unit]]] =
+    basicRequest
+      .put(externalUri.addPath("catalogue", "item", catalogueItemID.value.toString, "archive"))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonErrorUnit[E])
+      .send(sttpBackend)
+
+  def catalogueItemVariantArchivePut[E: JsonValueCodec](
+      catalogueItemID: CatalogueItemID,
+      catalogueItemVariantID: CatalogueItemVariantID,
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, Unit]]] =
+    basicRequest
+      .put(
+        externalUri.addPath(
+          "catalogue",
+          "item",
+          catalogueItemID.value.toString,
+          "variant",
+          catalogueItemVariantID.value.toString,
+          "archive",
+        )
+      )
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonErrorUnit[E])
+      .send(sttpBackend)
+
+  def catalogueItemGet[E: JsonValueCodec](
+      catalogueItemID: CatalogueItemID,
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, smithy.CatalogueItemGetResponse]]] =
+    basicRequest
+      .get(externalUri.addPath("catalogue", "item", catalogueItemID.value.toString))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonEitherOrFail[E, smithy.CatalogueItemGetResponse])
+      .send(sttpBackend)
+
+  def catalogueItemSummaryGet[E: JsonValueCodec](
+      catalogueItemIDs: List[CatalogueItemID],
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, smithy.CatalogueItemSummaryGetResponse]]] = {
+    val catalogueItemSummaryUri = catalogueItemIDs.foldLeft(externalUri.addPath("catalogue", "item", "summary")) {
+      (uri, catalogueItemID) => uri.addParam("catalogueItemIDs", catalogueItemID.value.toString)
+    }
+
+    basicRequest
+      .get(catalogueItemSummaryUri)
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonEitherOrFail[E, smithy.CatalogueItemSummaryGetResponse])
+      .send(sttpBackend)
+  }
+
+  def catalogueItemUniquenessGet[E: JsonValueCodec](
+      nameOpt: Option[String],
+      skuOpt: Option[String],
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, smithy.CatalogueItemUniquenessGetResponse]]] = {
+    val catalogueItemUniquenessUriWithName = nameOpt.fold(
+      externalUri.addPath("catalogue", "item", "uniqueness")
+    )(name => externalUri.addPath("catalogue", "item", "uniqueness").addParam("name", name))
+    val catalogueItemUniquenessUri =
+      skuOpt.fold(catalogueItemUniquenessUriWithName)(sku => catalogueItemUniquenessUriWithName.addParam("sku", sku))
+
+    basicRequest
+      .get(catalogueItemUniquenessUri)
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonEitherOrFail[E, smithy.CatalogueItemUniquenessGetResponse])
+      .send(sttpBackend)
+  }
+
   def insertCustomerIndividualsPost[E: JsonValueCodec](
       insertCustomerIndividualsPostRequest: smithy.InsertCustomerIndividualsPostRequest,
       organizationIDOpt: Option[OrganizationID],
@@ -703,128 +1008,6 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .response(asJsonEitherOrFail[E, smithy.GetCustomersGetResponse])
       .send(sttpBackend)
 
-  def insertCatalogueItemPost[E: JsonValueCodec](
-      insertCatalogueItemPostRequest: smithy.InsertCatalogueItemPostRequest,
-      organizationIDOpt: Option[OrganizationID],
-      accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, Unit]]] =
-    basicRequest
-      .post(externalUri.addPath("insert", "catalogue-item"))
-      .body(asJson(insertCatalogueItemPostRequest))
-      .pipe(request =>
-        organizationIDOpt.fold(request)(organizationID =>
-          request.header(OrganizationIDHeader, organizationID.value.toString)
-        )
-      )
-      .pipe(request =>
-        accessTokenOpt.fold(request)(accessToken =>
-          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
-        )
-      )
-      .response(asJsonErrorUnit[E])
-      .send(sttpBackend)
-
-  def insertCatalogueItemsPost[E: JsonValueCodec](
-      insertCatalogueItemsPostRequest: smithy.InsertCatalogueItemsPostRequest,
-      organizationIDOpt: Option[OrganizationID],
-      accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, Unit]]] =
-    basicRequest
-      .post(externalUri.addPath("insert", "catalogue-items"))
-      .body(asJson(insertCatalogueItemsPostRequest))
-      .pipe(request =>
-        organizationIDOpt.fold(request)(organizationID =>
-          request.header(OrganizationIDHeader, organizationID.value.toString)
-        )
-      )
-      .pipe(request =>
-        accessTokenOpt.fold(request)(accessToken =>
-          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
-        )
-      )
-      .response(asJsonErrorUnit[E])
-      .send(sttpBackend)
-
-  def updateCatalogueItemPut[E: JsonValueCodec](
-      updateCatalogueItemPutRequest: smithy.UpdateCatalogueItemPutRequest,
-      organizationIDOpt: Option[OrganizationID],
-      accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, Unit]]] =
-    basicRequest
-      .put(externalUri.addPath("update", "catalogue-item"))
-      .body(asJson(updateCatalogueItemPutRequest))
-      .pipe(request =>
-        organizationIDOpt.fold(request)(organizationID =>
-          request.header(OrganizationIDHeader, organizationID.value.toString)
-        )
-      )
-      .pipe(request =>
-        accessTokenOpt.fold(request)(accessToken =>
-          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
-        )
-      )
-      .response(asJsonErrorUnit[E])
-      .send(sttpBackend)
-
-  def archiveCatalogueItemPut[E: JsonValueCodec](
-      archiveCatalogueItemPutRequest: smithy.ArchiveCatalogueItemPutRequest,
-      organizationIDOpt: Option[OrganizationID],
-      accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, Unit]]] =
-    basicRequest
-      .put(externalUri.addPath("archive", "catalogue-item"))
-      .body(asJson(archiveCatalogueItemPutRequest))
-      .pipe(request =>
-        organizationIDOpt.fold(request)(organizationID =>
-          request.header(OrganizationIDHeader, organizationID.value.toString)
-        )
-      )
-      .pipe(request =>
-        accessTokenOpt.fold(request)(accessToken =>
-          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
-        )
-      )
-      .response(asJsonErrorUnit[E])
-      .send(sttpBackend)
-
-  def getCatalogueItemGet[E: JsonValueCodec](
-      catalogueItemID: CatalogueItemID,
-      organizationIDOpt: Option[OrganizationID],
-      accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, smithy.GetCatalogueItemGetResponse]]] =
-    basicRequest
-      .get(externalUri.addPath("get", "catalogue-item", catalogueItemID.value.toString))
-      .pipe(request =>
-        organizationIDOpt.fold(request)(organizationID =>
-          request.header(OrganizationIDHeader, organizationID.value.toString)
-        )
-      )
-      .pipe(request =>
-        accessTokenOpt.fold(request)(accessToken =>
-          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
-        )
-      )
-      .response(asJsonEitherOrFail[E, smithy.GetCatalogueItemGetResponse])
-      .send(sttpBackend)
-
-  def getCatalogueItemsGet[E: JsonValueCodec](
-      organizationIDOpt: Option[OrganizationID],
-      accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, smithy.GetCatalogueItemsGetResponse]]] =
-    basicRequest
-      .get(externalUri.addPath("get", "catalogue-items"))
-      .pipe(request =>
-        organizationIDOpt.fold(request)(organizationID =>
-          request.header(OrganizationIDHeader, organizationID.value.toString)
-        )
-      )
-      .pipe(request =>
-        accessTokenOpt.fold(request)(accessToken =>
-          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
-        )
-      )
-      .response(asJsonEitherOrFail[E, smithy.GetCatalogueItemsGetResponse])
-      .send(sttpBackend)
 }
 
 object GatewayClient {
