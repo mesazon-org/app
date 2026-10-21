@@ -27,10 +27,8 @@ Reusable model-transformation rules. Related: [Scala](scala.md), [Smithy](smithy
 
 ## Iron refined products
 
-- Import `io.github.iltotore.iron.chimney.given` for Iron's Chimney support.
-- Gateway code that transforms an Iron `RefinedType` whose base is a case class into a different product target also imports `io.mesazon.gateway.transform.given` (or the named `io.mesazon.gateway.transform.ironRefinedTypeToTargetTransformer`). Shared gateway transformation givens live together in `transform/transform.scala`.
-- The bridge's `TargetType <: Product` bound lets Chimney derive nested refined-product → product transformations without competing with Iron's primitive transformers.
-- With the bridge in scope, transform the refined value, collection, or complete owning product directly. Do not access `.value`, add a base-type ascription/cast, or define a one-off `Transformer` for the refined product.
+- Import `io.github.iltotore.iron.chimney.given` for Iron's Chimney support, including transforming an Iron `RefinedType` whose base is a case class into a different product target (Iron 3.4.1 + Chimney 2.1.0). Import it in every file that performs such a transformation, test code included; the gateway has no own refined-product bridge.
+- With Iron's givens in scope, transform the refined value, collection, or complete owning product directly. Do not access `.value`, add a base-type ascription/cast, or define a one-off `Transformer` for the refined product.
 
 ## Explicit transformers
 

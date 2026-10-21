@@ -111,7 +111,7 @@ Nullable update fields use `Option[Option[T]]`: `None` keeps, `Some(None)` clear
 
 Detail maps a missing repository result to the existing 500 `UnexpectedError`. Detail/summary sign only present normalized image keys with `S3ClientOrganizationMedia.genMediaUrl`; absent images make no S3 call. Repository and signing failures propagate. Summaries preserve repository order and fail the request if any required signing call fails. Uniqueness checks only supplied fields, name before SKU, stopping on failure.
 
-Shared Chimney givens live in `gateway/transform/transform.scala`: `NonEmptyChunk` to `List`, Iron refined product to target product, and `Option` to Smithy `Nullable`. Import `io.mesazon.gateway.transform.given`; do not add per-price delegates or exports. Mirrored enums and unchanged nested price fields derive automatically. See [Chimney](../standards/chimney.md).
+Shared Chimney givens live in `gateway/transform/transform.scala`: `NonEmptyChunk` to `List` and `Option` to Smithy `Nullable`. Import `io.mesazon.gateway.transform.given` for those and `io.github.iltotore.iron.chimney.given` for Iron refined product to target product; do not add per-price delegates or exports. Mirrored enums and unchanged nested price fields derive automatically. See [Chimney](../standards/chimney.md).
 
 ## Image upload
 
@@ -140,7 +140,7 @@ Paths below the gateway core Scala package `backend/gateway/core/src/main/scala/
 - Service/wiring: `service/CatalogueService.scala`, `service/FileService.scala`, `Main.scala`, `HttpApp.scala`, `transform/transform.scala`.
 - Upload: `tapir/FileServiceEndpoints.scala`, `tapir/tapir.scala`, `utils/FileScanner.scala`, `utils/ImageProcessing.scala`, `utils/TempFile.scala`, `clients/S3ClientOrganizationMedia.scala` and its config.
 - Arbitraries: test-kit `CatalogueDomainArbitraries`/`GatewayArbitraries`; core-test `CatalogueSmithyArbitraries`/`RepositoryArbitraries`. Specs inherit traits directly.
-- Build: domain includes ZIO core; sbt is pinned to 2.1.0-RC1 for writable SemanticDB restoration. Rationale/reproduction: [known issue](../known-issues.md), [build guide](../project/build.md). No new external service or Terraform requirement.
+- Build: domain includes ZIO core; sbt 2.0.11 includes writable SemanticDB restoration. Rationale/reproduction: [known issue](../known-issues.md), [build guide](../project/build.md). No new external service or Terraform requirement.
 
 ## Tests and verification
 
@@ -186,3 +186,5 @@ These describe current behavior, not proposed requirements already implemented.
 12. **JSON decimal precision — accepted limitation:** Smithy4s request decoding, the selling-unit JSONB codec, and the typed acceptance client's default decimal codecs use DECIMAL128 (34 significant digits), a 308-digit limit and an absolute-scale limit of 6,178. Therefore `0.12345678901234567890123456789012346` can become `0.1234567890123456789012345678901235` during request or database decoding; larger representations can fail decoding. A later unrelated variant update can persist a value rounded during its database read. Validator-level exactness does not prove exact input or readback. The user accepted this limitation because business values are not expected to approach this precision; keep the default codec and defer precision changes/tests until that expectation changes. Current prices fit within 34 significant digits. If revisited, assess persistence, the transport compiler/library integration and acceptance-client codecs together, with independent exact read/update and typed HTTP regressions. The pinned Smithy `JsoniterCodecCompiler` exposes no numeric-precision setting.
 
 Exact decimals remain JSON numbers. Clients that parse them as binary floating point can lose precision; switching to string encoding is an unresolved client-contract decision. A future unarchive feature must resolve live name/SKU collisions; no unarchive behavior is implied here.
+
+The batch non-member acceptance case has also failed in CI with a connection EOF before any HTTP response. Dependency-update verification passed the unchanged case, but the cause remains unconfirmed; see the [transport investigation](../known-issues.md#catalogue-batch-rejection-closes-the-connection-before-an-http-response).

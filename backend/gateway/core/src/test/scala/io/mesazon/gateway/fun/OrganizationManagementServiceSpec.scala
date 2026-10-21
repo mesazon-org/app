@@ -1,5 +1,6 @@
 package io.mesazon.gateway.fun
 
+import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.EmailClient
 import io.mesazon.gateway.config.*
@@ -8,7 +9,6 @@ import io.mesazon.gateway.repository.{OrganizationManagementRepository, UserDeta
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.state.AuthState
-import io.mesazon.gateway.transform.given
 import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.domain.*
 import io.mesazon.gateway.validation.service.*
