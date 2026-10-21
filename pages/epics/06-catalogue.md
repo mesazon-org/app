@@ -4,7 +4,7 @@ title: Catalogue
 
 # Catalogue
 
-> **Implementation and verification in progress — not released.** The catalogue with variants and selling units replaces the old item-only catalogue. All eight catalogue operations now have passing checks, including case-insensitive SKU uniqueness; item-image upload checks also pass. Final review remains. The separate status and archive rules are implemented; their repository, service, validation and image-upload checks pass.
+> **Implemented and reviewed — not released.** The catalogue with variants and selling units replaces the old item-only catalogue. Checks pass for all eight catalogue operations, case-insensitive SKU uniqueness, separate business status and archive behavior, and item-image uploads.
 
 ### Overview
 

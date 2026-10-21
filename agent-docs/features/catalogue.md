@@ -6,7 +6,7 @@ Organization-scoped items with variants, exact prices, selling units, and item i
 
 Business status describes the item or variant; every defined status is usable while `isArchived = false`. `Inactive` is a business label, not disabled state. The former status-based enabled/disabled lists conflated business state with archiving and were an incorrect model for Catalogue; do not restore that classification or its test matrix. The archive flag alone controls visibility, updates, uploads, uniqueness reservation, and last-variant counting.
 
-The product-doc slice is approved in `8483f6ec`. The currency transition is implemented and verified by the slice evidence below. The coordinated archive/status implementation passed its earlier checks. The review corrections simplify status-independent fixtures and retain the existing image-upload lookup. Lint, all 114 affected core tests, and all 35 fresh-image File API acceptance cases pass. All eight JSON operations have HTTP acceptance sections within the scope below. The SKU lookup and database index now enforce case-insensitive uniqueness while preserving stored spelling. All 58 Catalogue repository tests and all 92 Catalogue HTTP acceptance cases pass against fresh disposable databases and a fresh gateway image. Documentation now records the completed endpoint coverage; technical and product completion review remain. Excluded signed-image and success branches are not claimed as HTTP-tested.
+The product-doc slice is approved in `8483f6ec`. The currency transition is implemented and verified by the slice evidence below. The coordinated archive/status implementation passed its earlier checks. The review corrections simplify status-independent fixtures and retain the existing image-upload lookup. Lint, all 114 affected core tests, and all 35 fresh-image File API acceptance cases pass. All eight JSON operations have HTTP acceptance sections within the scope below. The SKU lookup and database index now enforce case-insensitive uniqueness while preserving stored spelling. All 59 Catalogue repository tests pass, including the completion-review correction below. All 92 Catalogue HTTP acceptance cases passed against a fresh gateway image and disposable database. Documentation records the completed endpoint coverage; technical and product completion reviews pass for the agreed scope. Excluded signed-image and success branches are not claimed as HTTP-tested.
 
 | Concern | Current code | Agreed target |
 |---|---|---|
@@ -247,7 +247,7 @@ Cleanup verification passed:
 
 Manual AI extraction specs received only reference updates and compiled; they were not executed.
 
-JSON Catalogue HTTP acceptance covers single POST (12 cases), batch POST (12), item PUT (16), item archive (8), variant archive (9), item detail GET (10), summary GET (10), and uniqueness GET (15), in Smithy order. The final 92-case run passed after the case-insensitive SKU correction against a fresh gateway image and disposable database. It covers the scoped success, validation/conflict, authentication/organization, and complete state assertions detailed below. Simple nullable item updates and both static routes now have HTTP proof. Signed-image response branches, typed-model decoding limitations, and deliberately reduced success combinations remain explicitly outside this HTTP scope. The acceptance backlog now records only remaining coverage limits; technical and product completion review are still separate from these test results.
+JSON Catalogue HTTP acceptance covers single POST (12 cases), batch POST (12), item PUT (16), item archive (8), variant archive (9), item detail GET (10), summary GET (10), and uniqueness GET (15), in Smithy order. The final 92-case run passed after the case-insensitive SKU correction against a fresh gateway image and disposable database. It covers the scoped success, validation/conflict, authentication/organization, and complete state assertions detailed below. Simple nullable item updates and both static routes now have HTTP proof. Signed-image response branches, typed-model decoding limitations, and deliberately reduced success combinations remain explicitly outside this HTTP scope. The acceptance backlog now records only remaining coverage limits; the completion review below records the separate technical and product assessment.
 
 ### POST /catalogue/item acceptance slice
 
@@ -329,7 +329,7 @@ Red verification: `runLint` passed, including acceptance compilation. Against th
 
 ### Green verification and documentation completion
 
-The lookup/index implementation is committed in `124e5dc6`. Real-PostgreSQL coverage proves case-insensitive lookup; single-insert, batch, and existing-variant update conflicts with complete rollback; archive reuse; organization scope; and preserved stored spelling. The update conflict also proves the preceding item-name change rolls back. The repository suite now contains 58 cases; older 57-case counts above describe earlier slices.
+The lookup/index implementation is committed in `124e5dc6`. Real-PostgreSQL coverage proves case-insensitive lookup; single-insert, batch, and existing-variant update conflicts with complete rollback; archive reuse; organization scope; and preserved stored spelling. The update conflict also proves the preceding item-name change rolls back. That SKU verification ran 58 repository cases; the completion-review correction below adds the 59th. Older 57-case counts above describe earlier slices.
 
 Verification after the implementation passed:
 
@@ -338,7 +338,19 @@ Verification after the implementation passed:
 - `gateway-core/Docker/publishLocal`, followed by all 92 `CatalogueApiSpec` tests against the fresh image and disposable database, ten suites completed and none aborted. The case-insensitive SKU request now returns `isSkuUnique = Some(false)`.
 - The subsequent six test-title clarifications changed no test bodies or assertions; lint and compilation passed again. Container tests were not repeated for wording alone.
 
-This documentation slice reconciles the epic and acceptance backlog with that evidence. It changes no runtime code and does not expand the agreed HTTP test scope. Signed-image responses and intentionally reduced update/archive success combinations remain outside the 92-case proof; typed-model decoding limitations remain documented above and in the backlog. Technical and product completion review remain pending.
+This documentation slice reconciles the epic and acceptance backlog with that evidence. It changes no runtime code and does not expand the agreed HTTP test scope. Signed-image responses and intentionally reduced update/archive success combinations remain outside the 92-case proof; typed-model decoding limitations remain documented above and in the backlog. The completion review below records the subsequent assessment.
+
+## Completion review
+
+Technical review checked the canonical contract and wiring, validation boundaries and shared transformations, tenant/archive predicates, positional Rows and projections, transaction locks and rollback, SKU lookup/index agreement, conflict translation, and image-upload lookup. It found no further implementation correctness defect after the coverage correction below.
+
+The current repository suite had no case supplying `statusOptUpdate = Some(...)`; the earlier transition proof in the lifecycle history was absent from committed tests. One focused test now updates an item from `Active` to `Inactive` and back, executing both PostgreSQL enum assignments. Each step asserts the changed status, complete saved item, unchanged child Row, and preserved archive flags. Fixed statuses prove this transition requirement; ordinary fixtures remain generated. This adds no HTTP success case or runtime change.
+
+Verification: final `runLint` passed, including core and acceptance compilation. All 59 `CatalogueRepositorySpec` cases passed against real PostgreSQL/Flyway, one suite completed and none aborted. The prior 92-case fresh-image Catalogue HTTP result and 35-case File API result remain applicable because runtime code and schema did not change. The initial malformed repository invocation ran no tests; only the corrected 59-case run is verification.
+
+Coverage limits remain explicit: signed-image detail/summary responses are functional rather than HTTP proof; update and archive HTTP successes retain the user-approved reduced scope; typed clients cannot construct unknown closed-enum strings or omitted required members. Current repository variant-update cases prove preservation of attributes, selling units and business status through the full-row SQL write; their replacement merge inputs are covered by validator/service mapping, without a dedicated database replacement case. Oversized image upload remains subject to the documented HTTP stall, with lower-level scanner proof. None of these limits is described as passing HTTP coverage.
+
+Product completion review returned `PRODUCT_ACCEPTANCE: complete for the agreed scope`. It confirmed the epic and current tests match the agreed currency, selling-unit, validation, archive/status, summary, uniqueness, authorization, and rollback rules, including the user-approved two-success PUT scope. The recorded coverage limits remain engineering follow-up work; no release or deployment was requested.
 
 ## Open decisions
 

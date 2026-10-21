@@ -702,6 +702,76 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           List(catalogueItemVariantRow)
       }
 
+      "update an item's status in both directions without archiving it or changing its variants" in new TestContext {
+        val organizationID   = arbitrarySample[OrganizationID]
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationID,
+          status = CatalogueItemStatus.Active,
+          isArchived = false,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          isArchived = false,
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+          .zioValue
+
+        inSequence(
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+          (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once(),
+        )
+
+        catalogueRepository
+          .updateCatalogueItem(
+            organizationID,
+            catalogueItemRow.catalogueItemID,
+            statusOptUpdate = Some(CatalogueItemStatus.Inactive),
+            updateCatalogueItemVariantInputs = Nil,
+            insertCatalogueItemVariantInputs = Nil,
+          )
+          .zioValue shouldBe (())
+
+        val catalogueItemRowInactiveExpected = catalogueItemRow.copy(
+          status = CatalogueItemStatus.Inactive,
+          isArchived = false,
+          updatedAt = UpdatedAt(instantNow),
+        )
+
+        val catalogueItemRowsInactive =
+          postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue
+
+        catalogueItemRowsInactive.head.status shouldNot equal(catalogueItemRow.status)
+        catalogueItemRowsInactive shouldBe List(catalogueItemRowInactiveExpected)
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe
+          List(catalogueItemVariantRow)
+
+        catalogueRepository
+          .updateCatalogueItem(
+            organizationID,
+            catalogueItemRow.catalogueItemID,
+            statusOptUpdate = Some(CatalogueItemStatus.Active),
+            updateCatalogueItemVariantInputs = Nil,
+            insertCatalogueItemVariantInputs = Nil,
+          )
+          .zioValue shouldBe (())
+
+        val catalogueItemRowActiveExpected = catalogueItemRowInactiveExpected.copy(
+          status = CatalogueItemStatus.Active
+        )
+
+        val catalogueItemRowsActive =
+          postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue
+
+        catalogueItemRowsActive.head.status shouldNot equal(catalogueItemRowInactiveExpected.status)
+        catalogueItemRowsActive shouldBe List(catalogueItemRowActiveExpected)
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe
+          List(catalogueItemVariantRow)
+      }
+
       "update only the specified fields of a catalogue item variant, leaving the rest unchanged" in new TestContext {
         val organizationID   = arbitrarySample[OrganizationID]
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
