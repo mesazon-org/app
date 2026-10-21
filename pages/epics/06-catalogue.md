@@ -6,7 +6,7 @@ title: Catalogue
 
 ### Overview
 
-The catalogue records what an organization sells. Each item has one or more variants, and each variant describes how it is sold, its optional price, and the details that distinguish it. People can add, browse, open, update, archive, and check items, and can upload an image for an item.
+The catalogue records what an organization sells. Each item has one or more variants, and each variant describes how it is sold, its optional price, and the details that distinguish it. People can add, browse, open, update, archive, and check items, and can upload an image for an item. Catalogue extraction from an image or file is planned but not built yet.
 
 ### Related / Out of scope
 
@@ -15,6 +15,7 @@ The catalogue records what an organization sells. Each item has one or more vari
 - **Not built yet** — Orders. Nothing places an order or decides whether an item without a price can be ordered.
 - **Not built yet** — Search, filtering, and paging. Catalogue browsing returns all non-archived items.
 - **Not built yet** — Time-based pricing and images for individual variants.
+- **Not built yet** — Extracting catalogue items and variants from an image, CSV file, or Excel file for review before adding them.
 
 ### Requirements across the epic
 
@@ -51,6 +52,7 @@ These are separate operations on a catalogue rather than one required journey.
 7. [User Archives a Variant](#7-user-archives-a-variant)
 8. [User Looks Up Chosen Items](#8-user-looks-up-chosen-items)
 9. [User Checks a Name or SKU Is Free](#9-user-checks-a-name-or-sku-is-free)
+10. [User Extracts Catalogue Items from an Image or File](#10-user-extracts-catalogue-items-from-an-image-or-file)
 
 ### Prerequisites
 
@@ -635,6 +637,136 @@ Nothing changes and no name or SKU is reserved.
 | 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
 | 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete |
 | 500 | `INTERNAL_SERVER_ERROR` | The person does not belong to the organization, or an unexpected error occurs |
+
+### 10. User Extracts Catalogue Items from an Image or File
+
+**Status: Not built yet.**
+
+**Who can reach this step: an owner or admin of the organization.**
+
+- The user has catalogue information in a product photo, CSV file, or Excel file and wants a quick starting point for the catalogue.
+- An AI model reads the image or file and returns catalogue item candidates for review.
+- The user resolves anything marked for attention before sending a candidate through the normal item-add flow.
+- Nothing is stored by extraction, and an uploaded photo is not attached to an item.
+
+#### Business Scenarios
+
+| **Scenarios** | **Requirements** |
+| --- | --- |
+| 1. User sends an image, CSV file, or Excel file with recognizable catalogue information | - The response contains candidate items with their variants and any readable details |
+| 2. An item has a readable name but some required or uncertain information is missing | - The candidate is returned with `needsAttention: true` and notes explaining what needs review |
+| 3. No item name can be read for an entry and it has no clear association with a named item | - The entry is not returned as a candidate and is counted as unidentified; spreadsheet row numbers are listed |
+| 4. The source contains several rows or visible entries that belong to one item | - The AI may group them into one candidate with multiple variants - `needsAttention` is true when the grouping is uncertain |
+| 5. A row has no item name but is clearly associated with a named item | - It becomes a variant of that item - It counts as an identified source entry, not as a separate processed item, and is not listed as unidentified |
+| 6. A meaningful source column does not map to a standard item or variant field | - Its value is preserved as a variant attribute |
+| 7. A price has an unsupported or unclear currency | - The price is omitted, the candidate is marked for attention, and the issue is explained in its notes |
+| 8. A required selling-unit value or structured unit cannot be read | - The candidate is returned for review with `needsAttention: true` |
+| 9. Two candidates have item names that match when letter case is ignored | - Both are marked as possible duplicates - They are not merged - Duplicate marking alone does not require attention |
+| 10. The image or file has no recognizable catalogue information | - Empty candidate lists are returned, with both identified and processed counts at zero - The notes explain that nothing usable was detected |
+| 11. A spreadsheet row is completely blank | - It is not counted as an entry and its row number is listed as empty |
+| 12. A non-blank spreadsheet row has no readable item name or clear association with a named item | - It is not returned as a candidate and its row number is listed as unidentified |
+| 13. The file name is missing, malformed, unsupported, or does not match the content | - The request is rejected before the file is sent to the AI |
+| 14. The file cannot be read as a CSV or Excel file, or is larger than 20 MB | - The request fails and no candidate result is returned |
+| 15. The AI service has a temporary failure | - The service tries again up to two more times - If every attempt fails, the request fails with no partial result |
+| 16. The AI service rejects the request or sends back an unusable answer | - The request fails without retrying that response |
+| 17. A member without an owner or admin role tries this step | - The request is rejected |
+| 18. The user reads the same image or file again | - The read is allowed and nothing from the previous read is reused or stored |
+| 19. The user sends an Excel workbook with several sheets | - Only the first sheet is read |
+| 20. The user sends a legacy `.xls` file | - It is read in the same way as an `.xlsx` file |
+| 21. The user sends a spreadsheet with many rows | - Every row is read in groups of up to 50, with up to 3 groups at a time - If any group fails, no partial result is returned |
+| 22. The user sends a supported file whose extension uses different letter case | - It is accepted when the extension matches the actual content |
+| 23. A candidate has `needsAttention: true` | - The client does not allow it to be sent through the normal item-add request until the user resolves the issue |
+| 24. The user supplies an extraction message | - The message guides optional field or layout interpretation across the whole upload and every spreadsheet batch |
+| 25. The message is empty, whitespace-only, ambiguous, or conflicts with the source | - Empty messages use the default rules - Ambiguous instructions produce the best result with unresolved issues in attention flags or notes - The request is not rejected solely for ambiguity |
+| 26. The extraction message is longer than 2,000 characters after trimming | - The request is rejected as a validation error |
+
+#### Requirements
+
+1. PNG, JPEG, and WEBP images, and genuinely readable CSV, `.xls`, and `.xlsx` files, are accepted up to 20 MB. Spreadsheet row count is not capped.
+2. The file name is required, 1–255 trimmed characters, and must have a supported extension matching the actual content, ignoring letter case.
+3. The response contains candidate catalogue items, empty spreadsheet row numbers, unidentified spreadsheet row numbers, and a concise note when there is anything else to review. Image responses always have empty row-number lists.
+4. A candidate contains an item name when one can be read, an optional description, zero or more extracted variants, duplicate status, attention status, and extraction notes. A candidate may omit fields that need user completion.
+5. A variant candidate may contain an optional SKU, label, description, price, selling unit, and attributes. Meaningful unmapped source columns become attributes. Structured unit values are preserved as stated and are not converted or invented.
+6. A candidate's `needsAttention` is true when a required field, a value, or an item/variant grouping is missing or uncertain, including when a price currency is unclear or unsupported. It is false when the candidate is resolved enough to send to the normal item-add request.
+7. Duplicate marking compares candidate item names within the same response, ignoring letter case. Duplicates are flagged but never merged, and candidates are never compared with items already in the catalogue.
+8. `entriesIdentified` describes the entries recognized in the source, including variant-only rows clearly associated with a named item, while `entriesProcessed` counts resulting candidate items after any grouping. A clearly associated variant-only row does not increase `entriesProcessed`. Blank rows are excluded from both counts; rows without a name or clear association are reported separately.
+9. Nothing is stored: no item, variant, image, file, or extraction response. The normal item-add request remains the only way to create catalogue records, and its existing validation remains unchanged.
+10. Each AI attempt may take up to one minute. Temporary failures are tried again up to two more times; rejected requests and unusable answers are not retried.
+11. Large spreadsheets are read in groups of up to 50 rows, with up to 3 groups at a time. Any failed group fails the whole read and returns no partial candidates.
+12. An optional processing message is trimmed plain text up to 2,000 characters. An empty or whitespace-only message is treated as absent.
+13. The processing message may guide optional field selection and source layout interpretation, but cannot override candidate requirements, selling-unit rules, row counting, duplicate marking, or normal add-item validation. An instruction to omit an optional price leaves it absent and does not alone set `needsAttention`.
+14. One processing message applies to the whole upload and every spreadsheet batch. It is used only for that extraction request and is never stored or returned as catalogue data.
+
+#### Request / Response / Outcome
+
+One upload carries whichever source the user has — an image, a CSV file, or an Excel file — in the same request shape.
+
+**Request**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Organization ID | `UUID` | Canonical 36-character form | ✅ | The organization whose catalogue is being prepared |
+| File | `Binary` | PNG, JPEG or WEBP; or genuinely readable as CSV or Excel (`.xls` or `.xlsx`); up to 20 MB | ✅ | The image or file to read |
+| File Name | `String` | 1–255 characters, trimmed; supported extension matching the actual content | ✅ | The source file name; it is not stored |
+| Processing Message | `String` | Up to 2,000 characters, trimmed plain text | ❌ | Optional guidance for interpreting the uploaded source |
+
+**Response — `ExtractCatalogueItemsPostResponse`**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Entries Identified | `Long` | Whole number, zero or more | ✅ | Entries recognized in the source before candidate grouping |
+| Entries Processed | `Long` | Whole number, zero or more | ✅ | Candidate items returned after grouping |
+| Catalogue Item Candidates | `ExtractCatalogueItemData[]` | May be empty | ✅ | Item candidates for review |
+| Empty Entry Rows | `Long[]` | May be empty; always empty for an image | ✅ | Spreadsheet rows that were completely blank |
+| Unidentified Entry Rows | `Long[]` | May be empty; always empty for an image | ✅ | Spreadsheet rows with content but no readable item name or clear association with a named item |
+| Unidentified Entries Notes | `String` | Concise, plain text | ❌ | Anything else worth flagging, including when no catalogue information could be detected |
+
+**ExtractCatalogueItemData**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Candidate | `ExtractCatalogueItemCandidate` | The item name is present; other fields may need completion | ✅ | The extracted item and its variants |
+| Is Duplicate | `Boolean` | — | ✅ | True when another candidate in this response has the same item name, ignoring letter case |
+| Needs Attention | `Boolean` | — | ✅ | True when the candidate has a missing or uncertain value or grouping and cannot yet be sent through the normal item-add request |
+| Extraction Notes | `String` | Concise, plain text | ❌ | What the user should review before adding the item |
+
+**ExtractCatalogueItemCandidate**
+
+The candidate contains the same item fields as an item-add request, but fields that need user completion may be absent.
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Name | `String` | 1–255 characters, trimmed | ✅ | The extracted item name |
+| Description | `String` | 1–255 characters, trimmed | ❌ | The extracted item description |
+| Variants | `ExtractCatalogueItemVariantCandidate[]` | May be empty while the candidate needs attention | ✅ | The extracted versions of the item |
+
+**ExtractCatalogueItemVariantCandidate**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| SKU | `String` | 1–255 characters, trimmed | ❌ | The extracted stock code |
+| Label | `String` | 1–255 characters, trimmed | ❌ | The extracted variant label |
+| Description | `String` | 1–255 characters, trimmed | ❌ | The extracted variant description |
+| Attributes | `Map<String, String>` | May be empty; names and values are 1–255 characters and trimmed | ✅ | Structured or unmapped details that distinguish the variant |
+| Price | `CatalogueItemVariantPrice` | Present only when the amount and supported currency are resolved | ❌ | The extracted price |
+| Selling Unit | `CatalogueItemVariantSaleUnit` | May be absent until required values are resolved | ❌ | How the variant is sold |
+
+**Outcome**
+
+- The user receives a preview of catalogue item candidates and the issues that need attention.
+- A candidate with `needsAttention: true` cannot be sent by the client through the normal item-add request until it is resolved.
+- Nothing is stored, and an uploaded image is not attached to an item.
+- The user adds resolved candidates through [step 1](#1-user-adds-an-item), where the existing validation and duplicate checks still apply.
+
+#### Http Error Responses
+
+| **Http Code** | **Code** | **Description** |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The processing message is longer than 2,000 characters after trimming |
+| 400 | `BAD_REQUEST_ERROR` | The organization is missing, the file name is missing or malformed, or the file name and content do not agree |
+| 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
+| 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete or the person's role does not allow extraction |
+| 500 | `INTERNAL_SERVER_ERROR` | The upload cannot be read, is larger than 20 MB, is not genuinely readable as a CSV or Excel file, the person does not belong to the organization, the AI service fails, or an unexpected error occurs |
 
 ### Known gaps and open questions
 
