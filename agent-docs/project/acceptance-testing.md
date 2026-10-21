@@ -1,6 +1,6 @@
 # Acceptance testing
 
-Black-box proof for gateway features. Use with the current feature doc, [Service flow](../features/flow/05-service.md), and [Scala](../standards/scala.md).
+Black-box proof for gateway features. Use with the current feature doc, [Service flow](../features/flow/05-service.md), [Scala](../standards/scala.md), and [Chimney](../standards/chimney.md).
 
 Known-missing coverage is tracked in [Acceptance test gaps](../acceptance-test-gaps.md). Check it before adding specs for a feature listed there, and delete the entry in the PR that closes it.
 

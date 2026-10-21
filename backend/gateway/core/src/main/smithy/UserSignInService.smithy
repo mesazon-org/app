@@ -11,7 +11,7 @@ service UserSignInService {
     operations: [SignInPost]
 }
 
-/// **Required Onboard Stage:** [`PASSWORD_PROVIDED`, `PHONE_VERIFICATION`, `PHONE_VERIFIED`]
+/// **Required Onboard Stage:** [`PasswordProvided`, `PhoneVerification`, `PhoneVerified`]
 @http(method: "POST", uri: "/signin", code: 200)
 operation SignInPost {
     output: SignInPostResponse

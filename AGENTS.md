@@ -82,6 +82,7 @@ Read every standard whose trigger matches the task:
 |---|---|
 | [Development practices](agent-docs/standards/development-practices.md) | Defining feature requirements, planning, implementing, or reviewing features and bug fixes: BDD scenarios, DDD domain rules, and TDD red/green/refactor |
 | [Scala](agent-docs/standards/scala.md) | Writing, changing, reviewing, or testing Scala code, including naming and refactoring |
+| [Chimney](agent-docs/standards/chimney.md) | Adding/changing model transformations, including domain/Smithy enums, collections, Iron refined products, or custom `Transformer`s |
 | [Smithy](agent-docs/standards/smithy.md) | Adding/changing Smithy endpoints, operations, transport models, traits, errors, or generated contracts |
 | [Tapir](agent-docs/standards/tapir.md) | Adding/changing Tapir endpoints, streaming inputs, security, errors, or OpenAPI docs |
 | [Iron](agent-docs/standards/iron.md) | Adding/changing refined newtypes, domain constraints, validation boundaries, or refined conversions/codecs |

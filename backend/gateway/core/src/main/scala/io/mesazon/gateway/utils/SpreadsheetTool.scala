@@ -25,10 +25,10 @@ trait SpreadsheetTool {
 object SpreadsheetTool {
 
   private final class SpreadsheetToolImpl extends SpreadsheetTool {
-    inline private val csvTempFilePrefix       = "csv-"
-    inline private val noCellsLastCellNumBound = 0
-    inline private val firstCellIndex          = 0
-    inline private val firstSheetIndex         = 0
+    private inline val csvTempFilePrefix       = "csv-"
+    private inline val noCellsLastCellNumBound = 0
+    private inline val firstCellIndex          = 0
+    private inline val firstSheetIndex         = 0
 
     private def cellValues(row: Row, dataFormatter: DataFormatter): List[String] = {
       val lastCellNum = row.getLastCellNum

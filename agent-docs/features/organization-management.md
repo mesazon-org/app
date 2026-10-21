@@ -1,6 +1,6 @@
 # Organization Management
 
-Owns organization details/address/slug/stage, membership roles, and creation. `@completedOnboardStage` requires a valid access token and `OnboardStage.completedStages` (`PhoneVerified`).
+Owns organization details/addresses/slug/stage, membership roles, and creation. `@completedOnboardStage` requires a valid access token and `OnboardStage.completedStages` (`PhoneVerified`).
 
 **Scope**: organization rows, membership/roles, creation endpoint, slug uniqueness, and the logo upload endpoint that advances the organization to `LogoProvided`.
 
@@ -16,17 +16,18 @@ Owns organization details/address/slug/stage, membership roles, and creation. `@
 
 Smithy spec: `backend/gateway/core/src/main/smithy/OrganizationManagementService.smithy` (+ `domain/OrganizationManagement.smithy`).
 
-`CreateOrganizationPost` carries no `@organizationUserRolesAllowed` because the caller has no membership yet — the flow *creates* the membership, making them `OWNER`.
+`CreateOrganizationPost` carries no `@organizationUserRolesAllowed` because the caller has no membership yet — the flow *creates* the membership, making them `Owner`.
 
 ## Role policy (for future org-scoped endpoints)
 
-Follow the [role policy](../standards/smithy.md#custom-traits): reads `OWNER|ADMIN|USER`; mutations `OWNER|ADMIN`; organization deletion `OWNER` only.
+Follow the [role policy](../standards/smithy.md#custom-traits): reads `Owner|Admin|User`; mutations `Owner|Admin`; organization deletion `Owner` only.
 
 ## Flow
 
 ### POST /create/organization (`OrganizationManagementService.createOrganizationPost`)
-1. Read `AuthedUser`; validate name, slug, contacts, optional tagline/address/company registration/tax ID.
+1. Read `AuthedUser`; validate name, slug, contacts, addresses, optional tagline/company registration/tax ID.
    - `emails`/`phoneNumbers` are JSONB lists of value + `isDefault`; validate every entry and exactly one default when non-empty.
+   - `addresses` is a JSONB list of `OrganizationAddressEntry` (`RefinedType[AddressEntry, Pure]`, like `OrganizationPhoneNumber` over `PhoneNumber`); `AddressEntry(address: Address, addressType: AddressType)`, where `Address` holds optional `addressLine1`, `addressLine2`, `city`, `postalCode`, and `country` owner-less `NonEmptyTrimmed` newtypes. Today only `addressLine2` is optional and Smithy rejects a missing required part before validation; after this change all five Smithy members and domain fields are optional. `AddressValidator` validates every supplied text value unchanged: missing/null fields become `None`, while empty, whitespace-only, untrimmed, or overlong strings produce field-specific errors containing the original value. At least one field must contain non-whitespace text. The address-type combination is checked first; an invalid combination returns only the `addresses` error and skips every entry's field validation. For a valid combination, `validateAddressHasAtLeastOneFieldNonEmpty` uses `trimAndFilterNonEmpty` only to check for non-whitespace content; field validation receives the original values unchanged. The presence error accumulates before field errors: all-missing entries return only the indexed `address` error, while blank-only entries also report each supplied invalid field. No default rule. Allowed combinations remain empty, exactly one entry typed `ShippingAndBilling`, or exactly two entries, one `Shipping` and one `Billing` in either order; contents are not compared. Stored lists are not re-checked or cleaned up, and existing JSONB documents with populated fields remain readable without migration. This is an intentionally breaking single release: after a partial address is stored, the prior binary cannot safely read that row, coexist in a rolling deployment, or serve as a rollback target. The request validator wraps validated entries in `OrganizationAddressEntry`. On the wire the list is `OrganizationAddressEntryRequests` of shared `AddressEntryRequest { address: AddressRequest, addressType: AddressType }`; the address object and `addressType` remain required.
    - `OrganizationSlug`: trimmed, non-empty, max 63, `^[a-z0-9]+(?:-[a-z0-9]+)*$`; safe for URL path or DNS label.
 2. `OrganizationManagementRepository.createOrganization` inserts **in one transaction**:
    - `OrganizationDetailsRow` (generated `OrganizationID`, stage `DetailsProvided`, `logoImageAsset` `None`), and
@@ -41,7 +42,7 @@ The repository also exposes `isOrganizationSlugExists` (`OrganizationManagementR
 
 `POST /upload/organization/logo` is a Tapir streaming endpoint, not Smithy — Smithy JSON routes cap at 5 MB (`HttpApp.SmithyMaxEntitySize`); Tapir streams binary and allows 20 MB (`HttpApp.TapirMaxEntitySize`, kept equal to `file-service.file-bytes-max`). See [Alternate HTTP](../project/alternate-http.md) for the shared Tapir transport mechanics (docs mounting, error model, security wiring) this endpoint follows alongside [Catalogue](catalogue.md#image-upload)'s catalogue-item-image upload — the two mirror the same pipeline shape, differing only in entity scoping and persistence target.
 
-Binary body; organization in the `X-Organization-ID` header, original file name in the `X-File-Name` header (metadata travels in headers because the body is the raw image). A missing or malformed header (non-UUID organization id; file name not 1–255 trimmed characters) is a Tapir decode failure → `400 BAD_REQUEST_ERROR` via `tapir.scala`'s `decodeFailureHandler`. Security (`AuthorizationService.auth`): valid access JWT, `OnboardStage.completedStages` (= `PhoneVerified`), and the caller must be assigned to the organization as `OWNER` or `ADMIN` (disallowed role → `403`, no membership row → `500`).
+Binary body; organization in the `X-Organization-ID` header, original file name in the `X-File-Name` header (metadata travels in headers because the body is the raw image). A missing or malformed header (non-UUID organization id; file name not 1–255 trimmed characters) is a Tapir decode failure → `400 BAD_REQUEST_ERROR` via `tapir.scala`'s `decodeFailureHandler`. Security (`AuthorizationService.auth`): valid access JWT, `OnboardStage.completedStages` (= `PhoneVerified`), and the caller must be assigned to the organization as `Owner` or `Admin` (disallowed role → `403`, no membership row → `500`).
 
 Error codes on this endpoint are Tapir's `TapirServerError` codes (`TapirServerError.scala`), mapped from `ServiceError` by `HttpErrorHandler.errorResponseHandlerTapir`: every 400 is `BAD_REQUEST_ERROR` — there is no `VALIDATION_ERROR`/field list on this endpoint, unlike the Smithy create endpoint.
 
@@ -70,7 +71,7 @@ Error codes on this endpoint are Tapir's `TapirServerError` codes (`TapirServerE
 
 ## Key files
 
-- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OrganizationManagement.scala` (contact-point entries, `CreateOrganizationPostRequest`); `Organization*` newtypes live in the shared `Newtypes.scala`, and the `OrganizationStage`/`OrganizationUserRole` enums each have their own file (`OrganizationStage.scala`, `OrganizationUserRole.scala`) — see [domain placement](flow/02-validation.md#domain-placement)
+- Domain: `backend/domain/src/main/scala/io/mesazon/domain/gateway/OrganizationManagement.scala` (contact-point entries, `CreateOrganizationPostRequest`); the shared `Address` and `AddressEntry` case classes (`Address.scala`, `AddressEntry.scala`) and `AddressType` enum (`Shipping`/`Billing`/`ShippingAndBilling`, Smithy enum in `domain/Gateway.smithy`) has its own file `AddressType.scala`; `Organization*` newtypes live in the shared `Newtypes.scala`, and the `OrganizationStage`/`OrganizationUserRole` enums each have their own file (`OrganizationStage.scala`, `OrganizationUserRole.scala`) — see [domain placement](flow/02-validation.md#domain-placement)
 - Validator: `validation/service/OrganizationManagementRequestValidator.scala`
 - Arbitraries: `testkit/base/OrganizationManagementDomainArbitraries.scala`, `gateway/utils/OrganizationManagementSmithyArbitraries.scala`
 - Service: `backend/gateway/core/src/main/scala/io/mesazon/gateway/service/OrganizationManagementService.scala`

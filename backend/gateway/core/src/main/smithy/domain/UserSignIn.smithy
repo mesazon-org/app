@@ -26,7 +26,7 @@ structure SignInOrganization {
     @required
     slug: String
     @required
-    role: OrganizationUserRole
+    userRole: OrganizationUserRole
     logoUrl: String
 }
 

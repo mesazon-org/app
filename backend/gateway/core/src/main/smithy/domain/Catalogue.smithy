@@ -5,8 +5,8 @@ namespace io.mesazon.gateway.smithy
 use alloy#UUID
 
 enum CatalogueItemStatus {
-    ACTIVE
-    ARCHIVED
+    Active
+    Archived
 }
 
 structure CatalogueItemPriceRequest {

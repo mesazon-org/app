@@ -11,6 +11,7 @@ import zio.*
 final class OrganizationManagementRequestValidator(
     emailValidator: EmailValidator,
     phoneNumberDomainValidator: PhoneNumberDomainValidator,
+    addressValidator: AddressValidator,
 ) {
 
   def validatedCreateOrganizationPostRequest(
@@ -23,18 +24,15 @@ final class OrganizationManagementRequestValidator(
   ): UIO[ValidatedNec[InvalidFieldError, CreateOrganizationPostRequest]] =
     validateOrganizationEmails(request.emails)
       .zip(validateOrganizationPhoneNumbers(request.phoneNumbers))
-      .map((emailsValidated, phoneNumbersValidated) =>
+      .zip(validateOrganizationAddresses(request.addresses))
+      .map((emailsValidated, phoneNumbersValidated, addressesValidated) =>
         (
           validateRequiredField("name", request.name, OrganizationName.either),
           validateRequiredField("slug", request.slug, OrganizationSlug.either),
           validateOptionalField("tagline", request.tagline, OrganizationTagline.either),
           emailsValidated,
           phoneNumbersValidated,
-          validateOptionalField("addressLine1", request.addressLine1, OrganizationAddressLine1.either),
-          validateOptionalField("addressLine2", request.addressLine2, OrganizationAddressLine2.either),
-          validateOptionalField("city", request.city, OrganizationCity.either),
-          validateOptionalField("postalCode", request.postalCode, OrganizationPostalCode.either),
-          validateOptionalField("country", request.country, OrganizationCountry.either),
+          addressesValidated,
           validateOptionalField(
             "companyRegistrationNumber",
             request.companyRegistrationNumber,
@@ -65,6 +63,11 @@ final class OrganizationManagementRequestValidator(
           )
         )
     ).map(_.andThen(entries => validateSingleDefault("phoneNumbers", entries)(_.isDefault)))
+
+  private def validateOrganizationAddresses(
+      addresses: List[smithy.AddressEntryRequest]
+  ): UIO[ValidatedNec[InvalidFieldError, List[OrganizationAddressEntry]]] =
+    addressValidator.validateAddressEntries(addresses).map(_.map(_.map(OrganizationAddressEntry(_))))
 }
 
 object OrganizationManagementRequestValidator {

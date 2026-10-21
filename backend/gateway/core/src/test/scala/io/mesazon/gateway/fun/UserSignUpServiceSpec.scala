@@ -770,7 +770,7 @@ class UserSignUpServiceSpec
 
         signUpVerifyEmailPostResponse shouldBe smithy.SignUpVerifyEmailPostResponse(
           accessTokenExpiresInSeconds = accessJwt.expiresIn.toSeconds,
-          onboardStage = onboardStageFromDomainToSmithy(OnboardStage.EmailVerified),
+          onboardStage = smithy.OnboardStage.EmailVerified,
           refreshToken = refreshJwt.refreshToken.value,
           accessToken = accessJwt.accessToken.value,
         )
@@ -846,7 +846,7 @@ class UserSignUpServiceSpec
 
         signUpVerifyEmailPostResponse shouldBe smithy.SignUpVerifyEmailPostResponse(
           accessTokenExpiresInSeconds = accessJwt.expiresIn.toSeconds,
-          onboardStage = onboardStageFromDomainToSmithy(OnboardStage.EmailVerified),
+          onboardStage = smithy.OnboardStage.EmailVerified,
           refreshToken = refreshJwt.refreshToken.value,
           accessToken = accessJwt.accessToken.value,
         )

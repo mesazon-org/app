@@ -20,11 +20,7 @@ case class CreateOrganizationPostRequest(
     tagline: Option[OrganizationTagline],
     emails: List[OrganizationEmailEntryRequest],
     phoneNumbers: List[OrganizationPhoneNumberEntryRequest],
-    addressLine1: Option[OrganizationAddressLine1],
-    addressLine2: Option[OrganizationAddressLine2],
-    city: Option[OrganizationCity],
-    postalCode: Option[OrganizationPostalCode],
-    country: Option[OrganizationCountry],
+    addresses: List[OrganizationAddressEntry],
     companyRegistrationNumber: Option[OrganizationCompanyRegistrationNumber],
     taxID: Option[OrganizationTaxID],
 )

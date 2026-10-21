@@ -52,9 +52,9 @@ Cross-transport results:
 
 Every organization-scoped input mixes in `OrganizationScopedInput`, which provides required `X-Organization-ID`; never put organization scope in the body/URI. Roles:
 
-- reads: `OWNER`, `ADMIN`, `USER`;
-- mutations: `OWNER`, `ADMIN`;
-- delete organization: `OWNER`.
+- reads: `Owner`, `Admin`, `User`;
+- mutations: `Owner`, `Admin`;
+- delete organization: `Owner`.
 
 Enforcement:
 

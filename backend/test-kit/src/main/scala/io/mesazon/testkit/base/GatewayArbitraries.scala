@@ -43,6 +43,8 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
   given arbActionAttemptType: Arbitrary[ActionAttemptType] =
     Arbitrary(Gen.oneOf(ActionAttemptType.values.toIndexedSeq))
 
+  given arbAddressType: Arbitrary[AddressType] = Arbitrary(Gen.oneOf(AddressType.values.toIndexedSeq))
+
   given arbPrice: Arbitrary[Price] = Arbitrary(
     for {
       priceCurrencyCode <- Gen.oneOf("JPY", "USD", "KWD")
@@ -59,6 +61,18 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
   )
 
   given arbImageAsset: Arbitrary[ImageAsset] = Arbitrary(Gen.resultOf(ImageAsset.apply))
+
+  given arbAddress: Arbitrary[Address] = Arbitrary(
+    for {
+      addressLine1    <- Arbitrary.arbitrary[AddressLine1]
+      addressLine2Opt <- Arbitrary.arbitrary[Option[AddressLine2]]
+      cityOpt         <- Arbitrary.arbitrary[Option[City]]
+      postalCodeOpt   <- Arbitrary.arbitrary[Option[PostalCode]]
+      countryOpt      <- Arbitrary.arbitrary[Option[Country]]
+    } yield Address(Some(addressLine1), addressLine2Opt, cityOpt, postalCodeOpt, countryOpt)
+  )
+
+  given arbAddressEntry: Arbitrary[AddressEntry] = Arbitrary(Gen.resultOf(AddressEntry.apply))
 
   given arbAuthedUser: Arbitrary[AuthedUser] = Arbitrary(Gen.resultOf(AuthedUser.apply))
 
@@ -88,5 +102,25 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
           .choose(0, entries.length - 1)
           .map(defaultIndex => entries.updated(defaultIndex, setDefault(entries(defaultIndex))))
     }
+
+  protected def genAddressEntriesAllowedCombination: Gen[List[AddressEntry]] =
+    Gen.oneOf(
+      Gen.const(List.empty[AddressEntry]),
+      Arbitrary
+        .arbitrary[Address]
+        .map(address => List(AddressEntry(address = address, addressType = AddressType.ShippingAndBilling))),
+      for {
+        addressEntryShipping <- Arbitrary
+          .arbitrary[Address]
+          .map(address => AddressEntry(address = address, addressType = AddressType.Shipping))
+        addressEntryBilling <- Arbitrary
+          .arbitrary[Address]
+          .map(address => AddressEntry(address = address, addressType = AddressType.Billing))
+        addressEntries <- Gen.oneOf(
+          List(addressEntryShipping, addressEntryBilling),
+          List(addressEntryBilling, addressEntryShipping),
+        )
+      } yield addressEntries,
+    )
 
 }

@@ -36,8 +36,8 @@ service CustomerBookService {
     ]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "POST", uri: "/insert/customer-individual", code: 200)
 operation InsertCustomerIndividualPost {
     input := with [OrganizationScopedInput] {
@@ -49,8 +49,8 @@ operation InsertCustomerIndividualPost {
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "POST", uri: "/insert/customer-individuals", code: 200)
 operation InsertCustomerIndividualsPost {
     input := with [OrganizationScopedInput] {
@@ -62,8 +62,8 @@ operation InsertCustomerIndividualsPost {
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "POST", uri: "/insert/customer-business", code: 200)
 operation InsertCustomerBusinessPost {
     input := with [OrganizationScopedInput] {
@@ -75,8 +75,8 @@ operation InsertCustomerBusinessPost {
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "POST", uri: "/insert/customer-businesses", code: 200)
 operation InsertCustomerBusinessesPost {
     input := with [OrganizationScopedInput] {
@@ -88,8 +88,8 @@ operation InsertCustomerBusinessesPost {
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "POST", uri: "/insert/customers", code: 200)
 operation InsertCustomersPost {
     input := with [OrganizationScopedInput] {
@@ -101,8 +101,8 @@ operation InsertCustomersPost {
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "PUT", uri: "/update/customer-individual", code: 204)
 operation UpdateCustomerIndividualPut {
     input := with [OrganizationScopedInput] {
@@ -113,8 +113,8 @@ operation UpdateCustomerIndividualPut {
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "PUT", uri: "/update/customer-business", code: 204)
 operation UpdateCustomerBusinessPut {
     input := with [OrganizationScopedInput] {
@@ -125,8 +125,8 @@ operation UpdateCustomerBusinessPut {
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "PUT", uri: "/add/customer-business-contacts", code: 204)
 operation AddCustomerBusinessContactsPut {
     input := with [OrganizationScopedInput] {
@@ -137,8 +137,8 @@ operation AddCustomerBusinessContactsPut {
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "PUT", uri: "/remove/customer-business-contacts", code: 204)
 operation RemoveCustomerBusinessContactsPut {
     input := with [OrganizationScopedInput] {
@@ -149,8 +149,8 @@ operation RemoveCustomerBusinessContactsPut {
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "PUT", uri: "/archive/customer", code: 204)
 operation ArchiveCustomerPut {
     input := with [OrganizationScopedInput] {
@@ -161,8 +161,8 @@ operation ArchiveCustomerPut {
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`, `USER`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
 @http(method: "GET", uri: "/get/customer-individual/{customerID}", code: 200)
 operation GetCustomerIndividualGet {
     input := with [OrganizationScopedInput] {
@@ -174,8 +174,8 @@ operation GetCustomerIndividualGet {
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`, `USER`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
 @http(method: "GET", uri: "/get/customer-business/{customerID}", code: 200)
 operation GetCustomerBusinessGet {
     input := with [OrganizationScopedInput] {
@@ -187,8 +187,8 @@ operation GetCustomerBusinessGet {
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`, `USER`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
 @http(method: "GET", uri: "/get/customers", code: 200)
 operation GetCustomersGet {
     input := with [OrganizationScopedInput] {}

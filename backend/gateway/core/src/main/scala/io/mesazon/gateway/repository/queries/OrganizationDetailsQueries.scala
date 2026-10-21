@@ -2,7 +2,10 @@ package io.mesazon.gateway.repository.queries
 
 import cats.data.NonEmptyList
 import cats.syntax.all.*
+import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
+import com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker
 import io.github.gaelrenoux.tranzactio.doobie.*
+import io.github.iltotore.iron.jsoniter.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.config.RepositoryConfig
 import io.mesazon.gateway.repository.domain.*
@@ -15,6 +18,10 @@ import zio.*
 final class OrganizationDetailsQueries(
     config: RepositoryConfig
 ) {
+
+  private given organizationAddressEntriesCodec: JsonValueCodec[List[OrganizationAddressEntry]] =
+    JsonCodecMaker.make
+  private given organizationAddressEntriesMeta: Meta[List[OrganizationAddressEntry]] = jsonbMeta
 
   private val frSchema                   = Fragment.const(config.schema)
   private val frOrganizationDetailsTable = Fragment.const(config.organizationDetailsTable)
@@ -29,11 +36,7 @@ final class OrganizationDetailsQueries(
         |emails,
         |phone_numbers,
         |organization_stage,
-        |address_line_1,
-        |address_line_2,
-        |city,
-        |postal_code,
-        |country,
+        |addresses,
         |company_registration_number,
         |tax_id,
         |image_original_s3_bucket_key,
@@ -81,11 +84,7 @@ final class OrganizationDetailsQueries(
       taglineOptUpdate: Option[OrganizationTagline],
       emailsOptUpdate: Option[List[OrganizationEmailEntryRequest]],
       phoneNumbersOptUpdate: Option[List[OrganizationPhoneNumberEntryRequest]],
-      addressLine1OptUpdate: Option[OrganizationAddressLine1],
-      addressLine2OptUpdate: Option[OrganizationAddressLine2],
-      cityOptUpdate: Option[OrganizationCity],
-      postalCodeOptUpdate: Option[OrganizationPostalCode],
-      countryOptUpdate: Option[OrganizationCountry],
+      addressesOptUpdate: Option[List[OrganizationAddressEntry]],
       companyRegistrationNumberOptUpdate: Option[OrganizationCompanyRegistrationNumber] = None,
       taxIDOptUpdate: Option[OrganizationTaxID] = None,
       logoImageAssetOptUpdate: Option[OrganizationLogoImageAsset] = None,
@@ -99,11 +98,7 @@ final class OrganizationDetailsQueries(
       taglineOptUpdate.map(v => fr"tagline = $v"),
       emailsOptUpdate.map(v => fr"emails = $v"),
       phoneNumbersOptUpdate.map(v => fr"phone_numbers = $v"),
-      addressLine1OptUpdate.map(v => fr"address_line_1 = $v"),
-      addressLine2OptUpdate.map(v => fr"address_line_2 = $v"),
-      cityOptUpdate.map(v => fr"city = $v"),
-      postalCodeOptUpdate.map(v => fr"postal_code = $v"),
-      countryOptUpdate.map(v => fr"country = $v"),
+      addressesOptUpdate.map(v => fr"addresses = $v"),
       companyRegistrationNumberOptUpdate.map(v => fr"company_registration_number = $v"),
       taxIDOptUpdate.map(v => fr"tax_id = $v"),
       logoImageAssetOptUpdate.map(v => fr"image_original_s3_bucket_key = ${v.value.imageOriginalS3BucketKey}"),

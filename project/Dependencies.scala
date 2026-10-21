@@ -2,14 +2,14 @@ import sbt.*
 
 object Dependencies {
 
-  lazy val http4sV              = "0.23.37"
-  lazy val smithy4sV            = "0.19.12"
+  lazy val http4sV              = "0.23.38"
+  lazy val smithy4sV            = "0.19.13"
   lazy val zioV                 = "2.1.26"
   lazy val zioConfigV           = "4.1.0"
-  lazy val zioInteropCatsV      = "23.1.0.13"
+  lazy val zioInteropCatsV      = "23.1.0.14"
   lazy val catsV                = "2.13.0"
   lazy val zioLoggingV          = "2.5.3"
-  lazy val logbackV             = "1.6.4"
+  lazy val logbackV             = "1.6.5"
   lazy val julToSlf4jV          = "2.0.20"
   lazy val jclToSlf4jV          = "2.0.20"
   lazy val log4jToSlf4jV        = "2.26.1"
@@ -29,8 +29,8 @@ object Dependencies {
   lazy val circeV               = "0.14.16"
   lazy val sttpV                = "4.0.27"
   lazy val tapirV               = "1.13.32"
-  lazy val jsoniterV            = "2.41.0"
-  lazy val sttpAIV              = "0.11.3"
+  lazy val jsoniterV            = "2.41.2"
+  lazy val sttpAIV              = "0.11.4"
   lazy val jmailV               = "2.2.2"
   lazy val simplejavamailV      = "9.3.5"
   lazy val jjwtV                = "0.13.0"
@@ -38,10 +38,10 @@ object Dependencies {
   lazy val springCoreV          = "7.0.9"
   lazy val bouncyCastleV        = "1.86"
   lazy val uuidCreatorV         = "6.1.1"
-  lazy val scalamockV           = "7.5.5"
+  lazy val scalamockV           = "7.6.0"
   lazy val scrimageV            = "4.6.8"
-  lazy val tikaV                = "4.0.0"
-  lazy val awssdkV              = "2.55.6"
+  lazy val tikaV                = "4.1.0"
+  lazy val awssdkV              = "2.55.11"
   lazy val zioS3V               = "0.4.4"
   lazy val poiV                 = "5.5.1"
   lazy val commonsCsvV          = "1.14.1"
@@ -96,6 +96,7 @@ object Dependencies {
   lazy val testcontainers               = "org.testcontainers" % "testcontainers"                 % testcontainersV
   lazy val testcontainersScalaScalatest = "com.dimafeng"      %% "testcontainers-scala-scalatest" % testcontainersScalaV
   lazy val scalamock                    = "org.scalamock"     %% "scalamock"                      % scalamockV
+  lazy val scalamockScalaTest           = "org.scalamock"     %% "scalamock-scalatest"            % scalamockV
   lazy val scalamockZIO                 = "org.scalamock"     %% "scalamock-zio"                  % scalamockV
 
   // Chimney

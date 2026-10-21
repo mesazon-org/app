@@ -46,8 +46,8 @@ object JwtService {
       idGenerator: IDGenerator,
   ) extends JwtService {
 
-    inline private val audienceRefresh       = "auth:refresh"
-    inline private val audienceResetPassword = "auth:reset_password"
+    private inline val audienceRefresh       = "auth:refresh"
+    private inline val audienceResetPassword = "auth:reset_password"
 
     private val jjwtClock = timeProvider.clock.map(clock =>
       new JJwtClock {

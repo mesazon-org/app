@@ -10,6 +10,7 @@ organizationName  := "Mesazon"
 scalafixOnCompile := enableScalaLint
 scalafmtOnCompile := enableScalaLint
 semanticdbEnabled := true
+semanticdbVersion := "4.17.4"
 Test / fork       := true
 run / fork        := true
 usePipelining     := true
@@ -74,6 +75,7 @@ lazy val backendTestKitModule = createBackendModule("test-kit")(None)
     Dependencies.scalacheck,
     Dependencies.scalaTestPlusCheck,
     Dependencies.scalamock,
+    Dependencies.scalamockScalaTest,
     Dependencies.scalamockZIO,
     Dependencies.testcontainers,
     Dependencies.testcontainersScalaScalatest,

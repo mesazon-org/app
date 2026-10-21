@@ -1793,7 +1793,7 @@ class CatalogueApiSpec extends GatewayAcceptanceTest, CatalogueSmithyArbitraries
 
         getCatalogueItem.catalogueItemID shouldBe catalogueItemRowActive.catalogueItemID.value
         getCatalogueItem.name shouldBe catalogueItemRowActive.name.value
-        getCatalogueItem.status shouldBe smithy.CatalogueItemStatus.ACTIVE
+        getCatalogueItem.status shouldBe smithy.CatalogueItemStatus.Active
         getCatalogueItem.imageNormalizedUrl shouldBe defined
       }
 

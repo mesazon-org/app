@@ -10,7 +10,7 @@ service UserForgotPasswordService {
     operations: [ForgotPasswordPost, ForgotPasswordVerifyOTPPost, ForgotPasswordResetPost]
 }
 
-/// **Required Onboard Stage:** [`PASSWORD_PROVIDED`, `PHONE_VERIFICATION`, `PHONE_VERIFIED`]
+/// **Required Onboard Stage:** [`PasswordProvided`, `PhoneVerification`, `PhoneVerified`]
 @http(method: "POST", uri: "/forgot/password", code: 200)
 operation ForgotPasswordPost {
     input := {
@@ -22,7 +22,7 @@ operation ForgotPasswordPost {
     errors: [ValidationError, Forbidden, InternalServerError]
 }
 
-/// **Required Onboard Stage:** [`PASSWORD_PROVIDED`, `PHONE_VERIFICATION`, `PHONE_VERIFIED`]
+/// **Required Onboard Stage:** [`PasswordProvided`, `PhoneVerification`, `PhoneVerified`]
 @http(method: "POST", uri: "/forgot/password/verify-otp", code: 200)
 operation ForgotPasswordVerifyOTPPost {
     input := {
@@ -34,7 +34,7 @@ operation ForgotPasswordVerifyOTPPost {
     errors: [BadRequest, ValidationError, Forbidden, InternalServerError]
 }
 
-/// **Required Onboard Stage:** [`PASSWORD_PROVIDED`, `PHONE_VERIFICATION`, `PHONE_VERIFIED`]
+/// **Required Onboard Stage:** [`PasswordProvided`, `PhoneVerification`, `PhoneVerified`]
 @http(method: "POST", uri: "/forgot/password/reset", code: 204)
 operation ForgotPasswordResetPost {
     input := {

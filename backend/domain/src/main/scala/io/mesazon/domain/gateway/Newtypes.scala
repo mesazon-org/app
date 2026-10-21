@@ -63,6 +63,21 @@ type PhoneNationalNumber = PhoneNationalNumber.T
 object PhoneNumberE164 extends RefinedType[String, NonEmptyTrimmed]
 type PhoneNumberE164 = PhoneNumberE164.T
 
+object AddressLine1 extends RefinedType[String, NonEmptyTrimmed]
+type AddressLine1 = AddressLine1.T
+
+object AddressLine2 extends RefinedType[String, NonEmptyTrimmed]
+type AddressLine2 = AddressLine2.T
+
+object City extends RefinedType[String, NonEmptyTrimmed]
+type City = City.T
+
+object PostalCode extends RefinedType[String, NonEmptyTrimmed]
+type PostalCode = PostalCode.T
+
+object Country extends RefinedType[String, NonEmptyTrimmed]
+type Country = Country.T
+
 object Message extends RefinedType[String, NonEmpty]
 type Message = Message.T
 
@@ -116,20 +131,8 @@ type OrganizationEmail = OrganizationEmail.T
 object OrganizationPhoneNumber extends RefinedType[PhoneNumber, Pure]
 type OrganizationPhoneNumber = OrganizationPhoneNumber.T
 
-object OrganizationAddressLine1 extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationAddressLine1 = OrganizationAddressLine1.T
-
-object OrganizationAddressLine2 extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationAddressLine2 = OrganizationAddressLine2.T
-
-object OrganizationCity extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationCity = OrganizationCity.T
-
-object OrganizationPostalCode extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationPostalCode = OrganizationPostalCode.T
-
-object OrganizationCountry extends RefinedType[String, NonEmptyTrimmed]
-type OrganizationCountry = OrganizationCountry.T
+object OrganizationAddressEntry extends RefinedType[AddressEntry, Pure]
+type OrganizationAddressEntry = OrganizationAddressEntry.T
 
 object OrganizationCompanyRegistrationNumber extends RefinedType[String, NonEmptyTrimmed]
 type OrganizationCompanyRegistrationNumber = OrganizationCompanyRegistrationNumber.T
@@ -172,20 +175,8 @@ type CustomerEmail = CustomerEmail.T
 object CustomerPhoneNumber extends RefinedType[PhoneNumber, Pure]
 type CustomerPhoneNumber = CustomerPhoneNumber.T
 
-object CustomerAddressLine1 extends RefinedType[String, NonEmptyTrimmed]
-type CustomerAddressLine1 = CustomerAddressLine1.T
-
-object CustomerAddressLine2 extends RefinedType[String, NonEmptyTrimmed]
-type CustomerAddressLine2 = CustomerAddressLine2.T
-
-object CustomerCity extends RefinedType[String, NonEmptyTrimmed]
-type CustomerCity = CustomerCity.T
-
-object CustomerPostalCode extends RefinedType[String, NonEmptyTrimmed]
-type CustomerPostalCode = CustomerPostalCode.T
-
-object CustomerCountry extends RefinedType[String, NonEmptyTrimmed]
-type CustomerCountry = CustomerCountry.T
+object CustomerAddressEntry extends RefinedType[AddressEntry, Pure]
+type CustomerAddressEntry = CustomerAddressEntry.T
 
 // Catalogue
 

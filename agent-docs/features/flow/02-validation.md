@@ -1,8 +1,10 @@
 # Slice 2 — Validation
 
-Use after the endpoint contract/models exist. Add validated request domain models, newtypes, feature arbitraries, validators, and validator unit tests. Read [Iron](../../standards/iron.md), [Scala tests](../../standards/scala.md#tests), and the chosen transport standard: [Smithy names](../../standards/smithy.md#names) or [Tapir](../../standards/tapir.md).
+Use after the endpoint contract/models exist. Add validated request domain models, newtypes, feature arbitraries, validators, and validator unit tests. Read [Iron](../../standards/iron.md), [Scala tests](../../standards/scala.md#tests), [Chimney](../../standards/chimney.md), and the chosen transport standard: [Smithy names](../../standards/smithy.md#names) or [Tapir](../../standards/tapir.md).
 
 Validation is the only boundary where untrusted transport primitives become refined domain values. It returns one 400 `ValidationError` containing every invalid field; never fail fast.
+
+Validators check supplied values unchanged. Do not trim, normalize, or filter invalid values into absence before field refinement. `trimAndFilterNonEmpty` is permitted only inside `validateAddressHasAtLeastOneFieldNonEmpty`, to check whether at least one address field contains non-whitespace text; its temporary results must never replace the supplied values passed to field validation. An optional field accepts `None`, but a supplied empty, whitespace-only, or untrimmed string fails that field's refinement and retains the original value in the error. Keep any explicitly agreed normalization in a separately named preprocessing step before validation.
 
 ## Domain placement
 
@@ -24,7 +26,7 @@ Keep feature values out of generic arbitrary traits:
 - Shared refined-base generators such as exact `BigDecimal :| Pure` live in `IronRefinedTypeArbitraries`; feature arbitraries reuse them through their newtypes instead of redefining ranges.
 - Shared domain case-class generators such as `Price` and `ImageAsset` live in `GatewayArbitraries`; repository-only traits contain only repository Rows/inputs and persistence-specific enums. A valid canonical `Price` is correlated: generate a supported, fixed-fraction ISO currency first, then a realistically bounded non-negative amount at exactly that currency's fraction-digit scale. Never derive `Price` with independent `Gen.resultOf` fields.
 - `<Feature>DomainArbitraries` in test-kit extends `GatewayArbitraries`; define one explicitly named `given arb<ExactTypeName>` per domain case class. Use `Arbitrary(Gen.resultOf(Type.apply))` when existing field givens independently produce valid instances; write a custom generator only for correlations, normalization, bounds, or cross-field invariants.
-- Smithy route: `<Feature>SmithyArbitraries` in gateway-core test utils extends the domain trait plus `IronRefinedTypeTransformer`. Derive every Smithy arbitrary from the domain arbitrary using Chimney `transformInto`; add explicit `Transformer`s only where shapes differ.
+- Smithy route: `<Feature>SmithyArbitraries` in gateway-core test utils extends the domain trait plus `IronRefinedTypeTransformer`. Derive every Smithy arbitrary from the domain arbitrary following the [Chimney standard](../../standards/chimney.md), including its rules for Iron refined products and explicit transformers.
 - Tapir route: derive the typed endpoint-input arbitrary from the same domain arbitrary beside the endpoint tests; the domain generator remains the source of valid data.
 - Smithy given names append `Smithy` to avoid inherited collisions.
 - Never use anonymous givens: singular/plural synthesized names can shadow and produce misleading `RefinedType.Mirror` failures.
@@ -52,6 +54,7 @@ File: `validation/service/<Feature>RequestValidator.scala`.
 - Do not create a validator when wire decoding already guarantees the entire request (for example UUID-only input); construct its newtypes in the service.
 - Bind Smithy inputs as `<fullRequestName>Smithy`; qualify Tapir inputs equivalently. Bind validated values as the plain domain request name.
 - Compose fields in declaration order with `ValidatedNec` + `mapN`; clients must receive all errors in stable field order.
+- Put every constructor argument in the tuple, in the target's declaration order, and finish with `.mapN(Target.apply)`. Wrap an infallible value in `Validated.validNec(...)` rather than capturing it in a lambda; enum conversion follows the [Chimney enum standard](../../standards/chimney.md#enums) (see `validation/domain/AddressValidator.scala`).
 - `fieldName` exactly equals the Smithy member, except a `validateAllNested` batch wrapper uses the singular item concept because the error represents one indexed element.
 - Singular, batch, and combined requests reuse private per-item/per-field validation; never duplicate field lists.
 - A batch error identifies one failed element, so pass the singular item concept to `validateAllNested` (for example `catalogueItem`, not the plural request member `catalogueItems`). Preserve the source index and return no error for valid elements between failures.
@@ -66,6 +69,10 @@ File: `unit/validation/service/<Feature>RequestValidatorSpec.scala`; extend `ZWo
 
 1. **Success round-trip:** sample the domain request, transform to the transport request, validate, assert the original domain value.
 2. **Failure accumulation:** sample a valid transport request, replace all targeted fields with invalid values, and assert the exact ordered `List[InvalidFieldError]`, including nested indexes.
+
+The accumulation test exists to prove one thing: every field that can fail is collected and reported together, in order. Make each fallible field fail once in that single test, and stop there.
+
+Never re-test a validator that already has its own spec. When a request validator delegates to a shared domain validator (`EmailValidator`, `PhoneNumberDomainValidator`, `AddressValidator`, `PriceDomainValidator`), that validator's edge cases — bad parts, allowed combinations, formats, boundaries — are proven once in `unit/validation/domain/<Validator>Spec.scala`. The request validator spec does not repeat them and adds no separate "reject when …" test for a delegated rule. For a delegated field, the accumulation test carries one dummy invalid value, written by hand (for addresses: a single `ShippingAndBilling` entry with `city = ""`), just to show the delegated errors are accumulated with the others. The round-trip test already proves the wiring.
 
 Use fresh `arbitrarySample` data per test; no shared valid fixtures. Sampling is not free: never generate a batch/list wrapper and then replace its entire expensive collection. In that case, sample the single element model once, derive scenario variants with `.copy(...)`, and construct the one-field wrapper directly from the controlled list. Sample the complete batch only when the generator/round-trip itself is under proof. Add extra cases for list/default/nested behavior when the two required cases cannot prove them.
 

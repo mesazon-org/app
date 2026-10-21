@@ -1,21 +1,22 @@
 # Contract-first HTTP API
 
-Reusable Smithy rules. Related: [Mesazon endpoints](../features/flow/01-endpoints.md), [authentication](../project/authentication.md), [validation](../features/flow/02-validation.md), [newtypes](iron.md), [Scala/tests](scala.md), [Tapir](tapir.md).
+Reusable Smithy rules. Related: [Mesazon endpoints](../features/flow/01-endpoints.md), [authentication](../project/authentication.md), [validation](../features/flow/02-validation.md), [newtypes](iron.md), [Scala/tests](scala.md), [Chimney](chimney.md), [Tapir](tapir.md).
 
 ## Names
 
 - Service/file: `<Feature>Service` / `<Feature>Service.smithy`.
 - Operation: `{Action}{Entity}{HttpMethod}` or `{Flow}{HttpMethod}`; suffix equals actual method. Batch operation/URI/shapes use plural entity.
 - Shapes: `<Operation>Request|Response` in feature domain file.
-- Service/operation/shape names use `PascalCase`.
+- Service/operation/shape names use `UpperCamelCase`.
 - Contract name is canonical: validated domain request has the exact same name. Rename both together.
 - Generated types are always package-qualified; import package, never members.
 - When wire/domain types coexist: bare binding = domain; generated binding = full type name + `Smithy`. Applies to handler params, validated outputs, wrappers, tests, and arbitrary givens.
 - Each operation owns its shapes; never share a common entity shape across operations.
 - Item: `{Action}{Entity}`. Batch list: plural item name, no `List` suffix.
 - Contact/value+flag entry: `<Owner><Kind>EntryRequest`; list plural `...EntryRequests`; domain entry has same name.
+- Owner-less value shapes shared by several features live in `domain/Gateway.smithy` and mirror their shared domain case class (`PhoneNumberRequest` ↔ `PhoneNumber`, `AddressRequest` ↔ `Address`, `AddressEntryRequest` ↔ `AddressEntry`); each feature declares only its owner-named list, e.g. `list OrganizationAddressEntryRequests { member: AddressEntryRequest }`.
 - Request list member: `@default([])`, never `@required`, so omitted empty JSON decodes to non-optional `Nil`. Response list: `@required`. Never model request list as `Option[List]` solely to default it empty.
-- Members: `camelCase`; IDL UUID named `<entity>ID`; client duration integer named `<thing>ExpiresInSeconds`; enum values `SCREAMING_SNAKE_CASE`; centralize domain↔contract enum mappers.
+- Members: `camelCase`; IDL UUID named `<entity>ID`; client duration integer named `<thing>ExpiresInSeconds`; enum values use `UpperCamelCase` and exactly match their mirrored domain enum cases. Follow [Chimney's enum rules](chimney.md#enums) when converting them.
 - URI: verb-first kebab-case; plural entity for batches (`/insert/customers`).
 
 ## Files

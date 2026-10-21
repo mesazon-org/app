@@ -5,6 +5,7 @@ import io.mesazon.domain.gateway.ServiceError.BadRequestError.InvalidFieldError
 import io.mesazon.gateway.config.PhoneNumberValidatorConfig
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.utils.*
+import io.mesazon.gateway.utils.given
 import io.mesazon.gateway.validation.domain.*
 import io.mesazon.gateway.validation.service.*
 import io.mesazon.testkit.base.*
@@ -27,6 +28,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
     .provide(
       CustomerBookRequestValidator.live,
       EmailValidator.live,
+      AddressValidator.live,
       PhoneNumberDomainValidator.live,
       PhoneNumberUtil.live,
       ZLayer.succeed(PhoneNumberValidatorConfig(supportedPhoneRegions = Set("CY", "GB"))),
@@ -51,6 +53,17 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .copy(
             fullName = "",
             emails = List(smithy.CustomerEmailEntryRequest(email = "invalid-email", isDefault = false)),
+            addresses = List(
+              smithy.AddressEntryRequest(
+                address = smithy.AddressRequest(
+                  addressLine1 = Some("1 Main Street"),
+                  city = Some(""),
+                  postalCode = Some("1010"),
+                  country = Some("Cyprus"),
+                ),
+                addressType = smithy.AddressType.ShippingAndBilling,
+              )
+            ),
           )
 
         validator
@@ -60,6 +73,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
             invalidFields = List(
               InvalidFieldError("fullName", nonEmptyTrimmedError, List("")),
               emailFormatError("invalid-email"),
+              InvalidFieldError("city", nonEmptyTrimmedError, List(""), index = 0),
             )
           )
       }

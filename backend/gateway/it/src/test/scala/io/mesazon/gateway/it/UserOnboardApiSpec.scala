@@ -52,7 +52,7 @@ class UserOnboardApiSpec
           .zioValue
 
         onboardPasswordPostResponse.code shouldBe StatusCode.Ok
-        onboardPasswordPostResponse.body.value.onboardStage.name shouldBe "PASSWORD_PROVIDED"
+        onboardPasswordPostResponse.body.value.onboardStage.name shouldBe "PasswordProvided"
 
         mailHogClient.readInbox().zioValue.total shouldBe 1
 
@@ -200,7 +200,7 @@ class UserOnboardApiSpec
           .zioValue
 
         onboardDetailsPostResponse.code shouldBe StatusCode.Ok
-        onboardDetailsPostResponse.body.value.onboardStage.name shouldBe "PHONE_VERIFICATION"
+        onboardDetailsPostResponse.body.value.onboardStage.name shouldBe "PhoneVerification"
         onboardDetailsPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
@@ -281,7 +281,7 @@ class UserOnboardApiSpec
             .zioValue
 
           onboardDetailsPostResponse.code shouldBe StatusCode.Ok
-          onboardDetailsPostResponse.body.value.onboardStage.name shouldBe "PHONE_VERIFICATION"
+          onboardDetailsPostResponse.body.value.onboardStage.name shouldBe "PhoneVerification"
           onboardDetailsPostResponse.body.value.otpID shouldBe userOtpRow.otpID.value
 
           mailHogClient.readInbox().zioValue.total shouldBe 0
@@ -556,7 +556,7 @@ class UserOnboardApiSpec
           .zioValue
 
         onboardDetailsPostResponse.code shouldBe StatusCode.Ok
-        onboardDetailsPostResponse.body.value.onboardStage.name shouldBe "PHONE_VERIFICATION"
+        onboardDetailsPostResponse.body.value.onboardStage.name shouldBe "PhoneVerification"
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 
@@ -612,7 +612,7 @@ class UserOnboardApiSpec
             .zioValue
 
           onboardDetailsPostResponse.code shouldBe StatusCode.Ok
-          onboardDetailsPostResponse.body.value.onboardStage.name shouldBe "PHONE_VERIFICATION"
+          onboardDetailsPostResponse.body.value.onboardStage.name shouldBe "PhoneVerification"
           onboardDetailsPostResponse.body.value.otpID shouldBe userOtpRowCaller.otpID.value
 
           mailHogClient.readInbox().zioValue.total shouldBe 0
@@ -674,7 +674,7 @@ class UserOnboardApiSpec
           .zioValue
 
         onboardVerifyPhoneNumberResponse.code shouldBe StatusCode.Ok
-        onboardVerifyPhoneNumberResponse.body.value.onboardStage.name shouldBe "PHONE_VERIFIED"
+        onboardVerifyPhoneNumberResponse.body.value.onboardStage.name shouldBe "PhoneVerified"
 
         mailHogClient.readInbox().zioValue.total shouldBe 0
 

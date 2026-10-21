@@ -54,7 +54,7 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
           sendMaxRetries = 2,
           sendRetryDelay = Duration.fromSeconds(1),
           csvBatchMaxDataRows = 50,
-          csvBatchParallelism = 3,
+          csvBatchParallelism = 6,
         )
       ),
       HttpClientZioBackend.layer(),
@@ -86,8 +86,13 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
             .extractCustomers(organizationID, extractCustomersFileName, extractCustomersFileByteStream)
             .zioValue
 
+          val extractCustomersPostResponse2 = extractCustomersPostResponse.copy(
+            customerIndividualCandidates = extractCustomersPostResponse.customerIndividualCandidates.take(10),
+            customerBusinessCandidates = extractCustomersPostResponse.customerBusinessCandidates.take(10),
+          )
+
           info(
-            s"$fileName response:\n${writeToString(extractCustomersPostResponse, WriterConfig.withIndentionStep(2))}"
+            s"$fileName response:\n${writeToString(extractCustomersPostResponse2, WriterConfig.withIndentionStep(2))}"
           )
         }
       }

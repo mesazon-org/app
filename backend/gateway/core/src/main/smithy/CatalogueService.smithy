@@ -24,8 +24,8 @@ service CatalogueService {
     ]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "POST", uri: "/insert/catalogue-item", code: 204)
 operation InsertCatalogueItemPost {
     input := with [OrganizationScopedInput] {
@@ -36,8 +36,8 @@ operation InsertCatalogueItemPost {
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "POST", uri: "/insert/catalogue-items", code: 204)
 operation InsertCatalogueItemsPost {
     input := with [OrganizationScopedInput] {
@@ -48,8 +48,8 @@ operation InsertCatalogueItemsPost {
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "PUT", uri: "/update/catalogue-item", code: 204)
 operation UpdateCatalogueItemPut {
     input := with [OrganizationScopedInput] {
@@ -60,8 +60,8 @@ operation UpdateCatalogueItemPut {
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
 @http(method: "PUT", uri: "/archive/catalogue-item", code: 204)
 operation ArchiveCatalogueItemPut {
     input := with [OrganizationScopedInput] {
@@ -72,8 +72,8 @@ operation ArchiveCatalogueItemPut {
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`, `USER`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
 @http(method: "GET", uri: "/get/catalogue-item/{catalogueItemID}", code: 200)
 operation GetCatalogueItemGet {
     input := with [OrganizationScopedInput] {
@@ -85,8 +85,8 @@ operation GetCatalogueItemGet {
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
-/// **Required Organization User Roles:** [`OWNER`, `ADMIN`, `USER`]
-@organizationUserRolesAllowed(roles: ["OWNER", "ADMIN", "USER"])
+/// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
 @http(method: "GET", uri: "/get/catalogue-items", code: 200)
 operation GetCatalogueItemsGet {
     input := with [OrganizationScopedInput] {}

@@ -41,7 +41,7 @@ Migration rules:
 
 ## Historical data
 
-- Parent owning financial/audit history: soft-delete via application-set lifecycle enum (`ACTIVE`/`ARCHIVED` style), no DB default; active-only reads by default. Pure children with no history may hard-delete.
+- Parent owning financial/audit history: soft-delete via application-set lifecycle enum (`Active`/`Archived` style), no DB default; active-only reads by default. Pure children with no history may hard-delete.
 - Historical rows: append-only; cancellation/refund/reversal changes status, never deletes.
 - Snapshot relevant parent fields onto history in addition to FK.
 - History→parent FK: `on delete restrict`, never cascade.

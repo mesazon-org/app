@@ -1,7 +1,9 @@
 package io.mesazon.gateway.middleware
 
+import io.mesazon.domain.gateway.OrganizationUserRole
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy as gatewaySmithy
+import io.scalaland.chimney.dsl.*
 import org.http4s.HttpApp
 import smithy4s.Hints
 import smithy4s.http4s.ServerEndpointMiddleware
@@ -34,7 +36,7 @@ object ServerMiddleware {
               case None =>
                 val organizationUserRolesAllowedOpt = endpointHints
                   .get[gatewaySmithy.OrganizationUserRolesAllowed]
-                  .map(_.roles.map(organizationUserRoleFromSmithyToDomain))
+                  .map(_.roles.transformInto[List[OrganizationUserRole]])
                 HttpApp[Task](request =>
                   authorizationService.auth(
                     request,

@@ -32,6 +32,10 @@ trait OrganizationManagementDomainArbitraries extends GatewayArbitraries {
     )(_.copy(isDefault = true))
   )
 
+  given arbOrganizationAddressEntries: Arbitrary[List[OrganizationAddressEntry]] = Arbitrary(
+    genAddressEntriesAllowedCombination.map(_.map(OrganizationAddressEntry(_)))
+  )
+
   given arbCreateOrganizationPostRequest: Arbitrary[CreateOrganizationPostRequest] = Arbitrary(
     Gen.resultOf(CreateOrganizationPostRequest.apply)
   )

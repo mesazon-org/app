@@ -21,6 +21,7 @@ Reusable functional JDBC rules. Related: [schema](postgres.md), [repository](../
 - Derive enums generically from case names, matching enum-as-text.
 - Document/semi-structured columns need explicitly named codecs beside the owning queries; anonymous same-shape codecs may collide/shadow.
 - Keep the refinement library's codec-integration import in derivation scope; missing it may appear as a low-level macro failure/stack overflow.
+- jsoniter `JsonCodecMaker.make` encodes a Scala 3 enum case inside a jsonb document as `{"type": "<Case>"}` by default (discriminator field). To store the plain case-name string, scope a named `JsonCodecMaker.makeWithoutDiscriminator` codec to the enum beside the owning queries (e.g. `addressTypeCodec` in `queries/queries.scala`); the list codec picks it up.
 
 ## Building dynamic queries
 

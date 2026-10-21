@@ -67,13 +67,18 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 | 4. User leaves the optional details blank | - The organization is created with only a name and short name |
 | 5. The confirmation email cannot be sent | - The organization is still created and the user is not held up |
 | 6. User has not finished personal onboarding | - Rejected. Verifying a phone number is what unlocks this step |
+| 7. User supplies one address for both shipping and billing, or a shipping address and a billing address | - Each address is stored with its type - None is marked as a default - An empty list is allowed; the organization simply has no recorded address |
+| 8. User supplies an address with some text fields missing, but at least one field has content | - Accepted - The address is stored with the content that was supplied |
+| 9. User supplies an address whose text fields are all empty, with a type other than shipping, billing, or both, or any other combination of addresses | - Rejected and nothing is stored |
 
 #### Requirements
 
-1. A business name and a short name are required. Everything else — tagline, address, company registration number, tax id, contact details — is optional.
+1. A business name and a short name are required. Everything else — tagline, addresses, company registration number, tax id, contact details — is optional.
 2. The short name may contain only lowercase letters, digits and hyphens, is at most 63 characters, and must be unique across the whole product, because it is used in web addresses.
 3. When contact emails or phone numbers are given, every entry must be valid and exactly one of them must be marked as the default.
 4. We email the creator to confirm, but never let that email delay or block the creation.
+5. Every address text field is optional. Missing or null values are absent. Supplied values must contain 1–255 characters with no leading or trailing whitespace; empty or whitespace-only values are rejected for that field. An address must contain at least one non-empty text field, its type is required, and addresses have no default.
+6. When addresses are given there must be either exactly one, marked as both shipping and billing, or exactly two, one shipping and one billing in either order. Three or more, two of the same type, a single shipping-only or billing-only address, or a both-purposes address alongside another are all rejected.
 
 #### Request / Response / Outcome
 
@@ -86,11 +91,7 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 | Tagline | `String` | 1–255 characters, trimmed | ❌ | A short line describing the business |
 | Emails | `EmailEntry[]` | Empty by default | ❌ | Contact email addresses. See **EmailEntry** below |
 | Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact phone numbers. See **PhoneNumberEntry** below |
-| Address Line 1 | `String` | 1–255 characters, trimmed | ❌ | Street address |
-| Address Line 2 | `String` | 1–255 characters, trimmed | ❌ | Street address, continued |
-| City | `String` | 1–255 characters, trimmed | ❌ |  |
-| Postal Code | `String` | 1–255 characters, trimmed | ❌ |  |
-| Country | `String` | 1–255 characters, trimmed | ❌ |  |
+| Addresses | `AddressEntry[]` | Empty by default; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | The business's addresses. See **AddressEntry** below |
 | Company Registration Number | `String` | 1–255 characters, trimmed | ❌ |  |
 | Tax ID | `String` | 1–255 characters, trimmed | ❌ |  |
 
@@ -98,8 +99,8 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters | ✅ | One contact address |
-| Is Default | `Boolean` | Exactly one entry in the list must be true | ✅ | Marks the address to use by default |
+| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters | ✅ | One contact email address |
+| Is Default | `Boolean` | Exactly one entry in the list must be true | ✅ | Marks the email address to use by default |
 
 **PhoneNumberEntry**
 
@@ -114,6 +115,23 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 | --- | --- | --- | --- | --- |
 | Phone National Number | `String` | 1–255 characters, trimmed; must be a real number for its country | ✅ | The number without its country code |
 | Phone Country Code | `String` | 1–255 characters, trimmed; must be a real country dialling code | ✅ | The country dialling code |
+
+**AddressEntry**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Address | `Address` | — | ✅ | Where it is. See **Address** below |
+| Address Type | `AddressType` | `Shipping`, `Billing` or `ShippingAndBilling` | ✅ | What the address is used for. `ShippingAndBilling` means one address serves both |
+
+**Address**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Address Line 1 | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ | Street address |
+| Address Line 2 | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ | Street address, continued |
+| City | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ |  |
+| Postal Code | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ |  |
+| Country | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ | Free text, as the person types it |
 
 **Response**
 
@@ -131,7 +149,7 @@ Only the owner role is ever assigned today, because there is no way to add a sec
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - Form validation error - Short name has the wrong shape - A contact list has no default, or more than one |
+| 400 | `VALIDATION_ERROR` | - Form validation error - Short name has the wrong shape - A contact list has no default, or more than one - An address has no non-empty text field - The addresses are not an allowed combination |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
 | 500 | `INTERNAL_SERVER_ERROR` | - The short name is already taken - Unexpected error |

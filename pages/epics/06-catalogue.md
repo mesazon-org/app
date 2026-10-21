@@ -221,7 +221,7 @@ Request is empty apart from naming the organization.
 | --- | --- | --- | --- | --- |
 | Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Identifies the item, used to open it |
 | Name | `String` | — | ✅ | The item's name |
-| Status | `CatalogueItemStatus` | `ACTIVE` or `ARCHIVED` | ✅ | Always `ACTIVE` here, since only active items are listed |
+| Status | `CatalogueItemStatus` | `Active` or `Archived` | ✅ | Always `Active` here, since only active items are listed |
 | Image URL | `String` | A working link, present only if the item has an image | ❌ | A picture of the item |
 
 **Outcome**

@@ -27,7 +27,7 @@ object FileScanner {
     private val NoRemainingBytesAllowed = 0L
     private val tika                    = new Tika()
 
-    inline private val FileNameDeclaredField = "fileNameDeclared"
+    private inline val FileNameDeclaredField = "fileNameDeclared"
 
     private def validateFileExtension(
         fileNameDeclared: String,
