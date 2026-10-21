@@ -4,11 +4,13 @@ Known-missing acceptance coverage, found by reading the epics in `pages/epics/` 
 
 This is a backlog, not a guide — write the tests per [Acceptance testing](project/acceptance-testing.md), then delete the entry. An entry left here after its test lands is worse than no list.
 
-Established 2026-09-03 from a review of `01-user-onboarding`, `02-forgot-password`, `03-sign-in`, `04-organization-onboarding`, `05-customer-book`, and `06-catalogue`. At that review all six legacy Catalogue Smithy endpoints had acceptance blocks; their replacement with the item/variant contract introduces the Catalogue gap below. Token Refresh has not been audited and may hold gaps of its own.
+Established 2026-09-03 from a review of `01-user-onboarding`, `02-forgot-password`, `03-sign-in`, `04-organization-onboarding`, `05-customer-book`, and `06-catalogue`. Token Refresh has not been audited and may hold gaps of its own.
 
 ## Catalogue remaining coverage
 
-All eight replacement JSON operations have acceptance sections in `CatalogueApiSpec`, in Smithy order: single POST (12), batch POST (12), item PUT (16), item archive (8), variant archive (9), detail GET (10), summary GET (10), and uniqueness GET (15). The final run passed all 92 cases against a fresh gateway image and disposable PostgreSQL/Flyway database after the case-insensitive SKU fix; ten suites completed and none aborted. Both static GET routes are verified. The separate 35-case `FileApiSpec`, including 14 item-image cases, remains passing evidence for uploads. Completed endpoints are no longer pending work.
+All eight JSON operations have acceptance sections. Current coverage and verified runs are recorded in the [Catalogue feature doc](features/catalogue.md#tests-and-verification). The remaining HTTP gaps are below; reduced-scope and typed-client limits are recorded separately.
+
+**Accepted decimal precision limitation:** rounding beyond 34 significant digits in HTTP and database JSON decoding is documented in the [Catalogue review](features/catalogue.md#known-issues-edge-cases-and-larger-follow-ups). The user deferred codec changes and dedicated precision tests because such values are outside expected business use. This is not pending acceptance work for the current scope. If the business needs greater precision later, use typed requests and independent exact database/response assertions; the acceptance client's current rounding codec must not hide the result.
 
 **Behaviour:** [Catalogue](../pages/epics/06-catalogue.md), opening an item and browsing all/chosen items with an image. The detail and summary acceptance successes currently use absent images. Presigned image URLs are covered by functional tests, but their HTTP response branches remain untested.
 

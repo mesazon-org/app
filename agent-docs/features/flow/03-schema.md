@@ -22,7 +22,7 @@ Current pre-release migration is `V2025.05.27__init.sql`; extend it only while n
 - Enum-as-text examples: `onboard_stage`, `organization_stage`, `user_role`, `otp_type`, `token_type`, `action_attempt_type`.
 - Phone value: `phone_region`, `phone_country_code`, `phone_national_number`, `phone_number_e164`.
 - Atomic multi-value contacts: `emails`, `phone_numbers`, `addresses` as `jsonb` (on `organization_details` and `customer`; enums inside, such as `addressType`, are stored as case-name strings).
-- `customer.status` is the sole native-enum exception: PG `customer_status`, labels `Active`/`Archived`; archive, never hard-delete.
+- Native-enum exceptions: `customer.status` uses PG `customer_status` (`Active`/`Archived`); Catalogue item/variant statuses use `catalogue_item_status` (`Active`/`Inactive`) and `catalogue_item_variant_status` (`Active`/`Inactive`/`OutOfStock`). Catalogue archives through a separate `is_archived` flag; all business statuses remain usable while it is false. See [Catalogue schema](../catalogue.md#schema-and-codecs). Archive records rather than hard-deleting them.
 - `customer_type`: `Individual` or `Business`, all customer data on `customer`.
   - Individual: `name` full name, `tax_id` null.
   - Business: `name` company, optional `tax_id`.

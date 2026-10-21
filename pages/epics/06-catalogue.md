@@ -4,49 +4,43 @@ title: Catalogue
 
 # Catalogue
 
-> **Implemented and reviewed — not released.** The catalogue with variants and selling units replaces the old item-only catalogue. Checks pass for all eight catalogue operations, case-insensitive SKU uniqueness, separate business status and archive behavior, and item-image uploads.
-
 ### Overview
 
-Every organization keeps a catalogue of what it sells. An item is the thing a customer recognises — a Coca-Cola, a T-shirt, tomatoes. Each item comes in one or more **variants**: the exact versions that are sold, each with its own way of being sold and, when set, its own price (a 1 L bottle, a pack of 6, a box of 12 kg, loose by the kilo). Future orders will pick variants from the catalogue.
+The catalogue records what an organization sells. Each item has one or more variants, and each variant describes how it is sold, its optional price, and the details that distinguish it. People can add, browse, open, update, archive, and check items, and can upload an image for an item.
 
 ### Related / Out of scope
 
-- **Related** — [Organization Onboarding]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}). An organization must exist first, and every request here names which organization it is for.
-- **Related** — [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}). Both work the same way — add, browse, open, update, archive — for a different kind of record. Anything already written there is not repeated here.
-- **Not built yet** — Orders. The catalogue exists so that orders can pick variants from it later, but nothing places or records an order yet. Whether a variant with no set price can be ordered is decided when orders are built.
-- **Not built yet** — Search, filtering and paging. The list returns every non-archived item in one go.
-- **Not built yet** — Pricing by time. Nothing can be billed per hour or per day. A service can be listed as a quantity of 1 piece, for example "1 session".
-- **Not built yet** — Images for individual variants. Only the item has an image.
+- **Related** — [Organization Onboarding]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}). An organization must exist before its catalogue can be used.
+- **Related** — [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}). It uses the same organization membership and role rules for a different kind of record.
+- **Not built yet** — Orders. Nothing places an order or decides whether an item without a price can be ordered.
+- **Not built yet** — Search, filtering, and paging. Catalogue browsing returns all non-archived items.
+- **Not built yet** — Time-based pricing and images for individual variants.
 
 ### Requirements across the epic
 
-Every request in this epic names the organization it applies to, and only touches that organization's catalogue.
-
 #### Functional
 
-1. An item has a name, may have a description, and has at least one variant. There is no upper limit on variants. The price and the way something is sold belong to each variant, not to the item.
-2. A variant must have a selling unit. It may also have a price, a SKU (stock-keeping unit), a label, a description, and attributes such as colour or size. A simple item is just an item with one variant that leaves all of these out.
-3. A variant without a price has no set price yet — for example, price on request or made to order. It is still listed and opened like any other variant.
-4. A variant's price, when given, is the full price of exactly the quantity its selling unit states, including everything inside it. "2 caramels" is its own variant with its own price, not twice the price of one. A pack of 6 bottles is priced as the whole pack. Loose tomatoes sold as "1 kilogram" are priced per kilogram.
-5. Each priced variant has its own currency, as part of its price. Variants of the same item may use different currencies. A variant with no price has no currency.
-6. An item's name must be unique among the organization's non-archived items. Archiving an item frees its name for reuse.
-7. A SKU, when given, must be unique among all of the organization's non-archived variants, across every item. Upper and lower case identify the same SKU. Archiving the variant, or its item, frees the SKU for reuse.
-8. Items and variants are **archived**, never deleted. Archiving an item also archives all of its variants. An item's last non-archived variant cannot be archived on its own; to retire it, archive the item.
-9. An item may carry one image. Uploading a new one replaces it.
+1. An item has a name, an optional description, and at least one variant. A variant has a required selling unit and may have a price, SKU, label, description, and attributes.
+2. A price belongs to a variant and covers exactly the quantity described by that variant's selling unit. Variants without a price remain listed and can be opened.
+3. An item name is unique among the organization's non-archived items. A SKU, when present, is unique among the organization's non-archived variants across all items. SKU comparison ignores letter case, while the submitted spelling is preserved.
+4. Items and variants are archived rather than deleted. Archiving an item archives all of its variants. A variant cannot be archived when it is the item's last non-archived variant.
+5. Business status and archive state are separate. An item is `Active` or `Inactive`; a variant is `Active`, `Inactive`, or `OutOfStock`. Every non-archived status remains visible, editable, and eligible for uniqueness checks and image upload.
+6. Public reads return non-archived records only. They do not include an archive flag.
+7. An item may have one image. A later upload replaces the existing image.
 
 #### Non-functional
 
-1. Every request needs a signed-in person who has finished personal onboarding and belongs to the organization named in the request. Someone outside the organization is refused with a server error — the same gap as [Organization Onboarding gap 3]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}#3-not-belonging-to-an-organization-is-reported-as-a-server-error).
-2. Owners, admins and ordinary members can all read. Only owners and admins can add, change, archive, or upload an image.
-3. Prices and the numbers in a selling unit are exact and never rounded. A price is kept with exactly two decimal places. The numbers in a selling unit keep exactly the decimal places they were given.
-4. When a request contains several validation problems at once, all of them are reported together. Each problem names the exact item, and the exact variant within it, that caused it. A currency that is not exactly the uppercase code `EUR`, `USD` or `GBP` is rejected as a bad request during request decoding, before field validation and accumulation.
-5. Adding several items at once is all-or-nothing. If any one of them fails, none of them are stored.
-6. A missing, invalid, or expired access token is refused with the same error code used everywhere else in the product for a rejected access token.
+1. Every request identifies an organization. The person must be signed in, have completed personal onboarding, and belong to that organization.
+2. Owners, admins, and ordinary members can read. Only owners and admins can add, update, archive, or upload an image.
+3. Price amounts use exactly two decimal places after validation without rounding. Selling-unit validation preserves the supplied decimal value, but very precise HTTP inputs can be rounded before validation; see [gap 11](#11-very-precise-input-numbers-can-be-rounded).
+4. A price currency is exactly the uppercase `EUR`, `USD`, or `GBP` code. Invalid currency values are rejected before field validation.
+5. When several validation problems are present, all are returned together in a deterministic order.
+6. A batch add is all-or-nothing. If any item fails, none of the items is stored.
+7. Missing, invalid, or expired access tokens use the product's standard unauthorized response.
 
 ### User flow
 
-Like the customer book, these are not a single journey. They are the things that can be done to a catalogue, and each stands on its own.
+These are separate operations on a catalogue rather than one required journey.
 
 1. [User Adds an Item](#1-user-adds-an-item)
 2. [User Uploads an Item's Image](#2-user-uploads-an-items-image)
@@ -60,124 +54,55 @@ Like the customer book, these are not a single journey. They are the things that
 
 ### Prerequisites
 
-**Item status** — an item is `Active` or `Inactive`. New items start out `Active`, and owners and admins can change this status while the item is not archived.
+**Item status** — an item starts `Active` and may be changed to `Inactive` while it is non-archived. `Inactive` does not hide or disable the item.
 
-**Variant status** — a variant is `Active`, `Inactive` or `OutOfStock`. Every new variant starts out `Active`, including one added to an existing item.
-- Owners and admins can move a variant freely between `Active`, `Inactive` and `OutOfStock`, in any direction, by updating the item.
-- Every item and variant status remains available for reading and editing while the record is not archived. Item image upload follows the same rule. Status does not disable a record.
-- Non-archived items reserve their names, and non-archived variants reserve their SKUs, whatever their status.
+**Variant status** — a new variant starts `Active`. An existing variant may be moved between `Active`, `Inactive`, and `OutOfStock` while it is non-archived. These statuses do not hide or disable the variant.
 
-**Archiving** — `isArchived` is a separate flag on both items and variants. New items and variants have `isArchived = false`. Only archiving can set this flag to `true`; changing fields or business status preserves it. Archiving preserves the item's or variant's status and cannot be undone. Archiving an item sets the flag on all of its variants while preserving each variant's status. Only the flag determines whether an item or variant is archived.
+**Archive state** — new items and variants are non-archived. Only the archive operations set the archive state. Archiving is permanent, and an archive operation preserves the item's and variants' business statuses and other details.
 
-**Attributes** — words the business chooses itself to tell variants apart, written as a name and a value: `Colour: Red`, `Size: M`, `Flavour: Peanut`. There is no fixed list. Two variants of the same item may have identical attributes.
-
-**Selling unit** — how one variant is sold. It has up to three parts. Each part is a number and a unit:
+**Selling unit** — every variant has a quantity and unit. It may also have a per-unit part and a unit-size part. Each number is greater than 0 and at most 99,999. Validation adds no decimal-place limit; the current input-decoding limitation is described in [gap 11](#11-very-precise-input-numbers-can-be-rounded).
 
 | Part | Meaning | Required |
 | --- | --- | --- |
-| Quantity | What one sale is — the amount the price covers | Yes |
-| Per unit | What each sold unit contains: how many containers, and which kind | No |
-| Unit size | The size of each single thing | No |
+| Quantity | The amount covered by one sale | ✅ |
+| Per unit | How many containers or pieces are in the sold unit | ❌ |
+| Unit size | The size of each individual thing | ❌ |
 
-- There are three groups of units:
-  - **Measurement units:** gram, kilogram, millilitre, litre, millimetre, centimetre, metre and square metre.
-  - **Package units:** pack and box. They say how something is sold or grouped.
-  - **Per units:** bag, bottle, can, jar and piece. They are the containers or pieces a customer sees, as in "per bottle".
-- The quantity can use any unit from any group. The per-unit part uses only per units. The unit-size part uses only measurement units.
-- Every number is greater than 0 and at most 99999. A number may have decimal places, and is never rounded.
-- Any combination of the three parts is accepted.
+- Quantity may use a measurement, package, or per-unit unit.
+- Per unit may use `Bag`, `Bottle`, `Can`, `Jar`, or `Piece`.
+- Unit size may use `Gram`, `Kilogram`, `Millilitre`, `Litre`, `Millimetre`, `Centimetre`, `Metre`, or `SquareMetre`.
+- Package units are `Pack` and `Box`.
 
-| Example | Quantity | Per unit | Unit size |
-| --- | --- | --- | --- |
-| 1 caramel | 1 piece | — | — |
-| 2 caramels | 2 piece | — | — |
-| A 1 L bottle of Coca-Cola | 1 bottle | — | 1 litre |
-| A pack of 6 × 1 L bottles | 1 pack | 6 bottle | 1 litre |
-| A box of 12 kg of tomatoes | 1 box | — | 12 kilogram |
-| Loose tomatoes, priced per kg | 1 kilogram | — | — |
-| A box of 100 screws | 1 box | 100 piece | — |
-
-**Price** — optional on every variant. When given, it is an exact amount plus a currency, always together: a price is given in full or left out entirely. The currency must be exactly the uppercase code `EUR`, `USD` or `GBP`; lowercase, surrounding-space, and other spellings are rejected without trimming or uppercasing. An amount may have at most two decimal places when sent; fewer decimal places are kept by appending zeroes until it has exactly two, and no amount is rounded. Every rule is in **Price** in [step 1](#1-user-adds-an-item).
+**Price** — a price is an exact non-negative amount and a currency together. The amount has at most 12 integer digits and at most two decimal places on input. Lower scales are padded to two places; values are never rounded. `EUR`, `USD`, and `GBP` are the available currencies.
 
 ### 1. User Adds an Item
 
 **Who can reach this step: an owner or admin of the organization.**
 
-- The user gives the item a name, optionally a description, and at least one variant. Each variant has a selling unit and, optionally, a price.
-- Several items can be added in one go.
-- Before adding, the user can check whether a name or SKU is still free, as in [step 9](#9-user-checks-a-name-or-sku-is-free).
+- The user supplies an item name, an optional description, and one or more variants.
+- A batch request can add several items together.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User adds a simple item with one variant, such as a 1 L bottle of Coca-Cola | - Stored as an active, non-archived item with one active, non-archived variant |
-| 2. User adds an item with several variants, such as a protein bar in three flavours, each with its own SKU and attributes | - The item and every variant are stored together, each variant active and non-archived |
-| 3. User adds variants that differ only in quantity, such as 1 caramel and 2 caramels | - Each variant keeps the price it was given; nothing is worked out from another variant's price |
-| 4. User adds variants in different currencies | - Accepted; each variant keeps its own currency |
-| 5. User adds a variant with no price | - Stored with no set price |
-| 6. User adds an item with no variants | - Rejected |
-| 7. User adds several items at once | - All are stored together or none are |
-| 8. User adds an item whose name is already taken by a non-archived item | - Rejected as a conflict, naming what clashed |
-| 9. User gives a SKU that a non-archived variant already has, in this request or already in the catalogue | - Rejected as a conflict, naming what clashed |
-| 10. User gives an invalid price amount or breaks a rule in **Selling unit** or the attribute rules below | - Rejected, naming the item, the variant, and the part at fault |
-| 11. User gives a currency other than the exact uppercase codes `EUR`, `USD` or `GBP` | - Rejected as a bad request before field validation |
-| 12. User submits several entries with validation problems at once | - Every validation problem is reported together, each tied to its item and variant |
-| 13. A member with the ordinary user role tries to add an item | - Rejected |
-| 14. User submits a batch with no items | - Rejected as invalid; nothing is stored |
+| 1. User adds an item with one or several variants | - The item and all variants are stored - Every new item and variant starts `Active` and non-archived |
+| 2. A variant has no price | - It is stored and listed without a set price |
+| 3. Variants use different quantities, units, prices, or currencies | - Each variant keeps its own values |
+| 4. User adds an item without a variant | - The request is rejected |
+| 5. A name or SKU is already reserved by a non-archived record | - The request is rejected as a conflict |
+| 6. Several validation problems occur in one request | - Every problem is returned together in a deterministic order |
+| 7. A batch contains no items or one item fails | - The request is rejected and no item is stored |
+| 8. A member without an owner or admin role tries to add an item | - The request is rejected |
 
 #### Requirements
 
 1. An item needs a name and at least one variant. The description is optional.
-2. Every variant needs a selling unit. The price, SKU, label, description and attributes are optional.
-3. Every price, selling unit and attribute must follow the rules in the tables below.
-4. A batch must contain at least one item.
+2. Every variant needs a selling unit. Its price and other variant fields are optional.
+3. Names, prices, selling units, SKUs, and attributes follow the rules in this epic.
+4. A batch must contain at least one item and succeeds only when every item is valid.
 
 #### Request / Response / Outcome
-
-These shapes are used throughout this epic.
-
-**Price**
-
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| Amount | `BigDecimal` | Non-negative; at most 12 integer digits; 0–2 decimal places on input; stored with exactly 2 decimal places by appending zeroes; never rounded | ✅ | The exact amount |
-| Currency | `Currency` | `EUR`, `USD` or `GBP` | ✅ | Which currency the amount is in |
-
-**CatalogueItemVariantSaleUnit**
-
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| Quantity | `CatalogueItemVariantQuantity` | See **CatalogueItemVariantQuantity** | ✅ | What one sale is, such as 1 pack or 1 kilogram |
-| Per Unit | `CatalogueItemVariantPerUnit` | See **CatalogueItemVariantPerUnit** | ❌ | What each sold unit contains, such as 6 bottles |
-| Unit Size | `CatalogueItemVariantUnitSize` | See **CatalogueItemVariantUnitSize** | ❌ | The size of each single thing, such as 1 litre |
-
-**CatalogueItemVariantQuantity**
-
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| Value | `BigDecimal` | Greater than 0; at most 99999; never rounded | ✅ | How many |
-| Unit | `CatalogueItemVariantUnit` | Any **UnitSize**, **PackageUnit** or **PerUnit** value | ✅ | Of what |
-
-**CatalogueItemVariantPerUnit**
-
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| Value | `BigDecimal` | Greater than 0; at most 99999; never rounded | ✅ | How many in each sold unit |
-| Unit | `CatalogueItemVariantUnitPerUnit` | See **PerUnit** | ✅ | What kind of container or piece |
-
-**CatalogueItemVariantUnitSize**
-
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| Value | `BigDecimal` | Greater than 0; at most 99999; never rounded | ✅ | The size |
-| Unit | `CatalogueItemVariantUnitUnitSize` | See **UnitSize** | ✅ | What it is measured in |
-
-**UnitSize** — `Gram`, `Kilogram`, `Millilitre`, `Litre`, `Millimetre`, `Centimetre`, `Metre` or `SquareMetre`.
-
-**PackageUnit** — `Pack` or `Box`.
-
-**PerUnit** — `Bag`, `Bottle`, `Can`, `Jar` or `Piece`.
 
 **Request — adding one item**
 
@@ -185,208 +110,213 @@ These shapes are used throughout this epic.
 | --- | --- | --- | --- | --- |
 | Name | `String` | 1–255 characters, trimmed; unique among non-archived items | ✅ | The item's name |
 | Description | `String` | 1–255 characters, trimmed | ❌ | A longer description of the item |
-| Variants | `CatalogueItemVariantInsert[]` | At least one entry; no upper limit | ✅ | The versions of the item that are sold |
+| Variants | `CatalogueItemVariantInsert[]` | At least one entry; up to 1,024 entries can be decoded | ❌ | The versions of the item that are sold |
 
 **CatalogueItemVariantInsert**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| SKU | `String` | 1–255 characters, trimmed; case-insensitive uniqueness; unique among the organization's non-archived variants | ❌ | The business's own stock code |
-| Label | `String` | 1–255 characters, trimmed | ❌ | A short label for this variant, such as "1L Lemon bottle" for the item "COKE" |
-| Description | `String` | 1–255 characters, trimmed | ❌ | A longer description of this variant |
-| Attributes | `Map<String, String>` | Empty by default; each name and value 1–255 characters, trimmed; names unique within the variant; no limit on how many | ❌ | What sets this variant apart, such as colour and size |
-| Price | `CatalogueItemVariantPrice` | See **Price** | ❌ | The full price of the quantity its selling unit states. Left out means the variant has no set price |
-| Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** | ✅ | How this variant is sold |
+| SKU | `String` | 1–255 characters, trimmed; case-insensitive uniqueness among non-archived variants | ❌ | The business's stock code; its submitted spelling is preserved |
+| Label | `String` | 1–255 characters, trimmed | ❌ | A short label for the variant |
+| Description | `String` | 1–255 characters, trimmed | ❌ | A longer description of the variant |
+| Attributes | `Map<String, String>` | Empty by default; up to 1,024 entries can be decoded; unique names; each name and value is 1–255 characters and trimmed | ❌ | What sets this variant apart |
+| Price | `CatalogueItemVariantPrice` | See **Price** | ❌ | The full price of the selling unit |
+| Selling Unit | `CatalogueItemVariantSaleUnit` | See **Selling unit** | ✅ | How the variant is sold |
 
-**Request — adding several at once**
+**CatalogueItemVariantPrice**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Items | `CatalogueItemPostRequest[]` | At least one entry. Each entry has the shape above | ❌ | The items to add, all together or not at all |
+| Amount | `BigDecimal` | Non-negative; at most 12 integer digits; 0–2 decimal places on input; stored with exactly 2 decimal places | ✅ | The exact amount |
+| Currency | `Currency` | `EUR`, `USD`, or `GBP` in exact uppercase form | ✅ | The currency of the amount |
+
+**CatalogueItemVariantSaleUnit**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Quantity | `CatalogueItemVariantQuantity` | Positive and at most 99,999 | ✅ | The amount covered by one sale |
+| Per Unit | `CatalogueItemVariantPerUnit` | Positive and at most 99,999 | ❌ | The containers or pieces in the sold unit |
+| Unit Size | `CatalogueItemVariantUnitSize` | Positive and at most 99,999 | ❌ | The size of each individual thing |
+
+**Request — adding several items**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Catalogue Items | `CatalogueItemPostRequest[]` | At least one entry; up to 1,024 entries can be decoded | ❌ | The items to add together |
 
 **Response — adding one item**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Identifies the new item, used to open it, change it, archive it, or upload its image |
+| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Identifies the new item |
 
-**Response — adding several at once**
+**Response — adding several items**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Item IDs | `UUID[]` | Canonical 36-character form each; one per item added, in the same order as the request | ✅ | Identifies each new item |
+| Catalogue Item IDs | `UUID[]` | One canonical UUID per item, in request order | ✅ | Identifies each new item |
 
-Only item identifiers are returned. Variant identifiers are not; they are seen by opening the item, as in [step 4](#4-user-opens-an-item).
+Only item identifiers are returned. Variant identifiers are available when the item is opened.
 
 **Outcome**
 
-- The item is stored as active, and every one of its variants is stored as active.
-- For a batch, every item is stored together, or none is.
-- If anything is refused, including a name or SKU that is already taken, nothing at all is stored.
+- A successful single request stores the item and all of its variants.
+- A successful batch stores every item in request order, or stores none of them.
+- A rejected request stores nothing.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - A batch contains no items - One or more fields are invalid, reported together with the item and variant each belongs to |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request - The price currency was not exactly `EUR`, `USD` or `GBP` in uppercase - A variant is missing its required selling unit |
-| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
-| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
-| 409 | `CONFLICT_ERROR` | - A non-archived item already has that name - A non-archived variant already has that SKU |
-| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+| 400 | `VALIDATION_ERROR` | A batch is empty, or one or more fields are invalid; all validation problems are returned together |
+| 400 | `BAD_REQUEST_ERROR` | The organization is missing, a required selling unit is missing, or the currency is not an exact supported code |
+| 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
+| 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete or the person's role cannot add items |
+| 409 | `CONFLICT_ERROR` | A non-archived item already has the name, or a non-archived variant already has the SKU |
+| 500 | `INTERNAL_SERVER_ERROR` | The person does not belong to the organization, or an unexpected error occurs |
 
 ### 2. User Uploads an Item's Image
 
 **Who can reach this step: an owner or admin of the organization.**
 
-- User picks an image for an existing, non-archived item.
-- We check it really is an image, store it, and make a smaller standard copy.
-- The image belongs to the item as a whole, not to any one variant.
+- The user uploads an image for a non-archived item.
+- A later upload replaces the item's existing image.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. Owner uploads a valid image for a non-archived item | - The file is checked to really be a PNG, JPEG or WEBP - The original is stored as sent, alongside a smaller standard copy |
-| 2. Owner uploads a second image later | - The new image replaces the old one |
-| 3. User uploads an image for an item that is archived, or does not exist | - Rejected - Today this is reported as a server error — see [gap 1](#1-uploading-for-a-missing-or-archived-item-is-reported-as-a-server-error) |
-| 4. User uploads a file whose filename extension does not match what the file really is | - Rejected as an invalid request and nothing is stored |
-| 5. User uploads a file larger than the limit | - Should be rejected cleanly - Today it is not: the same stall affects this upload as the organization logo upload — see [Organization Onboarding step 2]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}#2-user-uploads-a-logo) |
-| 6. A member with the ordinary user role tries to upload | - Rejected |
-| 7. The organization id, item id, or file name is missing from the request | - Rejected as an invalid request |
+| 1. User uploads a valid image | - The original and a smaller standard copy are stored |
+| 2. User uploads another image | - The new image replaces the previous image |
+| 3. The file is not a supported image or its name does not match its contents | - The request is rejected and the image is not stored |
+| 4. The item is missing, archived, or belongs to another organization | - The request is rejected and the image is not stored |
+| 5. A member without an owner or admin role tries to upload | - The request is rejected |
 
 #### Requirements
 
-1. Only PNG, JPEG and WEBP files are accepted, judged by the file's contents. The filename extension must agree with what the file really is.
-2. A file may be up to 20 MB.
-3. The smaller standard copy is at most 640×640. Uploading again replaces both the original and the smaller copy.
-4. Only a non-archived item can receive an image. Its `Active` or `Inactive` status does not change this.
+1. PNG, JPEG, and WEBP files are accepted when the filename extension agrees with the file's contents.
+2. An image may be up to 20 MB.
+3. The smaller copy is at most 640×640 pixels.
+4. Only a non-archived item can receive an image. Its item and variant statuses are unchanged by the upload.
 
 #### Request / Response / Outcome
 
 **Request**
 
-The body is the raw image file. Three values travel in the request's headers instead of the body:
-
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Organization ID | `UUID` | Canonical 36-character form, sent as the `X-Organization-ID` header | ✅ | Which organization the item belongs to |
-| Catalogue Item ID | `UUID` | Canonical 36-character form, sent as the `X-Catalogue-Item-ID` header | ✅ | Which item the image is for |
-| File Name | `String` | 1–255 characters, trimmed; supported extension matching the actual format; sent as the `X-File-Name` header | ✅ | The original name of the file, kept alongside the stored image |
-| Image | Binary | PNG, JPEG or WEBP; up to 20 MB | ✅ | The image itself, sent as the request body |
+| Organization ID | `UUID` | Canonical 36-character form | ✅ | The organization that owns the item |
+| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | The item receiving the image |
+| File Name | `String` | 1–255 characters, trimmed; supported extension matching the image | ✅ | The original file name |
+| Image | `Binary` | PNG, JPEG, or WEBP; up to 20 MB | ✅ | The image contents |
 
 **Response**
 
-Response is empty. A successful upload answers with nothing but a success status.
+Response is empty.
 
 **Outcome**
 
-- The image is stored exactly as uploaded, with a smaller standard copy beside it, replacing any image the item already had.
-- This step never changes the status of the item or of any of its variants.
-- On any refusal nothing is stored.
+- The original image and smaller copy are stored for the item.
+- Uploading again replaces both copies.
+- A refusal before image storage begins leaves the item and its stored image unchanged. Failures during storage have the limitations in [gap 9](#9-image-changes-are-not-atomic).
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `BAD_REQUEST_ERROR` | - The organization id header is missing - The item id header is missing - The file name header is missing or unsupported - The filename extension does not match what the file really is |
-| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
-| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow it |
-| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - The item does not exist, belongs to another organization, or is archived - The image cannot be read or processed - Unexpected error |
+| 400 | `BAD_REQUEST_ERROR` | A required request value is missing, the filename is unsupported, or the filename and image contents disagree |
+| 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
+| 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete or the person's role cannot upload images |
+| 500 | `INTERNAL_SERVER_ERROR` | The person does not belong to the organization, the item cannot be found or is archived, the image cannot be processed, or an unexpected error occurs |
 
 ### 3. User Browses the Catalogue
 
 **Who can reach this step: any member of the organization.**
 
-- User opens the catalogue and sees every non-archived item with its non-archived variants.
+- The user sees every non-archived item and its non-archived variants.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User opens the catalogue | - Every non-archived item in the organization is returned, each with its name, status, picture if any, and non-archived variants |
-| 2. A variant has a price | - That variant keeps its price and currency in the summary |
-| 3. A variant has no price | - That variant is returned with no price |
-| 4. Some of an item's variants are `Inactive` or `OutOfStock` | - They are included with their status |
-| 5. Some of an item's variants are archived | - They are left out |
-| 6. An item is `Inactive` but not archived | - It is included with its status |
-| 7. An item has no image | - It appears in the list with nothing in place of a picture |
-| 8. The organization has archived items | - They do not appear, and there is no way to list them again — the same gap as [Customer Book gap 3]({{ site.baseurl }}{% link epics/05-customer-book.md %}#3-archiving-is-final-and-archived-customers-cannot-be-found-again) |
-| 9. The organization has no items yet | - An empty list is returned |
+| 1. The organization has non-archived items | - Every one is returned with its status, image if present, and variant summaries |
+| 2. An item or variant is `Inactive` or `OutOfStock` | - It remains visible with that status |
+| 3. A variant is archived | - It is omitted from the item |
+| 4. An item has no image or the organization has no items | - The image is absent, or an empty list is returned |
 
 #### Requirements
 
-1. Any member may browse the catalogue, whatever their role.
-2. The list contains only non-archived items.
-3. Each entry shows its non-archived item fields and every non-archived variant's summary fields in catalogue order. Archived variants are not listed.
+1. Any organization member may browse the catalogue.
+2. Only non-archived items and variants are returned.
+3. Variant summaries include their optional price and SKU, required selling unit and status.
+4. Items and variants are returned in catalogue order.
 
 #### Request / Response / Outcome
 
 **Request**
 
-Request is empty apart from naming the organization. The optional identifier filter is described in step 8; without it, all non-archived items are returned.
+The request has no catalogue fields; it identifies the organization.
 
 **Response**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Items | `CatalogueItemSummary[]` | Every non-archived item, oldest first, with its non-archived variants oldest first; may be empty | ✅ | The catalogue |
+| Catalogue Item Summaries | `CatalogueItemSummary[]` | Every non-archived item, oldest first; may be empty | ✅ | The catalogue |
 
 **CatalogueItemSummary**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Identifies the item, used to open it |
+| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Identifies the item |
 | Name | `String` | — | ✅ | The item's name |
-| Status | `CatalogueItemStatus` | `Active` or `Inactive` | ✅ | The item's current status |
-| Image URL | `String` | A working link, present only if the item has an image | ❌ | A picture of the item |
-| Variants | `CatalogueItemVariantSummary[]` | Every non-archived variant, at least one, in catalogue order | ✅ | The versions of the item that are sold |
+| Status | `CatalogueItemStatus` | `Active` or `Inactive` | ✅ | The item's status |
+| Image URL | `String` | Present only when the item has an image | ❌ | A link to the item's image |
+| Variants | `CatalogueItemVariantSummary[]` | Every non-archived variant, oldest first; at least one | ✅ | The item's variants |
 
 **CatalogueItemVariantSummary**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ✅ | Identifies the variant |
-| SKU | `String` | 1–255 characters, trimmed; case-insensitive uniqueness | ❌ | The business's stock code |
+| SKU | `String` | 1–255 characters, trimmed; case-insensitive uniqueness | ❌ | The variant's stock code |
 | Label | `String` | 1–255 characters, trimmed | ❌ | A short label for the variant |
-| Price | `CatalogueItemVariantPrice` | See **Price** in step 1 | ❌ | The full price of the variant's selling unit |
-| Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ✅ | How this variant is sold |
-| Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ✅ | The variant's current status |
+| Price | `CatalogueItemVariantPrice` | See **CatalogueItemVariantPrice** | ❌ | The variant's price |
+| Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** | ✅ | How the variant is sold |
+| Status | `CatalogueItemVariantStatus` | `Active`, `Inactive`, or `OutOfStock` | ✅ | The variant's status |
 
 **Outcome**
 
-Nothing changes. This step only reads.
+Nothing changes.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
-| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
-| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+| 400 | `BAD_REQUEST_ERROR` | The organization is missing |
+| 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
+| 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete |
+| 500 | `INTERNAL_SERVER_ERROR` | The person does not belong to the organization, or an unexpected error occurs |
 
 ### 4. User Opens an Item
 
 **Who can reach this step: any member of the organization.**
 
-- User picks a non-archived item from the catalogue to see it in full, including every non-archived variant still on offer.
+- The user opens one non-archived item to see its full details and variants.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User opens a non-archived item | - Its name, description, status, picture if any, and every non-archived variant are returned, each variant with its status |
-| 2. Some of the item's variants are archived | - The item still opens normally - Those variants are left out; `Inactive` and `OutOfStock` variants are shown |
-| 3. User opens an item that has been archived | - Not returned. It is treated exactly like an item that does not exist |
-| 4. User opens an item that does not exist, or has been archived | - Reported as a server error rather than "not found" — the same gap as [Customer Book gap 1]({{ site.baseurl }}{% link epics/05-customer-book.md %}#1-looking-up-a-customer-that-is-not-there-is-reported-as-a-server-error) |
+| 1. The item is non-archived | - Its details and every non-archived variant are returned |
+| 2. Some variants are archived | - The item opens normally and those variants are omitted |
+| 3. The item is missing, archived, or belongs to another organization | - The request is rejected as a server error |
 
 #### Requirements
 
-1. An item is looked up by its identifier.
-2. Only a non-archived item can be opened. An archived item cannot be opened.
-3. The answer includes the item's status and the status of each variant it lists.
-4. Archived variants are never listed. Archiving some of an item's variants does not stop the item being opened.
+1. The item is selected by identifier.
+2. Only a non-archived item can be opened.
+3. The response includes the item's status and each returned variant's status.
+4. Returned variants include their complete attributes, price, selling unit, and optional descriptive fields.
 
 #### Request / Response / Outcome
 
@@ -394,7 +324,7 @@ Nothing changes. This step only reads.
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Item ID | `UUID` | Canonical 36-character form, in the address | ✅ | Which item to open |
+| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | The item to open |
 
 **Response**
 
@@ -402,69 +332,65 @@ Nothing changes. This step only reads.
 | --- | --- | --- | --- | --- |
 | Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Identifies the item |
 | Name | `String` | — | ✅ | The item's name |
-| Description | `String` | — | ❌ | Present only if the item has one |
-| Status | `CatalogueItemStatus` | `Active` or `Inactive` | ✅ | The item's current status |
-| Variants | `CatalogueItemVariant[]` | Non-archived variants only; at least one entry | ✅ | The versions of the item on offer |
-| Image URL | `String` | A working link | ❌ | Present only if the item has an image |
+| Description | `String` | Present only when set | ❌ | The item's description |
+| Status | `CatalogueItemStatus` | `Active` or `Inactive` | ✅ | The item's status |
+| Image URL | `String` | Present only when an image exists | ❌ | A link to the item's image |
+| Variants | `CatalogueItemVariant[]` | Every non-archived variant; at least one | ✅ | The item's variants |
 
 **CatalogueItemVariant**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ✅ | Identifies the variant; used to change or archive it |
-| SKU | `String` | — | ❌ | Present only if the variant has one |
-| Label | `String` | — | ❌ | Present only if the variant has one |
-| Description | `String` | — | ❌ | Present only if the variant has one |
-| Attributes | `Map<String, String>` | May be empty | ✅ | What sets this variant apart |
-| Price | `CatalogueItemVariantPrice` | See **Price** in step 1 | ❌ | Present only if the variant has a price |
-| Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ✅ | How this variant is sold |
-| Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ✅ | Whether the variant is on sale, paused, or out of stock |
+| Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ✅ | Identifies the variant |
+| SKU | `String` | Present only when set | ❌ | The variant's stock code |
+| Label | `String` | Present only when set | ❌ | A short label |
+| Description | `String` | Present only when set | ❌ | A longer description |
+| Attributes | `Map<String, String>` | May be empty | ✅ | The variant's distinguishing details |
+| Price | `CatalogueItemVariantPrice` | Present only when set | ❌ | The variant's price |
+| Selling Unit | `CatalogueItemVariantSaleUnit` | Required | ✅ | How the variant is sold |
+| Status | `CatalogueItemVariantStatus` | `Active`, `Inactive`, or `OutOfStock` | ✅ | The variant's status |
 
 **Outcome**
 
-Nothing changes. This step only reads.
+Nothing changes.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
-| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
-| 500 | `INTERNAL_SERVER_ERROR` | - No non-archived item with that identifier: it does not exist, or it has been archived - The person does not belong to the organization - Unexpected error |
+| 400 | `BAD_REQUEST_ERROR` | The organization or item identifier is missing or malformed |
+| 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
+| 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete |
+| 500 | `INTERNAL_SERVER_ERROR` | The item does not exist, is archived, belongs to another organization, or an unexpected error occurs |
 
 ### 5. User Updates an Item
 
 **Who can reach this step: an owner or admin of the organization.**
 
-- The user changes a non-archived item's name, description or status.
-- The user changes existing variants by their identifier, including moving a variant between `Active`, `Inactive` and `OutOfStock`.
-- The user adds new variants. They are sent in a separate list from the variants being changed.
+- The user changes item fields, changes existing variants by identifier, or adds new variants.
+- Item and variant business status can be changed while the records remain non-archived.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User changes a non-archived item's name, description or status | - The change is saved - Fields left out of the request are left as they were |
-| 2. User clears the item's description, or a variant's price, SKU, label or description | - That value is removed; a variant whose price is cleared has no set price |
-| 3. User changes an existing variant's price, selling unit, attributes or status, listing it with its identifier among the variants to change | - The change is saved for that variant only - Variants not mentioned are left exactly as they were |
-| 4. User marks a variant `OutOfStock` or `Inactive`, and later `Active` again | - Each move is saved; any move among these three statuses is allowed |
-| 5. User adds a new variant to a non-archived item, listing it, with no identifier, among the new variants | - Stored as `Active` and not archived - Stored with no set price if none is given |
-| 6. User renames an item to a name another non-archived item already has | - Rejected as a conflict |
-| 7. User gives a variant a SKU that another non-archived variant already has | - Rejected as a conflict |
-| 8. User changes an item that has been archived, or does not exist | - Nothing happens, and it is reported as successful — the same gap as [Customer Book gap 2]({{ site.baseurl }}{% link epics/05-customer-book.md %}#2-changes-to-an-archived-customer-are-silently-discarded) |
-| 9. Among the variants to change, user names one that does not exist, belongs to another item, or is archived | - The whole update is refused as a server error, and nothing is stored - One message covers all three causes; they are not told apart |
-| 10. A member with the ordinary user role tries to make a change | - Rejected |
+| 1. User changes an item's name, description, or status | - The change is saved; omitted fields remain unchanged |
+| 2. User clears an optional item or variant field | - The selected value is removed |
+| 3. User replaces an existing variant field or attributes | - The change applies to that variant; unmentioned variants remain unchanged |
+| 4. User adds a new variant | - It is stored as `Active` and non-archived |
+| 5. An item is missing or archived | - The update succeeds without changing anything |
+| 6. A named variant is missing, archived, or belongs to another item | - The update is rejected and no changes are stored |
+| 7. A new name or SKU is already reserved | - The update is rejected as a conflict and no changes are stored |
+| 8. A member without an owner or admin role tries to update | - The request is rejected |
 
 #### Requirements
 
-1. Only non-archived items can be changed.
-2. A field left out of the request keeps its current value. The item status can be set to `Active` or `Inactive`. The item description, and a variant's price, SKU, label and description, can be cleared. A variant's selling unit can be replaced but never removed.
-3. When given, a variant's attributes replace all of its existing attributes.
-4. A variant's status can be set only to `Active`, `Inactive` or `OutOfStock`.
-5. A new variant needs a selling unit, and its price is optional, just like one added in [step 1](#1-user-adds-an-item).
-6. A rename must leave the item name unique among non-archived items, and every SKU unique among non-archived variants.
-7. Variants to change and variants to add are sent in two separate lists. Every variant to change is named by its identifier; a new variant has no identifier, since it does not exist yet.
+1. Fields left out of the request keep their current values. Item description and variant SKU, label, description, and price can be cleared explicitly.
+2. Item status can be `Active` or `Inactive`. Variant status can be `Active`, `Inactive`, or `OutOfStock`.
+3. A supplied attributes map replaces all existing attributes, and an empty map clears them. A supplied selling unit replaces the existing selling unit; a selling unit cannot be removed.
+4. New variants use the same fields and rules as inserted variants and start `Active` and non-archived.
+5. General updates cannot archive records. Only the archive operations set archive state.
+6. Names and SKUs remain unique among non-archived records.
 
 #### Request / Response / Outcome
 
@@ -472,67 +398,67 @@ Nothing changes. This step only reads.
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Which item to change |
-| Name | `String` | 1–255 characters, trimmed; unique among non-archived items | ❌ | Leave out to keep the current name |
-| Description | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current description; can be cleared |
-| Status | `CatalogueItemStatus` | `Active` or `Inactive` | ❌ | Leave out to keep the current status |
-| Variants | `CatalogueItemVariantUpdate[]` | Empty by default; existing variants only | ❌ | Changes to existing variants; variants not listed stay as they are |
-| New Variants | `CatalogueItemVariantInsert[]` | Empty by default; no upper limit | ❌ | Variants to add to the item |
+| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | The item to update |
+| Name | `String` | 1–255 characters, trimmed; unique among non-archived items | ❌ | A replacement name |
+| Description | `String` | 1–255 characters, trimmed; explicit null clears it | ❌ | A replacement description |
+| Status | `CatalogueItemStatus` | `Active` or `Inactive` | ❌ | A replacement item status |
+| Variants Update | `CatalogueItemVariantUpdate[]` | Existing variants; empty by default; up to 1,024 entries can be decoded | ❌ | Changes to existing variants |
+| Variants Insert | `CatalogueItemVariantInsert[]` | New variants; empty by default; up to 1,024 entries can be decoded | ❌ | Variants to add |
 
 **CatalogueItemVariantUpdate**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Item Variant ID | `UUID` | Canonical 36-character form; a non-archived variant of this item | ✅ | Which existing variant to change |
-| SKU | `String` | Same as in **CatalogueItemVariantInsert** | ❌ | Leave out to keep; can be cleared |
-| Label | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep; can be cleared |
-| Description | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep; can be cleared |
-| Attributes | `Map<String, String>` | Same as in **CatalogueItemVariantInsert** | ❌ | Leave out to keep; when given, replaces all attributes |
-| Price | `CatalogueItemVariantPrice` | See **Price** in step 1 | ❌ | Leave out to keep the current price; can be cleared |
-| Selling Unit | `CatalogueItemVariantSaleUnit` | See **CatalogueItemVariantSaleUnit** in step 1 | ❌ | Leave out to keep the current selling unit |
-| Status | `CatalogueItemVariantStatus` | `Active`, `Inactive` or `OutOfStock` | ❌ | Leave out to keep the current status |
+| Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ✅ | The existing variant to update |
+| SKU | `String` | Same rules as **CatalogueItemVariantInsert**; explicit null clears it | ❌ | A replacement stock code |
+| Label | `String` | 1–255 characters, trimmed; explicit null clears it | ❌ | A replacement label |
+| Description | `String` | 1–255 characters, trimmed; explicit null clears it | ❌ | A replacement description |
+| Attributes | `Map<String, String>` | Same rules as **CatalogueItemVariantInsert** | ❌ | Replacement attributes |
+| Price | `CatalogueItemVariantPrice` | Same rules as **CatalogueItemVariantInsert**; explicit null clears it | ❌ | A replacement price |
+| Selling Unit | `CatalogueItemVariantSaleUnit` | Same rules as **CatalogueItemVariantInsert** | ❌ | A replacement selling unit |
+| Status | `CatalogueItemVariantStatus` | `Active`, `Inactive`, or `OutOfStock` | ❌ | A replacement variant status |
 
-New variants use **CatalogueItemVariantInsert**, defined in step 1.
+New variants use **CatalogueItemVariantInsert**. A request field left out keeps its value; an explicit nullable value clears that field.
 
 **Response**
 
-Response is empty. A successful change answers with nothing but a success status, and so does a change that quietly did nothing.
+Response is empty.
 
 **Outcome**
 
-- For a non-archived item, the named fields and variants are changed, new variants are added as `Active` and not archived, and nothing else changes.
-- For an archived or missing item nothing is stored, and the answer is the same as success.
-- If anything is refused, nothing at all is stored.
+- A non-archived item's requested changes are applied atomically.
+- A missing or archived item is unchanged and still returns success.
+- Invalid referenced variants and conflicts leave the item and all variants unchanged.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the variant each belongs to |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request - The price currency was not exactly `EUR`, `USD` or `GBP` in uppercase - A new variant is missing its required selling unit - A status value outside the item's or variant's status choices was sent |
-| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
-| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
-| 409 | `CONFLICT_ERROR` | - A non-archived item already has that name - A non-archived variant already has that SKU |
-| 500 | `INTERNAL_SERVER_ERROR` | - A variant to change does not exist, belongs to another item, or is archived (one message for all three) - The person does not belong to the organization - Unexpected error |
+| 400 | `VALIDATION_ERROR` | One or more item or variant fields are invalid; all such problems are returned together |
+| 400 | `BAD_REQUEST_ERROR` | The organization is missing, a required selling unit is missing, or a currency or status value is invalid |
+| 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
+| 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete or the person's role cannot update items |
+| 409 | `CONFLICT_ERROR` | A non-archived item already has the name, or a non-archived variant already has the SKU |
+| 500 | `INTERNAL_SERVER_ERROR` | A referenced variant is missing, archived, belongs to another item, or an unexpected error occurs |
 
 ### 6. User Archives an Item
 
 **Who can reach this step: an owner or admin of the organization.**
 
-- The user retires an item that is no longer for sale, along with all of its variants.
+- The user retires an item and all of its variants.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User archives a non-archived item | - The item's `isArchived` flag and every variant's flag become `true` - The item leaves the catalogue - Its name, and every SKU its variants held, become free for reuse - Its status, variants' statuses and image, if any, are kept |
-| 2. User archives an item that is already archived, or does not exist | - Nothing happens, and it is reported as successful |
-| 3. User wants an archived item back | - Not possible. There is no way to reverse archiving — the same gap as [Customer Book gap 3]({{ site.baseurl }}{% link epics/05-customer-book.md %}#3-archiving-is-final-and-archived-customers-cannot-be-found-again) |
+| 1. User archives a non-archived item | - The item and all variants leave the catalogue - Their statuses, details, and image are retained - The name and SKUs become free |
+| 2. User archives an item that is already archived or does not exist | - Nothing changes and the request succeeds |
+| 3. User wants an archived item back | - Archiving cannot be undone |
 
 #### Requirements
 
-1. Archiving an item sets its `isArchived` flag and all of its variants' flags to `true`.
-2. Archiving preserves the item's status and every variant's status. The item is kept in full, including its image and variants, but it can no longer be opened.
+1. Archiving an item archives all of its variants.
+2. Archiving preserves business statuses and stored details.
 3. Archiving cannot be undone.
 
 #### Request / Response / Outcome
@@ -541,46 +467,45 @@ Response is empty. A successful change answers with nothing but a success status
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | Which item to archive |
+| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | The item to archive |
 
 **Response**
 
-Response is empty, whether the item was archived just now, was already archived, or never existed.
+Response is empty.
 
 **Outcome**
 
-- A non-archived item and all of its variants get `isArchived = true`. The item leaves the catalogue and can no longer be opened. Its status, the variants' statuses, and the record and image are kept. The name and the variants' SKUs become free for reuse.
-- An already-archived or missing item is left exactly as it was.
+The item and its variants are no longer returned by catalogue reads, while their statuses and stored details remain retained. An already archived or missing item is unchanged.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
-| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
-| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+| 400 | `BAD_REQUEST_ERROR` | The organization or item identifier is missing or malformed |
+| 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
+| 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete or the person's role cannot archive items |
+| 500 | `INTERNAL_SERVER_ERROR` | The person does not belong to the organization, or an unexpected error occurs |
 
 ### 7. User Archives a Variant
 
 **Who can reach this step: an owner or admin of the organization.**
 
-- The user retires one variant that is no longer sold, such as a discontinued flavour, and leaves the rest of the item alone.
+- The user retires one variant while leaving the item and its other variants available.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User archives one of several non-archived variants | - That variant gets `isArchived = true` and its SKU becomes free for reuse - Its status, the item and the other variants are unchanged |
-| 2. User archives the item's last non-archived variant | - Rejected as not allowed, and nothing changes - The item keeps its status; to retire it, archive the item as in [step 6](#6-user-archives-an-item) |
-| 3. User archives a variant that is already archived, does not exist, or belongs to a different item from the one named | - Nothing happens, and it is reported as successful, the same as archiving an item |
-| 4. User wants an archived variant back | - Not possible. Archiving cannot be undone |
-| 5. A member with the ordinary user role tries to archive a variant | - Rejected |
+| 1. User archives one of several non-archived variants | - That variant leaves catalogue reads and its SKU becomes free - The item, other variants, and statuses are unchanged |
+| 2. User archives the item's last non-archived variant | - The request is rejected and nothing changes - The user must archive the item instead |
+| 3. The variant is already archived, missing, or belongs to another item | - Nothing changes and the request succeeds |
+| 4. User wants an archived variant back | - Archiving cannot be undone |
 
 #### Requirements
 
-1. Archiving a variant sets its `isArchived` flag to `true` and preserves its status. The variant is kept, but it is no longer listed, counted, or priced anywhere in the catalogue.
-2. A non-archived item always keeps at least one non-archived variant. Archiving a variant never archives its item.
+1. A variant archive preserves the variant's status and stored details.
+2. A non-archived item always has at least one non-archived variant.
+3. Archiving a variant never archives its item.
 
 #### Request / Response / Outcome
 
@@ -588,49 +513,48 @@ Response is empty, whether the item was archived just now, was already archived,
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | The item the variant belongs to |
-| Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ✅ | Which variant to archive |
+| Catalogue Item ID | `UUID` | Canonical 36-character form | ✅ | The item containing the variant |
+| Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ✅ | The variant to archive |
 
 **Response**
 
-Response is empty, whether the variant was archived just now, was already archived, never existed, or belongs to a different item.
+Response is empty.
 
 **Outcome**
 
-- The variant gets `isArchived = true` and its SKU becomes free for reuse. Its status, the item and its other variants are unchanged.
-- An already-archived or missing variant, or one belonging to a different item, is left exactly as it was.
-- If it is the item's last non-archived variant, the request is refused and nothing changes: the variant and the item, including their statuses and archive flags, both stay as they were.
+The selected variant is omitted from catalogue reads and its SKU becomes free. If it is the last non-archived variant, the item and variant remain unchanged.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
-| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes - The variant is the item's last non-archived one; archive the item instead |
-| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+| 400 | `BAD_REQUEST_ERROR` | The organization or identifier is missing or malformed |
+| 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
+| 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete, the person's role cannot archive variants, or the variant is the item's last non-archived variant |
+| 500 | `INTERNAL_SERVER_ERROR` | The person does not belong to the organization, or an unexpected error occurs |
 
 ### 8. User Looks Up Chosen Items
 
 **Who can reach this step: any member of the organization.**
 
-- This is the same summary operation as [browsing the catalogue](#3-user-browses-the-catalogue). The user may supply item identifiers to filter its response; leaving the identifiers absent or empty returns every non-archived item.
+- The user may provide item identifiers to filter the same summaries returned by browsing.
+- No identifiers, or an empty list, returns every non-archived item.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User asks for several non-archived items | - Each is returned with the same item and non-archived-variant summaries as in [step 3](#3-user-browses-the-catalogue) |
-| 2. Some of the identifiers do not exist, belong to an archived item, or belong to another organization | - Those items are simply left out; the rest are returned - There is no error and no sign that anything was left out |
-| 3. None of the identifiers match a non-archived item | - An empty list is returned |
-| 4. User sends the same identifier more than once, or in any order | - Each item appears once - The list follows the order the items were added to the catalogue, oldest first, not the order of the request |
-| 5. User sends no identifiers or an empty identifier list | - Every non-archived item is returned, in the same summary form as [step 3](#3-user-browses-the-catalogue) |
+| 1. User supplies matching item identifiers | - Each matching non-archived item is returned once with its summaries |
+| 2. An identifier is missing, archived, or belongs to another organization | - That item is omitted without an error |
+| 3. No supplied identifier matches | - An empty list is returned |
+| 4. User supplies duplicate identifiers or a different request order | - Each item appears once in catalogue order |
+| 5. User supplies no identifiers or an empty list | - Every non-archived item is returned |
 
 #### Requirements
 
-1. Any member may look up items, whatever their role.
-2. The identifiers are optional. When none are sent, every non-archived item of this organization is returned; when some are sent, only matching non-archived items are returned.
-3. Returned items use the same item and non-archived-variant summaries as in [step 3](#3-user-browses-the-catalogue).
+1. Any organization member may use this lookup.
+2. The identifier filter is optional and repeated identifiers do not duplicate results.
+3. Results use the same non-archived item and variant summaries as browsing.
 
 #### Request / Response / Outcome
 
@@ -638,51 +562,49 @@ Response is empty, whether the variant was archived just now, was already archiv
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Item IDs | `UUID[]` | Zero or more entries; canonical 36-character form each; sent in the address as a repeated `catalogueItemIDs` key, such as `?catalogueItemIDs=a&catalogueItemIDs=b` | ❌ | Optional filter of which items to look up |
+| Catalogue Item IDs | `UUID[]` | Zero or more canonical UUIDs; optional repeated values | ❌ | Items to include; absent or empty means all |
 
 **Response**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Catalogue Items | `CatalogueItemSummary[]` | Every non-archived item when no IDs are sent; otherwise only the requested items that are non-archived in this organization; each at most once; oldest first; may be empty | ✅ | The catalogue or the requested items. See **CatalogueItemSummary** in step 3 |
+| Catalogue Item Summaries | `CatalogueItemSummary[]` | Matching non-archived items, once each, oldest first; may be empty | ✅ | The selected catalogue items |
 
 **Outcome**
 
-Nothing changes. This step only reads.
+Nothing changes.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
-| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
-| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+| 400 | `BAD_REQUEST_ERROR` | The organization or an identifier is missing or malformed |
+| 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
+| 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete |
+| 500 | `INTERNAL_SERVER_ERROR` | The person does not belong to the organization, or an unexpected error occurs |
 
 ### 9. User Checks a Name or SKU Is Free
 
 **Who can reach this step: any member of the organization.**
 
-- While filling in an item, for example as they type, the user checks whether a name or a SKU is still free before adding or changing anything.
-- This lets them fix a clash early, instead of having the add or update refused as a conflict.
+- Before adding or updating an item, the user may check whether its name or a variant SKU is available.
+- The check reserves nothing; a later add or update can still lose a race and return a conflict.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User checks both a name and a SKU | - An answer comes back for each |
-| 2. User checks only a name, or only a SKU | - An answer comes back for that one only |
-| 3. User checks neither | - Rejected as invalid, with separate errors for the missing name and SKU |
-| 4. The name belongs to a non-archived item | - Reported as taken |
-| 5. The SKU belongs to a non-archived variant, including an `Inactive` or `OutOfStock` one | - Reported as taken even when letter case differs |
-| 6. The name or SKU is not used anywhere in the organization | - Reported as free |
-| 7. The name belongs only to an archived item, or the SKU only to an archived variant or a variant of an archived item | - Reported as free, the same way adding an item treats it |
+| 1. User checks a name, a SKU, or both | - The response contains the corresponding availability result |
+| 2. Neither value is supplied, or a supplied value is blank or invalid | - The request is rejected with the relevant validation fields |
+| 3. A non-archived item has the name | - The name is reported as taken |
+| 4. A non-archived variant has the SKU | - The SKU is reported as taken, ignoring letter case |
+| 5. Only archived records use the name or SKU | - The value is reported as free |
 
 #### Requirements
 
-1. Any member may check, whatever their role.
-2. At least one of a name and a SKU must be given.
-3. A name counts as taken only if a non-archived item of this organization has it. A SKU counts as taken only if a non-archived variant of this organization has it. These are the same rules adding and updating an item apply.
+1. Any organization member may check availability.
+2. At least one of name and SKU must be supplied. When neither is supplied, both fields are named in the validation response.
+3. Name and SKU checks use the same non-archived scope and case-insensitive SKU rule as add and update.
 
 #### Request / Response / Outcome
 
@@ -690,38 +612,96 @@ Nothing changes. This step only reads.
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Name | `String` | 1–255 characters, trimmed; sent in the address as `name` | ❌ | The item name to check. Give this, the SKU, or both |
-| SKU | `String` | 1–255 characters, trimmed; case-insensitive uniqueness; sent in the address as `sku` | ❌ | The variant SKU to check. Give this, the name, or both |
+| Name | `String` | 1–255 characters, trimmed | ❌ | The item name to check |
+| SKU | `String` | 1–255 characters, trimmed; comparison ignores letter case | ❌ | The variant SKU to check |
 
 **Response**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Is Name Unique | `Boolean` | Present only when a name was checked | ❌ | `true` if the name is free; `false` if a non-archived item already has it |
-| Is SKU Unique | `Boolean` | Present only when a SKU was checked | ❌ | `true` if the SKU is free; `false` if a non-archived variant already has it |
+| Is Name Unique | `Boolean` | Present only when a name was supplied | ❌ | Whether the name is free |
+| Is SKU Unique | `Boolean` | Present only when a SKU was supplied | ❌ | Whether the SKU is free |
 
 **Outcome**
 
-Nothing changes, and nothing is reserved. A name or SKU reported free can still be taken before the user adds or changes the item, and that request is then refused as a conflict as usual.
+Nothing changes and no name or SKU is reserved.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - Neither a name nor a SKU was given; both fields are named in the errors - A name or SKU was given but is invalid, such as blank |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
-| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
-| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
-| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+| 400 | `VALIDATION_ERROR` | Neither field was supplied, or a supplied name or SKU is invalid; both fields are named when neither is supplied |
+| 400 | `BAD_REQUEST_ERROR` | The organization is missing |
+| 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
+| 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete |
+| 500 | `INTERNAL_SERVER_ERROR` | The person does not belong to the organization, or an unexpected error occurs |
 
 ### Known gaps and open questions
 
-Everything above describes the agreed product. Nothing in this section has been decided yet, and each item needs a product answer before it can be built.
-
 #### 1. Uploading for a missing or archived item is reported as a server error
 
-Naming an item that does not exist, belongs to another organization, or has been archived is refused as a server error. Picking an item a colleague just archived, or following a stale link, is ordinary, not a failure on our side.
+Naming an item that does not exist, belongs to another organization, or has been archived returns a server error. A stale item reference is an ordinary client-side condition, but the current response does not distinguish it from an unexpected server failure.
 
-**To decide:** whether this should be a plain refusal instead, naming what was wrong with the item.
+**To decide:** whether this should return a client error that identifies the invalid item reference.
+
+#### 2. Oversized image uploads may not return promptly
+
+The product limit is 20 MB, but the current streaming transport can stall on an oversized request instead of returning a clear refusal.
+
+**To decide:** which client error and response behavior should be guaranteed for an upload over the limit.
+
+#### 3. A request from outside the organization is reported as a server error
+
+Naming an organization that the signed-in person does not belong to returns a server error. This is the same unresolved organization-membership behavior described in [Organization Onboarding gap 3]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}#3-not-belonging-to-an-organization-is-reported-as-a-server-error).
+
+**To decide:** whether a non-member should receive the same refusal as a member without the required role, or a response that identifies the organization access problem.
+
+#### 4. Very large valid requests can fail during persistence
+
+Each incoming JSON list or attribute map is limited to 1,024 entries by request decoding. A batch of individually valid items can still contain enough total variants to fail with a server error, with nothing saved. These implementation limits are not explicit product validation rules.
+
+**To decide:** whether to publish and enforce a maximum request size or count.
+
+#### 5. Extremely precise selling-unit numbers can fail when saved
+
+The documented `0 < value ≤ 99,999` rule has no decimal-place restriction, but the current request and storage formats have finite limits. Values satisfying the number rule are therefore not all supported end to end. Request decoding currently rejects extreme representations before they can be saved; see [gap 11](#11-very-precise-input-numbers-can-be-rounded).
+
+**To decide:** whether persistence should support every accepted precision or validation should add a storage-compatible limit.
+
+#### 6. Duplicate variant identifiers in one update are not rejected as validation errors
+
+An update that names the same existing variant more than once can fail as a server error and leave the whole update unchanged.
+
+**To decide:** whether duplicate variant identifiers should be rejected during validation with a clear field error.
+
+#### 7. Some control characters can pass validation but fail when saved
+
+Certain text values, such as a value containing an embedded null character, can pass input validation and then cause a server error when the item or variant is stored.
+
+**To decide:** whether these characters should be rejected during request validation.
+
+#### 8. SKU case comparison does not cover every Unicode case equivalence
+
+SKU comparison ignores letter case, but some Unicode spellings that users may regard as equivalent can still be treated as different, such as `straße` and `STRASSE`.
+
+**To decide:** whether SKU comparison should use a broader Unicode case-folding rule.
+
+#### 9. Image changes are not atomic
+
+A failed upload can still replace an existing image or leave a new image stored without an item association. Concurrent uploads can mix the original from one request with the resized image from another. If the item is archived during an upload, the upload can report success after storing the image without updating the archived item.
+
+**To decide:** how to keep each image pair and its item association consistent when an upload fails or overlaps another change.
+
+#### 10. Swapping existing SKUs can be rejected as a conflict
+
+An update that swaps two variants' existing SKUs can return a conflict even though the intended final SKUs would be unique. No part of that update is saved.
+
+**To decide:** whether one update should support swapping or transferring a reserved SKU between variants.
+
+#### 11. Very precise input numbers can be rounded
+
+Numbers with more than 34 significant digits can be rounded while a request or stored selling unit is read. For example, a selling-unit quantity of `0.12345678901234567890123456789012346` can be stored as `0.1234567890123456789012345678901235`. An unrelated variant update can save a value rounded during its read. Some larger numeric representations cannot be read. This falls short of the intended exact-decimal behavior.
+
+**Accepted for now:** business values are not expected to need this many significant digits, so no change is planned. Revisit exact input handling if that expectation changes.
 
 {% include abbreviations.md %}

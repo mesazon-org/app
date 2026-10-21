@@ -33,7 +33,7 @@ Shapes:
   - A batch create lists its single-create sibling's request shape as its entry (`list CatalogueItemsInsert { member: CatalogueItemPostRequest }`).
   - An update's list of new children reuses the create operation's child entry list (`CatalogueItemPutRequest.variantsInsert: CatalogueItemVariantsInsert`).
 
-  Generic nested names are what make these reuses read correctly at every use site. As soon as either side needs a member or trait the other does not have, split the shapes. Never share update, response, or read shapes, or shapes that only look alike.
+  Generic nested names are what make these reuses read correctly at every use site. As soon as either side needs a member or trait the other does not have, split the shapes. Keep update and read entity views separate. Reusable value shapes, such as Catalogue price and selling unit, may appear in both requests and responses when their meaning and member traits are identical; this does not permit sharing an entire entity view merely because its fields look alike.
 - Contact/value+flag entry: `<Owner><Kind>EntryRequest`; list plural `...EntryRequests`; domain entry has same name.
 - Owner-less value shapes shared by several features live in `domain/Gateway.smithy` and mirror their shared domain case class (`PhoneNumberRequest` ↔ `PhoneNumber`, `AddressRequest` ↔ `Address`, `AddressEntryRequest` ↔ `AddressEntry`); each feature declares only its owner-named list, e.g. `list OrganizationAddressEntryRequests { member: AddressEntryRequest }`.
 - Request list member: `@default([])`, never `@required`, so omitted empty JSON decodes to non-optional `Nil`. Response list: `@required`. Never model request list as `Option[List]` solely to default it empty.
@@ -85,18 +85,7 @@ Applies to new and reworked contracts; see [Reference implementation](#reference
 - A read over several resources takes no `/batch`; it filters on its plain path with an optional `@default([])` ID-list query param, where empty means all (`GET /catalogue/item/summary?catalogueItemIDs=…`).
 - A static segment may sit next to an `{id}` label at the same depth; smithy4s routes the static one first (`HttpEndpoint.moreSpecific`), so `/catalogue/item/summary` never reaches `{catalogueItemID}`.
 
-Applied in `CatalogueService.smithy`; operation names derive from the paths per [Names](#names):
-
-| Purpose | Method | Path | Operation |
-|---|---|---|---|
-| Create one item | `POST` | `/catalogue/item` | `CatalogueItemPost` |
-| Create many items | `POST` | `/catalogue/item/batch` | `CatalogueItemBatchPost` |
-| Update item | `PUT` | `/catalogue/item/{catalogueItemID}` | `CatalogueItemPut` |
-| Archive item | `PUT` | `/catalogue/item/{catalogueItemID}/archive` | `CatalogueItemArchivePut` |
-| Archive variant | `PUT` | `/catalogue/item/{catalogueItemID}/variant/{catalogueItemVariantID}/archive` | `CatalogueItemVariantArchivePut` |
-| Get item | `GET` | `/catalogue/item/{catalogueItemID}` | `CatalogueItemGet` |
-| Item summaries, all or by IDs | `GET` | `/catalogue/item/summary[?catalogueItemIDs=…]` | `CatalogueItemSummaryGet` |
-| Check name/SKU uniqueness | `GET` | `/catalogue/item/uniqueness?name=…&sku=…` | `CatalogueItemUniquenessGet` |
+The [Catalogue endpoint table](../features/catalogue.md#endpoints) applies these conventions; operation names derive from the paths per [Names](#names).
 
 Expose only the operations a feature needs.
 
