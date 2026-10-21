@@ -1,5 +1,6 @@
 package io.mesazon.gateway.utils
 
+import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.smithy
 import io.mesazon.gateway.transform.given

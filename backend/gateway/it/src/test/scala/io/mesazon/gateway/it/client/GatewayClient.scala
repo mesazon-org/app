@@ -9,7 +9,6 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.json.tapir.given
 import io.mesazon.gateway.smithy
-import io.mesazon.gateway.transform.given
 import io.scalaland.chimney.dsl.*
 import smithy4s.Nullable
 import sttp.client4.*

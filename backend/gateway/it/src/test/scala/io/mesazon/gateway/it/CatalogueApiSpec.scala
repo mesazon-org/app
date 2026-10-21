@@ -1,5 +1,6 @@
 package io.mesazon.gateway.it
 
+import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient.given
 import io.mesazon.gateway.it.harness.GatewayAcceptanceTest
