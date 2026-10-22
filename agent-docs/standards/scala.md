@@ -58,6 +58,8 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 
 ## Tests
 
+- Add dedicated JSON codec tests only when the user explicitly requests them. Do not create serialization, deserialization, or codec round-trip specs by default.
+
 ### Structure and names
 
 - Add a blank line immediately after a test-class declaration. Environment-selection overrides (such as `dockerComposeFile` and `exposedServices`) stay at the top of the test class, before models, givens, vals, and helper defs; this is an explicit exception to the general member-ordering rule. Lifecycle hooks such as `beforeAll` and `afterEach` may follow the context helper as in existing integration specs.
