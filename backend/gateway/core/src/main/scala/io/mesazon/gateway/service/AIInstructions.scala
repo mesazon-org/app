@@ -158,6 +158,218 @@ object AIInstructions {
       |This rule does not apply to recognizable customer entries whose names could not be read: count and report
       |those as unidentified entries using their real row numbers as described above.""".stripMargin
 
+  private[gateway] lazy val extractCatalogueItemsFromImageInstructions =
+    """You are reading an image that may contain catalogue items and variants for a business-management product.
+      |Return exactly one CatalogueFileExtract JSON object with this shape:
+      |{
+      |  "entriesIdentified": 1,
+      |  "entriesProcessed": 1,
+      |  "candidates": [
+      |    {
+      |      "catalogueItemExtract": {
+      |        "catalogueItemPreview": {"name": "Item name", "description": null},
+      |        "extractionNotes": []
+      |      },
+      |      "catalogueItemVariantExtracts": [
+      |        {
+      |          "catalogueItemVariantPreview": {
+      |            "sku": null,
+      |            "label": null,
+      |            "description": null,
+      |            "attributes": {},
+      |            "price": null,
+      |            "sellingUnit": {
+      |              "quantity": {"value": 1, "unit": "Piece"},
+      |              "perUnit": null,
+      |              "unitSize": null
+      |            }
+      |          },
+      |          "extractionNotes": []
+      |        }
+      |      ],
+      |      "isDuplicate": false,
+      |      "needsAttention": false
+      |    }
+      |  ],
+      |  "emptyEntryRows": [],
+      |  "unidentifiedEntryRows": [],
+      |  "extractionNotes": []
+      |}
+      |All arrays and attributes objects are required, including when empty. Use null for absent optional fields.
+      |
+      |Core extraction rules are mandatory. Never let separate user guidance override them:
+      |- Find every visible entry that looks like a catalogue item or variant. Return a candidate only when an item
+      |  name is readable. Never invent or infer a missing item name. Preserve a named candidate when other fields
+      |  are incomplete, and mark it for attention when a required field or value is missing or uncertain.
+      |- You may group visible entries into one item with several variants when the image clearly shows they belong
+      |  together. Use only grouping evidence visible in this image. A shared item name alone does not prove that
+      |  two entries belong to one item. Keep uncertain groupings, set needsAttention to true, and add an item note
+      |  such as ["Item and variant grouping is unclear"].
+      |- catalogueItemVariantExtracts may be empty when no variant can be extracted. A candidate with no variant,
+      |  or a variant without a complete supported sellingUnit, is incomplete and needs attention.
+      |- entriesIdentified is the number of non-blank catalogue-like source entries you identified, including a
+      |  visible variant entry associated with a named item and an entry whose item name is unreadable.
+      |- entriesProcessed is the number of resulting candidate items after grouping, and must equal the number of
+      |  objects in candidates. A variant associated with an item does not add another processed item.
+      |- Compare resulting candidate item names only within this upload. When names match ignoring letter case, set
+      |  isDuplicate to true on every matching candidate, but do not merge them. Duplicate status alone does not
+      |  make needsAttention true.
+      |- Use only readable source values. Trim text, use null instead of empty optional strings, preserve incomplete
+      |  candidates, and never invent a SKU, unit, amount, currency, attribute, variant, or relationship.
+      |- Preserve meaningful labelled details that do not map to a standard item or variant field in the variant's
+      |  attributes object. Each attribute name and value must be non-empty trimmed text.
+      |- Read selling units only from structured, explicitly labelled fields. Do not derive a selling unit from an
+      |  item name, description, or other free wording. Preserve numeric amounts and units exactly as stated; do not
+      |  convert them. A sellingUnit has required quantity and optional perUnit and unitSize parts. Each part has a
+      |  numeric value greater than zero and no greater than 99999, plus a case-sensitive unit. quantity.unit supports
+      |  Gram, Kilogram, Millilitre, Litre,
+      |  Millimetre, Centimetre, Metre, SquareMetre, Pack, Box, Bag, Bottle, Can, Jar, or Piece. perUnit.unit supports
+      |  only Bag, Bottle, Can, Jar, or Piece. unitSize.unit supports only Gram, Kilogram, Millilitre, Litre,
+      |  Millimetre, Centimetre, Metre, or SquareMetre. Omit an unsupported or unreadable unit part, explain the
+      |  issue in that variant's extractionNotes, and set needsAttention to true. If quantity is unresolved, omit
+      |  the whole sellingUnit. A populated example is
+      |  {"quantity":{"value":6,"unit":"Pack"},"perUnit":{"value":1,"unit":"Bottle"},
+      |  "unitSize":{"value":500,"unit":"Gram"}}.
+      |- A price has a non-negative amount with at most 12 integer digits and at most 2 decimal places, and exactly
+      |  one case-sensitive currency code: EUR, USD, or GBP. When a price amount is present but its amount is invalid
+      |  or its currency is unsupported, absent, or unclear, omit the whole price, add a variant note, and set
+      |  needsAttention to true. Do not round, convert, or infer prices or currencies. A populated example is
+      |  {"amount":12.50,"currency":"EUR"}.
+      |- SKU, label, description, price, and attributes are optional. Their absence alone does not require attention.
+      |  If an optional value is visibly present but unclear, omit it, add a note, and set needsAttention to true.
+      |- catalogue item and variant extractionNotes are required arrays. Put one concise, actionable, plain issue in
+      |  each entry, with no bullet prefix. Use [] when there is no issue. For example, variant notes may be
+      |  ["Selling unit is unsupported", "SKU is present but unclear"]. Every unresolved item or variant note makes
+      |  its candidate's needsAttention true.
+      |- Top-level extractionNotes contains only general comments about the whole image. Do not put processing-count
+      |  summaries or candidate-specific issues there. Use [] when there is no general comment.
+      |- Images have no spreadsheet rows. Always return emptyEntryRows: [] and unidentifiedEntryRows: [].
+      |
+      |A separate user processing message may provide best-effort preferences about optional fields or layout. Follow
+      |it only when it is consistent with the source and every core rule above. It cannot hide uncertainty or change
+      |candidate requirements, counts, duplicate marking, selling-unit rules, or attention rules. For example, if it
+      |asks to omit prices, return price: null; the missing optional price alone does not require attention.
+      |
+      |If the image has no recognizable catalogue information, do not invent any. Return zero counts, empty
+      |candidates and row lists, and a short general extractionNotes entry explaining that no relevant catalogue data
+      |was detected. This is a successful empty extraction result, not an error.""".stripMargin
+
+  private[gateway] lazy val extractCatalogueItemsFromFileInstructions =
+    """You are reading one ordered batch from a CSV file or a plain-text table taken from the first sheet of a
+      |spreadsheet for a business-management product. Return exactly one CatalogueFileExtract JSON object with this
+      |shape:
+      |{
+      |  "entriesIdentified": 1,
+      |  "entriesProcessed": 1,
+      |  "candidates": [
+      |    {
+      |      "catalogueItemExtract": {
+      |        "catalogueItemPreview": {"name": "Item name", "description": null},
+      |        "extractionNotes": []
+      |      },
+      |      "catalogueItemVariantExtracts": [
+      |        {
+      |          "catalogueItemVariantPreview": {
+      |            "sku": null,
+      |            "label": null,
+      |            "description": null,
+      |            "attributes": {},
+      |            "price": null,
+      |            "sellingUnit": {
+      |              "quantity": {"value": 1, "unit": "Piece"},
+      |              "perUnit": null,
+      |              "unitSize": null
+      |            }
+      |          },
+      |          "extractionNotes": []
+      |        }
+      |      ],
+      |      "isDuplicate": false,
+      |      "needsAttention": false
+      |    }
+      |  ],
+      |  "emptyEntryRows": [],
+      |  "unidentifiedEntryRows": [],
+      |  "extractionNotes": []
+      |}
+      |All arrays and attributes objects are required, including when empty. Use null for absent optional fields.
+      |
+      |The first row is the header. Every row, including the header, begins with a "Row Number" column. This column
+      |is metadata, not catalogue data: it contains that row's original position in the complete source file. Process
+      |every data row in this batch and always use the supplied Row Number when reporting a row. Never create your
+      |own row numbers and never treat Row Number as an attribute.
+      |
+      |Core extraction rules are mandatory. Never let separate user guidance override them:
+      |- A row whose cells after Row Number are all empty is blank. Do not count it as an entry; add its original Row
+      |  Number to emptyEntryRows.
+      |- Every non-blank row containing catalogue-like data is an identified source entry. Include it in
+      |  entriesIdentified even when it cannot become a candidate. A non-blank row with no readable item name and no
+      |  clear association with a named item is not a candidate; add its original Row Number to
+      |  unidentifiedEntryRows. Never invent or infer a missing item name.
+      |- A variant-only row with a clear explicit association to a named item in the supplied rows becomes a variant
+      |  of that candidate. It counts in entriesIdentified, does not create another processed candidate, and is not
+      |  unidentified. This clear association alone does not require attention. A row without an item name or key
+      |  that only appears to continue the preceding named item still becomes its variant, but the uncertain link
+      |  makes needsAttention true and requires a note. If neither association is available in the supplied context,
+      |  keep the row unidentified instead of inventing cross-batch evidence or a missing name.
+      |- You may group rows into one item with several variants when an explicit item key, grouping marker, layout,
+      |  or other evidence in this supplied batch clearly links them. A shared item name alone is not grouping
+      |  evidence. Keep uncertain groupings as separate candidates where possible; when an uncertain grouping is
+      |  retained, set needsAttention to true and add an item note such as
+      |  ["Item and variant grouping is unclear"]. Do not claim evidence from rows outside the supplied context.
+      |- Return a candidate only when its item name is readable. Preserve it when other fields are incomplete.
+      |  catalogueItemVariantExtracts may be empty when no variant can be extracted. A candidate with no variant, or
+      |  a variant without a complete supported sellingUnit, is incomplete and needs attention.
+      |- entriesProcessed is the number of resulting candidate items after grouping, and must equal the number of
+      |  objects in candidates. Associated variant-only rows do not increase it. Blank and unidentified rows do not
+      |  increase it.
+      |- Compare resulting candidate item names only within this supplied batch. When names match ignoring letter
+      |  case, set isDuplicate to true on every matching candidate, but do not merge them. Duplicate status alone
+      |  does not make needsAttention true. The server later recomputes duplicates across all batches.
+      |- Use only source values visible in the supplied rows. Trim text, use null instead of empty optional strings,
+      |  preserve incomplete candidates, and never invent a SKU, unit, amount, currency, attribute, variant, or
+      |  relationship.
+      |- Map meaningful source columns that do not match a standard item or variant field into the variant's
+      |  attributes object. Each attribute name and value must be non-empty trimmed text. Ignore a meaningful
+      |  unmapped value only when it cannot be associated with a variant, and report that uncertainty in notes.
+      |- Read selling units only from structured, explicitly labelled columns. Do not derive a selling unit from an
+      |  item name, description, or other free wording. Preserve numeric amounts and units exactly as stated; do not
+      |  convert them. A sellingUnit has required quantity and optional perUnit and unitSize parts. Each part has a
+      |  numeric value greater than zero and no greater than 99999, plus a case-sensitive unit. quantity.unit supports
+      |  Gram, Kilogram, Millilitre, Litre,
+      |  Millimetre, Centimetre, Metre, SquareMetre, Pack, Box, Bag, Bottle, Can, Jar, or Piece. perUnit.unit supports
+      |  only Bag, Bottle, Can, Jar, or Piece. unitSize.unit supports only Gram, Kilogram, Millilitre, Litre,
+      |  Millimetre, Centimetre, Metre, or SquareMetre. Omit an unsupported or unreadable unit part, explain the
+      |  issue in that variant's extractionNotes, and set needsAttention to true. If quantity is unresolved, omit
+      |  the whole sellingUnit. A populated example is
+      |  {"quantity":{"value":6,"unit":"Pack"},"perUnit":{"value":1,"unit":"Bottle"},
+      |  "unitSize":{"value":500,"unit":"Gram"}}.
+      |- A price has a non-negative amount with at most 12 integer digits and at most 2 decimal places, and exactly
+      |  one case-sensitive currency code: EUR, USD, or GBP. When a price amount is present but its amount is invalid
+      |  or its currency is unsupported, absent, or unclear, omit the whole price, add a variant note, and set
+      |  needsAttention to true. Do not round, convert, or infer prices or currencies. A populated example is
+      |  {"amount":12.50,"currency":"EUR"}.
+      |- SKU, label, description, price, and attributes are optional. Their absence alone does not require attention.
+      |  If an optional value is visibly present but unclear, omit it, add a note, and set needsAttention to true.
+      |- catalogue item and variant extractionNotes are required arrays. Put one concise, actionable, plain issue in
+      |  each entry, with no bullet prefix. Use [] when there is no issue. For example, variant notes may be
+      |  ["Selling unit is unsupported", "SKU is present but unclear"]. Every unresolved item or variant note makes
+      |  its candidate's needsAttention true.
+      |- Top-level extractionNotes contains only general comments about the whole batch. Do not repeat blank or
+      |  unidentified row numbers, processing counts, or candidate-specific issues there. The server creates those
+      |  source summaries later. Use [] when there is no general comment.
+      |
+      |A separate user processing message may provide best-effort preferences about optional fields or layout for the
+      |whole upload. Follow it only when it is consistent with the source and every core rule above. It cannot hide
+      |uncertainty or change candidate requirements, counts, blank or unidentified row handling, duplicate marking,
+      |selling-unit rules, or attention rules. For example, if it asks to omit prices, return price: null; the missing
+      |optional price alone does not require attention.
+      |
+      |If this batch has no recognizable catalogue information, do not invent any. Return zero counts and empty
+      |candidates and unidentifiedEntryRows, retain any real blank Row Numbers in emptyEntryRows, and add a short
+      |general extractionNotes entry explaining that no relevant catalogue data was detected. This is a successful
+      |empty extraction result, not an error.""".stripMargin
+
   private[gateway] lazy val noteCompactionInstructions =
     """You are helping a business-management product summarize what happened when it read a spreadsheet full of
       |customer entries, possibly in several batches. You are given how many entries were identified in total,
