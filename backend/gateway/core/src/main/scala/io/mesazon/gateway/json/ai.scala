@@ -4,6 +4,7 @@ import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker
 import io.github.iltotore.iron.jsoniter.given
 import io.mesazon.domain.gateway.*
+import io.mesazon.gateway.json.tapir.{catalogueItemCandidateCodec, catalogueItemCandidateSchema}
 import sttp.apispec.{AnySchema, Schema as ApiSchema, SchemaLike}
 import sttp.tapir.Schema
 import sttp.tapir.codec.iron.given
@@ -14,6 +15,11 @@ object ai {
   given assistantResponseSchema: Schema[AssistantResponse] = Schema.derived[AssistantResponse]
 
   given assistantResponseCodec: JsonValueCodec[AssistantResponse] = JsonCodecMaker.make[AssistantResponse]
+
+  given catalogueFileExtractSchema: Schema[CatalogueFileExtract] = Schema.derived[CatalogueFileExtract]
+
+  given catalogueFileExtractCodec: JsonValueCodec[CatalogueFileExtract] =
+    JsonCodecMaker.make[CatalogueFileExtract]
 
   given extractCustomersPostResponseOpenAIJsonSchema: OpenAIJsonSchema[ExtractCustomersPostResponse] =
     fromTapir(tapir.extractCustomersPostResponseSchema)

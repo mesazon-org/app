@@ -136,8 +136,6 @@ object tapir {
 
   given catalogueItemCandidateSchema: Schema[CatalogueItemCandidate] = Schema.derived[CatalogueItemCandidate]
 
-  given catalogueFileExtractSchema: Schema[CatalogueFileExtract] = Schema.derived[CatalogueFileExtract]
-
   given catalogueFileExtractPostResponseSchema: Schema[CatalogueFileExtractPostResponse] =
     Schema.derived[CatalogueFileExtractPostResponse]
 
@@ -182,9 +180,6 @@ object tapir {
 
   given catalogueItemCandidateCodec: JsonValueCodec[CatalogueItemCandidate] =
     JsonCodecMaker.make[CatalogueItemCandidate]
-
-  given catalogueFileExtractCodec: JsonValueCodec[CatalogueFileExtract] =
-    JsonCodecMaker.make[CatalogueFileExtract]
 
   given catalogueFileExtractPostResponseCodec: JsonValueCodec[CatalogueFileExtractPostResponse] =
     JsonCodecMaker.make[CatalogueFileExtractPostResponse]
