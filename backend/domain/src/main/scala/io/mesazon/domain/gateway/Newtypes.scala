@@ -177,6 +177,12 @@ type CustomerAddressEntry = CustomerAddressEntry.T
 
 // Catalogue
 
+object CatalogueFileExtractFileName extends RefinedType[String, NonEmptyTrimmed]
+type CatalogueFileExtractFileName = CatalogueFileExtractFileName.T
+
+object CatalogueFileProcessingMessage extends RefinedType[String, NonEmptyTrimmedMessage]
+type CatalogueFileProcessingMessage = CatalogueFileProcessingMessage.T
+
 object CatalogueItemID extends RefinedTypeUUID
 type CatalogueItemID = CatalogueItemID.T
 
