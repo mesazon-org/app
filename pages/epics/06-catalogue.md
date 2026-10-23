@@ -684,9 +684,9 @@ Nothing changes and no name or SKU is reserved.
 1. PNG, JPEG, and WEBP images, and genuinely readable CSV, `.xls`, and `.xlsx` files, are accepted up to 20 MB. Spreadsheet row count is not capped.
 2. The file name is required, 1–255 trimmed characters, and must have a supported extension matching the actual content, ignoring letter case.
 3. The response contains candidate catalogue items, generated processing summaries in `infoNotes`, and general user-facing review comments in `extractionNotes`. Both note lists may be empty.
-4. A candidate contains an item name when one can be read, an optional description, zero or more extracted variants, `nameIsDuplicate`, and item-level extraction notes. A candidate may omit fields that need user completion.
+4. A candidate contains an item name when one can be read, an optional description, zero or more extracted variants, `atLeastOneVariant`, `nameIsDuplicate`, and item-level extraction notes. A candidate may omit fields that need user completion.
 5. A variant candidate may contain an optional SKU, label, description, price, selling unit, attributes, `missingRequiredSaleUnit`, `skuIsDuplicate`, and variant-level extraction notes. Meaningful unmapped source columns become attributes. Structured unit values are preserved as stated and are not converted or invented.
-6. Missing required selling-unit data is represented by `missingRequiredSaleUnit: true`. A repeated item name is represented by `nameIsDuplicate: true`, and a repeated SKU by `skuIsDuplicate: true`; other uncertain or unreadable details are general extraction notes. Notes do not automatically block a later add request.
+6. Missing required selling-unit data is represented by `missingRequiredSaleUnit: true`. A repeated item name is represented by `nameIsDuplicate: true`, and a repeated SKU by `skuIsDuplicate: true`; other uncertain or unreadable details are general extraction notes. The final response needs attention if any item or variant has any of the four flags set to true, including `atLeastOneVariant`. Notes do not affect this calculation or automatically block a later add request.
 7. Duplicate marking compares candidate item names and all variant SKUs within the current response, ignoring letter case. Duplicate checks never query or compare with items or variants already in the catalogue.
 8. The extraction tracks `entriesIdentified` and `entriesProcessed` internally. `entriesIdentified` includes variant-only rows clearly associated with a named item, while `entriesProcessed` counts resulting candidate items after any grouping. A clearly associated variant-only row does not increase `entriesProcessed`. Blank rows are excluded from both counts; rows without a name or clear association are reported separately.
 9. The service generates `infoNotes` from the internal counts and filtered blank-row totals, such as a processed count or the number of empty rows filtered. It generates top-level `extractionNotes` from unidentified row numbers and the AI's general extraction notes. These messages are generated from the current source and result, not fixed text.
@@ -717,6 +717,7 @@ One upload carries whichever source the user has — an image, a CSV file, or an
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | `candidates` | `CatalogueItemCandidate[]` | May be empty | ✅ | Item candidates for review |
+| `needsAttention` | `Boolean` | Computed from candidate flags; false when there are no candidates | ✅ | True if any item has `atLeastOneVariant` or `nameIsDuplicate` true, or any variant has `missingRequiredSaleUnit` or `skuIsDuplicate` true; general notes do not affect it |
 | `infoNotes` | `String[]` | May be empty; generated from processing counts and filtered blank-row totals | ✅ | Deterministic processing summaries for this source |
 | `extractionNotes` | `String[]` | May be empty; generated from unidentified row numbers and general AI extraction notes | ✅ | General user-facing review comments for this source |
 
@@ -727,6 +728,7 @@ One upload carries whichever source the user has — an image, a CSV file, or an
 | `name` | `String` | 1–255 characters, trimmed | ✅ | The extracted item name |
 | `description` | `String` | 1–255 characters, trimmed | ❌ | The extracted item description |
 | `variants` | `CatalogueItemVariantCandidate[]` | May be empty while a variant needs completion | ✅ | The extracted variants |
+| `atLeastOneVariant` | `Boolean` | — | ✅ | Attention flag; true contributes to `needsAttention`, despite the field name |
 | `nameIsDuplicate` | `Boolean` | — | ✅ | True when another candidate in this response has the same item name, ignoring letter case |
 | `extractionNotes` | `String[]` | May be empty; each entry is concise, plain, user-facing text about readability or extraction with no bullet prefix | ✅ | General comments for the user; the client renders each entry as its own bullet |
 
