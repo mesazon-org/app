@@ -9,13 +9,14 @@ import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.{AIInstructions, CatalogueFileService, ServiceTask}
 import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.{CatalogueDomainArbitraries, ZWordSpecBase}
-import org.apache.commons.csv.CSVRecord
+import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.scalamock.matchers.ArgCapture.CaptureOne
 import zio.*
 import zio.stream.ZStream
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
+import scala.jdk.CollectionConverters.*
 
 class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries, RepositoryArbitraries {
 
@@ -552,6 +553,66 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         }
       }
 
+      List(
+        ("CSV", "catalogue.csv", SupportedMediaType.CSV),
+        ("XLS", "catalogue.xls", SupportedMediaType.XLS),
+        ("XLSX", "catalogue.xlsx", SupportedMediaType.XLSX),
+      ).foreach { case (format, fileName, supportedMediaType) =>
+        s"return catalogue candidates after converting a $format source" in new TestContext {
+          val organizationID                 = arbitrarySample[OrganizationID]
+          val catalogueFileExtractFileName   = CatalogueFileExtractFileName.assume(fileName)
+          val catalogueFileExtractByteStream = ZStream.empty
+          val fileScannedPath                = FileScannedPath(Path.of(fileName))
+          val csvRecords             = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
+          val catalogueItemName      = CatalogueItemName("Item")
+          val catalogueFileAIExtract = CatalogueFileAIExtract(
+            1L,
+            1L,
+            List(CatalogueItemAIExtract(catalogueItemName, None, Nil, true, false, Nil)),
+            Nil,
+            Nil,
+            Nil,
+          )
+          inSequence(
+            fileScannerMock.scan
+              .expects(
+                catalogueFileExtractByteStream,
+                catalogueFileExtractFileName.value,
+                SupportedMediaType.extractData,
+                catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+              )
+              .returns(ZIO.succeed((fileScannedPath, supportedMediaType, FileBytesSize.assume(1L))))
+              .once(),
+            if (supportedMediaType == SupportedMediaType.CSV)
+              spreadsheetToolMock.convertToCsv.expects(fileScannedPath).returns(ZStream.fromIterable(csvRecords)).once()
+            else
+              spreadsheetToolMock.convertExcelToCsv
+                .expects(fileScannedPath)
+                .returns(ZStream.fromIterable(csvRecords))
+                .once(),
+          )
+          val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+            extractFromImageCallsRef,
+            extractFromCsvCallsRef,
+            noteCompactionCallsRef,
+            extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(catalogueFileAIExtract))),
+          )
+          val response = buildCatalogueFileService(aiClientDataExtraction)
+            .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+            .zioValue
+          response shouldBe CatalogueFileExtractPostResponse(
+            List(CatalogueItemCandidate(catalogueItemName, None, Nil, true, List("At least one variant is required."))),
+            List("Processed 1 of 1 entries"),
+            Nil,
+          )
+          extractFromCsvCallsRef.refValue shouldBe List(
+            (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
+          )
+          extractFromImageCallsRef.refValue shouldBe Nil
+          noteCompactionCallsRef.refValue shouldBe Nil
+        }
+      }
+
       "fail with an UnexpectedError when extraction file scanning fails" in new TestContext {
         val organizationID                 = arbitrarySample[OrganizationID]
         val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.jpeg")
@@ -605,6 +666,45 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         extractFromCsvCallsRef.refValue shouldBe Nil
         noteCompactionCallsRef.refValue shouldBe Nil
       }
+      List(true, false).foreach { conversionFails =>
+        val failureStage = if (conversionFails) "spreadsheet conversion" else "spreadsheet AI extraction"
+        s"fail with an UnexpectedError when $failureStage fails" in new TestContext {
+          val organizationID                 = arbitrarySample[OrganizationID]
+          val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.csv")
+          val catalogueFileExtractByteStream = ZStream.empty
+          val fileScannedPath                = FileScannedPath(Path.of("failed-catalogue.csv"))
+          val csvRecords      = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
+          val serviceError    = ServiceError.InternalServerError.UnexpectedError(s"Failed $failureStage")
+          val csvRecordStream = if (conversionFails) ZStream.fail(serviceError) else ZStream.fromIterable(csvRecords)
+          inSequence(
+            fileScannerMock.scan
+              .expects(
+                catalogueFileExtractByteStream,
+                catalogueFileExtractFileName.value,
+                SupportedMediaType.extractData,
+                catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+              )
+              .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.CSV, FileBytesSize.assume(1L))))
+              .once(),
+            spreadsheetToolMock.convertToCsv.expects(fileScannedPath).returns(csvRecordStream).once(),
+          )
+          val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[CatalogueFileAIExtract](
+            extractFromImageCallsRef,
+            extractFromCsvCallsRef,
+            noteCompactionCallsRef,
+            extractFromCsvOptResult = Some(ZIO.fail(serviceError)),
+          )
+          buildCatalogueFileService(aiClientDataExtraction)
+            .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+            .zioError shouldBe serviceError
+          extractFromCsvCallsRef.refValue shouldBe (
+            if (conversionFails) Nil else List((csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions))
+          )
+          extractFromImageCallsRef.refValue shouldBe Nil
+          noteCompactionCallsRef.refValue shouldBe Nil
+        }
+      }
+
     }
   }
 
