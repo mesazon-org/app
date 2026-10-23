@@ -61,6 +61,7 @@ case class CatalogueItemCandidate(
     name: CatalogueItemName,
     description: Option[CatalogueItemDescription],
     variants: List[CatalogueItemVariantCandidate],
+    atLeastOneVariant: Boolean,
     nameIsDuplicate: Boolean,
     extractionNotes: List[String],
 )

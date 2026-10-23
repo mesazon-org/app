@@ -32,13 +32,14 @@ Catalogue's agreed flags are:
 
 | Flag | Final meaning |
 |---|---|
+| `atLeastOneVariant` | `true` exactly when the item's final `variants` list is non-empty; recompute after grouping |
 | `missingRequiredSaleUnit` | `true` exactly when the variant has no usable `sellingUnit`; the service must keep it consistent with that optional field |
 | `nameIsDuplicate` | The item name matches another candidate's name case-insensitively within the completed upload |
 | `skuIsDuplicate` | A supplied SKU matches another variant's SKU case-insensitively across all candidates in the completed upload; absent SKUs are never duplicates |
 
 Recompute deterministic flags after grouping and aggregation, rather than trusting batch-local AI values. Catalogue duplicate flags are warnings, do not merge candidates, and do not query stored records. Existing insert validation and stored uniqueness rules still apply when a candidate is submitted.
 
-Catalogue needs no extra boolean for an empty variant list or an absent optional price, SKU, label, or description. A readable item name is already required by its candidate type; entries without one follow the feature's unidentified-entry rules. `CatalogueFileExtractPostResponse` additionally has a service-computed `needsAttention` boolean. It is absent from the AI result and nested candidates; the AI must not determine it. Its exact aggregation conditions remain to be agreed before implementation. Do not infer an automatic submission block from general notes.
+Catalogue explicitly exposes `atLeastOneVariant` on each item candidate, consistent with its final variant list. An absent optional price, SKU, label, or description does not need an additional flag. A readable item name is already required by its candidate type; entries without one follow the feature's unidentified-entry rules. `CatalogueFileExtractPostResponse` additionally has a service-computed `needsAttention` boolean. It is absent from the AI result and nested candidates; the AI must not determine it. Its exact aggregation conditions remain to be agreed before implementation. Do not infer an automatic submission block from general notes.
 
 ## Notes presented to users
 
