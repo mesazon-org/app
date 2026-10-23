@@ -38,10 +38,12 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
               name = arbitrarySample[CatalogueItemName],
               description = arbitrarySample[Option[CatalogueItemDescription]],
               variants = List(catalogueItemVariantCandidate),
+              atLeastOneVariant = false,
               nameIsDuplicate = false,
               extractionNotes = List("Item and variant grouping is unclear"),
             )
           ),
+          needsAttention = true,
           infoNotes = List("Processed 1 of 1 catalogue entries"),
           extractionNotes = List("The source image is cropped at the bottom"),
         )
