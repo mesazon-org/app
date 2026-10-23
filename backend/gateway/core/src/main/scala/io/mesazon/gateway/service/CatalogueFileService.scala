@@ -4,9 +4,11 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
 import io.mesazon.gateway.clients.{AIClientDataExtraction, S3ClientOrganizationMedia}
 import io.mesazon.gateway.config.CatalogueFileServiceConfig
+import io.mesazon.gateway.json.ai.given
 import io.mesazon.gateway.repository.CatalogueRepository
 import io.mesazon.gateway.tapir.TapirTask
 import io.mesazon.gateway.utils.*
+import io.scalaland.chimney.dsl.*
 import zio.*
 import zio.stream.ZStream
 
@@ -37,7 +39,7 @@ object CatalogueFileService {
       imageProcessing: ImageProcessing,
       @unused spreadsheetTool: SpreadsheetTool,
       s3ClientOrganizationMedia: S3ClientOrganizationMedia,
-      @unused aiClientDataExtraction: AIClientDataExtraction,
+      aiClientDataExtraction: AIClientDataExtraction,
   ) extends CatalogueFileService[ServiceTask] {
 
     override def uploadCatalogueItemImage(
@@ -101,8 +103,87 @@ object CatalogueFileService {
         catalogueFileExtractFileName: CatalogueFileExtractFileName,
         catalogueFileProcessingMessageOpt: Option[CatalogueFileProcessingMessage],
         catalogueFileExtractByteStream: ZStream[Any, Throwable, Byte],
-    ): ServiceTask[CatalogueFileExtractPostResponse] =
-      ZIO.die(new NotImplementedError("Catalogue item extraction is not implemented"))
+    ): ServiceTask[CatalogueFileExtractPostResponse] = ZIO.scoped(
+      for {
+        catalogueFileScanOutput <- fileScanner.scan(
+          catalogueFileExtractByteStream,
+          catalogueFileExtractFileName.value,
+          SupportedMediaType.extractData,
+          catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+        )
+        catalogueFileAIExtract <- catalogueFileScanOutput.supportedMediaType match {
+          case supportedMediaType if SupportedMediaType.images.contains(supportedMediaType) =>
+            aiClientDataExtraction.extractFromImage[CatalogueFileAIExtract](
+              catalogueFileScanOutput.fileScannedPath,
+              supportedMediaType,
+              AIInstructions.extractCatalogueItemsFromImageInstructions,
+              catalogueFileProcessingMessageOpt.map(_.value),
+            )
+          case _ =>
+            ZIO.die(new NotImplementedError("Catalogue spreadsheet extraction is not implemented"))
+        }
+        candidates = catalogueFileAIExtract.candidates.map { catalogueItemAIExtract =>
+          val extractionNotesComputed = computeExtractNotes(catalogueItemAIExtract)
+          val needsAttentionComputed  = computeNeedsAttention(catalogueItemAIExtract)
+
+          val variants = catalogueItemAIExtract.variants
+            .map(
+              _.intoPartial[CatalogueItemVariantInsert]
+                .withFieldComputed(_.attributes, _.attributes.map(a => a.name -> a.value).toMap)
+                .transform
+                .asOption
+            )
+            .flatMap(_.toList)
+
+          catalogueItemAIExtract
+            .into[CatalogueItemCandidate]
+            .withFieldConst(_.variants, variants)
+            .withFieldConst(_.needsAttention, needsAttentionComputed)
+            .withFieldConst(_.extractionNotes, extractionNotesComputed)
+            .transform
+        }
+        infoNotesComputed = computeInfoNotes(catalogueFileAIExtract)
+      } yield CatalogueFileExtractPostResponse(
+        candidates = candidates,
+        infoNotes = infoNotesComputed,
+        extractionNotes = catalogueFileAIExtract.extractionNotes,
+      )
+    )
+
+    // TODO: make this better to many lines.
+    private def computeInfoNotes(catalogueFileAIExtract: CatalogueFileAIExtract): List[String] =
+      List(
+        s"Entries identified: ${catalogueFileAIExtract.entriesIdentified}",
+        s"Entries processed: ${catalogueFileAIExtract.entriesProcessed}",
+        s"Empty rows (${catalogueFileAIExtract.emptyEntryRows.size}): [${catalogueFileAIExtract.emptyEntryRows.mkString(", ")}]",
+        s"Unidentified rows (${catalogueFileAIExtract.unidentifiedEntryRows.size}): [${catalogueFileAIExtract.unidentifiedEntryRows.mkString(", ")}]",
+      )
+
+    private def computeNeedsAttention(catalogueItemAIExtract: CatalogueItemAIExtract): Boolean =
+      catalogueItemAIExtract.atLeastOneVariant || catalogueItemAIExtract.nameIsDuplicate || catalogueItemAIExtract.variants
+        .exists(catalogueItemVariantAIExtract =>
+          catalogueItemVariantAIExtract.missingRequiredSaleUnit || catalogueItemVariantAIExtract.skuIsDuplicate || catalogueItemVariantAIExtract.sellingUnit.isEmpty
+        )
+
+    private def computeExtractNotes(catalogueItemAIExtract: CatalogueItemAIExtract): List[String] =
+      if (catalogueItemAIExtract.atLeastOneVariant)
+        Option.when(catalogueItemAIExtract.atLeastOneVariant)("At least one variant is required.").toList ++
+          Option.when(catalogueItemAIExtract.nameIsDuplicate)("Item name is duplicated in this extraction.").toList ++
+          catalogueItemAIExtract.extractionNotes
+      else
+        Option
+          .when(catalogueItemAIExtract.nameIsDuplicate)("Item name is duplicated in this extraction.")
+          .toList ++ catalogueItemAIExtract.extractionNotes ++
+          catalogueItemAIExtract.variants.zipWithIndex.flatMap { case (variant, index) =>
+            val prefix = s"Variant ${index + 1}: "
+            Option
+              .when(variant.missingRequiredSaleUnit || variant.sellingUnit.isEmpty)(
+                prefix + "Selling unit is missing."
+              )
+              .toList ++
+              Option.when(variant.skuIsDuplicate)(prefix + "SKU is duplicated in this extraction.").toList ++
+              variant.extractionNotes.map(prefix + _)
+          }
   }
 
   def observed(service: CatalogueFileService[ServiceTask]): CatalogueFileService[TapirTask] =
