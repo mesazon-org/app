@@ -18,6 +18,7 @@ object Mocks {
       extractFromImageOptResult: Option[IO[ServiceError, A]] = None,
       extractFromCsvOptResult: Option[IO[ServiceError, NonEmptyChunk[A]]] = None,
       noteCompactionOptResult: Option[IO[ServiceError, NoteCompactionOutput]] = None,
+      extractFromImageProcessingMessagesRefOpt: Option[Ref[List[Option[String]]]] = None,
   ) extends AIClientDataExtraction {
     override def extractFromImage[B](
         imageScannedPath: FileScannedPath,
@@ -26,6 +27,7 @@ object Mocks {
         processingMessageOpt: Option[String],
     )(using OpenAIJsonSchema[B], JsonValueCodec[B]): IO[ServiceError, B] =
       extractFromImageCallsRef.update(_ :+ (imageScannedPath, supportedMediaType, instructions)) *>
+        ZIO.foreachDiscard(extractFromImageProcessingMessagesRefOpt)(_.update(_ :+ processingMessageOpt)) *>
         extractFromImageOptResult
           .getOrElse(ZIO.die(new NotImplementedError("extractFromImage should not be called")))
           .map(_.asInstanceOf[B])

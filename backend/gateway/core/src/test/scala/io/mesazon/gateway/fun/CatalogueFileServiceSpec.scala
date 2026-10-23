@@ -507,6 +507,51 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         }
       }
 
+      List[(String, Option[CatalogueFileProcessingMessage])](
+        ("without optional guidance", None),
+        ("with optional guidance", Some(CatalogueFileProcessingMessage("Omit prices from variants"))),
+      ).foreach { case (guidance, catalogueFileProcessingMessageOpt) =>
+        s"forward the default photo instructions separately from processing guidance $guidance" in new TestContext {
+          val organizationID                        = arbitrarySample[OrganizationID]
+          val catalogueFileExtractFileName          = CatalogueFileExtractFileName("catalogue.jpeg")
+          val catalogueFileExtractByteStream        = ZStream.empty
+          val fileScannedPath                       = FileScannedPath(Path.of("guided-catalogue.jpeg"))
+          val catalogueFileAIExtract                = CatalogueFileAIExtract(0L, 0L, Nil, Nil, Nil, Nil)
+          val extractFromImageProcessingMessagesRef = Ref.make(List.empty[Option[String]]).zioValue
+          fileScannerMock.scan
+            .expects(
+              catalogueFileExtractByteStream,
+              catalogueFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+            )
+            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
+            .once()
+          val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+            extractFromImageCallsRef,
+            extractFromCsvCallsRef,
+            noteCompactionCallsRef,
+            extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
+            extractFromImageProcessingMessagesRefOpt = Some(extractFromImageProcessingMessagesRef),
+          )
+          val response = buildCatalogueFileService(aiClientDataExtraction)
+            .extractCatalogueItems(
+              organizationID,
+              catalogueFileExtractFileName,
+              catalogueFileProcessingMessageOpt,
+              catalogueFileExtractByteStream,
+            )
+            .zioValue
+          response shouldBe CatalogueFileExtractPostResponse(Nil, List("Processed 0 of 0 entries"), Nil)
+          extractFromImageCallsRef.refValue shouldBe List(
+            (fileScannedPath, SupportedMediaType.JPEG, AIInstructions.extractCatalogueItemsFromImageInstructions)
+          )
+          extractFromImageProcessingMessagesRef.refValue shouldBe List(catalogueFileProcessingMessageOpt.map(_.value))
+          extractFromCsvCallsRef.refValue shouldBe Nil
+          noteCompactionCallsRef.refValue shouldBe Nil
+        }
+      }
+
       "fail with an UnexpectedError when extraction file scanning fails" in new TestContext {
         val organizationID                 = arbitrarySample[OrganizationID]
         val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.jpeg")
