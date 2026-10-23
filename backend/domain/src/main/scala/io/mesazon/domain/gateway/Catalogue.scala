@@ -45,11 +45,18 @@ case class CatalogueItemUniquenessGetRequest(
     sku: Option[CatalogueItemVariantSku],
 )
 
-case class CatalogueItemVariantCandidate(
+// AI
+
+case class CatalogueItemVariantAttributesAIExtract(
+    name: CatalogueItemVariantAttributeName,
+    value: CatalogueItemVariantAttributeValue,
+)
+
+case class CatalogueItemVariantAIExtract(
     sku: Option[CatalogueItemVariantSku],
     label: Option[CatalogueItemVariantLabel],
     description: Option[CatalogueItemVariantDescription],
-    attributes: Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue],
+    attributes: List[CatalogueItemVariantAttributesAIExtract],
     price: Option[CatalogueItemVariantPrice],
     sellingUnit: Option[CatalogueItemVariantSaleUnit],
     missingRequiredSaleUnit: Boolean,
@@ -57,27 +64,36 @@ case class CatalogueItemVariantCandidate(
     extractionNotes: List[String],
 )
 
-case class CatalogueItemCandidate(
+case class CatalogueItemAIExtract(
     name: CatalogueItemName,
     description: Option[CatalogueItemDescription],
-    variants: List[CatalogueItemVariantCandidate],
+    variants: List[CatalogueItemVariantAIExtract],
     atLeastOneVariant: Boolean,
     nameIsDuplicate: Boolean,
     extractionNotes: List[String],
 )
 
-case class CatalogueFileExtract(
+case class CatalogueFileAIExtract(
     entriesIdentified: Long,
     entriesProcessed: Long,
-    candidates: List[CatalogueItemCandidate],
+    candidates: List[CatalogueItemAIExtract],
     emptyEntryRows: List[Long],
     unidentifiedEntryRows: List[Long],
     extractionNotes: List[String],
 )
 
+// Catalogue File
+
+case class CatalogueItemCandidate(
+    name: CatalogueItemName,
+    description: Option[CatalogueItemDescription],
+    variants: List[CatalogueItemVariantInsert],
+    needsAttention: Boolean,
+    extractionNotes: List[String],
+)
+
 case class CatalogueFileExtractPostResponse(
     candidates: List[CatalogueItemCandidate],
-    needsAttention: Boolean,
     infoNotes: List[String],
     extractionNotes: List[String],
 )

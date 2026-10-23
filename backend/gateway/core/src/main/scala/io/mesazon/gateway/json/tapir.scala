@@ -124,8 +124,8 @@ object tapir {
     summon[Schema[Map[String, String]]]
       .as[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]]
 
-  given catalogueItemVariantCandidateSchema: Schema[CatalogueItemVariantCandidate] =
-    Schema.derived[CatalogueItemVariantCandidate]
+  given catalogueItemVariantInsertSchema: Schema[CatalogueItemVariantInsert] =
+    Schema.derived[CatalogueItemVariantInsert]
 
   given catalogueItemCandidateSchema: Schema[CatalogueItemCandidate] = Schema.derived[CatalogueItemCandidate]
 
@@ -159,8 +159,8 @@ object tapir {
   given catalogueItemVariantSaleUnitCodec: JsonValueCodec[CatalogueItemVariantSaleUnit] =
     JsonCodecMaker.make[CatalogueItemVariantSaleUnit]
 
-  given catalogueItemVariantCandidateCodec: JsonValueCodec[CatalogueItemVariantCandidate] =
-    JsonCodecMaker.make[CatalogueItemVariantCandidate]
+  given catalogueItemVariantInsertCodec: JsonValueCodec[CatalogueItemVariantInsert] =
+    JsonCodecMaker.make[CatalogueItemVariantInsert]
 
   given catalogueItemCandidateCodec: JsonValueCodec[CatalogueItemCandidate] =
     JsonCodecMaker.make[CatalogueItemCandidate]

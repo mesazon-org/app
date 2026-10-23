@@ -317,30 +317,46 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .zioValue
 
         val catalogueFileExtract = aiClientDataExtraction
-          .extractFromImage[CatalogueFileExtract](
+          .extractFromImage[CatalogueFileAIExtract](
             imageScannedPath(),
             SupportedMediaType.JPEG,
             instructions,
           )
           .zioValue
 
-        catalogueFileExtract shouldBe CatalogueFileExtract(
+        catalogueFileExtract shouldBe CatalogueFileAIExtract(
           entriesIdentified = 1L,
           entriesProcessed = 1L,
           candidates = List(
-            CatalogueItemCandidate(
+            CatalogueItemAIExtract(
               name = CatalogueItemName.assume("Cotton T-Shirt"),
               description = Some(CatalogueItemDescription.assume("Classic crew neck")),
               variants = List(
-                CatalogueItemVariantCandidate(
+                CatalogueItemVariantAIExtract(
                   sku = Some(CatalogueItemVariantSku.assume("TS-RED-M")),
                   label = Some(CatalogueItemVariantLabel.assume("Red / Medium")),
                   description = None,
-                  attributes = Map(
-                    CatalogueItemVariantAttributeName.assume("Color") -> CatalogueItemVariantAttributeValue.assume(
-                      "Blue"
+                  attributes = List(
+                    CatalogueItemVariantAttributesAIExtract(
+                      CatalogueItemVariantAttributeName.assume("Color"),
+                      CatalogueItemVariantAttributeValue.assume("Red"),
                     ),
-                    CatalogueItemVariantAttributeName.assume("Size") -> CatalogueItemVariantAttributeValue.assume("M"),
+                    CatalogueItemVariantAttributesAIExtract(
+                      CatalogueItemVariantAttributeName.assume("Color"),
+                      CatalogueItemVariantAttributeValue.assume("Red"),
+                    ),
+                    CatalogueItemVariantAttributesAIExtract(
+                      CatalogueItemVariantAttributeName.assume("Color"),
+                      CatalogueItemVariantAttributeValue.assume("Blue"),
+                    ),
+                    CatalogueItemVariantAttributesAIExtract(
+                      CatalogueItemVariantAttributeName.assume("Size"),
+                      CatalogueItemVariantAttributeValue.assume("M"),
+                    ),
+                    CatalogueItemVariantAttributesAIExtract(
+                      CatalogueItemVariantAttributeName.assume("Size"),
+                      CatalogueItemVariantAttributeValue.assume("M"),
+                    ),
                   ),
                   price = Some(
                     CatalogueItemVariantPrice.assume(Price(PriceAmount.assume(BigDecimal("12.50")), Currency.EUR))
