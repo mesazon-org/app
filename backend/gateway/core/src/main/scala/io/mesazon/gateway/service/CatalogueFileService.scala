@@ -3,7 +3,7 @@ package io.mesazon.gateway.service
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
 import io.mesazon.gateway.clients.{AIClientDataExtraction, S3ClientOrganizationMedia}
-import io.mesazon.gateway.config.FileServiceConfig
+import io.mesazon.gateway.config.CatalogueFileServiceConfig
 import io.mesazon.gateway.repository.CatalogueRepository
 import io.mesazon.gateway.tapir.TapirTask
 import io.mesazon.gateway.utils.*
@@ -31,7 +31,7 @@ trait CatalogueFileService[F[_]] {
 object CatalogueFileService {
 
   private final class CatalogueFileServiceImpl(
-      fileServiceConfig: FileServiceConfig,
+      catalogueFileServiceConfig: CatalogueFileServiceConfig,
       catalogueRepository: CatalogueRepository,
       fileScanner: FileScanner,
       imageProcessing: ImageProcessing,
@@ -58,7 +58,7 @@ object CatalogueFileService {
           catalogueItemImageByteStream,
           catalogueItemImageOriginalFileName.value,
           SupportedMediaType.images,
-          fileServiceConfig.fileBytesMax,
+          catalogueFileServiceConfig.uploadCatalogueItemImageFileBytesMax,
         )
         catalogueItemImageNormalizedResult <- imageProcessing.normalize(
           FileByteStreamScanned(ZStream.fromPath(catalogueItemImageScanOutput.fileScannedPath.value)),

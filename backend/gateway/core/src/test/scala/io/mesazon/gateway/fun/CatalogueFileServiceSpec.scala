@@ -2,7 +2,7 @@ package io.mesazon.gateway.fun
 
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.{AIClientDataExtraction, S3ClientOrganizationMedia}
-import io.mesazon.gateway.config.FileServiceConfig
+import io.mesazon.gateway.config.CatalogueFileServiceConfig
 import io.mesazon.gateway.repository.CatalogueRepository
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.{CatalogueFileService, ServiceTask}
@@ -78,7 +78,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
                 catalogueItemImageByteStream,
                 catalogueItemImageOriginalFileName.value,
                 SupportedMediaType.images,
-                fileServiceConfig.fileBytesMax,
+                catalogueFileServiceConfig.uploadCatalogueItemImageFileBytesMax,
               )
               .returns(
                 ZIO.succeed(
@@ -184,7 +184,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
               catalogueItemImageByteStream,
               catalogueItemImageOriginalFileName.value,
               SupportedMediaType.images,
-              fileServiceConfig.fileBytesMax,
+              catalogueFileServiceConfig.uploadCatalogueItemImageFileBytesMax,
             )
             .returns(ZIO.fail(scanError))
             .once(),
@@ -255,8 +255,9 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
   }
 
   trait TestContext {
-    val fileServiceConfig = FileServiceConfig(
-      fileBytesMax = 20L * 1024 * 1024
+    val catalogueFileServiceConfig = CatalogueFileServiceConfig(
+      uploadCatalogueItemImageFileBytesMax = 20L * 1024 * 1024,
+      extractCatalogueItemsFileBytesMax = 10L * 1024 * 1024,
     )
 
     val catalogueRepositoryMock       = mock[CatalogueRepository]
@@ -270,7 +271,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
       .service[CatalogueFileService[ServiceTask]]
       .provide(
         CatalogueFileService.local,
-        ZLayer.succeed(fileServiceConfig),
+        ZLayer.succeed(catalogueFileServiceConfig),
         ZLayer.succeed(catalogueRepositoryMock),
         ZLayer.succeed(fileScannerMock),
         ZLayer.succeed(imageProcessingMock),
