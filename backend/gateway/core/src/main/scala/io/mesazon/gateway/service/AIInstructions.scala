@@ -166,29 +166,27 @@ object AIInstructions {
       |  "entriesProcessed": 1,
       |  "candidates": [
       |    {
-      |      "catalogueItemExtract": {
-      |        "catalogueItemPreview": {"name": "Item name", "description": null},
-      |        "extractionNotes": []
-      |      },
-      |      "catalogueItemVariantExtracts": [
+      |      "name": "Item name",
+      |      "description": null,
+      |      "variants": [
       |        {
-      |          "catalogueItemVariantPreview": {
-      |            "sku": null,
-      |            "label": null,
-      |            "description": null,
-      |            "attributes": {},
-      |            "price": null,
-      |            "sellingUnit": {
-      |              "quantity": {"value": 1, "unit": "Piece"},
-      |              "perUnit": null,
-      |              "unitSize": null
-      |            }
+      |          "sku": null,
+      |          "label": null,
+      |          "description": null,
+      |          "attributes": {},
+      |          "price": null,
+      |          "sellingUnit": {
+      |            "quantity": {"value": 1, "unit": "Piece"},
+      |            "perUnit": null,
+      |            "unitSize": null
       |          },
+      |          "missingRequiredSaleUnit": false,
+      |          "skuIsDuplicate": false,
       |          "extractionNotes": []
       |        }
       |      ],
-      |      "isDuplicate": false,
-      |      "needsAttention": false
+      |      "nameIsDuplicate": false,
+      |      "extractionNotes": []
       |    }
       |  ],
       |  "emptyEntryRows": [],
@@ -200,20 +198,22 @@ object AIInstructions {
       |Core extraction rules are mandatory. Never let separate user guidance override them:
       |- Find every visible entry that looks like a catalogue item or variant. Return a candidate only when an item
       |  name is readable. Never invent or infer a missing item name. Preserve a named candidate when other fields
-      |  are incomplete, and mark it for attention when a required field or value is missing or uncertain.
+      |  are incomplete, and describe blurry, unreadable, or uncertain values in the relevant extractionNotes.
       |- You may group visible entries into one item with several variants when the image clearly shows they belong
       |  together. Use only grouping evidence visible in this image. A shared item name alone does not prove that
-      |  two entries belong to one item. Keep uncertain groupings, set needsAttention to true, and add an item note
-      |  such as ["Item and variant grouping is unclear"].
-      |- catalogueItemVariantExtracts may be empty when no variant can be extracted. A candidate with no variant,
-      |  or a variant without a complete supported sellingUnit, is incomplete and needs attention.
+      |  two entries belong to one item. Describe an uncertain grouping in the item's extractionNotes, for example
+      |  ["Item and variant grouping is unclear"].
+      |- variants may be empty when no variant can be extracted. The normal add-item request validates required
+      |  variants later; do not invent a variant for this preview.
       |- entriesIdentified is the number of non-blank catalogue-like source entries you identified, including a
       |  visible variant entry associated with a named item and an entry whose item name is unreadable.
       |- entriesProcessed is the number of resulting candidate items after grouping, and must equal the number of
       |  objects in candidates. A variant associated with an item does not add another processed item.
-      |- Compare resulting candidate item names only within this upload. When names match ignoring letter case, set
-      |  isDuplicate to true on every matching candidate, but do not merge them. Duplicate status alone does not
-      |  make needsAttention true.
+      |- Compare resulting candidate item names only within this upload, never with an existing catalogue. When names
+      |  match ignoring letter case, set nameIsDuplicate to true on every matching candidate, but do not merge them.
+      |- Compare every readable variant SKU across all candidates in this upload, ignoring letter case. Set
+      |  skuIsDuplicate to true on every matching variant. An absent SKU always has skuIsDuplicate false. Do not query
+      |  or compare with existing catalogue variants.
       |- Use only readable source values. Trim text, use null instead of empty optional strings, preserve incomplete
       |  candidates, and never invent a SKU, unit, amount, currency, attribute, variant, or relationship.
       |- Preserve meaningful labelled details that do not map to a standard item or variant field in the variant's
@@ -225,30 +225,33 @@ object AIInstructions {
       |  Gram, Kilogram, Millilitre, Litre,
       |  Millimetre, Centimetre, Metre, SquareMetre, Pack, Box, Bag, Bottle, Can, Jar, or Piece. perUnit.unit supports
       |  only Bag, Bottle, Can, Jar, or Piece. unitSize.unit supports only Gram, Kilogram, Millilitre, Litre,
-      |  Millimetre, Centimetre, Metre, or SquareMetre. Omit an unsupported or unreadable unit part, explain the
-      |  issue in that variant's extractionNotes, and set needsAttention to true. If quantity is unresolved, omit
-      |  the whole sellingUnit. A populated example is
+      |  Millimetre, Centimetre, Metre, or SquareMetre. Omit an unsupported or unreadable unit part and explain the
+      |  issue in that variant's extractionNotes. If a complete required sellingUnit cannot be provided, return
+      |  sellingUnit: null and missingRequiredSaleUnit: true. Otherwise return the complete sellingUnit and
+      |  missingRequiredSaleUnit: false. A populated example is
       |  {"quantity":{"value":6,"unit":"Pack"},"perUnit":{"value":1,"unit":"Bottle"},
       |  "unitSize":{"value":500,"unit":"Gram"}}.
       |- A price has a non-negative amount with at most 12 integer digits and at most 2 decimal places, and exactly
       |  one case-sensitive currency code: EUR, USD, or GBP. When a price amount is present but its amount is invalid
-      |  or its currency is unsupported, absent, or unclear, omit the whole price, add a variant note, and set
-      |  needsAttention to true. Do not round, convert, or infer prices or currencies. A populated example is
+      |  or its currency is unsupported, absent, or unclear, omit the whole price and add a variant note. Do not
+      |  round, convert, or infer prices or currencies. A populated example is
       |  {"amount":12.50,"currency":"EUR"}.
-      |- SKU, label, description, price, and attributes are optional. Their absence alone does not require attention.
-      |  If an optional value is visibly present but unclear, omit it, add a note, and set needsAttention to true.
-      |- catalogue item and variant extractionNotes are required arrays. Put one concise, actionable, plain issue in
-      |  each entry, with no bullet prefix. Use [] when there is no issue. For example, variant notes may be
-      |  ["Selling unit is unsupported", "SKU is present but unclear"]. Every unresolved item or variant note makes
-      |  its candidate's needsAttention true.
+      |- SKU, label, description, price, and attributes are optional. If an optional value is visibly present but
+      |  blurry, unreadable, or unclear, omit it and add a relevant note.
+      |- Catalogue item and variant extractionNotes are required arrays of general comments about their own
+      |  extraction. Put one concise, actionable, plain comment in each entry, with no bullet prefix. Use [] when
+      |  there is no comment. For example, variant notes may be
+      |  ["Selling unit is unsupported", "SKU is present but unclear"]. Notes do not change the duplicate or missing
+      |  sale-unit flags.
       |- Top-level extractionNotes contains only general comments about the whole image. Do not put processing-count
       |  summaries or candidate-specific issues there. Use [] when there is no general comment.
       |- Images have no spreadsheet rows. Always return emptyEntryRows: [] and unidentifiedEntryRows: [].
       |
       |A separate user processing message may provide best-effort preferences about optional fields or layout. Follow
       |it only when it is consistent with the source and every core rule above. It cannot hide uncertainty or change
-      |candidate requirements, counts, duplicate marking, selling-unit rules, or attention rules. For example, if it
-      |asks to omit prices, return price: null; the missing optional price alone does not require attention.
+      |candidate requirements, counts, duplicate marking, selling-unit rules, or flag meanings. For example, if it
+      |asks to omit prices, return price: null; omitting that optional field does not set either duplicate flag or
+      |missingRequiredSaleUnit.
       |
       |If the image has no recognizable catalogue information, do not invent any. Return zero counts, empty
       |candidates and row lists, and a short general extractionNotes entry explaining that no relevant catalogue data
@@ -263,29 +266,27 @@ object AIInstructions {
       |  "entriesProcessed": 1,
       |  "candidates": [
       |    {
-      |      "catalogueItemExtract": {
-      |        "catalogueItemPreview": {"name": "Item name", "description": null},
-      |        "extractionNotes": []
-      |      },
-      |      "catalogueItemVariantExtracts": [
+      |      "name": "Item name",
+      |      "description": null,
+      |      "variants": [
       |        {
-      |          "catalogueItemVariantPreview": {
-      |            "sku": null,
-      |            "label": null,
-      |            "description": null,
-      |            "attributes": {},
-      |            "price": null,
-      |            "sellingUnit": {
-      |              "quantity": {"value": 1, "unit": "Piece"},
-      |              "perUnit": null,
-      |              "unitSize": null
-      |            }
+      |          "sku": null,
+      |          "label": null,
+      |          "description": null,
+      |          "attributes": {},
+      |          "price": null,
+      |          "sellingUnit": {
+      |            "quantity": {"value": 1, "unit": "Piece"},
+      |            "perUnit": null,
+      |            "unitSize": null
       |          },
+      |          "missingRequiredSaleUnit": false,
+      |          "skuIsDuplicate": false,
       |          "extractionNotes": []
       |        }
       |      ],
-      |      "isDuplicate": false,
-      |      "needsAttention": false
+      |      "nameIsDuplicate": false,
+      |      "extractionNotes": []
       |    }
       |  ],
       |  "emptyEntryRows": [],
@@ -308,24 +309,27 @@ object AIInstructions {
       |  unidentifiedEntryRows. Never invent or infer a missing item name.
       |- A variant-only row with a clear explicit association to a named item in the supplied rows becomes a variant
       |  of that candidate. It counts in entriesIdentified, does not create another processed candidate, and is not
-      |  unidentified. This clear association alone does not require attention. A row without an item name or key
-      |  that only appears to continue the preceding named item still becomes its variant, but the uncertain link
-      |  makes needsAttention true and requires a note. If neither association is available in the supplied context,
-      |  keep the row unidentified instead of inventing cross-batch evidence or a missing name.
+      |  unidentified. A row without an item name or key that only appears to continue the preceding named item still
+      |  becomes its variant; describe the uncertain link in the relevant extractionNotes. If neither association is
+      |  available in the supplied context, keep the row unidentified instead of inventing cross-batch evidence or a
+      |  missing name.
       |- You may group rows into one item with several variants when an explicit item key, grouping marker, layout,
       |  or other evidence in this supplied batch clearly links them. A shared item name alone is not grouping
       |  evidence. Keep uncertain groupings as separate candidates where possible; when an uncertain grouping is
-      |  retained, set needsAttention to true and add an item note such as
-      |  ["Item and variant grouping is unclear"]. Do not claim evidence from rows outside the supplied context.
+      |  retained, add an item note such as ["Item and variant grouping is unclear"]. Do not claim evidence from
+      |  rows outside the supplied context.
       |- Return a candidate only when its item name is readable. Preserve it when other fields are incomplete.
-      |  catalogueItemVariantExtracts may be empty when no variant can be extracted. A candidate with no variant, or
-      |  a variant without a complete supported sellingUnit, is incomplete and needs attention.
+      |  variants may be empty when no variant can be extracted. The normal add-item request validates required
+      |  variants later; do not invent a variant for this preview.
       |- entriesProcessed is the number of resulting candidate items after grouping, and must equal the number of
       |  objects in candidates. Associated variant-only rows do not increase it. Blank and unidentified rows do not
       |  increase it.
-      |- Compare resulting candidate item names only within this supplied batch. When names match ignoring letter
-      |  case, set isDuplicate to true on every matching candidate, but do not merge them. Duplicate status alone
-      |  does not make needsAttention true. The server later recomputes duplicates across all batches.
+      |- Compare resulting candidate item names only within this supplied batch, never with an existing catalogue.
+      |  When names match ignoring letter case, set nameIsDuplicate to true on every matching candidate, but do not
+      |  merge them. The server later recomputes name duplicates across all batches.
+      |- Compare every readable variant SKU across all candidates in this supplied batch, ignoring letter case. Set
+      |  skuIsDuplicate to true on every matching variant. An absent SKU always has skuIsDuplicate false. Never query
+      |  or compare with existing catalogue variants. The server later recomputes SKU duplicates across all batches.
       |- Use only source values visible in the supplied rows. Trim text, use null instead of empty optional strings,
       |  preserve incomplete candidates, and never invent a SKU, unit, amount, currency, attribute, variant, or
       |  relationship.
@@ -339,22 +343,24 @@ object AIInstructions {
       |  Gram, Kilogram, Millilitre, Litre,
       |  Millimetre, Centimetre, Metre, SquareMetre, Pack, Box, Bag, Bottle, Can, Jar, or Piece. perUnit.unit supports
       |  only Bag, Bottle, Can, Jar, or Piece. unitSize.unit supports only Gram, Kilogram, Millilitre, Litre,
-      |  Millimetre, Centimetre, Metre, or SquareMetre. Omit an unsupported or unreadable unit part, explain the
-      |  issue in that variant's extractionNotes, and set needsAttention to true. If quantity is unresolved, omit
-      |  the whole sellingUnit. A populated example is
+      |  Millimetre, Centimetre, Metre, or SquareMetre. Omit an unsupported or unreadable unit part and explain the
+      |  issue in that variant's extractionNotes. If a complete required sellingUnit cannot be provided, return
+      |  sellingUnit: null and missingRequiredSaleUnit: true. Otherwise return the complete sellingUnit and
+      |  missingRequiredSaleUnit: false. A populated example is
       |  {"quantity":{"value":6,"unit":"Pack"},"perUnit":{"value":1,"unit":"Bottle"},
       |  "unitSize":{"value":500,"unit":"Gram"}}.
       |- A price has a non-negative amount with at most 12 integer digits and at most 2 decimal places, and exactly
       |  one case-sensitive currency code: EUR, USD, or GBP. When a price amount is present but its amount is invalid
-      |  or its currency is unsupported, absent, or unclear, omit the whole price, add a variant note, and set
-      |  needsAttention to true. Do not round, convert, or infer prices or currencies. A populated example is
+      |  or its currency is unsupported, absent, or unclear, omit the whole price and add a variant note. Do not
+      |  round, convert, or infer prices or currencies. A populated example is
       |  {"amount":12.50,"currency":"EUR"}.
-      |- SKU, label, description, price, and attributes are optional. Their absence alone does not require attention.
-      |  If an optional value is visibly present but unclear, omit it, add a note, and set needsAttention to true.
-      |- catalogue item and variant extractionNotes are required arrays. Put one concise, actionable, plain issue in
-      |  each entry, with no bullet prefix. Use [] when there is no issue. For example, variant notes may be
-      |  ["Selling unit is unsupported", "SKU is present but unclear"]. Every unresolved item or variant note makes
-      |  its candidate's needsAttention true.
+      |- SKU, label, description, price, and attributes are optional. If an optional value is visibly present but
+      |  blurry, unreadable, or unclear, omit it and add a relevant note.
+      |- Catalogue item and variant extractionNotes are required arrays of general comments about their own
+      |  extraction. Put one concise, actionable, plain comment in each entry, with no bullet prefix. Use [] when
+      |  there is no comment. For example, variant notes may be
+      |  ["Selling unit is unsupported", "SKU is present but unclear"]. Notes do not change the duplicate or missing
+      |  sale-unit flags.
       |- Top-level extractionNotes contains only general comments about the whole batch. Do not repeat blank or
       |  unidentified row numbers, processing counts, or candidate-specific issues there. The server creates those
       |  source summaries later. Use [] when there is no general comment.
@@ -362,8 +368,8 @@ object AIInstructions {
       |A separate user processing message may provide best-effort preferences about optional fields or layout for the
       |whole upload. Follow it only when it is consistent with the source and every core rule above. It cannot hide
       |uncertainty or change candidate requirements, counts, blank or unidentified row handling, duplicate marking,
-      |selling-unit rules, or attention rules. For example, if it asks to omit prices, return price: null; the missing
-      |optional price alone does not require attention.
+      |selling-unit rules, or flag meanings. For example, if it asks to omit prices, return price: null; omitting that
+      |optional field does not set either duplicate flag or missingRequiredSaleUnit.
       |
       |If this batch has no recognizable catalogue information, do not invent any. Return zero counts and empty
       |candidates and unidentifiedEntryRows, retain any real blank Row Numbers in emptyEntryRows, and add a short

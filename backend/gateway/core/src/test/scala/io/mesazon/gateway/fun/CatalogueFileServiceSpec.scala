@@ -18,15 +18,15 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val organizationID                 = arbitrarySample[OrganizationID]
         val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.jpeg")
         val catalogueFileExtractByteStream = ZStream.fromResource("assets/organization-image-test-1.jpeg")
-        val catalogueItemVariantExtract = CatalogueItemVariantExtract(
-          catalogueItemVariantPreview = CatalogueItemVariantPreview(
-            sku = None,
-            label = arbitrarySample[Option[CatalogueItemVariantLabel]],
-            description = arbitrarySample[Option[CatalogueItemVariantDescription]],
-            attributes = arbitrarySample[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]],
-            price = arbitrarySample[Option[CatalogueItemVariantPrice]],
-            sellingUnit = None,
-          ),
+        val catalogueItemVariantCandidate  = CatalogueItemVariantCandidate(
+          sku = None,
+          label = arbitrarySample[Option[CatalogueItemVariantLabel]],
+          description = arbitrarySample[Option[CatalogueItemVariantDescription]],
+          attributes = arbitrarySample[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]],
+          price = arbitrarySample[Option[CatalogueItemVariantPrice]],
+          sellingUnit = None,
+          missingRequiredSaleUnit = true,
+          skuIsDuplicate = false,
           extractionNotes = List(
             "Selling unit is unsupported",
             "SKU is present but unclear",
@@ -35,16 +35,11 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val catalogueFileExtractPostResponseExpected = CatalogueFileExtractPostResponse(
           candidates = List(
             CatalogueItemCandidate(
-              catalogueItemExtract = CatalogueItemExtract(
-                catalogueItemPreview = CatalogueItemPreview(
-                  name = arbitrarySample[CatalogueItemName],
-                  description = arbitrarySample[Option[CatalogueItemDescription]],
-                ),
-                extractionNotes = List("Item and variant grouping is unclear"),
-              ),
-              catalogueItemVariantExtracts = List(catalogueItemVariantExtract),
-              isDuplicate = false,
-              needsAttention = true,
+              name = arbitrarySample[CatalogueItemName],
+              description = arbitrarySample[Option[CatalogueItemDescription]],
+              variants = List(catalogueItemVariantCandidate),
+              nameIsDuplicate = false,
+              extractionNotes = List("Item and variant grouping is unclear"),
             )
           ),
           infoNotes = List("Processed 1 of 1 catalogue entries"),

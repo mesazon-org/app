@@ -28,11 +28,13 @@ trait AIClientDataExtraction {
       imageScannedPath: FileScannedPath,
       supportedMediaType: SupportedMediaType,
       instructions: String,
+      processingMessageOpt: Option[String] = None,
   )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
 
   def extractFromCsv[A](
       csvRecordStream: ZStream[Scope, ServiceError, CSVRecord],
       instructions: String,
+      processingMessageOpt: Option[String] = None,
   )(using
       OpenAIJsonSchema[A],
       JsonValueCodec[A],
@@ -88,6 +90,7 @@ object AIClientDataExtraction {
         model: ChatCompletionModel,
         instructions: String,
         content: Content,
+        processingMessageOpt: Option[String] = None,
     )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
       for {
         response <- openAI
@@ -97,7 +100,7 @@ object AIClientDataExtraction {
               messages = Seq(
                 Message.System(instructions),
                 Message.User(content),
-              ),
+              ) ++ processingMessageOpt.map(processingMessage => Message.User(Content.TextContent(processingMessage))),
               responseFormat = Some(responseFormat),
             )
           )
@@ -125,6 +128,7 @@ object AIClientDataExtraction {
         imageBytes: Array[Byte],
         supportedMediaType: SupportedMediaType,
         instructions: String,
+        processingMessageOpt: Option[String],
     )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] = {
       val imageBase64 = Base64.getEncoder.encodeToString(imageBytes)
       val imageMime   = supportedMediaType.mimes.head
@@ -138,6 +142,7 @@ object AIClientDataExtraction {
             )
           )
         ),
+        processingMessageOpt,
       )
     }
 
@@ -186,17 +191,19 @@ object AIClientDataExtraction {
         imageScannedPath: FileScannedPath,
         supportedMediaType: SupportedMediaType,
         instructions: String,
+        processingMessageOpt: Option[String],
     )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
       ZIO
         .attemptBlocking(Files.readAllBytes(imageScannedPath.value))
         .mapError(error =>
           ServiceError.InternalServerError.UnexpectedError("Failed to read image for AI extraction", Some(error))
         )
-        .flatMap(extractFromImageBytes[A](_, supportedMediaType, instructions))
+        .flatMap(extractFromImageBytes[A](_, supportedMediaType, instructions, processingMessageOpt))
 
     override def extractFromCsv[A](
         csvRecordStream: ZStream[Scope, ServiceError, CSVRecord],
         instructions: String,
+        processingMessageOpt: Option[String],
     )(using
         OpenAIJsonSchema[A],
         JsonValueCodec[A],
@@ -215,6 +222,7 @@ object AIClientDataExtraction {
                   ChatCompletionModel.GPT56Luna,
                   instructions,
                   Content.TextContent(csvRecordsBatchText),
+                  processingMessageOpt,
                 )
               )
             }

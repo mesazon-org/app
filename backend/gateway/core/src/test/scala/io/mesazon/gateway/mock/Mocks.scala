@@ -23,6 +23,7 @@ object Mocks {
         imageScannedPath: FileScannedPath,
         supportedMediaType: SupportedMediaType,
         instructions: String,
+        processingMessageOpt: Option[String],
     )(using OpenAIJsonSchema[B], JsonValueCodec[B]): IO[ServiceError, B] =
       extractFromImageCallsRef.update(_ :+ (imageScannedPath, supportedMediaType, instructions)) *>
         extractFromImageOptResult
@@ -32,6 +33,7 @@ object Mocks {
     override def extractFromCsv[B](
         csvRecordStream: ZStream[Scope, ServiceError, CSVRecord],
         instructions: String,
+        processingMessageOpt: Option[String],
     )(using OpenAIJsonSchema[B], JsonValueCodec[B]): ZIO[Scope, ServiceError, NonEmptyChunk[B]] =
       for {
         csvRecords <- csvRecordStream.runCollect

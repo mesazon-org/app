@@ -124,15 +124,8 @@ object tapir {
     summon[Schema[Map[String, String]]]
       .as[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]]
 
-  given catalogueItemVariantPreviewSchema: Schema[CatalogueItemVariantPreview] =
-    Schema.derived[CatalogueItemVariantPreview]
-
-  given catalogueItemVariantExtractSchema: Schema[CatalogueItemVariantExtract] =
-    Schema.derived[CatalogueItemVariantExtract]
-
-  given catalogueItemPreviewSchema: Schema[CatalogueItemPreview] = Schema.derived[CatalogueItemPreview]
-
-  given catalogueItemExtractSchema: Schema[CatalogueItemExtract] = Schema.derived[CatalogueItemExtract]
+  given catalogueItemVariantCandidateSchema: Schema[CatalogueItemVariantCandidate] =
+    Schema.derived[CatalogueItemVariantCandidate]
 
   given catalogueItemCandidateSchema: Schema[CatalogueItemCandidate] = Schema.derived[CatalogueItemCandidate]
 
@@ -166,17 +159,8 @@ object tapir {
   given catalogueItemVariantSaleUnitCodec: JsonValueCodec[CatalogueItemVariantSaleUnit] =
     JsonCodecMaker.make[CatalogueItemVariantSaleUnit]
 
-  given catalogueItemVariantPreviewCodec: JsonValueCodec[CatalogueItemVariantPreview] =
-    JsonCodecMaker.make[CatalogueItemVariantPreview]
-
-  given catalogueItemVariantExtractCodec: JsonValueCodec[CatalogueItemVariantExtract] =
-    JsonCodecMaker.make[CatalogueItemVariantExtract]
-
-  given catalogueItemPreviewCodec: JsonValueCodec[CatalogueItemPreview] =
-    JsonCodecMaker.make[CatalogueItemPreview]
-
-  given catalogueItemExtractCodec: JsonValueCodec[CatalogueItemExtract] =
-    JsonCodecMaker.make[CatalogueItemExtract]
+  given catalogueItemVariantCandidateCodec: JsonValueCodec[CatalogueItemVariantCandidate] =
+    JsonCodecMaker.make[CatalogueItemVariantCandidate]
 
   given catalogueItemCandidateCodec: JsonValueCodec[CatalogueItemCandidate] =
     JsonCodecMaker.make[CatalogueItemCandidate]

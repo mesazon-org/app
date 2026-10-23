@@ -3,6 +3,7 @@ package io.mesazon.gateway.it
 import com.dimafeng.testcontainers.ExposedService
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
+import io.circe.parser.parse
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClientDataExtraction
 import io.mesazon.gateway.config.AIClientDataExtractionConfig
@@ -12,7 +13,11 @@ import io.mesazon.testkit.base.*
 import io.mesazon.wiremock.WiremockClient
 import io.mesazon.wiremock.WiremockClient.WiremockClientConfig
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
+import sttp.ai.openai.json.OpenAIDerivedCodecs.messageCodec
+import sttp.ai.openai.requests.completions.chat.message.{Content, Message as OpenAIMessage}
+import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
+import sttp.client4.jsoniter.*
 import sttp.model.StatusCode
 import sttp.tapir.Schema
 import zio.*
@@ -20,6 +25,7 @@ import zio.stream.*
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.util.Base64
 
 class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
@@ -60,10 +66,33 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
   case class ExtractedTestResult(value: String)
   case class Context(aiClientDataExtractionConfig: AIClientDataExtractionConfig, wiremockClient: WiremockClient)
+  private case class AIRequestLogResponse(requests: Seq[AIRequestLog])
+  private case class AIRequestLog(request: AIRequestLogged)
+  private case class AIRequestLogged(url: String, loggedDate: Long, body: String)
 
   given extractedTestResultOpenAIJsonSchema: OpenAIJsonSchema[ExtractedTestResult] =
     ai.fromTapir(extractedTestResultSchema)
   given JsonValueCodec[ExtractedTestResult] = JsonCodecMaker.make[ExtractedTestResult]
+  private given aiRequestLogResponseCodec: JsonValueCodec[AIRequestLogResponse] =
+    JsonCodecMaker.make[AIRequestLogResponse]
+
+  private def requestMessages(wiremockClient: WiremockClient): Seq[Seq[OpenAIMessage]] = {
+    val aiRequestLogResponse = basicRequest
+      .get(wiremockClient.config.baseUri.withPath("__admin", "requests"))
+      .response(asJsonOrFail[AIRequestLogResponse])
+      .send(wiremockClient.backend)
+      .orDie
+      .zioValue
+      .body
+
+    aiRequestLogResponse.requests
+      .filter(_.request.url == "/v1/chat/completions")
+      .sortBy(_.request.loggedDate)
+      .map { aiRequestLog =>
+        val requestBodyJson = parse(aiRequestLog.request.body).fold(throw _, identity)
+        requestBodyJson.hcursor.get[Seq[OpenAIMessage]]("messages").fold(throw _, identity)
+      }
+  }
 
   def withContext[A](f: Context => A): A = withContainers { container =>
     val wiremockClientConfig = WiremockClientConfig.from(container)
@@ -119,6 +148,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
       "successfully extract a structured response from an image" in withContext { context =>
         import context.*
 
+        val instructions           = "AI_CLIENT_SPEC_SUCCESS"
         val aiClientDataExtraction = ZIO
           .service[AIClientDataExtraction]
           .provide(
@@ -132,7 +162,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .extractFromImage[ExtractedTestResult](
             imageScannedPath(),
             SupportedMediaType.JPEG,
-            "AI_CLIENT_SPEC_SUCCESS",
+            instructions,
           )
           .zioValue
 
@@ -146,6 +176,67 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
         extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
         extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
         extractFromImageRequestMappings(0).count shouldBe 1
+
+        val imageSourceContent = Content.ArrayContent(
+          Seq(
+            Content.ContentPart.ImageUrl(
+              Content.ImageUrlDetails(
+                url =
+                  s"data:${SupportedMediaType.JPEG.mimes.head};base64,${Base64.getEncoder.encodeToString(imageBytes)}"
+              )
+            )
+          )
+        )
+        requestMessages(wiremockClient) shouldBe Seq(
+          Seq(
+            OpenAIMessage.System(instructions),
+            OpenAIMessage.User(imageSourceContent),
+          )
+        )
+      }
+
+      "send processing guidance after the image source content" in withContext { context =>
+        import context.*
+
+        val instructions           = "AI_CLIENT_SPEC_SUCCESS"
+        val processingMessage      = "Omit optional prices"
+        val aiClientDataExtraction = ZIO
+          .service[AIClientDataExtraction]
+          .provide(
+            AIClientDataExtraction.live,
+            ZLayer.succeed(aiClientDataExtractionConfig),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val extractedTestResult = aiClientDataExtraction
+          .extractFromImage[ExtractedTestResult](
+            imageScannedPath(),
+            SupportedMediaType.JPEG,
+            instructions,
+            processingMessageOpt = Some(processingMessage),
+          )
+          .zioValue
+
+        extractedTestResult shouldBe ExtractedTestResult("extracted-value")
+
+        val imageSourceContent = Content.ArrayContent(
+          Seq(
+            Content.ContentPart.ImageUrl(
+              Content.ImageUrlDetails(
+                url =
+                  s"data:${SupportedMediaType.JPEG.mimes.head};base64,${Base64.getEncoder.encodeToString(imageBytes)}"
+              )
+            )
+          )
+        )
+        requestMessages(wiremockClient) shouldBe Seq(
+          Seq(
+            OpenAIMessage.System(instructions),
+            OpenAIMessage.User(imageSourceContent),
+            OpenAIMessage.User(Content.TextContent(processingMessage)),
+          )
+        )
       }
 
       "successfully retry a rate-limited request and eventually decode the response" in withContext { context =>
@@ -490,6 +581,68 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
         extractFromCsvRequestMappings.map(_.count).distinct shouldBe Seq(3)
       }
 
+      "send the same processing guidance after every source batch" in withContext { context =>
+        import context.*
+
+        val csvBatchMaxDataRows                      = 2
+        val csvBatchCountExpected                    = 2
+        val aiClientDataExtractionConfigSmallBatches =
+          aiClientDataExtractionConfig.copy(csvBatchMaxDataRows = csvBatchMaxDataRows)
+        val instructions           = "AI_CLIENT_SPEC_CSV_GENERIC_SUCCESS"
+        val processingMessage      = "Omit optional prices"
+        val aiClientDataExtraction = ZIO
+          .service[AIClientDataExtraction]
+          .provide(
+            AIClientDataExtraction.live,
+            ZLayer.succeed(aiClientDataExtractionConfigSmallBatches),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val csvText =
+          "Full Name,Email\n" +
+            "Alice,alice@example.com\n" +
+            "Bob,bob@example.com\n" +
+            "Carol,carol@example.com\n"
+
+        val extractFromCsvResults = ZIO
+          .scoped(
+            aiClientDataExtraction.extractFromCsv[ExtractedTestResult](
+              csvRecordStream(csvText),
+              instructions,
+              processingMessageOpt = Some(processingMessage),
+            )
+          )
+          .zioValue
+
+        extractFromCsvResults.toChunk.toList shouldBe List.fill(csvBatchCountExpected)(
+          ExtractedTestResult("batch-result")
+        )
+
+        val csvBatchMessagesExpected = Set(
+          Seq(
+            OpenAIMessage.System(instructions),
+            OpenAIMessage.User(
+              Content.TextContent(
+                "Row Number,Full Name,Email\r\n2,Alice,alice@example.com\r\n3,Bob,bob@example.com\r\n"
+              )
+            ),
+            OpenAIMessage.User(Content.TextContent(processingMessage)),
+          ),
+          Seq(
+            OpenAIMessage.System(instructions),
+            OpenAIMessage.User(
+              Content.TextContent("Row Number,Full Name,Email\r\n4,Carol,carol@example.com\r\n")
+            ),
+            OpenAIMessage.User(Content.TextContent(processingMessage)),
+          ),
+        )
+        val csvBatchMessages = requestMessages(wiremockClient)
+
+        csvBatchMessages.size shouldBe csvBatchCountExpected
+        csvBatchMessages.toSet shouldBe csvBatchMessagesExpected
+      }
+
       "keep a blank row in its batch instead of excluding it before batching" in withContext { context =>
         import context.*
 
@@ -534,6 +687,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
         context =>
           import context.*
 
+          val instructions           = "AI_CLIENT_SPEC_CSV_ROW_NUMBER_SUCCESS"
           val aiClientDataExtraction = ZIO
             .service[AIClientDataExtraction]
             .provide(
@@ -553,7 +707,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             .scoped(
               aiClientDataExtraction.extractFromCsv[ExtractedTestResult](
                 csvRecordStream(csvText),
-                "AI_CLIENT_SPEC_CSV_ROW_NUMBER_SUCCESS",
+                instructions,
               )
             )
             .zioValue
@@ -567,6 +721,17 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           extractFromCsvRequestMappings(0).mapping.method shouldBe "POST"
           extractFromCsvRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
           extractFromCsvRequestMappings(0).count shouldBe 1
+
+          requestMessages(wiremockClient) shouldBe Seq(
+            Seq(
+              OpenAIMessage.System(instructions),
+              OpenAIMessage.User(
+                Content.TextContent(
+                  "Row Number,Full Name,Email\r\n2,Alice,alice@example.com\r\n3,,\r\n4,Bob,bob@example.com\r\n"
+                )
+              ),
+            )
+          )
       }
 
       "send exactly one batch for a CSV record stream with only a header row" in withContext { context =>

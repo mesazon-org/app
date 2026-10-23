@@ -654,14 +654,14 @@ Nothing changes and no name or SKU is reserved.
 | **Scenarios** | **Requirements** |
 | --- | --- |
 | 1. User sends an image, CSV file, or Excel file with recognizable catalogue information | - The response contains candidate items with their variants and any readable details, plus processing and review notes |
-| 2. An item has a readable name but some required or uncertain information is missing | - The candidate is returned with `needsAttention: true` and notes explaining what needs review |
+| 2. An item has a readable name but some required or uncertain information is missing | - The candidate is returned with item- or variant-level extraction notes - A missing selling unit is marked with `missingRequiredSaleUnit: true` |
 | 3. No item name can be read for an entry and it has no clear association with a named item | - The entry is not returned as a candidate - The affected spreadsheet row numbers are included in the general review notes |
-| 4. The source contains several rows or visible entries that belong to one item | - The AI may group them into one candidate with multiple variants - `needsAttention` is true when the grouping is uncertain |
-| 5. A row has no item name or key but appears to continue the preceding item | - It becomes a variant of that item with `needsAttention: true` - It counts as an identified source entry, not as a separate processed item, and is not listed as unidentified |
+| 4. The source contains several rows or visible entries that belong to one item | - The AI may group them into one candidate with multiple variants - Uncertain grouping is described in item-level extraction notes |
+| 5. A row has no item name or key but appears to continue the preceding item | - It becomes a variant of that item - Any uncertainty is described in extraction notes - It counts as an identified source entry, not as a separate processed item, and is not listed as unidentified |
 | 6. A meaningful source column does not map to a standard item or variant field | - Its value is preserved as a variant attribute |
-| 7. A price has an unsupported or unclear currency | - The price is omitted, the candidate is marked for attention, and the issue is explained in its notes |
-| 8. A required selling-unit value or structured unit cannot be read | - The candidate is returned for review with `needsAttention: true` |
-| 9. Two candidates have item names that match when letter case is ignored | - Both are marked as possible duplicates - They are not merged - Duplicate marking alone does not require attention |
+| 7. A price has an unsupported or unclear currency | - The price is omitted and the issue is explained in extraction notes |
+| 8. A required selling-unit value or structured unit cannot be read | - The variant is returned with `missingRequiredSaleUnit: true` and an extraction note |
+| 9. Two candidates have item names that match when letter case is ignored | - Both have `nameIsDuplicate: true` - They are not merged |
 | 10. The image or file has no recognizable catalogue information | - An empty candidate list is returned - Generated notes explain that nothing usable was detected |
 | 11. A spreadsheet row is completely blank | - It is not counted as an entry - A generated processing note reports how many blank rows were filtered |
 | 12. A non-blank spreadsheet row has no readable item name or clear association with a named item | - It is not returned as a candidate - Generated review notes identify the affected row numbers |
@@ -675,30 +675,29 @@ Nothing changes and no name or SKU is reserved.
 | 20. The user sends a legacy `.xls` file | - It is read in the same way as an `.xlsx` file |
 | 21. The user sends a spreadsheet with many rows | - Every row is read in groups of up to 50, with up to 3 groups at a time - If any group fails, no partial result is returned |
 | 22. The user sends a supported file whose extension uses different letter case | - It is accepted when the extension matches the actual content |
-| 23. A candidate has `needsAttention: true` | - The client does not allow it to be sent through the normal item-add request until the user resolves the issue |
-| 24. The user supplies an extraction message | - The message guides optional field or layout interpretation across the whole upload and every spreadsheet batch |
-| 25. The message is empty, whitespace-only, ambiguous, conflicts with the source, or requests an optional field that cannot be omitted reliably | - Empty messages use the default rules - The message is best-effort guidance - Unresolved instructions or values are reported in attention flags or notes - The request is not rejected solely for ambiguity |
-| 26. The extraction message is longer than 2,000 characters after trimming | - The request is rejected as a validation error |
+| 23. The user supplies an extraction message | - The message guides optional field or layout interpretation across the whole upload and every spreadsheet batch |
+| 24. The message is empty, whitespace-only, ambiguous, conflicts with the source, or requests an optional field that cannot be omitted reliably | - Empty messages use the default rules - The message is best-effort guidance - Unresolved instructions or values are reported in extraction notes or the relevant specific flag - The request is not rejected solely for ambiguity |
+| 25. The extraction message is longer than 2,000 characters after trimming | - The request is rejected as a validation error |
 
 #### Requirements
 
 1. PNG, JPEG, and WEBP images, and genuinely readable CSV, `.xls`, and `.xlsx` files, are accepted up to 20 MB. Spreadsheet row count is not capped.
 2. The file name is required, 1–255 trimmed characters, and must have a supported extension matching the actual content, ignoring letter case.
 3. The response contains candidate catalogue items, generated processing summaries in `infoNotes`, and general user-facing review comments in `extractionNotes`. Both note lists may be empty.
-4. A candidate contains an item name when one can be read, an optional description, zero or more extracted variants, duplicate status, attention status, and item-level extraction notes. A candidate may omit fields that need user completion.
-5. A variant candidate may contain an optional SKU, label, description, price, selling unit, attributes, and variant-level extraction notes. Meaningful unmapped source columns become attributes. Structured unit values are preserved as stated and are not converted or invented.
-6. A candidate's `needsAttention` is true when a required field, a value, or an item/variant grouping is missing or uncertain, including when a price currency is unclear or unsupported. It is false when the candidate is resolved enough to send to the normal item-add request.
-7. Duplicate marking compares candidate item names within the same response, ignoring letter case. Duplicates are flagged but never merged, and candidates are never compared with items already in the catalogue.
+4. A candidate contains an item name when one can be read, an optional description, zero or more extracted variants, `nameIsDuplicate`, and item-level extraction notes. A candidate may omit fields that need user completion.
+5. A variant candidate may contain an optional SKU, label, description, price, selling unit, attributes, `missingRequiredSaleUnit`, `skuIsDuplicate`, and variant-level extraction notes. Meaningful unmapped source columns become attributes. Structured unit values are preserved as stated and are not converted or invented.
+6. Missing required selling-unit data is represented by `missingRequiredSaleUnit: true`. A repeated item name is represented by `nameIsDuplicate: true`, and a repeated SKU by `skuIsDuplicate: true`; other uncertain or unreadable details are general extraction notes. Notes do not automatically block a later add request.
+7. Duplicate marking compares candidate item names and all variant SKUs within the current response, ignoring letter case. Duplicate checks never query or compare with items or variants already in the catalogue.
 8. The extraction tracks `entriesIdentified` and `entriesProcessed` internally. `entriesIdentified` includes variant-only rows clearly associated with a named item, while `entriesProcessed` counts resulting candidate items after any grouping. A clearly associated variant-only row does not increase `entriesProcessed`. Blank rows are excluded from both counts; rows without a name or clear association are reported separately.
 9. The service generates `infoNotes` from the internal counts and filtered blank-row totals, such as a processed count or the number of empty rows filtered. It generates top-level `extractionNotes` from unidentified row numbers and the AI's general extraction notes. These messages are generated from the current source and result, not fixed text.
 10. Nothing is stored: no item, variant, image, file, or extraction response. The normal item-add request remains the only way to create catalogue records, and its existing validation remains unchanged.
 11. Each AI attempt may take up to one minute. Temporary failures are tried again up to two more times; rejected requests and unusable answers are not retried.
 12. Large spreadsheets are read in groups of up to 50 rows, with up to 3 groups at a time. Any failed group fails the whole read and returns no partial candidates.
 13. An optional processing message is trimmed plain text up to 2,000 characters. An empty or whitespace-only message is treated as absent.
-14. The processing message is best-effort guidance for optional field selection and source layout interpretation. It cannot override candidate requirements, selling-unit rules, row counting, duplicate marking, or normal add-item validation. It does not guarantee that an optional field is omitted; when a preference leaves a value unresolved, the response reports it in notes or `needsAttention`.
+14. The processing message is best-effort guidance for optional field selection and source layout interpretation. It cannot override candidate requirements, selling-unit rules, row counting, duplicate marking, or normal add-item validation. It does not guarantee that an optional field is omitted; when a preference leaves a value unresolved, the response reports it in notes or the relevant specific flag.
 15. One processing message applies to the whole upload and every spreadsheet batch. It is used only for that extraction request and is never stored or returned as catalogue data.
-16. A variant-only row with no item name or key that appears to continue the preceding item attaches to that item with `needsAttention: true`. Named rows with the same item name split between 50-row groups merge only when they carry an explicit shared item key or group marker; otherwise they remain separate candidates marked `isDuplicate: true` and `needsAttention: true`.
-17. Each item- and variant-level `extractionNotes` entry is a concise, plain, actionable user-facing issue without a bullet prefix. The client renders each entry as its own bullet. The list is empty when there is no issue, and unresolved issues keep `needsAttention: true`.
+16. A variant-only row with no item name or key that appears to continue the preceding item attaches to that item, with any uncertainty described in extraction notes. Named rows with the same item name split between 50-row groups merge only when they carry an explicit shared item key or group marker; otherwise they remain separate candidates with `nameIsDuplicate: true` and an item-level extraction note describing the uncertain grouping.
+17. Each item- and variant-level `extractionNotes` entry is a concise, plain, user-facing comment about readability or extraction, such as a blurry or unclear field, without a bullet prefix. The client renders each entry as its own bullet. The list is empty when there is no comment; specific flags represent duplicate names, duplicate SKUs, and missing sale units.
 
 #### Request / Response / Outcome
 
@@ -725,35 +724,13 @@ One upload carries whichever source the user has — an image, a CSV file, or an
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| `catalogueItemExtract` | `CatalogueItemExtract` | The item name is present; other fields may need completion | ✅ | The extracted item |
-| `catalogueItemVariantExtracts` | `CatalogueItemVariantExtract[]` | May be empty while the candidate needs attention | ✅ | The extracted variants |
-| `isDuplicate` | `Boolean` | — | ✅ | True when another candidate in this response has the same item name, ignoring letter case |
-| `needsAttention` | `Boolean` | — | ✅ | True when the candidate has a missing or uncertain value or grouping and cannot yet be sent through the normal item-add request |
-
-**CatalogueItemExtract**
-
-The item preview contains the same item fields as an item-add request, but fields that need user completion may be absent.
-
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| `catalogueItemPreview` | `CatalogueItemPreview` | The item name is present; description may need completion | ✅ | The extracted item fields |
-| `extractionNotes` | `String[]` | May be empty; each entry is concise, plain, actionable user-facing text with no bullet prefix | ✅ | Issues for the user to review; the client renders each entry as its own bullet |
-
-**CatalogueItemPreview**
-
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
 | `name` | `String` | 1–255 characters, trimmed | ✅ | The extracted item name |
 | `description` | `String` | 1–255 characters, trimmed | ❌ | The extracted item description |
+| `variants` | `CatalogueItemVariantCandidate[]` | May be empty while a variant needs completion | ✅ | The extracted variants |
+| `nameIsDuplicate` | `Boolean` | — | ✅ | True when another candidate in this response has the same item name, ignoring letter case |
+| `extractionNotes` | `String[]` | May be empty; each entry is concise, plain, user-facing text about readability or extraction with no bullet prefix | ✅ | General comments for the user; the client renders each entry as its own bullet |
 
-**CatalogueItemVariantExtract**
-
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| `catalogueItemVariantPreview` | `CatalogueItemVariantPreview` | Variant fields may need completion | ✅ | The extracted variant fields |
-| `extractionNotes` | `String[]` | May be empty; each entry is concise, plain, actionable user-facing text with no bullet prefix | ✅ | Issues for the user to review; the client renders each entry as its own bullet |
-
-**CatalogueItemVariantPreview**
+**CatalogueItemVariantCandidate**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
@@ -763,13 +740,16 @@ The item preview contains the same item fields as an item-add request, but field
 | `attributes` | `Map<String, String>` | May be empty; names and values are 1–255 characters and trimmed | ✅ | Structured or unmapped details that distinguish the variant |
 | `price` | `CatalogueItemVariantPrice` | Present only when the amount and supported currency are resolved | ❌ | The extracted price |
 | `sellingUnit` | `CatalogueItemVariantSaleUnit` | May be absent until required values are resolved | ❌ | How the variant is sold |
+| `missingRequiredSaleUnit` | `Boolean` | — | ✅ | True when the required selling unit could not be resolved |
+| `skuIsDuplicate` | `Boolean` | — | ✅ | True when another variant candidate in this response has the same SKU, ignoring letter case |
+| `extractionNotes` | `String[]` | May be empty; each entry is concise, plain, user-facing text about readability or extraction with no bullet prefix | ✅ | General comments for the user; the client renders each entry as its own bullet |
 
-Examples of response notes include: `Processed 12 of 14 entries; filtered 2 empty rows.` in `infoNotes`; `Rows 7 and 11 had no readable item name.` in top-level `extractionNotes`; `The item may have been grouped from multiple source rows; confirm that its variants belong together.` at item level; `Selling unit “case” is not supported; choose a supported unit.` at variant level; and `SKU is present but unclear; confirm the stock code before adding.` at variant level. The counts and row numbers in these messages are generated from the current source and result. An unresolved item- or variant-level issue sets that candidate's `needsAttention: true`; upload-level notes do not automatically mark every candidate for attention.
+Examples of response notes include: `Processed 12 of 14 entries; filtered 2 empty rows.` in `infoNotes`; `Rows 7 and 11 had no readable item name.` in top-level `extractionNotes`; `The item may have been grouped from multiple source rows; confirm that its variants belong together.` at item level; `Selling unit “case” is not supported; choose a supported unit.` at variant level alongside `missingRequiredSaleUnit: true`; and `SKU is present but unclear; confirm the stock code before adding.` at variant level. The counts and row numbers in these messages are generated from the current source and result. Duplicate names and SKUs use their specific flags; general extraction notes do not automatically block a later add request.
 
 **Outcome**
 
-- The user receives a preview of catalogue item candidates and the issues that need attention.
-- A candidate with `needsAttention: true` cannot be sent by the client through the normal item-add request until it is resolved.
+- The user receives a preview of catalogue item candidates and processing and review notes.
+- Specific flags identify duplicate names, duplicate SKUs, and missing required selling units; general extraction notes are review comments.
 - Nothing is stored, and an uploaded image is not attached to an item.
 - The user adds resolved candidates through [step 1](#1-user-adds-an-item), where the existing validation and duplicate checks still apply.
 
