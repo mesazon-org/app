@@ -22,13 +22,17 @@ Extraction is a preview in the current Customer Book and planned Catalogue flows
 - A preview may omit an insert-required field when its contract allows that. Keep the existing insert validation intact. Absence of an optional field is not itself an extraction problem.
 - Check the actual schema sent to the provider before registration. OpenAI strict Structured Outputs require closed objects with `additionalProperties: false`; dynamic attribute-map keys need an explicit compatible design. Do not silently generate an empty-only map or change the domain to work around derivation. JSON mode is a separate choice and does not guarantee schema adherence. See the [official Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs).
 
-For dynamic attributes, Catalogue keeps its domain and public response maps unchanged. `json/ai.scala` alone represents the AI wire schema as a list of private name/value entries and supplies an AI-specific codec that decodes them into the existing candidate map. Each entry name/value uses the existing refined string types. This permits `strict: true` for the entire AI result because entry fields are fixed even when names vary. The HTTP schema/codec continues to use a map; do not replace or reuse it as the AI wire codec. No separate AI domain candidate hierarchy is needed. `AIClientDataExtraction` sends `strict: true` for all output schemas; no per-output strictness toggle remains. Strict schemas constrain structure, not factual correctness; service validation and verification of source-grouping evidence remain necessary. The AI decoder converts name/value entries directly with `toMap`; the last entry wins for repeated names. Keep AI-provided extraction notes unchanged. Do not add conflict detection, generated notes, or per-variant decoder state for this conversion.
+Catalogue separates AI extraction models from public candidates. `CatalogueFileAIExtract` contains `CatalogueItemAIExtract` and `CatalogueItemVariantAIExtract`; variant attributes are a list of `CatalogueItemVariantAttributesAIExtract` name/value entries. The strict AI schema and codec live in `json/ai.scala`. The service maps usable variants to `CatalogueItemVariantInsert` and converts attributes with `toMap`; the last entry wins for repeated names. Public candidates retain attribute maps through `json/tapir.scala`.
+
+Keep the preview assembly readable: compute notes and attention from the original AI item, partially map its variants, then construct the public candidate. Use pure `compute...` helpers for the business rules and [Chimney partial mappings](chimney.md#partial-preview-mappings) for the conversion. Do not put preview note-generation or filtering policy in JSON codecs.
+
+`AIClientDataExtraction` sends `strict: true` for all output schemas. Strict output constrains structure, not factual accuracy; service checks and verification of source-grouping evidence remain necessary.
 
 ## Descriptive booleans
 
 Add a boolean only for a specific condition with a defined client meaning. Document its scope, comparison rule, treatment of missing values, and which layer determines the final value. Prefer deriving observable presence from the value itself over adding another flag. General comments do not imply a readiness state.
 
-Catalogue's agreed flags are:
+Catalogue's AI issue flags are:
 
 | Flag | Final meaning |
 |---|---|
@@ -37,24 +41,30 @@ Catalogue's agreed flags are:
 | `nameIsDuplicate` | The item name matches another candidate's name case-insensitively within the completed upload |
 | `skuIsDuplicate` | A supplied SKU matches another variant's SKU case-insensitively across all candidates in the completed upload; absent SKUs are never duplicates |
 
-Recompute deterministic flags after grouping and aggregation, rather than trusting batch-local AI values. Catalogue duplicate flags contribute to `needsAttention`, do not merge candidates, and do not query stored records. Existing insert validation and stored uniqueness rules still apply when a candidate is submitted.
+Duplicate checks concern this upload only, never stored records, and do not justify merging candidates. Perform any feature-required reconciliation before final preview mapping. Normal insert validation and stored uniqueness rules still apply when a candidate is submitted.
 
-Catalogue explicitly exposes `atLeastOneVariant` on each item candidate as an attention flag. An absent optional price, SKU, label, or description does not need an additional flag. A readable item name is already required by its candidate type; entries without one follow the feature's unidentified-entry rules. `CatalogueFileExtractPostResponse` additionally has a service-computed `needsAttention` boolean. It is absent from the AI result and nested candidates; the AI must not determine it. Compute it as `candidates.exists(item => item.atLeastOneVariant || item.nameIsDuplicate || item.variants.exists(variant => variant.missingRequiredSaleUnit || variant.skuIsDuplicate))`. All four flags use `true` to contribute attention; do not negate `atLeastOneVariant`. An empty candidate list gives `false`. General extraction notes do not affect this value. Do not infer an automatic submission block from general notes.
+Compute `needsAttention` on each public `CatalogueItemCandidate`, not on the top-level response. Any true AI issue flag makes that item require attention; an absent variant selling unit does too, even if the AI omitted its flag. General AI notes alone do not change attention. Keep the item even when no variants can be mapped: the public variant list may be empty, while `CatalogueItemVariantInsert` still requires a selling unit. Existing add-item validation remains unchanged.
 
 ## Notes presented to users
 
 For extraction contracts with note lists, each string is one concise, plain-language comment. Return plain strings without Markdown bullets or numbering: the UI renders the list as bullet points. Use empty lists when there are no comments. Notes explain source limitations and extraction observations; they are not an encoded validation protocol.
 
-| Location | Meaning and examples |
+| Location | Responsibility |
 |---|---|
-| Item `extractionNotes` | Whole-item observations, such as `"Item description is partly obscured"` or `"Grouping with the preceding item is unclear"` |
-| Variant `extractionNotes` | Variant observations, such as `"Unit is not supported"`, `"SKU is visible but could not be read clearly"`, or `"Price currency could not be identified"` |
-| Top-level `extractionNotes` | General document observations from the AI, plus service-generated unidentified-row findings where the feature contract requires them |
-| Top-level `infoNotes` | Service-generated factual summaries, such as `"Processed 40/55 items"` and `"Filtered 3 empty items"` |
+| AI item/variant `extractionNotes` | General observations, such as a blurry description or an unreadable SKU. The AI must not repeat warnings represented by its issue flags. |
+| Public candidate `extractionNotes` | Service-generated issue messages plus the relevant AI item and variant comments. Prefix variant notes with their original position, such as `Variant 2: `. |
+| Top-level `extractionNotes` | General document comments from the AI. |
+| Top-level `infoNotes` | Service-generated summaries: combine processed and identified counts in one compact message, such as `Processed 12 of 14 entries`. Add an empty-row or unidentified-row summary only when its list is non-empty; include its count and row positions. |
 
-These examples belong in the default extraction instructions, with item and variant arrays shown separately. Missing-unit and duplicate flags have their own precise semantics; notes remain useful comments rather than a second set of flags. Keep an observation at the appropriate level instead of copying it to every candidate.
+### Prevent duplicate diagnostics at their source
 
-For Catalogue, preserve general AI notes in source-batch order and build summary/unidentified-row messages in code. Do not compact its lists into one string. Public note wording must agree with what the counts actually measure; spreadsheet source rows and grouped catalogue items are different quantities.
+- Give each known issue one owner. The service translates the four issue flags into fixed messages; the AI supplies only additional observations.
+- Apply the parent-level rule first. For Catalogue, when `atLeastOneVariant` is true, emit the item-level issues and AI item notes, then skip variant diagnostics. Do not repeat the parent problem as missing-unit warnings for every nested variant.
+- Otherwise, emit item issues and item notes, then process variants in source order. At each level, place computed issue messages before AI comments.
+- Preserve useful variant diagnostics even when partial mapping omits that variant from the output. Compute notes from the original AI data.
+- Prevent redundant messages through these branches and ownership rules. Do not apply a blanket `.distinct` to all notes: similar warnings on different variants can be valid.
+
+Default instructions should show concise note arrays separately for AI items and variants, for example `"Item description is partly obscured"` and `"SKU is visible but could not be read clearly"`. The UI renders each public note as one bullet. Keep Catalogue note lists intact rather than compacting them into one string; preserve source order when combining batches. Summary wording must distinguish source entries from resulting item candidates.
 
 ## Default instructions and user guidance
 

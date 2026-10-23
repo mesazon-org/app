@@ -150,14 +150,20 @@ object CatalogueFileService {
       )
     )
 
-    // TODO: make this better to many lines.
     private def computeInfoNotes(catalogueFileAIExtract: CatalogueFileAIExtract): List[String] =
       List(
-        s"Entries identified: ${catalogueFileAIExtract.entriesIdentified}",
-        s"Entries processed: ${catalogueFileAIExtract.entriesProcessed}",
-        s"Empty rows (${catalogueFileAIExtract.emptyEntryRows.size}): [${catalogueFileAIExtract.emptyEntryRows.mkString(", ")}]",
-        s"Unidentified rows (${catalogueFileAIExtract.unidentifiedEntryRows.size}): [${catalogueFileAIExtract.unidentifiedEntryRows.mkString(", ")}]",
-      )
+        s"Processed ${catalogueFileAIExtract.entriesProcessed} of ${catalogueFileAIExtract.entriesIdentified} entries"
+      ) ++
+        Option
+          .when(catalogueFileAIExtract.emptyEntryRows.nonEmpty)(
+            s"Empty rows (${catalogueFileAIExtract.emptyEntryRows.size}): [${catalogueFileAIExtract.emptyEntryRows.mkString(", ")}]"
+          )
+          .toList ++
+        Option
+          .when(catalogueFileAIExtract.unidentifiedEntryRows.nonEmpty)(
+            s"Unidentified rows (${catalogueFileAIExtract.unidentifiedEntryRows.size}): [${catalogueFileAIExtract.unidentifiedEntryRows.mkString(", ")}]"
+          )
+          .toList
 
     private def computeNeedsAttention(catalogueItemAIExtract: CatalogueItemAIExtract): Boolean =
       catalogueItemAIExtract.atLeastOneVariant || catalogueItemAIExtract.nameIsDuplicate || catalogueItemAIExtract.variants
