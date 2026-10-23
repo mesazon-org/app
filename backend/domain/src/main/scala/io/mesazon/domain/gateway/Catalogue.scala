@@ -76,6 +76,7 @@ case class CatalogueFileExtract(
 
 case class CatalogueFileExtractPostResponse(
     candidates: List[CatalogueItemCandidate],
+    needsAttention: Boolean,
     infoNotes: List[String],
     extractionNotes: List[String],
 )
