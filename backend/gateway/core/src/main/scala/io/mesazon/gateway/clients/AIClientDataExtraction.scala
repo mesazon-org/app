@@ -81,7 +81,7 @@ object AIClientDataExtraction {
     private def responseFormat[A](using schema: OpenAIJsonSchema[A]): ResponseFormat.JsonSchema =
       ResponseFormat.JsonSchema(
         name = "ai_client_response",
-        strict = Some(true),
+        strict = Some(schema.strict),
         schema = Some(schema.schema),
         description = None,
       )

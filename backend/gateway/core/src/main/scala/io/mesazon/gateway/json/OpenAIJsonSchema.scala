@@ -4,4 +4,6 @@ import sttp.apispec.Schema as ApiSchema
 
 trait OpenAIJsonSchema[A] {
   def schema: ApiSchema
+
+  def strict: Boolean = true
 }
