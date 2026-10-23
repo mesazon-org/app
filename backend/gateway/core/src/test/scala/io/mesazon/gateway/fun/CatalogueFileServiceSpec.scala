@@ -4,15 +4,205 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.{AIClientDataExtraction, S3ClientOrganizationMedia}
 import io.mesazon.gateway.config.FileServiceConfig
 import io.mesazon.gateway.repository.CatalogueRepository
+import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.{CatalogueFileService, ServiceTask}
-import io.mesazon.gateway.utils.{FileScanner, ImageProcessing, SpreadsheetTool}
+import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.{CatalogueDomainArbitraries, ZWordSpecBase}
+import org.scalamock.matchers.ArgCapture.CaptureOne
 import zio.*
 import zio.stream.ZStream
 
-class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries {
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+
+class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries, RepositoryArbitraries {
 
   "CatalogueFileService" when {
+    "uploadCatalogueItemImage" should {
+      "successfully upload a catalogue item's image" in new TestContext {
+        val organizationID                     = arbitrarySample[OrganizationID]
+        val catalogueItemID                    = arbitrarySample[CatalogueItemID]
+        val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
+        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
+
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          isArchived = false,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          isArchived = false,
+        )
+        val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
+          catalogueItemRow,
+          NonEmptyChunk.single(catalogueItemVariantRow),
+        )
+
+        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/catalogue-image-test-1.jpeg"))
+        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/catalogue-image-test-2.webp"))
+        val normalizeResult: NormalizeResult =
+          (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
+
+        val catalogueItemImageOriginalS3BucketKey   = arbitrarySample[ImageOriginalS3BucketKey]
+        val catalogueItemImageNormalizedS3BucketKey = arbitrarySample[ImageNormalizedS3BucketKey]
+        val uploadedImageResult: S3ClientOrganizationMedia.UploadedImageResult =
+          (
+            imageOriginalS3BucketKey = catalogueItemImageOriginalS3BucketKey,
+            imageNormalizedS3BucketKey = catalogueItemImageNormalizedS3BucketKey,
+          )
+
+        val catalogueItemImageAsset = CatalogueItemImageAsset.assume(
+          ImageAsset(
+            imageOriginalS3BucketKey = catalogueItemImageOriginalS3BucketKey,
+            imageNormalizedS3BucketKey = catalogueItemImageNormalizedS3BucketKey,
+            imageOriginalFileName = catalogueItemImageOriginalFileName,
+          )
+        )
+
+        val scannedImageBytes           = "scanned catalogue image".getBytes(StandardCharsets.UTF_8)
+        val fileScannedPath             = FileScannedPath(Files.createTempFile("catalogue-file-service-spec-", ".jpeg"))
+        val normalizeImageStreamCapture = CaptureOne[FileByteStreamScanned]()
+
+        try {
+          Files.write(fileScannedPath.value, scannedImageBytes)
+
+          inSequence(
+            catalogueRepositoryMock.getCatalogueItemWithVariants
+              .expects(organizationID, catalogueItemID)
+              .returningZIO(Some(catalogueItemWithVariantsRow))
+              .once(),
+            fileScannerMock.scan
+              .expects(
+                catalogueItemImageByteStream,
+                catalogueItemImageOriginalFileName.value,
+                SupportedMediaType.images,
+                fileServiceConfig.fileBytesMax,
+              )
+              .returns(
+                ZIO.succeed(
+                  (
+                    fileScannedPath = fileScannedPath,
+                    supportedMediaType = SupportedMediaType.JPEG,
+                    fileBytesSize = FileBytesSize.assume(Files.size(fileScannedPath.value)),
+                  )
+                )
+              )
+              .once(),
+            imageProcessingMock.normalize
+              .expects(capture(normalizeImageStreamCapture), SupportedMediaType.images)
+              .returns(ZIO.succeed(normalizeResult))
+              .once(),
+            s3ClientOrganizationMediaMock.uploadImageCatalogueItem
+              .expects(organizationID, catalogueItemID, originalByteStream, normalizedByteStream)
+              .returningZIO(uploadedImageResult)
+              .once(),
+            catalogueRepositoryMock.updateCatalogueItem
+              .expects(
+                organizationID,
+                catalogueItemID,
+                None,
+                None,
+                Some(catalogueItemImageAsset),
+                None,
+                Nil,
+                Nil,
+              )
+              .returningZIO(())
+              .once(),
+          )
+
+          val response = buildCatalogueFileService
+            .uploadCatalogueItemImage(
+              organizationID = organizationID,
+              catalogueItemID = catalogueItemID,
+              catalogueItemImageOriginalFileName = catalogueItemImageOriginalFileName,
+              catalogueItemImageByteStream = catalogueItemImageByteStream,
+            )
+            .zioEither
+
+          response shouldBe Right(())
+          normalizeImageStreamCapture.value.value.runCollect.zioValue shouldBe Chunk.fromArray(scannedImageBytes)
+        } finally Files.deleteIfExists(fileScannedPath.value)
+      }
+
+      "fail with an UnexpectedError before scanning when the catalogue item is missing" in new TestContext {
+        val organizationID                     = arbitrarySample[OrganizationID]
+        val catalogueItemID                    = arbitrarySample[CatalogueItemID]
+        val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
+        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
+
+        catalogueRepositoryMock.getCatalogueItemWithVariants
+          .expects(organizationID, catalogueItemID)
+          .returningZIO(None)
+          .once()
+
+        val serviceError = buildCatalogueFileService
+          .uploadCatalogueItemImage(
+            organizationID = organizationID,
+            catalogueItemID = catalogueItemID,
+            catalogueItemImageOriginalFileName = catalogueItemImageOriginalFileName,
+            catalogueItemImageByteStream = catalogueItemImageByteStream,
+          )
+          .zioError
+
+        serviceError shouldBe ServiceError.InternalServerError.UnexpectedError(
+          s"Catalogue item not found: catalogueItemID=[$catalogueItemID]"
+        )
+      }
+
+      "fail with an UnexpectedError and stop the upload pipeline when scanning fails" in new TestContext {
+        val organizationID                     = arbitrarySample[OrganizationID]
+        val catalogueItemID                    = arbitrarySample[CatalogueItemID]
+        val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
+        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
+        val scanError = ServiceError.InternalServerError.UnexpectedError("Failed to scan catalogue item image")
+
+        val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          isArchived = false,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          isArchived = false,
+        )
+        val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
+          catalogueItemRow,
+          NonEmptyChunk.single(catalogueItemVariantRow),
+        )
+
+        inSequence(
+          catalogueRepositoryMock.getCatalogueItemWithVariants
+            .expects(organizationID, catalogueItemID)
+            .returningZIO(Some(catalogueItemWithVariantsRow))
+            .once(),
+          fileScannerMock.scan
+            .expects(
+              catalogueItemImageByteStream,
+              catalogueItemImageOriginalFileName.value,
+              SupportedMediaType.images,
+              fileServiceConfig.fileBytesMax,
+            )
+            .returns(ZIO.fail(scanError))
+            .once(),
+        )
+
+        val serviceError = buildCatalogueFileService
+          .uploadCatalogueItemImage(
+            organizationID = organizationID,
+            catalogueItemID = catalogueItemID,
+            catalogueItemImageOriginalFileName = catalogueItemImageOriginalFileName,
+            catalogueItemImageByteStream = catalogueItemImageByteStream,
+          )
+          .zioError
+
+        serviceError shouldBe scanError
+      }
+    }
+
     "extractCatalogueItems" should {
       "return extracted catalogue item candidates for a photo" in new TestContext {
         val organizationID                 = arbitrarySample[OrganizationID]
