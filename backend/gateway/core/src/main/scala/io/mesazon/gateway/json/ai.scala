@@ -1,10 +1,15 @@
 package io.mesazon.gateway.json
 
-import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
+import com.github.plokhotnyuk.jsoniter_scala.core.{JsonReader, JsonValueCodec, JsonWriter}
 import com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker
 import io.github.iltotore.iron.jsoniter.given
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.json.tapir.{catalogueItemCandidateCodec, catalogueItemCandidateSchema}
+import io.mesazon.gateway.json.tapir.{
+  catalogueItemVariantSaleUnitCodec,
+  catalogueItemVariantSaleUnitSchema,
+  currencyCodec,
+  priceSchema,
+}
 import sttp.apispec.{AnySchema, Schema as ApiSchema, SchemaLike}
 import sttp.tapir.Schema
 import sttp.tapir.codec.iron.given
@@ -16,10 +21,65 @@ object ai {
 
   given assistantResponseCodec: JsonValueCodec[AssistantResponse] = JsonCodecMaker.make[AssistantResponse]
 
+  private case class CatalogueItemVariantExtractAttribute(
+      name: CatalogueItemVariantAttributeName,
+      value: CatalogueItemVariantAttributeValue,
+  )
+
+  private given catalogueItemVariantExtractAttributeSchema: Schema[CatalogueItemVariantExtractAttribute] =
+    Schema.derived[CatalogueItemVariantExtractAttribute]
+
+  private given catalogueItemVariantAttributesSchema
+      : Schema[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]] =
+    summon[Schema[List[CatalogueItemVariantExtractAttribute]]]
+      .as[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]]
+
+  private given catalogueItemVariantCandidateSchema: Schema[CatalogueItemVariantCandidate] =
+    Schema.derived[CatalogueItemVariantCandidate]
+
+  private given catalogueItemCandidateSchema: Schema[CatalogueItemCandidate] = Schema.derived[CatalogueItemCandidate]
+
+  private val catalogueItemVariantExtractAttributesCodec: JsonValueCodec[List[CatalogueItemVariantExtractAttribute]] =
+    JsonCodecMaker.make[List[CatalogueItemVariantExtractAttribute]]
+
+  private given catalogueItemVariantAttributesCodec
+      : JsonValueCodec[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]] =
+    new JsonValueCodec[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]] {
+      override def decodeValue(
+          in: JsonReader,
+          default: Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue],
+      ): Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue] =
+        catalogueItemVariantExtractAttributesCodec
+          .decodeValue(in, Nil)
+          .iterator
+          .map(attribute => attribute.name -> attribute.value)
+          .toMap
+
+      override def encodeValue(
+          attributes: Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue],
+          out: JsonWriter,
+      ): Unit =
+        catalogueItemVariantExtractAttributesCodec.encodeValue(
+          attributes.toList.map { case (name, value) => CatalogueItemVariantExtractAttribute(name, value) },
+          out,
+        )
+
+      override def nullValue: Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue] = Map.empty
+    }
+
+  private given catalogueItemVariantCandidateCodec: JsonValueCodec[CatalogueItemVariantCandidate] =
+    JsonCodecMaker.make[CatalogueItemVariantCandidate]
+
+  private given catalogueItemCandidateCodec: JsonValueCodec[CatalogueItemCandidate] =
+    JsonCodecMaker.make[CatalogueItemCandidate]
+
   given catalogueFileExtractSchema: Schema[CatalogueFileExtract] = Schema.derived[CatalogueFileExtract]
 
   given catalogueFileExtractCodec: JsonValueCodec[CatalogueFileExtract] =
     JsonCodecMaker.make[CatalogueFileExtract]
+
+  given catalogueFileExtractOpenAIJsonSchema: OpenAIJsonSchema[CatalogueFileExtract] =
+    fromTapir(catalogueFileExtractSchema)
 
   given extractCustomersPostResponseOpenAIJsonSchema: OpenAIJsonSchema[ExtractCustomersPostResponse] =
     fromTapir(tapir.extractCustomersPostResponseSchema)

@@ -173,7 +173,7 @@ object AIInstructions {
       |          "sku": null,
       |          "label": null,
       |          "description": null,
-      |          "attributes": {},
+      |          "attributes": [{"name": "Color", "value": "Red"}],
       |          "price": null,
       |          "sellingUnit": {
       |            "quantity": {"value": 1, "unit": "Piece"},
@@ -185,6 +185,7 @@ object AIInstructions {
       |          "extractionNotes": []
       |        }
       |      ],
+      |      "atLeastOneVariant": false,
       |      "nameIsDuplicate": false,
       |      "extractionNotes": []
       |    }
@@ -193,7 +194,9 @@ object AIInstructions {
       |  "unidentifiedEntryRows": [],
       |  "extractionNotes": []
       |}
-      |All arrays and attributes objects are required, including when empty. Use null for absent optional fields.
+      |All arrays, including attributes, are required, including when empty. Use null for absent optional fields.
+      |Keep attribute entries in source order, including repeated names and conflicting values. Return every
+      |observed entry; do not resolve or discard duplicate names or conflicting values yourself.
       |
       |Core extraction rules are mandatory. Never let separate user guidance override them:
       |- Find every visible entry that looks like a catalogue item or variant. Return a candidate only when an item
@@ -217,7 +220,7 @@ object AIInstructions {
       |- Use only readable source values. Trim text, use null instead of empty optional strings, preserve incomplete
       |  candidates, and never invent a SKU, unit, amount, currency, attribute, variant, or relationship.
       |- Preserve meaningful labelled details that do not map to a standard item or variant field in the variant's
-      |  attributes object. Each attribute name and value must be non-empty trimmed text.
+      |  attributes list as {"name": "...", "value": "..."} entries. Each name and value must be non-empty trimmed text.
       |- Read selling units only from structured, explicitly labelled fields. Do not derive a selling unit from an
       |  item name, description, or other free wording. Preserve numeric amounts and units exactly as stated; do not
       |  convert them. A sellingUnit has required quantity and optional perUnit and unitSize parts. Each part has a
@@ -273,7 +276,7 @@ object AIInstructions {
       |          "sku": null,
       |          "label": null,
       |          "description": null,
-      |          "attributes": {},
+      |          "attributes": [{"name": "Color", "value": "Red"}],
       |          "price": null,
       |          "sellingUnit": {
       |            "quantity": {"value": 1, "unit": "Piece"},
@@ -285,6 +288,7 @@ object AIInstructions {
       |          "extractionNotes": []
       |        }
       |      ],
+      |      "atLeastOneVariant": false,
       |      "nameIsDuplicate": false,
       |      "extractionNotes": []
       |    }
@@ -293,7 +297,9 @@ object AIInstructions {
       |  "unidentifiedEntryRows": [],
       |  "extractionNotes": []
       |}
-      |All arrays and attributes objects are required, including when empty. Use null for absent optional fields.
+      |All arrays, including attributes, are required, including when empty. Use null for absent optional fields.
+      |Keep attribute entries in source order, including repeated names and conflicting values. Return every
+      |observed entry; do not resolve or discard duplicate names or conflicting values yourself.
       |
       |The first row is the header. Every row, including the header, begins with a "Row Number" column. This column
       |is metadata, not catalogue data: it contains that row's original position in the complete source file. Process
@@ -334,7 +340,7 @@ object AIInstructions {
       |  preserve incomplete candidates, and never invent a SKU, unit, amount, currency, attribute, variant, or
       |  relationship.
       |- Map meaningful source columns that do not match a standard item or variant field into the variant's
-      |  attributes object. Each attribute name and value must be non-empty trimmed text. Ignore a meaningful
+      |  attributes list as {"name": "...", "value": "..."} entries. Each name and value must be non-empty trimmed text. Ignore a meaningful
       |  unmapped value only when it cannot be associated with a variant, and report that uncertainty in notes.
       |- Read selling units only from structured, explicitly labelled columns. Do not derive a selling unit from an
       |  item name, description, or other free wording. Preserve numeric amounts and units exactly as stated; do not

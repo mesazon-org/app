@@ -3,10 +3,11 @@ package io.mesazon.gateway.it
 import com.dimafeng.testcontainers.ExposedService
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
-import io.circe.parser.parse
+import io.circe.{parser, Json}
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClientDataExtraction
 import io.mesazon.gateway.config.AIClientDataExtractionConfig
+import io.mesazon.gateway.json.ai.given
 import io.mesazon.gateway.json.{ai, OpenAIJsonSchema}
 import io.mesazon.gateway.utils.FileScannedPath
 import io.mesazon.testkit.base.*
@@ -18,7 +19,7 @@ import sttp.ai.openai.requests.completions.chat.message.{Content, Message as Ope
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.client4.jsoniter.*
-import sttp.model.StatusCode
+import sttp.model.{MediaType, StatusCode}
 import sttp.tapir.Schema
 import zio.*
 import zio.stream.*
@@ -76,7 +77,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
   private given aiRequestLogResponseCodec: JsonValueCodec[AIRequestLogResponse] =
     JsonCodecMaker.make[AIRequestLogResponse]
 
-  private def requestMessages(wiremockClient: WiremockClient): Seq[Seq[OpenAIMessage]] = {
+  private def requestBodies(wiremockClient: WiremockClient): Seq[Json] = {
     val aiRequestLogResponse = basicRequest
       .get(wiremockClient.config.baseUri.withPath("__admin", "requests"))
       .response(asJsonOrFail[AIRequestLogResponse])
@@ -88,10 +89,23 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
     aiRequestLogResponse.requests
       .filter(_.request.url == "/v1/chat/completions")
       .sortBy(_.request.loggedDate)
-      .map { aiRequestLog =>
-        val requestBodyJson = parse(aiRequestLog.request.body).fold(throw _, identity)
-        requestBodyJson.hcursor.get[Seq[OpenAIMessage]]("messages").fold(throw _, identity)
-      }
+      .map(aiRequestLog => parser.parse(aiRequestLog.request.body).fold(throw _, identity))
+  }
+
+  private def requestMessages(wiremockClient: WiremockClient): Seq[Seq[OpenAIMessage]] =
+    requestBodies(wiremockClient)
+      .map(_.hcursor.get[Seq[OpenAIMessage]]("messages").fold(throw _, identity))
+
+  private def findPropertySchema(json: Json, propertyName: String): Option[Json] = {
+    val directPropertySchema = json.hcursor.downField("properties").downField(propertyName).focus
+
+    directPropertySchema.orElse(
+      json.arrayOrObject(
+        None,
+        _.iterator.flatMap(findPropertySchema(_, propertyName)).nextOption(),
+        _.values.iterator.flatMap(findPropertySchema(_, propertyName)).nextOption(),
+      )
+    )
   }
 
   def withContext[A](f: Context => A): A = withContainers { container =>
@@ -193,6 +207,198 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             OpenAIMessage.User(imageSourceContent),
           )
         )
+
+        val requestBody = requestBodies(wiremockClient).loneElement
+        requestBody.hcursor
+          .downField("response_format")
+          .downField("json_schema")
+          .get[Boolean]("strict")
+          .value shouldBe true
+      }
+
+      "decode catalogue candidates with attribute entries using a strict schema" in withContext { context =>
+        import context.*
+
+        val instructions             = "AI_CLIENT_SPEC_CATALOGUE_SUCCESS"
+        val catalogueFileExtractJson =
+          """{
+            |  "entriesIdentified": 1,
+            |  "entriesProcessed": 1,
+            |  "candidates": [
+            |    {
+            |      "name": "Cotton T-Shirt",
+            |      "description": "Classic crew neck",
+            |      "variants": [
+            |        {
+            |          "sku": "TS-RED-M",
+            |          "label": "Red / Medium",
+            |          "description": null,
+            |          "attributes": [{"name": "Color", "value": "Red"}, {"name": "Color", "value": "Red"}, {"name": "Color", "value": "Blue"}, {"name": "Size", "value": "M"}, {"name": "Size", "value": "M"}],
+            |          "price": {"amount": 12.50, "currency": "EUR"},
+            |          "sellingUnit": {
+            |            "quantity": {"value": 1, "unit": "Piece"},
+            |            "perUnit": null,
+            |            "unitSize": null
+            |          },
+            |          "missingRequiredSaleUnit": false,
+            |          "skuIsDuplicate": false,
+            |          "extractionNotes": ["Source label is partly obscured"]
+            |        }
+            |      ],
+            |      "atLeastOneVariant": false,
+            |      "nameIsDuplicate": false,
+            |      "extractionNotes": []
+            |    }
+            |  ],
+            |  "emptyEntryRows": [],
+            |  "unidentifiedEntryRows": [],
+            |  "extractionNotes": ["Image text was clear"]
+            |}""".stripMargin
+        val openAIResponseBody = Json
+          .obj(
+            "id"      -> Json.fromString("chatcmpl-catalogue-file-extract"),
+            "object"  -> Json.fromString("chat.completion"),
+            "created" -> Json.fromLong(1700000000L),
+            "model"   -> Json.fromString("gpt-5.6-sol"),
+            "choices" -> Json.arr(
+              Json.obj(
+                "index"         -> Json.fromInt(0),
+                "finish_reason" -> Json.fromString("stop"),
+                "message"       -> Json.obj(
+                  "role"    -> Json.fromString("assistant"),
+                  "content" -> Json.fromString(catalogueFileExtractJson),
+                ),
+              )
+            ),
+            "usage" -> Json.obj(
+              "prompt_tokens"     -> Json.fromInt(10),
+              "completion_tokens" -> Json.fromInt(5),
+              "total_tokens"      -> Json.fromInt(15),
+            ),
+          )
+          .noSpaces
+        val mappingJson = Json
+          .obj(
+            "priority" -> Json.fromInt(1),
+            "request"  -> Json.obj(
+              "method"       -> Json.fromString("POST"),
+              "urlPath"      -> Json.fromString("/v1/chat/completions"),
+              "bodyPatterns" -> Json.arr(
+                Json.obj("contains" -> Json.fromString(instructions))
+              ),
+            ),
+            "response" -> Json.obj(
+              "status"  -> Json.fromInt(200),
+              "headers" -> Json.obj(
+                "Content-Type" -> Json.fromString(MediaType.ApplicationJson.toString)
+              ),
+              "body" -> Json.fromString(openAIResponseBody),
+            ),
+          )
+          .noSpaces
+
+        val mappingResponse = basicRequest
+          .post(wiremockClient.config.baseUri.withPath("__admin", "mappings"))
+          .contentType(MediaType.ApplicationJson)
+          .body(mappingJson)
+          .send(wiremockClient.backend)
+          .orDie
+          .zioValue
+
+        mappingResponse.code shouldBe StatusCode.Created
+
+        val aiClientDataExtraction = ZIO
+          .service[AIClientDataExtraction]
+          .provide(
+            AIClientDataExtraction.live,
+            ZLayer.succeed(aiClientDataExtractionConfig),
+            HttpClientZioBackend.layer(),
+          )
+          .zioValue
+
+        val catalogueFileExtract = aiClientDataExtraction
+          .extractFromImage[CatalogueFileExtract](
+            imageScannedPath(),
+            SupportedMediaType.JPEG,
+            instructions,
+          )
+          .zioValue
+
+        catalogueFileExtract shouldBe CatalogueFileExtract(
+          entriesIdentified = 1L,
+          entriesProcessed = 1L,
+          candidates = List(
+            CatalogueItemCandidate(
+              name = CatalogueItemName.assume("Cotton T-Shirt"),
+              description = Some(CatalogueItemDescription.assume("Classic crew neck")),
+              variants = List(
+                CatalogueItemVariantCandidate(
+                  sku = Some(CatalogueItemVariantSku.assume("TS-RED-M")),
+                  label = Some(CatalogueItemVariantLabel.assume("Red / Medium")),
+                  description = None,
+                  attributes = Map(
+                    CatalogueItemVariantAttributeName.assume("Color") -> CatalogueItemVariantAttributeValue.assume(
+                      "Blue"
+                    ),
+                    CatalogueItemVariantAttributeName.assume("Size") -> CatalogueItemVariantAttributeValue.assume("M"),
+                  ),
+                  price = Some(
+                    CatalogueItemVariantPrice.assume(Price(PriceAmount.assume(BigDecimal("12.50")), Currency.EUR))
+                  ),
+                  sellingUnit = Some(
+                    CatalogueItemVariantSaleUnit(
+                      quantity = CatalogueItemVariantQuantity(
+                        value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
+                        unit = CatalogueItemVariantUnit.PerUnit.Piece,
+                      ),
+                      perUnit = None,
+                      unitSize = None,
+                    )
+                  ),
+                  missingRequiredSaleUnit = false,
+                  skuIsDuplicate = false,
+                  extractionNotes = List("Source label is partly obscured"),
+                )
+              ),
+              atLeastOneVariant = false,
+              nameIsDuplicate = false,
+              extractionNotes = List.empty,
+            )
+          ),
+          emptyEntryRows = List.empty,
+          unidentifiedEntryRows = List.empty,
+          extractionNotes = List("Image text was clear"),
+        )
+
+        val requestBody      = requestBodies(wiremockClient).loneElement
+        val jsonSchemaCursor = requestBody.hcursor
+          .downField("response_format")
+          .downField("json_schema")
+
+        jsonSchemaCursor.get[Boolean]("strict").value shouldBe true
+
+        val responseSchema   = jsonSchemaCursor.downField("schema").focus.value
+        val attributesSchema = findPropertySchema(responseSchema, "attributes").value
+        attributesSchema.hcursor.get[String]("type").value shouldBe "array"
+
+        val attributeEntrySchema         = attributesSchema.hcursor.downField("items").focus.value
+        val attributeEntrySchemaResolved =
+          attributeEntrySchema.hcursor.get[String]("$ref").toOption.fold(attributeEntrySchema) { schemaReference =>
+            schemaReference should startWith("#/$defs/")
+            responseSchema.hcursor.downField("$defs").downField(schemaReference.stripPrefix("#/$defs/")).focus.value
+          }
+        attributeEntrySchemaResolved.hcursor.get[Boolean]("additionalProperties").value shouldBe false
+        attributeEntrySchemaResolved.hcursor.get[Set[String]]("required").value shouldBe Set("name", "value")
+        attributeEntrySchemaResolved.hcursor
+          .downField("properties")
+          .downField("name")
+          .get[String]("type")
+          .value shouldBe "string"
+        attributeEntrySchemaResolved.hcursor
+          .downField("properties")
+          .downField("value")
+          .get[String]("type")
+          .value shouldBe "string"
       }
 
       "send processing guidance after the image source content" in withContext { context =>
