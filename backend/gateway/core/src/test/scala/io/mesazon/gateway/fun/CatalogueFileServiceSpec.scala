@@ -371,246 +371,969 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         )
       }
 
-      List[(String, CatalogueItemAIExtract => CatalogueItemAIExtract, String, Int)](
-        (
-          "an item requires a variant",
-          item => item.copy(atLeastOneVariant = true, variants = Nil),
-          "At least one variant is required.",
-          0,
-        ),
-        (
-          "an item name is duplicated",
-          item => item.copy(nameIsDuplicate = true),
-          "Item name is duplicated in this extraction.",
-          1,
-        ),
-        (
-          "a variant selling unit is missing",
-          item => item.copy(variants = item.variants.map(_.copy(sellingUnit = None, missingRequiredSaleUnit = true))),
-          "Variant 1: Selling unit is missing.",
-          0,
-        ),
-        (
-          "a variant SKU is duplicated",
-          item => item.copy(variants = item.variants.map(_.copy(skuIsDuplicate = true))),
-          "Variant 1: SKU is duplicated in this extraction.",
-          1,
-        ),
-        (
-          "an AI variant lacks a selling unit without setting its flag",
-          item => item.copy(variants = item.variants.map(_.copy(sellingUnit = None))),
-          "Variant 1: Selling unit is missing.",
-          0,
-        ),
-      ).foreach { case (condition, flaggedItem, expectedNote, expectedVariantCount) =>
-        s"mark the candidate for attention and add a note when $condition" in new TestContext {
-          val organizationID                 = arbitrarySample[OrganizationID]
-          val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.jpeg")
-          val catalogueFileExtractByteStream = ZStream.empty
-          val fileScannedPath                = FileScannedPath(Path.of("flagged-catalogue.jpeg"))
-          val catalogueItemVariantInsert     =
-            arbitrarySample[CatalogueItemVariantInsert].copy(sku = Some(arbitrarySample[CatalogueItemVariantSku]))
-          val catalogueItemAIExtract = CatalogueItemAIExtract(
-            name = arbitrarySample[CatalogueItemName],
-            description = arbitrarySample[Option[CatalogueItemDescription]],
-            variants = List(
-              CatalogueItemVariantAIExtract(
-                sku = catalogueItemVariantInsert.sku,
-                label = catalogueItemVariantInsert.label,
-                description = catalogueItemVariantInsert.description,
-                attributes = catalogueItemVariantInsert.attributes.toList.map { case (name, value) =>
-                  CatalogueItemVariantAttributesAIExtract(name, value)
-                },
-                price = catalogueItemVariantInsert.price,
-                sellingUnit = Some(catalogueItemVariantInsert.sellingUnit),
-                missingRequiredSaleUnit = false,
-                skuIsDuplicate = false,
-                extractionNotes = Nil,
-              )
-            ),
-            atLeastOneVariant = false,
-            nameIsDuplicate = false,
-            extractionNotes = Nil,
-          )
-          val catalogueFileAIExtract =
-            CatalogueFileAIExtract(1L, 1L, List(flaggedItem(catalogueItemAIExtract)), Nil, Nil, Nil)
-          fileScannerMock.scan
-            .expects(
-              catalogueFileExtractByteStream,
-              catalogueFileExtractFileName.value,
-              SupportedMediaType.extractData,
-              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+      "flag an item without variants" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.jpeg")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("flagged-catalogue.jpeg"))
+        val catalogueItemVariantInsert     =
+          arbitrarySample[CatalogueItemVariantInsert].copy(sku = Some(arbitrarySample[CatalogueItemVariantSku]))
+        val catalogueItemAIExtract = CatalogueItemAIExtract(
+          name = arbitrarySample[CatalogueItemName],
+          description = arbitrarySample[Option[CatalogueItemDescription]],
+          variants = List(
+            CatalogueItemVariantAIExtract(
+              sku = catalogueItemVariantInsert.sku,
+              label = catalogueItemVariantInsert.label,
+              description = catalogueItemVariantInsert.description,
+              attributes = catalogueItemVariantInsert.attributes.toList.map { case (name, value) =>
+                CatalogueItemVariantAttributesAIExtract(name, value)
+              },
+              price = catalogueItemVariantInsert.price,
+              sellingUnit = Some(catalogueItemVariantInsert.sellingUnit),
+              missingRequiredSaleUnit = false,
+              skuIsDuplicate = false,
+              extractionNotes = Nil,
             )
-            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
-            .once()
-          val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-            extractFromImageCallsRef,
-            extractFromCsvCallsRef,
-            noteCompactionCallsRef,
-            extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
-          )
-          val response = buildCatalogueFileService(aiClientDataExtraction)
-            .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
-            .zioValue
-
-          response shouldBe CatalogueFileExtractPostResponse(
-            candidates = List(
-              CatalogueItemCandidate(
-                name = catalogueItemAIExtract.name,
-                description = catalogueItemAIExtract.description,
-                variants = if (expectedVariantCount == 0) Nil else List(catalogueItemVariantInsert),
-                needsAttention = true,
-                extractionNotes = List(expectedNote),
-              )
-            ),
-            infoNotes = List("Processed 1 of 1 entries"),
-            extractionNotes = Nil,
-          )
-        }
-      }
-
-      List[(String, List[Long], List[Long], List[String])](
-        ("only the count summary", Nil, Nil, Nil),
-        ("only empty-row findings", List(2L, 4L), Nil, List("Empty rows (2): [2, 4]")),
-        ("only unidentified-row findings", Nil, List(6L), List("Unidentified rows (1): [6]")),
-      ).foreach { case (summary, emptyEntryRows, unidentifiedEntryRows, rowNotes) =>
-        s"return an empty photo preview with $summary" in new TestContext {
-          val organizationID                 = arbitrarySample[OrganizationID]
-          val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.jpeg")
-          val catalogueFileExtractByteStream = ZStream.empty
-          val fileScannedPath                = FileScannedPath(Path.of("empty-catalogue.jpeg"))
-          val extractionNotes                = List("No readable catalogue entries were found")
-          val catalogueFileAIExtract         =
-            CatalogueFileAIExtract(0L, 0L, Nil, emptyEntryRows, unidentifiedEntryRows, extractionNotes)
-          fileScannerMock.scan
-            .expects(
-              catalogueFileExtractByteStream,
-              catalogueFileExtractFileName.value,
-              SupportedMediaType.extractData,
-              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
-            )
-            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
-            .once()
-          val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-            extractFromImageCallsRef,
-            extractFromCsvCallsRef,
-            noteCompactionCallsRef,
-            extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
-          )
-          val response = buildCatalogueFileService(aiClientDataExtraction)
-            .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
-            .zioValue
-          response shouldBe CatalogueFileExtractPostResponse(
-            candidates = Nil,
-            infoNotes = List("Processed 0 of 0 entries") ++ rowNotes,
-            extractionNotes = extractionNotes,
-          )
-        }
-      }
-
-      List[(String, Option[CatalogueFileProcessingMessage])](
-        ("without optional guidance", None),
-        ("with optional guidance", Some(CatalogueFileProcessingMessage("Omit prices from variants"))),
-      ).foreach { case (guidance, catalogueFileProcessingMessageOpt) =>
-        s"forward the default photo instructions separately from processing guidance $guidance" in new TestContext {
-          val organizationID                        = arbitrarySample[OrganizationID]
-          val catalogueFileExtractFileName          = CatalogueFileExtractFileName("catalogue.jpeg")
-          val catalogueFileExtractByteStream        = ZStream.empty
-          val fileScannedPath                       = FileScannedPath(Path.of("guided-catalogue.jpeg"))
-          val catalogueFileAIExtract                = CatalogueFileAIExtract(0L, 0L, Nil, Nil, Nil, Nil)
-          val extractFromImageProcessingMessagesRef = Ref.make(List.empty[Option[String]]).zioValue
-          fileScannerMock.scan
-            .expects(
-              catalogueFileExtractByteStream,
-              catalogueFileExtractFileName.value,
-              SupportedMediaType.extractData,
-              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
-            )
-            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
-            .once()
-          val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-            extractFromImageCallsRef,
-            extractFromCsvCallsRef,
-            noteCompactionCallsRef,
-            extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
-            extractFromImageProcessingMessagesRefOpt = Some(extractFromImageProcessingMessagesRef),
-          )
-          val response = buildCatalogueFileService(aiClientDataExtraction)
-            .extractCatalogueItems(
-              organizationID,
-              catalogueFileExtractFileName,
-              catalogueFileProcessingMessageOpt,
-              catalogueFileExtractByteStream,
-            )
-            .zioValue
-          response shouldBe CatalogueFileExtractPostResponse(Nil, List("Processed 0 of 0 entries"), Nil)
-          extractFromImageCallsRef.refValue shouldBe List(
-            (fileScannedPath, SupportedMediaType.JPEG, AIInstructions.extractCatalogueItemsFromImageInstructions)
-          )
-          extractFromImageProcessingMessagesRef.refValue shouldBe List(catalogueFileProcessingMessageOpt.map(_.value))
-          extractFromCsvCallsRef.refValue shouldBe Nil
-          noteCompactionCallsRef.refValue shouldBe Nil
-        }
-      }
-
-      List(
-        ("CSV", "catalogue.csv", SupportedMediaType.CSV),
-        ("XLS", "catalogue.xls", SupportedMediaType.XLS),
-        ("XLSX", "catalogue.xlsx", SupportedMediaType.XLSX),
-      ).foreach { case (format, fileName, supportedMediaType) =>
-        s"return catalogue candidates after converting a $format source" in new TestContext {
-          val organizationID                 = arbitrarySample[OrganizationID]
-          val catalogueFileExtractFileName   = CatalogueFileExtractFileName.assume(fileName)
-          val catalogueFileExtractByteStream = ZStream.empty
-          val fileScannedPath                = FileScannedPath(Path.of(fileName))
-          val csvRecords             = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
-          val catalogueItemName      = CatalogueItemName("Item")
-          val catalogueFileAIExtract = CatalogueFileAIExtract(
+          ),
+          atLeastOneVariant = false,
+          nameIsDuplicate = false,
+          extractionNotes = Nil,
+        )
+        val catalogueFileAIExtract =
+          CatalogueFileAIExtract(
             1L,
             1L,
-            List(CatalogueItemAIExtract(catalogueItemName, None, Nil, true, false, Nil)),
+            List(catalogueItemAIExtract.copy(atLeastOneVariant = true, variants = Nil)),
             Nil,
             Nil,
             Nil,
           )
-          inSequence(
-            fileScannerMock.scan
-              .expects(
-                catalogueFileExtractByteStream,
-                catalogueFileExtractFileName.value,
-                SupportedMediaType.extractData,
-                catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+        fileScannerMock.scan
+          .expects(
+            catalogueFileExtractByteStream,
+            catalogueFileExtractFileName.value,
+            SupportedMediaType.extractData,
+            catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+          )
+          .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
+          .once()
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+
+        response shouldBe CatalogueFileExtractPostResponse(
+          candidates = List(
+            CatalogueItemCandidate(
+              name = catalogueItemAIExtract.name,
+              description = catalogueItemAIExtract.description,
+              variants = Nil,
+              needsAttention = true,
+              extractionNotes = List("At least one variant is required."),
+            )
+          ),
+          infoNotes = List("Processed 1 of 1 entries"),
+          extractionNotes = Nil,
+        )
+      }
+
+      "flag a duplicate item name" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.jpeg")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("flagged-catalogue.jpeg"))
+        val catalogueItemVariantInsert     =
+          arbitrarySample[CatalogueItemVariantInsert].copy(sku = Some(arbitrarySample[CatalogueItemVariantSku]))
+        val catalogueItemAIExtract = CatalogueItemAIExtract(
+          name = arbitrarySample[CatalogueItemName],
+          description = arbitrarySample[Option[CatalogueItemDescription]],
+          variants = List(
+            CatalogueItemVariantAIExtract(
+              sku = catalogueItemVariantInsert.sku,
+              label = catalogueItemVariantInsert.label,
+              description = catalogueItemVariantInsert.description,
+              attributes = catalogueItemVariantInsert.attributes.toList.map { case (name, value) =>
+                CatalogueItemVariantAttributesAIExtract(name, value)
+              },
+              price = catalogueItemVariantInsert.price,
+              sellingUnit = Some(catalogueItemVariantInsert.sellingUnit),
+              missingRequiredSaleUnit = false,
+              skuIsDuplicate = false,
+              extractionNotes = Nil,
+            )
+          ),
+          atLeastOneVariant = false,
+          nameIsDuplicate = false,
+          extractionNotes = Nil,
+        )
+        val catalogueFileAIExtract =
+          CatalogueFileAIExtract(1L, 1L, List(catalogueItemAIExtract.copy(nameIsDuplicate = true)), Nil, Nil, Nil)
+        fileScannerMock.scan
+          .expects(
+            catalogueFileExtractByteStream,
+            catalogueFileExtractFileName.value,
+            SupportedMediaType.extractData,
+            catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+          )
+          .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
+          .once()
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+
+        response shouldBe CatalogueFileExtractPostResponse(
+          candidates = List(
+            CatalogueItemCandidate(
+              name = catalogueItemAIExtract.name,
+              description = catalogueItemAIExtract.description,
+              variants = List(catalogueItemVariantInsert),
+              needsAttention = true,
+              extractionNotes = List("Item name is duplicated in this extraction."),
+            )
+          ),
+          infoNotes = List("Processed 1 of 1 entries"),
+          extractionNotes = Nil,
+        )
+      }
+
+      "flag a missing selling unit" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.jpeg")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("flagged-catalogue.jpeg"))
+        val catalogueItemVariantInsert     =
+          arbitrarySample[CatalogueItemVariantInsert].copy(sku = Some(arbitrarySample[CatalogueItemVariantSku]))
+        val catalogueItemAIExtract = CatalogueItemAIExtract(
+          name = arbitrarySample[CatalogueItemName],
+          description = arbitrarySample[Option[CatalogueItemDescription]],
+          variants = List(
+            CatalogueItemVariantAIExtract(
+              sku = catalogueItemVariantInsert.sku,
+              label = catalogueItemVariantInsert.label,
+              description = catalogueItemVariantInsert.description,
+              attributes = catalogueItemVariantInsert.attributes.toList.map { case (name, value) =>
+                CatalogueItemVariantAttributesAIExtract(name, value)
+              },
+              price = catalogueItemVariantInsert.price,
+              sellingUnit = Some(catalogueItemVariantInsert.sellingUnit),
+              missingRequiredSaleUnit = false,
+              skuIsDuplicate = false,
+              extractionNotes = Nil,
+            )
+          ),
+          atLeastOneVariant = false,
+          nameIsDuplicate = false,
+          extractionNotes = Nil,
+        )
+        val catalogueFileAIExtract =
+          CatalogueFileAIExtract(
+            1L,
+            1L,
+            List(
+              catalogueItemAIExtract.copy(variants =
+                catalogueItemAIExtract.variants.map(_.copy(sellingUnit = None, missingRequiredSaleUnit = true))
               )
-              .returns(ZIO.succeed((fileScannedPath, supportedMediaType, FileBytesSize.assume(1L))))
-              .once(),
-            if (supportedMediaType == SupportedMediaType.CSV)
-              spreadsheetToolMock.convertToCsv.expects(fileScannedPath).returns(ZStream.fromIterable(csvRecords)).once()
-            else
-              spreadsheetToolMock.convertExcelToCsv
-                .expects(fileScannedPath)
-                .returns(ZStream.fromIterable(csvRecords))
-                .once(),
-          )
-          val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-            extractFromImageCallsRef,
-            extractFromCsvCallsRef,
-            noteCompactionCallsRef,
-            extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(catalogueFileAIExtract))),
-          )
-          val response = buildCatalogueFileService(aiClientDataExtraction)
-            .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
-            .zioValue
-          response shouldBe CatalogueFileExtractPostResponse(
-            List(CatalogueItemCandidate(catalogueItemName, None, Nil, true, List("At least one variant is required."))),
-            List("Processed 1 of 1 entries"),
+            ),
+            Nil,
+            Nil,
             Nil,
           )
-          extractFromCsvCallsRef.refValue shouldBe List(
-            (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
+        fileScannerMock.scan
+          .expects(
+            catalogueFileExtractByteStream,
+            catalogueFileExtractFileName.value,
+            SupportedMediaType.extractData,
+            catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
           )
-          extractFromImageCallsRef.refValue shouldBe Nil
-          noteCompactionCallsRef.refValue shouldBe Nil
-        }
+          .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
+          .once()
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+
+        response shouldBe CatalogueFileExtractPostResponse(
+          candidates = List(
+            CatalogueItemCandidate(
+              name = catalogueItemAIExtract.name,
+              description = catalogueItemAIExtract.description,
+              variants = Nil,
+              needsAttention = true,
+              extractionNotes = List("Variant 1: Selling unit is missing."),
+            )
+          ),
+          infoNotes = List("Processed 1 of 1 entries"),
+          extractionNotes = Nil,
+        )
+      }
+
+      "flag a duplicate SKU" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.jpeg")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("flagged-catalogue.jpeg"))
+        val catalogueItemVariantInsert     =
+          arbitrarySample[CatalogueItemVariantInsert].copy(sku = Some(arbitrarySample[CatalogueItemVariantSku]))
+        val catalogueItemAIExtract = CatalogueItemAIExtract(
+          name = arbitrarySample[CatalogueItemName],
+          description = arbitrarySample[Option[CatalogueItemDescription]],
+          variants = List(
+            CatalogueItemVariantAIExtract(
+              sku = catalogueItemVariantInsert.sku,
+              label = catalogueItemVariantInsert.label,
+              description = catalogueItemVariantInsert.description,
+              attributes = catalogueItemVariantInsert.attributes.toList.map { case (name, value) =>
+                CatalogueItemVariantAttributesAIExtract(name, value)
+              },
+              price = catalogueItemVariantInsert.price,
+              sellingUnit = Some(catalogueItemVariantInsert.sellingUnit),
+              missingRequiredSaleUnit = false,
+              skuIsDuplicate = false,
+              extractionNotes = Nil,
+            )
+          ),
+          atLeastOneVariant = false,
+          nameIsDuplicate = false,
+          extractionNotes = Nil,
+        )
+        val catalogueFileAIExtract =
+          CatalogueFileAIExtract(
+            1L,
+            1L,
+            List(
+              catalogueItemAIExtract.copy(variants = catalogueItemAIExtract.variants.map(_.copy(skuIsDuplicate = true)))
+            ),
+            Nil,
+            Nil,
+            Nil,
+          )
+        fileScannerMock.scan
+          .expects(
+            catalogueFileExtractByteStream,
+            catalogueFileExtractFileName.value,
+            SupportedMediaType.extractData,
+            catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+          )
+          .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
+          .once()
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+
+        response shouldBe CatalogueFileExtractPostResponse(
+          candidates = List(
+            CatalogueItemCandidate(
+              name = catalogueItemAIExtract.name,
+              description = catalogueItemAIExtract.description,
+              variants = List(catalogueItemVariantInsert),
+              needsAttention = true,
+              extractionNotes = List("Variant 1: SKU is duplicated in this extraction."),
+            )
+          ),
+          infoNotes = List("Processed 1 of 1 entries"),
+          extractionNotes = Nil,
+        )
+      }
+
+      "flag a missing selling unit without an AI warning" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.jpeg")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("flagged-catalogue.jpeg"))
+        val catalogueItemVariantInsert     =
+          arbitrarySample[CatalogueItemVariantInsert].copy(sku = Some(arbitrarySample[CatalogueItemVariantSku]))
+        val catalogueItemAIExtract = CatalogueItemAIExtract(
+          name = arbitrarySample[CatalogueItemName],
+          description = arbitrarySample[Option[CatalogueItemDescription]],
+          variants = List(
+            CatalogueItemVariantAIExtract(
+              sku = catalogueItemVariantInsert.sku,
+              label = catalogueItemVariantInsert.label,
+              description = catalogueItemVariantInsert.description,
+              attributes = catalogueItemVariantInsert.attributes.toList.map { case (name, value) =>
+                CatalogueItemVariantAttributesAIExtract(name, value)
+              },
+              price = catalogueItemVariantInsert.price,
+              sellingUnit = Some(catalogueItemVariantInsert.sellingUnit),
+              missingRequiredSaleUnit = false,
+              skuIsDuplicate = false,
+              extractionNotes = Nil,
+            )
+          ),
+          atLeastOneVariant = false,
+          nameIsDuplicate = false,
+          extractionNotes = Nil,
+        )
+        val catalogueFileAIExtract =
+          CatalogueFileAIExtract(
+            1L,
+            1L,
+            List(
+              catalogueItemAIExtract.copy(variants = catalogueItemAIExtract.variants.map(_.copy(sellingUnit = None)))
+            ),
+            Nil,
+            Nil,
+            Nil,
+          )
+        fileScannerMock.scan
+          .expects(
+            catalogueFileExtractByteStream,
+            catalogueFileExtractFileName.value,
+            SupportedMediaType.extractData,
+            catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+          )
+          .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
+          .once()
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+
+        response shouldBe CatalogueFileExtractPostResponse(
+          candidates = List(
+            CatalogueItemCandidate(
+              name = catalogueItemAIExtract.name,
+              description = catalogueItemAIExtract.description,
+              variants = Nil,
+              needsAttention = true,
+              extractionNotes = List("Variant 1: Selling unit is missing."),
+            )
+          ),
+          infoNotes = List("Processed 1 of 1 entries"),
+          extractionNotes = Nil,
+        )
+      }
+
+      "summarize an empty extraction" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.jpeg")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("empty-catalogue.jpeg"))
+        val extractionNotes                = List("No readable catalogue entries were found")
+        val catalogueFileAIExtract         =
+          CatalogueFileAIExtract(0L, 0L, Nil, Nil, Nil, extractionNotes)
+        fileScannerMock.scan
+          .expects(
+            catalogueFileExtractByteStream,
+            catalogueFileExtractFileName.value,
+            SupportedMediaType.extractData,
+            catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+          )
+          .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
+          .once()
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+        response shouldBe CatalogueFileExtractPostResponse(
+          candidates = Nil,
+          infoNotes = List("Processed 0 of 0 entries"),
+          extractionNotes = extractionNotes,
+        )
+      }
+
+      "report empty rows" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.jpeg")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("empty-catalogue.jpeg"))
+        val extractionNotes                = List("No readable catalogue entries were found")
+        val catalogueFileAIExtract         =
+          CatalogueFileAIExtract(0L, 0L, Nil, List(2L, 4L), Nil, extractionNotes)
+        fileScannerMock.scan
+          .expects(
+            catalogueFileExtractByteStream,
+            catalogueFileExtractFileName.value,
+            SupportedMediaType.extractData,
+            catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+          )
+          .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
+          .once()
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+        response shouldBe CatalogueFileExtractPostResponse(
+          candidates = Nil,
+          infoNotes = List("Processed 0 of 0 entries", "Empty rows (2): [2, 4]"),
+          extractionNotes = extractionNotes,
+        )
+      }
+
+      "report unidentified rows" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.jpeg")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("empty-catalogue.jpeg"))
+        val extractionNotes                = List("No readable catalogue entries were found")
+        val catalogueFileAIExtract         =
+          CatalogueFileAIExtract(0L, 0L, Nil, Nil, List(6L), extractionNotes)
+        fileScannerMock.scan
+          .expects(
+            catalogueFileExtractByteStream,
+            catalogueFileExtractFileName.value,
+            SupportedMediaType.extractData,
+            catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+          )
+          .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
+          .once()
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+        response shouldBe CatalogueFileExtractPostResponse(
+          candidates = Nil,
+          infoNotes = List("Processed 0 of 0 entries", "Unidentified rows (1): [6]"),
+          extractionNotes = extractionNotes,
+        )
+      }
+
+      "extract a photo without processing guidance" in new TestContext {
+        val catalogueFileProcessingMessageOpt: Option[CatalogueFileProcessingMessage] = None
+        val organizationID                                                            = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName          = CatalogueFileExtractFileName("catalogue.jpeg")
+        val catalogueFileExtractByteStream        = ZStream.empty
+        val fileScannedPath                       = FileScannedPath(Path.of("guided-catalogue.jpeg"))
+        val catalogueFileAIExtract                = CatalogueFileAIExtract(0L, 0L, Nil, Nil, Nil, Nil)
+        val extractFromImageProcessingMessagesRef = Ref.make(List.empty[Option[String]]).zioValue
+        fileScannerMock.scan
+          .expects(
+            catalogueFileExtractByteStream,
+            catalogueFileExtractFileName.value,
+            SupportedMediaType.extractData,
+            catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+          )
+          .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
+          .once()
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
+          extractFromImageProcessingMessagesRefOpt = Some(extractFromImageProcessingMessagesRef),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(
+            organizationID,
+            catalogueFileExtractFileName,
+            catalogueFileProcessingMessageOpt,
+            catalogueFileExtractByteStream,
+          )
+          .zioValue
+        response shouldBe CatalogueFileExtractPostResponse(Nil, List("Processed 0 of 0 entries"), Nil)
+        extractFromImageCallsRef.refValue shouldBe List(
+          (fileScannedPath, SupportedMediaType.JPEG, AIInstructions.extractCatalogueItemsFromImageInstructions)
+        )
+        extractFromImageProcessingMessagesRef.refValue shouldBe List(catalogueFileProcessingMessageOpt.map(_.value))
+        extractFromCsvCallsRef.refValue shouldBe Nil
+        noteCompactionCallsRef.refValue shouldBe Nil
+      }
+
+      "forward photo processing guidance" in new TestContext {
+        val catalogueFileProcessingMessageOpt: Option[CatalogueFileProcessingMessage] =
+          Some(CatalogueFileProcessingMessage("Omit prices from variants"))
+        val organizationID                        = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName          = CatalogueFileExtractFileName("catalogue.jpeg")
+        val catalogueFileExtractByteStream        = ZStream.empty
+        val fileScannedPath                       = FileScannedPath(Path.of("guided-catalogue.jpeg"))
+        val catalogueFileAIExtract                = CatalogueFileAIExtract(0L, 0L, Nil, Nil, Nil, Nil)
+        val extractFromImageProcessingMessagesRef = Ref.make(List.empty[Option[String]]).zioValue
+        fileScannerMock.scan
+          .expects(
+            catalogueFileExtractByteStream,
+            catalogueFileExtractFileName.value,
+            SupportedMediaType.extractData,
+            catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+          )
+          .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
+          .once()
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
+          extractFromImageProcessingMessagesRefOpt = Some(extractFromImageProcessingMessagesRef),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(
+            organizationID,
+            catalogueFileExtractFileName,
+            catalogueFileProcessingMessageOpt,
+            catalogueFileExtractByteStream,
+          )
+          .zioValue
+        response shouldBe CatalogueFileExtractPostResponse(Nil, List("Processed 0 of 0 entries"), Nil)
+        extractFromImageCallsRef.refValue shouldBe List(
+          (fileScannedPath, SupportedMediaType.JPEG, AIInstructions.extractCatalogueItemsFromImageInstructions)
+        )
+        extractFromImageProcessingMessagesRef.refValue shouldBe List(catalogueFileProcessingMessageOpt.map(_.value))
+        extractFromCsvCallsRef.refValue shouldBe Nil
+        noteCompactionCallsRef.refValue shouldBe Nil
+      }
+
+      "extract catalogue items from CSV" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.csv")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("catalogue.csv"))
+        val csvRecords                     = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
+        val catalogueItemName              = CatalogueItemName("Item")
+        val catalogueFileAIExtract         = CatalogueFileAIExtract(
+          1L,
+          1L,
+          List(
+            CatalogueItemAIExtract(
+              catalogueItemName,
+              None,
+              Nil,
+              atLeastOneVariant = true,
+              nameIsDuplicate = false,
+              extractionNotes = Nil,
+            )
+          ),
+          Nil,
+          Nil,
+          Nil,
+        )
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              catalogueFileExtractByteStream,
+              catalogueFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+            )
+            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.CSV, FileBytesSize.assume(1L))))
+            .once(),
+          spreadsheetToolMock.convertToCsv.expects(fileScannedPath).returns(ZStream.fromIterable(csvRecords)).once(),
+        )
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(catalogueFileAIExtract))),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+        response shouldBe CatalogueFileExtractPostResponse(
+          List(
+            CatalogueItemCandidate(
+              catalogueItemName,
+              None,
+              Nil,
+              needsAttention = true,
+              extractionNotes = List("At least one variant is required."),
+            )
+          ),
+          List("Processed 1 of 1 entries"),
+          Nil,
+        )
+        extractFromCsvCallsRef.refValue shouldBe List(
+          (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
+        )
+        extractFromImageCallsRef.refValue shouldBe Nil
+        noteCompactionCallsRef.refValue shouldBe Nil
+      }
+
+      "extract catalogue items from XLS" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.xls")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("catalogue.xls"))
+        val csvRecords                     = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
+        val catalogueItemName              = CatalogueItemName("Item")
+        val catalogueFileAIExtract         = CatalogueFileAIExtract(
+          1L,
+          1L,
+          List(
+            CatalogueItemAIExtract(
+              catalogueItemName,
+              None,
+              Nil,
+              atLeastOneVariant = true,
+              nameIsDuplicate = false,
+              extractionNotes = Nil,
+            )
+          ),
+          Nil,
+          Nil,
+          Nil,
+        )
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              catalogueFileExtractByteStream,
+              catalogueFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+            )
+            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.XLS, FileBytesSize.assume(1L))))
+            .once(),
+          spreadsheetToolMock.convertExcelToCsv
+            .expects(fileScannedPath)
+            .returns(ZStream.fromIterable(csvRecords))
+            .once(),
+        )
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(catalogueFileAIExtract))),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+        response shouldBe CatalogueFileExtractPostResponse(
+          List(
+            CatalogueItemCandidate(
+              catalogueItemName,
+              None,
+              Nil,
+              needsAttention = true,
+              extractionNotes = List("At least one variant is required."),
+            )
+          ),
+          List("Processed 1 of 1 entries"),
+          Nil,
+        )
+        extractFromCsvCallsRef.refValue shouldBe List(
+          (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
+        )
+        extractFromImageCallsRef.refValue shouldBe Nil
+        noteCompactionCallsRef.refValue shouldBe Nil
+      }
+
+      "extract catalogue items from XLSX" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.xlsx")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("catalogue.xlsx"))
+        val csvRecords                     = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
+        val catalogueItemName              = CatalogueItemName("Item")
+        val catalogueFileAIExtract         = CatalogueFileAIExtract(
+          1L,
+          1L,
+          List(
+            CatalogueItemAIExtract(
+              catalogueItemName,
+              None,
+              Nil,
+              atLeastOneVariant = true,
+              nameIsDuplicate = false,
+              extractionNotes = Nil,
+            )
+          ),
+          Nil,
+          Nil,
+          Nil,
+        )
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              catalogueFileExtractByteStream,
+              catalogueFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+            )
+            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.XLSX, FileBytesSize.assume(1L))))
+            .once(),
+          spreadsheetToolMock.convertExcelToCsv
+            .expects(fileScannedPath)
+            .returns(ZStream.fromIterable(csvRecords))
+            .once(),
+        )
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(catalogueFileAIExtract))),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+        response shouldBe CatalogueFileExtractPostResponse(
+          List(
+            CatalogueItemCandidate(
+              catalogueItemName,
+              None,
+              Nil,
+              needsAttention = true,
+              extractionNotes = List("At least one variant is required."),
+            )
+          ),
+          List("Processed 1 of 1 entries"),
+          Nil,
+        )
+        extractFromCsvCallsRef.refValue shouldBe List(
+          (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
+        )
+        extractFromImageCallsRef.refValue shouldBe Nil
+        noteCompactionCallsRef.refValue shouldBe Nil
+      }
+
+      "preserve spreadsheet batch order and combine counts and row findings" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.csv")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("batched-catalogue.csv"))
+        val csvRecords = CSVParser.parse("Name\nItem A\nItem B", CSVFormat.DEFAULT).getRecords.asScala.toList
+        val catalogueItemNameFirst      = CatalogueItemName("Item A")
+        val catalogueItemNameSecond     = CatalogueItemName("Item B")
+        val catalogueFileAIExtractFirst = CatalogueFileAIExtract(
+          2L,
+          1L,
+          List(
+            CatalogueItemAIExtract(
+              catalogueItemNameFirst,
+              None,
+              Nil,
+              atLeastOneVariant = true,
+              nameIsDuplicate = false,
+              extractionNotes = Nil,
+            )
+          ),
+          List(3L),
+          List(4L),
+          List("First batch is cropped"),
+        )
+        val catalogueFileAIExtractSecond = CatalogueFileAIExtract(
+          2L,
+          1L,
+          List(
+            CatalogueItemAIExtract(
+              catalogueItemNameSecond,
+              None,
+              Nil,
+              atLeastOneVariant = true,
+              nameIsDuplicate = false,
+              extractionNotes = Nil,
+            )
+          ),
+          List(6L),
+          List(7L),
+          List("Second batch is blurry"),
+        )
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              catalogueFileExtractByteStream,
+              catalogueFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+            )
+            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.CSV, FileBytesSize.assume(1L))))
+            .once(),
+          spreadsheetToolMock.convertToCsv.expects(fileScannedPath).returns(ZStream.fromIterable(csvRecords)).once(),
+        )
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromCsvOptResult =
+            Some(ZIO.succeed(NonEmptyChunk(catalogueFileAIExtractFirst, catalogueFileAIExtractSecond))),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+        response shouldBe CatalogueFileExtractPostResponse(
+          List(
+            CatalogueItemCandidate(
+              catalogueItemNameFirst,
+              None,
+              Nil,
+              needsAttention = true,
+              extractionNotes = List("At least one variant is required."),
+            ),
+            CatalogueItemCandidate(
+              catalogueItemNameSecond,
+              None,
+              Nil,
+              needsAttention = true,
+              extractionNotes = List("At least one variant is required."),
+            ),
+          ),
+          List("Processed 2 of 4 entries", "Empty rows (2): [3, 6]", "Unidentified rows (2): [4, 7]"),
+          List("First batch is cropped", "Second batch is blurry"),
+        )
+        extractFromCsvCallsRef.refValue shouldBe List(
+          (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
+        )
+        extractFromImageCallsRef.refValue shouldBe Nil
+        noteCompactionCallsRef.refValue shouldBe Nil
+      }
+
+      "mark duplicate names and SKUs ignoring case" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.csv")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("duplicates-catalogue.csv"))
+        val csvRecords                     = CSVParser
+          .parse(
+            "Name,SKU\nBolt,SKU-A\nNut,SKU-C\nbOLT,SKU-B\nWasher,sku-a",
+            CSVFormat.DEFAULT,
+          )
+          .getRecords
+          .asScala
+          .toList
+        val catalogueItemVariantInsert = arbitrarySample[CatalogueItemVariantInsert].copy(
+          sku = Some(CatalogueItemVariantSku("SKU-A"))
+        )
+        val catalogueItemVariantInsertWithoutSku = catalogueItemVariantInsert.copy(sku = None)
+        val catalogueItemVariantInsertUnique     =
+          catalogueItemVariantInsert.copy(sku = Some(CatalogueItemVariantSku("SKU-C")))
+        val catalogueItemVariantInsertNameDuplicate =
+          catalogueItemVariantInsert.copy(sku = Some(CatalogueItemVariantSku("SKU-B")))
+        val catalogueItemVariantInsertSkuDuplicate =
+          catalogueItemVariantInsert.copy(sku = Some(CatalogueItemVariantSku("sku-a")))
+        val catalogueItemVariantAIExtract = CatalogueItemVariantAIExtract(
+          sku = catalogueItemVariantInsert.sku,
+          label = catalogueItemVariantInsert.label,
+          description = catalogueItemVariantInsert.description,
+          attributes = catalogueItemVariantInsert.attributes.toList.map { case (name, value) =>
+            CatalogueItemVariantAttributesAIExtract(name, value)
+          },
+          price = catalogueItemVariantInsert.price,
+          sellingUnit = Some(catalogueItemVariantInsert.sellingUnit),
+          missingRequiredSaleUnit = false,
+          skuIsDuplicate = true,
+          extractionNotes = Nil,
+        )
+        val catalogueItemAIExtract = CatalogueItemAIExtract(
+          name = CatalogueItemName("Bolt"),
+          description = None,
+          variants = List(catalogueItemVariantAIExtract, catalogueItemVariantAIExtract.copy(sku = None)),
+          atLeastOneVariant = false,
+          nameIsDuplicate = true,
+          extractionNotes = Nil,
+        )
+        val catalogueItemAIExtractUnique = catalogueItemAIExtract.copy(
+          name = CatalogueItemName("Nut"),
+          variants = List(catalogueItemVariantAIExtract.copy(sku = catalogueItemVariantInsertUnique.sku)),
+        )
+        val catalogueItemAIExtractNameDuplicate = catalogueItemAIExtract.copy(
+          name = CatalogueItemName("bOLT"),
+          variants = List(
+            catalogueItemVariantAIExtract.copy(sku = catalogueItemVariantInsertNameDuplicate.sku),
+            catalogueItemVariantAIExtract.copy(sku = None),
+          ),
+        )
+        val catalogueItemAIExtractSkuDuplicate = catalogueItemAIExtract.copy(
+          name = CatalogueItemName("Washer"),
+          variants = List(catalogueItemVariantAIExtract.copy(sku = catalogueItemVariantInsertSkuDuplicate.sku)),
+        )
+        val catalogueFileAIExtractFirst = CatalogueFileAIExtract(
+          2L,
+          2L,
+          List(catalogueItemAIExtract, catalogueItemAIExtractUnique),
+          Nil,
+          Nil,
+          Nil,
+        )
+        val catalogueFileAIExtractSecond = catalogueFileAIExtractFirst.copy(
+          candidates = List(catalogueItemAIExtractNameDuplicate, catalogueItemAIExtractSkuDuplicate)
+        )
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              catalogueFileExtractByteStream,
+              catalogueFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+            )
+            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.CSV, FileBytesSize.assume(1L))))
+            .once(),
+          spreadsheetToolMock.convertToCsv.expects(fileScannedPath).returns(ZStream.fromIterable(csvRecords)).once(),
+        )
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromCsvOptResult =
+            Some(ZIO.succeed(NonEmptyChunk(catalogueFileAIExtractFirst, catalogueFileAIExtractSecond))),
+        )
+        val response = buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+        val catalogueItemCandidateExpected = CatalogueItemCandidate(
+          name = catalogueItemAIExtract.name,
+          description = None,
+          variants = List(catalogueItemVariantInsert, catalogueItemVariantInsertWithoutSku),
+          needsAttention = true,
+          extractionNotes =
+            List("Item name is duplicated in this extraction.", "Variant 1: SKU is duplicated in this extraction."),
+        )
+        response shouldBe CatalogueFileExtractPostResponse(
+          candidates = List(
+            catalogueItemCandidateExpected,
+            catalogueItemCandidateExpected.copy(
+              name = catalogueItemAIExtractUnique.name,
+              variants = List(catalogueItemVariantInsertUnique),
+              needsAttention = false,
+              extractionNotes = Nil,
+            ),
+            catalogueItemCandidateExpected.copy(
+              name = catalogueItemAIExtractNameDuplicate.name,
+              variants = List(catalogueItemVariantInsertNameDuplicate, catalogueItemVariantInsertWithoutSku),
+              extractionNotes = List("Item name is duplicated in this extraction."),
+            ),
+            catalogueItemCandidateExpected.copy(
+              name = catalogueItemAIExtractSkuDuplicate.name,
+              variants = List(catalogueItemVariantInsertSkuDuplicate),
+              extractionNotes = List("Variant 1: SKU is duplicated in this extraction."),
+            ),
+          ),
+          infoNotes = List("Processed 4 of 4 entries"),
+          extractionNotes = Nil,
+        )
+        extractFromCsvCallsRef.refValue shouldBe List(
+          (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
+        )
+        extractFromImageCallsRef.refValue shouldBe Nil
+        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "fail with an UnexpectedError when extraction file scanning fails" in new TestContext {
@@ -666,43 +1389,73 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         extractFromCsvCallsRef.refValue shouldBe Nil
         noteCompactionCallsRef.refValue shouldBe Nil
       }
-      List(true, false).foreach { conversionFails =>
-        val failureStage = if (conversionFails) "spreadsheet conversion" else "spreadsheet AI extraction"
-        s"fail with an UnexpectedError when $failureStage fails" in new TestContext {
-          val organizationID                 = arbitrarySample[OrganizationID]
-          val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.csv")
-          val catalogueFileExtractByteStream = ZStream.empty
-          val fileScannedPath                = FileScannedPath(Path.of("failed-catalogue.csv"))
-          val csvRecords      = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
-          val serviceError    = ServiceError.InternalServerError.UnexpectedError(s"Failed $failureStage")
-          val csvRecordStream = if (conversionFails) ZStream.fail(serviceError) else ZStream.fromIterable(csvRecords)
-          inSequence(
-            fileScannerMock.scan
-              .expects(
-                catalogueFileExtractByteStream,
-                catalogueFileExtractFileName.value,
-                SupportedMediaType.extractData,
-                catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
-              )
-              .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.CSV, FileBytesSize.assume(1L))))
-              .once(),
-            spreadsheetToolMock.convertToCsv.expects(fileScannedPath).returns(csvRecordStream).once(),
-          )
-          val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[CatalogueFileAIExtract](
-            extractFromImageCallsRef,
-            extractFromCsvCallsRef,
-            noteCompactionCallsRef,
-            extractFromCsvOptResult = Some(ZIO.fail(serviceError)),
-          )
-          buildCatalogueFileService(aiClientDataExtraction)
-            .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
-            .zioError shouldBe serviceError
-          extractFromCsvCallsRef.refValue shouldBe (
-            if (conversionFails) Nil else List((csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions))
-          )
-          extractFromImageCallsRef.refValue shouldBe Nil
-          noteCompactionCallsRef.refValue shouldBe Nil
-        }
+      "fail with an UnexpectedError when spreadsheet conversion fails" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.csv")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("failed-catalogue.csv"))
+        val serviceError    = ServiceError.InternalServerError.UnexpectedError("Failed spreadsheet conversion")
+        val csvRecordStream = ZStream.fail(serviceError)
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              catalogueFileExtractByteStream,
+              catalogueFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+            )
+            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.CSV, FileBytesSize.assume(1L))))
+            .once(),
+          spreadsheetToolMock.convertToCsv.expects(fileScannedPath).returns(csvRecordStream).once(),
+        )
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[CatalogueFileAIExtract](
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromCsvOptResult = Some(ZIO.fail(serviceError)),
+        )
+        buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioError shouldBe serviceError
+        extractFromCsvCallsRef.refValue shouldBe Nil
+        extractFromImageCallsRef.refValue shouldBe Nil
+        noteCompactionCallsRef.refValue shouldBe Nil
+      }
+
+      "fail with an UnexpectedError when spreadsheet AI extraction fails" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.csv")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("failed-catalogue.csv"))
+        val csvRecords                     = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
+        val serviceError    = ServiceError.InternalServerError.UnexpectedError("Failed spreadsheet AI extraction")
+        val csvRecordStream = ZStream.fromIterable(csvRecords)
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              catalogueFileExtractByteStream,
+              catalogueFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+            )
+            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.CSV, FileBytesSize.assume(1L))))
+            .once(),
+          spreadsheetToolMock.convertToCsv.expects(fileScannedPath).returns(csvRecordStream).once(),
+        )
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[CatalogueFileAIExtract](
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRef,
+          extractFromCsvOptResult = Some(ZIO.fail(serviceError)),
+        )
+        buildCatalogueFileService(aiClientDataExtraction)
+          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioError shouldBe serviceError
+        extractFromCsvCallsRef.refValue shouldBe List(
+          (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
+        )
+        extractFromImageCallsRef.refValue shouldBe Nil
+        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
     }
