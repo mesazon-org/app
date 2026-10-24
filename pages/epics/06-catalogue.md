@@ -677,7 +677,7 @@ Nothing changes and no name or SKU is reserved.
 | 22. The user sends a supported file whose extension uses different letter case | - It is accepted when the extension matches the actual content |
 | 23. The user supplies an extraction message | - The message guides optional field or layout interpretation across the whole upload and every spreadsheet batch |
 | 24. The message is empty, whitespace-only, ambiguous, conflicts with the source, or requests an optional field that cannot be omitted reliably | - Empty messages use the default rules - The message is best-effort guidance - Unresolved instructions or values are reported in extraction notes or the relevant specific flag - The request is not rejected solely for ambiguity |
-| 25. The extraction message is longer than 2,000 characters after trimming | - The request is rejected as a validation error |
+| 25. The extraction message is longer than 2,000 characters after trimming | - The request is rejected as a bad request |
 
 #### Requirements
 
@@ -754,8 +754,7 @@ Examples: `Processed 12 of 14 entries`, `Empty rows (2): [3, 5]`, and `Unidentif
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | The processing message is longer than 2,000 characters after trimming |
-| 400 | `BAD_REQUEST_ERROR` | The organization is missing, the file name is missing or malformed, or the file name and content do not agree |
+| 400 | `BAD_REQUEST_ERROR` | The organization is missing, the file name is missing or malformed, the file name and content do not agree, or the processing message exceeds 2,000 characters after trimming |
 | 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
 | 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete or the person's role does not allow extraction |
 | 500 | `INTERNAL_SERVER_ERROR` | The upload cannot be read, is larger than 20 MB, is not genuinely readable as a CSV or Excel file, the person does not belong to the organization, the AI service fails, or an unexpected error occurs |
