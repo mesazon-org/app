@@ -915,13 +915,15 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
       }
 
       "extract catalogue items from CSV" in new TestContext {
-        val organizationID                 = arbitrarySample[OrganizationID]
-        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.csv")
-        val catalogueFileExtractByteStream = ZStream.empty
-        val fileScannedPath                = FileScannedPath(Path.of("catalogue.csv"))
-        val csvRecords                     = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
-        val catalogueItemName              = CatalogueItemName("Item")
-        val catalogueFileAIExtract         = CatalogueFileAIExtract(
+        val catalogueFileProcessingMessage      = CatalogueFileProcessingMessage("Omit prices from variants")
+        val extractFromCsvProcessingMessagesRef = Ref.make(List.empty[Option[String]]).zioValue
+        val organizationID                      = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName        = CatalogueFileExtractFileName("catalogue.csv")
+        val catalogueFileExtractByteStream      = ZStream.empty
+        val fileScannedPath                     = FileScannedPath(Path.of("catalogue.csv"))
+        val csvRecords             = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
+        val catalogueItemName      = CatalogueItemName("Item")
+        val catalogueFileAIExtract = CatalogueFileAIExtract(
           1L,
           1L,
           List(
@@ -955,9 +957,15 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           extractFromCsvCallsRef,
           noteCompactionCallsRef,
           extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(catalogueFileAIExtract))),
+          extractFromCsvProcessingMessagesRefOpt = Some(extractFromCsvProcessingMessagesRef),
         )
         val response = buildCatalogueFileService(aiClientDataExtraction)
-          .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .extractCatalogueItems(
+            organizationID,
+            catalogueFileExtractFileName,
+            Some(catalogueFileProcessingMessage),
+            catalogueFileExtractByteStream,
+          )
           .zioValue
         response shouldBe CatalogueFileExtractPostResponse(
           List(
@@ -975,18 +983,20 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         extractFromCsvCallsRef.refValue shouldBe List(
           (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
         )
+        extractFromCsvProcessingMessagesRef.refValue shouldBe List(Some(catalogueFileProcessingMessage.value))
         extractFromImageCallsRef.refValue shouldBe Nil
         noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "extract catalogue items from XLS" in new TestContext {
-        val organizationID                 = arbitrarySample[OrganizationID]
-        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.xls")
-        val catalogueFileExtractByteStream = ZStream.empty
-        val fileScannedPath                = FileScannedPath(Path.of("catalogue.xls"))
-        val csvRecords                     = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
-        val catalogueItemName              = CatalogueItemName("Item")
-        val catalogueFileAIExtract         = CatalogueFileAIExtract(
+        val extractFromCsvProcessingMessagesRef = Ref.make(List.empty[Option[String]]).zioValue
+        val organizationID                      = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName        = CatalogueFileExtractFileName("catalogue.xls")
+        val catalogueFileExtractByteStream      = ZStream.empty
+        val fileScannedPath                     = FileScannedPath(Path.of("catalogue.xls"))
+        val csvRecords             = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
+        val catalogueItemName      = CatalogueItemName("Item")
+        val catalogueFileAIExtract = CatalogueFileAIExtract(
           1L,
           1L,
           List(
@@ -1023,6 +1033,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           extractFromCsvCallsRef,
           noteCompactionCallsRef,
           extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(catalogueFileAIExtract))),
+          extractFromCsvProcessingMessagesRefOpt = Some(extractFromCsvProcessingMessagesRef),
         )
         val response = buildCatalogueFileService(aiClientDataExtraction)
           .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
@@ -1043,18 +1054,20 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         extractFromCsvCallsRef.refValue shouldBe List(
           (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
         )
+        extractFromCsvProcessingMessagesRef.refValue shouldBe List(None)
         extractFromImageCallsRef.refValue shouldBe Nil
         noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "extract catalogue items from XLSX" in new TestContext {
-        val organizationID                 = arbitrarySample[OrganizationID]
-        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.xlsx")
-        val catalogueFileExtractByteStream = ZStream.empty
-        val fileScannedPath                = FileScannedPath(Path.of("catalogue.xlsx"))
-        val csvRecords                     = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
-        val catalogueItemName              = CatalogueItemName("Item")
-        val catalogueFileAIExtract         = CatalogueFileAIExtract(
+        val extractFromCsvProcessingMessagesRef = Ref.make(List.empty[Option[String]]).zioValue
+        val organizationID                      = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName        = CatalogueFileExtractFileName("catalogue.xlsx")
+        val catalogueFileExtractByteStream      = ZStream.empty
+        val fileScannedPath                     = FileScannedPath(Path.of("catalogue.xlsx"))
+        val csvRecords             = CSVParser.parse("Name\nItem", CSVFormat.DEFAULT).getRecords.asScala.toList
+        val catalogueItemName      = CatalogueItemName("Item")
+        val catalogueFileAIExtract = CatalogueFileAIExtract(
           1L,
           1L,
           List(
@@ -1091,6 +1104,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           extractFromCsvCallsRef,
           noteCompactionCallsRef,
           extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(catalogueFileAIExtract))),
+          extractFromCsvProcessingMessagesRefOpt = Some(extractFromCsvProcessingMessagesRef),
         )
         val response = buildCatalogueFileService(aiClientDataExtraction)
           .extractCatalogueItems(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
@@ -1111,6 +1125,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         extractFromCsvCallsRef.refValue shouldBe List(
           (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
         )
+        extractFromCsvProcessingMessagesRef.refValue shouldBe List(None)
         extractFromImageCallsRef.refValue shouldBe Nil
         noteCompactionCallsRef.refValue shouldBe Nil
       }

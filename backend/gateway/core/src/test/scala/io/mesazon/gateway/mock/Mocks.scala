@@ -19,6 +19,7 @@ object Mocks {
       extractFromCsvOptResult: Option[IO[ServiceError, NonEmptyChunk[A]]] = None,
       noteCompactionOptResult: Option[IO[ServiceError, NoteCompactionOutput]] = None,
       extractFromImageProcessingMessagesRefOpt: Option[Ref[List[Option[String]]]] = None,
+      extractFromCsvProcessingMessagesRefOpt: Option[Ref[List[Option[String]]]] = None,
   ) extends AIClientDataExtraction {
     override def extractFromImage[B](
         imageScannedPath: FileScannedPath,
@@ -40,6 +41,7 @@ object Mocks {
       for {
         csvRecords <- csvRecordStream.runCollect
         _          <- extractFromCsvCallsRef.update(_ :+ (csvRecords.toList, instructions))
+        _          <- ZIO.foreachDiscard(extractFromCsvProcessingMessagesRefOpt)(_.update(_ :+ processingMessageOpt))
         result     <- extractFromCsvOptResult
           .getOrElse(
             extractFromImageOptResult
