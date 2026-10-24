@@ -657,7 +657,7 @@ Nothing changes and no name or SKU is reserved.
 | 2. An item has a readable name but some required or uncertain information is missing | - The candidate is retained with `needsAttention: true` for known issues and consolidated review notes - Variants without a selling unit are omitted |
 | 3. No item name can be read for an entry and it has no clear association with a named item | - The entry is not returned as a candidate - The affected spreadsheet row numbers are included in `infoNotes` |
 | 4. The source contains several rows or visible entries that belong to one item | - The AI may group them into one candidate with multiple variants - Uncertain grouping is described in item-level extraction notes |
-| 5. A row has no item name or key but appears to continue the preceding item | - It becomes a variant of that item - Any uncertainty is described in extraction notes - It counts as an identified source entry, not as a separate processed item, and is not listed as unidentified |
+| 5. A row has no item name or key but appears to continue the preceding item within the same extraction batch | - It becomes a variant of that item - Any uncertainty is described in extraction notes - It counts as an identified source entry, not as a separate processed item, and is not listed as unidentified |
 | 6. A meaningful source column does not map to a standard item or variant field | - Its value is preserved as a variant attribute |
 | 7. A price has an unsupported or unclear currency | - The price is omitted and the issue is explained in extraction notes |
 | 8. A required selling-unit value or structured unit cannot be read | - The variant is omitted from the insert-ready list - Its item is retained with `needsAttention: true` and a missing-unit note unless covered by the item-level variant issue |
@@ -688,7 +688,7 @@ Nothing changes and no name or SKU is reserved.
 5. Public variants use the existing insert shape: optional SKU, label, description and price, an attribute map, and a required selling unit. Meaningful unmapped source columns become attributes; repeated attribute names keep the last value. Preserve structured unit values without converting or inventing them.
 6. The AI reports internal missing-unit, duplicate-name, duplicate-SKU, and variant-presence issue flags. Any true issue flag on an item or its variants makes that candidate’s `needsAttention` true; an absent selling unit also does so. The service translates these issues into fixed review notes. General notes alone do not change attention or alter add-item validation.
 7. Duplicate marking compares candidate item names and all variant SKUs within the current response, ignoring letter case. Duplicate checks never query or compare with items or variants already in the catalogue.
-8. The extraction tracks `entriesIdentified` and `entriesProcessed` internally. `entriesIdentified` includes variant-only rows clearly associated with a named item, while `entriesProcessed` counts resulting candidate items after any grouping. A clearly associated variant-only row does not increase `entriesProcessed`. Blank rows are excluded from both counts; rows without a name or clear association are reported separately.
+8. The extraction tracks `entriesIdentified` and `entriesProcessed` internally. `entriesIdentified` includes variant-only rows clearly associated with a named item, while `entriesProcessed` counts resulting candidate items after grouping within each batch. A clearly associated variant-only row does not increase `entriesProcessed`. Blank rows are excluded from both counts; rows without a name or clear association are reported separately.
 9. `infoNotes` begins with one combined summary, such as `Processed 12 of 14 entries`. Add empty-row and unidentified-row summaries, including counts and original row numbers, only when those lists are non-empty. Top-level `extractionNotes` contains general AI document comments.
 10. Nothing is stored: no item, variant, image, file, or extraction response. The normal item-add request remains the only way to create catalogue records, and its existing validation remains unchanged.
 11. Each AI attempt may take up to one minute. Temporary failures are tried again up to two more times; rejected requests and unusable answers are not retried.
@@ -696,7 +696,7 @@ Nothing changes and no name or SKU is reserved.
 13. An optional processing message is trimmed plain text up to 2,000 characters. An empty or whitespace-only message is treated as absent.
 14. The processing message is best-effort guidance for optional field selection and source layout interpretation. It cannot override candidate requirements, selling-unit rules, row counting, duplicate marking, or normal add-item validation. It does not guarantee that an optional field is omitted; when a preference leaves a value unresolved, the response reports it in notes or the relevant specific flag.
 15. One processing message applies to the whole upload and every spreadsheet batch. It is used only for that extraction request and is never stored or returned as catalogue data.
-16. A variant-only row with no item name or key that appears to continue the preceding item attaches to that item, with any uncertainty described in extraction notes. Named rows with the same item name split between 50-row groups merge only when they carry an explicit shared item key or group marker; otherwise they remain separate candidates with attention and review notes describing the duplicate name and uncertain grouping.
+16. A variant-only row that appears to continue a named item within the same extraction batch may attach to it, with uncertainty described in extraction notes. Candidates from different batches remain separate, with duplicate warnings where applicable. Cross-batch grouping is deferred under [gap 12](#12-one-item-can-be-split-between-extraction-batches).
 17. Each candidate extraction note is concise, plain text with no bullet prefix; the client renders each as a bullet. Combine fixed issue warnings and general AI comments on the item, prefixing variant comments with their original position. When the item-level variant issue is present, omit redundant variant diagnostics. AI comments must not repeat the fixed warnings added by the service.
 
 #### Request / Response / Outcome
@@ -827,5 +827,11 @@ An update that swaps two variants' existing SKUs can return a conflict even thou
 Numbers with more than 34 significant digits can be rounded while a request or stored selling unit is read. For example, a selling-unit quantity of `0.12345678901234567890123456789012346` can be stored as `0.1234567890123456789012345678901235`. An unrelated variant update can save a value rounded during its read. Some larger numeric representations cannot be read. This falls short of the intended exact-decimal behavior.
 
 **Accepted for now:** business values are not expected to need this many significant digits, so no change is planned. Revisit exact input handling if that expectation changes.
+
+#### 12. One item can be split between extraction batches
+
+When an item's variants fall into different 50-row batches, the preview can contain separate candidates for that item. Matching names are flagged as duplicates. A variant-only row without a named item in its own batch can remain unidentified.
+
+**Deferred:** combining these candidates and linking continuations across batches will be tackled later. Users review the separate candidates for now.
 
 {% include abbreviations.md %}
