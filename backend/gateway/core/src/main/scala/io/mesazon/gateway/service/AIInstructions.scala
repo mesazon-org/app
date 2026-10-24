@@ -218,11 +218,18 @@ object AIInstructions {
       |  visible variant entry associated with a named item and an entry whose item name is unreadable.
       |- entriesProcessed is the number of resulting candidate items after grouping, and must equal the number of
       |  objects in candidates. A variant associated with an item does not add another processed item.
-      |- Compare resulting candidate item names only within this upload, never with an existing catalogue. When names
-      |  match ignoring letter case, set nameIsDuplicate to true on every matching candidate, but do not merge them.
-      |- Compare every readable variant SKU across all candidates in this upload, ignoring letter case. Set
-      |  skuIsDuplicate to true on every matching variant. An absent SKU always has skuIsDuplicate false. Do not query
-      |  or compare with existing catalogue variants.
+      |- Determine photo duplicates yourself using the existing nameIsDuplicate and skuIsDuplicate booleans.
+      |  Compare names of separate resulting candidates within this image, ignoring letter case. Set nameIsDuplicate
+      |  to true on every matching candidate only when another candidate has the same name; otherwise false.
+      |  Never count a candidate as its own duplicate, merge candidates because their names match, or compare with
+      |  an existing catalogue.
+      |- Compare readable, non-null SKUs across all variant occurrences in this image, including variants belonging
+      |  to the same item, ignoring letter case. Set skuIsDuplicate to true on every matching variant only when a
+      |  separate variant occurrence has the same SKU; otherwise false. Missing SKUs are never duplicates of one
+      |  another, and a variant does not match itself. Do not compare with stored catalogue variants.
+      |- For example, separate items named "Bolt" and "bOLT" both have nameIsDuplicate: true. Variants with SKUs
+      |  "SKU-A" and "sku-a" both have skuIsDuplicate: true. A unique item or SKU has its duplicate flag false.
+      |  Name and SKU flags are independent: matching item names do not imply matching variant SKUs, or vice versa.
       |- Use only readable source values. Trim text, use null instead of empty optional strings, preserve incomplete
       |  candidates, and never invent a SKU, unit, amount, currency, attribute, variant, or relationship.
       |- Preserve meaningful labelled details that do not map to a standard item or variant field in the variant's
