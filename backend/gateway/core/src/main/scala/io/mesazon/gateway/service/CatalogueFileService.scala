@@ -12,7 +12,7 @@ import io.scalaland.chimney.dsl.*
 import zio.*
 import zio.stream.ZStream
 
-import scala.annotation.unused
+import java.util.Locale
 
 trait CatalogueFileService[F[_]] {
   def uploadCatalogueItemImage(
@@ -37,10 +37,52 @@ object CatalogueFileService {
       catalogueRepository: CatalogueRepository,
       fileScanner: FileScanner,
       imageProcessing: ImageProcessing,
-      @unused spreadsheetTool: SpreadsheetTool,
+      spreadsheetTool: SpreadsheetTool,
       s3ClientOrganizationMedia: S3ClientOrganizationMedia,
       aiClientDataExtraction: AIClientDataExtraction,
   ) extends CatalogueFileService[ServiceTask] {
+
+    private val singleOccurrenceCount = 1
+
+    private def mergeCatalogueFileAIExtracts(
+        catalogueFileAIExtracts: NonEmptyChunk[CatalogueFileAIExtract]
+    ): CatalogueFileAIExtract = {
+      val catalogueFileAIExtractsList = catalogueFileAIExtracts.toList
+      val catalogueItemAIExtracts     = catalogueFileAIExtractsList.flatMap(_.candidates)
+
+      val catalogueItemNameCounts = catalogueItemAIExtracts.groupMapReduce(
+        _.name.value.toLowerCase(Locale.ROOT)
+      )(_ => singleOccurrenceCount)(_ + _)
+
+      val catalogueItemVariantSkuCounts = catalogueItemAIExtracts
+        .flatMap(_.variants.flatMap(_.sku))
+        .groupMapReduce(_.value.toLowerCase(Locale.ROOT))(_ => singleOccurrenceCount)(_ + _)
+
+      val candidates = catalogueItemAIExtracts.map { catalogueItemAIExtract =>
+        catalogueItemAIExtract.copy(
+          nameIsDuplicate =
+            catalogueItemNameCounts(catalogueItemAIExtract.name.value.toLowerCase(Locale.ROOT)) > singleOccurrenceCount,
+          variants = catalogueItemAIExtract.variants.map { catalogueItemVariantAIExtract =>
+            catalogueItemVariantAIExtract.copy(
+              skuIsDuplicate = catalogueItemVariantAIExtract.sku.exists(catalogueItemVariantSku =>
+                catalogueItemVariantSkuCounts(
+                  catalogueItemVariantSku.value.toLowerCase(Locale.ROOT)
+                ) > singleOccurrenceCount
+              )
+            )
+          },
+        )
+      }
+
+      CatalogueFileAIExtract(
+        entriesIdentified = catalogueFileAIExtracts.map(_.entriesIdentified).sum,
+        entriesProcessed = catalogueFileAIExtracts.map(_.entriesProcessed).sum,
+        candidates = candidates,
+        emptyEntryRows = catalogueFileAIExtractsList.flatMap(_.emptyEntryRows),
+        unidentifiedEntryRows = catalogueFileAIExtractsList.flatMap(_.unidentifiedEntryRows),
+        extractionNotes = catalogueFileAIExtractsList.flatMap(_.extractionNotes),
+      )
+    }
 
     override def uploadCatalogueItemImage(
         organizationID: OrganizationID,
@@ -119,9 +161,27 @@ object CatalogueFileService {
               AIInstructions.extractCatalogueItemsFromImageInstructions,
               catalogueFileProcessingMessageOpt.map(_.value),
             )
-          case _ =>
-            ZIO.die(new NotImplementedError("Catalogue spreadsheet extraction is not implemented"))
+          case supportedMediaType if SupportedMediaType.spreadsheets.contains(supportedMediaType) =>
+            val csvRecordStream =
+              if (SupportedMediaType.excel.contains(supportedMediaType))
+                spreadsheetTool.convertExcelToCsv(catalogueFileScanOutput.fileScannedPath)
+              else spreadsheetTool.convertToCsv(catalogueFileScanOutput.fileScannedPath)
+
+            aiClientDataExtraction
+              .extractFromCsv[CatalogueFileAIExtract](
+                csvRecordStream,
+                AIInstructions.extractCatalogueItemsFromFileInstructions,
+                catalogueFileProcessingMessageOpt.map(_.value),
+              )
+              .map(mergeCatalogueFileAIExtracts)
+          case supportedMediaTypeUnexpected =>
+            ZIO.fail(
+              ServiceError.InternalServerError.UnexpectedError(
+                s"Unexpected supported media type: [$supportedMediaTypeUnexpected]"
+              )
+            )
         }
+
         candidates = catalogueFileAIExtract.candidates.map { catalogueItemAIExtract =>
           val extractionNotesComputed = computeExtractNotes(catalogueItemAIExtract)
           val needsAttentionComputed  = computeNeedsAttention(catalogueItemAIExtract)
