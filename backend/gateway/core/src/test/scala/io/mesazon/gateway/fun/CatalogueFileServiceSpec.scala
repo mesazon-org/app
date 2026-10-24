@@ -204,6 +204,66 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
 
         serviceError shouldBe scanError
       }
+
+      "fail with an UnexpectedError when normalization fails" in new TestContext {
+        val organizationID                     = arbitrarySample[OrganizationID]
+        val catalogueItemID                    = arbitrarySample[CatalogueItemID]
+        val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
+        val catalogueItemImageByteStream       = ZStream.empty
+        val catalogueItemRow                   = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          isArchived = false,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemID,
+          isArchived = false,
+        )
+        val catalogueItemWithVariantsRow = CatalogueItemWithVariantsRow(
+          catalogueItemRow,
+          NonEmptyChunk.single(catalogueItemVariantRow),
+        )
+        val serviceError      = ServiceError.InternalServerError.UnexpectedError("Failed to normalize catalogue image")
+        val scannedImageBytes = "scanned catalogue image".getBytes(StandardCharsets.UTF_8)
+        val fileScannedPath   = FileScannedPath(Files.createTempFile("catalogue-normalize-failure-", ".jpeg"))
+        val normalizeImageStreamCapture = CaptureOne[FileByteStreamScanned]()
+        try {
+          Files.write(fileScannedPath.value, scannedImageBytes)
+          inSequence(
+            catalogueRepositoryMock.getCatalogueItemWithVariants
+              .expects(organizationID, catalogueItemID)
+              .returningZIO(Some(catalogueItemWithVariantsRow))
+              .once(),
+            fileScannerMock.scan
+              .expects(
+                catalogueItemImageByteStream,
+                catalogueItemImageOriginalFileName.value,
+                SupportedMediaType.images,
+                catalogueFileServiceConfig.uploadCatalogueItemImageFileBytesMax,
+              )
+              .returns(
+                ZIO.succeed(
+                  (fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(Files.size(fileScannedPath.value)))
+                )
+              )
+              .once(),
+            imageProcessingMock.normalize
+              .expects(capture(normalizeImageStreamCapture), SupportedMediaType.images)
+              .returns(ZIO.fail(serviceError))
+              .once(),
+          )
+          buildCatalogueFileService()
+            .uploadCatalogueItemImage(
+              organizationID,
+              catalogueItemID,
+              catalogueItemImageOriginalFileName,
+              catalogueItemImageByteStream,
+            )
+            .zioError shouldBe serviceError
+          normalizeImageStreamCapture.value.value.runCollect.zioValue shouldBe Chunk.fromArray(scannedImageBytes)
+        } finally Files.deleteIfExists(fileScannedPath.value)
+      }
     }
 
     "extractCatalogueItems" should {
