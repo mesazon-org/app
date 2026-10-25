@@ -32,7 +32,7 @@ object Dependencies {
   lazy val jsoniterV            = "2.42.0"
   lazy val sttpAIV              = "0.11.4"
   lazy val jmailV               = "2.2.2"
-  lazy val simplejavamailV      = "9.3.6"
+  lazy val simplejavamailV      = "9.3.8"
   lazy val jjwtV                = "0.13.0"
   lazy val springSecurityV      = "7.1.2"
   lazy val springCoreV          = "7.0.10"
