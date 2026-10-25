@@ -8,6 +8,7 @@ import scala.util.control.Exception.allCatch
 
 type NonEmptyTrimmedLowerCase = Trimmed & LettersLowerCase & MinLength[1] & MaxLength[255]
 type NonEmptyTrimmed          = Trimmed & MinLength[1] & MaxLength[255]
+type NonEmptyTrimmedMessage   = Trimmed & MinLength[1] & MaxLength[2000]
 type NonEmptyTrimmedUnsafe    = Trimmed & MinLength[1]
 type NonEmpty                 = MinLength[1] & MaxLength[1000]
 

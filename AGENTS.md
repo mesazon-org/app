@@ -85,6 +85,7 @@ Read every standard whose trigger matches the task:
 | [Chimney](agent-docs/standards/chimney.md) | Adding/changing model transformations, including domain/Smithy enums, collections, Iron refined products, or custom `Transformer`s |
 | [Smithy](agent-docs/standards/smithy.md) | Adding/changing Smithy endpoints, operations, transport models, traits, errors, or generated contracts |
 | [Tapir](agent-docs/standards/tapir.md) | Adding/changing Tapir endpoints, streaming inputs, security, errors, or OpenAPI docs |
+| [AI extraction](agent-docs/standards/ai-extraction.md) | Adding/changing extraction from uploaded images, CSV, or Excel, including candidate models, flags, notes, prompts, schemas, or batching |
 | [Iron](agent-docs/standards/iron.md) | Adding/changing refined newtypes, domain constraints, validation boundaries, or refined conversions/codecs |
 | [PostgreSQL](agent-docs/standards/postgres.md) | Adding/changing migrations, tables, columns, types, constraints, indexes, or stored-data lifecycle |
 | [Doobie](agent-docs/standards/doobie.md) | Adding/changing SQL queries, fragments, row codecs, repository DB effects, transactions, or pool wiring |

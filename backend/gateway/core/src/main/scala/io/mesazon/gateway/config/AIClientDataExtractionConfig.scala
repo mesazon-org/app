@@ -13,6 +13,12 @@ final case class AIClientDataExtractionConfig(
     sendRetryDelay: Duration,
     csvBatchMaxDataRows: Int,
     csvBatchParallelism: Int,
+    imageModel: String,
+    imageReasoningEffort: String,
+    csvModel: String,
+    csvReasoningEffort: String,
+    noteCompactionModel: String,
+    noteCompactionReasoningEffort: String,
 ) {
   val baseUri: Uri = Uri.unsafeApply(scheme, host, port).addPath("v1")
 }

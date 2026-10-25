@@ -21,31 +21,11 @@ object FileServiceEndpoints {
     override def id: smithy4s.ShapeId = smithy4s.ShapeId("io.mesazon.gateway.smithy", "FileService")
   }
 
-  private inline val FileNameHeader        = "X-File-Name"
-  private inline val CatalogueItemIDHeader = "X-Catalogue-Item-ID"
+  private inline val FileNameHeader = "X-File-Name"
 
   private val uploadOrganizationLogoPostEndpoint =
     securedEndpoint.post
       .in("upload" / "organization" / "logo")
-      .in(header[ImageOriginalFileName](FileNameHeader))
-      .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
-      .out(statusCode(StatusCode.Ok))
-      .errorOut(
-        tapirServerErrorOut(
-          NonEmptyChunk(
-            TapirServerError.UnauthorizedError,
-            TapirServerError.ForbiddenError,
-            TapirServerError.BadRequestError,
-            TapirServerError.InternalServerError,
-          )
-        )
-      )
-      .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
-
-  private val uploadCatalogueItemImagePostEndpoint =
-    securedEndpoint.post
-      .in("upload" / "catalogue-item" / "image")
-      .in(header[CatalogueItemID](CatalogueItemIDHeader))
       .in(header[ImageOriginalFileName](FileNameHeader))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
       .out(statusCode(StatusCode.Ok))
@@ -110,25 +90,6 @@ object FileServiceEndpoints {
                   organizationLogoImageByteStream,
                 )
           }),
-        uploadCatalogueItemImagePostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
-          authorizationService
-            .auth(
-              accessToken = accessToken,
-              requiresCompletedOnboardStage = true,
-              organizationIDOpt = Some(organizationID),
-              organizationUserRolesAllowedOpt = Some(OrganizationUserRole.adminRoles),
-            )
-            .as(organizationID)
-        }
-          .serverLogic(organizationID => {
-            case (catalogueItemID, catalogueItemImageOriginalFileName, catalogueItemImageByteStream) =>
-              fileService.uploadCatalogueItemImage(
-                organizationID,
-                catalogueItemID,
-                catalogueItemImageOriginalFileName,
-                catalogueItemImageByteStream,
-              )
-          }),
         extractCustomersPostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
           authorizationService
             .auth(
@@ -152,7 +113,6 @@ object FileServiceEndpoints {
           .toOpenAPI(
             List(
               uploadOrganizationLogoPostEndpoint,
-              uploadCatalogueItemImagePostEndpoint,
               extractCustomersPostEndpoint,
             ),
             Info(

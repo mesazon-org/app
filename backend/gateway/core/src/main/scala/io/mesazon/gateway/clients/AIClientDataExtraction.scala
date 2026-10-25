@@ -9,7 +9,12 @@ import io.mesazon.gateway.utils.*
 import org.apache.commons.csv.*
 import sttp.ai.openai.OpenAI
 import sttp.ai.openai.OpenAIExceptions.OpenAIException
-import sttp.ai.openai.requests.completions.chat.ChatRequestBody.{ChatBody, ChatCompletionModel, ResponseFormat}
+import sttp.ai.openai.requests.completions.chat.ChatRequestBody.{
+  ChatBody,
+  ChatCompletionModel,
+  ReasoningEffort,
+  ResponseFormat,
+}
 import sttp.ai.openai.requests.completions.chat.message.*
 import sttp.client4.*
 import sttp.model.StatusCode
@@ -28,11 +33,13 @@ trait AIClientDataExtraction {
       imageScannedPath: FileScannedPath,
       supportedMediaType: SupportedMediaType,
       instructions: String,
+      processingMessageOpt: Option[String] = None,
   )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
 
   def extractFromCsv[A](
       csvRecordStream: ZStream[Scope, ServiceError, CSVRecord],
       instructions: String,
+      processingMessageOpt: Option[String] = None,
   )(using
       OpenAIJsonSchema[A],
       JsonValueCodec[A],
@@ -85,19 +92,22 @@ object AIClientDataExtraction {
       )
 
     private def sendAndDecode[A](
-        model: ChatCompletionModel,
+        model: String,
+        reasoningEffort: String,
         instructions: String,
         content: Content,
+        processingMessageOpt: Option[String] = None,
     )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
       for {
         response <- openAI
           .createChatCompletion(
             ChatBody(
-              model = model,
+              model = ChatCompletionModel.CustomChatCompletionModel(model),
+              reasoningEffort = Some(ReasoningEffort.CustomReasoningEffort(reasoningEffort)),
               messages = Seq(
                 Message.System(instructions),
                 Message.User(content),
-              ),
+              ) ++ processingMessageOpt.map(processingMessage => Message.User(Content.TextContent(processingMessage))),
               responseFormat = Some(responseFormat),
             )
           )
@@ -125,11 +135,13 @@ object AIClientDataExtraction {
         imageBytes: Array[Byte],
         supportedMediaType: SupportedMediaType,
         instructions: String,
+        processingMessageOpt: Option[String],
     )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] = {
       val imageBase64 = Base64.getEncoder.encodeToString(imageBytes)
       val imageMime   = supportedMediaType.mimes.head
       sendAndDecode[A](
-        ChatCompletionModel.GPT56Sol,
+        aiClientDataExtractionConfig.imageModel,
+        aiClientDataExtractionConfig.imageReasoningEffort,
         instructions,
         Content.ArrayContent(
           Seq(
@@ -138,6 +150,7 @@ object AIClientDataExtraction {
             )
           )
         ),
+        processingMessageOpt,
       )
     }
 
@@ -186,17 +199,19 @@ object AIClientDataExtraction {
         imageScannedPath: FileScannedPath,
         supportedMediaType: SupportedMediaType,
         instructions: String,
+        processingMessageOpt: Option[String],
     )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
       ZIO
         .attemptBlocking(Files.readAllBytes(imageScannedPath.value))
         .mapError(error =>
           ServiceError.InternalServerError.UnexpectedError("Failed to read image for AI extraction", Some(error))
         )
-        .flatMap(extractFromImageBytes[A](_, supportedMediaType, instructions))
+        .flatMap(extractFromImageBytes[A](_, supportedMediaType, instructions, processingMessageOpt))
 
     override def extractFromCsv[A](
         csvRecordStream: ZStream[Scope, ServiceError, CSVRecord],
         instructions: String,
+        processingMessageOpt: Option[String],
     )(using
         OpenAIJsonSchema[A],
         JsonValueCodec[A],
@@ -212,9 +227,11 @@ object AIClientDataExtraction {
             .mapZIOPar(aiClientDataExtractionConfig.csvBatchParallelism) { csvRecordsDataWithIndexBatch =>
               csvRecordsBatchToText(csvRecordHeaderOpt, csvRecordsDataWithIndexBatch).flatMap(csvRecordsBatchText =>
                 sendAndDecode[A](
-                  ChatCompletionModel.GPT56Luna,
+                  aiClientDataExtractionConfig.csvModel,
+                  aiClientDataExtractionConfig.csvReasoningEffort,
                   instructions,
                   Content.TextContent(csvRecordsBatchText),
+                  processingMessageOpt,
                 )
               )
             }
@@ -230,7 +247,8 @@ object AIClientDataExtraction {
         instructions: String,
     ): IO[ServiceError, NoteCompactionOutput] =
       sendAndDecode[NoteCompactionOutput](
-        ChatCompletionModel.GPT54Mini,
+        aiClientDataExtractionConfig.noteCompactionModel,
+        aiClientDataExtractionConfig.noteCompactionReasoningEffort,
         instructions,
         Content.TextContent(
           noteCompactionContent(

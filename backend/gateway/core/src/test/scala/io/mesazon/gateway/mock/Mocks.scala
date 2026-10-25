@@ -18,13 +18,17 @@ object Mocks {
       extractFromImageOptResult: Option[IO[ServiceError, A]] = None,
       extractFromCsvOptResult: Option[IO[ServiceError, NonEmptyChunk[A]]] = None,
       noteCompactionOptResult: Option[IO[ServiceError, NoteCompactionOutput]] = None,
+      extractFromImageProcessingMessagesRefOpt: Option[Ref[List[Option[String]]]] = None,
+      extractFromCsvProcessingMessagesRefOpt: Option[Ref[List[Option[String]]]] = None,
   ) extends AIClientDataExtraction {
     override def extractFromImage[B](
         imageScannedPath: FileScannedPath,
         supportedMediaType: SupportedMediaType,
         instructions: String,
+        processingMessageOpt: Option[String],
     )(using OpenAIJsonSchema[B], JsonValueCodec[B]): IO[ServiceError, B] =
       extractFromImageCallsRef.update(_ :+ (imageScannedPath, supportedMediaType, instructions)) *>
+        ZIO.foreachDiscard(extractFromImageProcessingMessagesRefOpt)(_.update(_ :+ processingMessageOpt)) *>
         extractFromImageOptResult
           .getOrElse(ZIO.die(new NotImplementedError("extractFromImage should not be called")))
           .map(_.asInstanceOf[B])
@@ -32,10 +36,12 @@ object Mocks {
     override def extractFromCsv[B](
         csvRecordStream: ZStream[Scope, ServiceError, CSVRecord],
         instructions: String,
+        processingMessageOpt: Option[String],
     )(using OpenAIJsonSchema[B], JsonValueCodec[B]): ZIO[Scope, ServiceError, NonEmptyChunk[B]] =
       for {
         csvRecords <- csvRecordStream.runCollect
         _          <- extractFromCsvCallsRef.update(_ :+ (csvRecords.toList, instructions))
+        _          <- ZIO.foreachDiscard(extractFromCsvProcessingMessagesRefOpt)(_.update(_ :+ processingMessageOpt))
         result     <- extractFromCsvOptResult
           .getOrElse(
             extractFromImageOptResult

@@ -41,20 +41,21 @@ class ExtractCustomersFromImageGoldenSpec extends ZWordSpecBase {
       ZLayer.succeed(mock[ImageProcessing]),
       SpreadsheetTool.live,
       ZLayer.succeed(mock[OrganizationManagementRepository]),
-      ZLayer.succeed(mock[CatalogueRepository]),
       ZLayer.succeed(mock[S3ClientOrganizationMedia]),
       AIClientDataExtraction.live,
-      ZLayer.succeed(
-        AIClientDataExtractionConfig(
-          scheme = "https",
-          host = "api.openai.com",
-          port = 443,
-          apiKey = apiKey,
-          requestTimeout = Duration.fromSeconds(60),
-          sendMaxRetries = 2,
-          sendRetryDelay = Duration.fromSeconds(1),
-          csvBatchMaxDataRows = 50,
-          csvBatchParallelism = 3,
+      AIClientDataExtractionConfig.live.map(environment =>
+        environment.update[AIClientDataExtractionConfig](
+          _.copy(
+            scheme = "https",
+            host = "api.openai.com",
+            port = 443,
+            apiKey = apiKey,
+            requestTimeout = Duration.fromSeconds(60),
+            sendMaxRetries = 2,
+            sendRetryDelay = Duration.fromSeconds(1),
+            csvBatchMaxDataRows = 50,
+            csvBatchParallelism = 3,
+          )
         )
       ),
       HttpClientZioBackend.layer(),

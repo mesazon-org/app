@@ -4,8 +4,8 @@ import com.github.plokhotnyuk.jsoniter_scala.core.*
 import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import io.github.iltotore.iron.jsoniter.given
 import io.mesazon.domain.gateway.*
-import sttp.tapir.Schema
 import sttp.tapir.codec.iron.given
+import sttp.tapir.{Schema, SchemaType}
 
 object tapir {
   private final case class TapirServerErrorBody(code: String, message: String)
@@ -16,6 +16,28 @@ object tapir {
 
   private lazy val tapirServerErrorByCode: Map[String, TapirServerError] =
     TapirServerError.values.map(tapirServerError => tapirServerError.code -> tapirServerError).toMap
+
+  private given catalogueItemVariantAttributeNameKeyCodec: JsonKeyCodec[CatalogueItemVariantAttributeName] =
+    new JsonKeyCodec[CatalogueItemVariantAttributeName] {
+      override def decodeKey(in: JsonReader): CatalogueItemVariantAttributeName = {
+        val catalogueItemVariantAttributeNameRaw = in.readKeyAsString()
+        CatalogueItemVariantAttributeName
+          .either(catalogueItemVariantAttributeNameRaw)
+          .fold(
+            refinementError =>
+              in.decodeError(
+                s"Invalid CatalogueItemVariantAttributeName: [$catalogueItemVariantAttributeNameRaw], error: [$refinementError]"
+              ),
+            identity,
+          )
+      }
+
+      override def encodeKey(
+          catalogueItemVariantAttributeName: CatalogueItemVariantAttributeName,
+          out: JsonWriter,
+      ): Unit =
+        out.writeKey(catalogueItemVariantAttributeName.value)
+    }
 
   given addressTypeSchema: Schema[AddressType] =
     Schema.derivedEnumeration[AddressType].defaultStringBased
@@ -59,7 +81,92 @@ object tapir {
   given insertCustomerBusinessContactSchema: Schema[InsertCustomerBusinessContact] =
     Schema.derived[InsertCustomerBusinessContact]
 
+  given currencySchema: Schema[Currency] =
+    Schema.derivedEnumeration[Currency](
+      encode = Some(_.toString),
+      schemaType = SchemaType.SString(),
+    )
+
+  given priceSchema: Schema[Price] = Schema.derived[Price]
+
+  given catalogueItemVariantUnitSchema: Schema[CatalogueItemVariantUnit] =
+    Schema.derivedEnumeration[CatalogueItemVariantUnit](
+      encode = Some(_.toString),
+      schemaType = SchemaType.SString(),
+    )
+
+  given catalogueItemVariantUnitPerUnitSchema: Schema[CatalogueItemVariantUnit.PerUnit] =
+    Schema.derivedEnumeration[CatalogueItemVariantUnit.PerUnit](
+      encode = Some(_.toString),
+      schemaType = SchemaType.SString(),
+    )
+
+  given catalogueItemVariantUnitUnitSizeSchema: Schema[CatalogueItemVariantUnit.UnitSize] =
+    Schema.derivedEnumeration[CatalogueItemVariantUnit.UnitSize](
+      encode = Some(_.toString),
+      schemaType = SchemaType.SString(),
+    )
+
+  given catalogueItemVariantQuantitySchema: Schema[CatalogueItemVariantQuantity] =
+    Schema.derived[CatalogueItemVariantQuantity]
+
+  given catalogueItemVariantPerUnitSchema: Schema[CatalogueItemVariantPerUnit] =
+    Schema.derived[CatalogueItemVariantPerUnit]
+
+  given catalogueItemVariantUnitSizeSchema: Schema[CatalogueItemVariantUnitSize] =
+    Schema.derived[CatalogueItemVariantUnitSize]
+
+  given catalogueItemVariantSaleUnitSchema: Schema[CatalogueItemVariantSaleUnit] =
+    Schema.derived[CatalogueItemVariantSaleUnit]
+
+  given catalogueItemVariantAttributesSchema
+      : Schema[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]] =
+    summon[Schema[Map[String, String]]]
+      .as[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]]
+
+  given catalogueItemVariantInsertSchema: Schema[CatalogueItemVariantInsert] =
+    Schema.derived[CatalogueItemVariantInsert]
+
+  given catalogueItemCandidateSchema: Schema[CatalogueItemCandidate] = Schema.derived[CatalogueItemCandidate]
+
+  given catalogueFileAiExtractPostResponseSchema: Schema[CatalogueFileAiExtractPostResponse] =
+    Schema.derived[CatalogueFileAiExtractPostResponse]
+
   given addressTypeCodec: JsonValueCodec[AddressType] = JsonCodecMaker.makeWithoutDiscriminator[AddressType]
+
+  given currencyCodec: JsonValueCodec[Currency] = JsonCodecMaker.makeWithoutDiscriminator[Currency]
+
+  given catalogueItemVariantUnitCodec: JsonValueCodec[CatalogueItemVariantUnit] =
+    JsonCodecMaker.makeWithoutDiscriminator[CatalogueItemVariantUnit]
+
+  given catalogueItemVariantUnitPerUnitCodec: JsonValueCodec[CatalogueItemVariantUnit.PerUnit] =
+    JsonCodecMaker.makeWithoutDiscriminator[CatalogueItemVariantUnit.PerUnit]
+
+  given catalogueItemVariantUnitUnitSizeCodec: JsonValueCodec[CatalogueItemVariantUnit.UnitSize] =
+    JsonCodecMaker.makeWithoutDiscriminator[CatalogueItemVariantUnit.UnitSize]
+
+  given priceCodec: JsonValueCodec[Price] = JsonCodecMaker.make[Price]
+
+  given catalogueItemVariantQuantityCodec: JsonValueCodec[CatalogueItemVariantQuantity] =
+    JsonCodecMaker.make[CatalogueItemVariantQuantity]
+
+  given catalogueItemVariantPerUnitCodec: JsonValueCodec[CatalogueItemVariantPerUnit] =
+    JsonCodecMaker.make[CatalogueItemVariantPerUnit]
+
+  given catalogueItemVariantUnitSizeCodec: JsonValueCodec[CatalogueItemVariantUnitSize] =
+    JsonCodecMaker.make[CatalogueItemVariantUnitSize]
+
+  given catalogueItemVariantSaleUnitCodec: JsonValueCodec[CatalogueItemVariantSaleUnit] =
+    JsonCodecMaker.make[CatalogueItemVariantSaleUnit]
+
+  given catalogueItemVariantInsertCodec: JsonValueCodec[CatalogueItemVariantInsert] =
+    JsonCodecMaker.make[CatalogueItemVariantInsert]
+
+  given catalogueItemCandidateCodec: JsonValueCodec[CatalogueItemCandidate] =
+    JsonCodecMaker.make[CatalogueItemCandidate]
+
+  given catalogueFileAiExtractPostResponseCodec: JsonValueCodec[CatalogueFileAiExtractPostResponse] =
+    JsonCodecMaker.make[CatalogueFileAiExtractPostResponse]
 
   given extractCustomersPostResponseCodec: JsonValueCodec[ExtractCustomersPostResponse] =
     JsonCodecMaker.make[ExtractCustomersPostResponse]

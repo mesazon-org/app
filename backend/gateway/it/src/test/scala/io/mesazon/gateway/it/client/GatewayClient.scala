@@ -23,9 +23,10 @@ import scala.util.chaining.scalaUtilChainingOps
 case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]) {
   import config.*
 
-  private inline val OrganizationIDHeader  = "X-Organization-ID"
-  private inline val FileNameHeader        = "X-File-Name"
-  private inline val CatalogueItemIDHeader = "X-Catalogue-Item-ID"
+  private inline val OrganizationIDHeader    = "X-Organization-ID"
+  private inline val FileNameHeader          = "X-File-Name"
+  private inline val ProcessingMessageHeader = "X-Processing-Message"
+  private inline val CatalogueItemIDHeader   = "X-Catalogue-Item-ID"
 
   given JsonValueCodec[smithy.OnboardStage] = new JsonValueCodec[smithy.OnboardStage] {
     override def decodeValue(in: JsonReader, default: smithy.OnboardStage): smithy.OnboardStage = {
@@ -489,7 +490,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .response(asJsonErrorUnit[E])
       .send(sttpBackend)
 
-  def uploadCatalogueItemImagePost[E: JsonValueCodec](
+  def catalogueFileUploadImageItemPost[E: JsonValueCodec](
       organizationIDOpt: Option[OrganizationID],
       catalogueItemIDOpt: Option[CatalogueItemID],
       catalogueItemImageOriginalFileNameOpt: Option[ImageOriginalFileName],
@@ -497,7 +498,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, Unit]]] =
     basicRequest
-      .post(externalUri.addPath("upload", "catalogue-item", "image"))
+      .post(externalUri.addPath("catalogue", "file", "upload", "image", "item"))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
@@ -521,6 +522,40 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .body(imageBytes.toArray)
       .contentType(MediaType.ApplicationOctetStream)
       .response(asJsonErrorUnit[E])
+      .send(sttpBackend)
+
+  def catalogueFileAiExtractPost[E: JsonValueCodec](
+      organizationIDOpt: Option[OrganizationID],
+      catalogueFileExtractFileNameOpt: Option[CatalogueFileExtractFileName],
+      catalogueFileExtractFileBytes: Chunk[Byte],
+      accessTokenOpt: Option[AccessToken],
+      catalogueFileProcessingMessageOpt: Option[String],
+  ): Task[Response[Either[E, CatalogueFileAiExtractPostResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("catalogue", "file", "ai", "extract"))
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        catalogueFileExtractFileNameOpt.fold(request)(catalogueFileExtractFileName =>
+          request.header(FileNameHeader, catalogueFileExtractFileName.value)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .pipe(request =>
+        catalogueFileProcessingMessageOpt.fold(request)(catalogueFileProcessingMessage =>
+          request.header(ProcessingMessageHeader, catalogueFileProcessingMessage)
+        )
+      )
+      .body(catalogueFileExtractFileBytes.toArray)
+      .contentType(MediaType.ApplicationOctetStream)
+      .response(asJsonEitherOrFail[E, CatalogueFileAiExtractPostResponse])
       .send(sttpBackend)
 
   def extractCustomersPost[E: JsonValueCodec](

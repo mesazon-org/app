@@ -44,3 +44,56 @@ case class CatalogueItemUniquenessGetRequest(
     name: Option[CatalogueItemName],
     sku: Option[CatalogueItemVariantSku],
 )
+
+// AI
+
+case class CatalogueItemVariantAttributesAIExtract(
+    name: CatalogueItemVariantAttributeName,
+    value: CatalogueItemVariantAttributeValue,
+)
+
+case class CatalogueItemVariantAIExtract(
+    sku: Option[CatalogueItemVariantSku],
+    label: Option[CatalogueItemVariantLabel],
+    description: Option[CatalogueItemVariantDescription],
+    attributes: List[CatalogueItemVariantAttributesAIExtract],
+    price: Option[CatalogueItemVariantPrice],
+    sellingUnit: Option[CatalogueItemVariantSaleUnit],
+    missingRequiredSaleUnit: Boolean,
+    skuIsDuplicate: Boolean,
+    extractionNotes: List[String],
+)
+
+case class CatalogueItemAIExtract(
+    name: CatalogueItemName,
+    description: Option[CatalogueItemDescription],
+    variants: List[CatalogueItemVariantAIExtract],
+    atLeastOneVariant: Boolean,
+    nameIsDuplicate: Boolean,
+    extractionNotes: List[String],
+)
+
+case class CatalogueFileAIExtract(
+    entriesIdentified: Long,
+    entriesProcessed: Long,
+    candidates: List[CatalogueItemAIExtract],
+    emptyEntryRows: List[Long],
+    unidentifiedEntryRows: List[Long],
+    extractionNotes: List[String],
+)
+
+// Catalogue File
+
+case class CatalogueItemCandidate(
+    name: CatalogueItemName,
+    description: Option[CatalogueItemDescription],
+    variants: List[CatalogueItemVariantInsert],
+    needsAttention: Boolean,
+    extractionNotes: List[String],
+)
+
+case class CatalogueFileAiExtractPostResponse(
+    candidates: List[CatalogueItemCandidate],
+    infoNotes: List[String],
+    extractionNotes: List[String],
+)
