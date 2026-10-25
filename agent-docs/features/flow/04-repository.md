@@ -42,7 +42,7 @@ private val frTable  = frSchema ++ fr0"." ++ frFoo
 - Whole-row values use `fr0"(" ++ fr"$row" ++ fr0")"` through `insertRowWith`/`insertRowsWith`. Typed views over shared `customer` bind fields explicitly; positional whole-row writes are invalid.
 - Dynamic updates always set `updated_at`, then append flattened `...OptUpdate` assignments.
 - Bulk IDs use `in(..., NonEmptyList[ID])`. Upserts state the conflict target and use `EXCLUDED` assignments or `DO NOTHING`.
-- Native `customer_status` is outside `search_path`: writes cast `${status}::<schema>.customer_status`; selects cast `status::text`. Preserve casts in every status query.
+- Customer archive state uses `isArchived: Boolean` / `is_archived` in both typed Rows and all explicit projections, before audit fields. Bind Boolean values without enum casts; active queries use `is_archived = false`, and archive sets it to `true` without deleting rows or contacts.
 - Each Queries class exposes `val live = ZLayer.derive[...]`.
 
 ## Codecs

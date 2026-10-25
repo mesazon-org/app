@@ -2,87 +2,86 @@ package io.mesazon.domain.gateway
 
 // Contact points (each carries an isDefault flag)
 
-case class CustomerEmailEntryRequest(
+case class CustomerEmailEntry(
     email: CustomerEmail,
     isDefault: Boolean,
 )
 
-case class CustomerPhoneNumberEntryRequest(
+case class CustomerPhoneNumberEntry(
     phoneNumber: CustomerPhoneNumber,
     isDefault: Boolean,
 )
 
 // Individuals
 
-case class InsertCustomerIndividualPostRequest(
+case class CustomerBookIndividualPostRequest(
     fullName: CustomerFullName,
-    emails: List[CustomerEmailEntryRequest],
-    phoneNumbers: List[CustomerPhoneNumberEntryRequest],
+    emails: List[CustomerEmailEntry],
+    phoneNumbers: List[CustomerPhoneNumberEntry],
     addresses: List[CustomerAddressEntry],
 )
 
-case class InsertCustomerIndividualsPostRequest(
-    customerIndividuals: List[InsertCustomerIndividualPostRequest]
-)
-
-case class UpdateCustomerIndividualPutRequest(
-    customerID: CustomerID,
+case class CustomerBookIndividualPutRequest(
     fullName: Option[CustomerFullName],
-    emails: List[CustomerEmailEntryRequest],
-    phoneNumbers: List[CustomerPhoneNumberEntryRequest],
-    addresses: List[CustomerAddressEntry],
+    emails: Option[List[CustomerEmailEntry]],
+    phoneNumbers: Option[List[CustomerPhoneNumberEntry]],
+    addresses: Option[List[CustomerAddressEntry]],
 )
 
 // Business contacts
 
-case class InsertCustomerBusinessContact(
+case class CustomerBusinessContactInsert(
     fullName: CustomerFullName,
     role: Option[CustomerBusinessContactRole],
     email: Option[CustomerEmail],
     phoneNumber: Option[CustomerPhoneNumber],
 )
 
-case class AddCustomerBusinessContact(
-    fullName: CustomerFullName,
-    role: Option[CustomerBusinessContactRole],
-    email: Option[CustomerEmail],
-    phoneNumber: Option[CustomerPhoneNumber],
+case class CustomerBusinessContactUpdate(
+    customerBusinessContactID: CustomerBusinessContactID,
+    fullName: Option[CustomerFullName],
+    role: Option[Option[CustomerBusinessContactRole]],
+    email: Option[Option[CustomerEmail]],
+    phoneNumber: Option[Option[CustomerPhoneNumber]],
 )
 
-case class AddCustomerBusinessContactsPutRequest(
-    customerID: CustomerID,
-    customerBusinessContacts: List[AddCustomerBusinessContact],
+case class CustomerBusinessContactArchive(
+    customerBusinessContactID: CustomerBusinessContactID
 )
 
 // Businesses
 
-case class InsertCustomerBusinessPostRequest(
+case class CustomerBookBusinessPostRequest(
     businessName: CustomerBusinessName,
-    emails: List[CustomerEmailEntryRequest],
+    emails: List[CustomerEmailEntry],
     taxID: Option[CustomerTaxID],
-    phoneNumbers: List[CustomerPhoneNumberEntryRequest],
+    phoneNumbers: List[CustomerPhoneNumberEntry],
     addresses: List[CustomerAddressEntry],
-    customerBusinessContacts: List[InsertCustomerBusinessContact],
+    customerBusinessContacts: List[CustomerBusinessContactInsert],
 )
 
-case class InsertCustomerBusinessesPostRequest(
-    customerBusinesses: List[InsertCustomerBusinessPostRequest]
-)
-
-case class UpdateCustomerBusinessPutRequest(
-    customerID: CustomerID,
+case class CustomerBookBusinessPutRequest(
     businessName: Option[CustomerBusinessName],
-    emails: List[CustomerEmailEntryRequest],
-    taxID: Option[CustomerTaxID],
-    phoneNumbers: List[CustomerPhoneNumberEntryRequest],
-    addresses: List[CustomerAddressEntry],
+    emails: Option[List[CustomerEmailEntry]],
+    taxID: Option[Option[CustomerTaxID]],
+    phoneNumbers: Option[List[CustomerPhoneNumberEntry]],
+    addresses: Option[List[CustomerAddressEntry]],
+    customerBusinessContactsInsert: List[CustomerBusinessContactInsert],
+    customerBusinessContactsUpdate: List[CustomerBusinessContactUpdate],
+    customerBusinessContactsArchive: List[CustomerBusinessContactArchive],
 )
 
 // Combined
 
-case class InsertCustomersPostRequest(
-    customerBusinesses: List[InsertCustomerBusinessPostRequest],
-    customerIndividuals: List[InsertCustomerIndividualPostRequest],
+case class CustomerBookBatchPostRequest(
+    customerBusinesses: List[CustomerBookBusinessPostRequest],
+    customerIndividuals: List[CustomerBookIndividualPostRequest],
+)
+
+case class CustomerBookUniquenessGetRequest(
+    name: CustomerName,
+    customerType: CustomerType,
+    customerID: Option[CustomerID],
 )
 
 // File extraction

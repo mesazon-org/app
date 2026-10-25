@@ -3,92 +3,131 @@ package io.mesazon.testkit.base
 import io.mesazon.domain.gateway.*
 import org.scalacheck.*
 
+import java.util.UUID
+
 trait CustomerBookDomainArbitraries extends GatewayArbitraries {
 
+  private inline val CustomerBusinessContactCountMinimum = 0
+  private inline val CustomerBusinessContactCountMaximum = 50
+  private inline val CustomerBookBatchEntryCountMinimum  = 0
+  private inline val CustomerBookBatchEntryCountMaximum  = 25
+
   given arbCustomerType: Arbitrary[CustomerType] = Arbitrary(Gen.oneOf(CustomerType.values.toIndexedSeq))
-
-  given arbCustomerStatus: Arbitrary[CustomerStatus] = Arbitrary(Gen.oneOf(CustomerStatus.values.toIndexedSeq))
-
-  given arbCustomerEmailEntryRequest: Arbitrary[CustomerEmailEntryRequest] = Arbitrary(
-    Gen.resultOf(CustomerEmailEntryRequest.apply)
-  )
-
-  given arbCustomerPhoneNumberEntryRequest: Arbitrary[CustomerPhoneNumberEntryRequest] = Arbitrary(
-    Gen.resultOf(CustomerPhoneNumberEntryRequest.apply)
-  )
-
-  // A non-empty list must mark exactly one entry as default, so generate non-default entries and promote one at random.
-  given arbCustomerEmailEntryRequests: Arbitrary[List[CustomerEmailEntryRequest]] = Arbitrary(
-    genEntriesWithSingleDefault(
-      Arbitrary.arbitrary[CustomerEmailEntryRequest].map(_.copy(isDefault = false))
-    )(_.copy(isDefault = true))
-  )
-
-  given arbCustomerPhoneNumberEntryRequests: Arbitrary[List[CustomerPhoneNumberEntryRequest]] = Arbitrary(
-    genEntriesWithSingleDefault(
-      Arbitrary.arbitrary[CustomerPhoneNumberEntryRequest].map(_.copy(isDefault = false))
-    )(_.copy(isDefault = true))
-  )
 
   given arbCustomerAddressEntries: Arbitrary[List[CustomerAddressEntry]] = Arbitrary(
     genAddressEntriesAllowedCombination.map(_.map(CustomerAddressEntry(_)))
   )
 
-  given arbInsertCustomerIndividualPostRequest: Arbitrary[InsertCustomerIndividualPostRequest] = Arbitrary(
-    Gen.resultOf(InsertCustomerIndividualPostRequest.apply)
+  given arbCustomerEmailEntry: Arbitrary[CustomerEmailEntry] = Arbitrary(
+    Gen.resultOf(CustomerEmailEntry.apply)
   )
 
-  given arbInsertCustomerIndividualsPostRequest: Arbitrary[InsertCustomerIndividualsPostRequest] = Arbitrary(
+  given arbCustomerPhoneNumberEntry: Arbitrary[CustomerPhoneNumberEntry] = Arbitrary(
+    Gen.resultOf(CustomerPhoneNumberEntry.apply)
+  )
+
+  given arbCustomerEmailEntries: Arbitrary[List[CustomerEmailEntry]] = Arbitrary(
+    genEntriesWithSingleDefault(
+      Arbitrary.arbitrary[CustomerEmailEntry].map(_.copy(isDefault = false))
+    )(_.copy(isDefault = true))
+  )
+
+  given arbCustomerPhoneNumberEntries: Arbitrary[List[CustomerPhoneNumberEntry]] = Arbitrary(
+    genEntriesWithSingleDefault(
+      Arbitrary.arbitrary[CustomerPhoneNumberEntry].map(_.copy(isDefault = false))
+    )(_.copy(isDefault = true))
+  )
+
+  given arbCustomerBusinessContactInsert: Arbitrary[CustomerBusinessContactInsert] = Arbitrary(
+    Gen.resultOf(CustomerBusinessContactInsert.apply)
+  )
+
+  given arbCustomerBusinessContactsInsert: Arbitrary[List[CustomerBusinessContactInsert]] = Arbitrary(
     Gen
-      .choose(0, 50) // Limit the number of individuals to a reasonable range
-      .flatMap(n => Gen.listOfN(n, Arbitrary.arbitrary[InsertCustomerIndividualPostRequest]))
-      .map(InsertCustomerIndividualsPostRequest.apply)
+      .choose(CustomerBusinessContactCountMinimum, CustomerBusinessContactCountMaximum)
+      .flatMap(count => Gen.listOfN(count, Arbitrary.arbitrary[CustomerBusinessContactInsert]))
   )
 
-  given arbUpdateCustomerIndividualPutRequest: Arbitrary[UpdateCustomerIndividualPutRequest] = Arbitrary(
-    Gen.resultOf(UpdateCustomerIndividualPutRequest.apply)
+  given arbCustomerBusinessContactUpdate: Arbitrary[CustomerBusinessContactUpdate] = Arbitrary(
+    Gen.resultOf(CustomerBusinessContactUpdate.apply)
   )
 
-  given arbInsertCustomerBusinessContact: Arbitrary[InsertCustomerBusinessContact] = Arbitrary(
-    Gen.resultOf(InsertCustomerBusinessContact.apply)
-  )
-
-  given arbAddCustomerBusinessContact: Arbitrary[AddCustomerBusinessContact] = Arbitrary(
-    Gen.resultOf(AddCustomerBusinessContact.apply)
-  )
-
-  given arbAddCustomerBusinessContactsPutRequest: Arbitrary[AddCustomerBusinessContactsPutRequest] = Arbitrary(
-    for {
-      customerID                 <- Arbitrary.arbitrary[CustomerID]
-      addCustomerBusinessContact <- Gen
-        .choose(0, 50) // Limit the number of contacts to a reasonable range
-        .flatMap(n => Gen.listOfN(n, Arbitrary.arbitrary[AddCustomerBusinessContact]))
-    } yield AddCustomerBusinessContactsPutRequest(customerID, addCustomerBusinessContact)
-  )
-
-  given arbInsertCustomerBusinessPostRequest: Arbitrary[InsertCustomerBusinessPostRequest] = Arbitrary(
-    Gen.resultOf(InsertCustomerBusinessPostRequest.apply)
-  )
-
-  given arbInsertCustomerBusinessesPostRequest: Arbitrary[InsertCustomerBusinessesPostRequest] = Arbitrary(
+  given arbCustomerBusinessContactsUpdate: Arbitrary[List[CustomerBusinessContactUpdate]] = Arbitrary(
     Gen
-      .choose(0, 10)
-      .flatMap(n => Gen.listOfN(n, Arbitrary.arbitrary[InsertCustomerBusinessPostRequest]))
-      .map(InsertCustomerBusinessesPostRequest.apply)
+      .choose(CustomerBusinessContactCountMinimum, CustomerBusinessContactCountMaximum)
+      .flatMap(count => Gen.listOfN(count, Arbitrary.arbitrary[CustomerBusinessContactUpdate]))
   )
 
-  given arbUpdateCustomerBusinessPutRequest: Arbitrary[UpdateCustomerBusinessPutRequest] = Arbitrary(
-    Gen.resultOf(UpdateCustomerBusinessPutRequest.apply)
+  given arbCustomerBusinessContactArchive: Arbitrary[CustomerBusinessContactArchive] = Arbitrary(
+    Gen.resultOf(CustomerBusinessContactArchive.apply)
   )
 
-  given arbInsertCustomersPostRequest: Arbitrary[InsertCustomersPostRequest] = Arbitrary(
+  given arbCustomerBusinessContactsArchive: Arbitrary[List[CustomerBusinessContactArchive]] = Arbitrary(
+    Gen
+      .choose(CustomerBusinessContactCountMinimum, CustomerBusinessContactCountMaximum)
+      .flatMap(count => Gen.listOfN(count, Arbitrary.arbitrary[CustomerBusinessContactArchive]))
+  )
+
+  given arbCustomerBookIndividualPostRequest: Arbitrary[CustomerBookIndividualPostRequest] = Arbitrary(
+    Gen.resultOf(CustomerBookIndividualPostRequest.apply)
+  )
+
+  given arbCustomerBookBusinessPostRequest: Arbitrary[CustomerBookBusinessPostRequest] = Arbitrary(
+    Gen.resultOf(CustomerBookBusinessPostRequest.apply)
+  )
+
+  given arbCustomerBookIndividualPutRequest: Arbitrary[CustomerBookIndividualPutRequest] = Arbitrary(
+    Gen.resultOf(CustomerBookIndividualPutRequest.apply)
+  )
+
+  given arbCustomerBookBusinessPutRequest: Arbitrary[CustomerBookBusinessPutRequest] = Arbitrary(
     for {
-      insertCustomerBusinessPostRequest <- Gen
-        .choose(0, 25) // Limit the number of customers to a reasonable rangee
-        .flatMap(n => Gen.listOfN(n, Arbitrary.arbitrary[InsertCustomerBusinessPostRequest]))
-      insertCustomerIndividualPostRequest <- Gen
-        .choose(0, 25) // Limit the number of customers to a reasonable rangee
-        .flatMap(n => Gen.listOfN(n, Arbitrary.arbitrary[InsertCustomerIndividualPostRequest]))
-    } yield InsertCustomersPostRequest(insertCustomerBusinessPostRequest, insertCustomerIndividualPostRequest)
+      customerBookBusinessPutRequest <- Gen.resultOf(CustomerBookBusinessPutRequest.apply)
+      customerBusinessContactIDBase  <- Arbitrary.arbitrary[CustomerBusinessContactID]
+    } yield customerBookBusinessPutRequest.copy(
+      customerBusinessContactsUpdate = customerBookBusinessPutRequest.customerBusinessContactsUpdate.zipWithIndex.map {
+        case (customerBusinessContactUpdate, index) =>
+          customerBusinessContactUpdate.copy(
+            customerBusinessContactID = customerBusinessContactIDAtIndex(customerBusinessContactIDBase, index)
+          )
+      },
+      customerBusinessContactsArchive =
+        customerBookBusinessPutRequest.customerBusinessContactsArchive.zipWithIndex.map {
+          case (customerBusinessContactArchive, index) =>
+            customerBusinessContactArchive.copy(
+              customerBusinessContactID = customerBusinessContactIDAtIndex(
+                customerBusinessContactIDBase,
+                customerBookBusinessPutRequest.customerBusinessContactsUpdate.size + index,
+              )
+            )
+        },
+    )
   )
+
+  given arbCustomerBookBatchPostRequest: Arbitrary[CustomerBookBatchPostRequest] = Arbitrary(
+    for {
+      customerBusinesses <- Gen
+        .choose(CustomerBookBatchEntryCountMinimum, CustomerBookBatchEntryCountMaximum)
+        .flatMap(count => Gen.listOfN(count, Arbitrary.arbitrary[CustomerBookBusinessPostRequest]))
+      customerIndividuals <- Gen
+        .choose(CustomerBookBatchEntryCountMinimum, CustomerBookBatchEntryCountMaximum)
+        .flatMap(count => Gen.listOfN(count, Arbitrary.arbitrary[CustomerBookIndividualPostRequest]))
+    } yield CustomerBookBatchPostRequest(customerBusinesses, customerIndividuals)
+  )
+
+  given arbCustomerBookUniquenessGetRequest: Arbitrary[CustomerBookUniquenessGetRequest] = Arbitrary(
+    Gen.resultOf(CustomerBookUniquenessGetRequest.apply)
+  )
+
+  private def customerBusinessContactIDAtIndex(
+      customerBusinessContactIDBase: CustomerBusinessContactID,
+      index: Int,
+  ): CustomerBusinessContactID =
+    CustomerBusinessContactID(
+      new UUID(
+        customerBusinessContactIDBase.value.getMostSignificantBits,
+        customerBusinessContactIDBase.value.getLeastSignificantBits + index.toLong,
+      )
+    )
+
 }

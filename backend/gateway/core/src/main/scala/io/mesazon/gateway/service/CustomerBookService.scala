@@ -18,203 +18,123 @@ object CustomerBookService {
       customerBookRepository: CustomerBookRepository,
   ) extends smithy.CustomerBookService[ServiceTask] {
 
-    /** HTTP POST /insert/customer-individual */
-    override def insertCustomerIndividualPost(
+    override def customerBookIndividualPost(
         organizationID: UUID,
-        insertCustomerIndividualPostRequestSmithy: smithy.InsertCustomerIndividualPostRequest,
-    ): ServiceTask[smithy.InsertCustomerIndividualPostResponse] = for {
-      insertCustomerIndividualPostRequest <- customerBookRequestValidator.validatedInsertCustomerIndividualPostRequest(
-        insertCustomerIndividualPostRequestSmithy
+        customerBookIndividualPostRequestSmithy: smithy.CustomerBookIndividualPostRequest,
+    ): ServiceTask[smithy.CustomerBookIndividualPostResponse] = for {
+      customerBookIndividualPostRequest <- customerBookRequestValidator.validatedCustomerBookIndividualPostRequest(
+        customerBookIndividualPostRequestSmithy
       )
       customerIndividualDetailsRow <- customerBookRepository.insertCustomerIndividual(
         OrganizationID(organizationID),
-        insertCustomerIndividualPostRequest.transformInto[InsertCustomerIndividualInput],
+        customerBookIndividualPostRequest.transformInto[InsertCustomerIndividualInput],
       )
-    } yield customerIndividualDetailsRow.transformInto[smithy.InsertCustomerIndividualPostResponse]
+    } yield customerIndividualDetailsRow.transformInto[smithy.CustomerBookIndividualPostResponse]
 
-    /** HTTP POST /insert/customer-individuals */
-    override def insertCustomerIndividualsPost(
+    override def customerBookBusinessPost(
         organizationID: UUID,
-        insertCustomerIndividualsPostRequestSmithy: smithy.InsertCustomerIndividualsPostRequest,
-    ): ServiceTask[smithy.InsertCustomerIndividualsPostResponse] = for {
-      insertCustomerIndividualsPostRequest <-
-        customerBookRequestValidator.validatedInsertCustomerIndividualsPostRequest(
-          insertCustomerIndividualsPostRequestSmithy
-        )
-      customerIndividualDetailsRows <- customerBookRepository.insertCustomerIndividuals(
-        OrganizationID(organizationID),
-        insertCustomerIndividualsPostRequest.customerIndividuals.transformInto[List[InsertCustomerIndividualInput]],
-      )
-    } yield smithy.InsertCustomerIndividualsPostResponse(
-      customerIndividuals = customerIndividualDetailsRows.map(
-        _.into[smithy.GetCustomer]
-          .withFieldRenamed(_.fullName, _.name)
-          .withFieldConst(_.customerType, smithy.CustomerType.Individual)
-          .transform
-      )
-    )
-
-    /** HTTP POST /insert/customer-business */
-    override def insertCustomerBusinessPost(
-        organizationID: UUID,
-        insertCustomerBusinessPostRequestSmithy: smithy.InsertCustomerBusinessPostRequest,
-    ): ServiceTask[smithy.InsertCustomerBusinessPostResponse] = for {
-      insertCustomerBusinessPostRequest <- customerBookRequestValidator.validatedInsertCustomerBusinessPostRequest(
-        insertCustomerBusinessPostRequestSmithy
+        customerBookBusinessPostRequestSmithy: smithy.CustomerBookBusinessPostRequest,
+    ): ServiceTask[smithy.CustomerBookBusinessPostResponse] = for {
+      customerBookBusinessPostRequest <- customerBookRequestValidator.validatedCustomerBookBusinessPostRequest(
+        customerBookBusinessPostRequestSmithy
       )
       customerBusinessInsertRow <- customerBookRepository.insertCustomerBusiness(
         OrganizationID(organizationID),
-        insertCustomerBusinessPostRequest.transformInto[InsertCustomerBusinessInput],
+        customerBookBusinessPostRequest.transformInto[InsertCustomerBusinessInput],
       )
     } yield customerBusinessInsertRow.customerBusinessDetailsRow
-      .into[smithy.InsertCustomerBusinessPostResponse]
+      .into[smithy.CustomerBookBusinessPostResponse]
       .withFieldConst(
         _.customerBusinessContacts,
         customerBusinessInsertRow.customerBusinessContactRows
-          .transformInto[List[smithy.InsertCustomerBusinessContactResponse]],
+          .transformInto[List[smithy.CustomerBusinessContact]],
       )
       .transform
 
-    /** HTTP POST /insert/customer-businesses */
-    override def insertCustomerBusinessesPost(
+    override def customerBookBatchPost(
         organizationID: UUID,
-        insertCustomerBusinessesPostRequestSmithy: smithy.InsertCustomerBusinessesPostRequest,
-    ): ServiceTask[smithy.InsertCustomerBusinessesPostResponse] = for {
-      insertCustomerBusinessesPostRequest <- customerBookRequestValidator.validatedInsertCustomerBusinessesPostRequest(
-        insertCustomerBusinessesPostRequestSmithy
-      )
-      customerBusinessInsertRows <- customerBookRepository.insertCustomerBusinesses(
-        OrganizationID(organizationID),
-        insertCustomerBusinessesPostRequest.customerBusinesses.transformInto[List[InsertCustomerBusinessInput]],
-      )
-    } yield smithy.InsertCustomerBusinessesPostResponse(
-      customerBusinesses = customerBusinessInsertRows.map(
-        _.customerBusinessDetailsRow
-          .into[smithy.GetCustomer]
-          .withFieldRenamed(_.businessName, _.name)
-          .withFieldConst(_.customerType, smithy.CustomerType.Business)
-          .transform
-      )
-    )
-
-    /** HTTP POST /insert/customers */
-    override def insertCustomersPost(
-        organizationID: UUID,
-        insertCustomersPostRequestSmithy: smithy.InsertCustomersPostRequest,
-    ): ServiceTask[smithy.InsertCustomersPostResponse] = for {
-      insertCustomersPostRequest <- customerBookRequestValidator.validatedInsertCustomersPostRequest(
-        insertCustomersPostRequestSmithy
+        customerBookBatchPostRequestSmithy: smithy.CustomerBookBatchPostRequest,
+    ): ServiceTask[smithy.CustomerBookBatchPostResponse] = for {
+      customerBookBatchPostRequest <- customerBookRequestValidator.validatedCustomerBookBatchPostRequest(
+        customerBookBatchPostRequestSmithy
       )
       insertCustomersResult <- customerBookRepository.insertCustomers(
         OrganizationID(organizationID),
-        insertCustomersPostRequest.customerIndividuals.transformInto[List[InsertCustomerIndividualInput]],
-        insertCustomersPostRequest.customerBusinesses.transformInto[List[InsertCustomerBusinessInput]],
+        customerBookBatchPostRequest.customerIndividuals.transformInto[List[InsertCustomerIndividualInput]],
+        customerBookBatchPostRequest.customerBusinesses.transformInto[List[InsertCustomerBusinessInput]],
       )
-    } yield smithy.InsertCustomersPostResponse(
+    } yield smithy.CustomerBookBatchPostResponse(
       customers = insertCustomersResult.customerIndividualDetailsRows.map(
-        _.into[smithy.GetCustomer]
+        _.into[smithy.CustomerSummary]
           .withFieldRenamed(_.fullName, _.name)
           .withFieldConst(_.customerType, smithy.CustomerType.Individual)
           .transform
       ) ++
         insertCustomersResult.customerBusinessInsertRows.map(
           _.customerBusinessDetailsRow
-            .into[smithy.GetCustomer]
+            .into[smithy.CustomerSummary]
             .withFieldRenamed(_.businessName, _.name)
             .withFieldConst(_.customerType, smithy.CustomerType.Business)
             .transform
         )
     )
 
-    /** HTTP PUT /update/customer-individual */
-    override def updateCustomerIndividualPut(
+    /** HTTP PUT /customer-book/individual/{customerID} */
+    override def customerBookIndividualPut(
         organizationID: UUID,
-        updateCustomerIndividualPutRequestSmithy: smithy.UpdateCustomerIndividualPutRequest,
+        customerID: UUID,
+        customerBookIndividualPutRequestSmithy: smithy.CustomerBookIndividualPutRequest,
     ): ServiceTask[Unit] = for {
-      updateCustomerIndividualPutRequest <- customerBookRequestValidator.validatedUpdateCustomerIndividualPutRequest(
-        updateCustomerIndividualPutRequestSmithy
+      customerBookIndividualPutRequest <- customerBookRequestValidator.validatedCustomerBookIndividualPutRequest(
+        customerBookIndividualPutRequestSmithy
       )
       _ <- customerBookRepository.updateCustomerIndividual(
         organizationID = OrganizationID(organizationID),
-        customerID = updateCustomerIndividualPutRequest.customerID,
-        fullNameOptUpdate = updateCustomerIndividualPutRequest.fullName,
-        emailsOptUpdate = Some(updateCustomerIndividualPutRequest.emails.transformInto[List[CustomerEmailEntryInput]]),
-        phoneNumbersOptUpdate = Some(
-          updateCustomerIndividualPutRequest.phoneNumbers.transformInto[List[CustomerPhoneNumberEntryInput]]
-        ),
-        addressesOptUpdate = Some(updateCustomerIndividualPutRequest.addresses),
+        customerID = CustomerID(customerID),
+        fullNameOptUpdate = customerBookIndividualPutRequest.fullName,
+        emailsOptUpdate = customerBookIndividualPutRequest.emails.transformInto[Option[List[CustomerEmailEntryInput]]],
+        phoneNumbersOptUpdate =
+          customerBookIndividualPutRequest.phoneNumbers.transformInto[Option[List[CustomerPhoneNumberEntryInput]]],
+        addressesOptUpdate = customerBookIndividualPutRequest.addresses,
       )
     } yield ()
 
-    /** HTTP PUT /update/customer-business */
-    override def updateCustomerBusinessPut(
-        organizationID: UUID,
-        updateCustomerBusinessPutRequestSmithy: smithy.UpdateCustomerBusinessPutRequest,
-    ): ServiceTask[Unit] = for {
-      updateCustomerBusinessPutRequest <- customerBookRequestValidator.validatedUpdateCustomerBusinessPutRequest(
-        updateCustomerBusinessPutRequestSmithy
-      )
-      _ <- customerBookRepository.updateCustomerBusiness(
-        organizationID = OrganizationID(organizationID),
-        customerID = updateCustomerBusinessPutRequest.customerID,
-        businessNameOptUpdate = updateCustomerBusinessPutRequest.businessName,
-        emailsOptUpdate = Some(updateCustomerBusinessPutRequest.emails.transformInto[List[CustomerEmailEntryInput]]),
-        taxIDOptUpdate = updateCustomerBusinessPutRequest.taxID,
-        phoneNumbersOptUpdate = Some(
-          updateCustomerBusinessPutRequest.phoneNumbers.transformInto[List[CustomerPhoneNumberEntryInput]]
-        ),
-        addressesOptUpdate = Some(updateCustomerBusinessPutRequest.addresses),
-      )
-    } yield ()
-
-    /** HTTP PUT /add/customer-business-contacts */
-    override def addCustomerBusinessContactsPut(
-        organizationID: UUID,
-        addCustomerBusinessContactsPutRequestSmithy: smithy.AddCustomerBusinessContactsPutRequest,
-    ): ServiceTask[Unit] = for {
-      addCustomerBusinessContactsPutRequest <-
-        customerBookRequestValidator.validatedAddCustomerBusinessContactsPutRequest(
-          addCustomerBusinessContactsPutRequestSmithy
-        )
-      _ <- customerBookRepository.addCustomerBusinessContacts(
-        OrganizationID(organizationID),
-        addCustomerBusinessContactsPutRequest.customerID,
-        addCustomerBusinessContactsPutRequest.customerBusinessContacts
-          .transformInto[List[CustomerBusinessContactInput]],
-      )
-    } yield ()
-
-    /** HTTP PUT /remove/customer-business-contacts */
-    override def removeCustomerBusinessContactsPut(
-        organizationID: UUID,
-        removeCustomerBusinessContactsPutRequestSmithy: smithy.RemoveCustomerBusinessContactsPutRequest,
-    ): ServiceTask[Unit] =
-      customerBookRepository.removeCustomerBusinessContacts(
-        OrganizationID(organizationID),
-        CustomerID(removeCustomerBusinessContactsPutRequestSmithy.customerID),
-        removeCustomerBusinessContactsPutRequestSmithy.customerBusinessContacts.map(customerBusinessContact =>
-          CustomerBusinessContactID(customerBusinessContact.customerBusinessContactID)
-        ),
-      )
-
-    /** HTTP PUT /archive/customer */
-    override def archiveCustomerPut(
-        organizationID: UUID,
-        archiveCustomerPutRequestSmithy: smithy.ArchiveCustomerPutRequest,
-    ): ServiceTask[Unit] =
-      // Archiving a missing (or already-archived) customer is a silent no-op — no 404/500.
-      customerBookRepository
-        .archiveCustomer(
-          OrganizationID(organizationID),
-          CustomerID(archiveCustomerPutRequestSmithy.customerID),
-        )
-        .unit
-
-    /** HTTP GET /get/customer-individual/{customerID} */
-    override def getCustomerIndividualGet(
+    override def customerBookBusinessPut(
         organizationID: UUID,
         customerID: UUID,
-    ): ServiceTask[smithy.GetCustomerIndividualGetResponse] = for {
+        customerBookBusinessPutRequestSmithy: smithy.CustomerBookBusinessPutRequest,
+    ): ServiceTask[Unit] = for {
+      customerBookBusinessPutRequest <- customerBookRequestValidator.validatedCustomerBookBusinessPutRequest(
+        customerBookBusinessPutRequestSmithy
+      )
+      _ <- customerBookRepository.updateCustomerBusiness(
+        OrganizationID(organizationID),
+        CustomerID(customerID),
+        businessNameOptUpdate = customerBookBusinessPutRequest.businessName,
+        emailsOptUpdate = customerBookBusinessPutRequest.emails.transformInto[Option[List[CustomerEmailEntryInput]]],
+        taxIDOptUpdate = customerBookBusinessPutRequest.taxID,
+        phoneNumbersOptUpdate =
+          customerBookBusinessPutRequest.phoneNumbers.transformInto[Option[List[CustomerPhoneNumberEntryInput]]],
+        addressesOptUpdate = customerBookBusinessPutRequest.addresses,
+        updateCustomerBusinessContactInputs = customerBookBusinessPutRequest.customerBusinessContactsUpdate
+          .transformInto[List[UpdateCustomerBusinessContactInput]],
+        insertCustomerBusinessContactInputs = customerBookBusinessPutRequest.customerBusinessContactsInsert
+          .transformInto[List[CustomerBusinessContactInput]],
+        archiveCustomerBusinessContactIDs =
+          customerBookBusinessPutRequest.customerBusinessContactsArchive.map(_.customerBusinessContactID),
+      )
+    } yield ()
+
+    override def customerBookArchivePut(
+        organizationID: UUID,
+        customerID: UUID,
+    ): ServiceTask[Unit] =
+      customerBookRepository.archiveCustomer(OrganizationID(organizationID), CustomerID(customerID)).unit
+
+    override def customerBookIndividualGet(
+        organizationID: UUID,
+        customerID: UUID,
+    ): ServiceTask[smithy.CustomerBookIndividualGetResponse] = for {
       customerIndividualDetailsRow <- customerBookRepository
         .getCustomerIndividual(OrganizationID(organizationID), CustomerID(customerID))
         .someOrFail(
@@ -222,28 +142,53 @@ object CustomerBookService {
             s"Customer individual not found for customerID: [$customerID]"
           )
         )
-    } yield customerIndividualDetailsRow.transformInto[smithy.GetCustomerIndividualGetResponse]
+    } yield customerIndividualDetailsRow.transformInto[smithy.CustomerBookIndividualGetResponse]
 
-    /** HTTP GET /get/customer-business/{customerID} */
-    override def getCustomerBusinessGet(
+    override def customerBookBusinessGet(
         organizationID: UUID,
         customerID: UUID,
-    ): ServiceTask[smithy.GetCustomerBusinessGetResponse] = for {
-      customerBusinessDetailsRow <- customerBookRepository
+    ): ServiceTask[smithy.CustomerBookBusinessGetResponse] = for {
+      customerBusinessWithContactsRow <- customerBookRepository
         .getCustomerBusiness(OrganizationID(organizationID), CustomerID(customerID))
         .someOrFail(
           ServiceError.InternalServerError.UnexpectedError(s"Customer business not found for customerID: [$customerID]")
         )
-    } yield customerBusinessDetailsRow.transformInto[smithy.GetCustomerBusinessGetResponse]
+    } yield customerBusinessWithContactsRow.customerBusinessDetailsRow
+      .into[smithy.CustomerBookBusinessGetResponse]
+      .withFieldConst(
+        _.customerBusinessContacts,
+        customerBusinessWithContactsRow.customerBusinessContactRows.transformInto[List[smithy.CustomerBusinessContact]],
+      )
+      .transform
 
-    /** HTTP GET /get/customers */
-    override def getCustomersGet(
-        organizationID: UUID
-    ): ServiceTask[smithy.GetCustomersGetResponse] = for {
-      customerSummaryRows <- customerBookRepository.getCustomers(OrganizationID(organizationID))
-    } yield smithy.GetCustomersGetResponse(
-      customers = customerSummaryRows.transformInto[List[smithy.GetCustomer]]
+    override def customerBookSummaryGet(
+        organizationID: UUID,
+        customerIDs: List[UUID],
+    ): ServiceTask[smithy.CustomerBookSummaryGetResponse] = for {
+      customerSummaryRows <- customerBookRepository.getCustomerSummaries(
+        OrganizationID(organizationID),
+        customerIDs.map(CustomerID.apply),
+      )
+    } yield smithy.CustomerBookSummaryGetResponse(
+      customers = customerSummaryRows.transformInto[List[smithy.CustomerSummary]]
     )
+
+    override def customerBookUniquenessGet(
+        organizationID: UUID,
+        name: Option[String],
+        customerType: Option[smithy.CustomerType],
+        customerIDOpt: Option[UUID],
+    ): ServiceTask[smithy.CustomerBookUniquenessGetResponse] = for {
+      customerBookUniquenessGetRequest <- customerBookRequestValidator.validatedCustomerBookUniquenessGetRequest(
+        smithy.CustomerBookUniquenessGetInput(organizationID, name, customerType, customerIDOpt)
+      )
+      isNameUnique <- customerBookRepository.isUniqueCustomerName(
+        OrganizationID(organizationID),
+        customerBookUniquenessGetRequest.name,
+        customerBookUniquenessGetRequest.customerType,
+        customerBookUniquenessGetRequest.customerID,
+      )
+    } yield smithy.CustomerBookUniquenessGetResponse(isNameUnique = isNameUnique)
 
   }
 
@@ -252,115 +197,83 @@ object CustomerBookService {
   ): smithy.CustomerBookService[Task] =
     new smithy.CustomerBookService[Task] {
 
-      /** HTTP POST /insert/customer-individual */
-      override def insertCustomerIndividualPost(
+      override def customerBookIndividualPost(
           organizationID: UUID,
-          insertCustomerIndividualPostRequestSmithy: smithy.InsertCustomerIndividualPostRequest,
-      ): Task[smithy.InsertCustomerIndividualPostResponse] =
+          customerBookIndividualPostRequestSmithy: smithy.CustomerBookIndividualPostRequest,
+      ): Task[smithy.CustomerBookIndividualPostResponse] =
         HttpErrorHandler.errorResponseHandler(
-          service.insertCustomerIndividualPost(organizationID, insertCustomerIndividualPostRequestSmithy)
+          service.customerBookIndividualPost(organizationID, customerBookIndividualPostRequestSmithy)
         )
 
-      /** HTTP POST /insert/customer-individuals */
-      override def insertCustomerIndividualsPost(
+      override def customerBookBusinessPost(
           organizationID: UUID,
-          insertCustomerIndividualsPostRequestSmithy: smithy.InsertCustomerIndividualsPostRequest,
-      ): Task[smithy.InsertCustomerIndividualsPostResponse] =
+          customerBookBusinessPostRequestSmithy: smithy.CustomerBookBusinessPostRequest,
+      ): Task[smithy.CustomerBookBusinessPostResponse] =
         HttpErrorHandler.errorResponseHandler(
-          service.insertCustomerIndividualsPost(organizationID, insertCustomerIndividualsPostRequestSmithy)
+          service.customerBookBusinessPost(organizationID, customerBookBusinessPostRequestSmithy)
         )
 
-      /** HTTP POST /insert/customer-business */
-      override def insertCustomerBusinessPost(
+      override def customerBookBatchPost(
           organizationID: UUID,
-          insertCustomerBusinessPostRequestSmithy: smithy.InsertCustomerBusinessPostRequest,
-      ): Task[smithy.InsertCustomerBusinessPostResponse] =
+          customerBookBatchPostRequestSmithy: smithy.CustomerBookBatchPostRequest,
+      ): Task[smithy.CustomerBookBatchPostResponse] =
         HttpErrorHandler.errorResponseHandler(
-          service.insertCustomerBusinessPost(organizationID, insertCustomerBusinessPostRequestSmithy)
+          service.customerBookBatchPost(organizationID, customerBookBatchPostRequestSmithy)
         )
 
-      /** HTTP POST /insert/customer-businesses */
-      override def insertCustomerBusinessesPost(
-          organizationID: UUID,
-          insertCustomerBusinessesPostRequestSmithy: smithy.InsertCustomerBusinessesPostRequest,
-      ): Task[smithy.InsertCustomerBusinessesPostResponse] =
-        HttpErrorHandler.errorResponseHandler(
-          service.insertCustomerBusinessesPost(organizationID, insertCustomerBusinessesPostRequestSmithy)
-        )
-
-      /** HTTP POST /insert/customers */
-      override def insertCustomersPost(
-          organizationID: UUID,
-          insertCustomersPostRequestSmithy: smithy.InsertCustomersPostRequest,
-      ): Task[smithy.InsertCustomersPostResponse] =
-        HttpErrorHandler.errorResponseHandler(
-          service.insertCustomersPost(organizationID, insertCustomersPostRequestSmithy)
-        )
-
-      /** HTTP PUT /update/customer-individual */
-      override def updateCustomerIndividualPut(
-          organizationID: UUID,
-          updateCustomerIndividualPutRequestSmithy: smithy.UpdateCustomerIndividualPutRequest,
-      ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(
-          service.updateCustomerIndividualPut(organizationID, updateCustomerIndividualPutRequestSmithy)
-        )
-
-      /** HTTP PUT /update/customer-business */
-      override def updateCustomerBusinessPut(
-          organizationID: UUID,
-          updateCustomerBusinessPutRequestSmithy: smithy.UpdateCustomerBusinessPutRequest,
-      ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(
-          service.updateCustomerBusinessPut(organizationID, updateCustomerBusinessPutRequestSmithy)
-        )
-
-      /** HTTP PUT /add/customer-business-contacts */
-      override def addCustomerBusinessContactsPut(
-          organizationID: UUID,
-          addCustomerBusinessContactsPutRequestSmithy: smithy.AddCustomerBusinessContactsPutRequest,
-      ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(
-          service.addCustomerBusinessContactsPut(organizationID, addCustomerBusinessContactsPutRequestSmithy)
-        )
-
-      /** HTTP PUT /remove/customer-business-contacts */
-      override def removeCustomerBusinessContactsPut(
-          organizationID: UUID,
-          removeCustomerBusinessContactsPutRequestSmithy: smithy.RemoveCustomerBusinessContactsPutRequest,
-      ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(
-          service.removeCustomerBusinessContactsPut(organizationID, removeCustomerBusinessContactsPutRequestSmithy)
-        )
-
-      /** HTTP PUT /archive/customer */
-      override def archiveCustomerPut(
-          organizationID: UUID,
-          archiveCustomerPutRequestSmithy: smithy.ArchiveCustomerPutRequest,
-      ): Task[Unit] =
-        HttpErrorHandler.errorResponseHandler(
-          service.archiveCustomerPut(organizationID, archiveCustomerPutRequestSmithy)
-        )
-
-      /** HTTP GET /get/customer-individual/{customerID} */
-      override def getCustomerIndividualGet(
+      /** HTTP PUT /customer-book/individual/{customerID} */
+      override def customerBookIndividualPut(
           organizationID: UUID,
           customerID: UUID,
-      ): Task[smithy.GetCustomerIndividualGetResponse] =
-        HttpErrorHandler.errorResponseHandler(service.getCustomerIndividualGet(organizationID, customerID))
+          customerBookIndividualPutRequestSmithy: smithy.CustomerBookIndividualPutRequest,
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(
+          service.customerBookIndividualPut(organizationID, customerID, customerBookIndividualPutRequestSmithy)
+        )
 
-      /** HTTP GET /get/customer-business/{customerID} */
-      override def getCustomerBusinessGet(
+      override def customerBookBusinessPut(
           organizationID: UUID,
           customerID: UUID,
-      ): Task[smithy.GetCustomerBusinessGetResponse] =
-        HttpErrorHandler.errorResponseHandler(service.getCustomerBusinessGet(organizationID, customerID))
+          customerBookBusinessPutRequestSmithy: smithy.CustomerBookBusinessPutRequest,
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(
+          service.customerBookBusinessPut(organizationID, customerID, customerBookBusinessPutRequestSmithy)
+        )
 
-      /** HTTP GET /get/customers */
-      override def getCustomersGet(
-          organizationID: UUID
-      ): Task[smithy.GetCustomersGetResponse] =
-        HttpErrorHandler.errorResponseHandler(service.getCustomersGet(organizationID))
+      override def customerBookArchivePut(
+          organizationID: UUID,
+          customerID: UUID,
+      ): Task[Unit] =
+        HttpErrorHandler.errorResponseHandler(service.customerBookArchivePut(organizationID, customerID))
+
+      override def customerBookIndividualGet(
+          organizationID: UUID,
+          customerID: UUID,
+      ): Task[smithy.CustomerBookIndividualGetResponse] =
+        HttpErrorHandler.errorResponseHandler(service.customerBookIndividualGet(organizationID, customerID))
+
+      override def customerBookBusinessGet(
+          organizationID: UUID,
+          customerID: UUID,
+      ): Task[smithy.CustomerBookBusinessGetResponse] =
+        HttpErrorHandler.errorResponseHandler(service.customerBookBusinessGet(organizationID, customerID))
+
+      override def customerBookSummaryGet(
+          organizationID: UUID,
+          customerIDs: List[UUID],
+      ): Task[smithy.CustomerBookSummaryGetResponse] =
+        HttpErrorHandler.errorResponseHandler(service.customerBookSummaryGet(organizationID, customerIDs))
+
+      override def customerBookUniquenessGet(
+          organizationID: UUID,
+          name: Option[String],
+          customerType: Option[smithy.CustomerType],
+          customerIDOpt: Option[UUID],
+      ): Task[smithy.CustomerBookUniquenessGetResponse] =
+        HttpErrorHandler.errorResponseHandler(
+          service.customerBookUniquenessGet(organizationID, name, customerType, customerIDOpt)
+        )
+
     }
 
   val local = ZLayer.derive[CustomerBookServiceImpl].project[smithy.CustomerBookService[ServiceTask]](identity)

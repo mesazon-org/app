@@ -12,4 +12,5 @@ case class CustomerBusinessContactRow(
     phoneNumber: Option[CustomerPhoneNumber],
     createdAt: CreatedAt,
     updatedAt: UpdatedAt,
+    isArchived: Boolean,
 )

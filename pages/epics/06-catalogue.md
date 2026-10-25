@@ -834,4 +834,10 @@ When an item's variants fall into different 50-row batches, the preview can cont
 
 **Deferred:** combining these candidates and linking continuations across batches will be tackled later. Users review the separate candidates for now.
 
+#### 13. Availability checks count the record being edited
+
+Checking an item's unchanged name or a variant's unchanged SKU reports it as taken, because the check also counts that same record. This can make a valid edit look unavailable.
+
+**Deferred to the next PR:** allow the check to ignore the item or variant being edited. Checks for new items and variants continue to consider every existing non-archived record.
+
 {% include abbreviations.md %}

@@ -94,8 +94,6 @@ create table organization_user
 
 CREATE INDEX idx_organization_user_user_id_created_at ON organization_user (user_id, created_at DESC, organization_id);
 
-create type customer_status as enum ('Active', 'Archived');
-
 create table customer
 (
     organization_id uuid            not null,
@@ -106,7 +104,7 @@ create table customer
     phone_numbers   jsonb           not null,
     tax_id          text,
     addresses       jsonb           not null,
-    status          customer_status not null,
+    is_archived     boolean         not null,
     created_at      timestamptz     not null,
     updated_at      timestamptz     not null,
     primary key (organization_id, customer_id)
@@ -114,7 +112,7 @@ create table customer
 
 create unique index uq_customer_name
     on customer (organization_id, customer_type, name)
-    where status = 'Active';
+    where is_archived = false;
 
 create table customer_business_contact
 (
@@ -130,9 +128,8 @@ create table customer_business_contact
     phone_number_e164            text,
     created_at                   timestamptz not null,
     updated_at                   timestamptz not null,
+    is_archived                  boolean     not null,
     primary key (organization_id, customer_id, customer_business_contact_id),
-    constraint uq_customer_business_contact_email unique (organization_id, customer_id, email),
-    constraint uq_customer_business_contact_phone_number unique (organization_id, customer_id, phone_number_e164),
     foreign key (organization_id, customer_id)
         references customer (organization_id, customer_id)
 );

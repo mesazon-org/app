@@ -9,6 +9,7 @@ import io.mesazon.gateway.repository.CustomerBookRepository.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy
+import io.mesazon.gateway.transform.given
 import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.validation.domain.{AddressValidator, EmailValidator, PhoneNumberDomainValidator}
 import io.mesazon.gateway.validation.service.CustomerBookRequestValidator
@@ -21,47 +22,18 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
   private val nonEmptyTrimmedError =
     "Should not have leading or trailing whitespaces & Should have a minimum length of 1 & Should have a maximum length of 255"
 
-  private def toInsertCustomerIndividualInput(
-      request: InsertCustomerIndividualPostRequest
-  ): InsertCustomerIndividualInput =
-    InsertCustomerIndividualInput(
-      fullName = request.fullName,
-      emails = request.emails.map(entry => CustomerEmailEntryInput(email = entry.email, isDefault = entry.isDefault)),
-      phoneNumbers = request.phoneNumbers.map(entry =>
-        CustomerPhoneNumberEntryInput(phoneNumber = entry.phoneNumber, isDefault = entry.isDefault)
-      ),
-      addresses = request.addresses,
-    )
-
-  private def toInsertCustomerBusinessInput(request: InsertCustomerBusinessPostRequest): InsertCustomerBusinessInput =
-    InsertCustomerBusinessInput(
-      businessName = request.businessName,
-      emails = request.emails.map(entry => CustomerEmailEntryInput(email = entry.email, isDefault = entry.isDefault)),
-      taxID = request.taxID,
-      phoneNumbers = request.phoneNumbers.map(entry =>
-        CustomerPhoneNumberEntryInput(phoneNumber = entry.phoneNumber, isDefault = entry.isDefault)
-      ),
-      addresses = request.addresses,
-      customerBusinessContacts = request.customerBusinessContacts.map(contact =>
-        CustomerBusinessContactInput(
-          fullName = contact.fullName,
-          role = contact.role,
-          email = contact.email,
-          phoneNumber = contact.phoneNumber,
-        )
-      ),
-    )
-
   private val repositoryError =
     ServiceError.InternalServerError.RepositoryError("repository failure", new RuntimeException("boom"))
 
   "CustomerBookService" when {
-    "insertCustomerIndividualPost" should {
+    "customerBookIndividualPost" should {
       "successfully insert a customer individual" in new TestContext {
-        val organizationID                      = arbitrarySample[OrganizationID]
-        val insertCustomerIndividualPostRequest = arbitrarySample[InsertCustomerIndividualPostRequest]
-        val insertCustomerIndividualInput       = toInsertCustomerIndividualInput(insertCustomerIndividualPostRequest)
-        val customerIndividualDetailsRow        = arbitrarySample[CustomerIndividualDetailsRow].copy(
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookIndividualPostRequest =
+          arbitrarySample[CustomerBookIndividualPostRequest]
+        val insertCustomerIndividualInput =
+          customerBookIndividualPostRequest.transformInto[InsertCustomerIndividualInput]
+        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
           fullName = insertCustomerIndividualInput.fullName,
           emails = insertCustomerIndividualInput.emails,
           phoneNumbers = insertCustomerIndividualInput.phoneNumbers,
@@ -75,30 +47,33 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
 
         val customerBookService = buildCustomerBookService
 
-        val insertCustomerIndividualPostResponse = customerBookService
-          .insertCustomerIndividualPost(
+        val customerBookIndividualPostResponse = customerBookService
+          .customerBookIndividualPost(
             organizationID.value,
-            insertCustomerIndividualPostRequest.transformInto[smithy.InsertCustomerIndividualPostRequest],
+            customerBookIndividualPostRequest.transformInto[smithy.CustomerBookIndividualPostRequest],
           )
           .zioValue
 
-        insertCustomerIndividualPostResponse shouldBe smithy.InsertCustomerIndividualPostResponse(
+        customerBookIndividualPostResponse shouldBe smithy.CustomerBookIndividualPostResponse(
           customerID = customerIndividualDetailsRow.customerID.value,
           fullName = customerIndividualDetailsRow.fullName.value,
-          emails = customerIndividualDetailsRow.emails.map(entry =>
-            smithy.CustomerEmailEntryRequest(email = entry.email.value, isDefault = entry.isDefault)
+          emails = customerIndividualDetailsRow.emails.map(customerEmailEntry =>
+            smithy.CustomerEmailEntry(
+              email = customerEmailEntry.email.value,
+              isDefault = customerEmailEntry.isDefault,
+            )
           ),
-          phoneNumbers = customerIndividualDetailsRow.phoneNumbers.map(entry =>
-            smithy.CustomerPhoneNumberEntryRequest(
+          phoneNumbers = customerIndividualDetailsRow.phoneNumbers.map(customerPhoneNumberEntry =>
+            smithy.CustomerPhoneNumberEntry(
               phoneNumber = smithy.PhoneNumberRequest(
-                phoneNationalNumber = entry.phoneNumber.value.phoneNationalNumber.value,
-                phoneCountryCode = entry.phoneNumber.value.phoneCountryCode.value,
+                phoneNationalNumber = customerPhoneNumberEntry.phoneNumber.value.phoneNationalNumber.value,
+                phoneCountryCode = customerPhoneNumberEntry.phoneNumber.value.phoneCountryCode.value,
               ),
-              isDefault = entry.isDefault,
+              isDefault = customerPhoneNumberEntry.isDefault,
             )
           ),
           addresses = customerIndividualDetailsRow.addresses.map(customerAddressEntry =>
-            smithy.AddressEntryRequest(
+            smithy.CustomerAddressEntry(
               address = smithy.AddressRequest(
                 addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
                 addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
@@ -113,107 +88,50 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
       }
 
       "fail with a ValidationError and never reach the repository when the full name is invalid" in new TestContext {
-        val organizationID                            = arbitrarySample[OrganizationID]
-        val insertCustomerIndividualPostRequestSmithy =
-          arbitrarySample[smithy.InsertCustomerIndividualPostRequest].copy(fullName = "")
+        val organizationID                          = arbitrarySample[OrganizationID]
+        val customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
+          .transformInto[smithy.CustomerBookIndividualPostRequest]
+          .copy(fullName = "")
 
         val customerBookService = buildCustomerBookService
 
         customerBookService
-          .insertCustomerIndividualPost(organizationID.value, insertCustomerIndividualPostRequestSmithy)
+          .customerBookIndividualPost(organizationID.value, customerBookIndividualPostRequestSmithy)
           .zioError shouldBe ServiceError.BadRequestError.ValidationError(
           invalidFields = List(InvalidFieldError("fullName", nonEmptyTrimmedError, List("")))
         )
       }
 
       "fail with a RepositoryError and surface it unchanged" in new TestContext {
-        val organizationID                      = arbitrarySample[OrganizationID]
-        val insertCustomerIndividualPostRequest = arbitrarySample[InsertCustomerIndividualPostRequest]
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookIndividualPostRequest =
+          arbitrarySample[CustomerBookIndividualPostRequest]
+        val insertCustomerIndividualInput =
+          customerBookIndividualPostRequest.transformInto[InsertCustomerIndividualInput]
 
         customerBookRepositoryMock.insertCustomerIndividual
-          .expects(organizationID, toInsertCustomerIndividualInput(insertCustomerIndividualPostRequest))
+          .expects(organizationID, insertCustomerIndividualInput)
           .returns(ZIO.fail(repositoryError))
           .once()
 
         val customerBookService = buildCustomerBookService
 
         customerBookService
-          .insertCustomerIndividualPost(
+          .customerBookIndividualPost(
             organizationID.value,
-            insertCustomerIndividualPostRequest.transformInto[smithy.InsertCustomerIndividualPostRequest],
+            customerBookIndividualPostRequest.transformInto[smithy.CustomerBookIndividualPostRequest],
           )
           .zioError shouldBe repositoryError
       }
     }
 
-    "insertCustomerIndividualsPost" should {
-      "successfully insert a batch of customer individuals" in new TestContext {
-        val organizationID                       = arbitrarySample[OrganizationID]
-        val insertCustomerIndividualsPostRequest = arbitrarySample[InsertCustomerIndividualsPostRequest]
-        val insertCustomerIndividualInputs       =
-          insertCustomerIndividualsPostRequest.customerIndividuals.map(toInsertCustomerIndividualInput)
-        val customerIndividualDetailsRows = insertCustomerIndividualInputs.map(insertCustomerIndividualInput =>
-          arbitrarySample[CustomerIndividualDetailsRow].copy(
-            fullName = insertCustomerIndividualInput.fullName,
-            emails = insertCustomerIndividualInput.emails,
-            phoneNumbers = insertCustomerIndividualInput.phoneNumbers,
-            addresses = insertCustomerIndividualInput.addresses,
-          )
-        )
-
-        customerBookRepositoryMock.insertCustomerIndividuals
-          .expects(organizationID, insertCustomerIndividualInputs)
-          .returningZIO(customerIndividualDetailsRows)
-          .once()
-
-        val customerBookService = buildCustomerBookService
-
-        val insertCustomerIndividualsPostResponse = customerBookService
-          .insertCustomerIndividualsPost(
-            organizationID.value,
-            insertCustomerIndividualsPostRequest.transformInto[smithy.InsertCustomerIndividualsPostRequest],
-          )
-          .zioValue
-
-        insertCustomerIndividualsPostResponse shouldBe smithy.InsertCustomerIndividualsPostResponse(
-          customerIndividuals = customerIndividualDetailsRows.map(customerIndividualDetailsRow =>
-            smithy.GetCustomer(
-              customerID = customerIndividualDetailsRow.customerID.value,
-              name = customerIndividualDetailsRow.fullName.value,
-              customerType = smithy.CustomerType.Individual,
-            )
-          )
-        )
-      }
-
-      "fail with a RepositoryError and surface it unchanged" in new TestContext {
-        val organizationID                       = arbitrarySample[OrganizationID]
-        val insertCustomerIndividualsPostRequest = arbitrarySample[InsertCustomerIndividualsPostRequest]
-        val insertCustomerIndividualInputs       =
-          insertCustomerIndividualsPostRequest.customerIndividuals.map(toInsertCustomerIndividualInput)
-
-        customerBookRepositoryMock.insertCustomerIndividuals
-          .expects(organizationID, insertCustomerIndividualInputs)
-          .returns(ZIO.fail(repositoryError))
-          .once()
-
-        val customerBookService = buildCustomerBookService
-
-        customerBookService
-          .insertCustomerIndividualsPost(
-            organizationID.value,
-            insertCustomerIndividualsPostRequest.transformInto[smithy.InsertCustomerIndividualsPostRequest],
-          )
-          .zioError shouldBe repositoryError
-      }
-    }
-
-    "insertCustomerBusinessPost" should {
+    "customerBookBusinessPost" should {
       "successfully insert a customer business" in new TestContext {
-        val organizationID                    = arbitrarySample[OrganizationID]
-        val insertCustomerBusinessPostRequest = arbitrarySample[InsertCustomerBusinessPostRequest]
-        val insertCustomerBusinessInput       = toInsertCustomerBusinessInput(insertCustomerBusinessPostRequest)
-        val customerBusinessDetailsRow        = arbitrarySample[CustomerBusinessDetailsRow].copy(
+        val organizationID                  = arbitrarySample[OrganizationID]
+        val customerBookBusinessPostRequest =
+          arbitrarySample[CustomerBookBusinessPostRequest]
+        val insertCustomerBusinessInput = customerBookBusinessPostRequest.transformInto[InsertCustomerBusinessInput]
+        val customerBusinessDetailsRow  = arbitrarySample[CustomerBusinessDetailsRow].copy(
           businessName = insertCustomerBusinessInput.businessName,
           emails = insertCustomerBusinessInput.emails,
           taxID = insertCustomerBusinessInput.taxID,
@@ -241,22 +159,22 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
 
         val customerBookService = buildCustomerBookService
 
-        val insertCustomerBusinessPostResponse = customerBookService
-          .insertCustomerBusinessPost(
+        val customerBookBusinessPostResponse = customerBookService
+          .customerBookBusinessPost(
             organizationID.value,
-            insertCustomerBusinessPostRequest.transformInto[smithy.InsertCustomerBusinessPostRequest],
+            customerBookBusinessPostRequest.transformInto[smithy.CustomerBookBusinessPostRequest],
           )
           .zioValue
 
-        insertCustomerBusinessPostResponse shouldBe smithy.InsertCustomerBusinessPostResponse(
+        customerBookBusinessPostResponse shouldBe smithy.CustomerBookBusinessPostResponse(
           customerID = customerBusinessDetailsRow.customerID.value,
           businessName = customerBusinessDetailsRow.businessName.value,
           emails = customerBusinessDetailsRow.emails.map(entry =>
-            smithy.CustomerEmailEntryRequest(email = entry.email.value, isDefault = entry.isDefault)
+            smithy.CustomerEmailEntry(email = entry.email.value, isDefault = entry.isDefault)
           ),
           taxID = customerBusinessDetailsRow.taxID.map(_.value),
           phoneNumbers = customerBusinessDetailsRow.phoneNumbers.map(entry =>
-            smithy.CustomerPhoneNumberEntryRequest(
+            smithy.CustomerPhoneNumberEntry(
               phoneNumber = smithy.PhoneNumberRequest(
                 phoneNationalNumber = entry.phoneNumber.value.phoneNationalNumber.value,
                 phoneCountryCode = entry.phoneNumber.value.phoneCountryCode.value,
@@ -265,7 +183,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
             )
           ),
           addresses = customerBusinessDetailsRow.addresses.map(customerAddressEntry =>
-            smithy.AddressEntryRequest(
+            smithy.CustomerAddressEntry(
               address = smithy.AddressRequest(
                 addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
                 addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
@@ -277,7 +195,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
             )
           ),
           customerBusinessContacts = customerBusinessContactRows.map(customerBusinessContactRow =>
-            smithy.InsertCustomerBusinessContactResponse(
+            smithy.CustomerBusinessContact(
               customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID.value,
               fullName = customerBusinessContactRow.fullName.value,
               role = customerBusinessContactRow.role.map(_.value),
@@ -294,114 +212,56 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
       }
 
       "fail with a ValidationError and never reach the repository when the business name is invalid" in new TestContext {
-        val organizationID                          = arbitrarySample[OrganizationID]
-        val insertCustomerBusinessPostRequestSmithy =
-          arbitrarySample[smithy.InsertCustomerBusinessPostRequest].copy(businessName = "")
+        val organizationID                        = arbitrarySample[OrganizationID]
+        val customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
+          .transformInto[smithy.CustomerBookBusinessPostRequest]
+          .copy(businessName = "")
 
         val customerBookService = buildCustomerBookService
 
         customerBookService
-          .insertCustomerBusinessPost(organizationID.value, insertCustomerBusinessPostRequestSmithy)
+          .customerBookBusinessPost(organizationID.value, customerBookBusinessPostRequestSmithy)
           .zioError shouldBe ServiceError.BadRequestError.ValidationError(
           invalidFields = List(InvalidFieldError("businessName", nonEmptyTrimmedError, List("")))
         )
       }
 
       "fail with a RepositoryError and surface it unchanged" in new TestContext {
-        val organizationID                    = arbitrarySample[OrganizationID]
-        val insertCustomerBusinessPostRequest = arbitrarySample[InsertCustomerBusinessPostRequest]
+        val organizationID                  = arbitrarySample[OrganizationID]
+        val customerBookBusinessPostRequest =
+          arbitrarySample[CustomerBookBusinessPostRequest]
 
         customerBookRepositoryMock.insertCustomerBusiness
-          .expects(organizationID, toInsertCustomerBusinessInput(insertCustomerBusinessPostRequest))
+          .expects(organizationID, customerBookBusinessPostRequest.transformInto[InsertCustomerBusinessInput])
           .returns(ZIO.fail(repositoryError))
           .once()
 
         val customerBookService = buildCustomerBookService
 
         customerBookService
-          .insertCustomerBusinessPost(
+          .customerBookBusinessPost(
             organizationID.value,
-            insertCustomerBusinessPostRequest.transformInto[smithy.InsertCustomerBusinessPostRequest],
+            customerBookBusinessPostRequest.transformInto[smithy.CustomerBookBusinessPostRequest],
           )
           .zioError shouldBe repositoryError
       }
     }
 
-    "insertCustomerBusinessesPost" should {
-      "successfully insert a batch of customer businesses" in new TestContext {
-        val organizationID                      = arbitrarySample[OrganizationID]
-        val insertCustomerBusinessesPostRequest = arbitrarySample[InsertCustomerBusinessesPostRequest]
-        val insertCustomerBusinessInputs        =
-          insertCustomerBusinessesPostRequest.customerBusinesses.map(toInsertCustomerBusinessInput)
-        val customerBusinessInsertRows: List[CustomerBusinessInsertRow] =
-          insertCustomerBusinessInputs.map(insertCustomerBusinessInput =>
-            (
-              customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-                businessName = insertCustomerBusinessInput.businessName,
-                emails = insertCustomerBusinessInput.emails,
-                taxID = insertCustomerBusinessInput.taxID,
-                phoneNumbers = insertCustomerBusinessInput.phoneNumbers,
-                addresses = insertCustomerBusinessInput.addresses,
-              ),
-              customerBusinessContactRows = List.empty,
-            )
-          )
-
-        customerBookRepositoryMock.insertCustomerBusinesses
-          .expects(organizationID, insertCustomerBusinessInputs)
-          .returningZIO(customerBusinessInsertRows)
-          .once()
-
-        val customerBookService = buildCustomerBookService
-
-        val insertCustomerBusinessesPostResponse = customerBookService
-          .insertCustomerBusinessesPost(
-            organizationID.value,
-            insertCustomerBusinessesPostRequest.transformInto[smithy.InsertCustomerBusinessesPostRequest],
-          )
-          .zioValue
-
-        insertCustomerBusinessesPostResponse shouldBe smithy.InsertCustomerBusinessesPostResponse(
-          customerBusinesses = customerBusinessInsertRows.map(customerBusinessInsertRow =>
-            smithy.GetCustomer(
-              customerID = customerBusinessInsertRow.customerBusinessDetailsRow.customerID.value,
-              name = customerBusinessInsertRow.customerBusinessDetailsRow.businessName.value,
-              customerType = smithy.CustomerType.Business,
-            )
-          )
+    "customerBookBatchPost" should {
+      "successfully insert individuals and businesses and return individual summaries before business summaries" in new TestContext {
+        val organizationID               = arbitrarySample[OrganizationID]
+        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+          customerBusinesses = List(
+            arbitrarySample[CustomerBookBusinessPostRequest]
+          ),
+          customerIndividuals = List(
+            arbitrarySample[CustomerBookIndividualPostRequest]
+          ),
         )
-      }
-
-      "fail with a RepositoryError and surface it unchanged" in new TestContext {
-        val organizationID                      = arbitrarySample[OrganizationID]
-        val insertCustomerBusinessesPostRequest = arbitrarySample[InsertCustomerBusinessesPostRequest]
-        val insertCustomerBusinessInputs        =
-          insertCustomerBusinessesPostRequest.customerBusinesses.map(toInsertCustomerBusinessInput)
-
-        customerBookRepositoryMock.insertCustomerBusinesses
-          .expects(organizationID, insertCustomerBusinessInputs)
-          .returns(ZIO.fail(repositoryError))
-          .once()
-
-        val customerBookService = buildCustomerBookService
-
-        customerBookService
-          .insertCustomerBusinessesPost(
-            organizationID.value,
-            insertCustomerBusinessesPostRequest.transformInto[smithy.InsertCustomerBusinessesPostRequest],
-          )
-          .zioError shouldBe repositoryError
-      }
-    }
-
-    "insertCustomersPost" should {
-      "successfully insert individuals and businesses in one payload" in new TestContext {
-        val organizationID                 = arbitrarySample[OrganizationID]
-        val insertCustomersPostRequest     = arbitrarySample[InsertCustomersPostRequest]
         val insertCustomerIndividualInputs =
-          insertCustomersPostRequest.customerIndividuals.map(toInsertCustomerIndividualInput)
+          customerBookBatchPostRequest.customerIndividuals.transformInto[List[InsertCustomerIndividualInput]]
         val insertCustomerBusinessInputs =
-          insertCustomersPostRequest.customerBusinesses.map(toInsertCustomerBusinessInput)
+          customerBookBatchPostRequest.customerBusinesses.transformInto[List[InsertCustomerBusinessInput]]
         val customerIndividualDetailsRows = insertCustomerIndividualInputs.map(insertCustomerIndividualInput =>
           arbitrarySample[CustomerIndividualDetailsRow].copy(
             fullName = insertCustomerIndividualInput.fullName,
@@ -433,25 +293,23 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           .returningZIO(insertCustomersResult)
           .once()
 
-        val customerBookService = buildCustomerBookService
-
-        val insertCustomersPostResponse = customerBookService
-          .insertCustomersPost(
+        val customerBookBatchPostResponse = buildCustomerBookService
+          .customerBookBatchPost(
             organizationID.value,
-            insertCustomersPostRequest.transformInto[smithy.InsertCustomersPostRequest],
+            customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest],
           )
           .zioValue
 
-        insertCustomersPostResponse shouldBe smithy.InsertCustomersPostResponse(
+        customerBookBatchPostResponse shouldBe smithy.CustomerBookBatchPostResponse(
           customers = customerIndividualDetailsRows.map(customerIndividualDetailsRow =>
-            smithy.GetCustomer(
+            smithy.CustomerSummary(
               customerID = customerIndividualDetailsRow.customerID.value,
               name = customerIndividualDetailsRow.fullName.value,
               customerType = smithy.CustomerType.Individual,
             )
           ) ++
             customerBusinessInsertRows.map(customerBusinessInsertRow =>
-              smithy.GetCustomer(
+              smithy.CustomerSummary(
                 customerID = customerBusinessInsertRow.customerBusinessDetailsRow.customerID.value,
                 name = customerBusinessInsertRow.customerBusinessDetailsRow.businessName.value,
                 customerType = smithy.CustomerType.Business,
@@ -460,52 +318,100 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
         )
       }
 
+      "fail with accumulated validation errors and never reach the repository" in new TestContext {
+        val organizationID                     = arbitrarySample[OrganizationID]
+        val customerBookBatchPostRequestSmithy = smithy.CustomerBookBatchPostRequest(
+          customerBusinesses = List(
+            arbitrarySample[CustomerBookBusinessPostRequest]
+              .transformInto[smithy.CustomerBookBusinessPostRequest]
+              .copy(businessName = "")
+          ),
+          customerIndividuals = List(
+            arbitrarySample[CustomerBookIndividualPostRequest]
+              .transformInto[smithy.CustomerBookIndividualPostRequest]
+              .copy(fullName = "")
+          ),
+        )
+        val businessNameError = InvalidFieldError("businessName", nonEmptyTrimmedError, List(""))
+        val fullNameError     = InvalidFieldError("fullName", nonEmptyTrimmedError, List(""))
+
+        buildCustomerBookService
+          .customerBookBatchPost(organizationID.value, customerBookBatchPostRequestSmithy)
+          .zioError shouldBe ServiceError.BadRequestError.ValidationError(
+          invalidFields = List(
+            InvalidFieldError("customerBusiness", s"Failed with invalid fields [$businessNameError]", List()),
+            InvalidFieldError("customerIndividual", s"Failed with invalid fields [$fullNameError]", List()),
+          )
+        )
+      }
+
       "fail with a RepositoryError and surface it unchanged" in new TestContext {
-        val organizationID                 = arbitrarySample[OrganizationID]
-        val insertCustomersPostRequest     = arbitrarySample[InsertCustomersPostRequest]
+        val organizationID               = arbitrarySample[OrganizationID]
+        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+          customerBusinesses = List(
+            arbitrarySample[CustomerBookBusinessPostRequest]
+          ),
+          customerIndividuals = List(
+            arbitrarySample[CustomerBookIndividualPostRequest]
+          ),
+        )
         val insertCustomerIndividualInputs =
-          insertCustomersPostRequest.customerIndividuals.map(toInsertCustomerIndividualInput)
+          customerBookBatchPostRequest.customerIndividuals.transformInto[List[InsertCustomerIndividualInput]]
         val insertCustomerBusinessInputs =
-          insertCustomersPostRequest.customerBusinesses.map(toInsertCustomerBusinessInput)
+          customerBookBatchPostRequest.customerBusinesses.transformInto[List[InsertCustomerBusinessInput]]
 
         customerBookRepositoryMock.insertCustomers
           .expects(organizationID, insertCustomerIndividualInputs, insertCustomerBusinessInputs)
           .returns(ZIO.fail(repositoryError))
           .once()
 
-        val customerBookService = buildCustomerBookService
-
-        customerBookService
-          .insertCustomersPost(
+        buildCustomerBookService
+          .customerBookBatchPost(
             organizationID.value,
-            insertCustomersPostRequest.transformInto[smithy.InsertCustomersPostRequest],
+            customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest],
           )
           .zioError shouldBe repositoryError
       }
     }
 
-    "updateCustomerIndividualPut" should {
+    "customerBookIndividualPut" should {
       "successfully update a customer individual" in new TestContext {
-        val organizationID                     = arbitrarySample[OrganizationID]
-        val updateCustomerIndividualPutRequest = arbitrarySample[UpdateCustomerIndividualPutRequest]
-        val customerIndividualDetailsRow       = arbitrarySample[CustomerIndividualDetailsRow]
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerID                        = arbitrarySample[CustomerID]
+        val customerBookIndividualPostRequest = arbitrarySample[CustomerBookIndividualPostRequest]
+          .copy(
+            emails = List(CustomerEmailEntry(arbitrarySample[CustomerEmail], isDefault = true)),
+            phoneNumbers = List(CustomerPhoneNumberEntry(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+            addresses =
+              List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+          )
+        val customerBookIndividualPutRequest = CustomerBookIndividualPutRequest(
+          fullName = Some(customerBookIndividualPostRequest.fullName),
+          emails = Some(customerBookIndividualPostRequest.emails),
+          phoneNumbers = Some(customerBookIndividualPostRequest.phoneNumbers),
+          addresses = Some(customerBookIndividualPostRequest.addresses),
+        )
+        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
 
         customerBookRepositoryMock.updateCustomerIndividual
           .expects(
             organizationID,
-            updateCustomerIndividualPutRequest.customerID,
-            updateCustomerIndividualPutRequest.fullName,
-            Some(
-              updateCustomerIndividualPutRequest.emails.map(entry =>
-                CustomerEmailEntryInput(email = entry.email, isDefault = entry.isDefault)
+            customerID,
+            customerBookIndividualPutRequest.fullName,
+            customerBookIndividualPutRequest.emails.map(
+              _.map(customerEmailEntry =>
+                CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
               )
             ),
-            Some(
-              updateCustomerIndividualPutRequest.phoneNumbers.map(entry =>
-                CustomerPhoneNumberEntryInput(phoneNumber = entry.phoneNumber, isDefault = entry.isDefault)
+            customerBookIndividualPutRequest.phoneNumbers.map(
+              _.map(customerPhoneNumberEntry =>
+                CustomerPhoneNumberEntryInput(
+                  customerPhoneNumberEntry.phoneNumber,
+                  isDefault = customerPhoneNumberEntry.isDefault,
+                )
               )
             ),
-            Some(updateCustomerIndividualPutRequest.addresses),
+            customerBookIndividualPutRequest.addresses,
           )
           .returningZIO(Some(customerIndividualDetailsRow))
           .once()
@@ -513,227 +419,369 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
         val customerBookService = buildCustomerBookService
 
         customerBookService
-          .updateCustomerIndividualPut(
+          .customerBookIndividualPut(
             organizationID.value,
-            updateCustomerIndividualPutRequest.transformInto[smithy.UpdateCustomerIndividualPutRequest],
+            customerID.value,
+            customerBookIndividualPutRequest.transformInto[smithy.CustomerBookIndividualPutRequest],
+          )
+          .zioValue shouldBe ()
+      }
+
+      "successfully keep omitted lists unchanged" in new TestContext {
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerID                        = arbitrarySample[CustomerID]
+        val customerBookIndividualPostRequest = arbitrarySample[CustomerBookIndividualPostRequest]
+
+        val customerBookIndividualPutRequest = CustomerBookIndividualPutRequest(
+          fullName = Some(customerBookIndividualPostRequest.fullName),
+          emails = None,
+          phoneNumbers = None,
+          addresses = None,
+        )
+        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+
+        customerBookRepositoryMock.updateCustomerIndividual
+          .expects(
+            organizationID,
+            customerID,
+            customerBookIndividualPutRequest.fullName,
+            customerBookIndividualPutRequest.emails.map(
+              _.map(customerEmailEntry =>
+                CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
+              )
+            ),
+            customerBookIndividualPutRequest.phoneNumbers.map(
+              _.map(customerPhoneNumberEntry =>
+                CustomerPhoneNumberEntryInput(
+                  customerPhoneNumberEntry.phoneNumber,
+                  isDefault = customerPhoneNumberEntry.isDefault,
+                )
+              )
+            ),
+            customerBookIndividualPutRequest.addresses,
+          )
+          .returningZIO(Some(customerIndividualDetailsRow))
+          .once()
+
+        val customerBookService = buildCustomerBookService
+
+        customerBookService
+          .customerBookIndividualPut(
+            organizationID.value,
+            customerID.value,
+            customerBookIndividualPutRequest.transformInto[smithy.CustomerBookIndividualPutRequest],
+          )
+          .zioValue shouldBe ()
+      }
+
+      "successfully clear explicitly empty lists" in new TestContext {
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerID                        = arbitrarySample[CustomerID]
+        val customerBookIndividualPostRequest = arbitrarySample[CustomerBookIndividualPostRequest]
+
+        val customerBookIndividualPutRequest = CustomerBookIndividualPutRequest(
+          fullName = Some(customerBookIndividualPostRequest.fullName),
+          emails = Some(Nil),
+          phoneNumbers = Some(Nil),
+          addresses = Some(Nil),
+        )
+        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+
+        customerBookRepositoryMock.updateCustomerIndividual
+          .expects(
+            organizationID,
+            customerID,
+            customerBookIndividualPutRequest.fullName,
+            customerBookIndividualPutRequest.emails.map(
+              _.map(customerEmailEntry =>
+                CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
+              )
+            ),
+            customerBookIndividualPutRequest.phoneNumbers.map(
+              _.map(customerPhoneNumberEntry =>
+                CustomerPhoneNumberEntryInput(
+                  customerPhoneNumberEntry.phoneNumber,
+                  isDefault = customerPhoneNumberEntry.isDefault,
+                )
+              )
+            ),
+            customerBookIndividualPutRequest.addresses,
+          )
+          .returningZIO(Some(customerIndividualDetailsRow))
+          .once()
+
+        val customerBookService = buildCustomerBookService
+
+        customerBookService
+          .customerBookIndividualPut(
+            organizationID.value,
+            customerID.value,
+            customerBookIndividualPutRequest.transformInto[smithy.CustomerBookIndividualPutRequest],
           )
           .zioValue shouldBe ()
       }
 
       "fail with a ValidationError and never reach the repository when the full name is invalid" in new TestContext {
-        val organizationID                           = arbitrarySample[OrganizationID]
-        val updateCustomerIndividualPutRequestSmithy =
-          arbitrarySample[smithy.UpdateCustomerIndividualPutRequest].copy(fullName = Some(""))
+        val organizationID                         = arbitrarySample[OrganizationID]
+        val customerID                             = arbitrarySample[CustomerID]
+        val customerBookIndividualPutRequestSmithy = smithy.CustomerBookIndividualPutRequest(fullName = Some(""))
 
         val customerBookService = buildCustomerBookService
 
         customerBookService
-          .updateCustomerIndividualPut(organizationID.value, updateCustomerIndividualPutRequestSmithy)
+          .customerBookIndividualPut(organizationID.value, customerID.value, customerBookIndividualPutRequestSmithy)
           .zioError shouldBe ServiceError.BadRequestError.ValidationError(
           invalidFields = List(InvalidFieldError("fullName", nonEmptyTrimmedError, List("")))
         )
       }
+
+      "fail with an UnexpectedError and propagate the repository error unchanged" in new TestContext {
+        val organizationID  = arbitrarySample[OrganizationID]
+        val customerID      = arbitrarySample[CustomerID]
+        val repositoryError = ServiceError.InternalServerError.UnexpectedError("update failed")
+
+        customerBookRepositoryMock.updateCustomerIndividual
+          .expects(organizationID, customerID, None, None, None, None)
+          .failingZIO(repositoryError)
+          .once()
+
+        val customerBookService = buildCustomerBookService
+
+        customerBookService
+          .customerBookIndividualPut(organizationID.value, customerID.value, smithy.CustomerBookIndividualPutRequest())
+          .zioError shouldBe repositoryError
+      }
     }
 
-    "updateCustomerBusinessPut" should {
-      "successfully update a customer business" in new TestContext {
-        val organizationID                   = arbitrarySample[OrganizationID]
-        val updateCustomerBusinessPutRequest = arbitrarySample[UpdateCustomerBusinessPutRequest]
-        val customerBusinessDetailsRow       = arbitrarySample[CustomerBusinessDetailsRow]
+    "customerBookBusinessPut" should {
+      "successfully map business replacements and all contact actions into one update" in new TestContext {
+        val organizationID                = arbitrarySample[OrganizationID]
+        val customerID                    = arbitrarySample[CustomerID]
+        val customerBusinessContactInsert =
+          arbitrarySample[CustomerBusinessContactInsert]
+        val customerBusinessContactUpdate = CustomerBusinessContactUpdate(
+          arbitrarySample[CustomerBusinessContactID],
+          Some(arbitrarySample[CustomerFullName]),
+          Some(Some(arbitrarySample[CustomerBusinessContactRole])),
+          Some(None),
+          None,
+        )
+        val customerBusinessContactArchive = CustomerBusinessContactArchive(arbitrarySample[CustomerBusinessContactID])
+        val customerBookBusinessPutRequest = CustomerBookBusinessPutRequest(
+          Some(arbitrarySample[CustomerBusinessName]),
+          Some(List(CustomerEmailEntry(arbitrarySample[CustomerEmail], isDefault = true))),
+          Some(Some(arbitrarySample[CustomerTaxID])),
+          Some(List(CustomerPhoneNumberEntry(arbitrarySample[CustomerPhoneNumber], isDefault = true))),
+          Some(List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling)))),
+          List(customerBusinessContactInsert),
+          List(customerBusinessContactUpdate),
+          List(customerBusinessContactArchive),
+        )
+        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+
+        customerBusinessContactUpdate.customerBusinessContactID shouldNot equal(
+          customerBusinessContactArchive.customerBusinessContactID
+        )
 
         customerBookRepositoryMock.updateCustomerBusiness
           .expects(
             organizationID,
-            updateCustomerBusinessPutRequest.customerID,
-            updateCustomerBusinessPutRequest.businessName,
-            Some(
-              updateCustomerBusinessPutRequest.emails.map(entry =>
-                CustomerEmailEntryInput(email = entry.email, isDefault = entry.isDefault)
+            customerID,
+            customerBookBusinessPutRequest.businessName,
+            customerBookBusinessPutRequest.emails.map(
+              _.map(entry => CustomerEmailEntryInput(entry.email, isDefault = entry.isDefault))
+            ),
+            customerBookBusinessPutRequest.taxID,
+            customerBookBusinessPutRequest.phoneNumbers.map(
+              _.map(entry => CustomerPhoneNumberEntryInput(entry.phoneNumber, isDefault = entry.isDefault))
+            ),
+            customerBookBusinessPutRequest.addresses,
+            List(
+              UpdateCustomerBusinessContactInput(
+                customerBusinessContactUpdate.customerBusinessContactID,
+                customerBusinessContactUpdate.fullName,
+                customerBusinessContactUpdate.role,
+                customerBusinessContactUpdate.email,
+                customerBusinessContactUpdate.phoneNumber,
               )
             ),
-            updateCustomerBusinessPutRequest.taxID,
-            Some(
-              updateCustomerBusinessPutRequest.phoneNumbers.map(entry =>
-                CustomerPhoneNumberEntryInput(phoneNumber = entry.phoneNumber, isDefault = entry.isDefault)
+            List(
+              CustomerBusinessContactInput(
+                customerBusinessContactInsert.fullName,
+                customerBusinessContactInsert.role,
+                customerBusinessContactInsert.email,
+                customerBusinessContactInsert.phoneNumber,
               )
             ),
-            Some(updateCustomerBusinessPutRequest.addresses),
+            List(customerBusinessContactArchive.customerBusinessContactID),
           )
           .returningZIO(Some(customerBusinessDetailsRow))
           .once()
 
         val customerBookService = buildCustomerBookService
-
         customerBookService
-          .updateCustomerBusinessPut(
+          .customerBookBusinessPut(
             organizationID.value,
-            updateCustomerBusinessPutRequest.transformInto[smithy.UpdateCustomerBusinessPutRequest],
+            customerID.value,
+            customerBookBusinessPutRequest.transformInto[smithy.CustomerBookBusinessPutRequest],
           )
           .zioValue shouldBe ()
       }
 
-      "fail with a ValidationError and never reach the repository when the business name is invalid" in new TestContext {
-        val organizationID                         = arbitrarySample[OrganizationID]
-        val updateCustomerBusinessPutRequestSmithy =
-          arbitrarySample[smithy.UpdateCustomerBusinessPutRequest].copy(businessName = Some(""))
+      "successfully preserve omitted fields and empty contact actions" in new TestContext {
+        val organizationID             = arbitrarySample[OrganizationID]
+        val customerID                 = arbitrarySample[CustomerID]
+        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
 
-        val customerBookService = buildCustomerBookService
-
-        customerBookService
-          .updateCustomerBusinessPut(organizationID.value, updateCustomerBusinessPutRequestSmithy)
-          .zioError shouldBe ServiceError.BadRequestError.ValidationError(
-          invalidFields = List(InvalidFieldError("businessName", nonEmptyTrimmedError, List("")))
-        )
-      }
-    }
-
-    "addCustomerBusinessContactsPut" should {
-      "successfully add contacts to a customer business" in new TestContext {
-        val organizationID                        = arbitrarySample[OrganizationID]
-        val addCustomerBusinessContactsPutRequest = arbitrarySample[AddCustomerBusinessContactsPutRequest]
-        val customerBusinessContactInputs         =
-          addCustomerBusinessContactsPutRequest.customerBusinessContacts.map(contact =>
-            CustomerBusinessContactInput(
-              fullName = contact.fullName,
-              role = contact.role,
-              email = contact.email,
-              phoneNumber = contact.phoneNumber,
-            )
-          )
-        val customerBusinessContactRows =
-          customerBusinessContactInputs.map(_ => arbitrarySample[CustomerBusinessContactRow])
-
-        customerBookRepositoryMock.addCustomerBusinessContacts
-          .expects(organizationID, addCustomerBusinessContactsPutRequest.customerID, customerBusinessContactInputs)
-          .returningZIO(customerBusinessContactRows)
-          .once()
-
-        val customerBookService = buildCustomerBookService
-
-        customerBookService
-          .addCustomerBusinessContactsPut(
-            organizationID.value,
-            addCustomerBusinessContactsPutRequest.transformInto[smithy.AddCustomerBusinessContactsPutRequest],
-          )
-          .zioValue shouldBe ()
-      }
-
-      "fail with a ValidationError and never reach the repository when a contact's full name is invalid" in new TestContext {
-        val organizationID                              = arbitrarySample[OrganizationID]
-        val addCustomerBusinessContactsPutRequestSmithy =
-          arbitrarySample[smithy.AddCustomerBusinessContactsPutRequest].copy(
-            customerBusinessContacts = List(arbitrarySample[smithy.AddCustomerBusinessContact].copy(fullName = ""))
-          )
-
-        val customerBookService = buildCustomerBookService
-
-        customerBookService
-          .addCustomerBusinessContactsPut(organizationID.value, addCustomerBusinessContactsPutRequestSmithy)
-          .zioError shouldBe ServiceError.BadRequestError.ValidationError(
-          invalidFields = List(InvalidFieldError("fullName", nonEmptyTrimmedError, List(""), index = 0))
-        )
-      }
-    }
-
-    "removeCustomerBusinessContactsPut" should {
-      "successfully remove contacts from a customer business" in new TestContext {
-        val organizationID                                 = arbitrarySample[OrganizationID]
-        val removeCustomerBusinessContactsPutRequestSmithy =
-          arbitrarySample[smithy.RemoveCustomerBusinessContactsPutRequest]
-
-        customerBookRepositoryMock.removeCustomerBusinessContacts
+        customerBookRepositoryMock.updateCustomerBusiness
           .expects(
             organizationID,
-            CustomerID(removeCustomerBusinessContactsPutRequestSmithy.customerID),
-            removeCustomerBusinessContactsPutRequestSmithy.customerBusinessContacts.map(customerBusinessContact =>
-              CustomerBusinessContactID(customerBusinessContact.customerBusinessContactID)
-            ),
+            customerID,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Nil,
+            Nil,
+            Nil,
           )
-          .returningZIOUnit
+          .returningZIO(Some(customerBusinessDetailsRow))
           .once()
 
         val customerBookService = buildCustomerBookService
-
         customerBookService
-          .removeCustomerBusinessContactsPut(organizationID.value, removeCustomerBusinessContactsPutRequestSmithy)
+          .customerBookBusinessPut(
+            organizationID.value,
+            customerID.value,
+            smithy.CustomerBookBusinessPutRequest(),
+          )
           .zioValue shouldBe ()
       }
 
-      "fail with a RepositoryError and surface it unchanged" in new TestContext {
-        val organizationID                                 = arbitrarySample[OrganizationID]
-        val removeCustomerBusinessContactsPutRequestSmithy =
-          arbitrarySample[smithy.RemoveCustomerBusinessContactsPutRequest]
+      "successfully preserve explicit empty lists and nullable clears" in new TestContext {
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val customerID                     = arbitrarySample[CustomerID]
+        val customerBusinessContactID      = arbitrarySample[CustomerBusinessContactID]
+        val customerBusinessDetailsRow     = arbitrarySample[CustomerBusinessDetailsRow]
+        val customerBookBusinessPutRequest = CustomerBookBusinessPutRequest(
+          None,
+          Some(Nil),
+          Some(None),
+          Some(Nil),
+          Some(Nil),
+          Nil,
+          List(CustomerBusinessContactUpdate(customerBusinessContactID, None, Some(None), Some(None), Some(None))),
+          Nil,
+        )
 
-        customerBookRepositoryMock.removeCustomerBusinessContacts
+        customerBookRepositoryMock.updateCustomerBusiness
           .expects(
             organizationID,
-            CustomerID(removeCustomerBusinessContactsPutRequestSmithy.customerID),
-            removeCustomerBusinessContactsPutRequestSmithy.customerBusinessContacts.map(customerBusinessContact =>
-              CustomerBusinessContactID(customerBusinessContact.customerBusinessContactID)
+            customerID,
+            None,
+            Some(Nil),
+            Some(None),
+            Some(Nil),
+            Some(Nil),
+            List(
+              UpdateCustomerBusinessContactInput(customerBusinessContactID, None, Some(None), Some(None), Some(None))
             ),
+            Nil,
+            Nil,
           )
-          .returns(ZIO.fail(repositoryError))
+          .returningZIO(Some(customerBusinessDetailsRow))
           .once()
 
         val customerBookService = buildCustomerBookService
-
         customerBookService
-          .removeCustomerBusinessContactsPut(organizationID.value, removeCustomerBusinessContactsPutRequestSmithy)
+          .customerBookBusinessPut(
+            organizationID.value,
+            customerID.value,
+            customerBookBusinessPutRequest.transformInto[smithy.CustomerBookBusinessPutRequest],
+          )
+          .zioValue shouldBe ()
+      }
+
+      "fail with a ValidationError without reaching the repository when the business name is invalid" in new TestContext {
+        val customerBookService = buildCustomerBookService
+        customerBookService
+          .customerBookBusinessPut(
+            arbitrarySample[OrganizationID].value,
+            arbitrarySample[CustomerID].value,
+            smithy.CustomerBookBusinessPutRequest(businessName = Some("")),
+          )
+          .zioError shouldBe ServiceError.BadRequestError.ValidationError(
+          List(InvalidFieldError("businessName", nonEmptyTrimmedError, List("")))
+        )
+      }
+
+      "fail with a RepositoryError and propagate it unchanged" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+        val customerID     = arbitrarySample[CustomerID]
+
+        customerBookRepositoryMock.updateCustomerBusiness
+          .expects(
+            organizationID,
+            customerID,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Nil,
+            Nil,
+            Nil,
+          )
+          .failingZIO(repositoryError)
+          .once()
+
+        val customerBookService = buildCustomerBookService
+        customerBookService
+          .customerBookBusinessPut(
+            organizationID.value,
+            customerID.value,
+            smithy.CustomerBookBusinessPutRequest(),
+          )
           .zioError shouldBe repositoryError
       }
     }
 
-    "archiveCustomerPut" should {
-      "successfully archive a customer" in new TestContext {
-        val organizationID                  = arbitrarySample[OrganizationID]
-        val archiveCustomerPutRequestSmithy = arbitrarySample[smithy.ArchiveCustomerPutRequest]
+    "customerBookArchivePut" should {
+      "successfully archive the customer identified by the path in the given organization" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+        val customerID     = arbitrarySample[CustomerID]
 
         customerBookRepositoryMock.archiveCustomer
-          .expects(organizationID, CustomerID(archiveCustomerPutRequestSmithy.customerID))
-          .returningZIO(Some(CustomerID(archiveCustomerPutRequestSmithy.customerID)))
+          .expects(organizationID, customerID)
+          .returningZIO(Some(customerID))
           .once()
 
         val customerBookService = buildCustomerBookService
 
         customerBookService
-          .archiveCustomerPut(organizationID.value, archiveCustomerPutRequestSmithy)
+          .customerBookArchivePut(organizationID.value, customerID.value)
           .zioValue shouldBe ()
       }
 
-      "silently succeed when no customer matches the id" in new TestContext {
-        val organizationID                  = arbitrarySample[OrganizationID]
-        val archiveCustomerPutRequestSmithy = arbitrarySample[smithy.ArchiveCustomerPutRequest]
+      "fail with a RepositoryError and propagate it unchanged" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+        val customerID     = arbitrarySample[CustomerID]
 
         customerBookRepositoryMock.archiveCustomer
-          .expects(organizationID, CustomerID(archiveCustomerPutRequestSmithy.customerID))
-          .returningZIO(None)
+          .expects(organizationID, customerID)
+          .failingZIO(repositoryError)
           .once()
 
         val customerBookService = buildCustomerBookService
 
         customerBookService
-          .archiveCustomerPut(organizationID.value, archiveCustomerPutRequestSmithy)
-          .zioValue shouldBe ()
-      }
-
-      "fail with a RepositoryError and surface it unchanged" in new TestContext {
-        val organizationID                  = arbitrarySample[OrganizationID]
-        val archiveCustomerPutRequestSmithy = arbitrarySample[smithy.ArchiveCustomerPutRequest]
-
-        customerBookRepositoryMock.archiveCustomer
-          .expects(organizationID, CustomerID(archiveCustomerPutRequestSmithy.customerID))
-          .returns(ZIO.fail(repositoryError))
-          .once()
-
-        val customerBookService = buildCustomerBookService
-
-        customerBookService
-          .archiveCustomerPut(organizationID.value, archiveCustomerPutRequestSmithy)
+          .customerBookArchivePut(organizationID.value, customerID.value)
           .zioError shouldBe repositoryError
       }
     }
 
-    "getCustomerIndividualGet" should {
+    "customerBookIndividualGet" should {
       "successfully return the customer individual's full details" in new TestContext {
         val organizationID               = arbitrarySample[OrganizationID]
         val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
@@ -745,27 +793,30 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
 
         val customerBookService = buildCustomerBookService
 
-        val getCustomerIndividualGetResponse = customerBookService
-          .getCustomerIndividualGet(organizationID.value, customerIndividualDetailsRow.customerID.value)
+        val customerBookIndividualGetResponse = customerBookService
+          .customerBookIndividualGet(organizationID.value, customerIndividualDetailsRow.customerID.value)
           .zioValue
 
-        getCustomerIndividualGetResponse shouldBe smithy.GetCustomerIndividualGetResponse(
+        customerBookIndividualGetResponse shouldBe smithy.CustomerBookIndividualGetResponse(
           customerID = customerIndividualDetailsRow.customerID.value,
           fullName = customerIndividualDetailsRow.fullName.value,
-          emails = customerIndividualDetailsRow.emails.map(entry =>
-            smithy.CustomerEmailEntryRequest(email = entry.email.value, isDefault = entry.isDefault)
+          emails = customerIndividualDetailsRow.emails.map(customerEmailEntryInput =>
+            smithy.CustomerEmailEntry(
+              email = customerEmailEntryInput.email.value,
+              isDefault = customerEmailEntryInput.isDefault,
+            )
           ),
-          phoneNumbers = customerIndividualDetailsRow.phoneNumbers.map(entry =>
-            smithy.CustomerPhoneNumberEntryRequest(
+          phoneNumbers = customerIndividualDetailsRow.phoneNumbers.map(customerPhoneNumberEntryInput =>
+            smithy.CustomerPhoneNumberEntry(
               phoneNumber = smithy.PhoneNumberRequest(
-                phoneNationalNumber = entry.phoneNumber.value.phoneNationalNumber.value,
-                phoneCountryCode = entry.phoneNumber.value.phoneCountryCode.value,
+                phoneNationalNumber = customerPhoneNumberEntryInput.phoneNumber.value.phoneNationalNumber.value,
+                phoneCountryCode = customerPhoneNumberEntryInput.phoneNumber.value.phoneCountryCode.value,
               ),
-              isDefault = entry.isDefault,
+              isDefault = customerPhoneNumberEntryInput.isDefault,
             )
           ),
           addresses = customerIndividualDetailsRow.addresses.map(customerAddressEntry =>
-            smithy.AddressEntryRequest(
+            smithy.CustomerAddressEntry(
               address = smithy.AddressRequest(
                 addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
                 addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
@@ -791,47 +842,77 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
         val customerBookService = buildCustomerBookService
 
         customerBookService
-          .getCustomerIndividualGet(organizationID.value, customerID.value)
+          .customerBookIndividualGet(organizationID.value, customerID.value)
           .zioError shouldBe ServiceError.InternalServerError.UnexpectedError(
           s"Customer individual not found for customerID: [${customerID.value}]"
         )
       }
-    }
 
-    "getCustomerBusinessGet" should {
-      "successfully return the customer business's full details" in new TestContext {
-        val organizationID             = arbitrarySample[OrganizationID]
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+      "fail with a RepositoryError and propagate it unchanged" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+        val customerID     = arbitrarySample[CustomerID]
 
-        customerBookRepositoryMock.getCustomerBusiness
-          .expects(organizationID, customerBusinessDetailsRow.customerID)
-          .returningZIO(Some(customerBusinessDetailsRow))
+        customerBookRepositoryMock.getCustomerIndividual
+          .expects(organizationID, customerID)
+          .failingZIO(repositoryError)
           .once()
 
         val customerBookService = buildCustomerBookService
 
-        val getCustomerBusinessGetResponse = customerBookService
-          .getCustomerBusinessGet(organizationID.value, customerBusinessDetailsRow.customerID.value)
+        customerBookService
+          .customerBookIndividualGet(organizationID.value, customerID.value)
+          .zioError shouldBe repositoryError
+      }
+    }
+
+    "customerBookBusinessGet" should {
+      "successfully return the customer business's full details" in new TestContext {
+        val organizationID             = arbitrarySample[OrganizationID]
+        val customerBusinessDetailsRow =
+          arbitrarySample[CustomerBusinessDetailsRow].copy(organizationID = organizationID)
+
+        val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+          organizationID = customerBusinessDetailsRow.organizationID,
+          customerID = customerBusinessDetailsRow.customerID,
+          isArchived = false,
+        )
+        val customerBusinessWithContactsRow = CustomerBusinessWithContactsRow(
+          customerBusinessDetailsRow,
+          List(customerBusinessContactRow),
+        )
+
+        customerBookRepositoryMock.getCustomerBusiness
+          .expects(organizationID, customerBusinessDetailsRow.customerID)
+          .returningZIO(Some(customerBusinessWithContactsRow))
+          .once()
+
+        val customerBookService = buildCustomerBookService
+
+        val customerBookBusinessGetResponse = customerBookService
+          .customerBookBusinessGet(organizationID.value, customerBusinessDetailsRow.customerID.value)
           .zioValue
 
-        getCustomerBusinessGetResponse shouldBe smithy.GetCustomerBusinessGetResponse(
+        customerBookBusinessGetResponse shouldBe smithy.CustomerBookBusinessGetResponse(
           customerID = customerBusinessDetailsRow.customerID.value,
           businessName = customerBusinessDetailsRow.businessName.value,
-          emails = customerBusinessDetailsRow.emails.map(entry =>
-            smithy.CustomerEmailEntryRequest(email = entry.email.value, isDefault = entry.isDefault)
+          emails = customerBusinessDetailsRow.emails.map(customerEmailEntryInput =>
+            smithy.CustomerEmailEntry(
+              email = customerEmailEntryInput.email.value,
+              isDefault = customerEmailEntryInput.isDefault,
+            )
           ),
           taxID = customerBusinessDetailsRow.taxID.map(_.value),
-          phoneNumbers = customerBusinessDetailsRow.phoneNumbers.map(entry =>
-            smithy.CustomerPhoneNumberEntryRequest(
+          phoneNumbers = customerBusinessDetailsRow.phoneNumbers.map(customerPhoneNumberEntryInput =>
+            smithy.CustomerPhoneNumberEntry(
               phoneNumber = smithy.PhoneNumberRequest(
-                phoneNationalNumber = entry.phoneNumber.value.phoneNationalNumber.value,
-                phoneCountryCode = entry.phoneNumber.value.phoneCountryCode.value,
+                phoneNationalNumber = customerPhoneNumberEntryInput.phoneNumber.value.phoneNationalNumber.value,
+                phoneCountryCode = customerPhoneNumberEntryInput.phoneNumber.value.phoneCountryCode.value,
               ),
-              isDefault = entry.isDefault,
+              isDefault = customerPhoneNumberEntryInput.isDefault,
             )
           ),
           addresses = customerBusinessDetailsRow.addresses.map(customerAddressEntry =>
-            smithy.AddressEntryRequest(
+            smithy.CustomerAddressEntry(
               address = smithy.AddressRequest(
                 addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
                 addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
@@ -840,6 +921,20 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
                 country = customerAddressEntry.value.address.country.map(_.value),
               ),
               addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
+            )
+          ),
+          customerBusinessContacts = List(
+            smithy.CustomerBusinessContact(
+              customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID.value,
+              fullName = customerBusinessContactRow.fullName.value,
+              role = customerBusinessContactRow.role.map(_.value),
+              email = customerBusinessContactRow.email.map(_.value),
+              phoneNumber = customerBusinessContactRow.phoneNumber.map(customerPhoneNumber =>
+                smithy.PhoneNumberRequest(
+                  phoneNationalNumber = customerPhoneNumber.value.phoneNationalNumber.value,
+                  phoneCountryCode = customerPhoneNumber.value.phoneCountryCode.value,
+                )
+              ),
             )
           ),
         )
@@ -857,54 +952,149 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
         val customerBookService = buildCustomerBookService
 
         customerBookService
-          .getCustomerBusinessGet(organizationID.value, customerID.value)
+          .customerBookBusinessGet(organizationID.value, customerID.value)
           .zioError shouldBe ServiceError.InternalServerError.UnexpectedError(
           s"Customer business not found for customerID: [${customerID.value}]"
         )
       }
-    }
 
-    "getCustomersGet" should {
-      "successfully return every customer in the repository's order" in new TestContext {
-        val organizationID      = arbitrarySample[OrganizationID]
-        val customerSummaryRow1 = arbitrarySample[CustomerSummaryRow]
-        val customerSummaryRow2 = arbitrarySample[CustomerSummaryRow]
+      "fail with a RepositoryError and propagate it unchanged" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+        val customerID     = arbitrarySample[CustomerID]
 
-        customerSummaryRow1 should not be customerSummaryRow2
-
-        customerBookRepositoryMock.getCustomers
-          .expects(organizationID)
-          .returningZIO(List(customerSummaryRow1, customerSummaryRow2))
+        customerBookRepositoryMock.getCustomerBusiness
+          .expects(organizationID, customerID)
+          .failingZIO(repositoryError)
           .once()
 
         val customerBookService = buildCustomerBookService
 
-        val getCustomersGetResponse = customerBookService.getCustomersGet(organizationID.value).zioValue
+        customerBookService
+          .customerBookBusinessGet(organizationID.value, customerID.value)
+          .zioError shouldBe repositoryError
+      }
+    }
 
-        getCustomersGetResponse shouldBe smithy.GetCustomersGetResponse(
-          customers = List(customerSummaryRow1, customerSummaryRow2).map(customerSummaryRow =>
-            smithy.GetCustomer(
-              customerID = customerSummaryRow.customerID.value,
-              name = customerSummaryRow.name.value,
-              customerType = customerSummaryRow.customerType.transformInto[smithy.CustomerType],
-            )
+    "customerBookSummaryGet" should {
+      "successfully pass the ordered repeated IDs and return complete summaries in repository order" in new TestContext {
+        val organizationID           = arbitrarySample[OrganizationID]
+        val customerSummaryRowFirst  = arbitrarySample[CustomerSummaryRow]
+        val customerSummaryRowSecond = arbitrarySample[CustomerSummaryRow]
+        val customerIDs              = List(
+          customerSummaryRowFirst.customerID,
+          customerSummaryRowSecond.customerID,
+          customerSummaryRowFirst.customerID,
+        )
+
+        customerSummaryRowFirst.customerID shouldNot equal(customerSummaryRowSecond.customerID)
+
+        customerBookRepositoryMock.getCustomerSummaries
+          .expects(organizationID, customerIDs)
+          .returningZIO(List(customerSummaryRowSecond, customerSummaryRowFirst))
+          .once()
+
+        val customerBookService = buildCustomerBookService
+
+        val customerBookSummaryGetResponse = customerBookService
+          .customerBookSummaryGet(organizationID.value, customerIDs.map(_.value))
+          .zioValue
+
+        customerBookSummaryGetResponse shouldBe smithy.CustomerBookSummaryGetResponse(
+          customers = List(
+            smithy.CustomerSummary(
+              customerID = customerSummaryRowSecond.customerID.value,
+              name = customerSummaryRowSecond.name.value,
+              customerType = customerSummaryRowSecond.customerType.transformInto[smithy.CustomerType],
+            ),
+            smithy.CustomerSummary(
+              customerID = customerSummaryRowFirst.customerID.value,
+              name = customerSummaryRowFirst.name.value,
+              customerType = customerSummaryRowFirst.customerType.transformInto[smithy.CustomerType],
+            ),
           )
         )
       }
 
-      "fail with a RepositoryError and surface it unchanged" in new TestContext {
+      "fail with a RepositoryError and propagate it unchanged" in new TestContext {
         val organizationID = arbitrarySample[OrganizationID]
+        val customerIDs    = List(arbitrarySample[CustomerID])
 
-        customerBookRepositoryMock.getCustomers
-          .expects(organizationID)
-          .returns(ZIO.fail(repositoryError))
+        customerBookRepositoryMock.getCustomerSummaries
+          .expects(organizationID, customerIDs)
+          .failingZIO(repositoryError)
           .once()
 
         val customerBookService = buildCustomerBookService
 
-        customerBookService.getCustomersGet(organizationID.value).zioError shouldBe repositoryError
+        customerBookService
+          .customerBookSummaryGet(organizationID.value, customerIDs.map(_.value))
+          .zioError shouldBe repositoryError
       }
     }
+
+    "customerBookUniquenessGet" should {
+      "successfully pass the complete validated name check and return its result" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+        val customerName   = arbitrarySample[CustomerName]
+        val customerType   = arbitrarySample[CustomerType]
+        val customerIDOpt  = Some(arbitrarySample[CustomerID])
+        val isNameUnique   = arbitrarySample[Boolean]
+
+        customerBookRepositoryMock.isUniqueCustomerName
+          .expects(organizationID, customerName, customerType, customerIDOpt)
+          .returningZIO(isNameUnique)
+          .once()
+
+        val customerBookService = buildCustomerBookService
+
+        customerBookService
+          .customerBookUniquenessGet(
+            organizationID.value,
+            Some(customerName.value),
+            Some(customerType.transformInto[smithy.CustomerType]),
+            customerIDOpt.map(_.value),
+          )
+          .zioValue shouldBe smithy.CustomerBookUniquenessGetResponse(isNameUnique = isNameUnique)
+      }
+
+      "fail with a ValidationError before repository access when name and customer type are absent" in new TestContext {
+        val organizationID      = arbitrarySample[OrganizationID]
+        val customerBookService = buildCustomerBookService
+
+        customerBookService
+          .customerBookUniquenessGet(organizationID.value, None, None, None)
+          .zioError shouldBe ServiceError.BadRequestError.ValidationError(
+          List(
+            InvalidFieldError("name", "Name must be provided", Seq.empty),
+            InvalidFieldError("customerType", "Customer type must be provided", Seq.empty),
+          )
+        )
+      }
+
+      "fail with a RepositoryError and propagate it unchanged" in new TestContext {
+        val organizationID = arbitrarySample[OrganizationID]
+        val customerName   = arbitrarySample[CustomerName]
+        val customerType   = arbitrarySample[CustomerType]
+        val customerIDOpt  = Option.empty[CustomerID]
+
+        customerBookRepositoryMock.isUniqueCustomerName
+          .expects(organizationID, customerName, customerType, customerIDOpt)
+          .failingZIO(repositoryError)
+          .once()
+
+        val customerBookService = buildCustomerBookService
+
+        customerBookService
+          .customerBookUniquenessGet(
+            organizationID.value,
+            Some(customerName.value),
+            Some(customerType.transformInto[smithy.CustomerType]),
+            customerIDOpt.map(_.value),
+          )
+          .zioError shouldBe repositoryError
+      }
+    }
+
   }
 
   trait TestContext {

@@ -20,11 +20,6 @@ trait CustomerBookRepository {
       insertCustomerIndividualInput: InsertCustomerIndividualInput,
   ): IO[ServiceError, CustomerIndividualDetailsRow]
 
-  def insertCustomerIndividuals(
-      organizationID: OrganizationID,
-      insertCustomerIndividualInputs: List[InsertCustomerIndividualInput],
-  ): IO[ServiceError, List[CustomerIndividualDetailsRow]]
-
   def updateCustomerIndividual(
       organizationID: OrganizationID,
       customerID: CustomerID,
@@ -39,19 +34,17 @@ trait CustomerBookRepository {
       insertCustomerBusinessInput: InsertCustomerBusinessInput,
   ): IO[ServiceError, CustomerBusinessInsertRow]
 
-  def insertCustomerBusinesses(
-      organizationID: OrganizationID,
-      insertCustomerBusinessInputs: List[InsertCustomerBusinessInput],
-  ): IO[ServiceError, List[CustomerBusinessInsertRow]]
-
   def updateCustomerBusiness(
       organizationID: OrganizationID,
       customerID: CustomerID,
       businessNameOptUpdate: Option[CustomerBusinessName] = None,
       emailsOptUpdate: Option[List[CustomerEmailEntryInput]] = None,
-      taxIDOptUpdate: Option[CustomerTaxID] = None,
+      taxIDOptUpdate: Option[Option[CustomerTaxID]] = None,
       phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]] = None,
       addressesOptUpdate: Option[List[CustomerAddressEntry]] = None,
+      updateCustomerBusinessContactInputs: List[UpdateCustomerBusinessContactInput] = Nil,
+      insertCustomerBusinessContactInputs: List[CustomerBusinessContactInput] = Nil,
+      archiveCustomerBusinessContactIDs: List[CustomerBusinessContactID] = Nil,
   ): IO[ServiceError, Option[CustomerBusinessDetailsRow]]
 
   def insertCustomers(
@@ -59,18 +52,6 @@ trait CustomerBookRepository {
       insertCustomerIndividualInputs: List[InsertCustomerIndividualInput],
       insertCustomerBusinessInputs: List[InsertCustomerBusinessInput],
   ): IO[ServiceError, InsertCustomersResult]
-
-  def addCustomerBusinessContacts(
-      organizationID: OrganizationID,
-      customerID: CustomerID,
-      customerBusinessContactInputs: List[CustomerBusinessContactInput],
-  ): IO[ServiceError, List[CustomerBusinessContactRow]]
-
-  def removeCustomerBusinessContacts(
-      organizationID: OrganizationID,
-      customerID: CustomerID,
-      customerBusinessContactIDs: List[CustomerBusinessContactID],
-  ): IO[ServiceError, Unit]
 
   def archiveCustomer(
       organizationID: OrganizationID,
@@ -85,11 +66,19 @@ trait CustomerBookRepository {
   def getCustomerBusiness(
       organizationID: OrganizationID,
       customerID: CustomerID,
-  ): IO[ServiceError, Option[CustomerBusinessDetailsRow]]
+  ): IO[ServiceError, Option[CustomerBusinessWithContactsRow]]
 
-  def getCustomers(
-      organizationID: OrganizationID
+  def getCustomerSummaries(
+      organizationID: OrganizationID,
+      customerIDs: List[CustomerID],
   ): IO[ServiceError, List[CustomerSummaryRow]]
+
+  def isUniqueCustomerName(
+      organizationID: OrganizationID,
+      name: CustomerName,
+      customerType: CustomerType,
+      customerIDOpt: Option[CustomerID],
+  ): IO[ServiceError, Boolean]
 }
 
 object CustomerBookRepository {
@@ -109,6 +98,14 @@ object CustomerBookRepository {
       role: Option[CustomerBusinessContactRole],
       email: Option[CustomerEmail],
       phoneNumber: Option[CustomerPhoneNumber],
+  )
+
+  case class UpdateCustomerBusinessContactInput(
+      customerBusinessContactID: CustomerBusinessContactID,
+      fullName: Option[CustomerFullName],
+      role: Option[Option[CustomerBusinessContactRole]],
+      email: Option[Option[CustomerEmail]],
+      phoneNumber: Option[Option[CustomerPhoneNumber]],
   )
 
   case class InsertCustomerIndividualInput(
@@ -167,34 +164,6 @@ object CustomerBookRepository {
           )
         )
     } yield customerIndividualDetailsRow
-
-    override def insertCustomerIndividuals(
-        organizationID: OrganizationID,
-        insertCustomerIndividualInputs: List[InsertCustomerIndividualInput],
-    ): IO[ServiceError, List[CustomerIndividualDetailsRow]] = for {
-      instantNow            <- timeProvider.instantNow
-      customerIDsWithInputs <- ZIO.foreach(insertCustomerIndividualInputs)(input =>
-        generateCustomerID.map(customerID => (customerID = customerID, input = input))
-      )
-      customerIndividualDetailsRows = customerIDsWithInputs.map(customerIDWithInput =>
-        buildCustomerIndividualDetailsRow(
-          organizationID,
-          customerIDWithInput.customerID,
-          customerIDWithInput.input,
-          instantNow,
-        )
-      )
-      _ <- database
-        .transactionOrWiden(
-          customerBookQueries.insertCustomerIndividualDetailsRows(customerIndividualDetailsRows)
-        )
-        .mapError(
-          catchUniqueConstraintViolation(
-            s"Failed to insert customer individuals for organization ID: [$organizationID]",
-            uniqueConstraintViolationMessage,
-          )
-        )
-    } yield customerIndividualDetailsRows
 
     override def updateCustomerIndividual(
         organizationID: OrganizationID,
@@ -261,81 +230,97 @@ object CustomerBookRepository {
       customerBusinessContactRows = customerBusinessContactRows,
     )
 
-    override def insertCustomerBusinesses(
-        organizationID: OrganizationID,
-        insertCustomerBusinessInputs: List[InsertCustomerBusinessInput],
-    ): IO[ServiceError, List[CustomerBusinessInsertRow]] = for {
-      instantNow            <- timeProvider.instantNow
-      customerIDsWithInputs <- ZIO.foreach(insertCustomerBusinessInputs)(input =>
-        generateCustomerID.map(customerID => (customerID = customerID, input = input))
-      )
-      customerBusinessInsertRows <- ZIO.foreach(customerIDsWithInputs)(customerIDWithInput =>
-        buildCustomerBusinessContactRows(
-          organizationID,
-          customerIDWithInput.customerID,
-          customerIDWithInput.input.customerBusinessContacts,
-          instantNow,
-        ).map(customerBusinessContactRows =>
-          (
-            customerBusinessDetailsRow = buildCustomerBusinessDetailsRow(
-              organizationID,
-              customerIDWithInput.customerID,
-              customerIDWithInput.input,
-              instantNow,
-            ),
-            customerBusinessContactRows = customerBusinessContactRows,
-          )
-        )
-      )
-      _ <- database
-        .transactionOrWiden(
-          for {
-            _ <- customerBookQueries.insertCustomerBusinessDetailsRows(
-              customerBusinessInsertRows.map(_.customerBusinessDetailsRow)
-            )
-            _ <- customerBookQueries.insertCustomerBusinessContactRows(
-              customerBusinessInsertRows.flatMap(_.customerBusinessContactRows)
-            )
-          } yield ()
-        )
-        .mapError(
-          catchUniqueConstraintViolation(
-            s"Failed to insert customer businesses for organization ID: [$organizationID]",
-            uniqueConstraintViolationMessage,
-          )
-        )
-    } yield customerBusinessInsertRows
-
     override def updateCustomerBusiness(
         organizationID: OrganizationID,
         customerID: CustomerID,
         businessNameOptUpdate: Option[CustomerBusinessName],
         emailsOptUpdate: Option[List[CustomerEmailEntryInput]],
-        taxIDOptUpdate: Option[CustomerTaxID],
+        taxIDOptUpdate: Option[Option[CustomerTaxID]],
         phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]],
         addressesOptUpdate: Option[List[CustomerAddressEntry]],
+        updateCustomerBusinessContactInputs: List[UpdateCustomerBusinessContactInput],
+        insertCustomerBusinessContactInputs: List[CustomerBusinessContactInput],
+        archiveCustomerBusinessContactIDs: List[CustomerBusinessContactID],
     ): IO[ServiceError, Option[CustomerBusinessDetailsRow]] = for {
-      instantNow                        <- timeProvider.instantNow
-      customerBusinessDetailsRowUpdated <- database
-        .transactionOrWiden(
-          customerBookQueries.updateCustomerBusinessDetailsRow(
+      instantNow <- timeProvider.instantNow
+      updatedAt = UpdatedAt(instantNow)
+      customerBusinessContactRowsInsert <- buildCustomerBusinessContactRows(
+        organizationID,
+        customerID,
+        insertCustomerBusinessContactInputs,
+        instantNow,
+      )
+      customerBusinessDetailsRowUpdatedOpt <- database.transactionOrWiden {
+        for {
+          customerBusinessDetailsRowUpdatedOpt <- customerBookQueries.updateCustomerBusinessDetailsRow(
             organizationID,
             customerID,
-            UpdatedAt(instantNow),
+            updatedAt,
             businessNameOptUpdate,
             emailsOptUpdate,
             taxIDOptUpdate,
             phoneNumbersOptUpdate,
             addressesOptUpdate,
           )
-        )
-        .mapError(
+          _ <- customerBusinessDetailsRowUpdatedOpt match {
+            case None    => ZIO.unit
+            case Some(_) =>
+              for {
+                updateCustomerBusinessContactInputsOptNonEmpty = NonEmptyList.fromList(
+                  updateCustomerBusinessContactInputs
+                )
+                customerBusinessContactRowsOpt <- ZIO.foreach(updateCustomerBusinessContactInputsOptNonEmpty)(
+                  updateCustomerBusinessContactInputsNonEmpty =>
+                    customerBookQueries.getCustomerBusinessContactRowsByIDs(
+                      organizationID,
+                      customerID,
+                      updateCustomerBusinessContactInputsNonEmpty.map(_.customerBusinessContactID),
+                    )
+                )
+                _ <- customerBusinessContactRowsOpt match {
+                  case None                              => ZIO.unit
+                  case Some(customerBusinessContactRows) =>
+                    if (customerBusinessContactRows.size != updateCustomerBusinessContactInputs.size)
+                      ZIO.fail(
+                        ServiceError.InternalServerError.UnexpectedError(
+                          s"Failed to update customer business with ID: [$customerID]. Some customer business contact IDs do not exist, belong to another customer business, or are archived. Requested: [${updateCustomerBusinessContactInputs.map(_.customerBusinessContactID)}], Found: [${customerBusinessContactRows}]"
+                        )
+                      )
+                    else ZIO.unit
+                }
+                customerBusinessContactRowsOptUpdated = mergeUpdateCustomerBusinessContactInputs(
+                  updateCustomerBusinessContactInputsOptNonEmpty,
+                  customerBusinessContactRowsOpt.getOrElse(Nil),
+                  updatedAt,
+                )
+                _ <- ZIO.foreach(customerBusinessContactRowsOptUpdated)(customerBusinessContactRowsUpdated =>
+                  customerBookQueries.updateCustomerBusinessContactRows(
+                    organizationID,
+                    customerID,
+                    customerBusinessContactRowsUpdated,
+                  )
+                )
+                _ <- customerBookQueries.insertCustomerBusinessContactRows(customerBusinessContactRowsInsert)
+                _ <- ZIO.foreach(NonEmptyList.fromList(archiveCustomerBusinessContactIDs))(customerBusinessContactIDs =>
+                  customerBookQueries.archiveCustomerBusinessContactRows(
+                    organizationID,
+                    customerID,
+                    customerBusinessContactIDs,
+                    updatedAt,
+                  )
+                )
+              } yield ()
+          }
+        } yield customerBusinessDetailsRowUpdatedOpt
+      }.mapError {
+        case serviceError: ServiceError => serviceError
+        case throwable                  =>
           catchUniqueConstraintViolation(
             s"Failed to update customer business with ID: [$customerID]",
             uniqueConstraintViolationMessage,
-          )
-        )
-    } yield customerBusinessDetailsRowUpdated
+          )(throwable)
+      }
+    } yield customerBusinessDetailsRowUpdatedOpt
 
     override def insertCustomers(
         organizationID: OrganizationID,
@@ -398,69 +383,6 @@ object CustomerBookRepository {
       customerBusinessInsertRows = customerBusinessInsertRows,
     )
 
-    override def addCustomerBusinessContacts(
-        organizationID: OrganizationID,
-        customerID: CustomerID,
-        customerBusinessContactInputs: List[CustomerBusinessContactInput],
-    ): IO[ServiceError, List[CustomerBusinessContactRow]] = for {
-      instantNow                  <- timeProvider.instantNow
-      customerBusinessContactRows <- buildCustomerBusinessContactRows(
-        organizationID,
-        customerID,
-        customerBusinessContactInputs,
-        instantNow,
-      )
-      // Contacts are only added to an active business; an archived (or absent) parent is a silent no-op.
-      customerBusinessContactRowsInserted <- database
-        .transactionOrWiden(
-          for {
-            active   <- customerBookQueries.customerActiveExists(organizationID, customerID)
-            inserted <-
-              if (active)
-                customerBookQueries
-                  .insertCustomerBusinessContactRows(customerBusinessContactRows)
-                  .as(customerBusinessContactRows)
-              else ZIO.succeed(List.empty[CustomerBusinessContactRow])
-          } yield inserted
-        )
-        .mapError(
-          catchUniqueConstraintViolation(
-            s"Failed to add customer business contacts for customer ID: [$customerID]",
-            uniqueConstraintViolationMessage,
-          )
-        )
-    } yield customerBusinessContactRowsInserted
-
-    override def removeCustomerBusinessContacts(
-        organizationID: OrganizationID,
-        customerID: CustomerID,
-        customerBusinessContactIDs: List[CustomerBusinessContactID],
-    ): IO[ServiceError, Unit] =
-      NonEmptyList.fromList(customerBusinessContactIDs) match {
-        case None                                     => ZIO.unit
-        case Some(customerBusinessContactIDsNonEmpty) =>
-          database
-            .transactionOrWiden(
-              // Contacts are only removed from an active business; an archived (or absent) parent is a no-op.
-              for {
-                active <- customerBookQueries.customerActiveExists(organizationID, customerID)
-                _      <- ZIO.when(active)(
-                  customerBookQueries.deleteCustomerBusinessContactRows(
-                    organizationID,
-                    customerID,
-                    customerBusinessContactIDsNonEmpty,
-                  )
-                )
-              } yield ()
-            )
-            .mapError(e =>
-              ServiceError.InternalServerError.RepositoryError(
-                s"Failed to remove customer business contacts for customer ID: [$customerID]",
-                e,
-              )
-            )
-      }
-
     override def archiveCustomer(
         organizationID: OrganizationID,
         customerID: CustomerID,
@@ -496,11 +418,9 @@ object CustomerBookRepository {
     override def getCustomerBusiness(
         organizationID: OrganizationID,
         customerID: CustomerID,
-    ): IO[ServiceError, Option[CustomerBusinessDetailsRow]] =
+    ): IO[ServiceError, Option[CustomerBusinessWithContactsRow]] =
       database
-        .transactionOrWiden(
-          customerBookQueries.getCustomerBusinessDetailsRow(organizationID, customerID)
-        )
+        .transactionOrWiden(customerBookQueries.getCustomerBusinessWithContactsRow(organizationID, customerID))
         .mapError(e =>
           ServiceError.InternalServerError.RepositoryError(
             s"Failed to get customer business with ID: [$customerID]",
@@ -508,28 +428,62 @@ object CustomerBookRepository {
           )
         )
 
-    override def getCustomers(
-        organizationID: OrganizationID
+    override def getCustomerSummaries(
+        organizationID: OrganizationID,
+        customerIDs: List[CustomerID],
     ): IO[ServiceError, List[CustomerSummaryRow]] =
       database
-        .transactionOrWiden(
-          customerBookQueries.getCustomerSummaryRows(organizationID)
-        )
+        .transactionOrWiden(customerBookQueries.getCustomerSummaryRows(organizationID, customerIDs))
         .mapError(e =>
           ServiceError.InternalServerError.RepositoryError(
-            s"Failed to get customers for organization ID: [$organizationID]",
+            s"Failed to get customer summaries for organization ID: [$organizationID], customer IDs: [${customerIDs.mkString(", ")}]",
             e,
           )
         )
 
-    private val uniqueConstraintViolationMessage: PartialFunction[String, String] = {
-      case "uq_customer_name" =>
-        "A customer with the given name already exists in this organization"
-      case "uq_customer_business_contact_email" =>
-        "A business contact with the given email already exists for this customer"
-      case "uq_customer_business_contact_phone_number" =>
-        "A business contact with the given phone number already exists for this customer"
+    override def isUniqueCustomerName(
+        organizationID: OrganizationID,
+        name: CustomerName,
+        customerType: CustomerType,
+        customerIDOpt: Option[CustomerID],
+    ): IO[ServiceError, Boolean] =
+      database
+        .transactionOrWiden(customerBookQueries.isUniqueCustomerName(organizationID, name, customerType, customerIDOpt))
+        .mapError(e =>
+          ServiceError.InternalServerError.RepositoryError(
+            s"Failed to check name uniqueness for organizationID: [$organizationID], name: [$name], customerType: [$customerType], customerIDOpt: [$customerIDOpt]",
+            e,
+          )
+        )
+
+    private val uniqueConstraintViolationMessage: PartialFunction[String, String] = { case "uq_customer_name" =>
+      "A customer with the given name already exists in this organization"
     }
+
+    private def mergeUpdateCustomerBusinessContactInputs(
+        updateCustomerBusinessContactInputs: Option[NonEmptyList[UpdateCustomerBusinessContactInput]],
+        customerBusinessContactRowsExisting: List[CustomerBusinessContactRow],
+        updatedAt: UpdatedAt,
+    ): Option[NonEmptyList[CustomerBusinessContactRow]] =
+      updateCustomerBusinessContactInputs.flatMap(updateCustomerBusinessContactInputsNonEmpty =>
+        updateCustomerBusinessContactInputsNonEmpty.traverse { updateCustomerBusinessContactInput =>
+          customerBusinessContactRowsExisting
+            .find(
+              _.customerBusinessContactID == updateCustomerBusinessContactInput.customerBusinessContactID
+            )
+            .map { customerBusinessContactRowExisting =>
+              customerBusinessContactRowExisting.copy(
+                fullName =
+                  updateCustomerBusinessContactInput.fullName.getOrElse(customerBusinessContactRowExisting.fullName),
+                role = updateCustomerBusinessContactInput.role.getOrElse(customerBusinessContactRowExisting.role),
+                email = updateCustomerBusinessContactInput.email.getOrElse(customerBusinessContactRowExisting.email),
+                phoneNumber = updateCustomerBusinessContactInput.phoneNumber
+                  .getOrElse(customerBusinessContactRowExisting.phoneNumber),
+                updatedAt = updatedAt,
+              )
+            }
+        }
+      )
 
     private def generateCustomerID: IO[ServiceError, CustomerID] =
       idGenerator.generateID
@@ -564,9 +518,9 @@ object CustomerBookRepository {
         input.emails,
         input.phoneNumbers,
         input.addresses,
-        CustomerStatus.Active,
-        CreatedAt(instantNow),
-        UpdatedAt(instantNow),
+        isArchived = false,
+        createdAt = CreatedAt(instantNow),
+        updatedAt = UpdatedAt(instantNow),
       )
 
     private def buildCustomerBusinessDetailsRow(
@@ -583,9 +537,9 @@ object CustomerBookRepository {
         input.emails,
         input.phoneNumbers,
         input.addresses,
-        CustomerStatus.Active,
-        CreatedAt(instantNow),
-        UpdatedAt(instantNow),
+        isArchived = false,
+        createdAt = CreatedAt(instantNow),
+        updatedAt = UpdatedAt(instantNow),
       )
 
     private def buildCustomerBusinessContactRows(
@@ -606,6 +560,7 @@ object CustomerBookRepository {
             contact.phoneNumber,
             CreatedAt(instantNow),
             UpdatedAt(instantNow),
+            isArchived = false,
           )
         }
       }

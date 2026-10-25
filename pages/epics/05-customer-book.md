@@ -8,13 +8,15 @@ title: Customer Book
 
 Every organization keeps a book of the people and companies it trades with. It is the organization's own address book, and it is where future orders will point.
 
+Customer-record actions use the `/customer-book/` resource namespace. Reading an image or file remains at `/extract/customers`.
+
 ### Related / Out of scope
 
 - **Related** — [Organization Onboarding]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}). An organization must exist first, and every request here names which organization it is for.
 - **Out of scope** — Who may belong to an organization and what each role means. That is set up with the organization itself.
 - **Out of scope** — Checking an image's or file's candidates against customers already stored in the book. The only duplicate check made when reading an image, CSV file, or Excel file is between candidates found within that same image or file.
 - **Not built yet** — Orders. The customer book exists so that orders can point at a customer later, but nothing places or records an order yet.
-- **Not built yet** — Search, filtering and paging. The list returns every active customer in one go, sorted by name.
+- **Not built yet** — Search and paging. The list can be narrowed to an explicit set of customer identifiers, but it still returns all matching active customers in one go, sorted by name.
 
 ### Requirements across the epic
 
@@ -25,7 +27,7 @@ Every request in this epic names the organization it applies to, and only touche
 1. A customer is either a **person** or a **business**, chosen when they are added and fixed for good. There is no converting one into the other.
 2. Only businesses have **contacts** — the individual people you deal with inside that company. A contact is never itself a customer and can never be the target of an order.
 3. A customer's name must be unique among that organization's active customers **of the same kind**. A person and a business may share a name, and archiving a customer frees their name for reuse.
-4. Customers are **archived**, never deleted. Contacts are the opposite: removing one deletes it outright.
+4. Customers and business contacts are **archived**, never deleted. Archiving either one is permanent.
 5. A customer may have any number of email addresses and phone numbers. Each business contact has at most one email address and one phone number, and no address.
 6. A customer has no address, exactly one address marked as both shipping and billing, or exactly two addresses, one shipping and one billing in either order. Whenever addresses are sent, anything else is rejected: three or more, two of the same type, a single shipping-only or billing-only address, or a both-purposes address alongside another.
 
@@ -47,7 +49,8 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 4. [User Updates a Customer](#4-user-updates-a-customer)
 5. [User Manages a Business's Contacts](#5-user-manages-a-businesss-contacts)
 6. [User Archives a Customer](#6-user-archives-a-customer)
-7. [User Extracts Customers from an Image or File](#7-user-extracts-customers-from-an-image-or-file)
+7. [User Checks Whether a Customer Name Is Free](#7-user-checks-whether-a-customer-name-is-free)
+8. [User Extracts Customers from an Image or File](#8-user-extracts-customers-from-an-image-or-file)
 
 ### Prerequisites
 
@@ -62,6 +65,8 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 | User | Yes | No |
 
 **Customer status** — a customer is `Active` or `Archived`. New customers start active. Archiving is one-way.
+
+**Business contact status** — a contact is `Active` or `Archived`. New contacts start active. Archiving is one-way; archived contacts keep their details.
 
 **Default contact details** — email and phone lists may be left empty. When a list has entries, exactly one of them must be marked as the default. Addresses have no default.
 
@@ -83,7 +88,7 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 | 2. User adds a business | - Stored as a business, active - May carry a tax id, which a person may not - Any contacts given are saved with it, all or nothing |
 | 3. User adds several customers at once | - All are stored together or none are |
 | 4. User adds a customer whose name is already taken by an active customer of the same kind | - Rejected as a conflict, naming what clashed - A person and a business may share a name; only same-kind clashes are refused |
-| 5. User gives two contacts at the same business the same email or phone number | - Rejected as a conflict - Contacts may leave email and phone blank, and any number of contacts may have neither |
+| 5. User gives two contacts at the same business the same email or phone number | - Accepted - Contacts may share email and phone values, leave them blank, or have neither |
 | 6. User submits several bad entries at once | - Every problem is reported together - Each is tied to the entry that caused it, including which contact inside which business |
 | 7. User leaves the contact lists empty | - Accepted. The customer simply has no recorded contact details |
 | 8. A member with the ordinary user role tries to add a customer | - Rejected. Reading is open to everyone; changing is not |
@@ -97,20 +102,18 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 2. A tax id may be recorded for a business and never for a person.
 3. When email or phone lists are given, every entry must be valid and exactly one must be marked as the default.
 4. A name must be unique among active customers of the same kind within the organization.
-5. Within one business, no two contacts may share an email address, and no two may share a phone number.
+5. Contacts at the same business may share email addresses and phone numbers, whether they are active or archived.
 6. Adding several customers at once succeeds completely or not at all.
 7. Every address text field is optional. Missing or null values are absent. Supplied values must contain 1–255 characters with no leading or trailing whitespace; empty or whitespace-only values are rejected for that field. An address must contain at least one non-empty text field, its type is required, and together the addresses must be an allowed combination (functional rule 6).
 
 #### Request / Response / Outcome
 
-A customer can be added one at a time, several of one kind at once, or as a mixed batch of both kinds. All five ways carry the same two shapes — the batch forms simply wrap them in lists:
+A customer can be added one at a time or as a mixed batch of people and businesses. The three forms carry the same two shapes — the mixed batch wraps them in lists:
 
 | **What the user is adding** | **What is sent** |
 | --- | --- |
 | One person | One `CustomerIndividual` |
 | One business | One `CustomerBusiness` |
-| Several people at once | `CustomerIndividual[]` |
-| Several businesses at once | `CustomerBusiness[]` |
 | A mixed batch | `CustomerIndividual[]` and `CustomerBusiness[]` together |
 
 The two shapes are separate and neither is a variant of the other. A person has a name and no tax id and no contacts; a business has a business name and may have both.
@@ -181,12 +184,12 @@ The shapes used above and throughout this epic:
 | --- | --- | --- | --- | --- |
 | Full Name | `String` | 1–255 characters, trimmed | ✅ | The contact's name |
 | Role | `String` | 1–255 characters, trimmed | ❌ | What they do there |
-| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters; unique within the business | ❌ |  |
-| Phone Number | `PhoneNumber` | Unique within the business | ❌ |  |
+| Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters | ❌ |  |
+| Phone Number | `PhoneNumber` | — | ❌ |  |
 
 **Response**
 
-A successful add answers with what was just created. Adding one person or one business returns that customer's full stored details — for a business, including the generated identifier of every inline contact. Adding a batch of one kind, or a mixed batch of both, returns a summary per customer instead, in the order it was sent — individuals first, then businesses, for a mixed batch.
+A successful add answers with what was just created. Adding one person or one business returns that customer's full stored details — for a business, including the generated identifier of every inline contact. Adding a mixed batch returns a summary per customer instead, in the order it was sent — individuals first, then businesses.
 
 **Response — one CustomerIndividual**
 
@@ -208,19 +211,19 @@ A successful add answers with what was just created. Adding one person or one bu
 | Tax ID | `String` | — | ❌ | Present only if recorded |
 | Phone Numbers | `PhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
 | Addresses | `AddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
-| Customer Business Contacts | `BusinessContactCreated[]` | May be empty | ✅ | Every contact just stored, each carrying its new identifier |
+| Customer Business Contacts | `CustomerBusinessContact[]` | May be empty | ✅ | Every contact just stored, each carrying its new identifier |
 
-**BusinessContactCreated**
+**CustomerBusinessContact**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Customer Business Contact ID | `UUID` | Canonical 36-character form | ✅ | The new contact's identifier |
+| Customer Business Contact ID | `UUID` | Canonical 36-character form | ✅ | The contact's identifier, used for later updates or archiving |
 | Full Name | `String` | — | ✅ | The contact's name |
 | Role | `String` | — | ❌ | Present only if recorded |
 | Email | `String` | — | ❌ | Present only if recorded |
 | Phone Number | `PhoneNumber` | — | ❌ | Present only if recorded |
 
-**Response — a batch of one kind, or a mixed batch**
+**Response — a mixed batch**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
@@ -241,7 +244,7 @@ A successful add answers with what was just created. Adding one person or one bu
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
-| 409 | `CONFLICT_ERROR` | - A customer of this kind already has that name - A contact at this business already has that email address - A contact at this business already has that phone number |
+| 409 | `CONFLICT_ERROR` | - A customer of this kind already has that name |
 | 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
 
 ### 2. User Browses the Customer Book
@@ -249,6 +252,7 @@ A successful add answers with what was just created. Adding one person or one bu
 **Who can reach this step: any member of the organization.**
 
 - User opens the customer book and sees everyone currently in it.
+- User may provide a set of customer identifiers to see only those customers.
 - The list is sorted by name, ignoring capitalisation.
 
 #### Business Scenarios
@@ -258,6 +262,8 @@ A successful add answers with what was just created. Adding one person or one bu
 | 1. User opens the customer book | - Every active customer in the organization is returned - Each entry says whether it is a person or a business - Sorted by name, ignoring capitalisation |
 | 2. The organization has archived customers | - Archived customers do not appear - There is no way to list them again - See [gap 3](#3-archiving-is-final-and-archived-customers-cannot-be-found-again) |
 | 3. The organization has no customers yet | - An empty list is returned |
+| 4. User supplies customer identifiers | - Matching active customers are returned once each - Missing, archived, or other-organization identifiers are omitted without an error |
+| 5. User supplies no identifiers or an empty list | - Every active customer is returned |
 
 #### Requirements
 
@@ -265,12 +271,17 @@ A successful add answers with what was just created. Adding one person or one bu
 2. The list contains only active customers.
 3. Each entry carries enough to show a row and open it: the identifier, the name, and whether it is a person or a business.
 4. The list is sorted by name, ignoring capitalisation.
+5. An optional identifier list narrows the result. An omitted or empty list means all active customers.
 
 #### Request / Response / Outcome
 
 **Request**
 
-Request is empty apart from naming the organization. There is nothing to search, filter or page by.
+The request names the organization and may include an identifier list. There is no text search or paging.
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer IDs | `UUID[]` | Empty by default | ❌ | Return only these active customers; missing, archived, or foreign identifiers are omitted |
 
 **Response**
 
@@ -304,21 +315,21 @@ Nothing changes. This step only reads.
 **Who can reach this step: any member of the organization.**
 
 - User picks a customer from the book.
-- The app asks for the person or the business by identifier, depending on which the list said it was.
+- The summary says whether the customer is a person or a business, and the app uses that kind to choose the matching details request.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User opens a customer that exists | - Their full details are returned, including all contact details and every address with its type |
-| 2. User opens a customer that has been archived | - Their details are still returned. Archiving hides a customer from the list, not from a direct look-up |
-| 3. User opens a customer that does not exist, or asks for a person using the business screen | - Reported as a server error rather than "not found" — see [gap 1](#1-looking-up-a-customer-that-is-not-there-is-reported-as-a-server-error) |
+| 1. User opens an existing individual or business | - Their full details are returned, including customer contact details and every address with its type - A business also includes its active business contacts - The app chooses the individual or business details request using the kind shown in the summary |
+| 2. User opens a customer that has been archived | - Their details are unavailable, just like a customer that is missing |
+| 3. User opens a customer that does not exist | - Reported as a server error rather than "not found" — see [gap 1](#1-looking-up-an-unavailable-customer-is-reported-as-a-server-error) |
 
 #### Requirements
 
-1. A customer is looked up by identifier, and the caller must say which kind they expect.
-2. Asking for the wrong kind finds nothing, even when a customer with that identifier exists.
-3. An archived customer can still be opened directly.
+1. The app opens an individual or business through its matching details request, using the kind shown in the customer summary.
+2. Archived customers cannot be opened. Their customer and contact details remain stored.
+3. A business read includes active contacts and omits archived contacts. An individual read has no business contacts.
 
 #### Request / Response / Outcome
 
@@ -328,9 +339,9 @@ Nothing changes. This step only reads.
 | --- | --- | --- | --- | --- |
 | Customer ID | `UUID` | Canonical 36-character form | ✅ | Which customer to open |
 
-There are two answers, one per kind, and the caller gets whichever they asked for.
+The app uses the customer's kind from the summary to choose the matching individual or business details request. Each response contains only the fields for that kind. A business includes active contacts; archived contacts are omitted.
 
-**Response — CustomerIndividual**
+**Response — Individual**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
@@ -340,18 +351,19 @@ There are two answers, one per kind, and the caller gets whichever they asked fo
 | Phone Numbers | `PhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
 | Addresses | `AddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
 
-**Response — CustomerBusiness**
+**Response — Business**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Customer ID | `UUID` | Canonical 36-character form | ✅ | Identifies the customer |
 | Business Name | `String` | — | ✅ | The company's name |
 | Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded email address, each marked default or not |
-| Tax ID | `String` | — | ❌ | Present only if recorded |
+| Tax ID | `String` | — | ❌ | Present when recorded |
 | Phone Numbers | `PhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
 | Addresses | `AddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
+| Customer Business Contacts | `CustomerBusinessContact[]` | May be empty; active contacts only | ✅ | Active business contacts; archived contacts are omitted |
 
-Neither answer includes the business's contacts, and neither says whether the customer is archived. See [gap 2](#2-changes-to-an-archived-customer-are-silently-discarded).
+See **CustomerBusinessContact** in [step 1](#1-user-adds-a-customer) for the contact fields.
 
 **Outcome**
 
@@ -364,61 +376,88 @@ Nothing changes. This step only reads.
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
-| 500 | `INTERNAL_SERVER_ERROR` | - No customer of that kind with that identifier - The person does not belong to the organization - Unexpected error |
+| 500 | `INTERNAL_SERVER_ERROR` | - No available customer of that kind with that identifier - The person does not belong to the organization - Unexpected error |
 
 ### 4. User Updates a Customer
 
 **Who can reach this step: an owner or admin of the organization.**
 
 - User opens a customer and changes their details.
+- For a business, the same change may insert, update, or archive its contacts.
 - The kind of customer can never be changed — only their details.
 
 #### Business Scenarios
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User changes an active customer's details | - The change is saved - Email, phone and address lists are replaced wholesale by whatever is sent - Single fields left out are left as they were |
+| 1. User changes an active customer's details | - The change is saved - Omitted email, phone, and address lists stay unchanged - An explicit empty list (`[]`) clears that detail - A non-empty list validates and replaces the whole detail - Single fields left out are left as they were - A null tax ID clears it - Supplied names and tax IDs replace them; names cannot be cleared |
 | 2. User renames a customer to a name another active customer of the same kind already has | - Rejected as a conflict |
 | 3. User changes a customer that has been archived | - Nothing happens, and the change is reported as successful - See [gap 2](#2-changes-to-an-archived-customer-are-silently-discarded) |
 | 4. User changes a customer that does not exist | - Nothing happens, and it is reported as successful |
 | 5. A member with the ordinary user role tries to make a change | - Rejected |
 | 6. User replaces an address with some text fields missing, but at least one field has content | - Accepted - The partial address is stored |
 | 7. User replaces an address whose text fields are all empty | - Rejected and nothing is stored |
+| 8. User changes a business and its contacts together | - Customer fields and all contact changes are applied atomically |
+| 9. A contact to update is missing, archived, or belongs to another business | - The whole change is rejected and nothing is stored |
+| 10. A contact to archive is missing, archived, or belongs to another business | - Nothing changes for that contact and the request still succeeds |
+| 11. User changes a missing or archived business | - Nothing happens, and the change is reported as successful |
+| 12. A contact ID is repeated in either list, or appears in both update and archive lists | - Rejected with a validation error before any change is stored |
 
 #### Requirements
 
 1. Only active customers can be changed. The kind is fixed at creation and never changes.
-2. Email, phone and address lists are replaced entirely by what is sent, rather than merged. Sending an empty list clears them, and leaving a list out is the same as sending it empty.
-3. Optional single fields left out of the request, such as the name or tax id, are left unchanged.
+2. Email, phone, and address lists are nonnullable and replaced entirely when supplied, rather than merged. Leaving a list out keeps it, an explicit empty list (`[]`) clears it, and a non-empty list validates and replaces it.
+3. Names are optional replacement fields: leaving one out keeps the current name, and a name cannot be cleared. A business tax ID is nullable: leaving it out keeps the current value, null clears it, and a supplied value replaces it.
 4. A rename must still leave the name unique among active customers of the same kind.
 5. Address text fields are optional, but every address must contain at least one non-empty text field; an address with all five fields empty is rejected.
+6. Business contact changes are part of the business update and are atomic with its other fields. Contacts not named in a list remain unchanged.
+7. New contacts are active. An update changes only the fields supplied; an archive is permanent and keeps the contact's details.
+8. A missing, archived, or foreign contact referenced for update rejects the whole business update. A missing, archived, or foreign contact named for archive is ignored, matching the catalogue's update and archive behavior.
+9. Contact IDs must be unique within each list and across the update and archive lists. Duplicate or overlapping IDs are rejected before any write.
 
 #### Request / Response / Outcome
 
-There are two ways to update, one per kind, and the caller must use the one matching the customer. Updating a person through the business form finds nothing, and changes nothing.
+There are two ways to update, one per kind, and the customer identifier is part of the request path. Updating a person through the business form finds nothing, and changes nothing.
 
 **Request — updating a CustomerIndividual**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Customer ID | `UUID` | Canonical 36-character form | ✅ | Which customer to change |
-| Full Name | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current name |
-| Emails | `EmailEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
-| Phone Numbers | `PhoneNumberEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
-| Addresses | `AddressEntry[]` | Replaces the whole list; when not empty, one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Send the complete set, not just additions |
+| Full Name | `String` | 1–255 characters, trimmed; cannot be cleared | ❌ | Replacement name; leave out to keep the current name |
+| Emails | `EmailEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
+| Phone Numbers | `PhoneNumberEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
+| Addresses | `AddressEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list; when non-empty, one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Send the complete set, not just additions |
 
 **Request — updating a CustomerBusiness**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Customer ID | `UUID` | Canonical 36-character form | ✅ | Which customer to change |
-| Business Name | `String` | 1–255 characters, trimmed | ❌ | Leave out to keep the current name |
-| Emails | `EmailEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
-| Tax ID | `String` | 1–255 characters, trimmed | ❌ | Left out means unchanged |
-| Phone Numbers | `PhoneNumberEntry[]` | Replaces the whole list | ❌ | Send the complete set, not just additions |
-| Addresses | `AddressEntry[]` | Replaces the whole list; when not empty, one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Send the complete set, not just additions |
+| Business Name | `String` | 1–255 characters, trimmed; cannot be cleared | ❌ | Replacement name; leave out to keep the current name |
+| Emails | `EmailEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
+| Tax ID | `String` | 1–255 characters, trimmed; explicit null clears it | ❌ | Replacement tax ID; leave out to keep the current value |
+| Phone Numbers | `PhoneNumberEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
+| Addresses | `AddressEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list; when non-empty, one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Send the complete set, not just additions |
+| Customer Business Contacts Insert | `BusinessContact[]` | Empty by default | ❌ | Contacts to add as active contacts |
+| Customer Business Contacts Update | `BusinessContactUpdate[]` | Empty by default | ❌ | Existing contacts to change |
+| Customer Business Contacts Archive | `ContactReference[]` | Empty by default | ❌ | Existing contacts to archive permanently |
 
-Neither form touches the business's contacts. Those are managed on their own, in [step 5](#5-user-manages-a-businesss-contacts).
+The customer identifier is supplied in the path for both forms. Individual updates have no contact lists. Business updates apply all three contact lists together with the business fields.
+
+**BusinessContactUpdate**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer Business Contact ID | `UUID` | Canonical 36-character form | ✅ | Which existing contact to change |
+| Full Name | `String` | 1–255 characters, trimmed | ❌ | Replacement name; omitted means unchanged |
+| Role | `String` | 1–255 characters, trimmed | ❌ | Replacement role; null clears it |
+| Email | `String` | Standardised email; max 255 characters | ❌ | Replacement email; null clears it |
+| Phone Number | `PhoneNumber` | A real number for its country | ❌ | Replacement phone; null clears it |
+
+**ContactReference**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer Business Contact ID | `UUID` | Canonical 36-character form | ✅ | Identifies one contact to archive |
 
 **Response**
 
@@ -427,24 +466,25 @@ Response is empty. A successful change answers with nothing but a success status
 **Outcome**
 
 - For an active customer the details are replaced as described and nothing else changes.
+- For an active business, contact inserts, updates, and archives are applied with the customer fields in one atomic change.
 - For an archived or missing customer nothing is stored, and the answer is the same as success.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - One or more fields are invalid |
+| 400 | `VALIDATION_ERROR` | - One or more fields are invalid - A contact ID is duplicated or appears in both the update and archive lists |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - An active customer of this kind already has that name |
-| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - A contact named for update is missing, archived, or belongs to another business - Unexpected error |
 
 ### 5. User Manages a Business's Contacts
 
 **Who can reach this step: an owner or admin of the organization.**
 
-- User opens a business and adds the people they deal with there, or removes ones who have moved on.
+- User manages the people they deal with inside a business as part of that business's update.
 - Only businesses have contacts.
 
 #### Business Scenarios
@@ -452,61 +492,67 @@ Response is empty. A successful change answers with nothing but a success status
 | **Scenarios** | **Requirements** |
 | --- | --- |
 | 1. User adds contacts to an active business | - The contacts are appended to the ones already there - Existing contacts are untouched |
-| 2. User adds a contact whose email or phone number another contact at that business already has | - Rejected as a conflict |
+| 2. User adds a contact whose email or phone number another contact at that business already has | - Accepted - Contacts may share email and phone values |
 | 3. User adds a contact with no email and no phone number | - Accepted. Any number of contacts may have neither |
-| 4. User removes contacts | - The named contacts are deleted outright - Unlike customers, contacts are not archived |
-| 5. User adds or removes contacts on an archived or missing business | - Nothing happens, and it is reported as successful - See [gap 2](#2-changes-to-an-archived-customer-are-silently-discarded) |
+| 4. User changes an existing contact | - Only the supplied fields change - Fields left out stay as they were |
+| 5. User archives contacts | - The named contacts become archived permanently and keep their details |
+| 6. User updates a contact that is missing, archived, or belongs to another business | - The whole business update is rejected and no change is stored |
+| 7. User archives a contact that is missing, archived, or belongs to another business | - Nothing changes for that contact and the request still succeeds |
+| 8. User manages contacts on an archived or missing business | - Nothing happens, and it is reported as successful - See [gap 2](#2-changes-to-an-archived-customer-are-silently-discarded) |
+| 9. A contact ID is repeated in either list, or appears in both update and archive lists | - Rejected with a validation error before any change is stored |
 
 #### Requirements
 
 1. Contacts belong to a business and are added to it, never created on their own.
 2. Adding appends. It never replaces the contacts already recorded.
-3. Within one business, no two contacts may share an email address, and no two may share a phone number. Contacts with neither are always allowed.
-4. Removing a contact deletes it. There is no archived state for contacts and no way to get one back.
-5. Archiving a business keeps its contacts.
+3. Contacts at the same business may share email addresses and phone numbers, whether they are active or archived. Contacts with neither are always allowed.
+4. Updating a contact changes only supplied fields. Archiving a contact is permanent and keeps its details.
+5. All contact changes and business-field changes in one update are applied atomically.
+6. Archiving a business keeps its contacts and their states.
+7. Contact IDs are unique within each list and across the update and archive lists.
 
 #### Request / Response / Outcome
 
-**Request** — adding contacts
+All contact lists are part of the business update described in [step 4](#4-user-updates-a-customer). They are optional and default to empty.
+
+**Request** — inserting contacts
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Customer ID | `UUID` | Canonical 36-character form | ✅ | Which business to add to |
-| Customer Business Contacts | `BusinessContact[]` | Empty by default | ❌ | The people to add. Same shape as when adding a business, [described in step 1](#1-user-adds-a-customer) |
+| Customer Business Contacts Insert | `BusinessContact[]` | Empty by default | ❌ | The people to add as active contacts. Same shape as when adding a business, [described in step 1](#1-user-adds-a-customer) |
 
-**Request** — removing contacts
-
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| Customer ID | `UUID` | Canonical 36-character form | ✅ | Which business to remove from |
-| Customer Business Contacts | `ContactReference[]` | Empty by default | ❌ | Which contacts to delete. See **ContactReference** below |
-
-**ContactReference**
+**Request** — updating contacts
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Customer Business Contact ID | `UUID` | Canonical 36-character form | ✅ | Identifies one contact to delete |
+| Customer Business Contacts Update | `BusinessContactUpdate[]` | Empty by default | ❌ | Existing contacts to change. See **BusinessContactUpdate** in step 4 |
+
+**Request** — archiving contacts
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer Business Contacts Archive | `ContactReference[]` | Empty by default | ❌ | Which contacts to archive permanently. See **ContactReference** in step 4 |
 
 **Response**
 
-Response is empty for both adding and removing.
+Response is empty.
 
 **Outcome**
 
 - Adding stores the new contacts alongside the existing ones.
-- Removing deletes the named contacts permanently.
-- If the business is archived or missing, nothing is stored or deleted and the answer still reports success.
+- Updating changes the named active contacts and leaves all other contacts untouched.
+- Archiving keeps the named contacts but removes them from active-contact use.
+- If the business is archived or missing, nothing is stored or changed and the answer still reports success.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | - One or more contacts are invalid (adding only) |
+| 400 | `VALIDATION_ERROR` | - One or more contacts are invalid - A contact ID is duplicated or appears in both the update and archive lists |
 | 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
-| 409 | `CONFLICT_ERROR` | - A contact at this business already has that email address or phone number (adding only) |
-| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - A contact named for update is missing, archived, or belongs to another business - Unexpected error |
 
 ### 6. User Archives a Customer
 
@@ -526,7 +572,7 @@ Response is empty for both adding and removing.
 #### Requirements
 
 1. Archiving works the same for a person and a business.
-2. An archived customer is kept in full, including their contacts, and can still be opened directly by identifier.
+2. An archived customer and its contacts are kept in full but cannot be opened through customer details.
 3. Archiving frees the name for reuse by a new active customer of the same kind.
 4. Archiving cannot be undone.
 
@@ -534,9 +580,7 @@ Response is empty for both adding and removing.
 
 **Request**
 
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| Customer ID | `UUID` | Canonical 36-character form | ✅ | Which customer to archive |
+The customer identifier is supplied in the request path. There is no request body.
 
 **Response**
 
@@ -557,7 +601,64 @@ Response is empty, whether the customer was archived just now, was already archi
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
 
-### 7. User Extracts Customers from an Image or File
+### 7. User Checks Whether a Customer Name Is Free
+
+**Who can reach this step: any member of the organization.**
+
+- Before adding or renaming a customer, the user may check whether the name is available for that kind of customer.
+- The check reserves nothing. A later add or update can still lose a race and return a conflict.
+
+#### Business Scenarios
+
+| **Scenarios** | **Requirements** |
+| --- | --- |
+| 1. User checks a name that no active customer of that kind uses | - The name is reported as free |
+| 2. User checks a name used by an active customer of the same kind | - The name is reported as taken |
+| 3. A customer of the other kind uses the name | - The name is still reported as free |
+| 4. Only archived customers use the name | - The name is reported as free |
+| 5. User checks the current name while updating that customer | - The current customer is ignored, so the name is reported as free unless another active customer of the same kind uses it |
+| 6. User omits the name or customer kind, or supplies an invalid name | - The request is rejected with a validation error |
+| 7. User supplies an unknown customer kind | - The request is rejected while the request is read |
+
+#### Requirements
+
+1. The check uses the same active, same-kind uniqueness rule as adding and updating.
+2. A person and a business may have the same name.
+3. Archived customers do not reserve names.
+4. An optional customer identifier excludes that customer from the check, for use while updating.
+5. The check does not reserve the name or change stored data.
+
+#### Request / Response / Outcome
+
+**Request**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Name | `String` | 1–255 characters, trimmed | ✅ | The person or business name to check |
+| Customer Type | `CustomerType` | `Individual` or `Business` | ✅ | Which kind of customer to check |
+| Customer ID | `UUID` | Canonical 36-character form | ❌ | The customer being renamed, which is ignored by the check |
+
+**Response**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Is Name Unique | `Boolean` | — | ✅ | Whether an active customer of this kind already uses the name |
+
+**Outcome**
+
+Nothing changes and the check reserves nothing.
+
+#### Http Error Responses
+
+| **Http Code** | **Code** | **Description** |
+| --- | --- | --- |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request - The customer kind is not `Individual` or `Business` |
+| 400 | `VALIDATION_ERROR` | - The name or customer kind is missing, or the name is invalid |
+| 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
+| 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished |
+| 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - Unexpected error |
+
+### 8. User Extracts Customers from an Image or File
 
 **Who can reach this step: an owner or admin of the organization.**
 
@@ -683,11 +784,11 @@ A `candidate` part with the same fields and constraints as **CustomerBusiness** 
 
 Everything above describes what the product does today. Nothing in this section exists yet; each one needs a product answer before it can be built.
 
-#### 1. Looking up a customer that is not there is reported as a server error
+#### 1. Looking up an unavailable customer is reported as a server error
 
-Opening a customer that does not exist, or asking for a person through the business screen, comes back as a server error rather than "not found".
+Opening a customer that does not exist, has been archived, or asking for a person through the business screen, comes back as a server error rather than "not found".
 
-Both are ordinary: a stale link, a bookmark to something since archived, or simply the wrong screen for that kind of customer. The person is told the product is broken.
+These are ordinary cases: a stale link, a bookmark to something since archived, or simply the wrong screen for that kind of customer. The person is told the product is broken.
 
 This is the same shape as [Organization Onboarding gap 3]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}#3-not-belonging-to-an-organization-is-reported-as-a-server-error), which applies here too: on every step, naming an organization the person does not belong to is a server error. The two should be answered together.
 
@@ -697,17 +798,17 @@ This is the same shape as [Organization Onboarding gap 3]({{ site.baseurl }}{% l
 
 Changing an archived customer, or adding and removing its contacts, does nothing at all — and reports success. The same happens for a customer that does not exist.
 
-Nothing distinguishes "saved" from "quietly ignored". Someone editing a customer archived by a colleague moments earlier sees their change accepted, then finds it gone. Because an archived customer can still be opened directly, this is easy to reach: the screen loads and looks perfectly editable.
+Nothing distinguishes "saved" from "quietly ignored". Someone who already has a customer's screen open when a colleague archives it can submit a change and see it accepted, then find it gone.
 
 The reasoning is that archiving already achieves what the edit wanted. That holds for archiving something twice; it does not hold for someone typing a new phone number into a form.
 
-**To decide:** whether editing an archived customer should say so, and whether the screen should show that a customer is archived at all — today nothing in the answer reveals it.
+**To decide:** whether editing an archived customer should say so. The customer can no longer be opened after archiving, but a screen already open may still be submitted.
 
 #### 3. Archiving is final, and archived customers cannot be found again
 
-Archiving cannot be undone, and the customer book lists only active customers. There is no way to browse or search archived ones.
+Archiving cannot be undone, the customer book lists only current customers, and archived customer details cannot be opened. There is no way to browse or search archived ones. Customer and contact details remain stored.
 
-Together that means an accidental archive is unrecoverable in practice. The record still exists and can still be opened, but only by someone who kept the identifier — and nothing in the product shows it any more.
+Together that means an accidental archive is unrecoverable in practice: the stored record cannot be reached through the product.
 
 **To decide:** whether archiving can be reversed, and whether archived customers should be listable. If reversing is allowed, restoring a customer whose name has since been taken by a new active one needs an answer.
 
@@ -721,7 +822,7 @@ Nothing today creates such a record, but a future change or a direct data fix co
 
 #### 5. Nothing limits how often an image or file can be read
 
-[Extracting customers from an image or file](#7-user-extracts-customers-from-an-image-or-file) can be used as often as an owner or admin likes, with no limit per person, per organization, or overall. Each read goes to an outside AI service, which costs money, so nothing stops it being used far more than the migration it is meant for needs.
+[Extracting customers from an image or file](#8-user-extracts-customers-from-an-image-or-file) can be used as often as an owner or admin likes, with no limit per person, per organization, or overall. Each read goes to an outside AI service, which costs money, so nothing stops it being used far more than the migration it is meant for needs.
 
 **To decide:** whether a limit is needed, and if so what it should be.
 
