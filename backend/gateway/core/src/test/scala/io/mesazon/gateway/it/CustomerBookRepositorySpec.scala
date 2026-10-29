@@ -519,8 +519,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             addressesOptUpdate = Some(insertCustomerBusinessInput.addresses),
             updateCustomerBusinessContactInputs =
               List(updateCustomerBusinessContactInput, updateCustomerBusinessContactInputSecond),
-            insertCustomerBusinessContactInputs = List(customerBusinessContactInput),
-            archiveCustomerBusinessContactIDs = List(customerBusinessContactRowArchive.customerBusinessContactID),
+            customerBusinessContactInputsInsert = List(customerBusinessContactInput),
+            customerBusinessContactIDsArchive = List(customerBusinessContactRowArchive.customerBusinessContactID),
           )
           .zioValue shouldBe Some(customerBusinessDetailsRowExpected)
 
@@ -717,7 +717,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             businessNameOptUpdate = Some(arbitrarySample[CustomerBusinessName]),
             taxIDOptUpdate = Some(None),
             updateCustomerBusinessContactInputs = updateCustomerBusinessContactInputs,
-            insertCustomerBusinessContactInputs = List(customerBusinessContactInput),
+            customerBusinessContactInputsInsert = List(customerBusinessContactInput),
           )
           .zioError
 
@@ -788,7 +788,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             businessNameOptUpdate = Some(arbitrarySample[CustomerBusinessName]),
             taxIDOptUpdate = Some(None),
             updateCustomerBusinessContactInputs = updateCustomerBusinessContactInputs,
-            insertCustomerBusinessContactInputs = List(customerBusinessContactInput),
+            customerBusinessContactInputsInsert = List(customerBusinessContactInput),
           )
           .zioError
 
@@ -864,7 +864,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             businessNameOptUpdate = Some(arbitrarySample[CustomerBusinessName]),
             taxIDOptUpdate = Some(None),
             updateCustomerBusinessContactInputs = updateCustomerBusinessContactInputs,
-            insertCustomerBusinessContactInputs = List(customerBusinessContactInput),
+            customerBusinessContactInputsInsert = List(customerBusinessContactInput),
           )
           .zioError
 
@@ -941,7 +941,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             businessNameOptUpdate = Some(arbitrarySample[CustomerBusinessName]),
             taxIDOptUpdate = Some(None),
             updateCustomerBusinessContactInputs = updateCustomerBusinessContactInputs,
-            insertCustomerBusinessContactInputs = List(customerBusinessContactInput),
+            customerBusinessContactInputsInsert = List(customerBusinessContactInput),
           )
           .zioError
 
@@ -977,8 +977,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             businessNameOptUpdate = Some(arbitrarySample[CustomerBusinessName]),
             taxIDOptUpdate = Some(None),
             updateCustomerBusinessContactInputs = List(updateCustomerBusinessContactInput),
-            insertCustomerBusinessContactInputs = List(customerBusinessContactInput),
-            archiveCustomerBusinessContactIDs = customerBusinessContactIDs,
+            customerBusinessContactInputsInsert = List(customerBusinessContactInput),
+            customerBusinessContactIDsArchive = customerBusinessContactIDs,
           )
           .zioValue shouldBe None
 
@@ -1021,8 +1021,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             businessNameOptUpdate = Some(arbitrarySample[CustomerBusinessName]),
             taxIDOptUpdate = Some(None),
             updateCustomerBusinessContactInputs = List(updateCustomerBusinessContactInput),
-            insertCustomerBusinessContactInputs = List(customerBusinessContactInput),
-            archiveCustomerBusinessContactIDs = customerBusinessContactIDs,
+            customerBusinessContactInputsInsert = List(customerBusinessContactInput),
+            customerBusinessContactIDsArchive = customerBusinessContactIDs,
           )
           .zioValue shouldBe None
 
@@ -1071,8 +1071,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             businessNameOptUpdate = Some(arbitrarySample[CustomerBusinessName]),
             taxIDOptUpdate = Some(None),
             updateCustomerBusinessContactInputs = List(updateCustomerBusinessContactInput),
-            insertCustomerBusinessContactInputs = List(customerBusinessContactInput),
-            archiveCustomerBusinessContactIDs = customerBusinessContactIDs,
+            customerBusinessContactInputsInsert = List(customerBusinessContactInput),
+            customerBusinessContactIDsArchive = customerBusinessContactIDs,
           )
           .zioValue shouldBe None
 
@@ -1111,8 +1111,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             businessNameOptUpdate = Some(arbitrarySample[CustomerBusinessName]),
             taxIDOptUpdate = Some(None),
             updateCustomerBusinessContactInputs = List(updateCustomerBusinessContactInput),
-            insertCustomerBusinessContactInputs = List(customerBusinessContactInput),
-            archiveCustomerBusinessContactIDs = customerBusinessContactIDs,
+            customerBusinessContactInputsInsert = List(customerBusinessContactInput),
+            customerBusinessContactIDsArchive = customerBusinessContactIDs,
           )
           .zioValue shouldBe None
 
@@ -1154,7 +1154,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           isArchived = false,
         )
         val customerBusinessContactIDMissing  = arbitrarySample[CustomerBusinessContactID]
-        val archiveCustomerBusinessContactIDs = List(
+        val customerBusinessContactIDsArchive = List(
           customerBusinessContactRow.customerBusinessContactID,
           customerBusinessContactRowArchived.customerBusinessContactID,
           customerBusinessContactRowOther.customerBusinessContactID,
@@ -1180,7 +1180,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
 
         customerBusinessDetailsRowOther.customerID shouldNot equal(customerBusinessDetailsRow.customerID)
         customerBusinessDetailsRowForeign.organizationID shouldNot equal(customerBusinessDetailsRow.organizationID)
-        archiveCustomerBusinessContactIDs.distinct should have size archiveCustomerBusinessContactIDs.size
+        customerBusinessContactIDsArchive.distinct should have size customerBusinessContactIDsArchive.size
 
         postgresClient
           .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRows(customerBusinessDetailsRows))
@@ -1198,7 +1198,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .updateCustomerBusiness(
             customerBusinessDetailsRow.organizationID,
             customerBusinessDetailsRow.customerID,
-            archiveCustomerBusinessContactIDs = archiveCustomerBusinessContactIDs,
+            customerBusinessContactIDsArchive = customerBusinessContactIDsArchive,
           )
           .zioValue shouldBe Some(customerBusinessDetailsRow.copy(updatedAt = UpdatedAt(instantNow)))
 
@@ -1210,7 +1210,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .updateCustomerBusiness(
             customerBusinessDetailsRow.organizationID,
             customerBusinessDetailsRow.customerID,
-            archiveCustomerBusinessContactIDs = archiveCustomerBusinessContactIDs,
+            customerBusinessContactIDsArchive = customerBusinessContactIDsArchive,
           )
           .zioValue shouldBe Some(customerBusinessDetailsRow.copy(updatedAt = UpdatedAt(instantNowNext)))
 
@@ -1275,8 +1275,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             businessNameOptUpdate = Some(arbitrarySample[CustomerBusinessName]),
             taxIDOptUpdate = Some(None),
             updateCustomerBusinessContactInputs = List(updateCustomerBusinessContactInput),
-            insertCustomerBusinessContactInputs = List(customerBusinessContactInput),
-            archiveCustomerBusinessContactIDs = List(customerBusinessContactRowArchive.customerBusinessContactID),
+            customerBusinessContactInputsInsert = List(customerBusinessContactInput),
+            customerBusinessContactIDsArchive = List(customerBusinessContactRowArchive.customerBusinessContactID),
           )
           .zioError
 
@@ -1328,8 +1328,8 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             customerBusinessDetailsRow.organizationID,
             customerBusinessDetailsRow.customerID,
             businessNameOptUpdate = Some(customerBusinessDetailsRowExisting.businessName),
-            insertCustomerBusinessContactInputs = List(customerBusinessContactInput),
-            archiveCustomerBusinessContactIDs = List(customerBusinessContactRow.customerBusinessContactID),
+            customerBusinessContactInputsInsert = List(customerBusinessContactInput),
+            customerBusinessContactIDsArchive = List(customerBusinessContactRow.customerBusinessContactID),
           )
           .zioError
 

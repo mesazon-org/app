@@ -62,7 +62,6 @@ object CustomerBookService {
       customerIDs = customerIDs.transformInto[List[UUID]]
     )
 
-    /** HTTP PUT /customer-book/individual/{customerID} */
     override def customerBookIndividualPut(
         organizationID: UUID,
         customerID: UUID,
@@ -101,9 +100,9 @@ object CustomerBookService {
         addressesOptUpdate = customerBookBusinessPutRequest.addresses,
         updateCustomerBusinessContactInputs = customerBookBusinessPutRequest.customerBusinessContactsUpdate
           .transformInto[List[UpdateCustomerBusinessContactInput]],
-        insertCustomerBusinessContactInputs = customerBookBusinessPutRequest.customerBusinessContactsInsert
+        customerBusinessContactInputsInsert = customerBookBusinessPutRequest.customerBusinessContactsInsert
           .transformInto[List[CustomerBusinessContactInput]],
-        archiveCustomerBusinessContactIDs =
+        customerBusinessContactIDsArchive =
           customerBookBusinessPutRequest.customerBusinessContactsArchive.map(_.customerBusinessContactID),
       )
     } yield ()
@@ -204,7 +203,6 @@ object CustomerBookService {
           service.customerBookBatchPost(organizationID, customerBookBatchPostRequestSmithy)
         )
 
-      /** HTTP PUT /customer-book/individual/{customerID} */
       override def customerBookIndividualPut(
           organizationID: UUID,
           customerID: UUID,

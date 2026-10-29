@@ -56,20 +56,6 @@ final class CustomerBookQueries(
         |updated_at
          """.stripMargin
 
-  private def frCustomerIndividualValues(row: CustomerIndividualDetailsRow): Fragment =
-    fr0"(" ++ List(
-      fr0"${row.organizationID}",
-      fr0"${row.customerID}",
-      fr0"${CustomerType.Individual}",
-      fr0"${row.fullName}",
-      fr0"${row.emails}",
-      fr0"${row.phoneNumbers}",
-      fr0"${row.addresses}",
-      fr0"${row.isArchived}",
-      fr0"${row.createdAt}",
-      fr0"${row.updatedAt}",
-    ).intercalate(fr",") ++ fr0")"
-
   private val frCustomerIndividualSelectFields =
     fr"""
         |organization_id,
@@ -97,21 +83,6 @@ final class CustomerBookQueries(
         |created_at,
         |updated_at
          """.stripMargin
-
-  private def frCustomerBusinessValues(row: CustomerBusinessDetailsRow): Fragment =
-    fr0"(" ++ List(
-      fr0"${row.organizationID}",
-      fr0"${row.customerID}",
-      fr0"${CustomerType.Business}",
-      fr0"${row.businessName}",
-      fr0"${row.taxID}",
-      fr0"${row.emails}",
-      fr0"${row.phoneNumbers}",
-      fr0"${row.addresses}",
-      fr0"${row.isArchived}",
-      fr0"${row.createdAt}",
-      fr0"${row.updatedAt}",
-    ).intercalate(fr",") ++ fr0")"
 
   private val frCustomerBusinessSelectFields =
     fr"""
@@ -184,6 +155,35 @@ final class CustomerBookQueries(
         |updated_at
          """.stripMargin
 
+  private def frCustomerIndividualValues(customerIndividualDetailsRow: CustomerIndividualDetailsRow): Fragment =
+    fr0"(" ++ List(
+      fr0"${customerIndividualDetailsRow.organizationID}",
+      fr0"${customerIndividualDetailsRow.customerID}",
+      fr0"${CustomerType.Individual}",
+      fr0"${customerIndividualDetailsRow.fullName}",
+      fr0"${customerIndividualDetailsRow.emails}",
+      fr0"${customerIndividualDetailsRow.phoneNumbers}",
+      fr0"${customerIndividualDetailsRow.addresses}",
+      fr0"${customerIndividualDetailsRow.isArchived}",
+      fr0"${customerIndividualDetailsRow.createdAt}",
+      fr0"${customerIndividualDetailsRow.updatedAt}",
+    ).intercalate(fr",") ++ fr0")"
+
+  private def frCustomerBusinessValues(customerBusinessDetailsRow: CustomerBusinessDetailsRow): Fragment =
+    fr0"(" ++ List(
+      fr0"${customerBusinessDetailsRow.organizationID}",
+      fr0"${customerBusinessDetailsRow.customerID}",
+      fr0"${CustomerType.Business}",
+      fr0"${customerBusinessDetailsRow.businessName}",
+      fr0"${customerBusinessDetailsRow.taxID}",
+      fr0"${customerBusinessDetailsRow.emails}",
+      fr0"${customerBusinessDetailsRow.phoneNumbers}",
+      fr0"${customerBusinessDetailsRow.addresses}",
+      fr0"${customerBusinessDetailsRow.isArchived}",
+      fr0"${customerBusinessDetailsRow.createdAt}",
+      fr0"${customerBusinessDetailsRow.updatedAt}",
+    ).intercalate(fr",") ++ fr0")"
+
   // Whole-row insert via doobie's positional `Write` binding — for rows that map 1:1 to their table
   // (e.g. `CustomerBusinessContactRow`). Rows that are a typed view over a shared table build their
   // VALUES explicitly through the `…With` helpers below.
@@ -211,9 +211,9 @@ final class CustomerBookQueries(
       frValues: Row => Fragment,
       rows: List[Row],
   ): TranzactIO[Unit] =
-    NonEmptyList.fromList(rows).fold(ZIO.unit: TranzactIO[Unit]) { rowsNel =>
+    NonEmptyList.fromList(rows).fold(ZIO.unit: TranzactIO[Unit]) { rowsNonEmpty =>
       tzio {
-        val frAllValues = rowsNel.toList.map(frValues).intercalate(fr",")
+        val frAllValues = rowsNonEmpty.toList.map(frValues).intercalate(fr",")
         val q           =
           fr"INSERT INTO" ++ frTable ++
             fr"(" ++ frFields ++ fr")" ++
@@ -222,6 +222,19 @@ final class CustomerBookQueries(
         q.update.run.void
       }
     }
+
+  private def frCustomerBusinessContactUpdateValues(customerBusinessContactRow: CustomerBusinessContactRow): Fragment =
+    fr0"(" ++ List(
+      fr0"${customerBusinessContactRow.customerBusinessContactID}::uuid",
+      fr0"${customerBusinessContactRow.fullName}::text",
+      fr0"${customerBusinessContactRow.role}::text",
+      fr0"${customerBusinessContactRow.email}::text",
+      fr0"${customerBusinessContactRow.phoneNumber.map(_.value.phoneRegion)}::text",
+      fr0"${customerBusinessContactRow.phoneNumber.map(_.value.phoneCountryCode)}::text",
+      fr0"${customerBusinessContactRow.phoneNumber.map(_.value.phoneNationalNumber)}::text",
+      fr0"${customerBusinessContactRow.phoneNumber.map(_.value.phoneNumberE164)}::text",
+      fr0"${customerBusinessContactRow.updatedAt}::timestamptz",
+    ).intercalate(fr",") ++ fr0")"
 
   def insertCustomerIndividualDetailsRow(
       customerIndividualDetailsRow: CustomerIndividualDetailsRow
@@ -432,7 +445,7 @@ final class CustomerBookQueries(
 
   def isUniqueCustomerName(
       organizationID: OrganizationID,
-      name: CustomerName,
+      customerName: CustomerName,
       customerType: CustomerType,
       customerIDOpt: Option[CustomerID],
   ): TranzactIO[Boolean] =
@@ -441,7 +454,7 @@ final class CustomerBookQueries(
         fr"SELECT 1 FROM" ++ frCustomerTable ++
           whereAndOpt(
             Some(fr"organization_id = $organizationID"),
-            Some(fr"name = $name"),
+            Some(fr"name = $customerName"),
             Some(fr"customer_type = $customerType"),
             Some(fr"is_archived = false"),
             customerIDOpt.map(customerID => fr"customer_id <> $customerID"),
@@ -466,19 +479,6 @@ final class CustomerBookQueries(
 
       q.query[CustomerBusinessContactRow].to[List]
     }
-
-  private def frCustomerBusinessContactUpdateValues(customerBusinessContactRow: CustomerBusinessContactRow): Fragment =
-    fr0"(" ++ List(
-      fr0"${customerBusinessContactRow.customerBusinessContactID}::uuid",
-      fr0"${customerBusinessContactRow.fullName}::text",
-      fr0"${customerBusinessContactRow.role}::text",
-      fr0"${customerBusinessContactRow.email}::text",
-      fr0"${customerBusinessContactRow.phoneNumber.map(_.value.phoneRegion)}::text",
-      fr0"${customerBusinessContactRow.phoneNumber.map(_.value.phoneCountryCode)}::text",
-      fr0"${customerBusinessContactRow.phoneNumber.map(_.value.phoneNationalNumber)}::text",
-      fr0"${customerBusinessContactRow.phoneNumber.map(_.value.phoneNumberE164)}::text",
-      fr0"${customerBusinessContactRow.updatedAt}::timestamptz",
-    ).intercalate(fr",") ++ fr0")"
 
   def updateCustomerBusinessContactRows(
       organizationID: OrganizationID,
