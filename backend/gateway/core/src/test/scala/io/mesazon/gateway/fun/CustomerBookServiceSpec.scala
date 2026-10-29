@@ -33,12 +33,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           arbitrarySample[CustomerBookIndividualPostRequest]
         val insertCustomerIndividualInput =
           customerBookIndividualPostRequest.transformInto[InsertCustomerIndividualInput]
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
-          fullName = insertCustomerIndividualInput.fullName,
-          emails = insertCustomerIndividualInput.emails,
-          phoneNumbers = insertCustomerIndividualInput.phoneNumbers,
-          addresses = insertCustomerIndividualInput.addresses,
-        )
+        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
 
         customerBookRepositoryMock.insertCustomerIndividual
           .expects(organizationID, insertCustomerIndividualInput)
@@ -55,35 +50,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           .zioValue
 
         customerBookIndividualPostResponse shouldBe smithy.CustomerBookIndividualPostResponse(
-          customerID = customerIndividualDetailsRow.customerID.value,
-          fullName = customerIndividualDetailsRow.fullName.value,
-          emails = customerIndividualDetailsRow.emails.map(customerEmailEntry =>
-            smithy.CustomerEmailEntry(
-              email = customerEmailEntry.email.value,
-              isDefault = customerEmailEntry.isDefault,
-            )
-          ),
-          phoneNumbers = customerIndividualDetailsRow.phoneNumbers.map(customerPhoneNumberEntry =>
-            smithy.CustomerPhoneNumberEntry(
-              phoneNumber = smithy.PhoneNumberRequest(
-                phoneNationalNumber = customerPhoneNumberEntry.phoneNumber.value.phoneNationalNumber.value,
-                phoneCountryCode = customerPhoneNumberEntry.phoneNumber.value.phoneCountryCode.value,
-              ),
-              isDefault = customerPhoneNumberEntry.isDefault,
-            )
-          ),
-          addresses = customerIndividualDetailsRow.addresses.map(customerAddressEntry =>
-            smithy.CustomerAddressEntry(
-              address = smithy.AddressRequest(
-                addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
-                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
-                city = customerAddressEntry.value.address.city.map(_.value),
-                postalCode = customerAddressEntry.value.address.postalCode.map(_.value),
-                country = customerAddressEntry.value.address.country.map(_.value),
-              ),
-              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
-            )
-          ),
+          customerID = customerIndividualDetailsRow.customerID.value
         )
       }
 
@@ -131,25 +98,10 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
         val customerBookBusinessPostRequest =
           arbitrarySample[CustomerBookBusinessPostRequest]
         val insertCustomerBusinessInput = customerBookBusinessPostRequest.transformInto[InsertCustomerBusinessInput]
-        val customerBusinessDetailsRow  = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          businessName = insertCustomerBusinessInput.businessName,
-          emails = insertCustomerBusinessInput.emails,
-          taxID = insertCustomerBusinessInput.taxID,
-          phoneNumbers = insertCustomerBusinessInput.phoneNumbers,
-          addresses = insertCustomerBusinessInput.addresses,
-        )
-        val customerBusinessContactRows =
-          insertCustomerBusinessInput.customerBusinessContacts.map(customerBusinessContactInput =>
-            arbitrarySample[CustomerBusinessContactRow].copy(
-              fullName = customerBusinessContactInput.fullName,
-              role = customerBusinessContactInput.role,
-              email = customerBusinessContactInput.email,
-              phoneNumber = customerBusinessContactInput.phoneNumber,
-            )
-          )
+        val customerBusinessDetailsRow  = arbitrarySample[CustomerBusinessDetailsRow]
         val customerBusinessInsertRow: CustomerBusinessInsertRow = (
           customerBusinessDetailsRow = customerBusinessDetailsRow,
-          customerBusinessContactRows = customerBusinessContactRows,
+          customerBusinessContactRows = Nil,
         )
 
         customerBookRepositoryMock.insertCustomerBusiness
@@ -167,47 +119,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           .zioValue
 
         customerBookBusinessPostResponse shouldBe smithy.CustomerBookBusinessPostResponse(
-          customerID = customerBusinessDetailsRow.customerID.value,
-          businessName = customerBusinessDetailsRow.businessName.value,
-          emails = customerBusinessDetailsRow.emails.map(entry =>
-            smithy.CustomerEmailEntry(email = entry.email.value, isDefault = entry.isDefault)
-          ),
-          taxID = customerBusinessDetailsRow.taxID.map(_.value),
-          phoneNumbers = customerBusinessDetailsRow.phoneNumbers.map(entry =>
-            smithy.CustomerPhoneNumberEntry(
-              phoneNumber = smithy.PhoneNumberRequest(
-                phoneNationalNumber = entry.phoneNumber.value.phoneNationalNumber.value,
-                phoneCountryCode = entry.phoneNumber.value.phoneCountryCode.value,
-              ),
-              isDefault = entry.isDefault,
-            )
-          ),
-          addresses = customerBusinessDetailsRow.addresses.map(customerAddressEntry =>
-            smithy.CustomerAddressEntry(
-              address = smithy.AddressRequest(
-                addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
-                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
-                city = customerAddressEntry.value.address.city.map(_.value),
-                postalCode = customerAddressEntry.value.address.postalCode.map(_.value),
-                country = customerAddressEntry.value.address.country.map(_.value),
-              ),
-              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
-            )
-          ),
-          customerBusinessContacts = customerBusinessContactRows.map(customerBusinessContactRow =>
-            smithy.CustomerBusinessContact(
-              customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID.value,
-              fullName = customerBusinessContactRow.fullName.value,
-              role = customerBusinessContactRow.role.map(_.value),
-              email = customerBusinessContactRow.email.map(_.value),
-              phoneNumber = customerBusinessContactRow.phoneNumber.map(phoneNumber =>
-                smithy.PhoneNumberRequest(
-                  phoneNationalNumber = phoneNumber.value.phoneNationalNumber.value,
-                  phoneCountryCode = phoneNumber.value.phoneCountryCode.value,
-                )
-              ),
-            )
-          ),
+          customerID = customerBusinessDetailsRow.customerID.value
         )
       }
 
@@ -248,7 +160,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
     }
 
     "customerBookBatchPost" should {
-      "successfully insert individuals and businesses and return individual summaries before business summaries" in new TestContext {
+      "successfully insert individuals and businesses and return individual IDs before business IDs" in new TestContext {
         val organizationID               = arbitrarySample[OrganizationID]
         val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
           customerBusinesses = List(
@@ -262,24 +174,12 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           customerBookBatchPostRequest.customerIndividuals.transformInto[List[InsertCustomerIndividualInput]]
         val insertCustomerBusinessInputs =
           customerBookBatchPostRequest.customerBusinesses.transformInto[List[InsertCustomerBusinessInput]]
-        val customerIndividualDetailsRows = insertCustomerIndividualInputs.map(insertCustomerIndividualInput =>
-          arbitrarySample[CustomerIndividualDetailsRow].copy(
-            fullName = insertCustomerIndividualInput.fullName,
-            emails = insertCustomerIndividualInput.emails,
-            phoneNumbers = insertCustomerIndividualInput.phoneNumbers,
-            addresses = insertCustomerIndividualInput.addresses,
-          )
-        )
+        val customerIndividualDetailsRows =
+          insertCustomerIndividualInputs.map(_ => arbitrarySample[CustomerIndividualDetailsRow])
         val customerBusinessInsertRows: List[CustomerBusinessInsertRow] =
-          insertCustomerBusinessInputs.map(insertCustomerBusinessInput =>
+          insertCustomerBusinessInputs.map(_ =>
             (
-              customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-                businessName = insertCustomerBusinessInput.businessName,
-                emails = insertCustomerBusinessInput.emails,
-                taxID = insertCustomerBusinessInput.taxID,
-                phoneNumbers = insertCustomerBusinessInput.phoneNumbers,
-                addresses = insertCustomerBusinessInput.addresses,
-              ),
+              customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow],
               customerBusinessContactRows = List.empty,
             )
           )
@@ -301,20 +201,10 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           .zioValue
 
         customerBookBatchPostResponse shouldBe smithy.CustomerBookBatchPostResponse(
-          customers = customerIndividualDetailsRows.map(customerIndividualDetailsRow =>
-            smithy.CustomerSummary(
-              customerID = customerIndividualDetailsRow.customerID.value,
-              name = customerIndividualDetailsRow.fullName.value,
-              customerType = smithy.CustomerType.Individual,
-            )
-          ) ++
-            customerBusinessInsertRows.map(customerBusinessInsertRow =>
-              smithy.CustomerSummary(
-                customerID = customerBusinessInsertRow.customerBusinessDetailsRow.customerID.value,
-                name = customerBusinessInsertRow.customerBusinessDetailsRow.businessName.value,
-                customerType = smithy.CustomerType.Business,
-              )
-            )
+          customerIDs = List(
+            customerIndividualDetailsRows.head.customerID.value,
+            customerBusinessInsertRows.head.customerBusinessDetailsRow.customerID.value,
+          )
         )
       }
 

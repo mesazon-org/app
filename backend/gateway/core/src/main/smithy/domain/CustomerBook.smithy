@@ -52,14 +52,6 @@ structure CustomerBookIndividualPostRequest {
 structure CustomerBookIndividualPostResponse {
     @required
     customerID: UUID
-    @required
-    fullName: String
-    @required
-    emails: CustomerEmailEntries
-    @required
-    phoneNumbers: CustomerPhoneNumberEntries
-    @required
-    addresses: CustomerAddressEntries
 }
 
 structure CustomerBookIndividualPutRequest {
@@ -152,17 +144,6 @@ structure CustomerBookBusinessPutRequest {
 structure CustomerBookBusinessPostResponse {
     @required
     customerID: UUID
-    @required
-    businessName: String
-    @required
-    emails: CustomerEmailEntries
-    taxID: String
-    @required
-    phoneNumbers: CustomerPhoneNumberEntries
-    @required
-    addresses: CustomerAddressEntries
-    @required
-    customerBusinessContacts: CustomerBusinessContacts
 }
 
 list CustomerIndividualsInsert {
@@ -182,7 +163,7 @@ structure CustomerBookBatchPostRequest {
 
 structure CustomerBookBatchPostResponse {
     @required
-    customers: CustomerSummaries
+    customerIDs: CustomerIDs
 }
 
 structure CustomerBookIndividualGetResponse {

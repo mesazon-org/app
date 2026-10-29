@@ -83,32 +83,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
         )
         customerBookIndividualPostResponse.body.value shouldBe smithy.CustomerBookIndividualPostResponse(
-          customerID = customerIndividualDetailsRowsAll.head.customerID.value,
-          fullName = customerBookIndividualPostRequest.fullName.value,
-          emails = customerBookIndividualPostRequest.emails.map(entry =>
-            smithy.CustomerEmailEntry(entry.email.value, entry.isDefault)
-          ),
-          phoneNumbers = customerBookIndividualPostRequest.phoneNumbers.map(entry =>
-            smithy.CustomerPhoneNumberEntry(
-              smithy.PhoneNumberRequest(
-                entry.phoneNumber.value.phoneNationalNumber.value,
-                entry.phoneNumber.value.phoneCountryCode.value,
-              ),
-              entry.isDefault,
-            )
-          ),
-          addresses = customerBookIndividualPostRequest.addresses.map(customerAddressEntry =>
-            smithy.CustomerAddressEntry(
-              address = smithy.AddressRequest(
-                addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
-                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
-                city = customerAddressEntry.value.address.city.map(_.value),
-                postalCode = customerAddressEntry.value.address.postalCode.map(_.value),
-                country = customerAddressEntry.value.address.country.map(_.value),
-              ),
-              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
-            )
-          ),
+          customerID = customerIndividualDetailsRowsAll.head.customerID.value
         )
       }
 
@@ -461,47 +436,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         )
 
         customerBookBusinessPostResponse.body.value shouldBe smithy.CustomerBookBusinessPostResponse(
-          customerID = customerBusinessDetailsRowsAll.head.customerID.value,
-          businessName = customerBookBusinessPostRequest.businessName.value,
-          emails = customerBookBusinessPostRequest.emails.map(entry =>
-            smithy.CustomerEmailEntry(entry.email.value, entry.isDefault)
-          ),
-          taxID = customerBookBusinessPostRequest.taxID.map(_.value),
-          phoneNumbers = customerBookBusinessPostRequest.phoneNumbers.map(entry =>
-            smithy.CustomerPhoneNumberEntry(
-              smithy.PhoneNumberRequest(
-                entry.phoneNumber.value.phoneNationalNumber.value,
-                entry.phoneNumber.value.phoneCountryCode.value,
-              ),
-              entry.isDefault,
-            )
-          ),
-          addresses = customerBookBusinessPostRequest.addresses.map(customerAddressEntry =>
-            smithy.CustomerAddressEntry(
-              address = smithy.AddressRequest(
-                addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
-                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
-                city = customerAddressEntry.value.address.city.map(_.value),
-                postalCode = customerAddressEntry.value.address.postalCode.map(_.value),
-                country = customerAddressEntry.value.address.country.map(_.value),
-              ),
-              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
-            )
-          ),
-          customerBusinessContacts = List(
-            smithy.CustomerBusinessContact(
-              customerBusinessContactID = customerBusinessContactRowsAll.head.customerBusinessContactID.value,
-              fullName = customerBusinessContactInsert.fullName.value,
-              role = customerBusinessContactInsert.role.map(_.value),
-              email = customerBusinessContactInsert.email.map(_.value),
-              phoneNumber = customerBusinessContactInsert.phoneNumber.map(phoneNumber =>
-                smithy.PhoneNumberRequest(
-                  phoneNumber.value.phoneNationalNumber.value,
-                  phoneNumber.value.phoneCountryCode.value,
-                )
-              ),
-            )
-          ),
+          customerID = customerBusinessDetailsRowsAll.head.customerID.value
         )
       }
 
@@ -589,51 +524,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           }
 
         customerBookBusinessPostResponse.body.value shouldBe smithy.CustomerBookBusinessPostResponse(
-          customerID = customerBusinessDetailsRowsAll.head.customerID.value,
-          businessName = customerBookBusinessPostRequest.businessName.value,
-          emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
-            smithy.CustomerEmailEntry(customerEmailEntry.email.value, isDefault = customerEmailEntry.isDefault)
-          ),
-          taxID = customerBookBusinessPostRequest.taxID.map(_.value),
-          phoneNumbers = customerBookBusinessPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
-            smithy.CustomerPhoneNumberEntry(
-              smithy.PhoneNumberRequest(
-                customerPhoneNumberEntry.phoneNumber.value.phoneNationalNumber.value,
-                customerPhoneNumberEntry.phoneNumber.value.phoneCountryCode.value,
-              ),
-              isDefault = customerPhoneNumberEntry.isDefault,
-            )
-          ),
-          addresses = customerBookBusinessPostRequest.addresses.map(customerAddressEntry =>
-            smithy.CustomerAddressEntry(
-              address = smithy.AddressRequest(
-                addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
-                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
-                city = customerAddressEntry.value.address.city.map(_.value),
-                postalCode = customerAddressEntry.value.address.postalCode.map(_.value),
-                country = customerAddressEntry.value.address.country.map(_.value),
-              ),
-              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
-            )
-          ),
-          customerBusinessContacts = customerBookBusinessPostRequest.customerBusinessContacts.map {
-            customerBusinessContactInsert =>
-              val customerBusinessContactRow =
-                customerBusinessContactRowsAll.find(_.fullName == customerBusinessContactInsert.fullName).value
-
-              smithy.CustomerBusinessContact(
-                customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID.value,
-                fullName = customerBusinessContactInsert.fullName.value,
-                role = customerBusinessContactInsert.role.map(_.value),
-                email = customerBusinessContactInsert.email.map(_.value),
-                phoneNumber = customerBusinessContactInsert.phoneNumber.map(customerPhoneNumber =>
-                  smithy.PhoneNumberRequest(
-                    customerPhoneNumber.value.phoneNationalNumber.value,
-                    customerPhoneNumber.value.phoneCountryCode.value,
-                  )
-                ),
-              )
-          },
+          customerID = customerBusinessDetailsRowsAll.head.customerID.value
         )
       }
 
@@ -729,51 +620,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           }
 
         customerBookBusinessPostResponse.body.value shouldBe smithy.CustomerBookBusinessPostResponse(
-          customerID = customerBusinessDetailsRowsAll.head.customerID.value,
-          businessName = customerBookBusinessPostRequest.businessName.value,
-          emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
-            smithy.CustomerEmailEntry(customerEmailEntry.email.value, isDefault = customerEmailEntry.isDefault)
-          ),
-          taxID = customerBookBusinessPostRequest.taxID.map(_.value),
-          phoneNumbers = customerBookBusinessPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
-            smithy.CustomerPhoneNumberEntry(
-              smithy.PhoneNumberRequest(
-                customerPhoneNumberEntry.phoneNumber.value.phoneNationalNumber.value,
-                customerPhoneNumberEntry.phoneNumber.value.phoneCountryCode.value,
-              ),
-              isDefault = customerPhoneNumberEntry.isDefault,
-            )
-          ),
-          addresses = customerBookBusinessPostRequest.addresses.map(customerAddressEntry =>
-            smithy.CustomerAddressEntry(
-              address = smithy.AddressRequest(
-                addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
-                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
-                city = customerAddressEntry.value.address.city.map(_.value),
-                postalCode = customerAddressEntry.value.address.postalCode.map(_.value),
-                country = customerAddressEntry.value.address.country.map(_.value),
-              ),
-              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
-            )
-          ),
-          customerBusinessContacts = customerBookBusinessPostRequest.customerBusinessContacts.map {
-            customerBusinessContactInsert =>
-              val customerBusinessContactRow =
-                customerBusinessContactRowsAll.find(_.fullName == customerBusinessContactInsert.fullName).value
-
-              smithy.CustomerBusinessContact(
-                customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID.value,
-                fullName = customerBusinessContactInsert.fullName.value,
-                role = customerBusinessContactInsert.role.map(_.value),
-                email = customerBusinessContactInsert.email.map(_.value),
-                phoneNumber = customerBusinessContactInsert.phoneNumber.map(customerPhoneNumber =>
-                  smithy.PhoneNumberRequest(
-                    customerPhoneNumber.value.phoneNationalNumber.value,
-                    customerPhoneNumber.value.phoneCountryCode.value,
-                  )
-                ),
-              )
-          },
+          customerID = customerBusinessDetailsRowsAll.head.customerID.value
         )
       }
 
@@ -1167,18 +1014,10 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           )
 
           customerBookBatchPostResponse.body.value shouldBe smithy.CustomerBookBatchPostResponse(
-            customers = customerIndividuals.map(customerIndividual =>
-              smithy.CustomerSummary(
-                customerID = individualRows.find(_.fullName == customerIndividual.fullName).value.customerID.value,
-                name = customerIndividual.fullName.value,
-                customerType = smithy.CustomerType.Individual,
-              )
+            customerIDs = customerIndividuals.map(customerIndividual =>
+              individualRows.find(_.fullName == customerIndividual.fullName).value.customerID.value
             ) ++ customerBusinesses.map(customerBusiness =>
-              smithy.CustomerSummary(
-                customerID = businessRows.find(_.businessName == customerBusiness.businessName).value.customerID.value,
-                name = customerBusiness.businessName.value,
-                customerType = smithy.CustomerType.Business,
-              )
+              businessRows.find(_.businessName == customerBusiness.businessName).value.customerID.value
             )
           )
       }
@@ -1210,7 +1049,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           .zioValue
 
         customerBookBatchPostResponse.code shouldBe StatusCode.Ok
-        customerBookBatchPostResponse.body.value shouldBe smithy.CustomerBookBatchPostResponse(customers = Nil)
+        customerBookBatchPostResponse.body.value shouldBe smithy.CustomerBookBatchPostResponse(customerIDs = Nil)
 
         postgresClient
           .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)

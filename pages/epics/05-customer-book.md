@@ -189,8 +189,6 @@ The shapes used above and throughout this epic:
 
 **Response**
 
-The identifier-only responses below are agreed and pending implementation.
-
 Adding one person or one business returns only the new customer's identifier. A mixed batch returns only the new customer identifiers, with individuals first and businesses second, preserving the order within each input list. To get a business's contact identifiers, open its business details.
 
 **Response — one individual**

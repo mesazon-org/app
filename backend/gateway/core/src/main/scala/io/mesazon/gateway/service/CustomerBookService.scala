@@ -29,7 +29,7 @@ object CustomerBookService {
         OrganizationID(organizationID),
         customerBookIndividualPostRequest.transformInto[InsertCustomerIndividualInput],
       )
-    } yield customerIndividualDetailsRow.transformInto[smithy.CustomerBookIndividualPostResponse]
+    } yield smithy.CustomerBookIndividualPostResponse(customerIndividualDetailsRow.customerID.value)
 
     override def customerBookBusinessPost(
         organizationID: UUID,
@@ -42,14 +42,9 @@ object CustomerBookService {
         OrganizationID(organizationID),
         customerBookBusinessPostRequest.transformInto[InsertCustomerBusinessInput],
       )
-    } yield customerBusinessInsertRow.customerBusinessDetailsRow
-      .into[smithy.CustomerBookBusinessPostResponse]
-      .withFieldConst(
-        _.customerBusinessContacts,
-        customerBusinessInsertRow.customerBusinessContactRows
-          .transformInto[List[smithy.CustomerBusinessContact]],
-      )
-      .transform
+    } yield smithy.CustomerBookBusinessPostResponse(
+      customerBusinessInsertRow.customerBusinessDetailsRow.customerID.value
+    )
 
     override def customerBookBatchPost(
         organizationID: UUID,
@@ -64,19 +59,8 @@ object CustomerBookService {
         customerBookBatchPostRequest.customerBusinesses.transformInto[List[InsertCustomerBusinessInput]],
       )
     } yield smithy.CustomerBookBatchPostResponse(
-      customers = insertCustomersResult.customerIndividualDetailsRows.map(
-        _.into[smithy.CustomerSummary]
-          .withFieldRenamed(_.fullName, _.name)
-          .withFieldConst(_.customerType, smithy.CustomerType.Individual)
-          .transform
-      ) ++
-        insertCustomersResult.customerBusinessInsertRows.map(
-          _.customerBusinessDetailsRow
-            .into[smithy.CustomerSummary]
-            .withFieldRenamed(_.businessName, _.name)
-            .withFieldConst(_.customerType, smithy.CustomerType.Business)
-            .transform
-        )
+      customerIDs = insertCustomersResult.customerIndividualDetailsRows.map(_.customerID.value) ++
+        insertCustomersResult.customerBusinessInsertRows.map(_.customerBusinessDetailsRow.customerID.value)
     )
 
     /** HTTP PUT /customer-book/individual/{customerID} */
