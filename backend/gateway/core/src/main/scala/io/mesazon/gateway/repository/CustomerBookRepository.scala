@@ -18,7 +18,7 @@ trait CustomerBookRepository {
   def insertCustomerIndividual(
       organizationID: OrganizationID,
       insertCustomerIndividualInput: InsertCustomerIndividualInput,
-  ): IO[ServiceError, CustomerIndividualDetailsRow]
+  ): IO[ServiceError, CustomerID]
 
   def updateCustomerIndividual(
       organizationID: OrganizationID,
@@ -32,7 +32,7 @@ trait CustomerBookRepository {
   def insertCustomerBusiness(
       organizationID: OrganizationID,
       insertCustomerBusinessInput: InsertCustomerBusinessInput,
-  ): IO[ServiceError, CustomerBusinessInsertRow]
+  ): IO[ServiceError, CustomerID]
 
   def updateCustomerBusiness(
       organizationID: OrganizationID,
@@ -51,7 +51,7 @@ trait CustomerBookRepository {
       organizationID: OrganizationID,
       insertCustomerIndividualInputs: List[InsertCustomerIndividualInput],
       insertCustomerBusinessInputs: List[InsertCustomerBusinessInput],
-  ): IO[ServiceError, InsertCustomersResult]
+  ): IO[ServiceError, List[CustomerID]]
 
   def archiveCustomer(
       organizationID: OrganizationID,
@@ -124,16 +124,6 @@ object CustomerBookRepository {
       customerBusinessContacts: List[CustomerBusinessContactInput],
   )
 
-  type CustomerBusinessInsertRow = (
-      customerBusinessDetailsRow: CustomerBusinessDetailsRow,
-      customerBusinessContactRows: List[CustomerBusinessContactRow],
-  )
-
-  type InsertCustomersResult = (
-      customerIndividualDetailsRows: List[CustomerIndividualDetailsRow],
-      customerBusinessInsertRows: List[CustomerBusinessInsertRow],
-  )
-
   private final class CustomerBookRepositoryImpl(
       database: DatabaseOps.ServiceOps[Transactor[Task]],
       customerBookQueries: CustomerBookQueries,
@@ -144,7 +134,7 @@ object CustomerBookRepository {
     override def insertCustomerIndividual(
         organizationID: OrganizationID,
         insertCustomerIndividualInput: InsertCustomerIndividualInput,
-    ): IO[ServiceError, CustomerIndividualDetailsRow] = for {
+    ): IO[ServiceError, CustomerID] = for {
       instantNow <- timeProvider.instantNow
       customerID <- generateCustomerID
       customerIndividualDetailsRow = buildCustomerIndividualDetailsRow(
@@ -163,7 +153,7 @@ object CustomerBookRepository {
             uniqueConstraintViolationMessage,
           )
         )
-    } yield customerIndividualDetailsRow
+    } yield customerID
 
     override def updateCustomerIndividual(
         organizationID: OrganizationID,
@@ -197,7 +187,7 @@ object CustomerBookRepository {
     override def insertCustomerBusiness(
         organizationID: OrganizationID,
         insertCustomerBusinessInput: InsertCustomerBusinessInput,
-    ): IO[ServiceError, CustomerBusinessInsertRow] = for {
+    ): IO[ServiceError, CustomerID] = for {
       instantNow                  <- timeProvider.instantNow
       customerID                  <- generateCustomerID
       customerBusinessContactRows <- buildCustomerBusinessContactRows(
@@ -225,10 +215,7 @@ object CustomerBookRepository {
             uniqueConstraintViolationMessage,
           )
         )
-    } yield (
-      customerBusinessDetailsRow = customerBusinessDetailsRow,
-      customerBusinessContactRows = customerBusinessContactRows,
-    )
+    } yield customerID
 
     override def updateCustomerBusiness(
         organizationID: OrganizationID,
@@ -326,7 +313,7 @@ object CustomerBookRepository {
         organizationID: OrganizationID,
         insertCustomerIndividualInputs: List[InsertCustomerIndividualInput],
         insertCustomerBusinessInputs: List[InsertCustomerBusinessInput],
-    ): IO[ServiceError, InsertCustomersResult] = for {
+    ): IO[ServiceError, List[CustomerID]] = for {
       instantNow                      <- timeProvider.instantNow
       customerIDsWithIndividualInputs <- ZIO.foreach(insertCustomerIndividualInputs)(input =>
         generateCustomerID.map(customerID => (customerID = customerID, input = input))
@@ -378,10 +365,7 @@ object CustomerBookRepository {
             uniqueConstraintViolationMessage,
           )
         )
-    } yield (
-      customerIndividualDetailsRows = customerIndividualDetailsRows,
-      customerBusinessInsertRows = customerBusinessInsertRows,
-    )
+    } yield customerIDsWithIndividualInputs.map(_.customerID) ++ customerIDsWithBusinessInputs.map(_.customerID)
 
     override def archiveCustomer(
         organizationID: OrganizationID,

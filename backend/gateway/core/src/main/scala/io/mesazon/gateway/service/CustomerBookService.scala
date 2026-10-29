@@ -25,11 +25,11 @@ object CustomerBookService {
       customerBookIndividualPostRequest <- customerBookRequestValidator.validatedCustomerBookIndividualPostRequest(
         customerBookIndividualPostRequestSmithy
       )
-      customerIndividualDetailsRow <- customerBookRepository.insertCustomerIndividual(
+      customerID <- customerBookRepository.insertCustomerIndividual(
         OrganizationID(organizationID),
         customerBookIndividualPostRequest.transformInto[InsertCustomerIndividualInput],
       )
-    } yield smithy.CustomerBookIndividualPostResponse(customerIndividualDetailsRow.customerID.value)
+    } yield smithy.CustomerBookIndividualPostResponse(customerID.value)
 
     override def customerBookBusinessPost(
         organizationID: UUID,
@@ -38,12 +38,12 @@ object CustomerBookService {
       customerBookBusinessPostRequest <- customerBookRequestValidator.validatedCustomerBookBusinessPostRequest(
         customerBookBusinessPostRequestSmithy
       )
-      customerBusinessInsertRow <- customerBookRepository.insertCustomerBusiness(
+      customerID <- customerBookRepository.insertCustomerBusiness(
         OrganizationID(organizationID),
         customerBookBusinessPostRequest.transformInto[InsertCustomerBusinessInput],
       )
     } yield smithy.CustomerBookBusinessPostResponse(
-      customerBusinessInsertRow.customerBusinessDetailsRow.customerID.value
+      customerID.value
     )
 
     override def customerBookBatchPost(
@@ -53,14 +53,13 @@ object CustomerBookService {
       customerBookBatchPostRequest <- customerBookRequestValidator.validatedCustomerBookBatchPostRequest(
         customerBookBatchPostRequestSmithy
       )
-      insertCustomersResult <- customerBookRepository.insertCustomers(
+      customerIDs <- customerBookRepository.insertCustomers(
         OrganizationID(organizationID),
         customerBookBatchPostRequest.customerIndividuals.transformInto[List[InsertCustomerIndividualInput]],
         customerBookBatchPostRequest.customerBusinesses.transformInto[List[InsertCustomerBusinessInput]],
       )
     } yield smithy.CustomerBookBatchPostResponse(
-      customerIDs = insertCustomersResult.customerIndividualDetailsRows.map(_.customerID.value) ++
-        insertCustomersResult.customerBusinessInsertRows.map(_.customerBusinessDetailsRow.customerID.value)
+      customerIDs = customerIDs.transformInto[List[UUID]]
     )
 
     /** HTTP PUT /customer-book/individual/{customerID} */

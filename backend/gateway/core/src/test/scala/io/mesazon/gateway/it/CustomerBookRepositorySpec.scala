@@ -78,7 +78,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
         )
 
         customerBookRepository.insertCustomerIndividual(organizationID, insertCustomerIndividualInput).zioValue shouldBe
-          customerIndividualDetailsRowExpected
+          customerID
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue shouldBe
           List(customerIndividualDetailsRowExpected)
@@ -155,13 +155,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           UpdatedAt(instantNow),
           isArchived = false,
         )
-        val customerBusinessInsertRowExpected: CustomerBusinessInsertRow = (
-          customerBusinessDetailsRow = customerBusinessDetailsRowExpected,
-          customerBusinessContactRows = List(customerBusinessContactRowExpected),
-        )
 
         customerBookRepository.insertCustomerBusiness(organizationID, insertCustomerBusinessInput).zioValue shouldBe
-          customerBusinessInsertRowExpected
+          customerID
 
         postgresClient
           .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
@@ -244,19 +240,9 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           updatedAt = UpdatedAt(instantNow),
         )
 
-        val insertCustomersResultExpected: InsertCustomersResult = (
-          customerIndividualDetailsRows = List(customerIndividualDetailsRowExpected),
-          customerBusinessInsertRows = List(
-            (
-              customerBusinessDetailsRow = customerBusinessDetailsRowExpected,
-              customerBusinessContactRows = List.empty,
-            )
-          ),
-        )
-
         customerBookRepository
           .insertCustomers(organizationID, List(insertCustomerIndividualInput), List(insertCustomerBusinessInput))
-          .zioValue shouldBe insertCustomersResultExpected
+          .zioValue shouldBe List(customerIDIndividual, customerIDBusiness)
 
         postgresClient
           .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)

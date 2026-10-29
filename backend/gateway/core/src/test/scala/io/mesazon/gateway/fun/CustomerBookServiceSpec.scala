@@ -33,11 +33,11 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           arbitrarySample[CustomerBookIndividualPostRequest]
         val insertCustomerIndividualInput =
           customerBookIndividualPostRequest.transformInto[InsertCustomerIndividualInput]
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+        val customerID = arbitrarySample[CustomerID]
 
         customerBookRepositoryMock.insertCustomerIndividual
           .expects(organizationID, insertCustomerIndividualInput)
-          .returningZIO(customerIndividualDetailsRow)
+          .returningZIO(customerID)
           .once()
 
         val customerBookService = buildCustomerBookService
@@ -50,7 +50,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           .zioValue
 
         customerBookIndividualPostResponse shouldBe smithy.CustomerBookIndividualPostResponse(
-          customerID = customerIndividualDetailsRow.customerID.value
+          customerID = customerID.value
         )
       }
 
@@ -98,15 +98,11 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
         val customerBookBusinessPostRequest =
           arbitrarySample[CustomerBookBusinessPostRequest]
         val insertCustomerBusinessInput = customerBookBusinessPostRequest.transformInto[InsertCustomerBusinessInput]
-        val customerBusinessDetailsRow  = arbitrarySample[CustomerBusinessDetailsRow]
-        val customerBusinessInsertRow: CustomerBusinessInsertRow = (
-          customerBusinessDetailsRow = customerBusinessDetailsRow,
-          customerBusinessContactRows = Nil,
-        )
+        val customerID                  = arbitrarySample[CustomerID]
 
         customerBookRepositoryMock.insertCustomerBusiness
           .expects(organizationID, insertCustomerBusinessInput)
-          .returningZIO(customerBusinessInsertRow)
+          .returningZIO(customerID)
           .once()
 
         val customerBookService = buildCustomerBookService
@@ -119,7 +115,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           .zioValue
 
         customerBookBusinessPostResponse shouldBe smithy.CustomerBookBusinessPostResponse(
-          customerID = customerBusinessDetailsRow.customerID.value
+          customerID = customerID.value
         )
       }
 
@@ -174,23 +170,15 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           customerBookBatchPostRequest.customerIndividuals.transformInto[List[InsertCustomerIndividualInput]]
         val insertCustomerBusinessInputs =
           customerBookBatchPostRequest.customerBusinesses.transformInto[List[InsertCustomerBusinessInput]]
-        val customerIndividualDetailsRows =
-          insertCustomerIndividualInputs.map(_ => arbitrarySample[CustomerIndividualDetailsRow])
-        val customerBusinessInsertRows: List[CustomerBusinessInsertRow] =
-          insertCustomerBusinessInputs.map(_ =>
-            (
-              customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow],
-              customerBusinessContactRows = List.empty,
-            )
-          )
-        val insertCustomersResult: InsertCustomersResult = (
-          customerIndividualDetailsRows = customerIndividualDetailsRows,
-          customerBusinessInsertRows = customerBusinessInsertRows,
-        )
+        val customerIDIndividual = arbitrarySample[CustomerID]
+        val customerIDBusiness   = arbitrarySample[CustomerID]
+        val customerIDs          = List(customerIDIndividual, customerIDBusiness)
+
+        customerIDIndividual shouldNot equal(customerIDBusiness)
 
         customerBookRepositoryMock.insertCustomers
           .expects(organizationID, insertCustomerIndividualInputs, insertCustomerBusinessInputs)
-          .returningZIO(insertCustomersResult)
+          .returningZIO(customerIDs)
           .once()
 
         val customerBookBatchPostResponse = buildCustomerBookService
@@ -202,8 +190,8 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
 
         customerBookBatchPostResponse shouldBe smithy.CustomerBookBatchPostResponse(
           customerIDs = List(
-            customerIndividualDetailsRows.head.customerID.value,
-            customerBusinessInsertRows.head.customerBusinessDetailsRow.customerID.value,
+            customerIDIndividual.value,
+            customerIDBusiness.value,
           )
         )
       }
