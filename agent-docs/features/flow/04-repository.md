@@ -25,7 +25,7 @@ Use project acronyms (`UserID`, `OtpID`, `IDGenerator`, `JwtService`, `WahaClien
 - Default repository inputs are flat parameters with full domain names. Do not pass API/Smithy request models.
 - Define `<Operation><Entity>Input` in the repository companion only for a batch element or repeated/nested child. It has no generated ID/audit fields. Singular and batch operations reuse the same element input; single-only update/remove operations remain flat.
 - The service maps validated request → input following the [Chimney standard](../../standards/chimney.md).
-- Repository returns Rows/projections, not Smithy or Doobie types: `get` → `Option[Row]`, create/update → affected Row where useful, many → `List[Row]`; insert returns generated ID(s) when later references need them.
+- Repository returns domain values, never Smithy or Doobie types: resource inserts return generated domain IDs (one ID or a collection); reads return `Option[Row]` or `List[Row]`, and updates return an affected Row where useful. Keep insert Rows/internal row pairs inside persistence; do not return them solely to echo created details. Follow [ID-only resource create responses](../../standards/smithy.md#resource-create-responses), with any product-required exception documented in the feature.
 
 ## Queries
 

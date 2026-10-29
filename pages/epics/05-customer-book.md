@@ -189,45 +189,27 @@ The shapes used above and throughout this epic:
 
 **Response**
 
-A successful add answers with what was just created. Adding one person or one business returns that customer's full stored details — for a business, including the generated identifier of every inline contact. Adding a mixed batch returns a summary per customer instead, in the order it was sent — individuals first, then businesses.
+The identifier-only responses below are agreed and pending implementation.
 
-**Response — one CustomerIndividual**
+Adding one person or one business returns only the new customer's identifier. A mixed batch returns only the new customer identifiers, with individuals first and businesses second, preserving the order within each input list. To get a business's contact identifiers, open its business details.
 
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| Customer ID | `UUID` | Canonical 36-character form | ✅ | The new customer's identifier |
-| Full Name | `String` | — | ✅ | The person's name |
-| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded email address, each marked default or not |
-| Phone Numbers | `PhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
-| Addresses | `AddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
-
-**Response — one CustomerBusiness**
+**Response — one individual**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Customer ID | `UUID` | Canonical 36-character form | ✅ | The new customer's identifier |
-| Business Name | `String` | — | ✅ | The company's name |
-| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded email address, each marked default or not |
-| Tax ID | `String` | — | ❌ | Present only if recorded |
-| Phone Numbers | `PhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
-| Addresses | `AddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
-| Customer Business Contacts | `CustomerBusinessContact[]` | May be empty | ✅ | Every contact just stored, each carrying its new identifier |
 
-**CustomerBusinessContact**
+**Response — one business**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Customer Business Contact ID | `UUID` | Canonical 36-character form | ✅ | The contact's identifier, used for later updates or archiving |
-| Full Name | `String` | — | ✅ | The contact's name |
-| Role | `String` | — | ❌ | Present only if recorded |
-| Email | `String` | — | ❌ | Present only if recorded |
-| Phone Number | `PhoneNumber` | — | ❌ | Present only if recorded |
+| Customer ID | `UUID` | Canonical 36-character form | ✅ | The new customer's identifier |
 
 **Response — a mixed batch**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Customers | `CustomerSummary[]` | Same order as sent | ✅ | One summary per customer just added. See **CustomerSummary** in [step 2](#2-user-browses-the-customer-book) |
+| Customer IDs | `UUID[]` | Individuals first, then businesses; order within each list is preserved | ✅ | Identifiers of the new customers; may be empty |
 
 **Outcome**
 
@@ -363,7 +345,15 @@ The app uses the customer's kind from the summary to choose the matching individ
 | Addresses | `AddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
 | Customer Business Contacts | `CustomerBusinessContact[]` | May be empty; active contacts only | ✅ | Active business contacts; archived contacts are omitted |
 
-See **CustomerBusinessContact** in [step 1](#1-user-adds-a-customer) for the contact fields.
+**CustomerBusinessContact**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Customer Business Contact ID | `UUID` | Canonical 36-character form | ✅ | The contact's identifier, used for later updates or archiving |
+| Full Name | `String` | — | ✅ | The contact's name |
+| Role | `String` | — | ❌ | Present only if recorded |
+| Email | `String` | — | ❌ | Present only if recorded |
+| Phone Number | `PhoneNumber` | — | ❌ | Present only if recorded |
 
 **Outcome**
 

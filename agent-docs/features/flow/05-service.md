@@ -6,6 +6,7 @@ Combine the endpoint, validation, schema, and repository layers into the working
 
 - `service/<Feature>Service.scala` implements the generated Smithy service; a Tapir feature supplies its handler/security wiring through its endpoint module.
 - Normal authenticated handler flow: `AuthState.get → validate → map domain request to repository input → repository/client calls → map Rows/domain values to Smithy response`.
+- Resource-create handlers map repository domain IDs directly into [ID-only create responses](../../standards/smithy.md#resource-create-responses): one required ID for a single insert, a required ID list for a batch. Preserve the feature's batch ordering and empty-input policy. Retrieve full stored details and child IDs through detail GETs rather than extra reads inside the create handler.
 - Auth/role/onboard checks belong to middleware/security declarations and `AuthState`, not hand-written credential checks in handlers. For auth machinery changes read [Authentication](../../project/authentication.md).
 - Use `.local` for the raw `ServiceTask` implementation. `.observed` translates/logs `ServiceError` as Smithy errors; `.live` is production wiring.
 - Wire the service, validator, repository/queries, clients, and generated routes into the application graph. Preserve exact organization scoping and `OptUpdate` semantics.

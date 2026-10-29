@@ -32,7 +32,6 @@ Shapes:
 - Keep operation-level request/response wrappers named for their own operation. Within a feature, reuse nested shapes and lists for the same domain concept when their contracts are identical: members, required/optional/default/nullable traits, validation and stored defaults. Do not introduce `Batch`, `Created`, or operation qualifiers solely to duplicate an existing nested view.
   - A batch create lists its single-create sibling's request shape as its entry (`list CatalogueItemsInsert { member: CatalogueItemPostRequest }`).
   - An update's list of new children reuses the create operation's child entry list (`CatalogueItemPutRequest.variantsInsert: CatalogueItemVariantsInsert`).
-  - Business POST and GET share `CustomerBusinessContact` / `CustomerBusinessContacts`; customer batch POST and summary GET share `CustomerSummary` / `CustomerSummaries`.
 
   Split the views when their contracts differ, such as contact insert/update/read entries with different IDs, requiredness or nullable update semantics. Reusable value shapes, such as Catalogue price and selling unit, may appear in requests and responses when their meaning and member traits are identical. Sharing is based on the same domain concept and contract, not merely the same field layout.
 - Owner-named nested entry in a resource-oriented contract: `<Owner><Kind>Entry`; list plural `...Entries` (`CustomerPhoneNumberEntry` / `CustomerPhoneNumberEntries`). Use the same plain names for email and address entries. Legacy contracts keep their `...EntryRequest` / `...EntryRequests` shapes until the last operation using them is reworked; then remove those shapes.
@@ -70,6 +69,17 @@ URIs: resource-oriented kebab-case per [Resource paths](#resource-paths) for new
 - Errors: base validation/unauthorized/internal; add bad-request for rejected well-formed input, forbidden for role/stage gates, conflict for state collision.
 - Order errors by status ascending; ties alphabetically. Apply to new errors.
 - Any domain error addition/status move/new failure mode updates every affected operation's error list in the same change.
+
+## Resource create responses
+
+Resource-creation POSTs follow Catalogue's ID-only response pattern:
+
+- A single create returns `200` with one required `<entity>ID: UUID`, such as `CatalogueItemPostResponse.catalogueItemID`.
+- A batch create returns `200` with one required `<entity>IDs` UUID list, such as `CatalogueItemBatchPostResponse.catalogueItemIDs`. Reuse the feature's ID-list shape. Preserve the documented input order; mixed input lists define their traversal order explicitly. If an empty batch is valid for the feature, return an empty ID list.
+- Return identifiers of the resources the endpoint creates; do not echo full records, summaries or nested child details. Stored details and child identifiers are obtained through the corresponding detail GET.
+- Repository inserts return domain IDs (one ID or a collection); the service maps those IDs directly into the operation response. Keep write Rows and internal row pairs inside persistence rather than exposing them just to build a create response. See [Repository flow](../features/flow/04-repository.md#rows-and-repository-inputs) and [Service flow](../features/flow/05-service.md#implementation-boundary).
+
+This rule applies to resource creation, not every POST operation: authentication, extraction previews and other commands retain their own agreed contracts. Any feature-specific create-response exception must be an explicit product requirement documented in that feature.
 
 ## Resource paths
 
