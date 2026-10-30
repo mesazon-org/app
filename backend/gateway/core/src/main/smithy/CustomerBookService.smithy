@@ -12,186 +12,158 @@ use alloy#simpleRestJson
 service CustomerBookService {
     version: "1.0.0",
     operations: [
-        InsertCustomerIndividualPost
-        InsertCustomerIndividualsPost
+        CustomerBookIndividualPost
+        CustomerBookBusinessPost
+        CustomerBookBatchPost
 
-        InsertCustomerBusinessPost
-        InsertCustomerBusinessesPost
+        CustomerBookIndividualPut
 
-        InsertCustomersPost
+        CustomerBookBusinessPut
 
-        UpdateCustomerIndividualPut
+        CustomerBookArchivePut
 
-        UpdateCustomerBusinessPut
+        CustomerBookIndividualGet
+        CustomerBookBusinessGet
 
-        AddCustomerBusinessContactsPut
-        RemoveCustomerBusinessContactsPut
-
-        ArchiveCustomerPut
-
-        GetCustomerIndividualGet
-        GetCustomerBusinessGet
-
-        GetCustomersGet
+        CustomerBookSummaryGet
+        CustomerBookUniquenessGet
     ]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "POST", uri: "/insert/customer-individual", code: 200)
-operation InsertCustomerIndividualPost {
+@http(method: "POST", uri: "/customer-book/individual", code: 200)
+operation CustomerBookIndividualPost {
     input := with [OrganizationScopedInput] {
         @required
         @httpPayload
-        request: InsertCustomerIndividualPostRequest
+        request: CustomerBookIndividualPostRequest
     }
-    output: InsertCustomerIndividualPostResponse
+    output: CustomerBookIndividualPostResponse
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "POST", uri: "/insert/customer-individuals", code: 200)
-operation InsertCustomerIndividualsPost {
+@http(method: "POST", uri: "/customer-book/business", code: 200)
+operation CustomerBookBusinessPost {
     input := with [OrganizationScopedInput] {
         @required
         @httpPayload
-        request: InsertCustomerIndividualsPostRequest
+        request: CustomerBookBusinessPostRequest
     }
-    output: InsertCustomerIndividualsPostResponse
+    output: CustomerBookBusinessPostResponse
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "POST", uri: "/insert/customer-business", code: 200)
-operation InsertCustomerBusinessPost {
+@http(method: "POST", uri: "/customer-book/batch", code: 200)
+operation CustomerBookBatchPost {
     input := with [OrganizationScopedInput] {
         @required
         @httpPayload
-        request: InsertCustomerBusinessPostRequest
+        request: CustomerBookBatchPostRequest
     }
-    output: InsertCustomerBusinessPostResponse
+    output: CustomerBookBatchPostResponse
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "POST", uri: "/insert/customer-businesses", code: 200)
-operation InsertCustomerBusinessesPost {
+@http(method: "PUT", uri: "/customer-book/individual/{customerID}", code: 204)
+operation CustomerBookIndividualPut {
     input := with [OrganizationScopedInput] {
         @required
-        @httpPayload
-        request: InsertCustomerBusinessesPostRequest
-    }
-    output: InsertCustomerBusinessesPostResponse
-    errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
-}
+        @httpLabel
+        customerID: UUID
 
-/// **Required Organization User Roles:** [`Owner`, `Admin`]
-@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "POST", uri: "/insert/customers", code: 200)
-operation InsertCustomersPost {
-    input := with [OrganizationScopedInput] {
         @required
         @httpPayload
-        request: InsertCustomersPostRequest
-    }
-    output: InsertCustomersPostResponse
-    errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
-}
-
-/// **Required Organization User Roles:** [`Owner`, `Admin`]
-@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "PUT", uri: "/update/customer-individual", code: 204)
-operation UpdateCustomerIndividualPut {
-    input := with [OrganizationScopedInput] {
-        @required
-        @httpPayload
-        request: UpdateCustomerIndividualPutRequest
+        request: CustomerBookIndividualPutRequest
     }
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "PUT", uri: "/update/customer-business", code: 204)
-operation UpdateCustomerBusinessPut {
+@http(method: "PUT", uri: "/customer-book/business/{customerID}", code: 204)
+operation CustomerBookBusinessPut {
     input := with [OrganizationScopedInput] {
         @required
+        @httpLabel
+        customerID: UUID
+
+        @required
         @httpPayload
-        request: UpdateCustomerBusinessPutRequest
+        request: CustomerBookBusinessPutRequest
     }
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "PUT", uri: "/add/customer-business-contacts", code: 204)
-operation AddCustomerBusinessContactsPut {
-    input := with [OrganizationScopedInput] {
-        @required
-        @httpPayload
-        request: AddCustomerBusinessContactsPutRequest
-    }
-    errors: [BadRequest, ValidationError, Unauthorized, Forbidden, Conflict, InternalServerError]
-}
-
-/// **Required Organization User Roles:** [`Owner`, `Admin`]
-@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "PUT", uri: "/remove/customer-business-contacts", code: 204)
-operation RemoveCustomerBusinessContactsPut {
-    input := with [OrganizationScopedInput] {
-        @required
-        @httpPayload
-        request: RemoveCustomerBusinessContactsPutRequest
-    }
-    errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
-}
-
-/// **Required Organization User Roles:** [`Owner`, `Admin`]
-@organizationUserRolesAllowed(roles: ["Owner", "Admin"])
-@http(method: "PUT", uri: "/archive/customer", code: 204)
-operation ArchiveCustomerPut {
-    input := with [OrganizationScopedInput] {
-        @required
-        @httpPayload
-        request: ArchiveCustomerPutRequest
-    }
-    errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
-}
-
-/// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
-@organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
-@http(method: "GET", uri: "/get/customer-individual/{customerID}", code: 200)
-operation GetCustomerIndividualGet {
+@http(method: "PUT", uri: "/customer-book/{customerID}/archive", code: 204)
+operation CustomerBookArchivePut {
     input := with [OrganizationScopedInput] {
         @required
         @httpLabel
         customerID: UUID
     }
-    output: GetCustomerIndividualGetResponse
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
-@http(method: "GET", uri: "/get/customer-business/{customerID}", code: 200)
-operation GetCustomerBusinessGet {
+@http(method: "GET", uri: "/customer-book/individual/{customerID}", code: 200)
+operation CustomerBookIndividualGet {
     input := with [OrganizationScopedInput] {
         @required
         @httpLabel
         customerID: UUID
     }
-    output: GetCustomerBusinessGetResponse
+    output: CustomerBookIndividualGetResponse
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
 }
 
 /// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
 @organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
-@http(method: "GET", uri: "/get/customers", code: 200)
-operation GetCustomersGet {
-    input := with [OrganizationScopedInput] {}
-    output: GetCustomersGetResponse
+@http(method: "GET", uri: "/customer-book/business/{customerID}", code: 200)
+operation CustomerBookBusinessGet {
+    input := with [OrganizationScopedInput] {
+        @required
+        @httpLabel
+        customerID: UUID
+    }
+    output: CustomerBookBusinessGetResponse
     errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
+}
+
+/// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
+@http(method: "GET", uri: "/customer-book/summary", code: 200)
+operation CustomerBookSummaryGet {
+    input := with [OrganizationScopedInput] {
+        @default([])
+        @httpQuery("customerIDs")
+        customerIDs: CustomerIDs
+    }
+    output: CustomerBookSummaryGetResponse
+    errors: [BadRequest, Unauthorized, Forbidden, InternalServerError]
+}
+
+/// **Required Organization User Roles:** [`Owner`, `Admin`, `User`]
+@organizationUserRolesAllowed(roles: ["Owner", "Admin", "User"])
+@http(method: "GET", uri: "/customer-book/uniqueness", code: 200)
+operation CustomerBookUniquenessGet {
+    input := with [OrganizationScopedInput] {
+        @httpQuery("name")
+        name: String
+        @httpQuery("customerType")
+        customerType: CustomerType
+        @httpQuery("customerID")
+        customerID: UUID
+    }
+    output: CustomerBookUniquenessGetResponse
+    errors: [BadRequest, ValidationError, Unauthorized, Forbidden, InternalServerError]
 }

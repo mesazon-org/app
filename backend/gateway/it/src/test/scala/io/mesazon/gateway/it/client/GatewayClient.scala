@@ -215,36 +215,22 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       override def nullValue: Nullable[A] = Nullable.Null
     }
 
-  given JsonValueCodec[smithy.InsertCustomerIndividualPostRequest] =
-    JsonCodecMaker.make[smithy.InsertCustomerIndividualPostRequest](CodecMakerConfig.withTransientEmpty(false))
-  given JsonValueCodec[smithy.InsertCustomerIndividualsPostRequest] =
-    JsonCodecMaker.make[smithy.InsertCustomerIndividualsPostRequest](CodecMakerConfig.withTransientEmpty(false))
-  given JsonValueCodec[smithy.InsertCustomerBusinessPostRequest] =
-    JsonCodecMaker.make[smithy.InsertCustomerBusinessPostRequest](CodecMakerConfig.withTransientEmpty(false))
-  given JsonValueCodec[smithy.InsertCustomerBusinessesPostRequest] =
-    JsonCodecMaker.make[smithy.InsertCustomerBusinessesPostRequest](CodecMakerConfig.withTransientEmpty(false))
-  given JsonValueCodec[smithy.InsertCustomersPostRequest] =
-    JsonCodecMaker.make[smithy.InsertCustomersPostRequest](CodecMakerConfig.withTransientEmpty(false))
-  given JsonValueCodec[smithy.InsertCustomerIndividualPostResponse] =
-    JsonCodecMaker.make[smithy.InsertCustomerIndividualPostResponse]
-  given JsonValueCodec[smithy.InsertCustomerIndividualsPostResponse] =
-    JsonCodecMaker.make[smithy.InsertCustomerIndividualsPostResponse]
-  given JsonValueCodec[smithy.InsertCustomerBusinessPostResponse] =
-    JsonCodecMaker.make[smithy.InsertCustomerBusinessPostResponse]
-  given JsonValueCodec[smithy.InsertCustomerBusinessesPostResponse] =
-    JsonCodecMaker.make[smithy.InsertCustomerBusinessesPostResponse]
-  given JsonValueCodec[smithy.InsertCustomersPostResponse] =
-    JsonCodecMaker.make[smithy.InsertCustomersPostResponse]
-  given JsonValueCodec[smithy.UpdateCustomerIndividualPutRequest] =
-    JsonCodecMaker.make[smithy.UpdateCustomerIndividualPutRequest](CodecMakerConfig.withTransientEmpty(false))
-  given JsonValueCodec[smithy.UpdateCustomerBusinessPutRequest] =
-    JsonCodecMaker.make[smithy.UpdateCustomerBusinessPutRequest](CodecMakerConfig.withTransientEmpty(false))
-  given JsonValueCodec[smithy.AddCustomerBusinessContactsPutRequest] =
-    JsonCodecMaker.make[smithy.AddCustomerBusinessContactsPutRequest](CodecMakerConfig.withTransientEmpty(false))
-  given JsonValueCodec[smithy.RemoveCustomerBusinessContactsPutRequest] =
-    JsonCodecMaker.make[smithy.RemoveCustomerBusinessContactsPutRequest](CodecMakerConfig.withTransientEmpty(false))
-  given JsonValueCodec[smithy.ArchiveCustomerPutRequest] =
-    JsonCodecMaker.make[smithy.ArchiveCustomerPutRequest]
+  given JsonValueCodec[smithy.CustomerBookIndividualPostRequest] =
+    JsonCodecMaker.make[smithy.CustomerBookIndividualPostRequest](CodecMakerConfig.withTransientEmpty(false))
+  given JsonValueCodec[smithy.CustomerBookBusinessPostRequest] =
+    JsonCodecMaker.make[smithy.CustomerBookBusinessPostRequest](CodecMakerConfig.withTransientEmpty(false))
+  given JsonValueCodec[smithy.CustomerBookBatchPostRequest] =
+    JsonCodecMaker.make[smithy.CustomerBookBatchPostRequest](CodecMakerConfig.withTransientEmpty(false))
+  given JsonValueCodec[smithy.CustomerBookBusinessPutRequest] =
+    JsonCodecMaker.make[smithy.CustomerBookBusinessPutRequest](CodecMakerConfig.withTransientEmpty(false))
+  given JsonValueCodec[smithy.CustomerBookIndividualPutRequest] =
+    JsonCodecMaker.make[smithy.CustomerBookIndividualPutRequest](CodecMakerConfig.withTransientEmpty(false))
+  given JsonValueCodec[smithy.CustomerBookIndividualPostResponse] =
+    JsonCodecMaker.make[smithy.CustomerBookIndividualPostResponse]
+  given JsonValueCodec[smithy.CustomerBookBusinessPostResponse] =
+    JsonCodecMaker.make[smithy.CustomerBookBusinessPostResponse]
+  given JsonValueCodec[smithy.CustomerBookBatchPostResponse] =
+    JsonCodecMaker.make[smithy.CustomerBookBatchPostResponse]
   given JsonValueCodec[smithy.CatalogueItemPostRequest] =
     JsonCodecMaker.make[smithy.CatalogueItemPostRequest](CodecMakerConfig.withTransientEmpty(false))
   given JsonValueCodec[smithy.CatalogueItemBatchPostRequest] =
@@ -252,11 +238,14 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   given JsonValueCodec[smithy.CatalogueItemPutRequest] =
     JsonCodecMaker.make[smithy.CatalogueItemPutRequest](CodecMakerConfig.withTransientEmpty(false))
 
-  given JsonValueCodec[smithy.GetCustomerIndividualGetResponse] =
-    JsonCodecMaker.make[smithy.GetCustomerIndividualGetResponse]
-  given JsonValueCodec[smithy.GetCustomerBusinessGetResponse] =
-    JsonCodecMaker.make[smithy.GetCustomerBusinessGetResponse]
-  given JsonValueCodec[smithy.GetCustomersGetResponse]        = JsonCodecMaker.make[smithy.GetCustomersGetResponse]
+  given JsonValueCodec[smithy.CustomerBookIndividualGetResponse] =
+    JsonCodecMaker.make[smithy.CustomerBookIndividualGetResponse]
+  given JsonValueCodec[smithy.CustomerBookBusinessGetResponse] =
+    JsonCodecMaker.make[smithy.CustomerBookBusinessGetResponse]
+  given JsonValueCodec[smithy.CustomerBookSummaryGetResponse] =
+    JsonCodecMaker.make[smithy.CustomerBookSummaryGetResponse]
+  given JsonValueCodec[smithy.CustomerBookUniquenessGetResponse] =
+    JsonCodecMaker.make[smithy.CustomerBookUniquenessGetResponse]
   given JsonValueCodec[smithy.CatalogueItemPostResponse]      = JsonCodecMaker.make[smithy.CatalogueItemPostResponse]
   given JsonValueCodec[smithy.CatalogueItemBatchPostResponse] =
     JsonCodecMaker.make[smithy.CatalogueItemBatchPostResponse]
@@ -586,14 +575,14 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .response(asJsonEitherOrFail[E, ExtractCustomersPostResponse])
       .send(sttpBackend)
 
-  def insertCustomerIndividualPost[E: JsonValueCodec](
-      insertCustomerIndividualPostRequest: smithy.InsertCustomerIndividualPostRequest,
+  def customerBookIndividualPost[E: JsonValueCodec](
+      customerBookIndividualPostRequest: smithy.CustomerBookIndividualPostRequest,
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, smithy.InsertCustomerIndividualPostResponse]]] =
+  ): Task[Response[Either[E, smithy.CustomerBookIndividualPostResponse]]] =
     basicRequest
-      .post(externalUri.addPath("insert", "customer-individual"))
-      .body(asJson(insertCustomerIndividualPostRequest))
+      .post(externalUri.addPath("customer-book", "individual"))
+      .body(asJson(customerBookIndividualPostRequest))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
@@ -604,7 +593,7 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .response(asJsonEitherOrFail[E, smithy.InsertCustomerIndividualPostResponse])
+      .response(asJsonEitherOrFail[E, smithy.CustomerBookIndividualPostResponse])
       .send(sttpBackend)
 
   def catalogueItemPost[E: JsonValueCodec](
@@ -794,14 +783,14 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .send(sttpBackend)
   }
 
-  def insertCustomerIndividualsPost[E: JsonValueCodec](
-      insertCustomerIndividualsPostRequest: smithy.InsertCustomerIndividualsPostRequest,
+  def customerBookBusinessPost[E: JsonValueCodec](
+      customerBookBusinessPostRequest: smithy.CustomerBookBusinessPostRequest,
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, smithy.InsertCustomerIndividualsPostResponse]]] =
+  ): Task[Response[Either[E, smithy.CustomerBookBusinessPostResponse]]] =
     basicRequest
-      .post(externalUri.addPath("insert", "customer-individuals"))
-      .body(asJson(insertCustomerIndividualsPostRequest))
+      .post(externalUri.addPath("customer-book", "business"))
+      .body(asJson(customerBookBusinessPostRequest))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
@@ -812,17 +801,17 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .response(asJsonEitherOrFail[E, smithy.InsertCustomerIndividualsPostResponse])
+      .response(asJsonEitherOrFail[E, smithy.CustomerBookBusinessPostResponse])
       .send(sttpBackend)
 
-  def insertCustomerBusinessPost[E: JsonValueCodec](
-      insertCustomerBusinessPostRequest: smithy.InsertCustomerBusinessPostRequest,
+  def customerBookBatchPost[E: JsonValueCodec](
+      customerBookBatchPostRequest: smithy.CustomerBookBatchPostRequest,
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, smithy.InsertCustomerBusinessPostResponse]]] =
+  ): Task[Response[Either[E, smithy.CustomerBookBatchPostResponse]]] =
     basicRequest
-      .post(externalUri.addPath("insert", "customer-business"))
-      .body(asJson(insertCustomerBusinessPostRequest))
+      .post(externalUri.addPath("customer-book", "batch"))
+      .body(asJson(customerBookBatchPostRequest))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
@@ -833,59 +822,18 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .response(asJsonEitherOrFail[E, smithy.InsertCustomerBusinessPostResponse])
+      .response(asJsonEitherOrFail[E, smithy.CustomerBookBatchPostResponse])
       .send(sttpBackend)
 
-  def insertCustomerBusinessesPost[E: JsonValueCodec](
-      insertCustomerBusinessesPostRequest: smithy.InsertCustomerBusinessesPostRequest,
-      organizationIDOpt: Option[OrganizationID],
-      accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, smithy.InsertCustomerBusinessesPostResponse]]] =
-    basicRequest
-      .post(externalUri.addPath("insert", "customer-businesses"))
-      .body(asJson(insertCustomerBusinessesPostRequest))
-      .pipe(request =>
-        organizationIDOpt.fold(request)(organizationID =>
-          request.header(OrganizationIDHeader, organizationID.value.toString)
-        )
-      )
-      .pipe(request =>
-        accessTokenOpt.fold(request)(accessToken =>
-          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
-        )
-      )
-      .response(asJsonEitherOrFail[E, smithy.InsertCustomerBusinessesPostResponse])
-      .send(sttpBackend)
-
-  def insertCustomersPost[E: JsonValueCodec](
-      insertCustomersPostRequest: smithy.InsertCustomersPostRequest,
-      organizationIDOpt: Option[OrganizationID],
-      accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, smithy.InsertCustomersPostResponse]]] =
-    basicRequest
-      .post(externalUri.addPath("insert", "customers"))
-      .body(asJson(insertCustomersPostRequest))
-      .pipe(request =>
-        organizationIDOpt.fold(request)(organizationID =>
-          request.header(OrganizationIDHeader, organizationID.value.toString)
-        )
-      )
-      .pipe(request =>
-        accessTokenOpt.fold(request)(accessToken =>
-          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
-        )
-      )
-      .response(asJsonEitherOrFail[E, smithy.InsertCustomersPostResponse])
-      .send(sttpBackend)
-
-  def updateCustomerIndividualPut[E: JsonValueCodec](
-      updateCustomerIndividualPutRequest: smithy.UpdateCustomerIndividualPutRequest,
+  def customerBookIndividualPut[E: JsonValueCodec](
+      customerID: CustomerID,
+      customerBookIndividualPutRequest: smithy.CustomerBookIndividualPutRequest,
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, Unit]]] =
     basicRequest
-      .put(externalUri.addPath("update", "customer-individual"))
-      .body(asJson(updateCustomerIndividualPutRequest))
+      .put(externalUri.addPath("customer-book", "individual", customerID.value.toString))
+      .body(asJson(customerBookIndividualPutRequest))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
@@ -899,14 +847,15 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .response(asJsonErrorUnit[E])
       .send(sttpBackend)
 
-  def updateCustomerBusinessPut[E: JsonValueCodec](
-      updateCustomerBusinessPutRequest: smithy.UpdateCustomerBusinessPutRequest,
+  def customerBookBusinessPut[E: JsonValueCodec](
+      customerID: CustomerID,
+      customerBookBusinessPutRequest: smithy.CustomerBookBusinessPutRequest,
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, Unit]]] =
     basicRequest
-      .put(externalUri.addPath("update", "customer-business"))
-      .body(asJson(updateCustomerBusinessPutRequest))
+      .put(externalUri.addPath("customer-book", "business", customerID.value.toString))
+      .body(asJson(customerBookBusinessPutRequest))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
@@ -920,76 +869,13 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .response(asJsonErrorUnit[E])
       .send(sttpBackend)
 
-  def addCustomerBusinessContactsPut[E: JsonValueCodec](
-      addCustomerBusinessContactsPutRequest: smithy.AddCustomerBusinessContactsPutRequest,
-      organizationIDOpt: Option[OrganizationID],
-      accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, Unit]]] =
-    basicRequest
-      .put(externalUri.addPath("add", "customer-business-contacts"))
-      .body(asJson(addCustomerBusinessContactsPutRequest))
-      .pipe(request =>
-        organizationIDOpt.fold(request)(organizationID =>
-          request.header(OrganizationIDHeader, organizationID.value.toString)
-        )
-      )
-      .pipe(request =>
-        accessTokenOpt.fold(request)(accessToken =>
-          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
-        )
-      )
-      .response(asJsonErrorUnit[E])
-      .send(sttpBackend)
-
-  def removeCustomerBusinessContactsPut[E: JsonValueCodec](
-      removeCustomerBusinessContactsPutRequest: smithy.RemoveCustomerBusinessContactsPutRequest,
-      organizationIDOpt: Option[OrganizationID],
-      accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, Unit]]] =
-    basicRequest
-      .put(externalUri.addPath("remove", "customer-business-contacts"))
-      .body(asJson(removeCustomerBusinessContactsPutRequest))
-      .pipe(request =>
-        organizationIDOpt.fold(request)(organizationID =>
-          request.header(OrganizationIDHeader, organizationID.value.toString)
-        )
-      )
-      .pipe(request =>
-        accessTokenOpt.fold(request)(accessToken =>
-          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
-        )
-      )
-      .response(asJsonErrorUnit[E])
-      .send(sttpBackend)
-
-  def archiveCustomerPut[E: JsonValueCodec](
-      archiveCustomerPutRequest: smithy.ArchiveCustomerPutRequest,
-      organizationIDOpt: Option[OrganizationID],
-      accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, Unit]]] =
-    basicRequest
-      .put(externalUri.addPath("archive", "customer"))
-      .body(asJson(archiveCustomerPutRequest))
-      .pipe(request =>
-        organizationIDOpt.fold(request)(organizationID =>
-          request.header(OrganizationIDHeader, organizationID.value.toString)
-        )
-      )
-      .pipe(request =>
-        accessTokenOpt.fold(request)(accessToken =>
-          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
-        )
-      )
-      .response(asJsonErrorUnit[E])
-      .send(sttpBackend)
-
-  def getCustomerIndividualGet[E: JsonValueCodec](
+  def customerBookArchivePut[E: JsonValueCodec](
       customerID: CustomerID,
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, smithy.GetCustomerIndividualGetResponse]]] =
+  ): Task[Response[Either[E, Unit]]] =
     basicRequest
-      .get(externalUri.addPath("get", "customer-individual", customerID.value.toString))
+      .put(externalUri.addPath("customer-book", customerID.value.toString, "archive"))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
@@ -1000,16 +886,16 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .response(asJsonEitherOrFail[E, smithy.GetCustomerIndividualGetResponse])
+      .response(asJsonErrorUnit[E])
       .send(sttpBackend)
 
-  def getCustomerBusinessGet[E: JsonValueCodec](
+  def customerBookIndividualGet[E: JsonValueCodec](
       customerID: CustomerID,
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, smithy.GetCustomerBusinessGetResponse]]] =
+  ): Task[Response[Either[E, smithy.CustomerBookIndividualGetResponse]]] =
     basicRequest
-      .get(externalUri.addPath("get", "customer-business", customerID.value.toString))
+      .get(externalUri.addPath("customer-book", "individual", customerID.value.toString))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
@@ -1020,15 +906,16 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .response(asJsonEitherOrFail[E, smithy.GetCustomerBusinessGetResponse])
+      .response(asJsonEitherOrFail[E, smithy.CustomerBookIndividualGetResponse])
       .send(sttpBackend)
 
-  def getCustomersGet[E: JsonValueCodec](
+  def customerBookBusinessGet[E: JsonValueCodec](
+      customerID: CustomerID,
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, smithy.GetCustomersGetResponse]]] =
+  ): Task[Response[Either[E, smithy.CustomerBookBusinessGetResponse]]] =
     basicRequest
-      .get(externalUri.addPath("get", "customers"))
+      .get(externalUri.addPath("customer-book", "business", customerID.value.toString))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
@@ -1039,8 +926,66 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .response(asJsonEitherOrFail[E, smithy.GetCustomersGetResponse])
+      .response(asJsonEitherOrFail[E, smithy.CustomerBookBusinessGetResponse])
       .send(sttpBackend)
+
+  def customerBookUniquenessGet[E: JsonValueCodec](
+      nameOpt: Option[String],
+      customerTypeOpt: Option[smithy.CustomerType],
+      customerIDOpt: Option[CustomerID],
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, smithy.CustomerBookUniquenessGetResponse]]] = {
+    val customerBookUniquenessUriWithName = nameOpt.fold(
+      externalUri.addPath("customer-book", "uniqueness")
+    )(name => externalUri.addPath("customer-book", "uniqueness").addParam("name", name))
+    val customerBookUniquenessUriWithType = customerTypeOpt.fold(customerBookUniquenessUriWithName)(customerType =>
+      customerBookUniquenessUriWithName.addParam("customerType", customerType.stringValue)
+    )
+    val customerBookUniquenessUri = customerIDOpt.fold(customerBookUniquenessUriWithType)(customerID =>
+      customerBookUniquenessUriWithType.addParam("customerID", customerID.value.toString)
+    )
+
+    basicRequest
+      .get(customerBookUniquenessUri)
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonEitherOrFail[E, smithy.CustomerBookUniquenessGetResponse])
+      .send(sttpBackend)
+  }
+
+  def customerBookSummaryGet[E: JsonValueCodec](
+      customerIDs: List[CustomerID],
+      organizationIDOpt: Option[OrganizationID],
+      accessTokenOpt: Option[AccessToken],
+  ): Task[Response[Either[E, smithy.CustomerBookSummaryGetResponse]]] = {
+    val customerSummaryUri = customerIDs.foldLeft(externalUri.addPath("customer-book", "summary")) { (uri, customerID) =>
+      uri.addParam("customerIDs", customerID.value.toString)
+    }
+
+    basicRequest
+      .get(customerSummaryUri)
+      .pipe(request =>
+        organizationIDOpt.fold(request)(organizationID =>
+          request.header(OrganizationIDHeader, organizationID.value.toString)
+        )
+      )
+      .pipe(request =>
+        accessTokenOpt.fold(request)(accessToken =>
+          request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
+        )
+      )
+      .response(asJsonEitherOrFail[E, smithy.CustomerBookSummaryGetResponse])
+      .send(sttpBackend)
+  }
 
 }
 

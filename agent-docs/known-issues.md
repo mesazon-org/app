@@ -11,6 +11,16 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 | Medium | CI, delivery, or a non-critical workflow is repeatedly blocked or unreliable |
 | Low | Harmless noise or a narrow inconvenience with no behavior or delivery impact |
 
+## Single-file formatting creates empty backend trees inside modules
+
+- **Status:** Resolved 2026-10-25
+- **Severity:** Low
+- **Signature:** Modules contain empty paths such as `backend/domain/backend/gateway/core/src/main/scala/io/mesazon/gateway/service`. Fourteen original trees were created together on 2026-10-15; they contain no files.
+- **Cause:** `scalafmtOnly` aggregates by default and resolves each explicit file path against each project's `baseDirectory`. Running it from the root with a repository-relative `backend/gateway/core/.../SomeFile.scala` path sends that path to every module. The failed reads create parent directories even though the files do not exist there. Reproduced with `scalafmtOnly backend/__directory_probe__/NoSuch.scala`, first in `gateway-core` and then from `app` across the aggregated modules.
+- **Fix:** Set `scalafmtOnly / aggregate := false` in the common settings in `build.sbt`. Remove the leftover trees using empty-directory removal only.
+- **Prevention:** Select `app` for repository-relative paths: `sbt "project app; scalafmtOnly backend/gateway/core/src/main/scala/io/mesazon/gateway/utils/SpreadsheetTool.scala"`. If selecting a module, use a path relative to that module. Use `runFmt` for all modules.
+- **Verify:** Run that root-project single-file command and `sbt "runLint"`; both must succeed without recreating nested `backend` trees.
+
 ## Scala 3.9.0 bump makes Smithy4s-generated sources fail the build on a fatal warning
 
 - **Status:** Resolved 2026-09-14

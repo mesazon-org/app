@@ -67,6 +67,7 @@ Verification of this dependency set: `sbt "clean; compile"`, `sbt "Test/compile;
 - Plugins must publish `_sbt2_3`; keep sbt-twirl `2.1.0-M9` until stable 2.1.0; Smithy plugin version equals `smithy4sV`.
 - Multi-command CI uses one quoted string: `sbt "a; b"`.
 - Test-name completion needs scoped `gateway-it / Test / testOnly` or selected project.
+- `scalafmtOnly` does not aggregate: explicit paths are relative to the selected project. For a repository-relative path, use `sbt "project app; scalafmtOnly backend/<module>/src/.../File.scala"`. Use `runFmt` for all modules. See [empty nested backend directories](../known-issues.md#single-file-formatting-creates-empty-backend-trees-inside-modules).
 - Gateway Docker base is distroless `java25-debian13`; stage `2/` dependencies and `4/` app. Configure bare `java` through Terraform `JAVA_TOOL_OPTIONS`, not ignored `JAVA_OPTS`.
 
 ## Aliases and CI

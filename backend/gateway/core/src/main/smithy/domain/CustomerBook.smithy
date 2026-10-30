@@ -3,54 +3,65 @@ $version: "2.0"
 namespace io.mesazon.gateway.smithy
 
 use alloy#UUID
+use alloy#nullable
 
-structure CustomerEmailEntryRequest {
+structure CustomerEmailEntry {
     @required
     email: String
     @required
     isDefault: Boolean
 }
 
-list CustomerEmailEntryRequests {
-    member: CustomerEmailEntryRequest
+list CustomerEmailEntries {
+    member: CustomerEmailEntry
 }
 
-structure CustomerPhoneNumberEntryRequest {
+structure CustomerPhoneNumberEntry {
     @required
     phoneNumber: PhoneNumberRequest
     @required
     isDefault: Boolean
 }
 
-list CustomerPhoneNumberEntryRequests {
-    member: CustomerPhoneNumberEntryRequest
+list CustomerPhoneNumberEntries {
+    member: CustomerPhoneNumberEntry
 }
 
-list CustomerAddressEntryRequests {
-    member: AddressEntryRequest
+structure CustomerAddressEntry {
+    @required
+    address: AddressRequest
+    @required
+    addressType: AddressType
 }
 
-structure InsertCustomerIndividualPostRequest {
+list CustomerAddressEntries {
+    member: CustomerAddressEntry
+}
+
+structure CustomerBookIndividualPostRequest {
     @required
     fullName: String
     @default([])
-    emails: CustomerEmailEntryRequests
+    emails: CustomerEmailEntries
     @default([])
-    phoneNumbers: CustomerPhoneNumberEntryRequests
+    phoneNumbers: CustomerPhoneNumberEntries
     @default([])
-    addresses: CustomerAddressEntryRequests
+    addresses: CustomerAddressEntries
 }
 
-list InsertCustomerIndividuals {
-    member: InsertCustomerIndividualPostRequest
+structure CustomerBookIndividualPostResponse {
+    @required
+    customerID: UUID
 }
 
-structure InsertCustomerIndividualsPostRequest {
-    @default([])
-    customerIndividuals: InsertCustomerIndividuals
+structure CustomerBookIndividualPutRequest {
+    fullName: String
+    emails: CustomerEmailEntries
+    phoneNumbers: CustomerPhoneNumberEntries
+    addresses: CustomerAddressEntries
 }
 
-structure InsertCustomerBusinessContact {
+structure CustomerBusinessContactInsert {
     @required
     fullName: String
     role: String
@@ -58,66 +69,13 @@ structure InsertCustomerBusinessContact {
     phoneNumber: PhoneNumberRequest
 }
 
-list InsertCustomerBusinessContacts {
-    member: InsertCustomerBusinessContact
+list CustomerBusinessContactsInsert {
+    member: CustomerBusinessContactInsert
 }
 
-structure InsertCustomerBusinessPostRequest {
+structure CustomerBusinessContact {
     @required
-    businessName: String
-    @default([])
-    emails: CustomerEmailEntryRequests
-    taxID: String
-    @default([])
-    phoneNumbers: CustomerPhoneNumberEntryRequests
-    @default([])
-    addresses: CustomerAddressEntryRequests
-    @default([])
-    customerBusinessContacts: InsertCustomerBusinessContacts
-}
-
-list InsertCustomerBusinesses {
-    member: InsertCustomerBusinessPostRequest
-}
-
-structure InsertCustomerBusinessesPostRequest {
-    @default([])
-    customerBusinesses: InsertCustomerBusinesses
-}
-
-structure InsertCustomersPostRequest {
-    @default([])
-    customerBusinesses: InsertCustomerBusinesses
-    @default([])
-    customerIndividuals: InsertCustomerIndividuals
-}
-
-structure UpdateCustomerIndividualPutRequest {
-    @required
-    customerID: UUID
-    fullName: String
-    @default([])
-    emails: CustomerEmailEntryRequests
-    @default([])
-    phoneNumbers: CustomerPhoneNumberEntryRequests
-    @default([])
-    addresses: CustomerAddressEntryRequests
-}
-
-structure UpdateCustomerBusinessPutRequest {
-    @required
-    customerID: UUID
-    businessName: String
-    @default([])
-    emails: CustomerEmailEntryRequests
-    taxID: String
-    @default([])
-    phoneNumbers: CustomerPhoneNumberEntryRequests
-    @default([])
-    addresses: CustomerAddressEntryRequests
-}
-
-structure AddCustomerBusinessContact {
+    customerBusinessContactID: UUID
     @required
     fullName: String
     role: String
@@ -125,66 +83,123 @@ structure AddCustomerBusinessContact {
     phoneNumber: PhoneNumberRequest
 }
 
-list AddCustomerBusinessContacts {
-    member: AddCustomerBusinessContact
+list CustomerBusinessContacts {
+    member: CustomerBusinessContact
 }
 
-structure AddCustomerBusinessContactsPutRequest {
+structure CustomerBookBusinessPostRequest {
     @required
-    customerID: UUID
+    businessName: String
     @default([])
-    customerBusinessContacts: AddCustomerBusinessContacts
+    emails: CustomerEmailEntries
+    taxID: String
+    @default([])
+    phoneNumbers: CustomerPhoneNumberEntries
+    @default([])
+    addresses: CustomerAddressEntries
+    @default([])
+    customerBusinessContacts: CustomerBusinessContactsInsert
 }
 
-structure RemoveCustomerBusinessContact {
+structure CustomerBusinessContactUpdate {
+    @required
+    customerBusinessContactID: UUID
+    fullName: String
+    @nullable
+    role: String
+    @nullable
+    email: String
+    @nullable
+    phoneNumber: PhoneNumberRequest
+}
+
+list CustomerBusinessContactsUpdate {
+    member: CustomerBusinessContactUpdate
+}
+
+structure CustomerBusinessContactArchive {
     @required
     customerBusinessContactID: UUID
 }
 
-list RemoveCustomerBusinessContacts {
-    member: RemoveCustomerBusinessContact
+list CustomerBusinessContactsArchive {
+    member: CustomerBusinessContactArchive
 }
 
-structure RemoveCustomerBusinessContactsPutRequest {
-    @required
-    customerID: UUID
+structure CustomerBookBusinessPutRequest {
+    businessName: String
+    emails: CustomerEmailEntries
+    @nullable
+    taxID: String
+    phoneNumbers: CustomerPhoneNumberEntries
+    addresses: CustomerAddressEntries
     @default([])
-    customerBusinessContacts: RemoveCustomerBusinessContacts
+    customerBusinessContactsInsert: CustomerBusinessContactsInsert
+    @default([])
+    customerBusinessContactsUpdate: CustomerBusinessContactsUpdate
+    @default([])
+    customerBusinessContactsArchive: CustomerBusinessContactsArchive
 }
 
-structure ArchiveCustomerPutRequest {
+structure CustomerBookBusinessPostResponse {
     @required
     customerID: UUID
 }
 
-structure GetCustomerIndividualGetResponse {
+list CustomerIndividualsInsert {
+    member: CustomerBookIndividualPostRequest
+}
+
+list CustomerBusinessesInsert {
+    member: CustomerBookBusinessPostRequest
+}
+
+structure CustomerBookBatchPostRequest {
+    @default([])
+    customerBusinesses: CustomerBusinessesInsert
+    @default([])
+    customerIndividuals: CustomerIndividualsInsert
+}
+
+structure CustomerBookBatchPostResponse {
+    @required
+    customerIDs: CustomerIDs
+}
+
+structure CustomerBookIndividualGetResponse {
     @required
     customerID: UUID
     @required
     fullName: String
     @required
-    emails: CustomerEmailEntryRequests
+    emails: CustomerEmailEntries
     @required
-    phoneNumbers: CustomerPhoneNumberEntryRequests
+    phoneNumbers: CustomerPhoneNumberEntries
     @required
-    addresses: CustomerAddressEntryRequests
+    addresses: CustomerAddressEntries
 }
 
-structure GetCustomerBusinessGetResponse {
+structure CustomerBookBusinessGetResponse {
     @required
     customerID: UUID
     @required
     businessName: String
     @required
-    emails: CustomerEmailEntryRequests
+    emails: CustomerEmailEntries
     taxID: String
     @required
-    phoneNumbers: CustomerPhoneNumberEntryRequests
+    phoneNumbers: CustomerPhoneNumberEntries
     @required
-    addresses: CustomerAddressEntryRequests
+    addresses: CustomerAddressEntries
+    @required
+    customerBusinessContacts: CustomerBusinessContacts
 }
 
-structure GetCustomer {
+list CustomerIDs {
+    member: UUID
+}
+
+structure CustomerSummary {
     @required
     customerID: UUID
     @required
@@ -193,69 +208,16 @@ structure GetCustomer {
     customerType: CustomerType
 }
 
-list GetCustomers {
-    member: GetCustomer
+list CustomerSummaries {
+    member: CustomerSummary
 }
 
-structure GetCustomersGetResponse {
+structure CustomerBookSummaryGetResponse {
     @required
-    customers: GetCustomers
+    customers: CustomerSummaries
 }
 
-structure InsertCustomerIndividualPostResponse {
+structure CustomerBookUniquenessGetResponse {
     @required
-    customerID: UUID
-    @required
-    fullName: String
-    @required
-    emails: CustomerEmailEntryRequests
-    @required
-    phoneNumbers: CustomerPhoneNumberEntryRequests
-    @required
-    addresses: CustomerAddressEntryRequests
-}
-
-structure InsertCustomerIndividualsPostResponse {
-    @required
-    customerIndividuals: GetCustomers
-}
-
-structure InsertCustomerBusinessContactResponse {
-    @required
-    customerBusinessContactID: UUID
-    @required
-    fullName: String
-    role: String
-    email: String
-    phoneNumber: PhoneNumberRequest
-}
-
-list InsertCustomerBusinessContactsResponse {
-    member: InsertCustomerBusinessContactResponse
-}
-
-structure InsertCustomerBusinessPostResponse {
-    @required
-    customerID: UUID
-    @required
-    businessName: String
-    @required
-    emails: CustomerEmailEntryRequests
-    taxID: String
-    @required
-    phoneNumbers: CustomerPhoneNumberEntryRequests
-    @required
-    addresses: CustomerAddressEntryRequests
-    @required
-    customerBusinessContacts: InsertCustomerBusinessContactsResponse
-}
-
-structure InsertCustomerBusinessesPostResponse {
-    @required
-    customerBusinesses: GetCustomers
-}
-
-structure InsertCustomersPostResponse {
-    @required
-    customers: GetCustomers
+    isNameUnique: Boolean
 }

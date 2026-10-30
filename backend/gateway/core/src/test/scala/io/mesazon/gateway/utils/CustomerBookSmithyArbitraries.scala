@@ -3,70 +3,63 @@ package io.mesazon.gateway.utils
 import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.smithy
+import io.mesazon.gateway.transform.given
 import io.mesazon.testkit.base.*
 import io.scalaland.chimney.dsl.*
 import org.scalacheck.*
 
 trait CustomerBookSmithyArbitraries extends CustomerBookDomainArbitraries, IronRefinedTypeTransformer {
 
-  given arbInsertCustomerIndividualPostRequestSmithy: Arbitrary[smithy.InsertCustomerIndividualPostRequest] = Arbitrary(
+  given arbCustomerBookIndividualPostRequestSmithy: Arbitrary[smithy.CustomerBookIndividualPostRequest] = Arbitrary(
     Arbitrary
-      .arbitrary[InsertCustomerIndividualPostRequest]
-      .map(_.transformInto[smithy.InsertCustomerIndividualPostRequest])
+      .arbitrary[CustomerBookIndividualPostRequest]
+      .map(_.transformInto[smithy.CustomerBookIndividualPostRequest])
   )
 
-  given arbInsertCustomerIndividualsPostRequestSmithy: Arbitrary[smithy.InsertCustomerIndividualsPostRequest] =
-    Arbitrary(
-      Arbitrary
-        .arbitrary[InsertCustomerIndividualsPostRequest]
-        .map(_.transformInto[smithy.InsertCustomerIndividualsPostRequest])
-    )
+  given arbCustomerBookBusinessPostRequestSmithy: Arbitrary[smithy.CustomerBookBusinessPostRequest] = Arbitrary(
+    Arbitrary.arbitrary[CustomerBookBusinessPostRequest].map(_.transformInto[smithy.CustomerBookBusinessPostRequest])
+  )
 
-  given arbInsertCustomerBusinessPostRequestSmithy: Arbitrary[smithy.InsertCustomerBusinessPostRequest] = Arbitrary(
+  given arbCustomerBookBatchPostRequestSmithy: Arbitrary[smithy.CustomerBookBatchPostRequest] = Arbitrary(
+    Arbitrary.arbitrary[CustomerBookBatchPostRequest].map(_.transformInto[smithy.CustomerBookBatchPostRequest])
+  )
+
+  given arbCustomerBookIndividualPutRequestSmithy: Arbitrary[smithy.CustomerBookIndividualPutRequest] = Arbitrary(
+    Arbitrary.arbitrary[CustomerBookIndividualPutRequest].map(_.transformInto[smithy.CustomerBookIndividualPutRequest])
+  )
+
+  given arbCustomerBusinessContactUpdateSmithy: Arbitrary[smithy.CustomerBusinessContactUpdate] = Arbitrary(
+    Arbitrary.arbitrary[CustomerBusinessContactUpdate].map(_.transformInto[smithy.CustomerBusinessContactUpdate])
+  )
+
+  given arbCustomerBusinessContactArchiveSmithy: Arbitrary[smithy.CustomerBusinessContactArchive] = Arbitrary(
+    Arbitrary.arbitrary[CustomerBusinessContactArchive].map(_.transformInto[smithy.CustomerBusinessContactArchive])
+  )
+
+  given arbCustomerBookBusinessPutRequestSmithy: Arbitrary[smithy.CustomerBookBusinessPutRequest] = Arbitrary(
+    Arbitrary.arbitrary[CustomerBookBusinessPutRequest].map(_.transformInto[smithy.CustomerBookBusinessPutRequest])
+  )
+
+  given arbCustomerBusinessContactsUpdateSmithy: Arbitrary[List[smithy.CustomerBusinessContactUpdate]] = Arbitrary(
     Arbitrary
-      .arbitrary[InsertCustomerBusinessPostRequest]
-      .map(_.transformInto[smithy.InsertCustomerBusinessPostRequest])
+      .arbitrary[List[CustomerBusinessContactUpdate]]
+      .map(_.transformInto[List[smithy.CustomerBusinessContactUpdate]])
   )
 
-  given arbInsertCustomerBusinessesPostRequestSmithy: Arbitrary[smithy.InsertCustomerBusinessesPostRequest] = Arbitrary(
+  given arbCustomerBusinessContactsArchiveSmithy: Arbitrary[List[smithy.CustomerBusinessContactArchive]] = Arbitrary(
     Arbitrary
-      .arbitrary[InsertCustomerBusinessesPostRequest]
-      .map(_.transformInto[smithy.InsertCustomerBusinessesPostRequest])
+      .arbitrary[List[CustomerBusinessContactArchive]]
+      .map(_.transformInto[List[smithy.CustomerBusinessContactArchive]])
   )
 
-  given arbInsertCustomersPostRequestSmithy: Arbitrary[smithy.InsertCustomersPostRequest] = Arbitrary(
-    Arbitrary.arbitrary[InsertCustomersPostRequest].map(_.transformInto[smithy.InsertCustomersPostRequest])
+  given arbCustomerBookUniquenessGetInputSmithy: Arbitrary[smithy.CustomerBookUniquenessGetInput] = Arbitrary(
+    for {
+      organizationID                   <- Arbitrary.arbitrary[OrganizationID]
+      customerBookUniquenessGetRequest <- Arbitrary.arbitrary[CustomerBookUniquenessGetRequest]
+    } yield customerBookUniquenessGetRequest
+      .into[smithy.CustomerBookUniquenessGetInput]
+      .withFieldConst(_.organizationID, organizationID.value)
+      .transform
   )
 
-  given arbUpdateCustomerIndividualPutRequestSmithy: Arbitrary[smithy.UpdateCustomerIndividualPutRequest] = Arbitrary(
-    Arbitrary
-      .arbitrary[UpdateCustomerIndividualPutRequest]
-      .map(_.transformInto[smithy.UpdateCustomerIndividualPutRequest])
-  )
-
-  given arbUpdateCustomerBusinessPutRequestSmithy: Arbitrary[smithy.UpdateCustomerBusinessPutRequest] = Arbitrary(
-    Arbitrary.arbitrary[UpdateCustomerBusinessPutRequest].map(_.transformInto[smithy.UpdateCustomerBusinessPutRequest])
-  )
-
-  given arbAddCustomerBusinessContactSmithy: Arbitrary[smithy.AddCustomerBusinessContact] = Arbitrary(
-    Arbitrary.arbitrary[AddCustomerBusinessContact].map(_.transformInto[smithy.AddCustomerBusinessContact])
-  )
-
-  given arbAddCustomerBusinessContactsPutRequestSmithy: Arbitrary[smithy.AddCustomerBusinessContactsPutRequest] =
-    Arbitrary(
-      Arbitrary
-        .arbitrary[AddCustomerBusinessContactsPutRequest]
-        .map(_.transformInto[smithy.AddCustomerBusinessContactsPutRequest])
-    )
-
-  given arbRemoveCustomerBusinessContactsPutRequestSmithy: Arbitrary[smithy.RemoveCustomerBusinessContactsPutRequest] =
-    Arbitrary(
-      for {
-        customerID               <- Gen.uuid
-        customerBusinessContacts <- Gen.listOf(Gen.uuid.map(smithy.RemoveCustomerBusinessContact.apply))
-      } yield smithy.RemoveCustomerBusinessContactsPutRequest(customerID, customerBusinessContacts)
-    )
-
-  given arbArchiveCustomerPutRequestSmithy: Arbitrary[smithy.ArchiveCustomerPutRequest] =
-    Arbitrary(Gen.uuid.map(smithy.ArchiveCustomerPutRequest.apply))
 }

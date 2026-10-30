@@ -9,11 +9,13 @@ organization      := "io.mesazon"
 organizationName  := "Mesazon"
 scalafixOnCompile := enableScalaLint
 scalafmtOnCompile := enableScalaLint
-semanticdbEnabled := true
-semanticdbVersion := "4.17.4"
-Test / fork       := true
-run / fork        := true
-usePipelining     := true
+// Explicit file paths belong to the selected project, not its aggregated modules.
+scalafmtOnly / aggregate := false
+semanticdbEnabled        := true
+semanticdbVersion        := "4.17.4"
+Test / fork              := true
+run / fork               := true
+usePipelining            := true
 
 lazy val backendDirName = "backend"
 

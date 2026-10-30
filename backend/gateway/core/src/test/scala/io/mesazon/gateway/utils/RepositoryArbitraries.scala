@@ -129,6 +129,9 @@ trait RepositoryArbitraries
   given arbCustomerBusinessContactInput: Arbitrary[CustomerBusinessContactInput] =
     Arbitrary(Gen.resultOf(CustomerBusinessContactInput.apply))
 
+  given arbUpdateCustomerBusinessContactInput: Arbitrary[UpdateCustomerBusinessContactInput] =
+    Arbitrary(Gen.resultOf(UpdateCustomerBusinessContactInput.apply))
+
   given arbInsertCustomerIndividualInput: Arbitrary[InsertCustomerIndividualInput] =
     Arbitrary(Gen.resultOf(InsertCustomerIndividualInput.apply))
 
