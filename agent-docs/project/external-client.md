@@ -31,6 +31,15 @@ sbt "gateway-core/testOnly *<Client>ClientSpec"
 
 If endpoint-visible behavior changes, also update the service functional and acceptance tests plus feature doc.
 
+## Sttp backend in a spec
+
+Every spec-side sttp backend — the client under test and the test clients that inspect the dependency (`WiremockClient`, `MailHogClient`, `GatewayClient`) — comes from the shared `io.mesazon.testkit.base.SttpTestBackend.live` layer. Never build one with `HttpClientZioBackend.layer()` in a test:
+
+- `layer()` is `ZLayer.scoped`, and `ZIOTestOps`'s `zioValue`/`zioEither` run an `IO` with no `Scope`, so the layer's finalizer runs the moment the backend is constructed — before the test body uses it. The lifetime of a backend a test holds must not depend on a scope that has already closed.
+- `layer()` builds a new JDK `HttpClient` per call site. With `withContext` creating one per `beforeAll`/`afterEach`/test, a single suite produces dozens of clients, each with its own selector thread and connection pool, and none of them is ever closed explicitly (`HttpClientBackend.close()` is a no-op unless the backend owns a `ThreadPoolExecutor`), so their shutdown is left to the JDK reclaiming each unreachable client.
+
+`SttpTestBackend` creates one `HttpClient` per JVM (`lazy val`), wraps it with `HttpClientZioBackend.usingClient(...)` so `close()` can never tear it down, and exposes it as a plain `ZLayer.succeed(...)` with no finalizer. It keeps the JDK's default HTTP version, so specs exercise the same negotiation a real client does. `SttpTestBackendSpec` in `backend/test-kit` pins those guarantees. Production wiring keeps its own `SttpBackend.live` (`usingClient` plus pinned HTTP/1.1 and config-driven timeouts) and is unaffected.
+
 ## Mockability of the client's own trait
 
 `AIClient` requires explicit `OpenAIJsonSchema[A]` registrations from `io.mesazon.gateway.json.ai`; ordinary transport callers import `io.mesazon.gateway.json.tapir`. `ai.fromTapir` adapts an existing ordinary schema once for each registered AI response. Do not derive the same model again, normalize schemas inside `AIClient`, or introduce a blanket conversion from every `Schema[A]`. The legacy `OpenAIClient` remains unchanged with its ordinary `Schema[A]` contract; `ai` also supplies its AssistantResponse schema/codec.

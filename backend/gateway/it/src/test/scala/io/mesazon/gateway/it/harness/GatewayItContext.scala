@@ -14,7 +14,7 @@ import io.mesazon.test.postgresql.PostgreSQLTestClient
 import io.mesazon.test.postgresql.PostgreSQLTestClient.PostgreSQLTestClientConfig
 import io.mesazon.test.s3.S3TestClient
 import io.mesazon.test.s3.S3TestClient.S3TestClientConfig
-import sttp.client4.httpclient.zio.HttpClientZioBackend
+import io.mesazon.testkit.base.SttpTestBackend
 import zio.*
 
 final case class GatewayItContext(
@@ -52,7 +52,7 @@ object GatewayItContext {
       .provide(GatewayClient.live, ZLayer.succeed(gatewayApiClientConfig))
     mailHogClient <- ZIO
       .service[MailHogClient]
-      .provide(MailHogClient.live, HttpClientZioBackend.layer(), ZLayer.succeed(mailHogClientConfig))
+      .provide(MailHogClient.live, SttpTestBackend.live, ZLayer.succeed(mailHogClientConfig))
     s3TestClient <- ZIO
       .service[S3TestClient]
       .provide(S3TestClient.live, ZLayer.succeed(s3TestClientConfig))

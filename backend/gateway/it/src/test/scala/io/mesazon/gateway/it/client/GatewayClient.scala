@@ -9,10 +9,10 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.json.tapir.given
 import io.mesazon.gateway.smithy
+import io.mesazon.testkit.base.SttpTestBackend
 import io.scalaland.chimney.dsl.*
 import smithy4s.Nullable
 import sttp.client4.*
-import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.client4.jsoniter.*
 import sttp.model.*
 import zio.*
@@ -1079,5 +1079,5 @@ object GatewayClient {
     }
   }
 
-  val live = HttpClientZioBackend.layer() >>> ZLayer.fromFunction(GatewayClient.apply)
+  val live = SttpTestBackend.live >>> ZLayer.fromFunction(GatewayClient.apply)
 }

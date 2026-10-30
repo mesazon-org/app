@@ -8,7 +8,6 @@ import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.*
 import io.mesazon.wiremock.WiremockClient
 import io.mesazon.wiremock.WiremockClient.WiremockClientConfig
-import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.model.StatusCode
 import zio.*
 
@@ -27,7 +26,7 @@ class TwilioClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBa
       .provide(
         WiremockClient.live,
         ZLayer.succeed(wiremockClientConfig),
-        HttpClientZioBackend.layer(),
+        SttpTestBackend.live,
       )
       .zioValue
 
@@ -76,7 +75,7 @@ class TwilioClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBa
           .provide(
             TwilioClient.live,
             ZLayer.succeed(twilioClientConfig),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -103,7 +102,7 @@ class TwilioClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBa
           .provide(
             TwilioClient.live,
             ZLayer.succeed(twilioClientConfig.copy(accountSid = "error")),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 

@@ -7,7 +7,6 @@ import io.mesazon.gateway.config.*
 import io.mesazon.gateway.utils.*
 import io.mesazon.gateway.utils.MailHogClient.MailHogClientConfig
 import io.mesazon.testkit.base.*
-import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.model.*
 import zio.*
 
@@ -23,7 +22,7 @@ class EmailClientSpec extends ZWordSpecBase, SmithyArbitraries, DockerComposeBas
     val mailHogClientConfig = MailHogClientConfig.from(container)
     val mailHogClient       = ZIO
       .service[MailHogClient]
-      .provide(MailHogClient.live, HttpClientZioBackend.layer(), ZLayer.succeed(mailHogClientConfig))
+      .provide(MailHogClient.live, SttpTestBackend.live, ZLayer.succeed(mailHogClientConfig))
       .zioValue
 
     val emailConfig = EmailConfig(

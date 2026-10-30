@@ -10,7 +10,6 @@ import io.mesazon.waha.config.WahaClientConfig
 import io.mesazon.waha.it.WahaClientSpec.Context
 import io.mesazon.wiremock.WiremockClient
 import io.mesazon.wiremock.WiremockClient.WiremockClientConfig
-import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.model.StatusCode
 import zio.*
 
@@ -47,7 +46,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
       gatewayApiClientConfig = WiremockClientConfig.from(container)
       wiremockClient <- ZIO
         .service[WiremockClient]
-        .provide(WiremockClient.live, ZLayer.succeed(gatewayApiClientConfig), HttpClientZioBackend.layer())
+        .provide(WiremockClient.live, ZLayer.succeed(gatewayApiClientConfig), SttpTestBackend.live)
     } yield Context(wiremockClient)
 
     f(context.zioValue)
@@ -80,7 +79,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
           .provide(
             WahaClient.live,
             buildWahaConfigLayer(wiremockClient.config),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -149,7 +148,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
           .provide(
             WahaClient.live,
             buildWahaConfigLayer(wiremockClient.config),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -175,7 +174,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
           .provide(
             WahaClient.live,
             buildWahaConfigLayer(wiremockClient.config),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -249,7 +248,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
           .provide(
             WahaClient.live,
             buildWahaConfigLayer(wiremockClient.config),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -368,7 +367,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
           .provide(
             WahaClient.live,
             buildWahaConfigLayer(wiremockClient.config),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -395,7 +394,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
           .provide(
             WahaClient.live,
             buildWahaConfigLayer(wiremockClient.config),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -424,7 +423,7 @@ class WahaClientSpec extends ZWordSpecBase with DockerComposeBase with WahaArbit
           .provide(
             WahaClient.live,
             buildWahaConfigLayer(wiremockClient.config),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
