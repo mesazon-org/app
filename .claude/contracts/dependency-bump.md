@@ -1,0 +1,1 @@
+../../.agents/contracts/dependency-bump.md
