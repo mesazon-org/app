@@ -576,13 +576,13 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .send(sttpBackend)
 
   def customerBookIndividualPost[E: JsonValueCodec](
-      customerBookIndividualPostRequestSmithy: smithy.CustomerBookIndividualPostRequest,
+      customerBookIndividualPostRequest: smithy.CustomerBookIndividualPostRequest,
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, smithy.CustomerBookIndividualPostResponse]]] =
     basicRequest
       .post(externalUri.addPath("customer-book", "individual"))
-      .body(asJson(customerBookIndividualPostRequestSmithy))
+      .body(asJson(customerBookIndividualPostRequest))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
@@ -784,13 +784,13 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   }
 
   def customerBookBusinessPost[E: JsonValueCodec](
-      customerBookBusinessPostRequestSmithy: smithy.CustomerBookBusinessPostRequest,
+      customerBookBusinessPostRequest: smithy.CustomerBookBusinessPostRequest,
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, smithy.CustomerBookBusinessPostResponse]]] =
     basicRequest
       .post(externalUri.addPath("customer-book", "business"))
-      .body(asJson(customerBookBusinessPostRequestSmithy))
+      .body(asJson(customerBookBusinessPostRequest))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
@@ -805,13 +805,13 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .send(sttpBackend)
 
   def customerBookBatchPost[E: JsonValueCodec](
-      customerBookBatchPostRequestSmithy: smithy.CustomerBookBatchPostRequest,
+      customerBookBatchPostRequest: smithy.CustomerBookBatchPostRequest,
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, smithy.CustomerBookBatchPostResponse]]] =
     basicRequest
       .post(externalUri.addPath("customer-book", "batch"))
-      .body(asJson(customerBookBatchPostRequestSmithy))
+      .body(asJson(customerBookBatchPostRequest))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
@@ -827,13 +827,13 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
 
   def customerBookIndividualPut[E: JsonValueCodec](
       customerID: CustomerID,
-      customerBookIndividualPutRequestSmithy: smithy.CustomerBookIndividualPutRequest,
+      customerBookIndividualPutRequest: smithy.CustomerBookIndividualPutRequest,
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, Unit]]] =
     basicRequest
       .put(externalUri.addPath("customer-book", "individual", customerID.value.toString))
-      .body(asJson(customerBookIndividualPutRequestSmithy))
+      .body(asJson(customerBookIndividualPutRequest))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
@@ -849,13 +849,13 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
 
   def customerBookBusinessPut[E: JsonValueCodec](
       customerID: CustomerID,
-      customerBookBusinessPutRequestSmithy: smithy.CustomerBookBusinessPutRequest,
+      customerBookBusinessPutRequest: smithy.CustomerBookBusinessPutRequest,
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, Unit]]] =
     basicRequest
       .put(externalUri.addPath("customer-book", "business", customerID.value.toString))
-      .body(asJson(customerBookBusinessPutRequestSmithy))
+      .body(asJson(customerBookBusinessPutRequest))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)

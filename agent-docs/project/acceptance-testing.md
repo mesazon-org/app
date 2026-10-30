@@ -206,6 +206,8 @@ Without it, an empty list can be omitted and rejected by Smithy decoding before 
 
 Client method requirements:
 
+- Typed `GatewayClient` request parameters use the plain full request name without a `Smithy` suffix, such as `customerBookIndividualPostRequest`; the qualified type already identifies the transport model.
+
 - path segments exactly match the Smithy `@http` URI;
 - path labels use refined domain IDs;
 - organization header and access token are both optional parameters so rejection cases can omit them;
@@ -223,7 +225,7 @@ An endpoint that calls out to an external/AI client with server-owned request co
 
 - Assert the exact HTTP status and complete success/error body.
 - Extract `Option`/`Either` values with `OptionValues`/`EitherValues` (`.value`, `.left.value`) instead of a separate `isDefined`/`isRight` check followed by `.get` — one call, and scalatest fails with a readable message instead of a bare `NoSuchElementException`. A bare `isDefined`/`isRight`/`isLeft` boolean assertion is fine on its own when nothing inside is ever unwrapped afterward (e.g. proving an object is absent from S3).
-- Inspect complete database/external state, not only the changed field.
+- Inspect complete database/external state, not only the changed field. Scope readbacks to the scenario’s behavior and possible side effects. Do not add blanket empty-table checks for every related table to every case; retain targeted persistence, unchanged-row and rollback assertions.
 - After rejection, assert every prohibited DB/email/storage effect is absent.
 - For an endpoint whose entire contract is "nothing is stored" (a read-only extraction/preview step, for example), assert the storage state explicitly in the happy-path test too, not only in the rejection cases — the success path is the one that actually exercises real returned data flowing through the stack, so it is the most meaningful place to prove none of it leaked into persistence.
 - Assert order only when contractual; otherwise compare order-insensitively.

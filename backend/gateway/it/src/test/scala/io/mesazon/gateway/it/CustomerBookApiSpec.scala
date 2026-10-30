@@ -20,19 +20,6 @@ import zio.*
 @DoNotDiscover
 class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbitraries, RepositoryArbitraries {
 
-  private def customerBookBatchPostRequestSmithy: smithy.CustomerBookBatchPostRequest =
-    smithy.CustomerBookBatchPostRequest(
-      customerBusinesses = List(
-        arbitrarySample[CustomerBookBusinessPostRequest]
-          .copy(customerBusinessContacts = List.empty)
-          .transformInto[smithy.CustomerBookBusinessPostRequest]
-      ),
-      customerIndividuals = List(
-        arbitrarySample[CustomerBookIndividualPostRequest]
-          .transformInto[smithy.CustomerBookIndividualPostRequest]
-      ),
-    )
-
   "Customer Book Service API" when {
     "POST /customer-book/individual" should {
       "successfully insert a customer individual" in withContext { context =>
@@ -65,17 +52,23 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         val customerIndividualDetailsRowsAll =
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
+
         customerIndividualDetailsRowsAll should have size 1
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 1
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+          .zioValue should have size 1
         customerIndividualDetailsRowsAll.head shouldBe CustomerIndividualDetailsRow(
           organizationID = organizationUserRow.organizationID,
           customerID = customerIndividualDetailsRowsAll.head.customerID,
           fullName = customerBookIndividualPostRequest.fullName,
-          emails = customerBookIndividualPostRequest.emails.map(entry =>
-            CustomerEmailEntryInput(entry.email, entry.isDefault)
+          emails = customerBookIndividualPostRequest.emails.map(customerEmailEntry =>
+            CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
           ),
-          phoneNumbers = customerBookIndividualPostRequest.phoneNumbers.map(entry =>
-            CustomerPhoneNumberEntryInput(entry.phoneNumber, entry.isDefault)
+          phoneNumbers = customerBookIndividualPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
+            CustomerPhoneNumberEntryInput(
+              customerPhoneNumberEntry.phoneNumber,
+              isDefault = customerPhoneNumberEntry.isDefault,
+            )
           ),
           addresses = customerBookIndividualPostRequest.addresses,
           isArchived = false,
@@ -119,7 +112,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPostResponse.code shouldBe StatusCode.BadRequest
         customerBookIndividualPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("fullName"))
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a BadRequest when the organization id header is missing" in withContext { context =>
@@ -148,7 +141,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPostResponse.code shouldBe StatusCode.BadRequest
         customerBookIndividualPostResponse.body.left.value shouldBe smithy.BadRequest()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with an Unauthorized when the access token is missing" in withContext { context =>
@@ -170,7 +163,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPostResponse.code shouldBe StatusCode.Unauthorized
         customerBookIndividualPostResponse.body.left.value shouldBe smithy.Unauthorized()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with an Unauthorized when the access token is invalid" in withContext { context =>
@@ -192,7 +185,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPostResponse.code shouldBe StatusCode.Unauthorized
         customerBookIndividualPostResponse.body.left.value shouldBe smithy.Unauthorized()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
@@ -226,7 +219,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPostResponse.code shouldBe StatusCode.Forbidden
         customerBookIndividualPostResponse.body.left.value shouldBe smithy.Forbidden()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
@@ -260,7 +253,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPostResponse.code shouldBe StatusCode.Forbidden
         customerBookIndividualPostResponse.body.left.value shouldBe smithy.Forbidden()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a Conflict when the full name already exists in the organization" in withContext { context =>
@@ -307,6 +300,10 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe
           List(customerIndividualDetailsRowExisting.customerID)
+
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          .zioValue shouldBe List(customerIndividualDetailsRowExisting)
       }
 
       "fail with an InternalServerError when the user details do not exist" in withContext { context =>
@@ -332,7 +329,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPostResponse.code shouldBe StatusCode.InternalServerError
         customerBookIndividualPostResponse.body.left.value shouldBe smithy.InternalServerError()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
@@ -363,7 +360,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPostResponse.code shouldBe StatusCode.InternalServerError
         customerBookIndividualPostResponse.body.left.value shouldBe smithy.InternalServerError()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
     }
 
@@ -401,16 +398,23 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         val customerBusinessDetailsRowsAll =
           postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
+
         customerBusinessDetailsRowsAll should have size 1
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 1
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+          .zioValue should have size 1
         customerBusinessDetailsRowsAll.head shouldBe CustomerBusinessDetailsRow(
           organizationID = organizationUserRow.organizationID,
           customerID = customerBusinessDetailsRowsAll.head.customerID,
           businessName = customerBookBusinessPostRequest.businessName,
-          emails =
-            customerBookBusinessPostRequest.emails.map(entry => CustomerEmailEntryInput(entry.email, entry.isDefault)),
-          phoneNumbers = customerBookBusinessPostRequest.phoneNumbers.map(entry =>
-            CustomerPhoneNumberEntryInput(entry.phoneNumber, entry.isDefault)
+          emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
+            CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
+          ),
+          phoneNumbers = customerBookBusinessPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
+            CustomerPhoneNumberEntryInput(
+              customerPhoneNumberEntry.phoneNumber,
+              isDefault = customerPhoneNumberEntry.isDefault,
+            )
           ),
           taxID = customerBookBusinessPostRequest.taxID,
           addresses = customerBookBusinessPostRequest.addresses,
@@ -421,7 +425,8 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         val customerBusinessContactRowsAll =
           postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue
-        customerBusinessContactRowsAll should have size 1
+
+        customerBusinessContactRowsAll should have size customerBookBusinessPostRequest.customerBusinessContacts.size
         customerBusinessContactRowsAll.head shouldBe CustomerBusinessContactRow(
           organizationID = organizationUserRow.organizationID,
           customerID = customerBusinessDetailsRowsAll.head.customerID,
@@ -440,7 +445,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         )
       }
 
-      "successfully insert and return both inline contacts sharing the same email" in withContext {
+      "successfully insert both inline contacts sharing the same email" in withContext {
         context =>
           import context.*
 
@@ -481,7 +486,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue
 
           customerBusinessDetailsRowsAll should have size 1
-          customerBusinessContactRowsAll should have size 2
+          customerBusinessContactRowsAll should have size customerBookBusinessPostRequest.customerBusinessContacts.size
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List(
             customerBusinessDetailsRowsAll.head.customerID
           )
@@ -528,7 +533,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         )
       }
 
-      "successfully insert and return both inline contacts sharing the same phone number" in withContext {
+      "successfully insert both inline contacts sharing the same phone number" in withContext {
         context =>
           import context.*
 
@@ -577,7 +582,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue
 
           customerBusinessDetailsRowsAll should have size 1
-          customerBusinessContactRowsAll should have size 2
+          customerBusinessContactRowsAll should have size customerBookBusinessPostRequest.customerBusinessContacts.size
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List(
             customerBusinessDetailsRowsAll.head.customerID
           )
@@ -656,7 +661,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPostResponse.code shouldBe StatusCode.BadRequest
         customerBookBusinessPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("businessName"))
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a BadRequest when the organization id header is missing" in withContext { context =>
@@ -685,7 +690,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPostResponse.code shouldBe StatusCode.BadRequest
         customerBookBusinessPostResponse.body.left.value shouldBe smithy.BadRequest()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with an Unauthorized when the access token is missing" in withContext { context =>
@@ -707,7 +712,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPostResponse.code shouldBe StatusCode.Unauthorized
         customerBookBusinessPostResponse.body.left.value shouldBe smithy.Unauthorized()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with an Unauthorized when the access token is invalid" in withContext { context =>
@@ -729,7 +734,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPostResponse.code shouldBe StatusCode.Unauthorized
         customerBookBusinessPostResponse.body.left.value shouldBe smithy.Unauthorized()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
@@ -763,7 +768,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPostResponse.code shouldBe StatusCode.Forbidden
         customerBookBusinessPostResponse.body.left.value shouldBe smithy.Forbidden()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
@@ -797,7 +802,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPostResponse.code shouldBe StatusCode.Forbidden
         customerBookBusinessPostResponse.body.left.value shouldBe smithy.Forbidden()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a Conflict when the business name already exists in the organization" in withContext { context =>
@@ -845,6 +850,10 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe
           List(customerBusinessDetailsRowExisting.customerID)
+
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+          .zioValue shouldBe List(customerBusinessDetailsRowExisting)
       }
 
       "fail with an InternalServerError when the user details do not exist" in withContext { context =>
@@ -870,7 +879,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPostResponse.code shouldBe StatusCode.InternalServerError
         customerBookBusinessPostResponse.body.left.value shouldBe smithy.InternalServerError()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
@@ -901,7 +910,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPostResponse.code shouldBe StatusCode.InternalServerError
         customerBookBusinessPostResponse.body.left.value shouldBe smithy.InternalServerError()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
     }
 
@@ -919,10 +928,10 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
           postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
-          val customerFullName1             = arbitrarySample[CustomerFullName]
-          val customerFullName2             = CustomerFullName.assume(s"${customerFullName1.value.take(253)}-2")
-          val customerBusinessName1         = arbitrarySample[CustomerBusinessName]
-          val customerBusinessName2         = CustomerBusinessName.assume(s"${customerBusinessName1.value.take(253)}-2")
+          val customerFullName1             = CustomerFullName.assume("Zeta Individual")
+          val customerFullName2             = CustomerFullName.assume("Alpha Individual")
+          val customerBusinessName1         = CustomerBusinessName.assume("Zeta Business")
+          val customerBusinessName2         = CustomerBusinessName.assume("Alpha Business")
           val customerBusinessContactInsert =
             arbitrarySample[CustomerBusinessContactInsert]
           val customerIndividuals = List(
@@ -954,70 +963,94 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
           customerBookBatchPostResponse.code shouldBe StatusCode.Ok
 
-          val individualRows =
+          val customerIndividualDetailsRows =
             postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
-          val businessRows =
+          val customerBusinessDetailsRows =
             postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
-          val contactRows =
+          val customerBusinessContactRows =
             postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue
-          individualRows should have size 2
-          businessRows should have size 2
-          contactRows should have size 1
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 4
 
-          customerIndividuals.foreach { customerIndividual =>
-            val customerIndividualDetailsRow = individualRows.find(_.fullName == customerIndividual.fullName).value
+          customerIndividualDetailsRows should have size customerIndividuals.size
+          customerBusinessDetailsRows should have size customerBusinesses.size
+          customerBusinessContactRows should have size customerBusinesses.flatMap(_.customerBusinessContacts).size
+          postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+            .zioValue should have size (customerIndividuals.size + customerBusinesses.size)
+
+          customerIndividuals.foreach { customerBookIndividualPostRequest =>
+            val customerIndividualDetailsRow =
+              customerIndividualDetailsRows.find(_.fullName == customerBookIndividualPostRequest.fullName).value
             customerIndividualDetailsRow shouldBe CustomerIndividualDetailsRow(
               organizationID = organizationUserRow.organizationID,
               customerID = customerIndividualDetailsRow.customerID,
-              fullName = customerIndividual.fullName,
-              emails = customerIndividual.emails.map(entry => CustomerEmailEntryInput(entry.email, entry.isDefault)),
-              phoneNumbers = customerIndividual.phoneNumbers.map(entry =>
-                CustomerPhoneNumberEntryInput(entry.phoneNumber, entry.isDefault)
+              fullName = customerBookIndividualPostRequest.fullName,
+              emails = customerBookIndividualPostRequest.emails.map(customerEmailEntry =>
+                CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
               ),
-              addresses = customerIndividual.addresses,
+              phoneNumbers = customerBookIndividualPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
+                CustomerPhoneNumberEntryInput(
+                  customerPhoneNumberEntry.phoneNumber,
+                  isDefault = customerPhoneNumberEntry.isDefault,
+                )
+              ),
+              addresses = customerBookIndividualPostRequest.addresses,
               isArchived = false,
               createdAt = customerIndividualDetailsRow.createdAt,
               updatedAt = customerIndividualDetailsRow.updatedAt,
             )
           }
-          customerBusinesses.foreach { customerBusiness =>
-            val customerBusinessDetailsRow = businessRows.find(_.businessName == customerBusiness.businessName).value
+          customerBusinesses.foreach { customerBookBusinessPostRequest =>
+            val customerBusinessDetailsRow =
+              customerBusinessDetailsRows.find(_.businessName == customerBookBusinessPostRequest.businessName).value
             customerBusinessDetailsRow shouldBe CustomerBusinessDetailsRow(
               organizationID = organizationUserRow.organizationID,
               customerID = customerBusinessDetailsRow.customerID,
-              businessName = customerBusiness.businessName,
-              emails = customerBusiness.emails.map(entry => CustomerEmailEntryInput(entry.email, entry.isDefault)),
-              phoneNumbers = customerBusiness.phoneNumbers.map(entry =>
-                CustomerPhoneNumberEntryInput(entry.phoneNumber, entry.isDefault)
+              businessName = customerBookBusinessPostRequest.businessName,
+              emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
+                CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
               ),
-              taxID = customerBusiness.taxID,
-              addresses = customerBusiness.addresses,
+              phoneNumbers = customerBookBusinessPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
+                CustomerPhoneNumberEntryInput(
+                  customerPhoneNumberEntry.phoneNumber,
+                  isDefault = customerPhoneNumberEntry.isDefault,
+                )
+              ),
+              taxID = customerBookBusinessPostRequest.taxID,
+              addresses = customerBookBusinessPostRequest.addresses,
               isArchived = false,
               createdAt = customerBusinessDetailsRow.createdAt,
               updatedAt = customerBusinessDetailsRow.updatedAt,
             )
           }
 
-          val firstBusinessRow = businessRows.find(_.businessName == customerBusinessName1).value
-          contactRows.head shouldBe CustomerBusinessContactRow(
+          val customerBusinessDetailsRowFirst =
+            customerBusinessDetailsRows.find(_.businessName == customerBusinessName1).value
+          customerBusinessContactRows.head shouldBe CustomerBusinessContactRow(
             organizationID = organizationUserRow.organizationID,
-            customerID = firstBusinessRow.customerID,
-            customerBusinessContactID = contactRows.head.customerBusinessContactID,
+            customerID = customerBusinessDetailsRowFirst.customerID,
+            customerBusinessContactID = customerBusinessContactRows.head.customerBusinessContactID,
             fullName = customerBusinessContactInsert.fullName,
             role = customerBusinessContactInsert.role,
             email = customerBusinessContactInsert.email,
             phoneNumber = customerBusinessContactInsert.phoneNumber,
-            createdAt = contactRows.head.createdAt,
-            updatedAt = contactRows.head.updatedAt,
+            createdAt = customerBusinessContactRows.head.createdAt,
+            updatedAt = customerBusinessContactRows.head.updatedAt,
             isArchived = false,
           )
 
           customerBookBatchPostResponse.body.value shouldBe smithy.CustomerBookBatchPostResponse(
-            customerIDs = customerIndividuals.map(customerIndividual =>
-              individualRows.find(_.fullName == customerIndividual.fullName).value.customerID.value
-            ) ++ customerBusinesses.map(customerBusiness =>
-              businessRows.find(_.businessName == customerBusiness.businessName).value.customerID.value
+            customerIDs = customerIndividuals.map(customerBookIndividualPostRequest =>
+              customerIndividualDetailsRows
+                .find(_.fullName == customerBookIndividualPostRequest.fullName)
+                .value
+                .customerID
+                .value
+            ) ++ customerBusinesses.map(customerBookBusinessPostRequest =>
+              customerBusinessDetailsRows
+                .find(_.businessName == customerBookBusinessPostRequest.businessName)
+                .value
+                .customerID
+                .value
             )
           )
       }
@@ -1070,19 +1103,20 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
           postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
-          val customerBookBatchPostRequest = customerBookBatchPostRequestSmithy.copy(
-            customerBusinesses = List(
-              customerBookBatchPostRequestSmithy.customerBusinesses.head.copy(businessName = "")
-            ),
-            customerIndividuals = List(
-              customerBookBatchPostRequestSmithy.customerIndividuals.head.copy(fullName = "")
-            ),
+          val customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
+            .copy(customerBusinessContacts = Nil)
+            .transformInto[smithy.CustomerBookBusinessPostRequest]
+          val customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
+            .transformInto[smithy.CustomerBookIndividualPostRequest]
+          val customerBookBatchPostRequestSmithy = smithy.CustomerBookBatchPostRequest(
+            customerBusinesses = List(customerBookBusinessPostRequestSmithy.copy(businessName = "")),
+            customerIndividuals = List(customerBookIndividualPostRequestSmithy.copy(fullName = "")),
           )
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
 
           val customerBookBatchPostResponse = gatewayClient
             .customerBookBatchPost[smithy.ValidationError](
-              customerBookBatchPostRequest,
+              customerBookBatchPostRequestSmithy,
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
@@ -1092,14 +1126,23 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           customerBookBatchPostResponse.body.left.value shouldBe smithy.ValidationError(fields =
             List("customerBusiness", "customerIndividual")
           )
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List.empty
+          postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
           postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe List.empty
+            .zioValue shouldBe Nil
       }
 
       "fail with a BadRequest when the organization id header is missing" in withContext { context =>
         import context.*
+
+        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+          customerBusinesses = List(
+            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+          ),
+          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+        )
+        val customerBookBatchPostRequestSmithy =
+          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
 
         val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
@@ -1116,11 +1159,21 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         customerBookBatchPostResponse.code shouldBe StatusCode.BadRequest
         customerBookBatchPostResponse.body.left.value shouldBe smithy.BadRequest()
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List.empty
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with an Unauthorized when the access token is missing" in withContext { context =>
         import context.*
+
+        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+          customerBusinesses = List(
+            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+          ),
+          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+        )
+        val customerBookBatchPostRequestSmithy =
+          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
 
         val customerBookBatchPostResponse = gatewayClient
           .customerBookBatchPost[smithy.Unauthorized](
@@ -1132,11 +1185,21 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         customerBookBatchPostResponse.code shouldBe StatusCode.Unauthorized
         customerBookBatchPostResponse.body.left.value shouldBe smithy.Unauthorized()
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List.empty
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with an Unauthorized when the access token is invalid" in withContext { context =>
         import context.*
+
+        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+          customerBusinesses = List(
+            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+          ),
+          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+        )
+        val customerBookBatchPostRequestSmithy =
+          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
 
         val customerBookBatchPostResponse = gatewayClient
           .customerBookBatchPost[smithy.Unauthorized](
@@ -1148,11 +1211,21 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         customerBookBatchPostResponse.code shouldBe StatusCode.Unauthorized
         customerBookBatchPostResponse.body.left.value shouldBe smithy.Unauthorized()
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List.empty
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
         import context.*
+
+        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+          customerBusinesses = List(
+            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+          ),
+          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+        )
+        val customerBookBatchPostRequestSmithy =
+          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
 
         val onboardStage   = Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
@@ -1173,11 +1246,21 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         customerBookBatchPostResponse.code shouldBe StatusCode.Forbidden
         customerBookBatchPostResponse.body.left.value shouldBe smithy.Forbidden()
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List.empty
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
         import context.*
+
+        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+          customerBusinesses = List(
+            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+          ),
+          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+        )
+        val customerBookBatchPostRequestSmithy =
+          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
 
         val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
@@ -1199,7 +1282,8 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         customerBookBatchPostResponse.code shouldBe StatusCode.Forbidden
         customerBookBatchPostResponse.body.left.value shouldBe smithy.Forbidden()
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List.empty
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a Conflict for an existing individual name and leave the accompanying business unpersisted" in withContext {
@@ -1214,23 +1298,23 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
           postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
-          val existingIndividual = arbitrarySample[CustomerIndividualDetailsRow].copy(
+          val customerIndividualDetailsRowExisting = arbitrarySample[CustomerIndividualDetailsRow].copy(
             organizationID = organizationUserRow.organizationID,
             isArchived = false,
           )
           postgresClient
-            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(existingIndividual))
+            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRowExisting))
             .zioValue
-          val businessContact =
+          val customerBusinessContactInsert =
             arbitrarySample[CustomerBusinessContactInsert]
           val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
             customerBusinesses = List(
               arbitrarySample[CustomerBookBusinessPostRequest]
-                .copy(customerBusinessContacts = List(businessContact))
+                .copy(customerBusinessContacts = List(customerBusinessContactInsert))
             ),
             customerIndividuals = List(
               arbitrarySample[CustomerBookIndividualPostRequest]
-                .copy(fullName = existingIndividual.fullName)
+                .copy(fullName = customerIndividualDetailsRowExisting.fullName)
             ),
           )
           val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
@@ -1248,13 +1332,17 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             message = "A customer with the given name already exists in this organization"
           )
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe
-            List(existingIndividual.customerID)
+            List(customerIndividualDetailsRowExisting.customerID)
           postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe List.empty
+            .zioValue shouldBe Nil
           postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe List.empty
+            .zioValue shouldBe Nil
+
+          postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+            .zioValue shouldBe List(customerIndividualDetailsRowExisting)
       }
 
       "fail with a Conflict for an existing business name and roll back the accompanying individual" in withContext {
@@ -1269,15 +1357,20 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
           postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
 
-          val existingBusiness = arbitrarySample[CustomerBusinessDetailsRow].copy(
+          val customerBusinessDetailsRowExisting = arbitrarySample[CustomerBusinessDetailsRow].copy(
             organizationID = organizationUserRow.organizationID,
             isArchived = false,
           )
-          postgresClient.executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(existingBusiness)).zioValue
+          postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRowExisting))
+            .zioValue
           val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
             customerBusinesses = List(
               arbitrarySample[CustomerBookBusinessPostRequest]
-                .copy(businessName = existingBusiness.businessName, customerBusinessContacts = List.empty)
+                .copy(
+                  businessName = customerBusinessDetailsRowExisting.businessName,
+                  customerBusinessContacts = List.empty,
+                )
             ),
             customerIndividuals = List(
               arbitrarySample[CustomerBookIndividualPostRequest]
@@ -1298,17 +1391,30 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             message = "A customer with the given name already exists in this organization"
           )
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe
-            List(existingBusiness.customerID)
+            List(customerBusinessDetailsRowExisting.customerID)
           postgresClient
             .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue shouldBe List.empty
+            .zioValue shouldBe Nil
           postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe List.empty
+            .zioValue shouldBe Nil
+
+          postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            .zioValue shouldBe List(customerBusinessDetailsRowExisting)
       }
 
       "fail with an InternalServerError when the user details do not exist" in withContext { context =>
         import context.*
+
+        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+          customerBusinesses = List(
+            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+          ),
+          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+        )
+        val customerBookBatchPostRequestSmithy =
+          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
 
         val userID         = arbitrarySample[UserID]
         val organizationID = arbitrarySample[OrganizationID]
@@ -1324,11 +1430,21 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         customerBookBatchPostResponse.code shouldBe StatusCode.InternalServerError
         customerBookBatchPostResponse.body.left.value shouldBe smithy.InternalServerError()
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List.empty
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
         import context.*
+
+        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+          customerBusinesses = List(
+            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+          ),
+          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+        )
+        val customerBookBatchPostRequestSmithy =
+          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
 
         val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
@@ -1345,7 +1461,8 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
         customerBookBatchPostResponse.code shouldBe StatusCode.InternalServerError
         customerBookBatchPostResponse.body.left.value shouldBe smithy.InternalServerError()
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List.empty
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
     }
 
@@ -1744,7 +1861,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPutResponse.code shouldBe StatusCode.BadRequest
         customerBookIndividualPutResponse.body.left.value shouldBe smithy.ValidationError(fields = List("fullName"))
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a BadRequest when the organization id header is missing" in withContext { context =>
@@ -1774,7 +1891,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPutResponse.code shouldBe StatusCode.BadRequest
         customerBookIndividualPutResponse.body.left.value shouldBe smithy.BadRequest()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with an Unauthorized when the access token is missing" in withContext { context =>
@@ -1797,7 +1914,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPutResponse.code shouldBe StatusCode.Unauthorized
         customerBookIndividualPutResponse.body.left.value shouldBe smithy.Unauthorized()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with an Unauthorized when the access token is invalid" in withContext { context =>
@@ -1820,7 +1937,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPutResponse.code shouldBe StatusCode.Unauthorized
         customerBookIndividualPutResponse.body.left.value shouldBe smithy.Unauthorized()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
@@ -1855,7 +1972,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPutResponse.code shouldBe StatusCode.Forbidden
         customerBookIndividualPutResponse.body.left.value shouldBe smithy.Forbidden()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
@@ -1890,7 +2007,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPutResponse.code shouldBe StatusCode.Forbidden
         customerBookIndividualPutResponse.body.left.value shouldBe smithy.Forbidden()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with a Conflict when renaming to an active individual name and retain both complete rows" in withContext {
@@ -1980,7 +2097,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPutResponse.code shouldBe StatusCode.InternalServerError
         customerBookIndividualPutResponse.body.left.value shouldBe smithy.InternalServerError()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
 
       "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
@@ -2012,7 +2129,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookIndividualPutResponse.code shouldBe StatusCode.InternalServerError
         customerBookIndividualPutResponse.body.left.value shouldBe smithy.InternalServerError()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
       }
     }
 
@@ -2074,7 +2191,10 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             customerBusinessContactRowAlreadyArchived,
           )
 
-          customerBusinessContactRows.map(_.customerBusinessContactID).distinct.size shouldBe 4
+          customerBusinessContactRows
+            .map(_.customerBusinessContactID)
+            .distinct
+            .size shouldBe customerBusinessContactRows.size
 
           postgresClient
             .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
@@ -2141,10 +2261,13 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               businessName = CustomerBusinessName.assume("Replacement Business"),
               emails = List(CustomerEmailEntryInput(CustomerEmail.assume("replacement@example.com"), isDefault = true)),
               taxID = Some(CustomerTaxID.assume("ReplacementTax")),
-              phoneNumbers = customerBookBusinessPutRequest.phoneNumbers.get.map(entry =>
-                CustomerPhoneNumberEntryInput(entry.phoneNumber, isDefault = entry.isDefault)
+              phoneNumbers = customerBookBusinessPutRequest.phoneNumbers.value.map(customerPhoneNumberEntry =>
+                CustomerPhoneNumberEntryInput(
+                  customerPhoneNumberEntry.phoneNumber,
+                  isDefault = customerPhoneNumberEntry.isDefault,
+                )
               ),
-              addresses = customerBookBusinessPutRequest.addresses.get,
+              addresses = customerBookBusinessPutRequest.addresses.value,
               updatedAt = customerBusinessDetailsRowUpdated.updatedAt,
             )
           )
@@ -2922,7 +3045,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPutResponse.code shouldBe StatusCode.BadRequest
         customerBookBusinessPutResponse.body.left.value shouldBe smithy.BadRequest()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
       }
@@ -2947,7 +3070,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPutResponse.code shouldBe StatusCode.Unauthorized
         customerBookBusinessPutResponse.body.left.value shouldBe smithy.Unauthorized()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
       }
@@ -2972,7 +3095,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPutResponse.code shouldBe StatusCode.Unauthorized
         customerBookBusinessPutResponse.body.left.value shouldBe smithy.Unauthorized()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
       }
@@ -3010,7 +3133,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPutResponse.code shouldBe StatusCode.Forbidden
         customerBookBusinessPutResponse.body.left.value shouldBe smithy.Forbidden()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
       }
@@ -3048,7 +3171,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPutResponse.code shouldBe StatusCode.Forbidden
         customerBookBusinessPutResponse.body.left.value shouldBe smithy.Forbidden()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
       }
@@ -3166,7 +3289,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPutResponse.code shouldBe StatusCode.InternalServerError
         customerBookBusinessPutResponse.body.left.value shouldBe smithy.InternalServerError()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
       }
@@ -3200,7 +3323,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBookBusinessPutResponse.code shouldBe StatusCode.InternalServerError
         customerBookBusinessPutResponse.body.left.value shouldBe smithy.InternalServerError()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue should have size 0
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
 
         postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
       }

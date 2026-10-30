@@ -16,7 +16,7 @@ General:
 - Service/operation/shape names use `UpperCamelCase`.
 - Contract name is canonical: validated domain request has the exact same name. Rename both together.
 - Generated types are always package-qualified; import package, never members.
-- When wire/domain types coexist: bare binding = domain; generated binding = full type name + `Smithy`. Applies to handler params, validated outputs, wrappers, tests, and arbitrary givens.
+- When wire/domain types coexist: bare binding = domain; generated binding = full type name + `Smithy`. Applies to handler params, validated outputs, wrappers, tests, and arbitrary givens. Typed `GatewayClient` request parameters are an exception: use the plain request name without `Smithy`, since those methods accept only transport inputs.
 - Members: `camelCase`; IDL UUID named `<entity>ID`; client duration integer named `<thing>ExpiresInSeconds`; enum values use `UpperCamelCase` and exactly match their mirrored domain enum cases. Follow [Chimney's enum rules](chimney.md#enums) when converting them.
 - Member qualifiers: add a role qualifier only when the same shape holds more than one member it could otherwise be confused with. Put it as a suffix after the base noun, never as a verb prefix. `CatalogueItemPostRequest.variants` stays plain because a create carries only one kind of variant list. `CatalogueItemPutRequest` carries two, changes to existing variants and brand-new ones, so they are `variantsUpdate` and `variantsInsert`. Never qualify by reflex.
 
