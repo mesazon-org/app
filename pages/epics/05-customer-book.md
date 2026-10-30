@@ -8,7 +8,7 @@ title: Customer Book
 
 Every organization keeps a book of the people and companies it trades with. It is the organization's own address book, and it is where future orders will point.
 
-Customer-record actions use the `/customer-book/` resource namespace. Reading an image or file remains at `/extract/customers`.
+Customers can be added, browsed, opened, updated, and archived. Users can also extract customer candidates from images or files.
 
 ### Related / Out of scope
 
@@ -112,63 +112,63 @@ A customer can be added one at a time or as a mixed batch of people and business
 
 | **What the user is adding** | **What is sent** |
 | --- | --- |
-| One person | One `CustomerIndividual` |
-| One business | One `CustomerBusiness` |
-| A mixed batch | `CustomerIndividual[]` and `CustomerBusiness[]` together |
+| One person | One `CustomerBookIndividualPostRequest` |
+| One business | One `CustomerBookBusinessPostRequest` |
+| A mixed batch | `CustomerBookIndividualPostRequest[]` and `CustomerBookBusinessPostRequest[]` together |
 
-The two shapes are separate and neither is a variant of the other. A person has a name and no tax id and no contacts; a business has a business name and may have both.
+The person and business forms are distinct. A person has a name and no tax id or contacts; a business has a business name and may have both.
 
-**Request — CustomerIndividual**
+**Request — CustomerBookIndividualPostRequest**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Full Name | `String` | 1–255 characters, trimmed | ✅ | The person's name |
-| Emails | `EmailEntry[]` | Empty by default | ❌ | Contact email addresses. See **EmailEntry** below |
-| Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact numbers. See **PhoneNumberEntry** below |
-| Addresses | `AddressEntry[]` | Empty by default; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Where they are. See **AddressEntry** below |
+| Emails | `CustomerEmailEntry[]` | Empty by default | ❌ | Contact email addresses. See **CustomerEmailEntry** below |
+| Phone Numbers | `CustomerPhoneNumberEntry[]` | Empty by default | ❌ | Contact numbers. See **CustomerPhoneNumberEntry** below |
+| Addresses | `CustomerAddressEntry[]` | Empty by default; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Where they are. See **CustomerAddressEntry** below |
 
-**Request — CustomerBusiness**
+**Request — CustomerBookBusinessPostRequest**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Business Name | `String` | 1–255 characters, trimmed | ✅ | The company's name |
-| Emails | `EmailEntry[]` | Empty by default | ❌ | Contact email addresses. See **EmailEntry** below |
-| Phone Numbers | `PhoneNumberEntry[]` | Empty by default | ❌ | Contact numbers. See **PhoneNumberEntry** below |
+| Emails | `CustomerEmailEntry[]` | Empty by default | ❌ | Contact email addresses. See **CustomerEmailEntry** below |
+| Phone Numbers | `CustomerPhoneNumberEntry[]` | Empty by default | ❌ | Contact numbers. See **CustomerPhoneNumberEntry** below |
 | Tax ID | `String` | 1–255 characters, trimmed | ❌ | The company's tax reference. A person may never have one |
-| Customer Business Contacts | `BusinessContact[]` | Empty by default | ❌ | People inside the business. See **BusinessContact** below |
-| Addresses | `AddressEntry[]` | Empty by default; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Where they are. See **AddressEntry** below |
+| Customer Business Contacts | `CustomerBusinessContactInsert[]` | Empty by default | ❌ | People inside the business. See **CustomerBusinessContactInsert** below |
+| Addresses | `CustomerAddressEntry[]` | Empty by default; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Where they are. See **CustomerAddressEntry** below |
 
 The shapes used above and throughout this epic:
 
-**EmailEntry**
+**CustomerEmailEntry**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters | ✅ | One contact email address |
 | Is Default | `Boolean` | Exactly one entry in the list must be true | ✅ | Marks the email address to use by default |
 
-**PhoneNumberEntry**
+**CustomerPhoneNumberEntry**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Phone Number | `PhoneNumber` | — | ✅ | One contact number. See **PhoneNumber** below |
+| Phone Number | `PhoneNumberRequest` | — | ✅ | One contact number. See **PhoneNumberRequest** below |
 | Is Default | `Boolean` | Exactly one entry in the list must be true | ✅ | Marks the number to use by default |
 
-**PhoneNumber**
+**PhoneNumberRequest**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Phone National Number | `String` | 1–255 characters, trimmed; must be a real number for its country | ✅ | The number without its country code |
 | Phone Country Code | `String` | 1–255 characters, trimmed; must be a real country dialling code | ✅ | The country dialling code |
 
-**AddressEntry**
+**CustomerAddressEntry**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Address | `Address` | — | ✅ | Where it is. See **Address** below |
+| Address | `AddressRequest` | — | ✅ | Where it is. See **AddressRequest** below |
 | Address Type | `AddressType` | `Shipping`, `Billing` or `ShippingAndBilling` | ✅ | What the address is used for. `ShippingAndBilling` means one address serves both |
 
-**Address**
+**AddressRequest**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
@@ -178,14 +178,14 @@ The shapes used above and throughout this epic:
 | Postal Code | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ |  |
 | Country | `String` | 1–255 characters, no leading or trailing whitespace when present | ❌ | Free text, as the person types it |
 
-**BusinessContact**
+**CustomerBusinessContactInsert**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Full Name | `String` | 1–255 characters, trimmed | ✅ | The contact's name |
 | Role | `String` | 1–255 characters, trimmed | ❌ | What they do there |
 | Email | `String` | Standardised by [RFC 5322](https://www.rfc-editor.org/rfc/rfc5322) & [RFC 6854](https://www.rfc-editor.org/rfc/rfc6854); max 255 characters | ❌ |  |
-| Phone Number | `PhoneNumber` | — | ❌ |  |
+| Phone Number | `PhoneNumberRequest` | — | ❌ |  |
 
 **Response**
 
@@ -327,9 +327,9 @@ The app uses the customer's kind from the summary to choose the matching individ
 | --- | --- | --- | --- | --- |
 | Customer ID | `UUID` | Canonical 36-character form | ✅ | Identifies the customer |
 | Full Name | `String` | — | ✅ | The person's name |
-| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded email address, each marked default or not |
-| Phone Numbers | `PhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
-| Addresses | `AddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
+| Emails | `CustomerEmailEntry[]` | May be empty | ✅ | Every recorded email address, each marked default or not |
+| Phone Numbers | `CustomerPhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
+| Addresses | `CustomerAddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
 
 **Response — Business**
 
@@ -337,10 +337,10 @@ The app uses the customer's kind from the summary to choose the matching individ
 | --- | --- | --- | --- | --- |
 | Customer ID | `UUID` | Canonical 36-character form | ✅ | Identifies the customer |
 | Business Name | `String` | — | ✅ | The company's name |
-| Emails | `EmailEntry[]` | May be empty | ✅ | Every recorded email address, each marked default or not |
+| Emails | `CustomerEmailEntry[]` | May be empty | ✅ | Every recorded email address, each marked default or not |
 | Tax ID | `String` | — | ❌ | Present when recorded |
-| Phone Numbers | `PhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
-| Addresses | `AddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
+| Phone Numbers | `CustomerPhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
+| Addresses | `CustomerAddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
 | Customer Business Contacts | `CustomerBusinessContact[]` | May be empty; active contacts only | ✅ | Active business contacts; archived contacts are omitted |
 
 **CustomerBusinessContact**
@@ -351,7 +351,7 @@ The app uses the customer's kind from the summary to choose the matching individ
 | Full Name | `String` | — | ✅ | The contact's name |
 | Role | `String` | — | ❌ | Present only if recorded |
 | Email | `String` | — | ❌ | Present only if recorded |
-| Phone Number | `PhoneNumber` | — | ❌ | Present only if recorded |
+| Phone Number | `PhoneNumberRequest` | — | ❌ | Present only if recorded |
 
 **Outcome**
 
@@ -407,31 +407,31 @@ Nothing changes. This step only reads.
 
 There are two ways to update, one per kind, and the customer identifier is part of the request path. Updating a person through the business form finds nothing, and changes nothing.
 
-**Request — updating a CustomerIndividual**
+**Request — updating a person**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Full Name | `String` | 1–255 characters, trimmed; cannot be cleared | ❌ | Replacement name; leave out to keep the current name |
-| Emails | `EmailEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
-| Phone Numbers | `PhoneNumberEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
-| Addresses | `AddressEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list; when non-empty, one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Send the complete set, not just additions |
+| Emails | `CustomerEmailEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
+| Phone Numbers | `CustomerPhoneNumberEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
+| Addresses | `CustomerAddressEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list; when non-empty, one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Send the complete set, not just additions |
 
-**Request — updating a CustomerBusiness**
+**Request — updating a business**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Business Name | `String` | 1–255 characters, trimmed; cannot be cleared | ❌ | Replacement name; leave out to keep the current name |
-| Emails | `EmailEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
+| Emails | `CustomerEmailEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
 | Tax ID | `String` | 1–255 characters, trimmed; explicit null clears it | ❌ | Replacement tax ID; leave out to keep the current value |
-| Phone Numbers | `PhoneNumberEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
-| Addresses | `AddressEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list; when non-empty, one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Send the complete set, not just additions |
-| Customer Business Contacts Insert | `BusinessContact[]` | Empty by default | ❌ | Contacts to add as active contacts |
-| Customer Business Contacts Update | `BusinessContactUpdate[]` | Empty by default | ❌ | Existing contacts to change |
-| Customer Business Contacts Archive | `ContactReference[]` | Empty by default | ❌ | Existing contacts to archive permanently |
+| Phone Numbers | `CustomerPhoneNumberEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
+| Addresses | `CustomerAddressEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list; when non-empty, one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Send the complete set, not just additions |
+| Customer Business Contacts Insert | `CustomerBusinessContactInsert[]` | Empty by default | ❌ | Contacts to add as active contacts |
+| Customer Business Contacts Update | `CustomerBusinessContactUpdate[]` | Empty by default | ❌ | Existing contacts to change |
+| Customer Business Contacts Archive | `CustomerBusinessContactArchive[]` | Empty by default | ❌ | Existing contacts to archive permanently |
 
 The customer identifier is supplied in the path for both forms. Individual updates have no contact lists. Business updates apply all three contact lists together with the business fields.
 
-**BusinessContactUpdate**
+**CustomerBusinessContactUpdate**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
@@ -439,9 +439,9 @@ The customer identifier is supplied in the path for both forms. Individual updat
 | Full Name | `String` | 1–255 characters, trimmed | ❌ | Replacement name; omitted means unchanged |
 | Role | `String` | 1–255 characters, trimmed | ❌ | Replacement role; null clears it |
 | Email | `String` | Standardised email; max 255 characters | ❌ | Replacement email; null clears it |
-| Phone Number | `PhoneNumber` | A real number for its country | ❌ | Replacement phone; null clears it |
+| Phone Number | `PhoneNumberRequest` | A real number for its country | ❌ | Replacement phone; null clears it |
 
-**ContactReference**
+**CustomerBusinessContactArchive**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
@@ -507,19 +507,19 @@ All contact lists are part of the business update described in [step 4](#4-user-
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Customer Business Contacts Insert | `BusinessContact[]` | Empty by default | ❌ | The people to add as active contacts. Same shape as when adding a business, [described in step 1](#1-user-adds-a-customer) |
+| Customer Business Contacts Insert | `CustomerBusinessContactInsert[]` | Empty by default | ❌ | The people to add as active contacts. Same shape as when adding a business, [described in step 1](#1-user-adds-a-customer) |
 
 **Request** — updating contacts
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Customer Business Contacts Update | `BusinessContactUpdate[]` | Empty by default | ❌ | Existing contacts to change. See **BusinessContactUpdate** in step 4 |
+| Customer Business Contacts Update | `CustomerBusinessContactUpdate[]` | Empty by default | ❌ | Existing contacts to change. See **CustomerBusinessContactUpdate** in step 4 |
 
 **Request** — archiving contacts
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Customer Business Contacts Archive | `ContactReference[]` | Empty by default | ❌ | Which contacts to archive permanently. See **ContactReference** in step 4 |
+| Customer Business Contacts Archive | `CustomerBusinessContactArchive[]` | Empty by default | ❌ | Which contacts to archive permanently. See **CustomerBusinessContactArchive** in step 4 |
 
 **Response**
 

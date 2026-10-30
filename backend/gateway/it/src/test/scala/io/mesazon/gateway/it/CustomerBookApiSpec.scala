@@ -59,7 +59,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           .zioValue should have size 1
         customerIndividualDetailsRowsAll.head shouldBe CustomerIndividualDetailsRow(
           organizationID = organizationUserRow.organizationID,
-          customerID = customerIndividualDetailsRowsAll.head.customerID,
+          customerID = CustomerID(customerBookIndividualPostResponse.body.value.customerID),
           fullName = customerBookIndividualPostRequest.fullName,
           emails = customerBookIndividualPostRequest.emails.map(customerEmailEntry =>
             CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
@@ -405,7 +405,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           .zioValue should have size 1
         customerBusinessDetailsRowsAll.head shouldBe CustomerBusinessDetailsRow(
           organizationID = organizationUserRow.organizationID,
-          customerID = customerBusinessDetailsRowsAll.head.customerID,
+          customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
           businessName = customerBookBusinessPostRequest.businessName,
           emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
             CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
@@ -429,7 +429,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         customerBusinessContactRowsAll should have size customerBookBusinessPostRequest.customerBusinessContacts.size
         customerBusinessContactRowsAll.head shouldBe CustomerBusinessContactRow(
           organizationID = organizationUserRow.organizationID,
-          customerID = customerBusinessDetailsRowsAll.head.customerID,
+          customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
           customerBusinessContactID = customerBusinessContactRowsAll.head.customerBusinessContactID,
           fullName = customerBusinessContactInsert.fullName,
           role = customerBusinessContactInsert.role,
@@ -488,11 +488,11 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           customerBusinessDetailsRowsAll should have size 1
           customerBusinessContactRowsAll should have size customerBookBusinessPostRequest.customerBusinessContacts.size
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List(
-            customerBusinessDetailsRowsAll.head.customerID
+            CustomerID(customerBookBusinessPostResponse.body.value.customerID)
           )
           customerBusinessDetailsRowsAll.head shouldBe CustomerBusinessDetailsRow(
             organizationID = organizationUserRow.organizationID,
-            customerID = customerBusinessDetailsRowsAll.head.customerID,
+            customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
             businessName = customerBookBusinessPostRequest.businessName,
             taxID = customerBookBusinessPostRequest.taxID,
             emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
@@ -516,7 +516,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
               CustomerBusinessContactRow(
                 organizationID = organizationUserRow.organizationID,
-                customerID = customerBusinessDetailsRowsAll.head.customerID,
+                customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
                 customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID,
                 fullName = customerBusinessContactInsert.fullName,
                 role = customerBusinessContactInsert.role,
@@ -584,11 +584,11 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
           customerBusinessDetailsRowsAll should have size 1
           customerBusinessContactRowsAll should have size customerBookBusinessPostRequest.customerBusinessContacts.size
           postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List(
-            customerBusinessDetailsRowsAll.head.customerID
+            CustomerID(customerBookBusinessPostResponse.body.value.customerID)
           )
           customerBusinessDetailsRowsAll.head shouldBe CustomerBusinessDetailsRow(
             organizationID = organizationUserRow.organizationID,
-            customerID = customerBusinessDetailsRowsAll.head.customerID,
+            customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
             businessName = customerBookBusinessPostRequest.businessName,
             taxID = customerBookBusinessPostRequest.taxID,
             emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
@@ -612,7 +612,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
 
               CustomerBusinessContactRow(
                 organizationID = organizationUserRow.organizationID,
-                customerID = customerBusinessDetailsRowsAll.head.customerID,
+                customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
                 customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID,
                 fullName = customerBusinessContactInsert.fullName,
                 role = customerBusinessContactInsert.role,
@@ -977,12 +977,12 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             .executeQuery(customerBookQueries.getAllCustomerIDsTesting)
             .zioValue should have size (customerIndividuals.size + customerBusinesses.size)
 
-          customerIndividuals.foreach { customerBookIndividualPostRequest =>
+          customerIndividuals.zipWithIndex.foreach { case (customerBookIndividualPostRequest, index) =>
             val customerIndividualDetailsRow =
               customerIndividualDetailsRows.find(_.fullName == customerBookIndividualPostRequest.fullName).value
             customerIndividualDetailsRow shouldBe CustomerIndividualDetailsRow(
               organizationID = organizationUserRow.organizationID,
-              customerID = customerIndividualDetailsRow.customerID,
+              customerID = CustomerID(customerBookBatchPostResponse.body.value.customerIDs(index)),
               fullName = customerBookIndividualPostRequest.fullName,
               emails = customerBookIndividualPostRequest.emails.map(customerEmailEntry =>
                 CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
@@ -999,12 +999,13 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               updatedAt = customerIndividualDetailsRow.updatedAt,
             )
           }
-          customerBusinesses.foreach { customerBookBusinessPostRequest =>
+          customerBusinesses.zipWithIndex.foreach { case (customerBookBusinessPostRequest, index) =>
             val customerBusinessDetailsRow =
               customerBusinessDetailsRows.find(_.businessName == customerBookBusinessPostRequest.businessName).value
             customerBusinessDetailsRow shouldBe CustomerBusinessDetailsRow(
               organizationID = organizationUserRow.organizationID,
-              customerID = customerBusinessDetailsRow.customerID,
+              customerID =
+                CustomerID(customerBookBatchPostResponse.body.value.customerIDs(customerIndividuals.size + index)),
               businessName = customerBookBusinessPostRequest.businessName,
               emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
                 CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
@@ -1023,11 +1024,9 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             )
           }
 
-          val customerBusinessDetailsRowFirst =
-            customerBusinessDetailsRows.find(_.businessName == customerBusinessName1).value
           customerBusinessContactRows.head shouldBe CustomerBusinessContactRow(
             organizationID = organizationUserRow.organizationID,
-            customerID = customerBusinessDetailsRowFirst.customerID,
+            customerID = CustomerID(customerBookBatchPostResponse.body.value.customerIDs(customerIndividuals.size)),
             customerBusinessContactID = customerBusinessContactRows.head.customerBusinessContactID,
             fullName = customerBusinessContactInsert.fullName,
             role = customerBusinessContactInsert.role,
