@@ -11,7 +11,7 @@ case class CustomerBusinessDetailsRow(
     emails: List[CustomerEmailEntryInput],
     phoneNumbers: List[CustomerPhoneNumberEntryInput],
     addresses: List[CustomerAddressEntry],
-    status: CustomerStatus,
+    isArchived: Boolean,
     createdAt: CreatedAt,
     updatedAt: UpdatedAt,
 )

@@ -6,7 +6,7 @@ Reusable Smithy rules. Related: [Mesazon endpoints](../features/flow/01-endpoint
 
 `CatalogueService.smithy` + `domain/Catalogue.smithy` (under `backend/gateway/core/src/main/smithy/`) are the canonical reference for the resource-oriented convention this standard describes: operation and shape names, resource paths and labels, the tenant mixin, role markers, error lists, and list defaults. Read both files alongside this standard before building a new endpoint.
 
-Every other live service (e.g. `CustomerBookService.smithy`) still uses the legacy verb-first style. Read it only to maintain that service; never copy it into a new or reworked contract.
+`CustomerBookService.smithy` also follows this resource-oriented convention. Services that retain the legacy verb-first style should be read only to maintain their existing contracts; never copy that style into a new or reworked contract.
 
 ## Names
 
@@ -16,7 +16,7 @@ General:
 - Service/operation/shape names use `UpperCamelCase`.
 - Contract name is canonical: validated domain request has the exact same name. Rename both together.
 - Generated types are always package-qualified; import package, never members.
-- When wire/domain types coexist: bare binding = domain; generated binding = full type name + `Smithy`. Applies to handler params, validated outputs, wrappers, tests, and arbitrary givens.
+- When wire/domain types coexist: bare binding = domain; generated binding = full type name + `Smithy`. Applies to handler params, validated outputs, wrappers, tests, and arbitrary givens. Typed `GatewayClient` request parameters are an exception: use the plain request name without `Smithy`, since those methods accept only transport inputs.
 - Members: `camelCase`; IDL UUID named `<entity>ID`; client duration integer named `<thing>ExpiresInSeconds`; enum values use `UpperCamelCase` and exactly match their mirrored domain enum cases. Follow [Chimney's enum rules](chimney.md#enums) when converting them.
 - Member qualifiers: add a role qualifier only when the same shape holds more than one member it could otherwise be confused with. Put it as a suffix after the base noun, never as a verb prefix. `CatalogueItemPostRequest.variants` stays plain because a create carries only one kind of variant list. `CatalogueItemPutRequest` carries two, changes to existing variants and brand-new ones, so they are `variantsUpdate` and `variantsInsert`. Never qualify by reflex.
 
@@ -29,13 +29,13 @@ Shapes:
 
 - Operation shapes: only the front-facing input/output shapes bind to the operation, named `<Operation>Request|Response` in the feature domain file, so they follow the operation's style: `CatalogueItemPostRequest`, `CatalogueItemSummaryGetResponse` (resource-oriented), `InsertCustomerIndividualPostRequest` (legacy).
 - Nested shapes (resource-oriented): a plain domain name with no operation name or HTTP method in it. The full view of an entity is the entity name alone (`CatalogueItemVariant`). Any other view takes a role suffix after the entity, never a prefix: `CatalogueItemVariantInsert`, `CatalogueItemVariantUpdate`, `CatalogueItemVariantSummary`, `CatalogueItemSummary`. A list is the plural, with no `List` suffix. When the role is a noun, the role is pluralised (`CatalogueItemVariantSummaries`, `CatalogueItemSummaries`); when it is `Insert`/`Update`, the entity is (`CatalogueItemVariantsInsert`, `CatalogueItemsInsert`). Legacy contracts keep their verb-first nested names (`InsertCustomerBusinessContact`, `InsertCustomerIndividuals`) until reworked.
-- Each operation owns its shapes; never share a common entity shape across operations. Two exceptions, both limited to create input and only when the reused shape means exactly the same input (same members, same required/optional/default traits, same validation and stored defaults):
+- Keep operation-level request/response wrappers named for their own operation. Within a feature, reuse nested shapes and lists for the same domain concept when their contracts are identical: members, required/optional/default/nullable traits, validation and stored defaults. Do not introduce `Batch`, `Created`, or operation qualifiers solely to duplicate an existing nested view.
   - A batch create lists its single-create sibling's request shape as its entry (`list CatalogueItemsInsert { member: CatalogueItemPostRequest }`).
   - An update's list of new children reuses the create operation's child entry list (`CatalogueItemPutRequest.variantsInsert: CatalogueItemVariantsInsert`).
 
-  Generic nested names are what make these reuses read correctly at every use site. As soon as either side needs a member or trait the other does not have, split the shapes. Keep update and read entity views separate. Reusable value shapes, such as Catalogue price and selling unit, may appear in both requests and responses when their meaning and member traits are identical; this does not permit sharing an entire entity view merely because its fields look alike.
-- Contact/value+flag entry: `<Owner><Kind>EntryRequest`; list plural `...EntryRequests`; domain entry has same name.
-- Owner-less value shapes shared by several features live in `domain/Gateway.smithy` and mirror their shared domain case class (`PhoneNumberRequest` ↔ `PhoneNumber`, `AddressRequest` ↔ `Address`, `AddressEntryRequest` ↔ `AddressEntry`); each feature declares only its owner-named list, e.g. `list OrganizationAddressEntryRequests { member: AddressEntryRequest }`.
+  Split the views when their contracts differ, such as contact insert/update/read entries with different IDs, requiredness or nullable update semantics. Reusable value shapes, such as Catalogue price and selling unit, may appear in requests and responses when their meaning and member traits are identical. Sharing is based on the same domain concept and contract, not merely the same field layout.
+- Owner-named nested entry in a resource-oriented contract: `<Owner><Kind>Entry`; list plural `...Entries` (`CustomerPhoneNumberEntry` / `CustomerPhoneNumberEntries`). Use the same plain names for email and address entries. Legacy contracts keep their `...EntryRequest` / `...EntryRequests` shapes until the last operation using them is reworked; then remove those shapes.
+- Owner-less value shapes shared by several features live in `domain/Gateway.smithy` and retain their existing `Request` names (`PhoneNumberRequest` ↔ `PhoneNumber`, `AddressRequest` ↔ `Address`, `AddressEntryRequest` ↔ `AddressEntry`). A reworked feature may wrap them in owner-named entries without `Request`, such as `CustomerAddressEntry` containing `AddressRequest`; legacy owner-named lists remain unchanged until reworked.
 - Request list member: `@default([])`, never `@required`, so omitted empty JSON decodes to non-optional `Nil`. Response list: `@required`. Never model request list as `Option[List]` solely to default it empty.
 
 URIs: resource-oriented kebab-case per [Resource paths](#resource-paths) for new and reworked contracts. Legacy services keep their verb-first URIs (`/insert/customers`) until reworked; never add a new verb-first URI.
@@ -69,6 +69,17 @@ URIs: resource-oriented kebab-case per [Resource paths](#resource-paths) for new
 - Errors: base validation/unauthorized/internal; add bad-request for rejected well-formed input, forbidden for role/stage gates, conflict for state collision.
 - Order errors by status ascending; ties alphabetically. Apply to new errors.
 - Any domain error addition/status move/new failure mode updates every affected operation's error list in the same change.
+
+## Resource create responses
+
+Resource-creation POSTs follow Catalogue's ID-only response pattern:
+
+- A single create returns `200` with one required `<entity>ID: UUID`, such as `CatalogueItemPostResponse.catalogueItemID`.
+- A batch create returns `200` with one required `<entity>IDs` UUID list, such as `CatalogueItemBatchPostResponse.catalogueItemIDs`. Reuse the feature's ID-list shape. Preserve the documented input order; mixed input lists define their traversal order explicitly. If an empty batch is valid for the feature, return an empty ID list.
+- Return identifiers of the resources the endpoint creates; do not echo full records, summaries or nested child details. Stored details and child identifiers are obtained through the corresponding detail GET.
+- Repository inserts return domain IDs (one ID or a collection); the service maps those IDs directly into the operation response. Keep write Rows and internal row pairs inside persistence rather than exposing them just to build a create response. See [Repository flow](../features/flow/04-repository.md#rows-and-repository-inputs) and [Service flow](../features/flow/05-service.md#implementation-boundary).
+
+This rule applies to resource creation, not every POST operation: authentication, extraction previews and other commands retain their own agreed contracts. Any feature-specific create-response exception must be an explicit product requirement documented in that feature.
 
 ## Resource paths
 

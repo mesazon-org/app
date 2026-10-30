@@ -72,15 +72,6 @@ object tapir {
 
   given phoneNumberSchema: Schema[PhoneNumber] = Schema.derived[PhoneNumber]
 
-  given customerEmailEntryRequestSchema: Schema[CustomerEmailEntryRequest] =
-    Schema.derived[CustomerEmailEntryRequest]
-
-  given customerPhoneNumberEntryRequestSchema: Schema[CustomerPhoneNumberEntryRequest] =
-    Schema.derived[CustomerPhoneNumberEntryRequest]
-
-  given insertCustomerBusinessContactSchema: Schema[InsertCustomerBusinessContact] =
-    Schema.derived[InsertCustomerBusinessContact]
-
   given currencySchema: Schema[Currency] =
     Schema.derivedEnumeration[Currency](
       encode = Some(_.toString),

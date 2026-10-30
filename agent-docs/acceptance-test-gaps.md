@@ -120,30 +120,6 @@ The "exactly one default" rule is deliberately *not* listed here — `Organizati
 
 Leaving this entry in place, struck through, so nobody re-adds it believing it was simply overlooked.
 
-## Endpoints with no acceptance coverage at all
-
-### 12. Five of the thirteen customer book endpoints are untested
-
-**Behaviour:** [Customer Book](../pages/epics/05-customer-book.md), steps 4 and 5, plus the mixed batch insert in step 1.
-
-`CustomerBookApiSpec` has blocks for eight endpoints. These five have none:
-
-| Endpoint | Epic step |
-|---|---|
-| `POST /insert/customers` | 1 — adding a mixed batch of people and businesses |
-| `PUT /update/customer-individual` | 4 — updating a customer |
-| `PUT /update/customer-business` | 4 — updating a customer |
-| `PUT /add/customer-business-contacts` | 5 — managing a business's contacts |
-| `PUT /remove/customer-business-contacts` | 5 — managing a business's contacts |
-
-`customer-book.md` already tracks this as "Acceptance: 8/13 endpoints complete", so it is a known shortfall rather than a discovery — recorded here so it sits with the rest of the backlog.
-
-Worth noting what the shape of the gap implies: **every mutation except insert and archive is untested over HTTP.** That includes both endpoints where the update is applied wholesale (email, phone and address lists replace rather than merge; an empty address list clears it), the uniqueness conflicts on renaming, and every endpoint that exercises the silent no-op on an archived parent — which is [gap 2 in the epic](../pages/epics/05-customer-book.md#2-changes-to-an-archived-customer-are-silently-discarded). The behaviour most likely to surprise a user is the behaviour with no black-box test behind it.
-
-The repository and functional layers do cover these, so this is about transport, role gating, and the org-scoping header — the things only an acceptance test sees.
-
-**Where:** `CustomerBookApiSpec`. Follow the matrix the eight existing blocks already use.
-
 ## Rejections decided at request decoding
 
 ### 13. An address with an unknown type or a missing required address object/type
@@ -158,7 +134,7 @@ The repository and functional layers do cover these, so this is about transport,
 
 ### 14. Address rules in customer extraction
 
-**Behaviour:** [Customer Book](../pages/epics/05-customer-book.md), step 7, scenarios 20–23 — one address is always marked shipping and billing; two are split into shipping and billing (first/second when the source does not say, with a note); three or more are cut to two with a note. Partial addresses are retained when at least one text field has non-whitespace content, with populated values trimmed and a note for missing or unclear fields; all-empty addresses are omitted.
+**Behaviour:** [Customer Book](../pages/epics/05-customer-book.md), step 8, scenarios 20–23 — one address is always marked shipping and billing; two are split into shipping and billing (first/second when the source does not say, with a note); three or more are cut to two with a note. Partial addresses are retained when at least one text field has non-whitespace content, with populated values trimmed and a note for missing or unclear fields; all-empty addresses are omitted.
 
 Both extraction prompts in `AIInstructions` now request the agreed partial-address behavior. `FileApiSpec` only decodes a stubbed response carrying one `ShippingAndBilling` address, so it proves the response shape and wire value, not what the model does. The golden specs are manual, need a live key, and have not been run since the address shape changed — so it is also unconfirmed that the real service accepts the new strict schema or follows the updated instructions. Live-AI verification was accepted as a risk on 2026-10-01 and remains outstanding.
 
