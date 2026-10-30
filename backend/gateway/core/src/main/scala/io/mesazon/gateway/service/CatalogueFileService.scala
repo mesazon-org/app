@@ -60,14 +60,17 @@ object CatalogueFileService {
 
       val candidates = catalogueItemAIExtracts.map { catalogueItemAIExtract =>
         catalogueItemAIExtract.copy(
-          nameIsDuplicate =
-            catalogueItemNameCounts(catalogueItemAIExtract.name.value.toLowerCase(Locale.ROOT)) > singleOccurrenceCount,
+          nameIsDuplicate = catalogueItemNameCounts
+            .get(catalogueItemAIExtract.name.value.toLowerCase(Locale.ROOT))
+            .exists(_ > singleOccurrenceCount),
           variants = catalogueItemAIExtract.variants.map { catalogueItemVariantAIExtract =>
             catalogueItemVariantAIExtract.copy(
               skuIsDuplicate = catalogueItemVariantAIExtract.sku.exists(catalogueItemVariantSku =>
-                catalogueItemVariantSkuCounts(
-                  catalogueItemVariantSku.value.toLowerCase(Locale.ROOT)
-                ) > singleOccurrenceCount
+                catalogueItemVariantSkuCounts
+                  .get(
+                    catalogueItemVariantSku.value.toLowerCase(Locale.ROOT)
+                  )
+                  .exists(_ > singleOccurrenceCount)
               )
             )
           },

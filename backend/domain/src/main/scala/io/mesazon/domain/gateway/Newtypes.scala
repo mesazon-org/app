@@ -142,8 +142,11 @@ type OrganizationLogoImageAsset = OrganizationLogoImageAsset.T
 
 // Customer Book
 
-object ExtractCustomersFileName extends RefinedType[String, NonEmptyTrimmed]
-type ExtractCustomersFileName = ExtractCustomersFileName.T
+object CustomerBookFileExtractFileName extends RefinedType[String, NonEmptyTrimmed]
+type CustomerBookFileExtractFileName = CustomerBookFileExtractFileName.T
+
+object CustomerBookFileProcessingMessage extends RefinedType[String, NonEmptyTrimmedMessage]
+type CustomerBookFileProcessingMessage = CustomerBookFileProcessingMessage.T
 
 object CustomerID extends RefinedTypeUUID
 type CustomerID = CustomerID.T

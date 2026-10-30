@@ -4,16 +4,11 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.HttpErrorHandler
 import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.config.FileServiceConfig
-import io.mesazon.gateway.json.ai.given
-import io.mesazon.gateway.json.tapir.extractCustomersPostResponseCodec
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.tapir.TapirTask
 import io.mesazon.gateway.utils.*
-import org.apache.commons.csv.CSVRecord
 import zio.*
 import zio.stream.*
-
-import java.util.Locale
 
 trait FileService[F[_]] {
   def uploadOrganizationLogo(
@@ -21,12 +16,6 @@ trait FileService[F[_]] {
       organizationLogoImageOriginalFileName: ImageOriginalFileName,
       organizationLogoImageByteStream: ZStream[Any, Throwable, Byte],
   ): F[Unit]
-
-  def extractCustomers(
-      organizationID: OrganizationID,
-      extractCustomersFileName: ExtractCustomersFileName,
-      extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
-  ): F[ExtractCustomersPostResponse]
 }
 
 object FileService {
@@ -36,99 +25,8 @@ object FileService {
       organizationManagementRepository: OrganizationManagementRepository,
       fileScanner: FileScanner,
       imageProcessing: ImageProcessing,
-      spreadsheetTool: SpreadsheetTool,
       s3ClientOrganizationMedia: S3ClientOrganizationMedia,
-      aiClientDataExtraction: AIClientDataExtraction,
   ) extends FileService[ServiceTask] {
-
-    private def normalizedName(name: String): String = name.toLowerCase(Locale.ROOT)
-
-    private def mergeExtractCustomersPostResponses(
-        responses: NonEmptyChunk[ExtractCustomersPostResponse]
-    ): ZIO[Any, ServiceError, ExtractCustomersPostResponse] = for {
-      responseList         = responses.toChunk.toList
-      individualCandidates = responseList.flatMap(_.customerIndividualCandidates)
-      businessCandidates   = responseList.flatMap(_.customerBusinessCandidates)
-      individualNameCounts = individualCandidates.groupMapReduce(candidate =>
-        normalizedName(candidate.candidate.fullName.value)
-      )(_ => 1)(_ + _)
-      businessNameCounts = businessCandidates.groupMapReduce(candidate =>
-        normalizedName(candidate.candidate.businessName.value)
-      )(_ => 1)(_ + _)
-      unidentifiedEntriesNotesAll = responseList.flatMap(_.unidentifiedEntriesNotes)
-      entriesIdentifiedSum        = responses.map(_.entriesIdentified).sum
-      entriesProcessedSum         = responses.map(_.entriesProcessed).sum
-      emptyEntryRowsAll           = responseList.flatMap(_.emptyEntryRows)
-      unidentifiedEntryRowsAll    = responseList.flatMap(_.unidentifiedEntryRows)
-      unidentifiedEntriesNotesOpt <- ZIO.when(unidentifiedEntriesNotesAll.nonEmpty)(
-        aiClientDataExtraction
-          .noteCompaction(
-            entriesIdentifiedSum,
-            entriesProcessedSum,
-            emptyEntryRowsAll,
-            unidentifiedEntryRowsAll,
-            unidentifiedEntriesNotesAll,
-            AIInstructions.noteCompactionInstructions,
-          )
-          .map(_.note)
-          .catchAllCause(cause =>
-            ZIO.logErrorCause("Failed to compact unidentified entries notes", cause) *>
-              ZIO.succeed(
-                unidentifiedEntriesNotesFallback(
-                  entriesIdentifiedSum,
-                  entriesProcessedSum,
-                  emptyEntryRowsAll,
-                  unidentifiedEntryRowsAll,
-                )
-              )
-          )
-      )
-      extractCustomersPostResponse = ExtractCustomersPostResponse(
-        entriesIdentified = entriesIdentifiedSum,
-        entriesProcessed = entriesProcessedSum,
-        emptyEntryRows = emptyEntryRowsAll,
-        unidentifiedEntryRows = unidentifiedEntryRowsAll,
-        unidentifiedEntriesNotes = unidentifiedEntriesNotesOpt,
-        customerIndividualCandidates = individualCandidates.map(candidate =>
-          candidate.copy(
-            isDuplicate = individualNameCounts(normalizedName(candidate.candidate.fullName.value)) > 1
-          )
-        ),
-        customerBusinessCandidates = businessCandidates.map(candidate =>
-          candidate.copy(
-            isDuplicate = businessNameCounts(normalizedName(candidate.candidate.businessName.value)) > 1
-          )
-        ),
-      )
-    } yield extractCustomersPostResponse
-
-    private def unidentifiedEntriesNotesFallback(
-        entriesIdentified: Long,
-        entriesProcessed: Long,
-        emptyEntryRows: List[Long],
-        unidentifiedEntryRows: List[Long],
-    ): String = {
-      val emptyEntryRowsSentence =
-        Option.when(emptyEntryRows.nonEmpty)(s" Rows ${emptyEntryRows.mkString(", ")} were blank.").getOrElse("")
-      val unidentifiedEntryRowsSentence = Option
-        .when(unidentifiedEntryRows.nonEmpty)(
-          s" Rows ${unidentifiedEntryRows.mkString(", ")} had no name we could read."
-        )
-        .getOrElse("")
-
-      s"$entriesProcessed of $entriesIdentified entries could be added automatically." +
-        emptyEntryRowsSentence + unidentifiedEntryRowsSentence
-    }
-
-    private def extractFromCsvRecordStream(
-        csvRecordStream: ZStream[Scope, ServiceError, CSVRecord]
-    ): ZIO[Scope, ServiceError, ExtractCustomersPostResponse] =
-      aiClientDataExtraction
-        .extractFromCsv[ExtractCustomersPostResponse](
-          csvRecordStream,
-          AIInstructions.extractCustomersFromFileInstructions,
-        )
-        .flatMap(mergeExtractCustomersPostResponses)
 
     override def uploadOrganizationLogo(
         organizationID: OrganizationID,
@@ -171,38 +69,6 @@ object FileService {
           logoImageAssetOptUpdate = Some(organizationLogoImageAsset),
         )
     } yield ())
-
-    override def extractCustomers(
-        organizationID: OrganizationID,
-        extractCustomersFileName: ExtractCustomersFileName,
-        extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
-    ): ServiceTask[ExtractCustomersPostResponse] = ZIO.scoped(for {
-      customerBookScanOutput <- fileScanner.scan(
-        extractCustomersFileByteStream,
-        extractCustomersFileName.value,
-        SupportedMediaType.extractData,
-        fileServiceConfig.fileBytesMax,
-      )
-      extractCustomersPostResponse <- customerBookScanOutput.supportedMediaType match {
-        case supportedMediaType if SupportedMediaType.images.contains(supportedMediaType) =>
-          aiClientDataExtraction.extractFromImage[ExtractCustomersPostResponse](
-            customerBookScanOutput.fileScannedPath,
-            supportedMediaType,
-            AIInstructions.extractCustomersFromImageInstructions,
-          )
-        case supportedMediaType if SupportedMediaType.excel.contains(supportedMediaType) =>
-          extractFromCsvRecordStream(spreadsheetTool.convertExcelToCsv(customerBookScanOutput.fileScannedPath))
-        case supportedMediaType if SupportedMediaType.csv.contains(supportedMediaType) =>
-          extractFromCsvRecordStream(spreadsheetTool.convertToCsv(customerBookScanOutput.fileScannedPath))
-        case supportedMediaTypeUnexpected =>
-          ZIO.fail(
-            ServiceError.InternalServerError.UnexpectedError(
-              s"Unexpected supported media type: [$supportedMediaTypeUnexpected]"
-            )
-          )
-      }
-    } yield extractCustomersPostResponse)
-
   }
 
   def observed(service: FileService[ServiceTask]): FileService[TapirTask] =
@@ -220,20 +86,6 @@ object FileService {
               organizationLogoImageByteStream,
             )
         )
-
-      override def extractCustomers(
-          organizationID: OrganizationID,
-          extractCustomersFileName: ExtractCustomersFileName,
-          extractCustomersFileByteStream: ZStream[Any, Throwable, Byte],
-      ): TapirTask[ExtractCustomersPostResponse] =
-        HttpErrorHandler.errorResponseHandlerTapir(
-          service.extractCustomers(
-            organizationID,
-            extractCustomersFileName,
-            extractCustomersFileByteStream,
-          )
-        )
-
     }
 
   val local = ZLayer

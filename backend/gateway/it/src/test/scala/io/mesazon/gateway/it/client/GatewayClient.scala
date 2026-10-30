@@ -547,22 +547,23 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       .response(asJsonEitherOrFail[E, CatalogueFileAiExtractPostResponse])
       .send(sttpBackend)
 
-  def extractCustomersPost[E: JsonValueCodec](
+  def customerBookFileAiExtractPost[E: JsonValueCodec](
       organizationIDOpt: Option[OrganizationID],
-      extractCustomersFileNameOpt: Option[ExtractCustomersFileName],
-      extractCustomersFileBytes: Chunk[Byte],
+      customerBookFileExtractFileNameOpt: Option[CustomerBookFileExtractFileName],
+      customerBookFileExtractFileBytes: Chunk[Byte],
       accessTokenOpt: Option[AccessToken],
-  ): Task[Response[Either[E, ExtractCustomersPostResponse]]] =
+      customerBookFileProcessingMessageOpt: Option[String],
+  ): Task[Response[Either[E, CustomerBookFileAiExtractPostResponse]]] =
     basicRequest
-      .post(externalUri.addPath("extract", "customers"))
+      .post(externalUri.addPath("customer-book", "file", "ai", "extract"))
       .pipe(request =>
         organizationIDOpt.fold(request)(organizationID =>
           request.header(OrganizationIDHeader, organizationID.value.toString)
         )
       )
       .pipe(request =>
-        extractCustomersFileNameOpt.fold(request)(extractCustomersFileName =>
-          request.header(FileNameHeader, extractCustomersFileName.value)
+        customerBookFileExtractFileNameOpt.fold(request)(customerBookFileExtractFileName =>
+          request.header(FileNameHeader, customerBookFileExtractFileName.value)
         )
       )
       .pipe(request =>
@@ -570,9 +571,14 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
           request.header(HeaderNames.Authorization, s"Bearer ${accessToken.value}")
         )
       )
-      .body(extractCustomersFileBytes.toArray)
+      .pipe(request =>
+        customerBookFileProcessingMessageOpt.fold(request)(customerBookFileProcessingMessage =>
+          request.header(ProcessingMessageHeader, customerBookFileProcessingMessage)
+        )
+      )
+      .body(customerBookFileExtractFileBytes.toArray)
       .contentType(MediaType.ApplicationOctetStream)
-      .response(asJsonEitherOrFail[E, ExtractCustomersPostResponse])
+      .response(asJsonEitherOrFail[E, CustomerBookFileAiExtractPostResponse])
       .send(sttpBackend)
 
   def customerBookIndividualPost[E: JsonValueCodec](

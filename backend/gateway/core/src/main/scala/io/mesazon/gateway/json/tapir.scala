@@ -46,29 +46,26 @@ object tapir {
 
   given addressEntrySchema: Schema[AddressEntry] = Schema.derived[AddressEntry]
 
-  given extractCustomerEmailEntrySchema: Schema[ExtractCustomerEmailEntry] = Schema.derived[ExtractCustomerEmailEntry]
+  given customerEmailEntrySchema: Schema[CustomerEmailEntry] = Schema.derived[CustomerEmailEntry]
 
-  given extractCustomerPhoneNumberSchema: Schema[ExtractCustomerPhoneNumber] =
-    Schema.derived[ExtractCustomerPhoneNumber]
+  given fieldInfoSchema: Schema[FieldInfo] = Schema.derived[FieldInfo]
 
-  given extractCustomerPhoneNumberEntrySchema: Schema[ExtractCustomerPhoneNumberEntry] =
-    Schema.derived[ExtractCustomerPhoneNumberEntry]
+  given customerPhoneNumberCandidateSchema: Schema[CustomerPhoneNumberCandidate] =
+    Schema.derived[CustomerPhoneNumberCandidate]
 
-  given extractCustomerIndividualSchema: Schema[ExtractCustomerIndividual] = Schema.derived[ExtractCustomerIndividual]
+  given customerPhoneNumberEntryCandidateSchema: Schema[CustomerPhoneNumberEntryCandidate] =
+    Schema.derived[CustomerPhoneNumberEntryCandidate]
 
-  given extractCustomerBusinessContactSchema: Schema[ExtractCustomerBusinessContact] =
-    Schema.derived[ExtractCustomerBusinessContact]
+  given customerBusinessContactCandidateSchema: Schema[CustomerBusinessContactCandidate] =
+    Schema.derived[CustomerBusinessContactCandidate]
 
-  given extractCustomerBusinessSchema: Schema[ExtractCustomerBusiness] = Schema.derived[ExtractCustomerBusiness]
+  given customerIndividualCandidateSchema: Schema[CustomerIndividualCandidate] =
+    Schema.derived[CustomerIndividualCandidate]
 
-  given extractCustomerIndividualDataSchema: Schema[ExtractCustomerIndividualData] =
-    Schema.derived[ExtractCustomerIndividualData]
+  given customerBusinessCandidateSchema: Schema[CustomerBusinessCandidate] = Schema.derived[CustomerBusinessCandidate]
 
-  given extractCustomerBusinessDataSchema: Schema[ExtractCustomerBusinessData] =
-    Schema.derived[ExtractCustomerBusinessData]
-
-  given extractCustomersPostResponseSchema: Schema[ExtractCustomersPostResponse] =
-    Schema.derived[ExtractCustomersPostResponse]
+  given customerBookFileAiExtractPostResponseSchema: Schema[CustomerBookFileAiExtractPostResponse] =
+    Schema.derived[CustomerBookFileAiExtractPostResponse]
 
   given phoneNumberSchema: Schema[PhoneNumber] = Schema.derived[PhoneNumber]
 
@@ -159,8 +156,8 @@ object tapir {
   given catalogueFileAiExtractPostResponseCodec: JsonValueCodec[CatalogueFileAiExtractPostResponse] =
     JsonCodecMaker.make[CatalogueFileAiExtractPostResponse]
 
-  given extractCustomersPostResponseCodec: JsonValueCodec[ExtractCustomersPostResponse] =
-    JsonCodecMaker.make[ExtractCustomersPostResponse]
+  given customerBookFileAiExtractPostResponseCodec: JsonValueCodec[CustomerBookFileAiExtractPostResponse] =
+    JsonCodecMaker.make[CustomerBookFileAiExtractPostResponse]
 
   given tapirServerErrorSchemaFallback: Schema[TapirServerError] =
     tapirServerErrorBodySchema

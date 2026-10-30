@@ -3,8 +3,8 @@ package io.mesazon.gateway.clients
 import com.github.plokhotnyuk.jsoniter_scala.core.*
 import io.mesazon.domain.gateway.{NoteCompactionOutput, ServiceError, SupportedMediaType}
 import io.mesazon.gateway.config.AIClientDataExtractionConfig
-import io.mesazon.gateway.json.OpenAIJsonSchema
 import io.mesazon.gateway.json.ai.given
+import io.mesazon.gateway.json.{ai, OpenAIJsonSchema}
 import io.mesazon.gateway.utils.*
 import org.apache.commons.csv.*
 import sttp.ai.openai.OpenAI
@@ -45,14 +45,7 @@ trait AIClientDataExtraction {
       JsonValueCodec[A],
   ): ZIO[Scope, ServiceError, NonEmptyChunk[A]]
 
-  def noteCompaction(
-      entriesIdentified: Long,
-      entriesProcessed: Long,
-      emptyEntryRows: List[Long],
-      unidentifiedEntryRows: List[Long],
-      unidentifiedEntriesNotes: List[String],
-      instructions: String,
-  ): IO[ServiceError, NoteCompactionOutput]
+  def noteCompaction(notes: List[String], instructions: String): IO[ServiceError, NoteCompactionOutput]
 }
 
 object AIClientDataExtraction {
@@ -94,9 +87,10 @@ object AIClientDataExtraction {
     private def sendAndDecode[A](
         model: String,
         reasoningEffort: String,
+        requestTimeout: Duration,
         instructions: String,
         content: Content,
-        processingMessageOpt: Option[String] = None,
+        processingMessageOpt: Option[String],
     )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
       for {
         response <- openAI
@@ -111,7 +105,7 @@ object AIClientDataExtraction {
               responseFormat = Some(responseFormat),
             )
           )
-          .readTimeout(aiClientDataExtractionConfig.requestTimeout.toScala)
+          .readTimeout(requestTimeout.toScala)
           .send(backend)
           .map(_.body)
           .absolve
@@ -142,6 +136,7 @@ object AIClientDataExtraction {
       sendAndDecode[A](
         aiClientDataExtractionConfig.imageModel,
         aiClientDataExtractionConfig.imageReasoningEffort,
+        aiClientDataExtractionConfig.requestTimeout,
         instructions,
         Content.ArrayContent(
           Seq(
@@ -181,20 +176,6 @@ object AIClientDataExtraction {
             .UnexpectedError("Failed to build CSV batch content for AI extraction", Some(error))
         )
 
-    private def noteCompactionContent(
-        entriesIdentified: Long,
-        entriesProcessed: Long,
-        emptyEntryRows: List[Long],
-        unidentifiedEntryRows: List[Long],
-        unidentifiedEntriesNotes: List[String],
-    ): String =
-      s"""Entries identified: $entriesIdentified
-         |Entries processed: $entriesProcessed
-         |Empty entry rows: ${emptyEntryRows.mkString(", ")}
-         |Unidentified entry rows: ${unidentifiedEntryRows.mkString(", ")}
-         |Raw notes from each batch:
-         |${unidentifiedEntriesNotes.map(note => s"- $note").mkString("\n")}""".stripMargin
-
     override def extractFromImage[A](
         imageScannedPath: FileScannedPath,
         supportedMediaType: SupportedMediaType,
@@ -229,6 +210,7 @@ object AIClientDataExtraction {
                 sendAndDecode[A](
                   aiClientDataExtractionConfig.csvModel,
                   aiClientDataExtractionConfig.csvReasoningEffort,
+                  aiClientDataExtractionConfig.requestTimeout,
                   instructions,
                   Content.TextContent(csvRecordsBatchText),
                   processingMessageOpt,
@@ -238,28 +220,16 @@ object AIClientDataExtraction {
             .runCollect
       } yield NonEmptyChunk(extractFromCsvResultsChunk.head, extractFromCsvResultsChunk.tail*)
 
-    override def noteCompaction(
-        entriesIdentified: Long,
-        entriesProcessed: Long,
-        emptyEntryRows: List[Long],
-        unidentifiedEntryRows: List[Long],
-        unidentifiedEntriesNotes: List[String],
-        instructions: String,
-    ): IO[ServiceError, NoteCompactionOutput] =
+    override def noteCompaction(notes: List[String], instructions: String): IO[ServiceError, NoteCompactionOutput] =
       sendAndDecode[NoteCompactionOutput](
         aiClientDataExtractionConfig.noteCompactionModel,
         aiClientDataExtractionConfig.noteCompactionReasoningEffort,
+        aiClientDataExtractionConfig.noteCompactionRequestTimeout,
         instructions,
-        Content.TextContent(
-          noteCompactionContent(
-            entriesIdentified,
-            entriesProcessed,
-            emptyEntryRows,
-            unidentifiedEntryRows,
-            unidentifiedEntriesNotes,
-          )
-        ),
+        Content.TextContent(writeToString(notes)(using ai.noteCompactionNotesCodec)),
+        None,
       )
+
   }
 
   val live = ZLayer {

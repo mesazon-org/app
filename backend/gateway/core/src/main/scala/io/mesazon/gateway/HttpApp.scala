@@ -4,7 +4,7 @@ import cats.syntax.all.*
 import fs2.io.net.Network
 import io.mesazon.gateway.config.GatewayServerConfig
 import io.mesazon.gateway.config.GatewayServerConfig.ServerConfig
-import io.mesazon.gateway.service.{AuthorizationService, CatalogueFileService, FileService}
+import io.mesazon.gateway.service.{AuthorizationService, CatalogueFileService, CustomerBookFileService, FileService}
 import io.mesazon.gateway.tapir.*
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.EntityLimiter
@@ -24,8 +24,9 @@ object HttpApp {
 
   // Smithy (JSON) routes allow batch requests up to 5 MB.
   private val SmithyMaxEntitySize: Long = 5L * 1024 * 1024
-  // Tapir routes carry logo uploads, so they allow up to 20 MB.
-  // Keep in sync with `file-service.file-bytes-max`.
+  // Tapir routes carry file uploads, so they allow up to 20 MB. Keep in sync with
+  // `file-service.file-bytes-max`, `catalogue-file-service.*-file-bytes-max` and
+  // `customer-book-file-service.extract-customers-file-bytes-max`.
   private val TapirMaxEntitySize: Long = 20L * 1024 * 1024
 
   private def buildSmithyRoute[Alg[_[_, _, _, _, _]]](
@@ -73,19 +74,26 @@ object HttpApp {
 
   private def externalTapirAndDocsRoutes(
       enableDocs: Boolean
-  ): ZIO[FileService[
-    TapirTask
-  ] & CatalogueFileService[TapirTask] & AuthorizationService[TapirTask], Nothing, TapirRoutes] =
+  ): ZIO[
+    FileService[TapirTask] & CatalogueFileService[TapirTask] & CustomerBookFileService[TapirTask] &
+      AuthorizationService[TapirTask],
+    Nothing,
+    TapirRoutes,
+  ] =
     for {
-      fileEndpoints          <- FileServiceEndpoints.allRoutesAndDocsEndpoints(enableDocs)
-      catalogueFileEndpoints <- CatalogueFileServiceEndpoints.allRoutesAndDocsEndpoints(enableDocs)
+      fileEndpoints             <- FileServiceEndpoints.allRoutesAndDocsEndpoints(enableDocs)
+      catalogueFileEndpoints    <- CatalogueFileServiceEndpoints.allRoutesAndDocsEndpoints(enableDocs)
+      customerBookFileEndpoints <- CustomerBookFileServiceEndpoints.allRoutesAndDocsEndpoints(enableDocs)
       streamRoutes: HttpRoutes[Task] =
         ZHttp4sServerInterpreter(tapirServerOptions)
-          .from(fileEndpoints.stream ++ catalogueFileEndpoints.stream)
+          .from(fileEndpoints.stream ++ catalogueFileEndpoints.stream ++ customerBookFileEndpoints.stream)
           .toRoutes
       docsRoutes: Option[HttpRoutes[Task]] = Option.when(enableDocs)(
         ZHttp4sServerInterpreter()
-          .from(fileEndpoints.docsOpt.toList ++ catalogueFileEndpoints.docsOpt.toList)
+          .from(
+            fileEndpoints.docsOpt.toList ++ catalogueFileEndpoints.docsOpt.toList ++
+              customerBookFileEndpoints.docsOpt.toList
+          )
           .toRoutes
       )
     } yield (streamRoutes, docsRoutes)
@@ -106,6 +114,7 @@ object HttpApp {
     smithy.CatalogueService,
     FileServiceEndpoints.smithy4sDocsID,
     CatalogueFileServiceEndpoints.smithy4sDocsID,
+    CustomerBookFileServiceEndpoints.smithy4sDocsID,
   )
 
   private def server(

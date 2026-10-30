@@ -1,0 +1,25 @@
+{
+  "priority": 2,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "contains": "You are removing repeated general notes written while reading a customer file in several batches"
+      },
+      {
+        "contains": "Column Balance was ignored"
+      },
+      {
+        "contains": "json_schema"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"chatcmpl-customer-book-file-note-compaction-acceptance\",\"object\":\"chat.completion\",\"created\":1700000000,\"model\":\"test-model\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"notes\\\":[\\\"Column Balance was ignored\\\"]}\"}}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}"
+  }
+}

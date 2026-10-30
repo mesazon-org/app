@@ -132,8 +132,9 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
       imageReasoningEffort = "medium",
       csvModel = "test-model",
       csvReasoningEffort = "medium",
-      noteCompactionModel = "test-model",
+      noteCompactionModel = "test-note-compaction-model",
       noteCompactionReasoningEffort = "medium",
+      noteCompactionRequestTimeout = Duration.fromSeconds(60),
     )
 
     f(Context(aiClientDataExtractionConfig, wiremockClient))
@@ -1027,10 +1028,16 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
     }
 
     "noteCompaction" should {
-      "successfully compact identified/processed counts, row lists, and notes into one message" in withContext {
+      "send the notes as one escaped JSON array of strings to the note compaction model with a strict schema and decode the compacted notes" in withContext {
         context =>
           import context.*
 
+          val instructions = "Combine these notes"
+          val notes        = List(
+            "NOTE_COMPACTION_SPEC_SUCCESS",
+            "Two rows were blank",
+            "Left out row 7, the heading \"WHOLESALE CLIENTS\",\nbecause nothing is beside it",
+          )
           val aiClientDataExtraction = ZIO
             .service[AIClientDataExtraction]
             .provide(
@@ -1040,18 +1047,11 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             )
             .zioValue
 
-          val noteCompactionOutput = aiClientDataExtraction
-            .noteCompaction(
-              entriesIdentified = 5L,
-              entriesProcessed = 3L,
-              emptyEntryRows = List(2L, 4L),
-              unidentifiedEntryRows = List(6L),
-              unidentifiedEntriesNotes = List("A raw batch note"),
-              instructions = "NOTE_COMPACTION_SPEC_SUCCESS",
-            )
-            .zioValue
+          val noteCompactionOutput = aiClientDataExtraction.noteCompaction(notes, instructions).zioValue
 
-          noteCompactionOutput shouldBe NoteCompactionOutput(note = "Two rows were blank and one had no readable name.")
+          noteCompactionOutput shouldBe NoteCompactionOutput(
+            notes = List("Two rows were blank", "One row had no readable name")
+          )
 
           val noteCompactionRequestMappings =
             wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
@@ -1060,6 +1060,43 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           noteCompactionRequestMappings(0).mapping.method shouldBe "POST"
           noteCompactionRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
           noteCompactionRequestMappings(0).count shouldBe 1
+
+          aiClientDataExtractionConfig.noteCompactionModel shouldNot equal(aiClientDataExtractionConfig.csvModel)
+          aiClientDataExtractionConfig.noteCompactionModel shouldNot equal(aiClientDataExtractionConfig.imageModel)
+
+          requestMessages(wiremockClient) shouldBe Seq(
+            Seq(
+              OpenAIMessage.System(instructions),
+              OpenAIMessage.User(
+                Content.TextContent(
+                  """["NOTE_COMPACTION_SPEC_SUCCESS","Two rows were blank","Left out row 7, the heading \"WHOLESALE CLIENTS\",\nbecause nothing is beside it"]"""
+                )
+              ),
+            )
+          )
+
+          val requestBody = requestBodies(wiremockClient).loneElement
+          requestBody.hcursor.get[String]("model").value shouldBe aiClientDataExtractionConfig.noteCompactionModel
+          requestBody.hcursor
+            .get[String]("reasoning_effort")
+            .value shouldBe aiClientDataExtractionConfig.noteCompactionReasoningEffort
+
+          val jsonSchemaCursor = requestBody.hcursor
+            .downField("response_format")
+            .downField("json_schema")
+
+          jsonSchemaCursor.get[Boolean]("strict").value shouldBe true
+
+          val responseSchemaCursor = jsonSchemaCursor.downField("schema")
+          responseSchemaCursor.get[Boolean]("additionalProperties").value shouldBe false
+          responseSchemaCursor.get[Set[String]]("required").value shouldBe Set("notes")
+          responseSchemaCursor.downField("properties").downField("notes").get[String]("type").value shouldBe "array"
+          responseSchemaCursor
+            .downField("properties")
+            .downField("notes")
+            .downField("items")
+            .get[String]("type")
+            .value shouldBe "string"
       }
 
       "fail with an UnexpectedError when the AI service returns an error" in withContext { context =>
@@ -1075,14 +1112,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .zioValue
 
         val serviceError = aiClientDataExtraction
-          .noteCompaction(
-            entriesIdentified = 5L,
-            entriesProcessed = 3L,
-            emptyEntryRows = List(2L, 4L),
-            unidentifiedEntryRows = List(6L),
-            unidentifiedEntriesNotes = List("A raw batch note"),
-            instructions = "NOTE_COMPACTION_SPEC_ERROR",
-          )
+          .noteCompaction(List("NOTE_COMPACTION_SPEC_ERROR"), "Combine these notes")
           .zioError
 
         serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
@@ -1091,11 +1121,11 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
         val noteCompactionRequestMappings =
           wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
 
-        noteCompactionRequestMappings.size shouldBe 3
+        noteCompactionRequestMappings.size shouldBe aiClientDataExtractionConfig.sendMaxRetries + 1
         noteCompactionRequestMappings.foreach { noteCompactionRequestMapping =>
           noteCompactionRequestMapping.mapping.method shouldBe "POST"
           noteCompactionRequestMapping.mapping.url shouldBe "/v1/chat/completions"
-          noteCompactionRequestMapping.count shouldBe 3
+          noteCompactionRequestMapping.count shouldBe aiClientDataExtractionConfig.sendMaxRetries + 1
         }
       }
 
@@ -1113,14 +1143,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             .zioValue
 
           val serviceError = aiClientDataExtraction
-            .noteCompaction(
-              entriesIdentified = 5L,
-              entriesProcessed = 3L,
-              emptyEntryRows = List(2L, 4L),
-              unidentifiedEntryRows = List(6L),
-              unidentifiedEntriesNotes = List("A raw batch note"),
-              instructions = "NOTE_COMPACTION_SPEC_BAD_REQUEST",
-            )
+            .noteCompaction(List("NOTE_COMPACTION_SPEC_BAD_REQUEST"), "Combine these notes")
             .zioError
 
           serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
@@ -1149,14 +1172,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             .zioValue
 
           val serviceError = aiClientDataExtraction
-            .noteCompaction(
-              entriesIdentified = 5L,
-              entriesProcessed = 3L,
-              emptyEntryRows = List(2L, 4L),
-              unidentifiedEntryRows = List(6L),
-              unidentifiedEntriesNotes = List("A raw batch note"),
-              instructions = "NOTE_COMPACTION_SPEC_MALFORMED",
-            )
+            .noteCompaction(List("NOTE_COMPACTION_SPEC_MALFORMED"), "Combine these notes")
             .zioError
 
           serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]

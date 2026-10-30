@@ -2,7 +2,6 @@ package io.mesazon.gateway.tapir
 
 import io.circe.syntax.*
 import io.mesazon.domain.gateway.*
-import io.mesazon.gateway.json.tapir.given
 import io.mesazon.gateway.service.*
 import sttp.apispec.openapi.Info
 import sttp.apispec.openapi.circe.*
@@ -11,7 +10,6 @@ import sttp.model.StatusCode
 import sttp.tapir.CodecFormat
 import sttp.tapir.codec.iron.given
 import sttp.tapir.docs.openapi.*
-import sttp.tapir.json.jsoniter.jsonBody
 import sttp.tapir.ztapir.*
 import zio.*
 
@@ -29,24 +27,6 @@ object FileServiceEndpoints {
       .in(header[ImageOriginalFileName](FileNameHeader))
       .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
       .out(statusCode(StatusCode.Ok))
-      .errorOut(
-        tapirServerErrorOut(
-          NonEmptyChunk(
-            TapirServerError.UnauthorizedError,
-            TapirServerError.ForbiddenError,
-            TapirServerError.BadRequestError,
-            TapirServerError.InternalServerError,
-          )
-        )
-      )
-      .description(requiredOrganizationRolesDescription(OrganizationUserRole.adminRoles))
-
-  private val extractCustomersPostEndpoint =
-    securedEndpoint.post
-      .in("extract" / "customers")
-      .in(header[ExtractCustomersFileName](FileNameHeader))
-      .in(streamBinaryBody(ZioStreams)(CodecFormat.OctetStream()))
-      .out(jsonBody[ExtractCustomersPostResponse])
       .errorOut(
         tapirServerErrorOut(
           NonEmptyChunk(
@@ -89,31 +69,13 @@ object FileServiceEndpoints {
                   organizationLogoImageOriginalFileName,
                   organizationLogoImageByteStream,
                 )
-          }),
-        extractCustomersPostEndpoint.zServerSecurityLogic { case (accessToken, organizationID) =>
-          authorizationService
-            .auth(
-              accessToken = accessToken,
-              requiresCompletedOnboardStage = true,
-              organizationIDOpt = Some(organizationID),
-              organizationUserRolesAllowedOpt = Some(OrganizationUserRole.adminRoles),
-            )
-            .as(organizationID)
-        }
-          .serverLogic(organizationID => { case (extractCustomersFileName, extractCustomersFileByteStream) =>
-            fileService.extractCustomers(
-              organizationID,
-              extractCustomersFileName,
-              extractCustomersFileByteStream,
-            )
-          }),
+          })
       )
       openApiDocsOpt = Option.when(enableDocs)(
         OpenAPIDocsInterpreter()
           .toOpenAPI(
             List(
-              uploadOrganizationLogoPostEndpoint,
-              extractCustomersPostEndpoint,
+              uploadOrganizationLogoPostEndpoint
             ),
             Info(
               title = "FileService",
