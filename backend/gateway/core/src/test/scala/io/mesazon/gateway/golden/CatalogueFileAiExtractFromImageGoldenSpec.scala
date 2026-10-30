@@ -8,8 +8,7 @@ import io.mesazon.gateway.json.tapir.catalogueFileAiExtractPostResponseCodec
 import io.mesazon.gateway.repository.CatalogueRepository
 import io.mesazon.gateway.service.{CatalogueFileService, ServiceTask}
 import io.mesazon.gateway.utils.*
-import io.mesazon.testkit.base.{GatewayArbitraries, ZWordSpecBase}
-import sttp.client4.httpclient.zio.HttpClientZioBackend
+import io.mesazon.testkit.base.{GatewayArbitraries, SttpTestBackend, ZWordSpecBase}
 import zio.*
 import zio.stream.ZStream
 
@@ -45,7 +44,7 @@ class CatalogueFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, GatewayAr
           )
         )
       ),
-      HttpClientZioBackend.layer(),
+      SttpTestBackend.live,
     )
     .zioValue
 

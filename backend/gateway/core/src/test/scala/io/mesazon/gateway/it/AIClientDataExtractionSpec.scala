@@ -17,7 +17,6 @@ import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import sttp.ai.openai.json.OpenAIDerivedCodecs.messageCodec
 import sttp.ai.openai.requests.completions.chat.message.{Content, Message as OpenAIMessage}
 import sttp.client4.*
-import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.client4.jsoniter.*
 import sttp.model.{MediaType, StatusCode}
 import sttp.tapir.Schema
@@ -115,7 +114,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
       .provide(
         WiremockClient.live,
         ZLayer.succeed(wiremockClientConfig),
-        HttpClientZioBackend.layer(),
+        SttpTestBackend.live,
       )
       .zioValue
 
@@ -174,7 +173,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfig),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -318,7 +317,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfig),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -433,7 +432,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfig),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -475,7 +474,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfig),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -508,7 +507,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfig),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -538,7 +537,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfig),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -573,7 +572,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             .provide(
               AIClientDataExtraction.live,
               ZLayer.succeed(aiClientDataExtractionConfig),
-              HttpClientZioBackend.layer(),
+              SttpTestBackend.live,
             )
             .zioValue
 
@@ -605,7 +604,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfig),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -642,7 +641,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfigTimeout),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -677,7 +676,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             .provide(
               AIClientDataExtraction.live,
               ZLayer.succeed(aiClientDataExtractionConfig),
-              HttpClientZioBackend.layer(),
+              SttpTestBackend.live,
             )
             .zioValue
 
@@ -709,7 +708,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfig),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -743,7 +742,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfig),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -781,7 +780,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfigSmallBatches),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -823,7 +822,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfigSmallBatches),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -881,7 +880,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfigSmallBatches),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -921,7 +920,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             .provide(
               AIClientDataExtraction.live,
               ZLayer.succeed(aiClientDataExtractionConfig),
-              HttpClientZioBackend.layer(),
+              SttpTestBackend.live,
             )
             .zioValue
 
@@ -970,7 +969,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfig),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -1005,7 +1004,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             .provide(
               AIClientDataExtraction.live,
               ZLayer.succeed(aiClientDataExtractionConfig),
-              HttpClientZioBackend.layer(),
+              SttpTestBackend.live,
             )
             .zioValue
 
@@ -1037,7 +1036,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             .provide(
               AIClientDataExtraction.live,
               ZLayer.succeed(aiClientDataExtractionConfig),
-              HttpClientZioBackend.layer(),
+              SttpTestBackend.live,
             )
             .zioValue
 
@@ -1071,7 +1070,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .provide(
             AIClientDataExtraction.live,
             ZLayer.succeed(aiClientDataExtractionConfig),
-            HttpClientZioBackend.layer(),
+            SttpTestBackend.live,
           )
           .zioValue
 
@@ -1109,7 +1108,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             .provide(
               AIClientDataExtraction.live,
               ZLayer.succeed(aiClientDataExtractionConfig),
-              HttpClientZioBackend.layer(),
+              SttpTestBackend.live,
             )
             .zioValue
 
@@ -1145,7 +1144,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             .provide(
               AIClientDataExtraction.live,
               ZLayer.succeed(aiClientDataExtractionConfig),
-              HttpClientZioBackend.layer(),
+              SttpTestBackend.live,
             )
             .zioValue
 

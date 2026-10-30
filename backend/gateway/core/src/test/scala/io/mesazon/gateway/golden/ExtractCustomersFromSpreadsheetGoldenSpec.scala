@@ -8,8 +8,7 @@ import io.mesazon.gateway.json.tapir.extractCustomersPostResponseCodec
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.service.{FileService, ServiceTask}
 import io.mesazon.gateway.utils.*
-import io.mesazon.testkit.base.ZWordSpecBase
-import sttp.client4.httpclient.zio.HttpClientZioBackend
+import io.mesazon.testkit.base.{SttpTestBackend, ZWordSpecBase}
 import zio.*
 import zio.stream.ZStream
 
@@ -58,7 +57,7 @@ class ExtractCustomersFromSpreadsheetGoldenSpec extends ZWordSpecBase {
           )
         )
       ),
-      HttpClientZioBackend.layer(),
+      SttpTestBackend.live,
     )
     .zioValue
 

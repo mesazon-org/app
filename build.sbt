@@ -81,6 +81,7 @@ lazy val backendTestKitModule = createBackendModule("test-kit")(None)
     Dependencies.testcontainers,
     Dependencies.testcontainersScalaScalatest,
     Dependencies.chimney,
+    Dependencies.sttpClient4ZIO,
   )
 
 lazy val backendPostgreSQLTestModule = createBackendModule("postgresql-test")(None)
