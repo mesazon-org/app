@@ -29,24 +29,24 @@ object CustomerBookFileService {
       aiClientDataExtraction: AIClientDataExtraction,
   ) extends CustomerBookFileService[ServiceTask] {
 
-    type CustomerPhoneNumberEntriesComputed = (
+    private type CustomerPhoneNumberEntriesComputed = (
         customerPhoneNumberEntryCandidates: List[CustomerPhoneNumberEntryCandidate],
         missingFields: List[FieldInfo],
         inferredFields: List[FieldInfo],
     )
 
-    type CustomerAddressEntriesComputed = (
+    private type CustomerAddressEntriesComputed = (
         addressEntries: List[CustomerAddressEntry],
         extractionNotes: List[String],
     )
 
-    type CustomerNameFieldsComputed = (
+    private type CustomerNameFieldsComputed = (
         missingFields: List[FieldInfo],
         inferredFields: List[FieldInfo],
         duplicateFields: List[FieldInfo],
     )
 
-    type CustomerBusinessContactsFieldsComputed =
+    private type CustomerBusinessContactsFieldsComputed =
       (
           customerBusinessContacts: List[CustomerBusinessContactCandidate],
           missingFields: List[FieldInfo],
@@ -166,15 +166,15 @@ object CustomerBookFileService {
     }
 
     private def computeAddressLeftOutNote(address: Address): String = {
-      val addressNoted = List(
+      val addressNotedOpt = List(
         address.addressLine1.map(_.value),
         address.addressLine2.map(_.value),
         address.city.map(_.value),
         address.postalCode.map(_.value),
         address.country.map(_.value),
-      ).flatten.headOption.toList
+      ).flatten.headOption
 
-      s"Address left out: ${addressNoted.mkString(", ")}"
+      s"Address left out: ${addressNotedOpt.mkString}"
     }
 
     private def computeAddressEntries(
@@ -346,9 +346,9 @@ object CustomerBookFileService {
                             .as(extractionNotesMerged)
                       }
                     )
-                    .catchAll(serviceError =>
+                    .catchAllCause(cause =>
                       ZIO
-                        .logWarningCause("Note compaction failed, keeping the raw notes", Cause.fail(serviceError))
+                        .logWarningCause("Note compaction failed, keeping the raw notes", cause)
                         .as(extractionNotesMerged)
                     )
                     .map(extractionNotes => customerBookFileAIExtractMerged.copy(extractionNotes = extractionNotes))
@@ -422,10 +422,11 @@ object CustomerBookFileService {
             .withFieldConst(_.extractionNotes, extractionNotes)
             .transform
         }
+        infoNotesComputed = computeInfoNotes(customerBookFileAIExtract)
       } yield CustomerBookFileAiExtractPostResponse(
         individualCandidates = individualCandidates,
         businessCandidates = businessCandidates,
-        infoNotes = computeInfoNotes(customerBookFileAIExtract),
+        infoNotes = infoNotesComputed,
         extractionNotes = customerBookFileAIExtract.extractionNotes,
       )
     )

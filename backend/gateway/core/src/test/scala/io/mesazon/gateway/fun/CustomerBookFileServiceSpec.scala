@@ -665,6 +665,25 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         )
       }
 
+      "keep the raw top-level notes when note compaction dies with a defect" in new TestContext {
+        val customerBookFileAIExtractNotesGroup  = List("Some cells are merged")
+        val customerBookFileAIExtractNotesMerged = List("Some cells are merged", "Some cells are merged")
+        val runtimeExceptionNoteCompaction       = new RuntimeException("Note compaction defect")
+
+        aiExtractFromSpreadsheetWithTwoGroups(
+          customerBookFileAIExtractNotesGroup,
+          ZIO.die(runtimeExceptionNoteCompaction),
+        ) shouldBe CustomerBookFileAiExtractPostResponse(
+          individualCandidates = Nil,
+          businessCandidates = Nil,
+          infoNotes = List("Processed 0 of 0 entries"),
+          extractionNotes = customerBookFileAIExtractNotesMerged,
+        )
+        noteCompactionCallsRef.refValue shouldBe List(
+          (customerBookFileAIExtractNotesMerged, AIInstructions.compactCustomerBookFileNotesInstructions)
+        )
+      }
+
       "keep the raw top-level notes when note compaction returns no notes" in new TestContext {
         val customerBookFileAIExtractNotesGroup  = List("Some cells are merged")
         val customerBookFileAIExtractNotesMerged = List("Some cells are merged", "Some cells are merged")
