@@ -25,6 +25,8 @@ import scala.jdk.CollectionConverters.*
 
 class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbitraries {
 
+  private inline val CustomerFullNameLengthMax = 255
+
   "CustomerBookFileService" when {
     "aiExtract" should {
       "extract candidates from an image without processing guidance" in new TestContext {
@@ -117,8 +119,8 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             CustomerIndividualCandidate(
               fullName = Some(customerFullName),
               emails = List(
-                CustomerEmailEntry(customerEmailDefault, isDefault = true),
-                CustomerEmailEntry(customerEmailSecondary, isDefault = false),
+                CustomerEmailEntry(email = customerEmailDefault, isDefault = true),
+                CustomerEmailEntry(email = customerEmailSecondary, isDefault = false),
               ),
               phoneNumbers = Nil,
               addresses = Nil,
@@ -133,8 +135,8 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             CustomerBusinessCandidate(
               businessName = Some(customerBusinessName),
               emails = List(
-                CustomerEmailEntry(customerBusinessEmailDefault, isDefault = true),
-                CustomerEmailEntry(customerBusinessEmailSecondary, isDefault = false),
+                CustomerEmailEntry(email = customerBusinessEmailDefault, isDefault = true),
+                CustomerEmailEntry(email = customerBusinessEmailSecondary, isDefault = false),
               ),
               taxID = Some(customerTaxID),
               phoneNumbers = Nil,
@@ -179,7 +181,15 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           supportedMediaType = SupportedMediaType.PNG,
           fileBytesSize = FileBytesSize.assume(1L),
         )
-        val customerBookFileAIExtract             = CustomerBookFileAIExtract(0L, 0L, Nil, Nil, Nil, Nil, Nil)
+        val customerBookFileAIExtract = CustomerBookFileAIExtract(
+          entriesIdentified = 0L,
+          entriesProcessed = 0L,
+          individualCandidates = Nil,
+          businessCandidates = Nil,
+          emptyEntryRowIndexes = Nil,
+          unidentifiedEntryRowIndexes = Nil,
+          extractionNotes = Nil,
+        )
         val extractFromImageProcessingMessagesRef = Ref.make(List.empty[Option[String]]).zioValue
 
         fileScannerMock.scan
@@ -251,13 +261,13 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         )
         val customerBookFileAIExtract =
           CustomerBookFileAIExtract(
-            1L,
-            1L,
-            List(customerIndividualAIExtract),
-            Nil,
-            Nil,
-            Nil,
-            List("Column B holds two emails for some rows"),
+            entriesIdentified = 1L,
+            entriesProcessed = 1L,
+            individualCandidates = List(customerIndividualAIExtract),
+            businessCandidates = Nil,
+            emptyEntryRowIndexes = Nil,
+            unidentifiedEntryRowIndexes = Nil,
+            extractionNotes = List("Column B holds two emails for some rows"),
           )
 
         inSequence(
@@ -298,8 +308,8 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             CustomerIndividualCandidate(
               fullName = Some(customerFullName),
               emails = List(
-                CustomerEmailEntry(customerEmailDefault, isDefault = true),
-                CustomerEmailEntry(customerEmailSecondary, isDefault = false),
+                CustomerEmailEntry(email = customerEmailDefault, isDefault = true),
+                CustomerEmailEntry(email = customerEmailSecondary, isDefault = false),
               ),
               phoneNumbers = Nil,
               addresses = Nil,
@@ -334,7 +344,15 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         )
         val csvRecords: List[CSVRecord] =
           CSVParser.parse("Full Name\nJane Doe", CSVFormat.DEFAULT).getRecords.asScala.toList
-        val customerBookFileAIExtract = CustomerBookFileAIExtract(0L, 0L, Nil, Nil, Nil, Nil, Nil)
+        val customerBookFileAIExtract = CustomerBookFileAIExtract(
+          entriesIdentified = 0L,
+          entriesProcessed = 0L,
+          individualCandidates = Nil,
+          businessCandidates = Nil,
+          emptyEntryRowIndexes = Nil,
+          unidentifiedEntryRowIndexes = Nil,
+          extractionNotes = Nil,
+        )
 
         inSequence(
           fileScannerMock.scan
@@ -388,7 +406,15 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         )
         val csvRecords: List[CSVRecord] =
           CSVParser.parse("Full Name\nJane Doe", CSVFormat.DEFAULT).getRecords.asScala.toList
-        val customerBookFileAIExtract = CustomerBookFileAIExtract(0L, 0L, Nil, Nil, Nil, Nil, Nil)
+        val customerBookFileAIExtract = CustomerBookFileAIExtract(
+          entriesIdentified = 0L,
+          entriesProcessed = 0L,
+          individualCandidates = Nil,
+          businessCandidates = Nil,
+          emptyEntryRowIndexes = Nil,
+          unidentifiedEntryRowIndexes = Nil,
+          extractionNotes = Nil,
+        )
 
         inSequence(
           fileScannerMock.scan
@@ -430,20 +456,23 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         extractFromImageCallsRef.refValue shouldBe Nil
       }
 
-      "scan the upload with the configured customer extraction byte limit" in new TestContext {
-        val extractCustomersFileBytesMaxApplicationDefault = 20L * 1024 * 1024
-        val organizationID                                 = arbitrarySample[OrganizationID]
-        val customerBookFileExtractFileName                = CustomerBookFileExtractFileName("customers.webp")
-        val customerBookFileExtractByteStream              = ZStream.empty
-        val fileScannerScanOutput: FileScannerScanOutput   = (
+      "send a WEBP upload to the image extraction" in new TestContext {
+        val organizationID                               = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName              = CustomerBookFileExtractFileName("customers.webp")
+        val customerBookFileExtractByteStream            = ZStream.empty
+        val fileScannerScanOutput: FileScannerScanOutput = (
           fileScannedPath = FileScannedPath(Path.of("customers.webp")),
           supportedMediaType = SupportedMediaType.WEBP,
           fileBytesSize = FileBytesSize.assume(1L),
         )
-        val customerBookFileAIExtract = CustomerBookFileAIExtract(0L, 0L, Nil, Nil, Nil, Nil, Nil)
-
-        customerBookFileServiceConfig.extractCustomersFileBytesMax shouldNot equal(
-          extractCustomersFileBytesMaxApplicationDefault
+        val customerBookFileAIExtract = CustomerBookFileAIExtract(
+          entriesIdentified = 0L,
+          entriesProcessed = 0L,
+          individualCandidates = Nil,
+          businessCandidates = Nil,
+          emptyEntryRowIndexes = Nil,
+          unidentifiedEntryRowIndexes = Nil,
+          extractionNotes = Nil,
         )
 
         fileScannerMock.scan
@@ -472,6 +501,14 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           infoNotes = List("Processed 0 of 0 entries"),
           extractionNotes = Nil,
         )
+        extractFromImageCallsRef.refValue shouldBe List(
+          (
+            fileScannerScanOutput.fileScannedPath,
+            SupportedMediaType.WEBP,
+            AIInstructions.extractCustomersFromImageInstructions,
+          )
+        )
+        extractFromCsvCallsRef.refValue shouldBe Nil
       }
 
       "merge spreadsheet batches in group order and replace the repeated top-level notes with the compacted notes" in new TestContext {
@@ -487,7 +524,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           CSVParser.parse("Full Name\nJane Doe\nJohn Roe", CSVFormat.DEFAULT).getRecords.asScala.toList
         val customerFullNameBatch1 = arbitrarySample[CustomerFullName]
         val customerFullNameBatch2 = CustomerFullName.assume(
-          if (customerFullNameBatch1.value.length < 255) customerFullNameBatch1.value + "b"
+          if (customerFullNameBatch1.value.length < CustomerFullNameLengthMax) customerFullNameBatch1.value + "b"
           else customerFullNameBatch1.value.dropRight(1)
         )
         val customerEmailBatch1Default        = arbitrarySample[CustomerEmail]
@@ -543,7 +580,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           "Column D looks like an internal reference",
         )
         val noteCompactionOutput = NoteCompactionOutput(
-          List("Column D looks like an internal reference in every group", "Some cells are merged")
+          notes = List("Column D looks like an internal reference in every group", "Some cells are merged")
         )
 
         customerFullNameBatch2.value.toLowerCase(Locale.ROOT) shouldNot equal(
@@ -585,8 +622,8 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             CustomerIndividualCandidate(
               fullName = Some(customerFullNameBatch1),
               emails = List(
-                CustomerEmailEntry(customerEmailBatch1Default, isDefault = true),
-                CustomerEmailEntry(customerEmailBatch1Secondary, isDefault = false),
+                CustomerEmailEntry(email = customerEmailBatch1Default, isDefault = true),
+                CustomerEmailEntry(email = customerEmailBatch1Secondary, isDefault = false),
               ),
               phoneNumbers = Nil,
               addresses = Nil,
@@ -599,8 +636,8 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             CustomerIndividualCandidate(
               fullName = Some(customerFullNameBatch2),
               emails = List(
-                CustomerEmailEntry(customerEmailBatch2Default, isDefault = true),
-                CustomerEmailEntry(customerEmailBatch2Secondary, isDefault = false),
+                CustomerEmailEntry(email = customerEmailBatch2Default, isDefault = true),
+                CustomerEmailEntry(email = customerEmailBatch2Secondary, isDefault = false),
               ),
               phoneNumbers = Nil,
               addresses = Nil,
@@ -615,8 +652,8 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             CustomerBusinessCandidate(
               businessName = Some(customerBusinessName),
               emails = List(
-                CustomerEmailEntry(customerBusinessEmailDefault, isDefault = true),
-                CustomerEmailEntry(customerBusinessEmailSecondary, isDefault = false),
+                CustomerEmailEntry(email = customerBusinessEmailDefault, isDefault = true),
+                CustomerEmailEntry(email = customerBusinessEmailSecondary, isDefault = false),
               ),
               taxID = None,
               phoneNumbers = Nil,
@@ -645,11 +682,35 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         extractFromImageCallsRef.refValue shouldBe Nil
       }
 
+      "replace the top-level notes with the compacted notes when compaction returns as many notes as it was sent" in new TestContext {
+        val customerBookFileAIExtractNotesGroup  = List("Some cells are merged")
+        val customerBookFileAIExtractNotesMerged = List("Some cells are merged", "Some cells are merged")
+        val noteCompactionOutput                 = NoteCompactionOutput(
+          notes = List("Some cells are merged in every group", "Column D looks like an internal reference")
+        )
+
+        noteCompactionOutput.notes.size shouldBe customerBookFileAIExtractNotesMerged.size
+        noteCompactionOutput.notes shouldNot equal(customerBookFileAIExtractNotesMerged)
+
+        aiExtractFromSpreadsheetWithTwoGroups(
+          customerBookFileAIExtractNotesGroup,
+          ZIO.succeed(noteCompactionOutput),
+        ) shouldBe CustomerBookFileAiExtractPostResponse(
+          individualCandidates = Nil,
+          businessCandidates = Nil,
+          infoNotes = List("Processed 0 of 0 entries"),
+          extractionNotes = noteCompactionOutput.notes,
+        )
+        noteCompactionCallsRef.refValue shouldBe List(
+          (customerBookFileAIExtractNotesMerged, AIInstructions.compactCustomerBookFileNotesInstructions)
+        )
+      }
+
       "keep the raw top-level notes when note compaction fails with an UnexpectedError" in new TestContext {
         val customerBookFileAIExtractNotesGroup  = List("Some cells are merged")
         val customerBookFileAIExtractNotesMerged = List("Some cells are merged", "Some cells are merged")
         val serviceErrorNoteCompaction           =
-          ServiceError.InternalServerError.UnexpectedError("Note compaction failed")
+          ServiceError.InternalServerError.UnexpectedError(error = "Note compaction failed")
 
         aiExtractFromSpreadsheetWithTwoGroups(
           customerBookFileAIExtractNotesGroup,
@@ -687,7 +748,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
       "keep the raw top-level notes when note compaction returns no notes" in new TestContext {
         val customerBookFileAIExtractNotesGroup  = List("Some cells are merged")
         val customerBookFileAIExtractNotesMerged = List("Some cells are merged", "Some cells are merged")
-        val noteCompactionOutput                 = NoteCompactionOutput(Nil)
+        val noteCompactionOutput                 = NoteCompactionOutput(notes = Nil)
 
         aiExtractFromSpreadsheetWithTwoGroups(
           customerBookFileAIExtractNotesGroup,
@@ -707,7 +768,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         val customerBookFileAIExtractNotesGroup  = List("Some cells are merged")
         val customerBookFileAIExtractNotesMerged = List("Some cells are merged", "Some cells are merged")
         val noteCompactionOutput                 = NoteCompactionOutput(
-          List("Some cells are merged", "Column D looks like an internal reference", "Row 7 is blank")
+          notes = List("Some cells are merged", "Column D looks like an internal reference", "Row 7 is blank")
         )
 
         noteCompactionOutput.notes.size should be > customerBookFileAIExtractNotesMerged.size
@@ -745,7 +806,15 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           extractionNotes = Nil,
         )
         val customerBookFileAIExtract =
-          CustomerBookFileAIExtract(4L, 1L, List(customerIndividualAIExtract), Nil, Nil, Nil, Nil)
+          CustomerBookFileAIExtract(
+            entriesIdentified = 4L,
+            entriesProcessed = 1L,
+            individualCandidates = List(customerIndividualAIExtract),
+            businessCandidates = Nil,
+            emptyEntryRowIndexes = Nil,
+            unidentifiedEntryRowIndexes = Nil,
+            extractionNotes = Nil,
+          )
 
         fileScannerMock.scan
           .expects(
@@ -799,7 +868,15 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         val csvRecords: List[CSVRecord] =
           CSVParser.parse("Full Name\n\n?\n", CSVFormat.DEFAULT).getRecords.asScala.toList
         val customerBookFileAIExtract =
-          CustomerBookFileAIExtract(3L, 0L, Nil, Nil, List(2L, 5L), List(7L), Nil)
+          CustomerBookFileAIExtract(
+            entriesIdentified = 3L,
+            entriesProcessed = 0L,
+            individualCandidates = Nil,
+            businessCandidates = Nil,
+            emptyEntryRowIndexes = List(2L, 5L),
+            unidentifiedEntryRowIndexes = List(7L),
+            extractionNotes = Nil,
+          )
 
         inSequence(
           fileScannerMock.scan
@@ -899,11 +976,11 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           individualCandidates = List.fill(346)(
             CustomerIndividualCandidate(
               fullName = None,
-              emails = List(CustomerEmailEntry(customerEmail, isDefault = true)),
+              emails = List(CustomerEmailEntry(email = customerEmail, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/fullName")),
+              missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -979,11 +1056,11 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           individualCandidates = List.fill(440)(
             CustomerIndividualCandidate(
               fullName = None,
-              emails = List(CustomerEmailEntry(customerEmail, isDefault = true)),
+              emails = List(CustomerEmailEntry(email = customerEmail, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/fullName")),
+              missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -992,6 +1069,74 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           businessCandidates = Nil,
           infoNotes = List("Processed 346 of 347 entries", "Candidates created 440", "Empty rows (1) at [6]"),
           extractionNotes = Nil,
+        )
+      }
+
+      "report the candidates created when merged entries make fewer candidates than the AI's processed entries" in new TestContext {
+        val customerFullName            = arbitrarySample[CustomerFullName]
+        val customerBusinessName        = arbitrarySample[CustomerBusinessName]
+        val customerIndividualAIExtract = CustomerIndividualAIExtract(
+          fullName = Some(customerFullName),
+          emails = Nil,
+          phoneNumbers = Nil,
+          addresses = Nil,
+          fullNameInferred = false,
+          extractionNotes = Nil,
+        )
+        val customerBusinessAIExtract = CustomerBusinessAIExtract(
+          businessName = Some(customerBusinessName),
+          emails = Nil,
+          taxID = None,
+          phoneNumbers = Nil,
+          addresses = Nil,
+          customerBusinessContacts = Nil,
+          businessNameInferred = false,
+          extractionNotes = Nil,
+        )
+        val customerBookFileAIExtract = CustomerBookFileAIExtract(
+          entriesIdentified = 3L,
+          entriesProcessed = 3L,
+          individualCandidates = List(customerIndividualAIExtract),
+          businessCandidates = List(customerBusinessAIExtract),
+          emptyEntryRowIndexes = Nil,
+          unidentifiedEntryRowIndexes = Nil,
+          extractionNotes = List("Two rows describe the same customer"),
+        )
+
+        (customerBookFileAIExtract.individualCandidates.size + customerBookFileAIExtract.businessCandidates.size).toLong should be <
+          customerBookFileAIExtract.entriesProcessed
+
+        aiExtractFromImage(customerBookFileAIExtract) shouldBe CustomerBookFileAiExtractPostResponse(
+          individualCandidates = List(
+            CustomerIndividualCandidate(
+              fullName = Some(customerFullName),
+              emails = Nil,
+              phoneNumbers = Nil,
+              addresses = Nil,
+              inferredFields = Nil,
+              missingFields = Nil,
+              duplicateFields = Nil,
+              needsAttention = false,
+              extractionNotes = Nil,
+            )
+          ),
+          businessCandidates = List(
+            CustomerBusinessCandidate(
+              businessName = Some(customerBusinessName),
+              emails = Nil,
+              taxID = None,
+              phoneNumbers = Nil,
+              addresses = Nil,
+              customerBusinessContacts = Nil,
+              inferredFields = Nil,
+              missingFields = Nil,
+              duplicateFields = Nil,
+              needsAttention = false,
+              extractionNotes = Nil,
+            )
+          ),
+          infoNotes = List("Processed 3 of 3 entries", "Candidates created 2"),
+          extractionNotes = List("Two rows describe the same customer"),
         )
       }
 
@@ -1072,11 +1217,11 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           individualCandidates = List.fill(4)(
             CustomerIndividualCandidate(
               fullName = None,
-              emails = List(CustomerEmailEntry(customerEmail, isDefault = true)),
+              emails = List(CustomerEmailEntry(email = customerEmail, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/fullName")),
+              missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -1147,7 +1292,15 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           fileBytesSize = FileBytesSize.assume(1L),
         )
         val extractionNotes           = List("AI could not detect relevant customer data in this image.")
-        val customerBookFileAIExtract = CustomerBookFileAIExtract(0L, 0L, Nil, Nil, Nil, Nil, extractionNotes)
+        val customerBookFileAIExtract = CustomerBookFileAIExtract(
+          entriesIdentified = 0L,
+          entriesProcessed = 0L,
+          individualCandidates = Nil,
+          businessCandidates = Nil,
+          emptyEntryRowIndexes = Nil,
+          unidentifiedEntryRowIndexes = Nil,
+          extractionNotes = extractionNotes,
+        )
 
         fileScannerMock.scan
           .expects(
@@ -1214,7 +1367,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           addresses = Nil,
           inferredFields = Nil,
           missingFields = Nil,
-          duplicateFields = List(FieldInfo("/fullName")),
+          duplicateFields = List(FieldInfo(path = "/fullName")),
           needsAttention = true,
           extractionNotes = List("The same name appears twice in the image"),
         )
@@ -1227,7 +1380,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           customerBusinessContacts = Nil,
           inferredFields = Nil,
           missingFields = Nil,
-          duplicateFields = List(FieldInfo("/businessName")),
+          duplicateFields = List(FieldInfo(path = "/businessName")),
           needsAttention = true,
           extractionNotes = Nil,
         )
@@ -1287,7 +1440,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           addresses = Nil,
           inferredFields = Nil,
           missingFields = Nil,
-          duplicateFields = List(FieldInfo("/fullName")),
+          duplicateFields = List(FieldInfo(path = "/fullName")),
           needsAttention = true,
           extractionNotes = Nil,
         )
@@ -1300,7 +1453,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           customerBusinessContacts = Nil,
           inferredFields = Nil,
           missingFields = Nil,
-          duplicateFields = List(FieldInfo("/businessName")),
+          duplicateFields = List(FieldInfo(path = "/businessName")),
           needsAttention = true,
           extractionNotes = Nil,
         )
@@ -1344,7 +1497,9 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
 
       "not mark names that differ only in letter case as duplicates" in new TestContext {
         val customerFullNameLowerCase =
-          CustomerFullName.assume((arbitrarySample[CustomerFullName].value.take(254) + "a").toLowerCase(Locale.ROOT))
+          CustomerFullName.assume(
+            (arbitrarySample[CustomerFullName].value.take(CustomerFullNameLengthMax - 1) + "a").toLowerCase(Locale.ROOT)
+          )
         val customerFullNameUpperCase =
           CustomerFullName.assume(customerFullNameLowerCase.value.toUpperCase(Locale.ROOT))
         val customerIndividualAIExtractLowerCase = CustomerIndividualAIExtract(
@@ -1505,22 +1660,22 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           individualCandidates = List(
             CustomerIndividualCandidate(
               fullName = None,
-              emails = List(CustomerEmailEntry(customerEmail1, isDefault = true)),
+              emails = List(CustomerEmailEntry(email = customerEmail1, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/fullName")),
+              missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
             ),
             CustomerIndividualCandidate(
               fullName = None,
-              emails = List(CustomerEmailEntry(customerEmail2, isDefault = true)),
+              emails = List(CustomerEmailEntry(email = customerEmail2, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/fullName")),
+              missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -1535,7 +1690,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addresses = Nil,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/businessName")),
+              missingFields = List(FieldInfo(path = "/businessName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -1548,7 +1703,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addresses = Nil,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/businessName")),
+              missingFields = List(FieldInfo(path = "/businessName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -1618,11 +1773,11 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           individualCandidates = List(
             CustomerIndividualCandidate(
               fullName = None,
-              emails = List(CustomerEmailEntry(customerEmail, isDefault = true)),
+              emails = List(CustomerEmailEntry(email = customerEmail, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/fullName")),
+              missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = List("Only an email is readable"),
@@ -1632,13 +1787,16 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = Nil,
               phoneNumbers = List(
                 CustomerPhoneNumberEntryCandidate(
-                  CustomerPhoneNumberCandidate(phoneNationalNumber, Some(phoneCountryCode)),
+                  phoneNumber = CustomerPhoneNumberCandidate(
+                    phoneNationalNumber = phoneNationalNumber,
+                    phoneCountryCode = Some(phoneCountryCode),
+                  ),
                   isDefault = true,
                 )
               ),
               addresses = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/fullName")),
+              missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -1650,19 +1808,19 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addresses = List(
                 CustomerAddressEntry(
                   AddressEntry(
-                    Address(
+                    address = Address(
                       addressLine1 = None,
                       addressLine2 = None,
                       city = Some(customerCity),
                       postalCode = None,
                       country = None,
                     ),
-                    AddressType.ShippingAndBilling,
+                    addressType = AddressType.ShippingAndBilling,
                   )
                 )
               ),
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/fullName")),
+              missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -1721,7 +1879,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addresses = Nil,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/businessName")),
+              missingFields = List(FieldInfo(path = "/businessName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -1741,7 +1899,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                 )
               ),
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/businessName")),
+              missingFields = List(FieldInfo(path = "/businessName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -1828,14 +1986,19 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   fullName = None,
                   role = None,
                   email = None,
-                  phoneNumber = Some(CustomerPhoneNumberCandidate(phoneNationalNumber, Some(phoneCountryCode))),
+                  phoneNumber = Some(
+                    CustomerPhoneNumberCandidate(
+                      phoneNationalNumber = phoneNationalNumber,
+                      phoneCountryCode = Some(phoneCountryCode),
+                    )
+                  ),
                 ),
               ),
               inferredFields = Nil,
               missingFields = List(
-                FieldInfo("/customerBusinessContacts/0/fullName"),
-                FieldInfo("/customerBusinessContacts/1/fullName"),
-                FieldInfo("/customerBusinessContacts/2/fullName"),
+                FieldInfo(path = "/customerBusinessContacts/0/fullName"),
+                FieldInfo(path = "/customerBusinessContacts/1/fullName"),
+                FieldInfo(path = "/customerBusinessContacts/2/fullName"),
               ),
               duplicateFields = Nil,
               needsAttention = true,
@@ -1881,13 +2044,14 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = Nil,
               phoneNumbers = List(
                 CustomerPhoneNumberEntryCandidate(
-                  CustomerPhoneNumberCandidate(phoneNationalNumber, None),
+                  phoneNumber =
+                    CustomerPhoneNumberCandidate(phoneNationalNumber = phoneNationalNumber, phoneCountryCode = None),
                   isDefault = true,
                 )
               ),
               addresses = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/phoneNumbers/0/phoneNumber/phoneCountryCode")),
+              missingFields = List(FieldInfo(path = "/phoneNumbers/0/phoneNumber/phoneCountryCode")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = List("The country code is cut off"),
@@ -1952,11 +2116,13 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   fullName = Some(customerBusinessContactFullName),
                   role = None,
                   email = None,
-                  phoneNumber = Some(CustomerPhoneNumberCandidate(phoneNationalNumber, None)),
+                  phoneNumber = Some(
+                    CustomerPhoneNumberCandidate(phoneNationalNumber = phoneNationalNumber, phoneCountryCode = None)
+                  ),
                 )
               ),
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/customerBusinessContacts/0/phoneNumber/phoneCountryCode")),
+              missingFields = List(FieldInfo(path = "/customerBusinessContacts/0/phoneNumber/phoneCountryCode")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -2020,14 +2186,14 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addresses = List(
                 CustomerAddressEntry(
                   AddressEntry(
-                    Address(
+                    address = Address(
                       addressLine1 = Some(customerAddressLine1),
                       addressLine2 = None,
                       city = None,
                       postalCode = None,
                       country = None,
                     ),
-                    AddressType.ShippingAndBilling,
+                    addressType = AddressType.ShippingAndBilling,
                   )
                 )
               ),
@@ -2063,8 +2229,15 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               phoneNumbers = Nil,
               addresses = List(
                 CustomerAddressEntryAIExtract(
-                  CustomerAddressAIExtract(None, None, Some(customerCity), None, None, Nil),
-                  customerFullNameWithAddressType.addressType,
+                  address = CustomerAddressAIExtract(
+                    addressLine1 = None,
+                    addressLine2 = None,
+                    city = Some(customerCity),
+                    postalCode = None,
+                    country = None,
+                    extractionNotes = Nil,
+                  ),
+                  addressType = customerFullNameWithAddressType.addressType,
                 )
               ),
               fullNameInferred = false,
@@ -2087,7 +2260,16 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               phoneNumbers = Nil,
               addresses = List(
                 CustomerAddressEntry(
-                  AddressEntry(Address(None, None, Some(customerCity), None, None), AddressType.ShippingAndBilling)
+                  AddressEntry(
+                    address = Address(
+                      addressLine1 = None,
+                      addressLine2 = None,
+                      city = Some(customerCity),
+                      postalCode = None,
+                      country = None,
+                    ),
+                    addressType = AddressType.ShippingAndBilling,
+                  )
                 )
               ),
               inferredFields = Nil,
@@ -2128,12 +2310,26 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               phoneNumbers = Nil,
               addresses = List(
                 CustomerAddressEntryAIExtract(
-                  CustomerAddressAIExtract(None, None, Some(customerCityFirst), None, None, Nil),
-                  customerFullNameWithAddressTypePair.addressTypeFirst,
+                  address = CustomerAddressAIExtract(
+                    addressLine1 = None,
+                    addressLine2 = None,
+                    city = Some(customerCityFirst),
+                    postalCode = None,
+                    country = None,
+                    extractionNotes = Nil,
+                  ),
+                  addressType = customerFullNameWithAddressTypePair.addressTypeFirst,
                 ),
                 CustomerAddressEntryAIExtract(
-                  CustomerAddressAIExtract(None, None, Some(customerCitySecond), None, None, Nil),
-                  customerFullNameWithAddressTypePair.addressTypeSecond,
+                  address = CustomerAddressAIExtract(
+                    addressLine1 = None,
+                    addressLine2 = None,
+                    city = Some(customerCitySecond),
+                    postalCode = None,
+                    country = None,
+                    extractionNotes = Nil,
+                  ),
+                  addressType = customerFullNameWithAddressTypePair.addressTypeSecond,
                 ),
               ),
               fullNameInferred = false,
@@ -2158,14 +2354,26 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addresses = List(
                 CustomerAddressEntry(
                   AddressEntry(
-                    Address(None, None, Some(customerCityFirst), None, None),
-                    customerFullNameWithAddressTypePair.addressTypeFirst,
+                    address = Address(
+                      addressLine1 = None,
+                      addressLine2 = None,
+                      city = Some(customerCityFirst),
+                      postalCode = None,
+                      country = None,
+                    ),
+                    addressType = customerFullNameWithAddressTypePair.addressTypeFirst,
                   )
                 ),
                 CustomerAddressEntry(
                   AddressEntry(
-                    Address(None, None, Some(customerCitySecond), None, None),
-                    customerFullNameWithAddressTypePair.addressTypeSecond,
+                    address = Address(
+                      addressLine1 = None,
+                      addressLine2 = None,
+                      city = Some(customerCitySecond),
+                      postalCode = None,
+                      country = None,
+                    ),
+                    addressType = customerFullNameWithAddressTypePair.addressTypeSecond,
                   )
                 ),
               ),
@@ -2210,12 +2418,26 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               phoneNumbers = Nil,
               addresses = List(
                 CustomerAddressEntryAIExtract(
-                  CustomerAddressAIExtract(None, None, Some(customerCityFirst), None, None, Nil),
-                  customerFullNameWithAddressTypePair.addressTypeFirst,
+                  address = CustomerAddressAIExtract(
+                    addressLine1 = None,
+                    addressLine2 = None,
+                    city = Some(customerCityFirst),
+                    postalCode = None,
+                    country = None,
+                    extractionNotes = Nil,
+                  ),
+                  addressType = customerFullNameWithAddressTypePair.addressTypeFirst,
                 ),
                 CustomerAddressEntryAIExtract(
-                  CustomerAddressAIExtract(None, None, Some(customerCitySecond), None, None, Nil),
-                  customerFullNameWithAddressTypePair.addressTypeSecond,
+                  address = CustomerAddressAIExtract(
+                    addressLine1 = None,
+                    addressLine2 = None,
+                    city = Some(customerCitySecond),
+                    postalCode = None,
+                    country = None,
+                    extractionNotes = Nil,
+                  ),
+                  addressType = customerFullNameWithAddressTypePair.addressTypeSecond,
                 ),
               ),
               fullNameInferred = false,
@@ -2245,10 +2467,28 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               phoneNumbers = Nil,
               addresses = List(
                 CustomerAddressEntry(
-                  AddressEntry(Address(None, None, Some(customerCityFirst), None, None), AddressType.Shipping)
+                  AddressEntry(
+                    address = Address(
+                      addressLine1 = None,
+                      addressLine2 = None,
+                      city = Some(customerCityFirst),
+                      postalCode = None,
+                      country = None,
+                    ),
+                    addressType = AddressType.Shipping,
+                  )
                 ),
                 CustomerAddressEntry(
-                  AddressEntry(Address(None, None, Some(customerCitySecond), None, None), AddressType.Billing)
+                  AddressEntry(
+                    address = Address(
+                      addressLine1 = None,
+                      addressLine2 = None,
+                      city = Some(customerCitySecond),
+                      postalCode = None,
+                      country = None,
+                    ),
+                    addressType = AddressType.Billing,
+                  )
                 ),
               ),
               inferredFields = Nil,
@@ -2276,15 +2516,29 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           phoneNumbers = Nil,
           addresses = List(
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, Some(customerCity1), None, None, Nil),
-              AddressType.Billing,
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = Some(customerCity1),
+                postalCode = None,
+                country = None,
+                extractionNotes = Nil,
+              ),
+              addressType = AddressType.Billing,
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, Some(customerCity2), None, None, Nil),
-              AddressType.Billing,
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = Some(customerCity2),
+                postalCode = None,
+                country = None,
+                extractionNotes = Nil,
+              ),
+              addressType = AddressType.Billing,
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(
+              address = CustomerAddressAIExtract(
                 addressLine1 = Some(customerAddressLine1),
                 addressLine2 = None,
                 city = Some(customerCity3),
@@ -2292,7 +2546,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                 country = None,
                 extractionNotes = List("The third address is faint"),
               ),
-              arbitrarySample[AddressType],
+              addressType = arbitrarySample[AddressType],
             ),
           ),
           fullNameInferred = false,
@@ -2317,14 +2571,33 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               fullName = Some(customerFullName),
               emails = Nil,
               phoneNumbers = Nil,
-              addresses = List(
-                CustomerAddressEntry(
-                  AddressEntry(Address(None, None, Some(customerCity1), None, None), AddressType.Shipping)
+              addresses =
+                List(
+                  CustomerAddressEntry(
+                    AddressEntry(
+                      address = Address(
+                        addressLine1 = None,
+                        addressLine2 = None,
+                        city = Some(customerCity1),
+                        postalCode = None,
+                        country = None,
+                      ),
+                      addressType = AddressType.Shipping,
+                    )
+                  ),
+                  CustomerAddressEntry(
+                    AddressEntry(
+                      address = Address(
+                        addressLine1 = None,
+                        addressLine2 = None,
+                        city = Some(customerCity2),
+                        postalCode = None,
+                        country = None,
+                      ),
+                      addressType = AddressType.Billing,
+                    )
+                  ),
                 ),
-                CustomerAddressEntry(
-                  AddressEntry(Address(None, None, Some(customerCity2), None, None), AddressType.Billing)
-                ),
-              ),
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -2355,20 +2628,48 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           phoneNumbers = Nil,
           addresses = List(
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, Some(customerCity1), None, None, Nil),
-              AddressType.Shipping,
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = Some(customerCity1),
+                postalCode = None,
+                country = None,
+                extractionNotes = Nil,
+              ),
+              addressType = AddressType.Shipping,
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, Some(customerCity2), None, None, Nil),
-              AddressType.Billing,
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = Some(customerCity2),
+                postalCode = None,
+                country = None,
+                extractionNotes = Nil,
+              ),
+              addressType = AddressType.Billing,
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(Some(customerAddressLine13), None, Some(customerCity3), None, None, Nil),
-              arbitrarySample[AddressType],
+              address = CustomerAddressAIExtract(
+                addressLine1 = Some(customerAddressLine13),
+                addressLine2 = None,
+                city = Some(customerCity3),
+                postalCode = None,
+                country = None,
+                extractionNotes = Nil,
+              ),
+              addressType = arbitrarySample[AddressType],
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(Some(customerAddressLine14), None, Some(customerCity4), None, None, Nil),
-              arbitrarySample[AddressType],
+              address = CustomerAddressAIExtract(
+                addressLine1 = Some(customerAddressLine14),
+                addressLine2 = None,
+                city = Some(customerCity4),
+                postalCode = None,
+                country = None,
+                extractionNotes = Nil,
+              ),
+              addressType = arbitrarySample[AddressType],
             ),
           ),
           fullNameInferred = false,
@@ -2392,14 +2693,33 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               fullName = Some(customerFullName),
               emails = Nil,
               phoneNumbers = Nil,
-              addresses = List(
-                CustomerAddressEntry(
-                  AddressEntry(Address(None, None, Some(customerCity1), None, None), AddressType.Shipping)
+              addresses =
+                List(
+                  CustomerAddressEntry(
+                    AddressEntry(
+                      address = Address(
+                        addressLine1 = None,
+                        addressLine2 = None,
+                        city = Some(customerCity1),
+                        postalCode = None,
+                        country = None,
+                      ),
+                      addressType = AddressType.Shipping,
+                    )
+                  ),
+                  CustomerAddressEntry(
+                    AddressEntry(
+                      address = Address(
+                        addressLine1 = None,
+                        addressLine2 = None,
+                        city = Some(customerCity2),
+                        postalCode = None,
+                        country = None,
+                      ),
+                      addressType = AddressType.Billing,
+                    )
+                  ),
                 ),
-                CustomerAddressEntry(
-                  AddressEntry(Address(None, None, Some(customerCity2), None, None), AddressType.Billing)
-                ),
-              ),
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -2431,53 +2751,81 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           phoneNumbers = Nil,
           addresses = List(
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, Some(customerCity1), None, None, Nil),
-              AddressType.Shipping,
-            ),
-            CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, Some(customerCity2), None, None, Nil),
-              AddressType.Billing,
-            ),
-            CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(
-                Some(customerAddressLine1),
-                Some(customerAddressLine2),
-                Some(customerCity),
-                Some(customerPostalCode),
-                Some(customerCountry),
-                Nil,
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = Some(customerCity1),
+                postalCode = None,
+                country = None,
+                extractionNotes = Nil,
               ),
-              arbitrarySample[AddressType],
+              addressType = AddressType.Shipping,
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(
-                None,
-                Some(customerAddressLine2),
-                Some(customerCity),
-                Some(customerPostalCode),
-                Some(customerCountry),
-                Nil,
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = Some(customerCity2),
+                postalCode = None,
+                country = None,
+                extractionNotes = Nil,
               ),
-              arbitrarySample[AddressType],
+              addressType = AddressType.Billing,
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(
-                None,
-                None,
-                Some(customerCity),
-                Some(customerPostalCode),
-                Some(customerCountry),
-                Nil,
+              address = CustomerAddressAIExtract(
+                addressLine1 = Some(customerAddressLine1),
+                addressLine2 = Some(customerAddressLine2),
+                city = Some(customerCity),
+                postalCode = Some(customerPostalCode),
+                country = Some(customerCountry),
+                extractionNotes = Nil,
               ),
-              arbitrarySample[AddressType],
+              addressType = arbitrarySample[AddressType],
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, None, Some(customerPostalCode), Some(customerCountry), Nil),
-              arbitrarySample[AddressType],
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = Some(customerAddressLine2),
+                city = Some(customerCity),
+                postalCode = Some(customerPostalCode),
+                country = Some(customerCountry),
+                extractionNotes = Nil,
+              ),
+              addressType = arbitrarySample[AddressType],
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, None, None, Some(customerCountry), Nil),
-              arbitrarySample[AddressType],
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = Some(customerCity),
+                postalCode = Some(customerPostalCode),
+                country = Some(customerCountry),
+                extractionNotes = Nil,
+              ),
+              addressType = arbitrarySample[AddressType],
+            ),
+            CustomerAddressEntryAIExtract(
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = None,
+                postalCode = Some(customerPostalCode),
+                country = Some(customerCountry),
+                extractionNotes = Nil,
+              ),
+              addressType = arbitrarySample[AddressType],
+            ),
+            CustomerAddressEntryAIExtract(
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = None,
+                postalCode = None,
+                country = Some(customerCountry),
+                extractionNotes = Nil,
+              ),
+              addressType = arbitrarySample[AddressType],
             ),
           ),
           fullNameInferred = false,
@@ -2507,14 +2855,33 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               fullName = Some(customerFullName),
               emails = Nil,
               phoneNumbers = Nil,
-              addresses = List(
-                CustomerAddressEntry(
-                  AddressEntry(Address(None, None, Some(customerCity1), None, None), AddressType.Shipping)
+              addresses =
+                List(
+                  CustomerAddressEntry(
+                    AddressEntry(
+                      address = Address(
+                        addressLine1 = None,
+                        addressLine2 = None,
+                        city = Some(customerCity1),
+                        postalCode = None,
+                        country = None,
+                      ),
+                      addressType = AddressType.Shipping,
+                    )
+                  ),
+                  CustomerAddressEntry(
+                    AddressEntry(
+                      address = Address(
+                        addressLine1 = None,
+                        addressLine2 = None,
+                        city = Some(customerCity2),
+                        postalCode = None,
+                        country = None,
+                      ),
+                      addressType = AddressType.Billing,
+                    )
+                  ),
                 ),
-                CustomerAddressEntry(
-                  AddressEntry(Address(None, None, Some(customerCity2), None, None), AddressType.Billing)
-                ),
-              ),
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -2553,7 +2920,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           ),
           addresses = List(
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(
+              address = CustomerAddressAIExtract(
                 addressLine1 = None,
                 addressLine2 = None,
                 city = None,
@@ -2561,7 +2928,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                 country = None,
                 extractionNotes = List("Only the postal code is readable"),
               ),
-              arbitrarySample[AddressType],
+              addressType = arbitrarySample[AddressType],
             )
           ),
           fullNameInferred = true,
@@ -2603,21 +2970,30 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = Nil,
               phoneNumbers = List(
                 CustomerPhoneNumberEntryCandidate(
-                  CustomerPhoneNumberCandidate(phoneNationalNumber, Some(phoneCountryCode)),
+                  phoneNumber = CustomerPhoneNumberCandidate(
+                    phoneNationalNumber = phoneNationalNumber,
+                    phoneCountryCode = Some(phoneCountryCode),
+                  ),
                   isDefault = true,
                 )
               ),
               addresses = List(
                 CustomerAddressEntry(
                   AddressEntry(
-                    Address(None, None, None, Some(customerPostalCode), None),
-                    AddressType.ShippingAndBilling,
+                    address = Address(
+                      addressLine1 = None,
+                      addressLine2 = None,
+                      city = None,
+                      postalCode = Some(customerPostalCode),
+                      country = None,
+                    ),
+                    addressType = AddressType.ShippingAndBilling,
                   )
                 )
               ),
               inferredFields = List(
-                FieldInfo("/fullName"),
-                FieldInfo("/phoneNumbers/0/phoneNumber/phoneCountryCode"),
+                FieldInfo(path = "/fullName"),
+                FieldInfo(path = "/phoneNumbers/0/phoneNumber/phoneCountryCode"),
               ),
               missingFields = Nil,
               duplicateFields = Nil,
@@ -2645,8 +3021,8 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                 )
               ),
               inferredFields = List(
-                FieldInfo("/businessName"),
-                FieldInfo("/customerBusinessContacts/0/fullName"),
+                FieldInfo(path = "/businessName"),
+                FieldInfo(path = "/customerBusinessContacts/0/fullName"),
               ),
               missingFields = Nil,
               duplicateFields = Nil,
@@ -2715,27 +3091,34 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             CustomerIndividualCandidate(
               fullName = Some(customerFullName),
               emails = List(
-                CustomerEmailEntry(customerEmail1, isDefault = true),
-                CustomerEmailEntry(customerEmail2, isDefault = false),
-                CustomerEmailEntry(customerEmail3, isDefault = false),
+                CustomerEmailEntry(email = customerEmail1, isDefault = true),
+                CustomerEmailEntry(email = customerEmail2, isDefault = false),
+                CustomerEmailEntry(email = customerEmail3, isDefault = false),
               ),
               phoneNumbers = List(
                 CustomerPhoneNumberEntryCandidate(
-                  CustomerPhoneNumberCandidate(phoneNationalNumber1, None),
+                  phoneNumber =
+                    CustomerPhoneNumberCandidate(phoneNationalNumber = phoneNationalNumber1, phoneCountryCode = None),
                   isDefault = true,
                 ),
                 CustomerPhoneNumberEntryCandidate(
-                  CustomerPhoneNumberCandidate(phoneNationalNumber2, Some(phoneCountryCode2)),
+                  phoneNumber = CustomerPhoneNumberCandidate(
+                    phoneNationalNumber = phoneNationalNumber2,
+                    phoneCountryCode = Some(phoneCountryCode2),
+                  ),
                   isDefault = false,
                 ),
                 CustomerPhoneNumberEntryCandidate(
-                  CustomerPhoneNumberCandidate(phoneNationalNumber3, Some(phoneCountryCode3)),
+                  phoneNumber = CustomerPhoneNumberCandidate(
+                    phoneNationalNumber = phoneNationalNumber3,
+                    phoneCountryCode = Some(phoneCountryCode3),
+                  ),
                   isDefault = false,
                 ),
               ),
               addresses = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/phoneNumbers/0/phoneNumber/phoneCountryCode")),
+              missingFields = List(FieldInfo(path = "/phoneNumbers/0/phoneNumber/phoneCountryCode")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -2758,20 +3141,48 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           phoneNumbers = Nil,
           addresses = List(
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, Some(customerCity1), None, None, List("First address note")),
-              AddressType.Billing,
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = Some(customerCity1),
+                postalCode = None,
+                country = None,
+                extractionNotes = List("First address note"),
+              ),
+              addressType = AddressType.Billing,
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, None, None, None, List("Empty address note")),
-              arbitrarySample[AddressType],
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = None,
+                postalCode = None,
+                country = None,
+                extractionNotes = List("Empty address note"),
+              ),
+              addressType = arbitrarySample[AddressType],
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, Some(customerCity3), None, None, List("Third address note")),
-              AddressType.Shipping,
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = Some(customerCity3),
+                postalCode = None,
+                country = None,
+                extractionNotes = List("Third address note"),
+              ),
+              addressType = AddressType.Shipping,
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, Some(customerCity4), None, None, List("Fourth address note")),
-              arbitrarySample[AddressType],
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = Some(customerCity4),
+                postalCode = None,
+                country = None,
+                extractionNotes = List("Fourth address note"),
+              ),
+              addressType = arbitrarySample[AddressType],
             ),
           ),
           fullNameInferred = false,
@@ -2795,14 +3206,33 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               fullName = Some(customerFullName),
               emails = Nil,
               phoneNumbers = Nil,
-              addresses = List(
-                CustomerAddressEntry(
-                  AddressEntry(Address(None, None, Some(customerCity1), None, None), AddressType.Billing)
+              addresses =
+                List(
+                  CustomerAddressEntry(
+                    AddressEntry(
+                      address = Address(
+                        addressLine1 = None,
+                        addressLine2 = None,
+                        city = Some(customerCity1),
+                        postalCode = None,
+                        country = None,
+                      ),
+                      addressType = AddressType.Billing,
+                    )
+                  ),
+                  CustomerAddressEntry(
+                    AddressEntry(
+                      address = Address(
+                        addressLine1 = None,
+                        addressLine2 = None,
+                        city = Some(customerCity3),
+                        postalCode = None,
+                        country = None,
+                      ),
+                      addressType = AddressType.Shipping,
+                    )
+                  ),
                 ),
-                CustomerAddressEntry(
-                  AddressEntry(Address(None, None, Some(customerCity3), None, None), AddressType.Shipping)
-                ),
-              ),
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -2837,16 +3267,37 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           phoneNumbers = Nil,
           addresses = List(
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, Some(customerCity1), None, None, List("First address note")),
-              AddressType.Billing,
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = Some(customerCity1),
+                postalCode = None,
+                country = None,
+                extractionNotes = List("First address note"),
+              ),
+              addressType = AddressType.Billing,
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, Some(customerCity2), None, None, List("Second address note")),
-              AddressType.ShippingAndBilling,
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = Some(customerCity2),
+                postalCode = None,
+                country = None,
+                extractionNotes = List("Second address note"),
+              ),
+              addressType = AddressType.ShippingAndBilling,
             ),
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, Some(customerCity3), None, None, List("Third address note")),
-              arbitrarySample[AddressType],
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = Some(customerCity3),
+                postalCode = None,
+                country = None,
+                extractionNotes = List("Third address note"),
+              ),
+              addressType = arbitrarySample[AddressType],
             ),
           ),
           customerBusinessContacts = List(
@@ -2891,14 +3342,33 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = Nil,
               taxID = None,
               phoneNumbers = Nil,
-              addresses = List(
-                CustomerAddressEntry(
-                  AddressEntry(Address(None, None, Some(customerCity1), None, None), AddressType.Shipping)
+              addresses =
+                List(
+                  CustomerAddressEntry(
+                    AddressEntry(
+                      address = Address(
+                        addressLine1 = None,
+                        addressLine2 = None,
+                        city = Some(customerCity1),
+                        postalCode = None,
+                        country = None,
+                      ),
+                      addressType = AddressType.Shipping,
+                    )
+                  ),
+                  CustomerAddressEntry(
+                    AddressEntry(
+                      address = Address(
+                        addressLine1 = None,
+                        addressLine2 = None,
+                        city = Some(customerCity2),
+                        postalCode = None,
+                        country = None,
+                      ),
+                      addressType = AddressType.Billing,
+                    )
+                  ),
                 ),
-                CustomerAddressEntry(
-                  AddressEntry(Address(None, None, Some(customerCity2), None, None), AddressType.Billing)
-                ),
-              ),
               customerBusinessContacts = List(
                 CustomerBusinessContactCandidate(
                   fullName = Some(customerBusinessContactFullName1),
@@ -2946,16 +3416,20 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = List(
             CustomerPhoneNumberAIExtract(
-              phoneNationalNumber1,
-              Some(phoneCountryCode1),
+              phoneNationalNumber = phoneNationalNumber1,
+              phoneCountryCode = Some(phoneCountryCode1),
               phoneCountryCodeInferred = false,
             ),
             CustomerPhoneNumberAIExtract(
-              phoneNationalNumber2,
-              Some(phoneCountryCode2),
+              phoneNationalNumber = phoneNationalNumber2,
+              phoneCountryCode = Some(phoneCountryCode2),
               phoneCountryCodeInferred = false,
             ),
-            CustomerPhoneNumberAIExtract(phoneNationalNumber3, None, phoneCountryCodeInferred = false),
+            CustomerPhoneNumberAIExtract(
+              phoneNationalNumber = phoneNationalNumber3,
+              phoneCountryCode = None,
+              phoneCountryCodeInferred = false,
+            ),
           ),
           addresses = Nil,
           fullNameInferred = false,
@@ -2967,11 +3441,15 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = List(
             CustomerPhoneNumberAIExtract(
-              phoneNationalNumber1,
-              Some(phoneCountryCode1),
+              phoneNationalNumber = phoneNationalNumber1,
+              phoneCountryCode = Some(phoneCountryCode1),
               phoneCountryCodeInferred = false,
             ),
-            CustomerPhoneNumberAIExtract(phoneNationalNumber2, None, phoneCountryCodeInferred = false),
+            CustomerPhoneNumberAIExtract(
+              phoneNationalNumber = phoneNationalNumber2,
+              phoneCountryCode = None,
+              phoneCountryCodeInferred = false,
+            ),
           ),
           addresses = Nil,
           customerBusinessContacts = Nil,
@@ -2999,21 +3477,28 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = Nil,
               phoneNumbers = List(
                 CustomerPhoneNumberEntryCandidate(
-                  CustomerPhoneNumberCandidate(phoneNationalNumber1, Some(phoneCountryCode1)),
+                  phoneNumber = CustomerPhoneNumberCandidate(
+                    phoneNationalNumber = phoneNationalNumber1,
+                    phoneCountryCode = Some(phoneCountryCode1),
+                  ),
                   isDefault = true,
                 ),
                 CustomerPhoneNumberEntryCandidate(
-                  CustomerPhoneNumberCandidate(phoneNationalNumber2, Some(phoneCountryCode2)),
+                  phoneNumber = CustomerPhoneNumberCandidate(
+                    phoneNationalNumber = phoneNationalNumber2,
+                    phoneCountryCode = Some(phoneCountryCode2),
+                  ),
                   isDefault = false,
                 ),
                 CustomerPhoneNumberEntryCandidate(
-                  CustomerPhoneNumberCandidate(phoneNationalNumber3, None),
+                  phoneNumber =
+                    CustomerPhoneNumberCandidate(phoneNationalNumber = phoneNationalNumber3, phoneCountryCode = None),
                   isDefault = false,
                 ),
               ),
               addresses = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/phoneNumbers/2/phoneNumber/phoneCountryCode")),
+              missingFields = List(FieldInfo(path = "/phoneNumbers/2/phoneNumber/phoneCountryCode")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -3026,18 +3511,22 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = None,
               phoneNumbers = List(
                 CustomerPhoneNumberEntryCandidate(
-                  CustomerPhoneNumberCandidate(phoneNationalNumber1, Some(phoneCountryCode1)),
+                  phoneNumber = CustomerPhoneNumberCandidate(
+                    phoneNationalNumber = phoneNationalNumber1,
+                    phoneCountryCode = Some(phoneCountryCode1),
+                  ),
                   isDefault = true,
                 ),
                 CustomerPhoneNumberEntryCandidate(
-                  CustomerPhoneNumberCandidate(phoneNationalNumber2, None),
+                  phoneNumber =
+                    CustomerPhoneNumberCandidate(phoneNationalNumber = phoneNationalNumber2, phoneCountryCode = None),
                   isDefault = false,
                 ),
               ),
               addresses = Nil,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/phoneNumbers/1/phoneNumber/phoneCountryCode")),
+              missingFields = List(FieldInfo(path = "/phoneNumbers/1/phoneNumber/phoneCountryCode")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -3075,8 +3564,8 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               email = None,
               phoneNumber = Some(
                 CustomerPhoneNumberAIExtract(
-                  phoneNationalNumber,
-                  Some(phoneCountryCode),
+                  phoneNationalNumber = phoneNationalNumber,
+                  phoneCountryCode = Some(phoneCountryCode),
                   phoneCountryCodeInferred = true,
                 )
               ),
@@ -3106,21 +3595,104 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = None,
               phoneNumbers = Nil,
               addresses = Nil,
-              customerBusinessContacts = List(
-                CustomerBusinessContactCandidate(
-                  fullName = Some(customerBusinessContactFullName1),
-                  role = None,
-                  email = None,
-                  phoneNumber = None,
+              customerBusinessContacts =
+                List(
+                  CustomerBusinessContactCandidate(
+                    fullName = Some(customerBusinessContactFullName1),
+                    role = None,
+                    email = None,
+                    phoneNumber = None,
+                  ),
+                  CustomerBusinessContactCandidate(
+                    fullName = Some(customerBusinessContactFullName2),
+                    role = None,
+                    email = None,
+                    phoneNumber = Some(
+                      CustomerPhoneNumberCandidate(
+                        phoneNationalNumber = phoneNationalNumber,
+                        phoneCountryCode = Some(phoneCountryCode),
+                      )
+                    ),
+                  ),
                 ),
-                CustomerBusinessContactCandidate(
-                  fullName = Some(customerBusinessContactFullName2),
-                  role = None,
-                  email = None,
-                  phoneNumber = Some(CustomerPhoneNumberCandidate(phoneNationalNumber, Some(phoneCountryCode))),
+              inferredFields = List(FieldInfo(path = "/customerBusinessContacts/1/phoneNumber/phoneCountryCode")),
+              missingFields = Nil,
+              duplicateFields = Nil,
+              needsAttention = false,
+              extractionNotes = List("Country code inferred from the address"),
+            )
+          ),
+          infoNotes = List("Processed 1 of 1 entries"),
+          extractionNotes = Nil,
+        )
+      }
+
+      "report a business's own inferred country code at the phone's position without marking the business" in new TestContext {
+        val customerBusinessName      = arbitrarySample[CustomerBusinessName]
+        val phoneNationalNumber1      = arbitrarySample[PhoneNationalNumber]
+        val phoneNationalNumber2      = PhoneNationalNumber.assume(phoneNationalNumber1.value + "1")
+        val phoneCountryCode1         = arbitrarySample[PhoneCountryCode]
+        val phoneCountryCode2         = arbitrarySample[PhoneCountryCode]
+        val customerBusinessAIExtract = CustomerBusinessAIExtract(
+          businessName = Some(customerBusinessName),
+          emails = Nil,
+          taxID = None,
+          phoneNumbers = List(
+            CustomerPhoneNumberAIExtract(
+              phoneNationalNumber = phoneNationalNumber1,
+              phoneCountryCode = Some(phoneCountryCode1),
+              phoneCountryCodeInferred = false,
+            ),
+            CustomerPhoneNumberAIExtract(
+              phoneNationalNumber = phoneNationalNumber2,
+              phoneCountryCode = Some(phoneCountryCode2),
+              phoneCountryCodeInferred = true,
+            ),
+          ),
+          addresses = Nil,
+          customerBusinessContacts = Nil,
+          businessNameInferred = false,
+          extractionNotes = List("Country code inferred from the address"),
+        )
+        val customerBookFileAIExtract = CustomerBookFileAIExtract(
+          entriesIdentified = 1L,
+          entriesProcessed = 1L,
+          individualCandidates = Nil,
+          businessCandidates = List(customerBusinessAIExtract),
+          emptyEntryRowIndexes = Nil,
+          unidentifiedEntryRowIndexes = Nil,
+          extractionNotes = Nil,
+        )
+
+        phoneNationalNumber2 shouldNot equal(phoneNationalNumber1)
+
+        aiExtractFromImage(customerBookFileAIExtract) shouldBe CustomerBookFileAiExtractPostResponse(
+          individualCandidates = Nil,
+          businessCandidates = List(
+            CustomerBusinessCandidate(
+              businessName = Some(customerBusinessName),
+              emails = Nil,
+              taxID = None,
+              phoneNumbers =
+                List(
+                  CustomerPhoneNumberEntryCandidate(
+                    phoneNumber = CustomerPhoneNumberCandidate(
+                      phoneNationalNumber = phoneNationalNumber1,
+                      phoneCountryCode = Some(phoneCountryCode1),
+                    ),
+                    isDefault = true,
+                  ),
+                  CustomerPhoneNumberEntryCandidate(
+                    phoneNumber = CustomerPhoneNumberCandidate(
+                      phoneNationalNumber = phoneNationalNumber2,
+                      phoneCountryCode = Some(phoneCountryCode2),
+                    ),
+                    isDefault = false,
+                  ),
                 ),
-              ),
-              inferredFields = List(FieldInfo("/customerBusinessContacts/1/phoneNumber/phoneCountryCode")),
+              addresses = Nil,
+              customerBusinessContacts = Nil,
+              inferredFields = List(FieldInfo(path = "/phoneNumbers/1/phoneNumber/phoneCountryCode")),
               missingFields = Nil,
               duplicateFields = Nil,
               needsAttention = false,
@@ -3140,7 +3712,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         val customerBusinessContactRole              = arbitrarySample[CustomerBusinessContactRole]
         val phoneNationalNumber1                     = arbitrarySample[PhoneNationalNumber]
         val phoneNationalNumber2                     = arbitrarySample[PhoneNationalNumber]
-        val phoneNationalNumber4                     = arbitrarySample[PhoneNationalNumber]
+        val phoneNationalNumber3                     = arbitrarySample[PhoneNationalNumber]
         val phoneCountryCode2                        = arbitrarySample[PhoneCountryCode]
         val customerBusinessContactAIExtractNameless = CustomerBusinessContactAIExtract(
           fullName = None,
@@ -3154,8 +3726,13 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           fullName = Some(customerBusinessContactFullName1),
           role = None,
           email = None,
-          phoneNumber =
-            Some(CustomerPhoneNumberAIExtract(phoneNationalNumber1, None, phoneCountryCodeInferred = false)),
+          phoneNumber = Some(
+            CustomerPhoneNumberAIExtract(
+              phoneNationalNumber = phoneNationalNumber1,
+              phoneCountryCode = None,
+              phoneCountryCodeInferred = false,
+            )
+          ),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -3164,7 +3741,11 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           role = None,
           email = None,
           phoneNumber = Some(
-            CustomerPhoneNumberAIExtract(phoneNationalNumber2, Some(phoneCountryCode2), phoneCountryCodeInferred = true)
+            CustomerPhoneNumberAIExtract(
+              phoneNationalNumber = phoneNationalNumber2,
+              phoneCountryCode = Some(phoneCountryCode2),
+              phoneCountryCodeInferred = true,
+            )
           ),
           fullNameInferred = false,
           extractionNotes = Nil,
@@ -3181,8 +3762,13 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           fullName = None,
           role = None,
           email = None,
-          phoneNumber =
-            Some(CustomerPhoneNumberAIExtract(phoneNationalNumber4, None, phoneCountryCodeInferred = false)),
+          phoneNumber = Some(
+            CustomerPhoneNumberAIExtract(
+              phoneNationalNumber = phoneNationalNumber3,
+              phoneCountryCode = None,
+              phoneCountryCodeInferred = false,
+            )
+          ),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -3232,13 +3818,20 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   fullName = Some(customerBusinessContactFullName1),
                   role = None,
                   email = None,
-                  phoneNumber = Some(CustomerPhoneNumberCandidate(phoneNationalNumber1, None)),
+                  phoneNumber = Some(
+                    CustomerPhoneNumberCandidate(phoneNationalNumber = phoneNationalNumber1, phoneCountryCode = None)
+                  ),
                 ),
                 CustomerBusinessContactCandidate(
                   fullName = Some(customerBusinessContactFullName2),
                   role = None,
                   email = None,
-                  phoneNumber = Some(CustomerPhoneNumberCandidate(phoneNationalNumber2, Some(phoneCountryCode2))),
+                  phoneNumber = Some(
+                    CustomerPhoneNumberCandidate(
+                      phoneNationalNumber = phoneNationalNumber2,
+                      phoneCountryCode = Some(phoneCountryCode2),
+                    )
+                  ),
                 ),
                 CustomerBusinessContactCandidate(
                   fullName = Some(customerBusinessContactFullName3),
@@ -3250,18 +3843,20 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   fullName = None,
                   role = None,
                   email = None,
-                  phoneNumber = Some(CustomerPhoneNumberCandidate(phoneNationalNumber4, None)),
+                  phoneNumber = Some(
+                    CustomerPhoneNumberCandidate(phoneNationalNumber = phoneNationalNumber3, phoneCountryCode = None)
+                  ),
                 ),
               ),
               inferredFields = List(
-                FieldInfo("/customerBusinessContacts/2/phoneNumber/phoneCountryCode"),
-                FieldInfo("/customerBusinessContacts/3/fullName"),
+                FieldInfo(path = "/customerBusinessContacts/2/phoneNumber/phoneCountryCode"),
+                FieldInfo(path = "/customerBusinessContacts/3/fullName"),
               ),
               missingFields = List(
-                FieldInfo("/customerBusinessContacts/0/fullName"),
-                FieldInfo("/customerBusinessContacts/1/phoneNumber/phoneCountryCode"),
-                FieldInfo("/customerBusinessContacts/4/fullName"),
-                FieldInfo("/customerBusinessContacts/4/phoneNumber/phoneCountryCode"),
+                FieldInfo(path = "/customerBusinessContacts/0/fullName"),
+                FieldInfo(path = "/customerBusinessContacts/1/phoneNumber/phoneCountryCode"),
+                FieldInfo(path = "/customerBusinessContacts/4/fullName"),
+                FieldInfo(path = "/customerBusinessContacts/4/phoneNumber/phoneCountryCode"),
               ),
               duplicateFields = Nil,
               needsAttention = true,
@@ -3290,7 +3885,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .toList
         val customerFullName       = arbitrarySample[CustomerFullName]
         val customerFullNameUnique = CustomerFullName.assume(
-          if (customerFullName.value.length < 255) customerFullName.value + "b"
+          if (customerFullName.value.length < CustomerFullNameLengthMax) customerFullName.value + "b"
           else customerFullName.value.dropRight(1)
         )
         val customerBusinessName        = arbitrarySample[CustomerBusinessName]
@@ -3345,7 +3940,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           addresses = Nil,
           inferredFields = Nil,
           missingFields = Nil,
-          duplicateFields = List(FieldInfo("/fullName")),
+          duplicateFields = List(FieldInfo(path = "/fullName")),
           needsAttention = true,
           extractionNotes = Nil,
         )
@@ -3390,11 +3985,11 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             customerIndividualCandidateDuplicate,
             CustomerIndividualCandidate(
               fullName = None,
-              emails = List(CustomerEmailEntry(customerEmail, isDefault = true)),
+              emails = List(CustomerEmailEntry(email = customerEmail, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/fullName")),
+              missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -3409,7 +4004,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addresses = Nil,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
-              missingFields = List(FieldInfo("/businessName")),
+              missingFields = List(FieldInfo(path = "/businessName")),
               duplicateFields = Nil,
               needsAttention = true,
               extractionNotes = Nil,
@@ -3458,8 +4053,13 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         val customerIndividualAIExtractPhoneNumberWithoutCountryCode = customerIndividualAIExtractNameless.copy(
           fullName = Some(customerFullNamePhoneNumber),
           emails = Nil,
-          phoneNumbers =
-            List(CustomerPhoneNumberAIExtract(phoneNationalNumber1, None, phoneCountryCodeInferred = false)),
+          phoneNumbers = List(
+            CustomerPhoneNumberAIExtract(
+              phoneNationalNumber = phoneNationalNumber1,
+              phoneCountryCode = None,
+              phoneCountryCodeInferred = false,
+            )
+          ),
         )
         val customerBusinessAIExtractNamelessContact = CustomerBusinessAIExtract(
           businessName = Some(customerBusinessName1),
@@ -3488,8 +4088,13 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                 fullName = Some(customerBusinessContactFullName),
                 role = None,
                 email = None,
-                phoneNumber =
-                  Some(CustomerPhoneNumberAIExtract(phoneNationalNumber2, None, phoneCountryCodeInferred = false)),
+                phoneNumber = Some(
+                  CustomerPhoneNumberAIExtract(
+                    phoneNationalNumber = phoneNationalNumber2,
+                    phoneCountryCode = None,
+                    phoneCountryCodeInferred = false,
+                  )
+                ),
                 fullNameInferred = false,
                 extractionNotes = Nil,
               )
@@ -3514,11 +4119,11 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         )
         val customerIndividualCandidateNameless = CustomerIndividualCandidate(
           fullName = None,
-          emails = List(CustomerEmailEntry(customerEmail, isDefault = true)),
+          emails = List(CustomerEmailEntry(email = customerEmail, isDefault = true)),
           phoneNumbers = Nil,
           addresses = Nil,
           inferredFields = Nil,
-          missingFields = List(FieldInfo("/fullName")),
+          missingFields = List(FieldInfo(path = "/fullName")),
           duplicateFields = Nil,
           needsAttention = true,
           extractionNotes = Nil,
@@ -3538,7 +4143,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             )
           ),
           inferredFields = Nil,
-          missingFields = List(FieldInfo("/customerBusinessContacts/0/fullName")),
+          missingFields = List(FieldInfo(path = "/customerBusinessContacts/0/fullName")),
           duplicateFields = Nil,
           needsAttention = true,
           extractionNotes = Nil,
@@ -3548,7 +4153,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           fullName = Some(customerFullNameDuplicate),
           emails = Nil,
           missingFields = Nil,
-          duplicateFields = List(FieldInfo("/fullName")),
+          duplicateFields = List(FieldInfo(path = "/fullName")),
         )
 
         customerFullNamePhoneNumber shouldNot equal(customerFullNameDuplicate)
@@ -3564,11 +4169,12 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = Nil,
               phoneNumbers = List(
                 CustomerPhoneNumberEntryCandidate(
-                  CustomerPhoneNumberCandidate(phoneNationalNumber1, None),
+                  phoneNumber =
+                    CustomerPhoneNumberCandidate(phoneNationalNumber = phoneNationalNumber1, phoneCountryCode = None),
                   isDefault = true,
                 )
               ),
-              missingFields = List(FieldInfo("/phoneNumbers/0/phoneNumber/phoneCountryCode")),
+              missingFields = List(FieldInfo(path = "/phoneNumbers/0/phoneNumber/phoneCountryCode")),
             ),
           ),
           businessCandidates = List(
@@ -3580,10 +4186,12 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   fullName = Some(customerBusinessContactFullName),
                   role = None,
                   email = None,
-                  phoneNumber = Some(CustomerPhoneNumberCandidate(phoneNationalNumber2, None)),
+                  phoneNumber = Some(
+                    CustomerPhoneNumberCandidate(phoneNationalNumber = phoneNationalNumber2, phoneCountryCode = None)
+                  ),
                 )
               ),
-              missingFields = List(FieldInfo("/customerBusinessContacts/0/phoneNumber/phoneCountryCode")),
+              missingFields = List(FieldInfo(path = "/customerBusinessContacts/0/phoneNumber/phoneCountryCode")),
             ),
           ),
           infoNotes = List("Processed 6 of 6 entries"),
@@ -3592,10 +4200,15 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
       }
 
       "not mark a candidate whose only findings are inferred fields, AI notes or a dropped all-empty address" in new TestContext {
-        val customerFullNameInferred                    = arbitrarySample[CustomerFullName]
-        val customerFullNamePhoneNumber                 = arbitrarySample[CustomerFullName]
-        val customerFullNameExtractionNotes             = arbitrarySample[CustomerFullName]
-        val customerFullNameAddress                     = arbitrarySample[CustomerFullName]
+        val customerFullName         = arbitrarySample[CustomerFullName]
+        val customerFullNameInferred =
+          CustomerFullName.assume(customerFullName.value.take(CustomerFullNameLengthMax - 1) + "a")
+        val customerFullNamePhoneNumber =
+          CustomerFullName.assume(customerFullName.value.take(CustomerFullNameLengthMax - 1) + "b")
+        val customerFullNameExtractionNotes =
+          CustomerFullName.assume(customerFullName.value.take(CustomerFullNameLengthMax - 1) + "c")
+        val customerFullNameAddress =
+          CustomerFullName.assume(customerFullName.value.take(CustomerFullNameLengthMax - 1) + "d")
         val phoneNationalNumber                         = arbitrarySample[PhoneNationalNumber]
         val phoneCountryCode                            = arbitrarySample[PhoneCountryCode]
         val customerIndividualAIExtractFullNameInferred = CustomerIndividualAIExtract(
@@ -3609,7 +4222,11 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         val customerIndividualAIExtractPhoneCountryCodeInferred = customerIndividualAIExtractFullNameInferred.copy(
           fullName = Some(customerFullNamePhoneNumber),
           phoneNumbers = List(
-            CustomerPhoneNumberAIExtract(phoneNationalNumber, Some(phoneCountryCode), phoneCountryCodeInferred = true)
+            CustomerPhoneNumberAIExtract(
+              phoneNationalNumber = phoneNationalNumber,
+              phoneCountryCode = Some(phoneCountryCode),
+              phoneCountryCodeInferred = true,
+            )
           ),
           fullNameInferred = false,
         )
@@ -3622,8 +4239,15 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           fullName = Some(customerFullNameAddress),
           addresses = List(
             CustomerAddressEntryAIExtract(
-              CustomerAddressAIExtract(None, None, None, None, None, Nil),
-              arbitrarySample[AddressType],
+              address = CustomerAddressAIExtract(
+                addressLine1 = None,
+                addressLine2 = None,
+                city = None,
+                postalCode = None,
+                country = None,
+                extractionNotes = Nil,
+              ),
+              addressType = arbitrarySample[AddressType],
             )
           ),
           fullNameInferred = false,
@@ -3647,12 +4271,19 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
-          inferredFields = List(FieldInfo("/fullName")),
+          inferredFields = List(FieldInfo(path = "/fullName")),
           missingFields = Nil,
           duplicateFields = Nil,
           needsAttention = false,
           extractionNotes = Nil,
         )
+
+        customerFullNamePhoneNumber shouldNot equal(customerFullNameInferred)
+        customerFullNameExtractionNotes shouldNot equal(customerFullNameInferred)
+        customerFullNameExtractionNotes shouldNot equal(customerFullNamePhoneNumber)
+        customerFullNameAddress shouldNot equal(customerFullNameInferred)
+        customerFullNameAddress shouldNot equal(customerFullNamePhoneNumber)
+        customerFullNameAddress shouldNot equal(customerFullNameExtractionNotes)
 
         aiExtractFromImage(customerBookFileAIExtract) shouldBe CustomerBookFileAiExtractPostResponse(
           individualCandidates = List(
@@ -3661,11 +4292,14 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               fullName = Some(customerFullNamePhoneNumber),
               phoneNumbers = List(
                 CustomerPhoneNumberEntryCandidate(
-                  CustomerPhoneNumberCandidate(phoneNationalNumber, Some(phoneCountryCode)),
+                  phoneNumber = CustomerPhoneNumberCandidate(
+                    phoneNationalNumber = phoneNationalNumber,
+                    phoneCountryCode = Some(phoneCountryCode),
+                  ),
                   isDefault = true,
                 )
               ),
-              inferredFields = List(FieldInfo("/phoneNumbers/0/phoneNumber/phoneCountryCode")),
+              inferredFields = List(FieldInfo(path = "/phoneNumbers/0/phoneNumber/phoneCountryCode")),
             ),
             customerIndividualCandidateFullNameInferred.copy(
               fullName = Some(customerFullNameExtractionNotes),
@@ -3718,11 +4352,15 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             customerIndividualAIExtractDuplicate.copy(
               phoneNumbers = List(
                 CustomerPhoneNumberAIExtract(
-                  phoneNationalNumber,
-                  Some(phoneCountryCode),
+                  phoneNationalNumber = phoneNationalNumber,
+                  phoneCountryCode = Some(phoneCountryCode),
                   phoneCountryCodeInferred = true,
                 ),
-                CustomerPhoneNumberAIExtract(phoneNationalNumber, None, phoneCountryCodeInferred = false),
+                CustomerPhoneNumberAIExtract(
+                  phoneNationalNumber = phoneNationalNumber,
+                  phoneCountryCode = None,
+                  phoneCountryCodeInferred = false,
+                ),
               ),
               fullNameInferred = true,
             ),
@@ -3746,8 +4384,13 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   fullName = Some(customerBusinessContactFullName1),
                   role = None,
                   email = None,
-                  phoneNumber =
-                    Some(CustomerPhoneNumberAIExtract(phoneNationalNumber, None, phoneCountryCodeInferred = false)),
+                  phoneNumber = Some(
+                    CustomerPhoneNumberAIExtract(
+                      phoneNationalNumber = phoneNationalNumber,
+                      phoneCountryCode = None,
+                      phoneCountryCodeInferred = false,
+                    )
+                  ),
                   fullNameInferred = true,
                   extractionNotes = Nil,
                 ),
@@ -3757,8 +4400,8 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   email = None,
                   phoneNumber = Some(
                     CustomerPhoneNumberAIExtract(
-                      phoneNationalNumber,
-                      Some(phoneCountryCode),
+                      phoneNationalNumber = phoneNationalNumber,
+                      phoneCountryCode = Some(phoneCountryCode),
                       phoneCountryCodeInferred = true,
                     )
                   ),
@@ -3876,7 +4519,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         val organizationID                    = arbitrarySample[OrganizationID]
         val customerBookFileExtractFileName   = CustomerBookFileExtractFileName("customers.jpeg")
         val customerBookFileExtractByteStream = ZStream.empty
-        val serviceErrorScan = ServiceError.InternalServerError.UnexpectedError("Failed to scan the upload")
+        val serviceErrorScan = ServiceError.InternalServerError.UnexpectedError(error = "Failed to scan the upload")
 
         fileScannerMock.scan
           .expects(
@@ -3902,7 +4545,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         extractFromCsvCallsRef.refValue shouldBe Nil
       }
 
-      "fail with an UnexpectedError when photo AI extraction fails" in new TestContext {
+      "fail with an UnexpectedError when image AI extraction fails" in new TestContext {
         val organizationID                               = arbitrarySample[OrganizationID]
         val customerBookFileExtractFileName              = CustomerBookFileExtractFileName("customers.jpeg")
         val customerBookFileExtractByteStream            = ZStream.empty
@@ -3911,7 +4554,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           supportedMediaType = SupportedMediaType.JPEG,
           fileBytesSize = FileBytesSize.assume(1L),
         )
-        val serviceErrorAI = ServiceError.InternalServerError.UnexpectedError("AI extraction failed")
+        val serviceErrorAI = ServiceError.InternalServerError.UnexpectedError(error = "AI extraction failed")
 
         fileScannerMock.scan
           .expects(
@@ -3944,6 +4587,50 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         extractFromCsvCallsRef.refValue shouldBe Nil
       }
 
+      "fail with an UnexpectedError when spreadsheet conversion fails" in new TestContext {
+        val organizationID                               = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName              = CustomerBookFileExtractFileName("customers.csv")
+        val customerBookFileExtractByteStream            = ZStream.empty
+        val fileScannerScanOutput: FileScannerScanOutput = (
+          fileScannedPath = FileScannedPath(Path.of("customers.csv")),
+          supportedMediaType = SupportedMediaType.CSV,
+          fileBytesSize = FileBytesSize.assume(1L),
+        )
+        val serviceErrorConversion =
+          ServiceError.InternalServerError.UnexpectedError(error = "Failed spreadsheet conversion")
+
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              customerBookFileExtractByteStream,
+              customerBookFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              customerBookFileServiceConfig.extractCustomersFileBytesMax,
+            )
+            .returns(ZIO.succeed(fileScannerScanOutput))
+            .once(),
+          spreadsheetToolMock.convertToCsv
+            .expects(fileScannerScanOutput.fileScannedPath)
+            .returns(ZStream.fail(serviceErrorConversion))
+            .once(),
+        )
+
+        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[CustomerBookFileAIExtract](
+          extractFromImageCallsRef,
+          extractFromCsvCallsRef,
+          noteCompactionCallsRefOpt = Some(noteCompactionCallsRef),
+        )
+
+        val serviceError = buildCustomerBookFileService(aiClientDataExtraction)
+          .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
+          .zioError
+
+        serviceError shouldBe serviceErrorConversion
+        extractFromCsvCallsRef.refValue shouldBe Nil
+        extractFromImageCallsRef.refValue shouldBe Nil
+        noteCompactionCallsRef.refValue shouldBe Nil
+      }
+
       "fail with an UnexpectedError when spreadsheet AI extraction fails" in new TestContext {
         val organizationID                               = arbitrarySample[OrganizationID]
         val customerBookFileExtractFileName              = CustomerBookFileExtractFileName("customers.csv")
@@ -3955,7 +4642,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         )
         val csvRecords: List[CSVRecord] =
           CSVParser.parse("Full Name\nJane Doe", CSVFormat.DEFAULT).getRecords.asScala.toList
-        val serviceErrorAI = ServiceError.InternalServerError.UnexpectedError("AI extraction failed")
+        val serviceErrorAI = ServiceError.InternalServerError.UnexpectedError(error = "AI extraction failed")
 
         inSequence(
           fileScannerMock.scan
@@ -3994,7 +4681,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
 
   trait TestContext {
     val customerBookFileServiceConfig = CustomerBookFileServiceConfig(
-      extractCustomersFileBytesMax = 15L * 1024 * 1024
+      extractCustomersFileBytesMax = 20971520L
     )
 
     val fileScannerMock     = mock[FileScanner]
