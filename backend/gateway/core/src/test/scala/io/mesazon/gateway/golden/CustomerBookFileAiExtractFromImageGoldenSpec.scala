@@ -35,6 +35,8 @@ class CustomerBookFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, Gatewa
     "contact-book-image-test-13.png",
   )
 
+  private inline val JsonIndentionStep = 2
+
   private def buildCustomerBookFileService: CustomerBookFileService[ServiceTask] = ZIO
     .service[CustomerBookFileService[ServiceTask]]
     .provide(
@@ -54,8 +56,8 @@ class CustomerBookFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, Gatewa
             requestTimeout = Duration.fromSeconds(180),
             sendMaxRetries = 2,
             sendRetryDelay = Duration.fromSeconds(1),
-            csvBatchMaxDataRows = 50,
-            csvBatchParallelism = 3,
+            csvBatchMaxDataRows = 100,
+            csvBatchParallelism = 4,
           )
         )
       ),
@@ -78,7 +80,7 @@ class CustomerBookFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, Gatewa
           val customerBookFileExtractByteStream =
             ZStream.fromResource(s"assets/${customerBookFileExtractFileName.value}")
 
-          val customerBookFileProcessingMessageOpt = CustomerBookFileProcessingMessage.assume(
+          val customerBookFileProcessingMessage = CustomerBookFileProcessingMessage.assume(
             "For each customers create a second entry with 1 suffix"
           )
 
@@ -86,13 +88,13 @@ class CustomerBookFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, Gatewa
             .aiExtract(
               organizationID,
               customerBookFileExtractFileName,
-              Some(customerBookFileProcessingMessageOpt),
+              Some(customerBookFileProcessingMessage),
               customerBookFileExtractByteStream,
             )
             .zioValue
 
           info(
-            s"${customerBookFileExtractFileName.value} response:\n${writeToString(customerBookFileAiExtractPostResponse, WriterConfig.withIndentionStep(2))}"
+            s"${customerBookFileExtractFileName.value} response:\n${writeToString(customerBookFileAiExtractPostResponse, WriterConfig.withIndentionStep(JsonIndentionStep))}"
           )
         }
       }
@@ -120,13 +122,11 @@ class CustomerBookFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, Gatewa
           .zioValue
 
         info(
-          s"${customerBookFileExtractFileName.value} response:\n${writeToString(customerBookFileAiExtractPostResponse, WriterConfig.withIndentionStep(2))}"
+          s"${customerBookFileExtractFileName.value} response:\n${writeToString(customerBookFileAiExtractPostResponse, WriterConfig.withIndentionStep(JsonIndentionStep))}"
         )
       }
-    }
 
-    "aiExtract irrelevant" should {
-      "extract customer candidates from contact-book-image-test-14.jpeg" in {
+      "extract customer candidates from contact-book-image-test-14.jpeg with irrelevant content" in {
         assume(
           apiKey.nonEmpty,
           "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
@@ -142,7 +142,7 @@ class CustomerBookFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, Gatewa
           .zioValue
 
         info(
-          s"${customerBookFileExtractFileName.value} response:\n${writeToString(customerBookFileAiExtractPostResponse, WriterConfig.withIndentionStep(2))}"
+          s"${customerBookFileExtractFileName.value} response:\n${writeToString(customerBookFileAiExtractPostResponse, WriterConfig.withIndentionStep(JsonIndentionStep))}"
         )
       }
     }

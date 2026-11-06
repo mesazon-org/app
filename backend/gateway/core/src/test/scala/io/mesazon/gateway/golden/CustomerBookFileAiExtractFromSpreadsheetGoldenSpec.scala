@@ -26,6 +26,8 @@ class CustomerBookFileAiExtractFromSpreadsheetGoldenSpec extends ZWordSpecBase, 
     "contact-book-spreadsheet-test-4.csv",
   )
 
+  private inline val JsonIndentionStep = 2
+
   private def buildCustomerBookFileService: CustomerBookFileService[ServiceTask] = ZIO
     .service[CustomerBookFileService[ServiceTask]]
     .provide(
@@ -45,8 +47,8 @@ class CustomerBookFileAiExtractFromSpreadsheetGoldenSpec extends ZWordSpecBase, 
             requestTimeout = Duration.fromSeconds(180),
             sendMaxRetries = 2,
             sendRetryDelay = Duration.fromSeconds(1),
-            csvBatchMaxDataRows = 50,
-            csvBatchParallelism = 3,
+            csvBatchMaxDataRows = 100,
+            csvBatchParallelism = 4,
           )
         )
       ),
@@ -69,7 +71,7 @@ class CustomerBookFileAiExtractFromSpreadsheetGoldenSpec extends ZWordSpecBase, 
           val customerBookFileExtractByteStream =
             ZStream.fromResource(s"assets/${customerBookFileExtractFileName.value}")
 
-          val customerBookFileProcessingMessageOpt = CustomerBookFileProcessingMessage.assume(
+          val customerBookFileProcessingMessage = CustomerBookFileProcessingMessage.assume(
             "You will some times surname missing extract also that from email if mathes the first name in email"
           )
 
@@ -77,13 +79,13 @@ class CustomerBookFileAiExtractFromSpreadsheetGoldenSpec extends ZWordSpecBase, 
             .aiExtract(
               organizationID,
               customerBookFileExtractFileName,
-              Some(customerBookFileProcessingMessageOpt),
+              Some(customerBookFileProcessingMessage),
               customerBookFileExtractByteStream,
             )
             .zioValue
 
           info(
-            s"${customerBookFileExtractFileName.value} response:\n${writeToString(customerBookFileAiExtractPostResponse, WriterConfig.withIndentionStep(2))}"
+            s"${customerBookFileExtractFileName.value} response:\n${writeToString(customerBookFileAiExtractPostResponse, WriterConfig.withIndentionStep(JsonIndentionStep))}"
           )
         }
       }

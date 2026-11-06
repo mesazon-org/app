@@ -9,8 +9,6 @@ import zio.*
 
 class CustomerBookFileNotesCompactionGoldenSpec extends ZWordSpecBase {
 
-  type NotesCompactionGoldenCase = (rule: String, notes: List[String])
-
   private val apiKey =
     sys.env.getOrElse(
       "AI_CLIENT_DATA_EXTRACTION_API_KEY",
@@ -25,7 +23,7 @@ class CustomerBookFileNotesCompactionGoldenSpec extends ZWordSpecBase {
       notes = List.fill(4)("Column Balance was ignored"),
     ),
     (
-      rule = "combine related notes with different details into one note naming both columns",
+      rule = "keep related notes that differ in detail as supplied",
       notes = List("Column Balance was ignored", "Column Birthday was ignored"),
     ),
     (
@@ -53,6 +51,8 @@ class CustomerBookFileNotesCompactionGoldenSpec extends ZWordSpecBase {
       ),
     ),
   )
+
+  type NotesCompactionGoldenCase = (rule: String, notes: List[String])
 
   private def buildAIClientDataExtraction: AIClientDataExtraction = ZIO
     .service[AIClientDataExtraction]

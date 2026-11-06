@@ -20,6 +20,8 @@ class CatalogueFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, GatewayAr
       "",
     )
 
+  private inline val JsonIndentionStep = 2
+
   private def buildCatalogueFileService: CatalogueFileService[ServiceTask] = ZIO
     .service[CatalogueFileService[ServiceTask]]
     .provide(
@@ -76,7 +78,7 @@ class CatalogueFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, GatewayAr
           .zioValue
 
         info(
-          s"${catalogueFileExtractFileName.value} response:\n${writeToString(catalogueFileAiExtractPostResponse, WriterConfig.withIndentionStep(2))}"
+          s"${catalogueFileExtractFileName.value} response:\n${writeToString(catalogueFileAiExtractPostResponse, WriterConfig.withIndentionStep(JsonIndentionStep))}"
         )
       }
 
@@ -95,7 +97,7 @@ class CatalogueFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, GatewayAr
 //          .zioValue
 //
 //        info(
-//          s"${catalogueFileExtractFileName.value} response:\n${writeToString(catalogueFileAiExtractPostResponse, WriterConfig.withIndentionStep(2))}"
+//          s"${catalogueFileExtractFileName.value} response:\n${writeToString(catalogueFileAiExtractPostResponse, WriterConfig.withIndentionStep(JsonIndentionStep))}"
 //        )
 //      }
     }
