@@ -1,6 +1,6 @@
 package io.mesazon.gateway.fun
 
-import com.github.plokhotnyuk.jsoniter_scala.core.writeToString
+import com.github.plokhotnyuk.jsoniter_scala.core.{writeToString, JsonValueCodec}
 import io.circe.{parser, Json}
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClientDataExtraction
@@ -10,7 +10,7 @@ import io.mesazon.gateway.json.tapir.{
   customerBusinessCandidateSchema,
   customerIndividualCandidateSchema,
 }
-import io.mesazon.gateway.mock.Mocks
+import io.mesazon.gateway.json.{ai, OpenAIJsonSchema}
 import io.mesazon.gateway.service.{AIInstructions, CustomerBookFileService, ServiceTask}
 import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.{CustomerBookDomainArbitraries, ZWordSpecBase}
@@ -85,27 +85,37 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           unidentifiedEntryRowIndexes = Nil,
           extractionNotes = List("The image is slightly cropped"),
         )
-        val extractFromImageProcessingMessagesRef = Ref.make(List.empty[Option[String]]).zioValue
 
-        fileScannerMock.scan
-          .expects(
-            customerBookFileExtractByteStream,
-            customerBookFileExtractFileName.value,
-            SupportedMediaType.extractData,
-            customerBookFileServiceConfig.extractCustomersFileBytesMax,
-          )
-          .returns(ZIO.succeed(fileScannerScanOutput))
-          .once()
-
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromImageOptResult = Some(ZIO.succeed(customerBookFileAIExtract)),
-          extractFromImageProcessingMessagesRefOpt = Some(extractFromImageProcessingMessagesRef),
-          noteCompactionCallsRefOpt = Some(noteCompactionCallsRef),
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              customerBookFileExtractByteStream,
+              customerBookFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              customerBookFileServiceConfig.extractCustomersFileBytesMax,
+            )
+            .returns(ZIO.succeed(fileScannerScanOutput))
+            .once(),
+          (aiClientDataExtractionMock
+            .extractFromImage[CustomerBookFileAIExtract](
+              _: FileScannedPath,
+              _: SupportedMediaType,
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              fileScannerScanOutput.fileScannedPath,
+              SupportedMediaType.JPEG,
+              AIInstructions.extractCustomersFromImageInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(customerBookFileAIExtract))
+            .once(),
         )
 
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(
             organizationID,
             customerBookFileExtractFileName,
@@ -159,16 +169,6 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           infoNotes = List("Processed 2 of 2 entries"),
           extractionNotes = List("The image is slightly cropped"),
         )
-        extractFromImageCallsRef.refValue shouldBe List(
-          (
-            fileScannerScanOutput.fileScannedPath,
-            SupportedMediaType.JPEG,
-            AIInstructions.extractCustomersFromImageInstructions,
-          )
-        )
-        extractFromImageProcessingMessagesRef.refValue shouldBe List(None)
-        extractFromCsvCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "forward image processing guidance to the image extraction" in new TestContext {
@@ -190,26 +190,37 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           unidentifiedEntryRowIndexes = Nil,
           extractionNotes = Nil,
         )
-        val extractFromImageProcessingMessagesRef = Ref.make(List.empty[Option[String]]).zioValue
 
-        fileScannerMock.scan
-          .expects(
-            customerBookFileExtractByteStream,
-            customerBookFileExtractFileName.value,
-            SupportedMediaType.extractData,
-            customerBookFileServiceConfig.extractCustomersFileBytesMax,
-          )
-          .returns(ZIO.succeed(fileScannerScanOutput))
-          .once()
-
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromImageOptResult = Some(ZIO.succeed(customerBookFileAIExtract)),
-          extractFromImageProcessingMessagesRefOpt = Some(extractFromImageProcessingMessagesRef),
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              customerBookFileExtractByteStream,
+              customerBookFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              customerBookFileServiceConfig.extractCustomersFileBytesMax,
+            )
+            .returns(ZIO.succeed(fileScannerScanOutput))
+            .once(),
+          (aiClientDataExtractionMock
+            .extractFromImage[CustomerBookFileAIExtract](
+              _: FileScannedPath,
+              _: SupportedMediaType,
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              fileScannerScanOutput.fileScannedPath,
+              SupportedMediaType.PNG,
+              AIInstructions.extractCustomersFromImageInstructions,
+              Some(customerBookFileProcessingMessage.value),
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(customerBookFileAIExtract))
+            .once(),
         )
 
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(
             organizationID,
             customerBookFileExtractFileName,
@@ -224,23 +235,13 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           infoNotes = List("Processed 0 of 0 entries"),
           extractionNotes = Nil,
         )
-        extractFromImageCallsRef.refValue shouldBe List(
-          (
-            fileScannerScanOutput.fileScannedPath,
-            SupportedMediaType.PNG,
-            AIInstructions.extractCustomersFromImageInstructions,
-          )
-        )
-        extractFromImageProcessingMessagesRef.refValue shouldBe List(Some(customerBookFileProcessingMessage.value))
-        extractFromCsvCallsRef.refValue shouldBe Nil
       }
 
       "extract candidates from a CSV file with processing guidance" in new TestContext {
-        val customerBookFileProcessingMessage   = CustomerBookFileProcessingMessage("Treat column B as the email")
-        val organizationID                      = arbitrarySample[OrganizationID]
-        val customerBookFileExtractFileName     = CustomerBookFileExtractFileName("customers.csv")
-        val customerBookFileExtractByteStream   = ZStream.empty
-        val extractFromCsvProcessingMessagesRef = Ref.make(List.empty[Option[String]]).zioValue
+        val customerBookFileProcessingMessage = CustomerBookFileProcessingMessage("Treat column B as the email")
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName("customers.csv")
+        val customerBookFileExtractByteStream = ZStream.empty
         val fileScannerScanOutput: FileScannerScanOutput = (
           fileScannedPath = FileScannedPath(Path.of("customers.csv")),
           supportedMediaType = SupportedMediaType.CSV,
@@ -284,17 +285,29 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(fileScannerScanOutput.fileScannedPath)
             .returns(ZStream.fromIterable(csvRecords))
             .once(),
+          (aiClientDataExtractionMock
+            .extractFromCsv[CustomerBookFileAIExtract](
+              _: ZStream[Scope, ServiceError, CSVRecord],
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              *,
+              AIInstructions.extractCustomersFromFileInstructions,
+              Some(customerBookFileProcessingMessage.value),
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .onCall { (csvRecordStream, _, _, _, _) =>
+              csvRecordStream.runCollect.map { csvRecordsCollected =>
+                csvRecordsCollected.toList shouldBe csvRecords
+                NonEmptyChunk.single(customerBookFileAIExtract)
+              }
+            }
+            .once(),
         )
 
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(customerBookFileAIExtract))),
-          extractFromCsvProcessingMessagesRefOpt = Some(extractFromCsvProcessingMessagesRef),
-          noteCompactionCallsRefOpt = Some(noteCompactionCallsRef),
-        )
-
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(
             organizationID,
             customerBookFileExtractFileName,
@@ -324,19 +337,12 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           infoNotes = List("Processed 1 of 1 entries"),
           extractionNotes = List("Column B holds two emails for some rows"),
         )
-        extractFromCsvCallsRef.refValue shouldBe List(
-          (csvRecords, AIInstructions.extractCustomersFromFileInstructions)
-        )
-        extractFromCsvProcessingMessagesRef.refValue shouldBe List(Some(customerBookFileProcessingMessage.value))
-        extractFromImageCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "extract candidates from an XLS file through Excel conversion" in new TestContext {
         val organizationID                               = arbitrarySample[OrganizationID]
         val customerBookFileExtractFileName              = CustomerBookFileExtractFileName("customers.xls")
         val customerBookFileExtractByteStream            = ZStream.empty
-        val extractFromCsvProcessingMessagesRef          = Ref.make(List.empty[Option[String]]).zioValue
         val fileScannerScanOutput: FileScannerScanOutput = (
           fileScannedPath = FileScannedPath(Path.of("customers.xls")),
           supportedMediaType = SupportedMediaType.XLS,
@@ -368,16 +374,29 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(fileScannerScanOutput.fileScannedPath)
             .returns(ZStream.fromIterable(csvRecords))
             .once(),
+          (aiClientDataExtractionMock
+            .extractFromCsv[CustomerBookFileAIExtract](
+              _: ZStream[Scope, ServiceError, CSVRecord],
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              *,
+              AIInstructions.extractCustomersFromFileInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .onCall { (csvRecordStream, _, _, _, _) =>
+              csvRecordStream.runCollect.map { csvRecordsCollected =>
+                csvRecordsCollected.toList shouldBe csvRecords
+                NonEmptyChunk.single(customerBookFileAIExtract)
+              }
+            }
+            .once(),
         )
 
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(customerBookFileAIExtract))),
-          extractFromCsvProcessingMessagesRefOpt = Some(extractFromCsvProcessingMessagesRef),
-        )
-
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioValue
 
@@ -387,18 +406,12 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           infoNotes = List("Processed 0 of 0 entries"),
           extractionNotes = Nil,
         )
-        extractFromCsvCallsRef.refValue shouldBe List(
-          (csvRecords, AIInstructions.extractCustomersFromFileInstructions)
-        )
-        extractFromCsvProcessingMessagesRef.refValue shouldBe List(None)
-        extractFromImageCallsRef.refValue shouldBe Nil
       }
 
       "extract candidates from an XLSX file through Excel conversion" in new TestContext {
         val organizationID                               = arbitrarySample[OrganizationID]
         val customerBookFileExtractFileName              = CustomerBookFileExtractFileName("customers.xlsx")
         val customerBookFileExtractByteStream            = ZStream.empty
-        val extractFromCsvProcessingMessagesRef          = Ref.make(List.empty[Option[String]]).zioValue
         val fileScannerScanOutput: FileScannerScanOutput = (
           fileScannedPath = FileScannedPath(Path.of("customers.xlsx")),
           supportedMediaType = SupportedMediaType.XLSX,
@@ -430,16 +443,29 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(fileScannerScanOutput.fileScannedPath)
             .returns(ZStream.fromIterable(csvRecords))
             .once(),
+          (aiClientDataExtractionMock
+            .extractFromCsv[CustomerBookFileAIExtract](
+              _: ZStream[Scope, ServiceError, CSVRecord],
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              *,
+              AIInstructions.extractCustomersFromFileInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .onCall { (csvRecordStream, _, _, _, _) =>
+              csvRecordStream.runCollect.map { csvRecordsCollected =>
+                csvRecordsCollected.toList shouldBe csvRecords
+                NonEmptyChunk.single(customerBookFileAIExtract)
+              }
+            }
+            .once(),
         )
 
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(customerBookFileAIExtract))),
-          extractFromCsvProcessingMessagesRefOpt = Some(extractFromCsvProcessingMessagesRef),
-        )
-
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioValue
 
@@ -449,11 +475,6 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           infoNotes = List("Processed 0 of 0 entries"),
           extractionNotes = Nil,
         )
-        extractFromCsvCallsRef.refValue shouldBe List(
-          (csvRecords, AIInstructions.extractCustomersFromFileInstructions)
-        )
-        extractFromCsvProcessingMessagesRef.refValue shouldBe List(None)
-        extractFromImageCallsRef.refValue shouldBe Nil
       }
 
       "send a WEBP upload to the image extraction" in new TestContext {
@@ -475,23 +496,36 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           extractionNotes = Nil,
         )
 
-        fileScannerMock.scan
-          .expects(
-            customerBookFileExtractByteStream,
-            customerBookFileExtractFileName.value,
-            SupportedMediaType.extractData,
-            customerBookFileServiceConfig.extractCustomersFileBytesMax,
-          )
-          .returns(ZIO.succeed(fileScannerScanOutput))
-          .once()
-
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromImageOptResult = Some(ZIO.succeed(customerBookFileAIExtract)),
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              customerBookFileExtractByteStream,
+              customerBookFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              customerBookFileServiceConfig.extractCustomersFileBytesMax,
+            )
+            .returns(ZIO.succeed(fileScannerScanOutput))
+            .once(),
+          (aiClientDataExtractionMock
+            .extractFromImage[CustomerBookFileAIExtract](
+              _: FileScannedPath,
+              _: SupportedMediaType,
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              fileScannerScanOutput.fileScannedPath,
+              SupportedMediaType.WEBP,
+              AIInstructions.extractCustomersFromImageInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(customerBookFileAIExtract))
+            .once(),
         )
 
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioValue
 
@@ -501,14 +535,6 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           infoNotes = List("Processed 0 of 0 entries"),
           extractionNotes = Nil,
         )
-        extractFromImageCallsRef.refValue shouldBe List(
-          (
-            fileScannerScanOutput.fileScannedPath,
-            SupportedMediaType.WEBP,
-            AIInstructions.extractCustomersFromImageInstructions,
-          )
-        )
-        extractFromCsvCallsRef.refValue shouldBe Nil
       }
 
       "merge spreadsheet batches in group order and replace the repeated top-level notes with the compacted notes" in new TestContext {
@@ -602,18 +628,33 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(fileScannerScanOutput.fileScannedPath)
             .returns(ZStream.fromIterable(csvRecords))
             .once(),
+          (aiClientDataExtractionMock
+            .extractFromCsv[CustomerBookFileAIExtract](
+              _: ZStream[Scope, ServiceError, CSVRecord],
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              *,
+              AIInstructions.extractCustomersFromFileInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .onCall { (csvRecordStream, _, _, _, _) =>
+              csvRecordStream.runCollect.map { csvRecordsCollected =>
+                csvRecordsCollected.toList shouldBe csvRecords
+                NonEmptyChunk(customerBookFileAIExtractBatch1, customerBookFileAIExtractBatch2)
+              }
+            }
+            .once(),
+          aiClientDataExtractionMock.noteCompaction
+            .expects(customerBookFileAIExtractNotesMerged, AIInstructions.compactCustomerBookFileNotesInstructions)
+            .returns(ZIO.succeed(noteCompactionOutput))
+            .once(),
         )
 
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromCsvOptResult =
-            Some(ZIO.succeed(NonEmptyChunk(customerBookFileAIExtractBatch1, customerBookFileAIExtractBatch2))),
-          noteCompactionCallsRefOpt = Some(noteCompactionCallsRef),
-          noteCompactionOptResult = Some(ZIO.succeed(noteCompactionOutput)),
-        )
-
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioValue
 
@@ -673,13 +714,6 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           ),
           extractionNotes = noteCompactionOutput.notes,
         )
-        extractFromCsvCallsRef.refValue shouldBe List(
-          (csvRecords, AIInstructions.extractCustomersFromFileInstructions)
-        )
-        noteCompactionCallsRef.refValue shouldBe List(
-          (customerBookFileAIExtractNotesMerged, AIInstructions.compactCustomerBookFileNotesInstructions)
-        )
-        extractFromImageCallsRef.refValue shouldBe Nil
       }
 
       "replace the top-level notes with the compacted notes when compaction returns as many notes as it was sent" in new TestContext {
@@ -694,15 +728,13 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
 
         aiExtractFromSpreadsheetWithTwoGroups(
           customerBookFileAIExtractNotesGroup,
+          customerBookFileAIExtractNotesMerged,
           ZIO.succeed(noteCompactionOutput),
         ) shouldBe CustomerBookFileAiExtractPostResponse(
           individualCandidates = Nil,
           businessCandidates = Nil,
           infoNotes = List("Processed 0 of 0 entries"),
           extractionNotes = noteCompactionOutput.notes,
-        )
-        noteCompactionCallsRef.refValue shouldBe List(
-          (customerBookFileAIExtractNotesMerged, AIInstructions.compactCustomerBookFileNotesInstructions)
         )
       }
 
@@ -714,15 +746,13 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
 
         aiExtractFromSpreadsheetWithTwoGroups(
           customerBookFileAIExtractNotesGroup,
+          customerBookFileAIExtractNotesMerged,
           ZIO.fail(serviceErrorNoteCompaction),
         ) shouldBe CustomerBookFileAiExtractPostResponse(
           individualCandidates = Nil,
           businessCandidates = Nil,
           infoNotes = List("Processed 0 of 0 entries"),
           extractionNotes = customerBookFileAIExtractNotesMerged,
-        )
-        noteCompactionCallsRef.refValue shouldBe List(
-          (customerBookFileAIExtractNotesMerged, AIInstructions.compactCustomerBookFileNotesInstructions)
         )
       }
 
@@ -733,15 +763,13 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
 
         aiExtractFromSpreadsheetWithTwoGroups(
           customerBookFileAIExtractNotesGroup,
+          customerBookFileAIExtractNotesMerged,
           ZIO.die(runtimeExceptionNoteCompaction),
         ) shouldBe CustomerBookFileAiExtractPostResponse(
           individualCandidates = Nil,
           businessCandidates = Nil,
           infoNotes = List("Processed 0 of 0 entries"),
           extractionNotes = customerBookFileAIExtractNotesMerged,
-        )
-        noteCompactionCallsRef.refValue shouldBe List(
-          (customerBookFileAIExtractNotesMerged, AIInstructions.compactCustomerBookFileNotesInstructions)
         )
       }
 
@@ -752,15 +780,13 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
 
         aiExtractFromSpreadsheetWithTwoGroups(
           customerBookFileAIExtractNotesGroup,
+          customerBookFileAIExtractNotesMerged,
           ZIO.succeed(noteCompactionOutput),
         ) shouldBe CustomerBookFileAiExtractPostResponse(
           individualCandidates = Nil,
           businessCandidates = Nil,
           infoNotes = List("Processed 0 of 0 entries"),
           extractionNotes = customerBookFileAIExtractNotesMerged,
-        )
-        noteCompactionCallsRef.refValue shouldBe List(
-          (customerBookFileAIExtractNotesMerged, AIInstructions.compactCustomerBookFileNotesInstructions)
         )
       }
 
@@ -775,15 +801,13 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
 
         aiExtractFromSpreadsheetWithTwoGroups(
           customerBookFileAIExtractNotesGroup,
+          customerBookFileAIExtractNotesMerged,
           ZIO.succeed(noteCompactionOutput),
         ) shouldBe CustomerBookFileAiExtractPostResponse(
           individualCandidates = Nil,
           businessCandidates = Nil,
           infoNotes = List("Processed 0 of 0 entries"),
           extractionNotes = customerBookFileAIExtractNotesMerged,
-        )
-        noteCompactionCallsRef.refValue shouldBe List(
-          (customerBookFileAIExtractNotesMerged, AIInstructions.compactCustomerBookFileNotesInstructions)
         )
       }
 
@@ -816,23 +840,36 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             extractionNotes = Nil,
           )
 
-        fileScannerMock.scan
-          .expects(
-            customerBookFileExtractByteStream,
-            customerBookFileExtractFileName.value,
-            SupportedMediaType.extractData,
-            customerBookFileServiceConfig.extractCustomersFileBytesMax,
-          )
-          .returns(ZIO.succeed(fileScannerScanOutput))
-          .once()
-
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromImageOptResult = Some(ZIO.succeed(customerBookFileAIExtract)),
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              customerBookFileExtractByteStream,
+              customerBookFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              customerBookFileServiceConfig.extractCustomersFileBytesMax,
+            )
+            .returns(ZIO.succeed(fileScannerScanOutput))
+            .once(),
+          (aiClientDataExtractionMock
+            .extractFromImage[CustomerBookFileAIExtract](
+              _: FileScannedPath,
+              _: SupportedMediaType,
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              fileScannerScanOutput.fileScannedPath,
+              SupportedMediaType.JPEG,
+              AIInstructions.extractCustomersFromImageInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(customerBookFileAIExtract))
+            .once(),
         )
 
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioValue
 
@@ -892,15 +929,24 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(fileScannerScanOutput.fileScannedPath)
             .returns(ZStream.fromIterable(csvRecords))
             .once(),
+          (aiClientDataExtractionMock
+            .extractFromCsv[CustomerBookFileAIExtract](
+              _: ZStream[Scope, ServiceError, CSVRecord],
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              *,
+              AIInstructions.extractCustomersFromFileInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(NonEmptyChunk.single(customerBookFileAIExtract)))
+            .once(),
         )
 
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(customerBookFileAIExtract))),
-        )
-
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioValue
 
@@ -960,15 +1006,24 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(fileScannerScanOutput.fileScannedPath)
             .returns(ZStream.fromIterable(csvRecords))
             .once(),
+          (aiClientDataExtractionMock
+            .extractFromCsv[CustomerBookFileAIExtract](
+              _: ZStream[Scope, ServiceError, CSVRecord],
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              *,
+              AIInstructions.extractCustomersFromFileInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(NonEmptyChunk.single(customerBookFileAIExtract)))
+            .once(),
         )
 
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(customerBookFileAIExtract))),
-        )
-
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioValue
 
@@ -1040,15 +1095,24 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(fileScannerScanOutput.fileScannedPath)
             .returns(ZStream.fromIterable(csvRecords))
             .once(),
+          (aiClientDataExtractionMock
+            .extractFromCsv[CustomerBookFileAIExtract](
+              _: ZStream[Scope, ServiceError, CSVRecord],
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              *,
+              AIInstructions.extractCustomersFromFileInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(NonEmptyChunk.single(customerBookFileAIExtract)))
+            .once(),
         )
 
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(customerBookFileAIExtract))),
-        )
-
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioValue
 
@@ -1200,16 +1264,24 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(fileScannerScanOutput.fileScannedPath)
             .returns(ZStream.fromIterable(csvRecords))
             .once(),
+          (aiClientDataExtractionMock
+            .extractFromCsv[CustomerBookFileAIExtract](
+              _: ZStream[Scope, ServiceError, CSVRecord],
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              *,
+              AIInstructions.extractCustomersFromFileInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(NonEmptyChunk(customerBookFileAIExtractBatch1, customerBookFileAIExtractBatch2)))
+            .once(),
         )
 
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromCsvOptResult =
-            Some(ZIO.succeed(NonEmptyChunk(customerBookFileAIExtractBatch1, customerBookFileAIExtractBatch2))),
-        )
-
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioValue
 
@@ -1302,23 +1374,36 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           extractionNotes = extractionNotes,
         )
 
-        fileScannerMock.scan
-          .expects(
-            customerBookFileExtractByteStream,
-            customerBookFileExtractFileName.value,
-            SupportedMediaType.extractData,
-            customerBookFileServiceConfig.extractCustomersFileBytesMax,
-          )
-          .returns(ZIO.succeed(fileScannerScanOutput))
-          .once()
-
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromImageOptResult = Some(ZIO.succeed(customerBookFileAIExtract)),
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              customerBookFileExtractByteStream,
+              customerBookFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              customerBookFileServiceConfig.extractCustomersFileBytesMax,
+            )
+            .returns(ZIO.succeed(fileScannerScanOutput))
+            .once(),
+          (aiClientDataExtractionMock
+            .extractFromImage[CustomerBookFileAIExtract](
+              _: FileScannedPath,
+              _: SupportedMediaType,
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              fileScannerScanOutput.fileScannedPath,
+              SupportedMediaType.JPEG,
+              AIInstructions.extractCustomersFromImageInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(customerBookFileAIExtract))
+            .once(),
         )
 
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioValue
 
@@ -1472,17 +1557,24 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(fileScannerScanOutput.fileScannedPath)
             .returns(ZStream.fromIterable(csvRecords))
             .once(),
+          (aiClientDataExtractionMock
+            .extractFromCsv[CustomerBookFileAIExtract](
+              _: ZStream[Scope, ServiceError, CSVRecord],
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              *,
+              AIInstructions.extractCustomersFromFileInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(NonEmptyChunk(customerBookFileAIExtractBatch, customerBookFileAIExtractBatch)))
+            .once(),
         )
 
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromCsvOptResult =
-            Some(ZIO.succeed(NonEmptyChunk(customerBookFileAIExtractBatch, customerBookFileAIExtractBatch))),
-          noteCompactionCallsRefOpt = Some(noteCompactionCallsRef),
-        )
-
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioValue
 
@@ -1492,7 +1584,6 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           infoNotes = List("Processed 4 of 4 entries"),
           extractionNotes = Nil,
         )
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "not mark names that differ only in letter case as duplicates" in new TestContext {
@@ -3961,16 +4052,24 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(fileScannerScanOutput.fileScannedPath)
             .returns(ZStream.fromIterable(csvRecords))
             .once(),
+          (aiClientDataExtractionMock
+            .extractFromCsv[CustomerBookFileAIExtract](
+              _: ZStream[Scope, ServiceError, CSVRecord],
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              *,
+              AIInstructions.extractCustomersFromFileInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(NonEmptyChunk(customerBookFileAIExtractBatch1, customerBookFileAIExtractBatch2)))
+            .once(),
         )
 
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromCsvOptResult =
-            Some(ZIO.succeed(NonEmptyChunk(customerBookFileAIExtractBatch1, customerBookFileAIExtractBatch2))),
-        )
-
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService(aiClientDataExtraction)
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioValue
 
@@ -4531,18 +4630,11 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           .returns(ZIO.fail(serviceErrorScan))
           .once()
 
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[CustomerBookFileAIExtract](
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-        )
-
-        val serviceError = buildCustomerBookFileService(aiClientDataExtraction)
+        val serviceError = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioError
 
         serviceError shouldBe serviceErrorScan
-        extractFromImageCallsRef.refValue shouldBe Nil
-        extractFromCsvCallsRef.refValue shouldBe Nil
       }
 
       "fail with an UnexpectedError when image AI extraction fails" in new TestContext {
@@ -4556,35 +4648,40 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         )
         val serviceErrorAI = ServiceError.InternalServerError.UnexpectedError(error = "AI extraction failed")
 
-        fileScannerMock.scan
-          .expects(
-            customerBookFileExtractByteStream,
-            customerBookFileExtractFileName.value,
-            SupportedMediaType.extractData,
-            customerBookFileServiceConfig.extractCustomersFileBytesMax,
-          )
-          .returns(ZIO.succeed(fileScannerScanOutput))
-          .once()
-
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[CustomerBookFileAIExtract](
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromImageOptResult = Some(ZIO.fail(serviceErrorAI)),
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              customerBookFileExtractByteStream,
+              customerBookFileExtractFileName.value,
+              SupportedMediaType.extractData,
+              customerBookFileServiceConfig.extractCustomersFileBytesMax,
+            )
+            .returns(ZIO.succeed(fileScannerScanOutput))
+            .once(),
+          (aiClientDataExtractionMock
+            .extractFromImage[CustomerBookFileAIExtract](
+              _: FileScannedPath,
+              _: SupportedMediaType,
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              fileScannerScanOutput.fileScannedPath,
+              SupportedMediaType.JPEG,
+              AIInstructions.extractCustomersFromImageInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.fail(serviceErrorAI))
+            .once(),
         )
 
-        val serviceError = buildCustomerBookFileService(aiClientDataExtraction)
+        val serviceError = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioError
 
         serviceError shouldBe serviceErrorAI
-        extractFromImageCallsRef.refValue shouldBe List(
-          (
-            fileScannerScanOutput.fileScannedPath,
-            SupportedMediaType.JPEG,
-            AIInstructions.extractCustomersFromImageInstructions,
-          )
-        )
-        extractFromCsvCallsRef.refValue shouldBe Nil
       }
 
       "fail with an UnexpectedError when spreadsheet conversion fails" in new TestContext {
@@ -4613,22 +4710,31 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(fileScannerScanOutput.fileScannedPath)
             .returns(ZStream.fail(serviceErrorConversion))
             .once(),
+          (aiClientDataExtractionMock
+            .extractFromCsv[CustomerBookFileAIExtract](
+              _: ZStream[Scope, ServiceError, CSVRecord],
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              *,
+              AIInstructions.extractCustomersFromFileInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .onCall { (csvRecordStream, _, _, _, _) =>
+              csvRecordStream.runCollect *>
+                ZIO.die(new IllegalStateException("The CSV record stream should fail with the conversion error"))
+            }
+            .once(),
         )
 
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[CustomerBookFileAIExtract](
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          noteCompactionCallsRefOpt = Some(noteCompactionCallsRef),
-        )
-
-        val serviceError = buildCustomerBookFileService(aiClientDataExtraction)
+        val serviceError = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioError
 
         serviceError shouldBe serviceErrorConversion
-        extractFromCsvCallsRef.refValue shouldBe Nil
-        extractFromImageCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "fail with an UnexpectedError when spreadsheet AI extraction fails" in new TestContext {
@@ -4658,23 +4764,33 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(fileScannerScanOutput.fileScannedPath)
             .returns(ZStream.fromIterable(csvRecords))
             .once(),
+          (aiClientDataExtractionMock
+            .extractFromCsv[CustomerBookFileAIExtract](
+              _: ZStream[Scope, ServiceError, CSVRecord],
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              *,
+              AIInstructions.extractCustomersFromFileInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .onCall { (csvRecordStream, _, _, _, _) =>
+              csvRecordStream.runCollect.flatMap { csvRecordsCollected =>
+                csvRecordsCollected.toList shouldBe csvRecords
+                ZIO.fail(serviceErrorAI)
+              }
+            }
+            .once(),
         )
 
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[CustomerBookFileAIExtract](
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromCsvOptResult = Some(ZIO.fail(serviceErrorAI)),
-        )
-
-        val serviceError = buildCustomerBookFileService(aiClientDataExtraction)
+        val serviceError = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
           .zioError
 
         serviceError shouldBe serviceErrorAI
-        extractFromCsvCallsRef.refValue shouldBe List(
-          (csvRecords, AIInstructions.extractCustomersFromFileInstructions)
-        )
-        extractFromImageCallsRef.refValue shouldBe Nil
       }
     }
   }
@@ -4684,23 +4800,18 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
       extractCustomersFileBytesMax = 20971520L
     )
 
-    val fileScannerMock     = mock[FileScanner]
-    val spreadsheetToolMock = mock[SpreadsheetTool]
+    val fileScannerMock            = mock[FileScanner]
+    val spreadsheetToolMock        = mock[SpreadsheetTool]
+    val aiClientDataExtractionMock = mock[AIClientDataExtraction]
 
-    val extractFromImageCallsRef = Ref.make(List.empty[(FileScannedPath, SupportedMediaType, String)]).zioValue
-    val extractFromCsvCallsRef   = Ref.make(List.empty[(List[CSVRecord], String)]).zioValue
-    val noteCompactionCallsRef   = Ref.make(List.empty[(List[String], String)]).zioValue
-
-    def buildCustomerBookFileService(
-        aiClientDataExtraction: AIClientDataExtraction
-    ): CustomerBookFileService[ServiceTask] = ZIO
+    def buildCustomerBookFileService: CustomerBookFileService[ServiceTask] = ZIO
       .service[CustomerBookFileService[ServiceTask]]
       .provide(
         CustomerBookFileService.local,
         ZLayer.succeed(customerBookFileServiceConfig),
         ZLayer.succeed(fileScannerMock),
         ZLayer.succeed(spreadsheetToolMock),
-        ZLayer.succeed(aiClientDataExtraction),
+        ZLayer.succeed(aiClientDataExtractionMock),
       )
       .zioValue
 
@@ -4715,23 +4826,36 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
         fileBytesSize = FileBytesSize.assume(1L),
       )
 
-      fileScannerMock.scan
-        .expects(
-          customerBookFileExtractByteStream,
-          customerBookFileExtractFileName.value,
-          SupportedMediaType.extractData,
-          customerBookFileServiceConfig.extractCustomersFileBytesMax,
-        )
-        .returns(ZIO.succeed(fileScannerScanOutput))
-        .once()
-
-      buildCustomerBookFileService(
-        new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromImageOptResult = Some(ZIO.succeed(customerBookFileAIExtract)),
-        )
+      inSequence(
+        fileScannerMock.scan
+          .expects(
+            customerBookFileExtractByteStream,
+            customerBookFileExtractFileName.value,
+            SupportedMediaType.extractData,
+            customerBookFileServiceConfig.extractCustomersFileBytesMax,
+          )
+          .returns(ZIO.succeed(fileScannerScanOutput))
+          .once(),
+        (aiClientDataExtractionMock
+          .extractFromImage[CustomerBookFileAIExtract](
+            _: FileScannedPath,
+            _: SupportedMediaType,
+            _: String,
+            _: Option[String],
+          )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+          .expects(
+            fileScannerScanOutput.fileScannedPath,
+            SupportedMediaType.JPEG,
+            AIInstructions.extractCustomersFromImageInstructions,
+            None,
+            ai.customerBookFileAIExtractOpenAIJsonSchema,
+            ai.customerBookFileAIExtractCodec,
+          )
+          .returns(ZIO.succeed(customerBookFileAIExtract))
+          .once(),
       )
+
+      buildCustomerBookFileService
         .aiExtract(
           arbitrarySample[OrganizationID],
           customerBookFileExtractFileName,
@@ -4743,6 +4867,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
 
     def aiExtractFromSpreadsheetWithTwoGroups(
         customerBookFileAIExtractNotesGroup: List[String],
+        customerBookFileAIExtractNotesMerged: List[String],
         noteCompactionResult: IO[ServiceError, NoteCompactionOutput],
     ): CustomerBookFileAiExtractPostResponse = {
       val customerBookFileExtractFileName              = CustomerBookFileExtractFileName("customers.csv")
@@ -4778,18 +4903,28 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           .expects(fileScannerScanOutput.fileScannedPath)
           .returns(ZStream.fromIterable(csvRecords))
           .once(),
+        (aiClientDataExtractionMock
+          .extractFromCsv[CustomerBookFileAIExtract](
+            _: ZStream[Scope, ServiceError, CSVRecord],
+            _: String,
+            _: Option[String],
+          )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+          .expects(
+            *,
+            AIInstructions.extractCustomersFromFileInstructions,
+            None,
+            ai.customerBookFileAIExtractOpenAIJsonSchema,
+            ai.customerBookFileAIExtractCodec,
+          )
+          .returns(ZIO.succeed(NonEmptyChunk(customerBookFileAIExtractGroup, customerBookFileAIExtractGroup)))
+          .once(),
+        aiClientDataExtractionMock.noteCompaction
+          .expects(customerBookFileAIExtractNotesMerged, AIInstructions.compactCustomerBookFileNotesInstructions)
+          .returns(noteCompactionResult)
+          .once(),
       )
 
-      buildCustomerBookFileService(
-        new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          extractFromCsvOptResult =
-            Some(ZIO.succeed(NonEmptyChunk(customerBookFileAIExtractGroup, customerBookFileAIExtractGroup))),
-          noteCompactionCallsRefOpt = Some(noteCompactionCallsRef),
-          noteCompactionOptResult = Some(noteCompactionResult),
-        )
-      )
+      buildCustomerBookFileService
         .aiExtract(
           arbitrarySample[OrganizationID],
           customerBookFileExtractFileName,
