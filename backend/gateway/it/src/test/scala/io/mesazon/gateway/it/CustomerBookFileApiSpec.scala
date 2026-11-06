@@ -415,6 +415,85 @@ class CustomerBookFileApiSpec extends GatewayAcceptanceTest, RepositoryArbitrari
         s3TestClient.listObjectKeys(organizationMediaBucket).zioValue shouldBe List.empty
       }
 
+      "treat blank processing guidance as no guidance without storing data" in withContext { context =>
+        import context.*
+
+        val onboardStage                = Random.shuffle(OnboardStage.completedStages).zioValue.head
+        val userDetailsRow              = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
+        val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
+          userID = userDetailsRow.userID,
+          userRole = organizationUserRoleAllowed,
+        )
+        val customerBookFileExtractFileName  = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+        val customerBookFileExtractFileBytes =
+          ZStream.fromResource(s"assets/${customerBookFileExtractFileName.value}").runCollect.zioValue
+        val customerBookFileProcessingMessage             = "   "
+        val customerBookFileAiExtractPostResponseExpected = CustomerBookFileAiExtractPostResponse(
+          individualCandidates = List(
+            CustomerIndividualCandidate(
+              fullName = Some(CustomerFullName.assume("John Smith")),
+              emails = List(
+                CustomerEmailEntry(email = CustomerEmail.assume("john.smith@example.com"), isDefault = true)
+              ),
+              phoneNumbers = List.empty,
+              addresses = List.empty,
+              inferredFields = List.empty,
+              missingFields = List.empty,
+              duplicateFields = List.empty,
+              needsAttention = false,
+              extractionNotes = List.empty,
+            ),
+            CustomerIndividualCandidate(
+              fullName = Some(CustomerFullName.assume("Jane Doe")),
+              emails = List(
+                CustomerEmailEntry(email = CustomerEmail.assume("jane.doe@example.com"), isDefault = true)
+              ),
+              phoneNumbers = List.empty,
+              addresses = List.empty,
+              inferredFields = List.empty,
+              missingFields = List.empty,
+              duplicateFields = List.empty,
+              needsAttention = false,
+              extractionNotes = List.empty,
+            ),
+          ),
+          businessCandidates = List.empty,
+          infoNotes = List("Processed 2 of 2 entries"),
+          extractionNotes = List.empty,
+        )
+
+        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+
+        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+
+        val customerBookFileAiExtractPostResponse = gatewayClient
+          .customerBookFileAiExtractPost[smithy.InternalServerError](
+            Some(organizationUserRow.organizationID),
+            Some(customerBookFileExtractFileName),
+            customerBookFileExtractFileBytes,
+            Some(accessJwt.accessToken),
+            Some(customerBookFileProcessingMessage),
+          )
+          .zioValue
+
+        customerBookFileAiExtractPostResponse.code shouldBe StatusCode.Ok
+        customerBookFileAiExtractPostResponse.body shouldBe Right(customerBookFileAiExtractPostResponseExpected)
+
+        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List.empty
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          .zioValue shouldBe List.empty
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+          .zioValue shouldBe List.empty
+        postgresClient
+          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+          .zioValue shouldBe List.empty
+        s3TestClient.listObjectKeys(organizationMediaBucket).zioValue shouldBe List.empty
+      }
+
       "extract customer candidates from a CSV read in several groups, compacting the repeated general notes, without storing data" in withContext {
         context =>
           import context.*
@@ -435,7 +514,7 @@ class CustomerBookFileApiSpec extends GatewayAcceptanceTest, RepositoryArbitrari
             individualCandidates = List.empty,
             businessCandidates = List.empty,
             infoNotes = List("Processed 0 of 0 entries"),
-            extractionNotes = List("Column Balance was ignored"),
+            extractionNotes = List("Column Balance was ignored across the file"),
           )
 
           postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
@@ -833,11 +912,11 @@ class CustomerBookFileApiSpec extends GatewayAcceptanceTest, RepositoryArbitrari
 
         val onboardStage                = Random.shuffle(OnboardStage.completedStages).zioValue.head
         val userDetailsRow              = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRoleAllowed =
+        val organizationUserRoleInvalid =
           Random.shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles).zioValue.head
         val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,
-          userRole = organizationUserRoleAllowed,
+          userRole = organizationUserRoleInvalid,
         )
         val customerBookFileExtractFileName  = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
         val customerBookFileExtractFileBytes =
@@ -877,8 +956,9 @@ class CustomerBookFileApiSpec extends GatewayAcceptanceTest, RepositoryArbitrari
       "fail with a Forbidden when onboarding is incomplete without storing data" in withContext { context =>
         import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        val onboardStageInvalid =
+          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
+        val userDetailsRow              = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
         val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
         val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
           userID = userDetailsRow.userID,

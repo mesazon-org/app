@@ -1158,6 +1158,40 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           noteCompactionRequestMappings(0).count shouldBe 1
       }
 
+      "fail with an UnexpectedError when each response exceeds the note compaction timeout after three attempts" in withContext {
+        context =>
+          import context.*
+
+          val aiClientDataExtractionConfigTimeout =
+            aiClientDataExtractionConfig.copy(noteCompactionRequestTimeout = Duration.fromMillis(100))
+
+          val aiClientDataExtraction = ZIO
+            .service[AIClientDataExtraction]
+            .provide(
+              AIClientDataExtraction.live,
+              ZLayer.succeed(aiClientDataExtractionConfigTimeout),
+              SttpTestBackend.live,
+            )
+            .zioValue
+
+          val serviceError = aiClientDataExtraction
+            .noteCompaction(List("AI_CLIENT_SPEC_TIMEOUT"), "Combine these notes")
+            .zioError
+
+          serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+          serviceError.message shouldBe "Unable to send message to AI"
+
+          val noteCompactionRequestMappings =
+            wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+          noteCompactionRequestMappings.size shouldBe aiClientDataExtractionConfigTimeout.sendMaxRetries + 1
+          noteCompactionRequestMappings.foreach { noteCompactionRequestMapping =>
+            noteCompactionRequestMapping.mapping.method shouldBe "POST"
+            noteCompactionRequestMapping.mapping.url shouldBe "/v1/chat/completions"
+            noteCompactionRequestMapping.count shouldBe aiClientDataExtractionConfigTimeout.sendMaxRetries + 1
+          }
+      }
+
       "fail with an UnexpectedError when the AI service returns undecodable structured-output JSON" in withContext {
         context =>
           import context.*
