@@ -1,6 +1,6 @@
 # Alternate HTTP transport changes
 
-For non-Smithy endpoints read [feature endpoints](../features/flow/01-endpoints.md), [Tapir](../standards/tapir.md), this file, and [Authentication](authentication.md). Tapir is only for transports Smithy cannot express; currently the [Organization Management](../features/organization-management.md#logo-upload) logo upload, [Catalogue](../features/catalogue.md#image-upload) image upload, and [Catalogue file extraction](../features/catalogue.md#catalogue-file-extraction), and [Customer Book extraction](../features/customer-book.md#image-csv-and-excel-extraction), all streaming with a separate size limit.
+For non-Smithy endpoints read [feature endpoints](../features/flow/01-endpoints.md), [Tapir](../standards/tapir.md), this file, and [Authentication](authentication.md). Tapir is only for transports Smithy cannot express; currently the [Organization Management](../features/organization-management.md#logo-upload) logo upload, [Catalogue](../features/catalogue.md#image-upload) image upload, [Catalogue file extraction](../features/catalogue.md#catalogue-file-extraction), and [Customer Book extraction](../features/customer-book.md#image-csv-and-excel-extraction), all streaming with a separate size limit.
 
 ## Files
 

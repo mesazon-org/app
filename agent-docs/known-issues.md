@@ -163,7 +163,7 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 
 - **Status:** Mitigated 2026-09-13
 - **Severity:** Medium
-- **Signature:** `gateway-it/testOnly *GatewayAcceptanceSpec -- -z /extract/customers` (a route since removed with customer extraction) builds the images and reports success, but executes zero tests. Running `FileApiSpec` directly instead bypasses the parent context initialization. Running ScalaTest's standalone runner from the repository root can also abort with `Unable to parse YAML file` / missing `compose.yaml` before starting tests.
+- **Signature:** `gateway-it/testOnly *GatewayAcceptanceSpec -- -z /extract/customers` (the old customer-extraction route, since replaced by `/customer-book/file/ai/extract`) builds the images and reports success, but executes zero tests. Running `FileApiSpec` directly instead bypasses the parent context initialization. Running ScalaTest's standalone runner from the repository root can also abort with `Unable to parse YAML file` / missing `compose.yaml` before starting tests.
 - **Cause:** sbt's ScalaTest wildcard test selector targets the selected parent's own test names, not its nested specs. The compose harness also depends on the gateway-it working directory. Nested suite selection is supported by the standalone [ScalaTest runner](https://www.scalatest.org/user_guide/using_the_runner), not sbt's suite-argument parser.
 - **Fix:** After publishing the current gateway and WireMock images, select the nested file suite through its parent and set the forked runner's working directory for this invocation only:
   ```sh
@@ -198,4 +198,4 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Cause:** `gateway-core` sets `Settings.testAfterDockerPublish(backendWiremock / Docker / publishLocal)` (`build.sbt`), so the `Test / test*` tasks first publish the WireMock image.
 - **Fix:** Start Docker, or run the same specs through `Test / testOnly`, which skips the Docker publish: `sbt "gateway-core/Test/testOnly io.mesazon.gateway.fun.CustomerBookFileServiceSpec"`.
 - **Prevention:** The `CLAUDE.md` command `gateway-core/testOnly io.mesazon.gateway.fun.*` ("no containers") needs Docker for the image publish. Use the `Test/testOnly` form when Docker is down; acceptance (`gateway-it/test`) always needs Docker.
-- **Verify:** With Docker stopped, the `Test/testOnly` command runs the spec (34 tests for `CustomerBookFileServiceSpec` on 2026-11-02) and reports `All tests passed`.
+- **Verify:** With Docker stopped, the `Test/testOnly` command runs the spec (`CustomerBookFileServiceSpec` has 53 tests) and reports `All tests passed`.
