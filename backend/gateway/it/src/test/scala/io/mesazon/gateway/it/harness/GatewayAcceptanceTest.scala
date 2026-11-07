@@ -1,21 +1,14 @@
 package io.mesazon.gateway.it.harness
 
+import com.dimafeng.testcontainers.DockerComposeContainer
 import io.mesazon.testkit.base.ZWordSpecBase
-import zio.ZIO
+import zio.*
 
-trait GatewayAcceptanceTest extends ZWordSpecBase {
+abstract class GatewayAcceptanceTest(dockerComposeContainer: => DockerComposeContainer) extends ZWordSpecBase {
 
-  @volatile private var context: GatewayItContext = scala.compiletime.uninitialized
-
-  private[it] def setContext(context: GatewayItContext): Unit = this.context = context
-
-  protected def withContext[A](f: GatewayItContext => A): A = f(context)
-
-  override def beforeEach(): Unit = {
-    super.beforeEach()
-    val resetState = ZIO.foreachDiscard(context.repositoryConfig.allTableNames)(tableName =>
-      context.postgresClient.truncateTable(context.repositoryConfig.schema, tableName)
-    ) *> context.mailHogClient.clearInbox() *> context.s3TestClient.emptyAllBuckets()
-    resetState.zioValue
-  }
+  protected def withContext[A](f: GatewayItContext => Task[A]): A =
+    ZIO
+      .serviceWithZIO[GatewayItContext](f)
+      .provide(GatewayItContext.live, ZLayer.succeed(dockerComposeContainer))
+      .zioValue
 }

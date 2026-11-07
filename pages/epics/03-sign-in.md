@@ -69,7 +69,7 @@ Each organization in the answer carries the person's **role** there — Owner, A
 
 #### Requirements
 
-1. Every failed attempt counts against the account. Past the limit the account is blocked for a period, and the correct password is refused too while the block lasts.
+1. Every failed attempt counts against the account. After 10 counted attempts the next one is refused, even with the correct password, until 15 minutes pass with no attempts at all. Every attempt, including one made while blocked, starts the 15 minutes again.
 2. A successful sign in clears the count, so ordinary mistyping never builds up to a block.
 3. Organizations in the answer are ordered with the most recently joined first.
 
@@ -109,7 +109,7 @@ Request body is empty. The credentials travel in the request's authorization hea
 - The person is signed in with a fresh session.
 - Every other session on the account ends, on every device, and a password reset still in progress stops working.
 - The failed-attempt count is cleared.
-- On a refusal nothing starts and nothing ends. A wrong password, or any attempt while the account is blocked, adds one to the attempt count; every other refusal changes nothing.
+- On a refusal nothing starts and nothing ends. A wrong password, or any attempt while the account is blocked (even with the right password), counts as one more attempt and starts the 15 minutes again. Every other refusal changes nothing.
 
 #### Http Error Responses
 
@@ -128,7 +128,7 @@ Everything above describes what the product does today. Nothing in this section 
 
 Every attempt, even one made during a block, restarts the block period, and only a successful sign in clears the count — which the block prevents. Anyone who knows an email address can keep trying slowly and hold the owner out for good, and the owner has no way to clear it.
 
-**To decide:** whether attempts during a block should extend it, whether the count should fade on its own, and whether the owner gets a way out, such as a successful password reset clearing the block.
+**To decide:** whether attempts during a block should restart it, whether the count should fade on its own, and whether the owner gets a way out, such as a successful password reset clearing the block.
 
 #### 2. Sign in reveals whether an email address has an account
 

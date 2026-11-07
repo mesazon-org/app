@@ -4,7 +4,7 @@ import io.mesazon.domain.gateway.OrganizationUserRole
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.smithy as gatewaySmithy
 import io.scalaland.chimney.dsl.*
-import org.http4s.HttpApp
+import org.http4s.{HttpApp, Request}
 import smithy4s.Hints
 import smithy4s.http4s.ServerEndpointMiddleware
 import zio.*
@@ -12,11 +12,15 @@ import zio.interop.catz.*
 
 object ServerMiddleware {
 
-  // TODO: Test this middleware (issue https://github.com/mesazon-org/app/issues/25)
+  private val DrainTimeout: Duration = 5.seconds
+
   private final class ServerMiddlewareImpl(
       authorizationService: AuthorizationService[Task],
       authenticationService: AuthenticationService[Task],
   ) extends ServerEndpointMiddleware.Simple[Task] {
+
+    private def drainRequestBody(request: Request[Task]): UIO[Unit] =
+      request.body.compile.drain.timeout(DrainTimeout).ignore
 
     override def prepareWithHints(serviceHints: Hints, endpointHints: Hints): HttpApp[Task] => HttpApp[Task] =
       (inputApp: HttpApp[Task]) =>
@@ -29,7 +33,9 @@ object ServerMiddleware {
                     ZIO.fail(gatewaySmithy.InternalServerError())
                 )
               case _ =>
-                HttpApp[Task](request => authenticationService.auth(request) *> inputApp(request))
+                HttpApp[Task](request =>
+                  authenticationService.auth(request).tapError(_ => drainRequestBody(request)) *> inputApp(request)
+                )
             }
           case (None, Some(_)) =>
             endpointHints.get[smithy.api.Auth] match {
@@ -38,11 +44,13 @@ object ServerMiddleware {
                   .get[gatewaySmithy.OrganizationUserRolesAllowed]
                   .map(_.roles.transformInto[List[OrganizationUserRole]])
                 HttpApp[Task](request =>
-                  authorizationService.auth(
-                    request,
-                    serviceHints.get[gatewaySmithy.CompletedOnboardStage].isDefined,
-                    organizationUserRolesAllowedOpt,
-                  ) *> inputApp(request)
+                  authorizationService
+                    .auth(
+                      request,
+                      serviceHints.get[gatewaySmithy.CompletedOnboardStage].isDefined,
+                      organizationUserRolesAllowedOpt,
+                    )
+                    .tapError(_ => drainRequestBody(request)) *> inputApp(request)
                 )
               case _ =>
                 HttpApp[Task](_ =>

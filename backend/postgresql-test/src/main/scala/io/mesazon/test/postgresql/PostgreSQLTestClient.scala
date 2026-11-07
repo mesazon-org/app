@@ -1,6 +1,7 @@
 package io.mesazon.test.postgresql
 
 import com.dimafeng.testcontainers.*
+import com.zaxxer.hikari.HikariDataSource
 import io.github.gaelrenoux.tranzactio.doobie.{tzio, Database, DbContext, TranzactIO}
 import io.github.gaelrenoux.tranzactio.{DatabaseOps, DbException}
 import org.postgresql.ds.PGSimpleDataSource
@@ -27,8 +28,9 @@ case class PostgreSQLTestClient(
      """.query[Boolean].unique
     }
 
-  private def truncateTableQuery(schema: String, table: String): TranzactIO[Unit] = {
-    val queryFragment = sql"""TRUNCATE TABLE """ ++ Fragment.const(s"$schema.$table CASCADE")
+  private def truncateTableQuery(schema: String, tables: List[String]): TranzactIO[Unit] = {
+    val queryFragment =
+      fr"TRUNCATE TABLE" ++ Fragment.const(tables.map(table => s"$schema.$table").mkString(", ")) ++ fr0"CASCADE"
     tzio {
       queryFragment.update.run.map(_ => ())
     }
@@ -39,8 +41,8 @@ case class PostgreSQLTestClient(
   def checkIfTableExists(schema: String, table: String): Task[Boolean] =
     database.transactionOrDie(checkIfTableExistsQuery(schema, table))
 
-  def truncateTable(schema: String, table: String): Task[Unit] =
-    database.transactionOrDie(truncateTableQuery(schema, table))
+  def truncateTable(schema: String, tables: String*): Task[Unit] =
+    database.transactionOrDie(truncateTableQuery(schema, tables.toList))
 
   def executeQuery[A](query: ConnectionIO[A]): IO[DbException, A] = database.transactionOrDie(tzio(query))
 
@@ -150,7 +152,27 @@ object PostgreSQLTestClient {
     } yield datasource
   }
 
+  private val hikariDatasourceLive = ZLayer.scoped {
+    for {
+      config     <- ZIO.service[PostgreSQLTestClientConfig]
+      datasource <- ZIO.acquireRelease(ZIO.attempt {
+        val hikariDataSource = new HikariDataSource()
+        hikariDataSource.setPoolName("postgresql-test-client")
+        hikariDataSource.setDriverClassName(config.driver)
+        hikariDataSource.setJdbcUrl(config.url)
+        hikariDataSource.setUsername(config.username)
+        hikariDataSource.setPassword(config.password)
+        hikariDataSource.setMaximumPoolSize(3)
+        hikariDataSource.setMinimumIdle(0)
+        hikariDataSource
+      })(dataSource => ZIO.attemptBlocking(dataSource.close()).orDie)
+    } yield datasource
+  }
+
   private given DbContext = DbContext(logHandler)
 
   val live = datasourceLive >>> Database.fromDatasource >>> ZLayer.fromFunction(PostgreSQLTestClient.apply)
+
+  val liveScoped =
+    hikariDatasourceLive >>> Database.fromDatasource >>> ZLayer.fromFunction(PostgreSQLTestClient.apply)
 }

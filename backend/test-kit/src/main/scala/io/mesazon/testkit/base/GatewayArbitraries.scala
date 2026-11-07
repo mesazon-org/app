@@ -11,10 +11,19 @@ trait GatewayArbitraries extends IronRefinedTypeArbitraries {
       phoneRegion <- Gen.oneOf(Seq("CY", "GB").map(PhoneRegion.assume))
       phoneCountryCode =
         if (phoneRegion.value == "CY") PhoneCountryCode.assume("+357") else PhoneCountryCode.assume("+44")
+      // Ranges libphonenumber accepts as mobiles of exactly this region; GB stays within 77[1-7] because
+      // other +44 7 ranges include Jersey, Guernsey and Isle of Man numbers
       phoneNationalNumber <-
         if (phoneCountryCode.value == "+357")
-          Gen.oneOf("99123123", "94232312", "95123123").map(PhoneNationalNumber.assume)
-        else Gen.oneOf("7754767565", "7423123243").map(PhoneNationalNumber.assume)
+          for {
+            phoneNationalNumberPrefix <- Gen.oneOf("94", "95", "96", "97", "99")
+            phoneNationalNumberSuffix <- Gen.choose(0, 999999)
+          } yield PhoneNationalNumber.assume(f"$phoneNationalNumberPrefix$phoneNationalNumberSuffix%06d")
+        else
+          for {
+            phoneNationalNumberPrefix <- Gen.oneOf("771", "772", "773", "774", "775", "776", "777")
+            phoneNationalNumberSuffix <- Gen.choose(0, 9999999)
+          } yield PhoneNationalNumber.assume(f"$phoneNationalNumberPrefix$phoneNationalNumberSuffix%07d")
       phoneNumberE164 = PhoneNumberE164.assume(s"$phoneCountryCode$phoneNationalNumber")
     } yield PhoneNumber(phoneRegion, phoneCountryCode, phoneNationalNumber, phoneNumberE164)
   )

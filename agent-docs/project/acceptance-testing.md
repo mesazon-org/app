@@ -12,10 +12,12 @@ Feature specs live in `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/<
 
 ## Harness
 
-- Annotate child specs with `@DoNotDiscover` and extend `GatewayAcceptanceTest` plus the exact feature/row arbitraries they need.
-- Register each child once in `GatewayAcceptanceSpec`. Run through `gateway-it/test` or `testOnly *GatewayAcceptanceSpec`; a child spec cannot boot the shared stack itself.
-- Add production Queries/clients needed for arrangement and inspection to `GatewayItContext.build`.
-- Shared `beforeEach` truncates every repository table and resets external services. Each test still owns all of its scenario data.
+- `GatewayItContext.live: ZLayer[DockerComposeContainer, Throwable, GatewayItContext]` is assembled with `ZLayer.makeSome` from the production `.live` layers (Queries, `JwtService`, `PasswordService`, `RepositoryConfig`, ...), the test clients' `.live` layers (except `PostgreSQLTestClient.liveScoped`, a Hikari pool closed on release; [Database runtime](database-runtime.md)), config layers derived from the container, and `SttpTestBackend.liveScoped`, which acquires one JDK `HttpClient`, closes it with `HttpClient.close()` on release (sttp never closes a client it was handed), and backs both `GatewayClient` and `MailHogClient` ([External client](external-client.md#sttp-backend-in-a-spec)). Add production Queries/clients needed for arrangement and inspection as a `GatewayItContext` field and their layer to `live`.
+- Annotate child specs with `@DoNotDiscover`, take the container by-name as the constructor argument (`dockerComposeContainer: => DockerComposeContainer`), and extend `GatewayAcceptanceTest(dockerComposeContainer)` plus the exact feature/row arbitraries they need. The parameter is by-name because nested specs are constructed before the containers start; it is read only when `withContext` runs. `GatewayAcceptanceTest` takes no ZIO types, holds no context or mutable state, and only exposes `protected def withContext[A](f: GatewayItContext => Task[A]): A`, which provides `GatewayItContext.live` with `ZLayer.succeed(dockerComposeContainer)` to `f` and runs it synchronously. Every call builds its own context from the container (with its own `HttpClient` and Hikari pool) and releases it when `f` ends. Through `.zioValue`, an assertion that fails inside `f` surfaces as the original ScalaTest failure with its spec file/line, or a typed `Throwable` failure, instead of a `FiberFailure`.
+- Register each child once in `GatewayAcceptanceSpec.nestedSuites` as `new <Feature>ApiSpec(withContainers(identity))`. `GatewayAcceptanceSpec` is a plain container `Suite` with `DockerComposeBase`; the by-name argument defers `withContainers` until a test's `withContext` call, after the containers have started. `TestContainersForAll.run` starts the containers, runs the nested suites, then stops the containers. Readiness needs no polling in the spec: `backend/gateway/it/compose.yaml` starts `gateway` only after `flyway` completes successfully (`depends_on` with `service_completed_successfully`), so the migrations are applied first, and the gateway's health-port `ExposedService` in `GatewayClient.ExposedServices` has a testcontainers wait strategy (`GET /readiness` returning 204, 1-minute startup timeout), so the containers count as started, and tests begin, only once the gateway reports ready. Run through `gateway-it/test` or `testOnly *GatewayAcceptanceSpec`; a child spec cannot boot the shared stack itself.
+- Every test is `"..." in withContext { context => import context.*; for { ... } yield () }`: every binding, including values that need no effect (`userID = arbitrarySample[UserID]` as the first line), arrangement, the HTTP call, and assertions (`_ = actual shouldBe expected`), is a `<-`/`=` binding in one `for`-comprehension, with no plain `val`s before the `for` ([Scala tests](../standards/scala.md#structure-and-names)). The context resets nothing. Each spec overrides `beforeEach` (calling `super.beforeEach()` first) and, through `withContext`, clears only the tables (and MailHog/S3 state) its tests and endpoints touch, taking table names from `repositoryConfig`; a spec must clear everything its assertions read, since other specs no longer reset shared state for it. Each test still owns all of its scenario data. `UserTokenRefreshApiSpec` is the reference.
+- Registered today: `UserTokenRefreshApiSpec`, `OrganizationManagementApiSpec`, `UserSignInApiSpec`, `FileApiSpec`, `UserSignUpApiSpec`, `UserForgotPasswordApiSpec`, `UserOnboardApiSpec`, `CustomerBookFileApiSpec`, `CatalogueFileApiSpec`, `CatalogueApiSpec`, and `CustomerBookApiSpec`.
+- Every spec migration also (1) checks each test name and inline comment against what the test actually seeds and asserts, fixing any that claim more, less, or the opposite; and (2) compares the feature doc's flow with the spec, then either closes documented-but-untested behaviour with a test or reports it.
 - Keep `gateway-it / Test / parallelExecution := false`; nested suites share infrastructure.
 
 ## Test assets
@@ -31,24 +33,27 @@ Examples: `contact-book-image-test-1.png` (an image-extraction golden fixture), 
 
 ## Structure, descriptions, and order
 
-Use one explicit section per endpoint:
+Use one explicit section per endpoint, then one `"middleware"` section for the shared gates ([Organization-scoped middleware gates](#organization-scoped-middleware-gates)):
 
 ```scala
 "<Feature> Service API" when {
   "POST /insert/entity" should {
-    "successfully insert an entity" in withContext { context => ... }
-    "fail with a ValidationError when the name is invalid" in withContext { context => ... }
-    "fail with a BadRequest when the organization id header is missing" in withContext { context => ... }
+    "successfully insert an entity" in withContext { context => import context.*; for { ... } yield () }
+    "fail with a ValidationError when the name is invalid" in withContext { context => import context.*; for { ... } yield () }
+  }
+
+  "middleware" should {
+    "fail with a BadRequest when the organization id header is missing on every endpoint" in withContext { context => import context.*; for { ... } yield () }
   }
 }
 ```
 
 - Order endpoint sections exactly as the operations appear in the owning Smithy service’s `operations` list. For Catalogue, single insert comes first, batch insert second, then update, archive operations, reads, and uniqueness. Insert new endpoint sections at their contract position.
-- Never parameterize endpoint cases or a shared middleware matrix. Route wiring can differ even when policy is identical; every result must name the endpoint and failing condition in test output.
+- Never parameterize endpoint cases. Every result must name the endpoint and failing condition in test output; a middleware gate test does this through its list position.
 - Put happy `200`/`204` and successful no-op/business-edge cases first. Order failures by HTTP status: `400`, `401`, `403`, `409`, `500`, `503`.
 - Success descriptions state the observable outcome. Failure descriptions start `fail with a[n] <ConcreteError>` and state the cause; include the rejected-side-effect proof when it is the scenario's important outcome.
-- One test invokes one endpoint. Arrange state directly through production Queries; never call another public endpoint as setup.
-- `CustomerBookApiSpec` is the canonical in-repository example. Match its explicit arrangement and assertion style; do not invent a feature-local abstraction for authentication, organization setup, endpoint iteration, or rejected-state checks.
+- Each endpoint case invokes one endpoint; the gate tests in the middleware section are the only exception. Arrange state directly through production Queries; never call another public endpoint as setup.
+- `CustomerBookApiSpec` is the canonical in-repository example for endpoint sections, and `CatalogueApiSpec` for the middleware section. Match their explicit arrangement and assertion style; do not invent a feature-local abstraction for authentication, organization setup, endpoint iteration, or rejected-state checks.
 
 ### Error shape changes: titles and order
 
@@ -58,14 +63,14 @@ This rule applies to **all test suites** that name error types in their descript
 
 ### Exact endpoint checklist
 
-Build the cases for each endpoint before writing code. Cross out only cases that are structurally impossible or not declared by the contract, and record non-obvious omissions in the feature doc.
+Build the cases for each endpoint before writing code. Cross out only cases that are structurally impossible or not declared by the contract, and record non-obvious omissions in the feature doc. The middleware gates are not endpoint cases: every organization-scoped endpoint joins each applicable gate test in the middleware section instead.
 
-| Endpoint kind | Required cases, in order |
+| Endpoint kind | Required endpoint-section cases, in order |
 |---|---|
-| Validated organization write | happy/no-op edges; `400 ValidationError`; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role; every `409 Conflict`; `500` missing user details; `500` missing membership; dependency `503` if declared |
-| UUID-only organization write | happy/no-op edges; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role; `500` missing user details; `500` missing membership; dependency `503` if declared |
-| Organization read by ID | happy for each distinct visibility rule; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role only when constructible; `500` referenced entity missing; `500` missing user details; `500` missing membership; dependency `503` if declared |
-| Organization list read | happy empty/non-empty/filter/order behavior; `400 BadRequest` missing organization; `401` missing token; `401` invalid token; `403` incomplete stage; `403` disallowed role only when constructible; `500` missing user details; `500` missing membership; dependency `503` if declared |
+| Validated organization write | happy/no-op edges; `400 ValidationError`; every `409 Conflict`; dependency `503` if declared |
+| UUID-only organization write | happy/no-op edges; dependency `503` if declared |
+| Organization read by ID | happy for each distinct visibility rule; `500` referenced entity missing; dependency `503` if declared |
+| Organization list read | happy empty/non-empty/filter/order behavior; dependency `503` if declared |
 
 Business statuses that share the same visibility/editability rules use arbitrary fixture statuses in the ordinary happy path. Do not duplicate an endpoint success for `Active`, `Inactive`, or another equivalent business status. Keep separate cases for real policy boundaries such as archived versus non-archived, and for status transitions when changing status is itself the requirement.
 
@@ -83,55 +88,49 @@ Do not build random prefixes/suffixes, repeat length/trim rules, or assert that 
 
 ## Test layout
 
-Keep the phases visually separate:
-
-1. values and models;
-2. database/external arrangement;
-3. token or final request values;
-4. HTTP call and response binding;
-5. response assertions;
-6. database/external assertions.
-
-Leave a blank line between phases. In particular, a completed `val` binding is followed by a blank line before its assertions, and a database effect is separated from the next `val` or assertion.
+Blank lines and statement grouping follow [Scala formatting](../standards/scala.md#formatting).
 
 Name values after exact models with qualifiers last (`catalogueItemRowArchived`, `organizationUserRoleInvalid`). Avoid generic `request`, `response`, `row`, or `result` names when an exact operation/model name exists.
 
 ### Canonical arrangement
 
-Write authentication and organization prerequisites directly in every applicable test:
+Write authentication and organization prerequisites directly in every applicable test, as bindings inside the test's `withContext` `for`-comprehension:
 
 ```scala
-val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-val userDetailsRow = arbitrarySample[UserDetailsRow]
-  .copy(onboardStage = onboardStage)
-val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-  .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+"successfully insert an entity" in withContext { context =>
+  import context.*
 
-postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+  for {
+    onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+    userDetailsRow = arbitrarySample[UserDetailsRow]
+      .copy(onboardStage = onboardStage)
+    organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+    organizationUserRow = arbitrarySample[OrganizationUserRow]
+      .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-val insertEntityPostRequest = arbitrarySample[InsertEntityPostRequest]
+    _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+    _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+    insertEntityPostRequest = arbitrarySample[InsertEntityPostRequest]
 
-val insertEntityPostResponse =
-  gatewayClient
-    .insertEntityPost[smithy.InternalServerError](
+    accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+    insertEntityPostResponse <- gatewayClient.insertEntityPost[smithy.InternalServerError](
       insertEntityPostRequest.transformInto[smithy.InsertEntityPostRequest],
       Some(organizationUserRow.organizationID),
       Some(accessJwt.accessToken),
     )
-    .zioValue
 
-insertEntityPostResponse.code shouldBe StatusCode.NoContent
+    _ = insertEntityPostResponse.code shouldBe StatusCode.NoContent
 
-val entityRowsAll = postgresClient.executeQuery(entityQueries.getAllEntityRowsTesting).zioValue
+    entityRowsAll <- postgresClient.executeQuery(entityQueries.getAllEntityRowsTesting)
 
-entityRowsAll shouldBe List(...)
+    _ = entityRowsAll shouldBe List(...)
+  } yield ()
+}
 ```
 
-Do not hide this arrangement behind `authenticatedOrganization`, `withOrganization`, fixture builders, endpoint descriptors, loops, or parameterized matrices. Repetition is intentional: each route case must expose exactly which prerequisite is valid, absent, or invalid.
+In endpoint cases, do not hide this arrangement behind `authenticatedOrganization`, `withOrganization`, fixture builders, endpoint descriptors, loops, or parameterized matrices. Repetition is intentional: each route case must expose exactly which prerequisite is valid, absent, or invalid. The middleware section's call list is the only multi-endpoint shape, and it still writes its arrangement inline.
 
 Use the exact operation/model in every binding:
 
@@ -142,22 +141,9 @@ Use the exact operation/model in every binding:
 
 Keep qualifiers last: `onboardStageInvalid`, `organizationUserRoleInvalid`, `catalogueItemRowArchived`, `organizationIDForeign`.
 
-### Whitespace
+## Organization-scoped middleware gates
 
-Blank lines are semantic separators, not decoration:
-
-- related model `val`s may stay together;
-- insert/update Query effects are separated from preceding models and following values;
-- request and token bindings are separate phases when that improves scanning;
-- the HTTP response binding is separated from setup;
-- response assertions are separated from subsequent DB/external reads;
-- a DB/external read bound to a `val` is followed by a blank line before its assertions.
-
-Never place a Query effect immediately beside an assertion, or a completed multi-line `val` immediately beside assertions.
-
-## Organization-scoped middleware matrix
-
-Every organization-scoped endpoint explicitly proves:
+Every organization-scoped endpoint is proven against each gate:
 
 1. missing organization ID header → `400 BadRequest`;
 2. missing access token → `401 Unauthorized`;
@@ -169,9 +155,9 @@ Every organization-scoped endpoint explicitly proves:
 
 For each rejection, seed unrelated prerequisites validly and assert the endpoint's tables and external systems are untouched. Generate allowed/disallowed stages and roles from their sets/complements; do not hardcode `Owner`.
 
-If the endpoint deliberately permits every defined organization role, a disallowed role cannot be constructed. Record this in the feature doc and omit only that impossible case. Add it if a future role expands the enum without joining the endpoint allow-list.
+If the endpoint deliberately permits every defined organization role, a disallowed role cannot be constructed. Record this in the feature doc and leave only that endpoint out of the role gate test. Add it if a future role expands the enum without joining the endpoint allow-list.
 
-Validation is a separate `400 ValidationError` case for fallible input. Assert its exact `.fields`. Also add declared conflicts, missing referenced entities, dependency outages, and feature-owned business branches where applicable.
+Validation is a separate `400 ValidationError` case in the endpoint's own section for fallible input. Assert its exact `.fields`. Also add declared conflicts, missing referenced entities, dependency outages, and feature-owned business branches where applicable.
 
 ### Exact middleware arrangement
 
@@ -184,6 +170,18 @@ Validation is a separate `400 ValidationError` case for fallible input. Assert i
 - Missing membership: insert completed user details and use a valid token, but do not insert an organization-user row for the supplied organization.
 
 Assert the exact empty/unchanged feature state after each rejection. Do not rely only on the HTTP status.
+
+### Middleware section shape
+
+- Every acceptance spec ends with one `"middleware" should { ... }` section after the endpoint sections, even when it has a single endpoint. Exceptions by the user's choice: `UserSignInApiSpec` and `UserSignUpApiSpec` keep their gate-like checks in their endpoint sections. It holds one test per gate the spec's endpoints have, in the gate order above. Name each `"fail with a[n] <ConcreteError> when <condition> on every endpoint"`. A gate that only some endpoints have covers just those and names them, e.g. `"... on every write endpoint"` when reads allow every role, or `"... on every endpoint that loads the user"`.
+- Gate-like checks move here even when a handler, not middleware code, enforces them: missing/invalid access token, incomplete or disallowed onboard stage (each endpoint called with its own user seeded in a stage that endpoint rejects), missing user details, organization header, organization role, and membership. Business rules stay in the endpoint sections: token refresh validation, reset-token checks, wrong password, attempt limits, unknown email, OTP expired/wrong/used up, and a membership's missing organization at sign-in.
+- Each test seeds once, with the gate's arrangement and one non-archived target (for Catalogue: an item, its variant and a sibling variant, so the last-variant rule cannot mask a write) in the supplied organization. It binds every request as an `=` binding, with no `arbitrarySample` inside the call list.
+- It runs `responses <- ZIO.collectAllPar(List(...))` with one typed `GatewayClient` call per covered endpoint, in Smithy operation order, all typed with the gate's error shape. A single-endpoint spec still uses a one-element list, so a later endpoint only extends it.
+- It asserts both lists whole: `responses.map(_.code) shouldBe List.fill(n)(StatusCode.<Status>)` and `responses.map(_.body.left.toOption) shouldBe List.fill(n)(Some(smithy.<Error>()))`. A failure prints both lists, so the differing position names the endpoint.
+- Then it binds the grouped verification reads, a blank line, and the unchanged-row assertions ([Scala formatting](../standards/scala.md#formatting)).
+- Tradeoff: all covered endpoints run against one seeded DB state. A wrong status names its endpoint by list position, but an unexpected write fails only the shared unchanged-row assertions, which cannot say which endpoint wrote. To pin it, narrow the list locally while debugging.
+- Parallel calls are safe because `ServerMiddleware` drains a rejected request body before answering ([Authentication](authentication.md#rejected-request-bodies)). Tapir `securedEndpoint` uploads do not drain; the user put that fix on hold. By the user's choice, `CatalogueFileApiSpec` still uses parallel middleware tests, so a rejected upload there can surface as EOF (`HTTP/1.1 header parser received no bytes`) instead of the status. Report such a failure; do not switch to sequential calls or add retries ([Known issues](../known-issues.md#catalogue-batch-rejection-closes-the-connection-before-an-http-response)).
+- `CatalogueApiSpec` is the reference.
 
 ## HTTP client codecs
 
@@ -226,10 +224,11 @@ An endpoint that calls out to an external/AI client with server-owned request co
 - Assert the exact HTTP status and complete success/error body.
 - Extract `Option`/`Either` values with `OptionValues`/`EitherValues` (`.value`, `.left.value`) instead of a separate `isDefined`/`isRight` check followed by `.get` — one call, and scalatest fails with a readable message instead of a bare `NoSuchElementException`. A bare `isDefined`/`isRight`/`isLeft` boolean assertion is fine on its own when nothing inside is ever unwrapped afterward (e.g. proving an object is absent from S3).
 - Inspect complete database/external state, not only the changed field. Scope readbacks to the scenario’s behavior and possible side effects. Do not add blanket empty-table checks for every related table to every case; retain targeted persistence, unchanged-row and rollback assertions.
+- Cost: whole-model asserts and seeded unchanged-row checks make each test stricter but longer. When they were adopted (November 2026, together with the merged middleware section), `*ApiSpec` lines rose from 18,090 to 20,750 (+15%) while test cases fell from 372 to 299.
 - After rejection, assert every prohibited DB/email/storage effect is absent.
 - For an endpoint whose entire contract is "nothing is stored" (a read-only extraction/preview step, for example), assert the storage state explicitly in the happy-path test too, not only in the rejection cases — the success path is the one that actually exercises real returned data flowing through the stack, so it is the most meaningful place to prove none of it leaked into persistence.
 - Assert order only when contractual; otherwise compare order-insensitively.
-- Control IDs/times when their values or ordering matter.
+- Control IDs/times when their values or ordering matter; take the test's "now" from `Instant.now` ([Scala tests](../standards/scala.md#tests)).
 - Missing referenced rows follow the feature's documented policy; assert the exact status and resulting state.
 - Do not construct the expected DB row by transforming with production mapping code. Build it field-by-field, preserving generated IDs/timestamps from the observed row only when the API does not return/control them.
 - For successful writes, assert tenant ID, every request-derived field, lifecycle status, optional composites, audit-field relationships, and total row count.
@@ -243,22 +242,24 @@ Before completion, inspect the spec from top to bottom and confirm:
 
 - every endpoint appears exactly once as a `should` section;
 - endpoint sections follow the owning Smithy service’s operation order;
-- every case invokes only that endpoint;
+- every endpoint case invokes only that endpoint;
 - happy/no-op cases precede `400`, `401`, `403`, `409`, `500`, `503`;
-- every organization-scoped endpoint contains the applicable middleware matrix explicitly;
+- the `"middleware"` section ends the spec with one test per applicable gate, each calling every covered endpoint in operation order, and no endpoint section repeats a gate;
 - every fallible body has exact validation-field coverage;
 - every declared conflict has a real constraint-backed case;
 - every documented missing-target/no-op policy is covered;
 - every rejection asserts prohibited state is absent;
 - every success asserts complete response and persistence/external state;
 - bindings use exact model/operation names and concept-first qualifiers;
-- there are no generic `request`, `response`, `row`, `result`, endpoint descriptors, endpoint loops, shared authentication fixtures, or cross-endpoint helpers;
-- blank lines separate setup values, effects, HTTP calls, reads, and assertions;
+- there are no generic `request`, `response`, `row`, `result`, endpoint descriptors, shared authentication fixtures, or cross-endpoint helpers, and no endpoint loops other than the middleware section's call list;
+- blank lines follow [Scala formatting](../standards/scala.md#formatting);
 - the feature spec is registered in `GatewayAcceptanceSpec`;
 - required Queries/clients are built in `GatewayItContext`;
 - `GatewayClient` methods and codecs cover every endpoint;
 - requests use typed client methods, with no raw-body methods or serialized-JSON mutation;
 - the feature doc lists exact completed and remaining acceptance cases.
+- every test name and inline comment matches what the test seeds and asserts;
+- every behaviour in the feature doc's flow is covered by a test or reported as untested.
 
 ## Verification
 

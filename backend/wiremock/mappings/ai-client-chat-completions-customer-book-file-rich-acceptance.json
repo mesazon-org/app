@@ -1,0 +1,25 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "contains": "Return exactly one CustomerBookFileAIExtract"
+      },
+      {
+        "contains": "json_schema"
+      },
+      {
+        "contains": "AI_CLIENT_SPEC_CUSTOMER_BOOK_FILE_RICH"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"chatcmpl-customer-book-file-rich-acceptance\",\"object\":\"chat.completion\",\"created\":1700000000,\"model\":\"test-model\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"entriesIdentified\\\":5,\\\"entriesProcessed\\\":4,\\\"individualCandidates\\\":[{\\\"fullName\\\":\\\"Alex Morgan\\\",\\\"emails\\\":[\\\"alex.morgan@example.com\\\",\\\"alex@morgan-home.example.com\\\"],\\\"phoneNumbers\\\":[{\\\"phoneNationalNumber\\\":\\\"99123456\\\",\\\"phoneCountryCode\\\":\\\"+357\\\",\\\"phoneCountryCodeInferred\\\":false}],\\\"addresses\\\":[{\\\"address\\\":{\\\"addressLine1\\\":null,\\\"addressLine2\\\":null,\\\"city\\\":\\\"Nicosia\\\",\\\"postalCode\\\":null,\\\"country\\\":\\\"Cyprus\\\",\\\"extractionNotes\\\":[\\\"Street name could not be read\\\"]},\\\"addressType\\\":\\\"Billing\\\"}],\\\"fullNameInferred\\\":false,\\\"extractionNotes\\\":[\\\"Handwritten entry\\\"]},{\\\"fullName\\\":\\\"Alex Morgan\\\",\\\"emails\\\":[],\\\"phoneNumbers\\\":[],\\\"addresses\\\":[],\\\"fullNameInferred\\\":false,\\\"extractionNotes\\\":[]},{\\\"fullName\\\":\\\"Jane Smith\\\",\\\"emails\\\":[\\\"jane.smith@example.com\\\"],\\\"phoneNumbers\\\":[],\\\"addresses\\\":[],\\\"fullNameInferred\\\":true,\\\"extractionNotes\\\":[\\\"Name taken from the email address\\\"]},{\\\"fullName\\\":null,\\\"emails\\\":[],\\\"phoneNumbers\\\":[{\\\"phoneNationalNumber\\\":\\\"99887766\\\",\\\"phoneCountryCode\\\":null,\\\"phoneCountryCodeInferred\\\":false},{\\\"phoneNationalNumber\\\":\\\"22334455\\\",\\\"phoneCountryCode\\\":\\\"+357\\\",\\\"phoneCountryCodeInferred\\\":true}],\\\"addresses\\\":[],\\\"fullNameInferred\\\":false,\\\"extractionNotes\\\":[\\\"Phone country code is not shown\\\"]}],\\\"businessCandidates\\\":[{\\\"businessName\\\":\\\"Acme Tools Ltd\\\",\\\"emails\\\":[\\\"orders@acme-tools.example.com\\\"],\\\"taxID\\\":\\\"CY10203040X\\\",\\\"phoneNumbers\\\":[{\\\"phoneNationalNumber\\\":\\\"22445566\\\",\\\"phoneCountryCode\\\":\\\"+357\\\",\\\"phoneCountryCodeInferred\\\":true}],\\\"addresses\\\":[{\\\"address\\\":{\\\"addressLine1\\\":\\\"1 Main Street\\\",\\\"addressLine2\\\":null,\\\"city\\\":\\\"Nicosia\\\",\\\"postalCode\\\":\\\"1010\\\",\\\"country\\\":\\\"Cyprus\\\",\\\"extractionNotes\\\":[]},\\\"addressType\\\":\\\"Billing\\\"},{\\\"address\\\":{\\\"addressLine1\\\":\\\"2 Harbour Road\\\",\\\"addressLine2\\\":null,\\\"city\\\":\\\"Limassol\\\",\\\"postalCode\\\":\\\"3030\\\",\\\"country\\\":\\\"Cyprus\\\",\\\"extractionNotes\\\":[]},\\\"addressType\\\":\\\"Billing\\\"},{\\\"address\\\":{\\\"addressLine1\\\":\\\"3 Market Square\\\",\\\"addressLine2\\\":null,\\\"city\\\":\\\"Larnaca\\\",\\\"postalCode\\\":null,\\\"country\\\":\\\"Cyprus\\\",\\\"extractionNotes\\\":[\\\"Warehouse address\\\"]},\\\"addressType\\\":\\\"Shipping\\\"}],\\\"customerBusinessContacts\\\":[{\\\"fullName\\\":null,\\\"role\\\":\\\"Accounts\\\",\\\"email\\\":\\\"accounts@acme-tools.example.com\\\",\\\"phoneNumber\\\":{\\\"phoneNationalNumber\\\":\\\"99001122\\\",\\\"phoneCountryCode\\\":\\\"+357\\\",\\\"phoneCountryCodeInferred\\\":true},\\\"fullNameInferred\\\":false,\\\"extractionNotes\\\":[\\\"Contact name is not shown\\\"]}],\\\"businessNameInferred\\\":false,\\\"extractionNotes\\\":[\\\"Letterhead logo was not used\\\"]}],\\\"emptyEntryRowIndexes\\\":[],\\\"unidentifiedEntryRowIndexes\\\":[6],\\\"extractionNotes\\\":[\\\"One entry at the bottom could not be read\\\"]}\"}}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}"
+  }
+}

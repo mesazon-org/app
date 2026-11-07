@@ -14,8 +14,11 @@ Production `PostgresTransactor`:
 
 Test `PostgreSQLTestClient`:
 
-- Use plain `PGSimpleDataSource`, not a pool/scoped layer; reuse production `DbContext`/database construction.
-- `checkIfTableExists`; `truncateTable` uses trusted `Fragment.const` and `TRUNCATE ... CASCADE`; `executeQuery(ConnectionIO|TranzactIO)` uses `transactionOrDie`.
+- Two layers, both reusing production `DbContext`/`Database.fromDatasource` construction:
+  - `live`: plain `PGSimpleDataSource`, nothing to release; used by gateway-core repository specs.
+  - `liveScoped`: `HikariDataSource` (pool `postgresql-test-client`, `maximumPoolSize` 3, `minimumIdle` 0) acquired with `ZIO.acquireRelease` and closed with blocking `close()` when the scope ends; used by gateway-it through `GatewayItContext.live`, so each `withContext` call opens and closes its own pool.
+- History: an unscoped Hikari pool built per `.provide` was never closed and leaked; `live` moved to `PGSimpleDataSource`, and `liveScoped` now closes its pool on release. Never add an unscoped pool.
+- `checkIfTableExists`; `truncateTable(schema, tables*)` sends one `TRUNCATE TABLE schema.t1, schema.t2, ... CASCADE` from trusted `Fragment.const` names (empty varargs is a caller bug, not guarded); `executeQuery(ConnectionIO|TranzactIO)` uses `transactionOrDie`.
 - Testcontainers exposes `postgres:5432`; `PostgreSQLTestClientConfig.from` resolves mapped host/port.
 
 Exercise lifecycle, config, logging branches, and test-client operations affected by the change.

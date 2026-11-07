@@ -73,9 +73,7 @@ class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitrari
         val userActionAttemptRowsAll =
           postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
 
-        userActionAttemptRowsAll should have size 1
-        userActionAttemptRowsAll.head shouldBe userActionAttemptRowGet
-        userActionAttemptRowsAll.head shouldBe UserActionAttemptRow(
+        userActionAttemptRowGet shouldBe UserActionAttemptRow(
           actionAttemptID = actionAttemptID,
           userID = userID,
           actionAttemptType = actionAttemptType,
@@ -83,6 +81,9 @@ class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitrari
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
         )
+
+        userActionAttemptRowsAll should have size 1
+        userActionAttemptRowsAll.head shouldBe userActionAttemptRowGet.copy(attempts = Attempts.assume(2))
       }
 
       "successfully get old record and increase existing action attempt count for a user and action type" in new TestContext {
@@ -134,6 +135,78 @@ class UserActionAttemptRepositorySpec extends ZWordSpecBase, RepositoryArbitrari
           attempts = Attempts.assume(userActionAttemptRow.attempts.value + 1),
           updatedAt = UpdatedAt(instantNowUpdate),
         )
+      }
+
+      "return attempts 1, 2 and 3 for three consecutive attempts from no previous attempt" in new TestContext {
+        val userID            = arbitrarySample[UserID]
+        val actionAttemptType = arbitrarySample[ActionAttemptType]
+
+        val actionAttemptID1 = arbitrarySample[ActionAttemptID]
+        val actionAttemptID2 = arbitrarySample[ActionAttemptID]
+        val actionAttemptID3 = arbitrarySample[ActionAttemptID]
+        val instantNow2      = instantNow.plusSeconds(1)
+        val instantNow3      = instantNow.plusSeconds(2)
+
+        val userActionAttemptRowExpected1 = UserActionAttemptRow(
+          actionAttemptID = actionAttemptID1,
+          userID = userID,
+          actionAttemptType = actionAttemptType,
+          attempts = Attempts.assume(1),
+          createdAt = CreatedAt(instantNow),
+          updatedAt = UpdatedAt(instantNow),
+        )
+        val userActionAttemptRowExpected2 = userActionAttemptRowExpected1.copy(attempts = Attempts.assume(2))
+        val userActionAttemptRowExpected3 = userActionAttemptRowExpected1.copy(
+          attempts = Attempts.assume(3),
+          updatedAt = UpdatedAt(instantNow2),
+        )
+        val userActionAttemptRowStoredExpected = userActionAttemptRowExpected1.copy(
+          attempts = Attempts.assume(4),
+          updatedAt = UpdatedAt(instantNow3),
+        )
+
+        inSequence(
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow)
+            .once(),
+          (() => idGeneratorMock.generateID)
+            .expects()
+            .returningZIO(actionAttemptID1.value)
+            .once(),
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow2)
+            .once(),
+          (() => idGeneratorMock.generateID)
+            .expects()
+            .returningZIO(actionAttemptID2.value)
+            .once(),
+          (() => timeProviderMock.instantNow)
+            .expects()
+            .returningZIO(instantNow3)
+            .once(),
+          (() => idGeneratorMock.generateID)
+            .expects()
+            .returningZIO(actionAttemptID3.value)
+            .once(),
+        )
+
+        userActionAttemptRepository
+          .getAndIncreaseUserActionAttempt(userID, actionAttemptType)
+          .zioValue shouldBe userActionAttemptRowExpected1
+
+        userActionAttemptRepository
+          .getAndIncreaseUserActionAttempt(userID, actionAttemptType)
+          .zioValue shouldBe userActionAttemptRowExpected2
+
+        userActionAttemptRepository
+          .getAndIncreaseUserActionAttempt(userID, actionAttemptType)
+          .zioValue shouldBe userActionAttemptRowExpected3
+
+        postgresClient
+          .executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting)
+          .zioValue shouldBe List(userActionAttemptRowStoredExpected)
       }
     }
 

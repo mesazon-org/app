@@ -33,12 +33,17 @@ If endpoint-visible behavior changes, also update the service functional and acc
 
 ## Sttp backend in a spec
 
-Every spec-side sttp backend — the client under test and the test clients that inspect the dependency (`WiremockClient`, `MailHogClient`, `GatewayClient`) — comes from the shared `io.mesazon.testkit.base.SttpTestBackend.live` layer. Never build one with `HttpClientZioBackend.layer()` in a test:
+Every `gateway-core`/`waha` spec-side sttp backend — the client under test and the test clients that inspect the dependency (`WiremockClient`, `MailHogClient`) — comes from the shared `io.mesazon.testkit.base.SttpTestBackend.live` layer. Never build one with `HttpClientZioBackend.layer()` in a test:
 
 - `layer()` is `ZLayer.scoped`, and `ZIOTestOps`'s `zioValue`/`zioEither` run an `IO` with no `Scope`, so the layer's finalizer runs the moment the backend is constructed — before the test body uses it. The lifetime of a backend a test holds must not depend on a scope that has already closed.
 - `layer()` builds a new JDK `HttpClient` per call site. With `withContext` creating one per `beforeAll`/`afterEach`/test, a single suite produces dozens of clients, each with its own selector thread and connection pool, and none of them is ever closed explicitly (`HttpClientBackend.close()` is a no-op unless the backend owns a `ThreadPoolExecutor`), so their shutdown is left to the JDK reclaiming each unreachable client.
 
-`SttpTestBackend` creates one `HttpClient` per JVM (`lazy val`), wraps it with `HttpClientZioBackend.usingClient(...)` so `close()` can never tear it down, and exposes it as a plain `ZLayer.succeed(...)` with no finalizer. It keeps the JDK's default HTTP version, so specs exercise the same negotiation a real client does. `SttpTestBackendSpec` in `backend/test-kit` pins those guarantees. Production wiring keeps its own `SttpBackend.live` (`usingClient` plus pinned HTTP/1.1 and config-driven timeouts) and is unaffected.
+`SttpTestBackend` has two layers with the same `WebSocketStreamBackend[Task, ZioStreams]` output, so callers can swap them:
+
+- `live` creates one `HttpClient` per JVM (`lazy val`), wraps it with `HttpClientZioBackend.usingClient(...)` so `close()` can never tear it down, and exposes it as a plain `ZLayer.succeed(...)` with no finalizer. `gateway-core` and `waha` specs use it. It keeps the JDK's default HTTP version, so specs exercise the same negotiation a real client does.
+- `liveScoped` acquires one `HttpClient` per scope with `ZIO.acquireRelease`, built with `.executor(zioExecutor.asJava)` so its worker tasks run on ZIO's executor and it creates no thread pool of its own (default HTTP version kept), wraps it with `HttpClientZioBackend.usingClient`, and calls `HttpClient.close()` on release itself, because the sttp backend's `close()` never closes a client it was handed; `close()` stops the client's per-client selector thread, which no builder setting removes. Gateway acceptance specs use it through `GatewayItContext.live`, which feeds it to both `GatewayClient` and `MailHogClient`; the client lives as long as one `withContext` call, which provides the layer to that test or `beforeEach` and closes it when the call ends ([Acceptance testing](acceptance-testing.md#harness)).
+
+Production wiring keeps its own `SttpBackend.live` (`usingClient` plus pinned HTTP/1.1 and config-driven timeouts) and is unaffected.
 
 ## Mockability of the client's own trait
 

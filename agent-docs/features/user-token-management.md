@@ -51,7 +51,7 @@ Defined in `backend/gateway/core/src/main/smithy/UserTokenService.smithy`.
 
 ## Tests
 
-- Acceptance (see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserTokenRefreshApiSpec.scala` — successful rotation, missing token (validation), invalid token, and the revocation case: a cryptographically valid refresh token not present in `user_token` is rejected
+- Acceptance (see [service completion](flow/05-service.md#acceptance-tests-real-app-over-http)): `backend/gateway/it/src/test/scala/io/mesazon/gateway/it/UserTokenRefreshApiSpec.scala` — successful rotation (only the new refresh-token row remains, and sending the old refresh token again afterwards is `401` with the table unchanged), missing token (validation), invalid token, the revocation case (a cryptographically valid refresh token not present in `user_token` is rejected), and a valid reset-password token stored as `ResetPasswordToken` sent as the refresh token (`401`, row unchanged). The row is seeded as it is really stored (type `ResetPasswordToken`), so the `auth:refresh` audience check rejects it first and the `RefreshToken`-typed lookup would reject it too; the audience check on its own is proven by `JwtServiceSpec`
 - Functional: `fun/UserTokenServiceSpec.scala`
 - Units: `unit/validation/service/UserTokenRequestValidatorSpec.scala`, `unit/service/JwtServiceSpec.scala`, `unit/service/AuthorizationServiceSpec.scala`
 - Integration: `it/UserTokenRepositorySpec.scala`

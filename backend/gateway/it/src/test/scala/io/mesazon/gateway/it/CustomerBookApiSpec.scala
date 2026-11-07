@@ -1,9 +1,9 @@
 package io.mesazon.gateway.it
 
+import com.dimafeng.testcontainers.DockerComposeContainer
 import io.github.iltotore.iron.chimney.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.domain.to
-import io.mesazon.gateway.it.client.GatewayClient
 import io.mesazon.gateway.it.client.GatewayClient.given
 import io.mesazon.gateway.it.harness.GatewayAcceptanceTest
 import io.mesazon.gateway.repository.CustomerBookRepository.*
@@ -17,1513 +17,73 @@ import smithy4s.Nullable
 import sttp.model.*
 import zio.*
 
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+
 @DoNotDiscover
-class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbitraries, RepositoryArbitraries {
+class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
+    extends GatewayAcceptanceTest(dockerComposeContainer),
+      CustomerBookSmithyArbitraries,
+      RepositoryArbitraries {
+
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+
+    withContext { context =>
+      import context.*
+
+      postgresClient.truncateTable(
+        repositoryConfig.schema,
+        repositoryConfig.userDetailsTable,
+        repositoryConfig.organizationUserTable,
+        repositoryConfig.customerTable,
+        repositoryConfig.customerBusinessContactTable,
+      )
+    }
+  }
 
   "Customer Book Service API" when {
     "POST /customer-book/individual" should {
       "successfully insert a customer individual" in withContext { context =>
         import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        val customerBookIndividualPostRequest = arbitrarySample[CustomerBookIndividualPostRequest]
+          customerBookIndividualPostRequest = arbitrarySample[CustomerBookIndividualPostRequest]
+          instantNow                        = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        val customerBookIndividualPostResponse =
-          gatewayClient
+          customerBookIndividualPostResponse <- gatewayClient
             .customerBookIndividualPost[smithy.InternalServerError](
               customerBookIndividualPostRequest.transformInto[smithy.CustomerBookIndividualPostRequest],
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-        customerBookIndividualPostResponse.code shouldBe StatusCode.Ok
+          _ = customerBookIndividualPostResponse.code shouldBe StatusCode.Ok
 
-        val customerIndividualDetailsRowsAll =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
-
-        customerIndividualDetailsRowsAll should have size 1
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIDsTesting)
-          .zioValue should have size 1
-        customerIndividualDetailsRowsAll.head shouldBe CustomerIndividualDetailsRow(
-          organizationID = organizationUserRow.organizationID,
-          customerID = CustomerID(customerBookIndividualPostResponse.body.value.customerID),
-          fullName = customerBookIndividualPostRequest.fullName,
-          emails = customerBookIndividualPostRequest.emails.map(customerEmailEntry =>
-            CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
-          ),
-          phoneNumbers = customerBookIndividualPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
-            CustomerPhoneNumberEntryInput(
-              customerPhoneNumberEntry.phoneNumber,
-              isDefault = customerPhoneNumberEntry.isDefault,
-            )
-          ),
-          addresses = customerBookIndividualPostRequest.addresses,
-          isArchived = false,
-          createdAt = customerIndividualDetailsRowsAll.head.createdAt,
-          updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
-        )
-        customerBookIndividualPostResponse.body.value shouldBe smithy.CustomerBookIndividualPostResponse(
-          customerID = customerIndividualDetailsRowsAll.head.customerID.value
-        )
-      }
-
-      "fail with a ValidationError when the full name is invalid" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBookIndividualPostRequestSmithy =
-          arbitrarySample[CustomerBookIndividualPostRequest]
-            .transformInto[smithy.CustomerBookIndividualPostRequest]
-            .copy(fullName = "")
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPostResponse =
-          gatewayClient
-            .customerBookIndividualPost[smithy.ValidationError](
-              customerBookIndividualPostRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookIndividualPostResponse.code shouldBe StatusCode.BadRequest
-        customerBookIndividualPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("fullName"))
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a BadRequest when the organization id header is missing" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val customerBookIndividualPostRequestSmithy =
-          arbitrarySample[CustomerBookIndividualPostRequest].transformInto[smithy.CustomerBookIndividualPostRequest]
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPostResponse =
-          gatewayClient
-            .customerBookIndividualPost[smithy.BadRequest](
-              customerBookIndividualPostRequestSmithy,
-              None,
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookIndividualPostResponse.code shouldBe StatusCode.BadRequest
-        customerBookIndividualPostResponse.body.left.value shouldBe smithy.BadRequest()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is missing" in withContext { context =>
-        import context.*
-
-        val customerBookIndividualPostRequestSmithy =
-          arbitrarySample[CustomerBookIndividualPostRequest].transformInto[smithy.CustomerBookIndividualPostRequest]
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookIndividualPostResponse =
-          gatewayClient
-            .customerBookIndividualPost[smithy.Unauthorized](
-              customerBookIndividualPostRequestSmithy,
-              Some(organizationID),
-              None,
-            )
-            .zioValue
-
-        customerBookIndividualPostResponse.code shouldBe StatusCode.Unauthorized
-        customerBookIndividualPostResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is invalid" in withContext { context =>
-        import context.*
-
-        val customerBookIndividualPostRequestSmithy =
-          arbitrarySample[CustomerBookIndividualPostRequest].transformInto[smithy.CustomerBookIndividualPostRequest]
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookIndividualPostResponse =
-          gatewayClient
-            .customerBookIndividualPost[smithy.Unauthorized](
-              customerBookIndividualPostRequestSmithy,
-              Some(organizationID),
-              Some(AccessToken("invalidtoken")),
-            )
-            .zioValue
-
-        customerBookIndividualPostResponse.code shouldBe StatusCode.Unauthorized
-        customerBookIndividualPostResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
-        import context.*
-
-        val onboardStageInvalid =
-          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStageInvalid)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBookIndividualPostRequestSmithy =
-          arbitrarySample[CustomerBookIndividualPostRequest].transformInto[smithy.CustomerBookIndividualPostRequest]
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPostResponse =
-          gatewayClient
-            .customerBookIndividualPost[smithy.Forbidden](
-              customerBookIndividualPostRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookIndividualPostResponse.code shouldBe StatusCode.Forbidden
-        customerBookIndividualPostResponse.body.left.value shouldBe smithy.Forbidden()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRoleInvalid =
-          Random.shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRoleInvalid)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBookIndividualPostRequestSmithy =
-          arbitrarySample[CustomerBookIndividualPostRequest].transformInto[smithy.CustomerBookIndividualPostRequest]
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPostResponse =
-          gatewayClient
-            .customerBookIndividualPost[smithy.Forbidden](
-              customerBookIndividualPostRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookIndividualPostResponse.code shouldBe StatusCode.Forbidden
-        customerBookIndividualPostResponse.body.left.value shouldBe smithy.Forbidden()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Conflict when the full name already exists in the organization" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBookIndividualPostRequest = arbitrarySample[CustomerBookIndividualPostRequest]
-
-        val customerIndividualDetailsRowExisting = arbitrarySample[CustomerIndividualDetailsRow]
-          .copy(
-            organizationID = organizationUserRow.organizationID,
-            isArchived = false,
-            fullName = customerBookIndividualPostRequest.fullName,
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
           )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRowExisting))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPostResponse =
-          gatewayClient
-            .customerBookIndividualPost[smithy.Conflict](
-              customerBookIndividualPostRequest.transformInto[smithy.CustomerBookIndividualPostRequest],
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookIndividualPostResponse.code shouldBe StatusCode.Conflict
-        customerBookIndividualPostResponse.body.left.value shouldBe smithy.Conflict(message =
-          "A customer with the given name already exists in this organization"
-        )
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe
-          List(customerIndividualDetailsRowExisting.customerID)
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe List(customerIndividualDetailsRowExisting)
-      }
-
-      "fail with an InternalServerError when the user details do not exist" in withContext { context =>
-        import context.*
-
-        val userID         = arbitrarySample[UserID]
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookIndividualPostRequestSmithy =
-          arbitrarySample[CustomerBookIndividualPostRequest].transformInto[smithy.CustomerBookIndividualPostRequest]
-
-        val accessJwt = jwtService.generateAccessToken(userID).zioValue
-
-        val customerBookIndividualPostResponse =
-          gatewayClient
-            .customerBookIndividualPost[smithy.InternalServerError](
-              customerBookIndividualPostRequestSmithy,
-              Some(organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookIndividualPostResponse.code shouldBe StatusCode.InternalServerError
-        customerBookIndividualPostResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookIndividualPostRequestSmithy =
-          arbitrarySample[CustomerBookIndividualPostRequest].transformInto[smithy.CustomerBookIndividualPostRequest]
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPostResponse =
-          gatewayClient
-            .customerBookIndividualPost[smithy.InternalServerError](
-              customerBookIndividualPostRequestSmithy,
-              Some(organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookIndividualPostResponse.code shouldBe StatusCode.InternalServerError
-        customerBookIndividualPostResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-    }
-
-    "POST /customer-book/business" should {
-      "successfully insert a customer business with its inline contact" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBusinessContactInsert =
-          arbitrarySample[CustomerBusinessContactInsert]
-        val customerBookBusinessPostRequest = arbitrarySample[CustomerBookBusinessPostRequest]
-          .copy(customerBusinessContacts = List(customerBusinessContactInsert))
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessPostResponse =
-          gatewayClient
-            .customerBookBusinessPost[smithy.InternalServerError](
-              customerBookBusinessPostRequest.transformInto[smithy.CustomerBookBusinessPostRequest],
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessPostResponse.code shouldBe StatusCode.Ok
-
-        val customerBusinessDetailsRowsAll =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
-
-        customerBusinessDetailsRowsAll should have size 1
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIDsTesting)
-          .zioValue should have size 1
-        customerBusinessDetailsRowsAll.head shouldBe CustomerBusinessDetailsRow(
-          organizationID = organizationUserRow.organizationID,
-          customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
-          businessName = customerBookBusinessPostRequest.businessName,
-          emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
-            CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
-          ),
-          phoneNumbers = customerBookBusinessPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
-            CustomerPhoneNumberEntryInput(
-              customerPhoneNumberEntry.phoneNumber,
-              isDefault = customerPhoneNumberEntry.isDefault,
-            )
-          ),
-          taxID = customerBookBusinessPostRequest.taxID,
-          addresses = customerBookBusinessPostRequest.addresses,
-          isArchived = false,
-          createdAt = customerBusinessDetailsRowsAll.head.createdAt,
-          updatedAt = customerBusinessDetailsRowsAll.head.updatedAt,
-        )
-
-        val customerBusinessContactRowsAll =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue
-
-        customerBusinessContactRowsAll should have size customerBookBusinessPostRequest.customerBusinessContacts.size
-        customerBusinessContactRowsAll.head shouldBe CustomerBusinessContactRow(
-          organizationID = organizationUserRow.organizationID,
-          customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
-          customerBusinessContactID = customerBusinessContactRowsAll.head.customerBusinessContactID,
-          fullName = customerBusinessContactInsert.fullName,
-          role = customerBusinessContactInsert.role,
-          email = customerBusinessContactInsert.email,
-          phoneNumber = customerBusinessContactInsert.phoneNumber,
-          createdAt = customerBusinessContactRowsAll.head.createdAt,
-          updatedAt = customerBusinessContactRowsAll.head.updatedAt,
-          isArchived = false,
-        )
-
-        customerBookBusinessPostResponse.body.value shouldBe smithy.CustomerBookBusinessPostResponse(
-          customerID = customerBusinessDetailsRowsAll.head.customerID.value
-        )
-      }
-
-      "successfully insert both inline contacts sharing the same email" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow]
-            .copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerEmail                  = arbitrarySample[CustomerEmail]
-          val customerBusinessContactInsert1 = arbitrarySample[CustomerBusinessContactInsert]
-            .copy(fullName = CustomerFullName.assume("contact one"), email = Some(customerEmail), phoneNumber = None)
-          val customerBusinessContactInsert2 = arbitrarySample[CustomerBusinessContactInsert]
-            .copy(fullName = CustomerFullName.assume("contact two"), email = Some(customerEmail), phoneNumber = None)
-          val customerBookBusinessPostRequest = arbitrarySample[CustomerBookBusinessPostRequest]
-            .copy(customerBusinessContacts = List(customerBusinessContactInsert1, customerBusinessContactInsert2))
-
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-          val customerBookBusinessPostResponse =
-            gatewayClient
-              .customerBookBusinessPost[smithy.InternalServerError](
-                customerBookBusinessPostRequest.transformInto[smithy.CustomerBookBusinessPostRequest],
-                Some(organizationUserRow.organizationID),
-                Some(accessJwt.accessToken),
-              )
-              .zioValue
-
-          customerBookBusinessPostResponse.code shouldBe StatusCode.Ok
-
-          val customerBusinessDetailsRowsAll =
-            postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
-          val customerBusinessContactRowsAll =
-            postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue
-
-          customerBusinessDetailsRowsAll should have size 1
-          customerBusinessContactRowsAll should have size customerBookBusinessPostRequest.customerBusinessContacts.size
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List(
-            CustomerID(customerBookBusinessPostResponse.body.value.customerID)
-          )
-          customerBusinessDetailsRowsAll.head shouldBe CustomerBusinessDetailsRow(
-            organizationID = organizationUserRow.organizationID,
-            customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
-            businessName = customerBookBusinessPostRequest.businessName,
-            taxID = customerBookBusinessPostRequest.taxID,
-            emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
-              CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
-            ),
-            phoneNumbers = customerBookBusinessPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
-              CustomerPhoneNumberEntryInput(
-                customerPhoneNumberEntry.phoneNumber,
-                isDefault = customerPhoneNumberEntry.isDefault,
-              )
-            ),
-            addresses = customerBookBusinessPostRequest.addresses,
-            isArchived = false,
-            createdAt = customerBusinessDetailsRowsAll.head.createdAt,
-            updatedAt = UpdatedAt(customerBusinessDetailsRowsAll.head.createdAt.value),
-          )
-          customerBusinessContactRowsAll should contain theSameElementsAs customerBookBusinessPostRequest.customerBusinessContacts.map {
-            customerBusinessContactInsert =>
-              val customerBusinessContactRow =
-                customerBusinessContactRowsAll.find(_.fullName == customerBusinessContactInsert.fullName).value
-
-              CustomerBusinessContactRow(
-                organizationID = organizationUserRow.organizationID,
-                customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
-                customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID,
-                fullName = customerBusinessContactInsert.fullName,
-                role = customerBusinessContactInsert.role,
-                email = customerBusinessContactInsert.email,
-                phoneNumber = customerBusinessContactInsert.phoneNumber,
-                createdAt = customerBusinessDetailsRowsAll.head.createdAt,
-                updatedAt = UpdatedAt(customerBusinessDetailsRowsAll.head.createdAt.value),
-                isArchived = false,
-              )
-          }
-
-        customerBookBusinessPostResponse.body.value shouldBe smithy.CustomerBookBusinessPostResponse(
-          customerID = customerBusinessDetailsRowsAll.head.customerID.value
-        )
-      }
-
-      "successfully insert both inline contacts sharing the same phone number" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow]
-            .copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerPhoneNumber            = arbitrarySample[CustomerPhoneNumber]
-          val customerBusinessContactInsert1 = arbitrarySample[CustomerBusinessContactInsert]
-            .copy(
-              fullName = CustomerFullName.assume("contact one"),
-              email = None,
-              phoneNumber = Some(customerPhoneNumber),
-            )
-          val customerBusinessContactInsert2 = arbitrarySample[CustomerBusinessContactInsert]
-            .copy(
-              fullName = CustomerFullName.assume("contact two"),
-              email = None,
-              phoneNumber = Some(customerPhoneNumber),
-            )
-          val customerBookBusinessPostRequest = arbitrarySample[CustomerBookBusinessPostRequest]
-            .copy(customerBusinessContacts = List(customerBusinessContactInsert1, customerBusinessContactInsert2))
-
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-          val customerBookBusinessPostResponse =
-            gatewayClient
-              .customerBookBusinessPost[smithy.InternalServerError](
-                customerBookBusinessPostRequest.transformInto[smithy.CustomerBookBusinessPostRequest],
-                Some(organizationUserRow.organizationID),
-                Some(accessJwt.accessToken),
-              )
-              .zioValue
-
-          customerBookBusinessPostResponse.code shouldBe StatusCode.Ok
-
-          val customerBusinessDetailsRowsAll =
-            postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
-          val customerBusinessContactRowsAll =
-            postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue
-
-          customerBusinessDetailsRowsAll should have size 1
-          customerBusinessContactRowsAll should have size customerBookBusinessPostRequest.customerBusinessContacts.size
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List(
-            CustomerID(customerBookBusinessPostResponse.body.value.customerID)
-          )
-          customerBusinessDetailsRowsAll.head shouldBe CustomerBusinessDetailsRow(
-            organizationID = organizationUserRow.organizationID,
-            customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
-            businessName = customerBookBusinessPostRequest.businessName,
-            taxID = customerBookBusinessPostRequest.taxID,
-            emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
-              CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
-            ),
-            phoneNumbers = customerBookBusinessPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
-              CustomerPhoneNumberEntryInput(
-                customerPhoneNumberEntry.phoneNumber,
-                isDefault = customerPhoneNumberEntry.isDefault,
-              )
-            ),
-            addresses = customerBookBusinessPostRequest.addresses,
-            isArchived = false,
-            createdAt = customerBusinessDetailsRowsAll.head.createdAt,
-            updatedAt = UpdatedAt(customerBusinessDetailsRowsAll.head.createdAt.value),
-          )
-          customerBusinessContactRowsAll should contain theSameElementsAs customerBookBusinessPostRequest.customerBusinessContacts.map {
-            customerBusinessContactInsert =>
-              val customerBusinessContactRow =
-                customerBusinessContactRowsAll.find(_.fullName == customerBusinessContactInsert.fullName).value
-
-              CustomerBusinessContactRow(
-                organizationID = organizationUserRow.organizationID,
-                customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
-                customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID,
-                fullName = customerBusinessContactInsert.fullName,
-                role = customerBusinessContactInsert.role,
-                email = customerBusinessContactInsert.email,
-                phoneNumber = customerBusinessContactInsert.phoneNumber,
-                createdAt = customerBusinessDetailsRowsAll.head.createdAt,
-                updatedAt = UpdatedAt(customerBusinessDetailsRowsAll.head.createdAt.value),
-                isArchived = false,
-              )
-          }
-
-        customerBookBusinessPostResponse.body.value shouldBe smithy.CustomerBookBusinessPostResponse(
-          customerID = customerBusinessDetailsRowsAll.head.customerID.value
-        )
-      }
-
-      "fail with a ValidationError when the business name is invalid" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBookBusinessPostRequestSmithy =
-          arbitrarySample[CustomerBookBusinessPostRequest]
-            .transformInto[smithy.CustomerBookBusinessPostRequest]
-            .copy(businessName = "")
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessPostResponse =
-          gatewayClient
-            .customerBookBusinessPost[smithy.ValidationError](
-              customerBookBusinessPostRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessPostResponse.code shouldBe StatusCode.BadRequest
-        customerBookBusinessPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("businessName"))
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a BadRequest when the organization id header is missing" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
-          .transformInto[smithy.CustomerBookBusinessPostRequest]
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessPostResponse =
-          gatewayClient
-            .customerBookBusinessPost[smithy.BadRequest](
-              customerBookBusinessPostRequestSmithy,
-              None,
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessPostResponse.code shouldBe StatusCode.BadRequest
-        customerBookBusinessPostResponse.body.left.value shouldBe smithy.BadRequest()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is missing" in withContext { context =>
-        import context.*
-
-        val customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
-          .transformInto[smithy.CustomerBookBusinessPostRequest]
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookBusinessPostResponse =
-          gatewayClient
-            .customerBookBusinessPost[smithy.Unauthorized](
-              customerBookBusinessPostRequestSmithy,
-              Some(organizationID),
-              None,
-            )
-            .zioValue
-
-        customerBookBusinessPostResponse.code shouldBe StatusCode.Unauthorized
-        customerBookBusinessPostResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is invalid" in withContext { context =>
-        import context.*
-
-        val customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
-          .transformInto[smithy.CustomerBookBusinessPostRequest]
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookBusinessPostResponse =
-          gatewayClient
-            .customerBookBusinessPost[smithy.Unauthorized](
-              customerBookBusinessPostRequestSmithy,
-              Some(organizationID),
-              Some(AccessToken("invalidtoken")),
-            )
-            .zioValue
-
-        customerBookBusinessPostResponse.code shouldBe StatusCode.Unauthorized
-        customerBookBusinessPostResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
-        import context.*
-
-        val onboardStageInvalid =
-          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStageInvalid)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
-          .transformInto[smithy.CustomerBookBusinessPostRequest]
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessPostResponse =
-          gatewayClient
-            .customerBookBusinessPost[smithy.Forbidden](
-              customerBookBusinessPostRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessPostResponse.code shouldBe StatusCode.Forbidden
-        customerBookBusinessPostResponse.body.left.value shouldBe smithy.Forbidden()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRoleInvalid =
-          Random.shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRoleInvalid)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
-          .transformInto[smithy.CustomerBookBusinessPostRequest]
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessPostResponse =
-          gatewayClient
-            .customerBookBusinessPost[smithy.Forbidden](
-              customerBookBusinessPostRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessPostResponse.code shouldBe StatusCode.Forbidden
-        customerBookBusinessPostResponse.body.left.value shouldBe smithy.Forbidden()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Conflict when the business name already exists in the organization" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBookBusinessPostRequest = arbitrarySample[CustomerBookBusinessPostRequest]
-          .copy(customerBusinessContacts = List.empty)
-
-        val customerBusinessDetailsRowExisting = arbitrarySample[CustomerBusinessDetailsRow]
-          .copy(
-            organizationID = organizationUserRow.organizationID,
-            isArchived = false,
-            businessName = customerBookBusinessPostRequest.businessName,
-          )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRowExisting))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessPostResponse =
-          gatewayClient
-            .customerBookBusinessPost[smithy.Conflict](
-              customerBookBusinessPostRequest.transformInto[smithy.CustomerBookBusinessPostRequest],
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessPostResponse.code shouldBe StatusCode.Conflict
-        customerBookBusinessPostResponse.body.left.value shouldBe smithy.Conflict(message =
-          "A customer with the given name already exists in this organization"
-        )
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe
-          List(customerBusinessDetailsRowExisting.customerID)
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue shouldBe List(customerBusinessDetailsRowExisting)
-      }
-
-      "fail with an InternalServerError when the user details do not exist" in withContext { context =>
-        import context.*
-
-        val userID         = arbitrarySample[UserID]
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
-          .transformInto[smithy.CustomerBookBusinessPostRequest]
-
-        val accessJwt = jwtService.generateAccessToken(userID).zioValue
-
-        val customerBookBusinessPostResponse =
-          gatewayClient
-            .customerBookBusinessPost[smithy.InternalServerError](
-              customerBookBusinessPostRequestSmithy,
-              Some(organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessPostResponse.code shouldBe StatusCode.InternalServerError
-        customerBookBusinessPostResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
-          .transformInto[smithy.CustomerBookBusinessPostRequest]
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessPostResponse =
-          gatewayClient
-            .customerBookBusinessPost[smithy.InternalServerError](
-              customerBookBusinessPostRequestSmithy,
-              Some(organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessPostResponse.code shouldBe StatusCode.InternalServerError
-        customerBookBusinessPostResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-    }
-
-    "POST /customer-book/batch" should {
-      "successfully insert individuals before businesses in the response and persist every customer and inline contact" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerFullName1             = CustomerFullName.assume("Zeta Individual")
-          val customerFullName2             = CustomerFullName.assume("Alpha Individual")
-          val customerBusinessName1         = CustomerBusinessName.assume("Zeta Business")
-          val customerBusinessName2         = CustomerBusinessName.assume("Alpha Business")
-          val customerBusinessContactInsert =
-            arbitrarySample[CustomerBusinessContactInsert]
-          val customerIndividuals = List(
-            arbitrarySample[CustomerBookIndividualPostRequest]
-              .copy(fullName = customerFullName1),
-            arbitrarySample[CustomerBookIndividualPostRequest]
-              .copy(fullName = customerFullName2),
-          )
-          val customerBusinesses = List(
-            arbitrarySample[CustomerBookBusinessPostRequest]
-              .copy(businessName = customerBusinessName1)
-              .copy(customerBusinessContacts = List(customerBusinessContactInsert)),
-            arbitrarySample[CustomerBookBusinessPostRequest]
-              .copy(businessName = customerBusinessName2, customerBusinessContacts = List.empty),
-          )
-          val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
-            customerBusinesses = customerBusinesses,
-            customerIndividuals = customerIndividuals,
-          )
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-          val customerBookBatchPostResponse = gatewayClient
-            .customerBookBatchPost[smithy.InternalServerError](
-              customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest],
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-          customerBookBatchPostResponse.code shouldBe StatusCode.Ok
-
-          val customerIndividualDetailsRows =
-            postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
-          val customerBusinessDetailsRows =
-            postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
-          val customerBusinessContactRows =
-            postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue
-
-          customerIndividualDetailsRows should have size customerIndividuals.size
-          customerBusinessDetailsRows should have size customerBusinesses.size
-          customerBusinessContactRows should have size customerBusinesses.flatMap(_.customerBusinessContacts).size
-          postgresClient
+          customerIDsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerIDsTesting)
-            .zioValue should have size (customerIndividuals.size + customerBusinesses.size)
 
-          customerIndividuals.zipWithIndex.foreach { case (customerBookIndividualPostRequest, index) =>
-            val customerIndividualDetailsRow =
-              customerIndividualDetailsRows.find(_.fullName == customerBookIndividualPostRequest.fullName).value
-            customerIndividualDetailsRow shouldBe CustomerIndividualDetailsRow(
-              organizationID = organizationUserRow.organizationID,
-              customerID = CustomerID(customerBookBatchPostResponse.body.value.customerIDs(index)),
-              fullName = customerBookIndividualPostRequest.fullName,
-              emails = customerBookIndividualPostRequest.emails.map(customerEmailEntry =>
-                CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
-              ),
-              phoneNumbers = customerBookIndividualPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
-                CustomerPhoneNumberEntryInput(
-                  customerPhoneNumberEntry.phoneNumber,
-                  isDefault = customerPhoneNumberEntry.isDefault,
-                )
-              ),
-              addresses = customerBookIndividualPostRequest.addresses,
-              isArchived = false,
-              createdAt = customerIndividualDetailsRow.createdAt,
-              updatedAt = customerIndividualDetailsRow.updatedAt,
-            )
-          }
-          customerBusinesses.zipWithIndex.foreach { case (customerBookBusinessPostRequest, index) =>
-            val customerBusinessDetailsRow =
-              customerBusinessDetailsRows.find(_.businessName == customerBookBusinessPostRequest.businessName).value
-            customerBusinessDetailsRow shouldBe CustomerBusinessDetailsRow(
-              organizationID = organizationUserRow.organizationID,
-              customerID =
-                CustomerID(customerBookBatchPostResponse.body.value.customerIDs(customerIndividuals.size + index)),
-              businessName = customerBookBusinessPostRequest.businessName,
-              emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
-                CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
-              ),
-              phoneNumbers = customerBookBusinessPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
-                CustomerPhoneNumberEntryInput(
-                  customerPhoneNumberEntry.phoneNumber,
-                  isDefault = customerPhoneNumberEntry.isDefault,
-                )
-              ),
-              taxID = customerBookBusinessPostRequest.taxID,
-              addresses = customerBookBusinessPostRequest.addresses,
-              isArchived = false,
-              createdAt = customerBusinessDetailsRow.createdAt,
-              updatedAt = customerBusinessDetailsRow.updatedAt,
-            )
-          }
+          _ = customerIndividualDetailsRowsAll should have size 1
+          _ = customerIDsAll should have size 1
 
-          customerBusinessContactRows.head shouldBe CustomerBusinessContactRow(
+          _ = customerIndividualDetailsRowsAll.head shouldBe CustomerIndividualDetailsRow(
             organizationID = organizationUserRow.organizationID,
-            customerID = CustomerID(customerBookBatchPostResponse.body.value.customerIDs(customerIndividuals.size)),
-            customerBusinessContactID = customerBusinessContactRows.head.customerBusinessContactID,
-            fullName = customerBusinessContactInsert.fullName,
-            role = customerBusinessContactInsert.role,
-            email = customerBusinessContactInsert.email,
-            phoneNumber = customerBusinessContactInsert.phoneNumber,
-            createdAt = customerBusinessContactRows.head.createdAt,
-            updatedAt = customerBusinessContactRows.head.updatedAt,
-            isArchived = false,
-          )
-
-          customerBookBatchPostResponse.body.value shouldBe smithy.CustomerBookBatchPostResponse(
-            customerIDs = customerIndividuals.map(customerBookIndividualPostRequest =>
-              customerIndividualDetailsRows
-                .find(_.fullName == customerBookIndividualPostRequest.fullName)
-                .value
-                .customerID
-                .value
-            ) ++ customerBusinesses.map(customerBookBusinessPostRequest =>
-              customerBusinessDetailsRows
-                .find(_.businessName == customerBookBusinessPostRequest.businessName)
-                .value
-                .customerID
-                .value
-            )
-          )
-      }
-
-      "successfully insert an empty batch without persisting customers or contacts" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-        val customerBookBatchPostRequestSmithy = smithy.CustomerBookBatchPostRequest(
-          customerBusinesses = Nil,
-          customerIndividuals = Nil,
-        )
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBatchPostResponse = gatewayClient
-          .customerBookBatchPost[smithy.InternalServerError](
-            customerBookBatchPostRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBatchPostResponse.code shouldBe StatusCode.Ok
-        customerBookBatchPostResponse.body.value shouldBe smithy.CustomerBookBatchPostResponse(customerIDs = Nil)
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a ValidationError for invalid businesses and individuals without persisting any customer" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
-            .copy(customerBusinessContacts = Nil)
-            .transformInto[smithy.CustomerBookBusinessPostRequest]
-          val customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
-            .transformInto[smithy.CustomerBookIndividualPostRequest]
-          val customerBookBatchPostRequestSmithy = smithy.CustomerBookBatchPostRequest(
-            customerBusinesses = List(customerBookBusinessPostRequestSmithy.copy(businessName = "")),
-            customerIndividuals = List(customerBookIndividualPostRequestSmithy.copy(fullName = "")),
-          )
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-          val customerBookBatchPostResponse = gatewayClient
-            .customerBookBatchPost[smithy.ValidationError](
-              customerBookBatchPostRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-          customerBookBatchPostResponse.code shouldBe StatusCode.BadRequest
-          customerBookBatchPostResponse.body.left.value shouldBe smithy.ValidationError(fields =
-            List("customerBusiness", "customerIndividual")
-          )
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe Nil
-      }
-
-      "fail with a BadRequest when the organization id header is missing" in withContext { context =>
-        import context.*
-
-        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
-          customerBusinesses = List(
-            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
-          ),
-          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
-        )
-        val customerBookBatchPostRequestSmithy =
-          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBatchPostResponse = gatewayClient
-          .customerBookBatchPost[smithy.BadRequest](
-            customerBookBatchPostRequestSmithy,
-            None,
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBatchPostResponse.code shouldBe StatusCode.BadRequest
-        customerBookBatchPostResponse.body.left.value shouldBe smithy.BadRequest()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is missing" in withContext { context =>
-        import context.*
-
-        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
-          customerBusinesses = List(
-            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
-          ),
-          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
-        )
-        val customerBookBatchPostRequestSmithy =
-          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
-
-        val customerBookBatchPostResponse = gatewayClient
-          .customerBookBatchPost[smithy.Unauthorized](
-            customerBookBatchPostRequestSmithy,
-            Some(arbitrarySample[OrganizationID]),
-            None,
-          )
-          .zioValue
-
-        customerBookBatchPostResponse.code shouldBe StatusCode.Unauthorized
-        customerBookBatchPostResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is invalid" in withContext { context =>
-        import context.*
-
-        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
-          customerBusinesses = List(
-            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
-          ),
-          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
-        )
-        val customerBookBatchPostRequestSmithy =
-          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
-
-        val customerBookBatchPostResponse = gatewayClient
-          .customerBookBatchPost[smithy.Unauthorized](
-            customerBookBatchPostRequestSmithy,
-            Some(arbitrarySample[OrganizationID]),
-            Some(AccessToken("invalidtoken")),
-          )
-          .zioValue
-
-        customerBookBatchPostResponse.code shouldBe StatusCode.Unauthorized
-        customerBookBatchPostResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
-        import context.*
-
-        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
-          customerBusinesses = List(
-            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
-          ),
-          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
-        )
-        val customerBookBatchPostRequestSmithy =
-          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
-
-        val onboardStage   = Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBatchPostResponse = gatewayClient
-          .customerBookBatchPost[smithy.Forbidden](
-            customerBookBatchPostRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBatchPostResponse.code shouldBe StatusCode.Forbidden
-        customerBookBatchPostResponse.body.left.value shouldBe smithy.Forbidden()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
-        import context.*
-
-        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
-          customerBusinesses = List(
-            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
-          ),
-          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
-        )
-        val customerBookBatchPostRequestSmithy =
-          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole =
-          Random.shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBatchPostResponse = gatewayClient
-          .customerBookBatchPost[smithy.Forbidden](
-            customerBookBatchPostRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBatchPostResponse.code shouldBe StatusCode.Forbidden
-        customerBookBatchPostResponse.body.left.value shouldBe smithy.Forbidden()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Conflict for an existing individual name and leave the accompanying business unpersisted" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerIndividualDetailsRowExisting = arbitrarySample[CustomerIndividualDetailsRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            isArchived = false,
-          )
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRowExisting))
-            .zioValue
-          val customerBusinessContactInsert =
-            arbitrarySample[CustomerBusinessContactInsert]
-          val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
-            customerBusinesses = List(
-              arbitrarySample[CustomerBookBusinessPostRequest]
-                .copy(customerBusinessContacts = List(customerBusinessContactInsert))
-            ),
-            customerIndividuals = List(
-              arbitrarySample[CustomerBookIndividualPostRequest]
-                .copy(fullName = customerIndividualDetailsRowExisting.fullName)
-            ),
-          )
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-          val customerBookBatchPostResponse = gatewayClient
-            .customerBookBatchPost[smithy.Conflict](
-              customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest],
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-          customerBookBatchPostResponse.code shouldBe StatusCode.Conflict
-          customerBookBatchPostResponse.body.left.value shouldBe smithy.Conflict(
-            message = "A customer with the given name already exists in this organization"
-          )
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe
-            List(customerIndividualDetailsRowExisting.customerID)
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe Nil
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe Nil
-
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue shouldBe List(customerIndividualDetailsRowExisting)
-      }
-
-      "fail with a Conflict for an existing business name and roll back the accompanying individual" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerBusinessDetailsRowExisting = arbitrarySample[CustomerBusinessDetailsRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            isArchived = false,
-          )
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRowExisting))
-            .zioValue
-          val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
-            customerBusinesses = List(
-              arbitrarySample[CustomerBookBusinessPostRequest]
-                .copy(
-                  businessName = customerBusinessDetailsRowExisting.businessName,
-                  customerBusinessContacts = List.empty,
-                )
-            ),
-            customerIndividuals = List(
-              arbitrarySample[CustomerBookIndividualPostRequest]
-            ),
-          )
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-          val customerBookBatchPostResponse = gatewayClient
-            .customerBookBatchPost[smithy.Conflict](
-              customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest],
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-          customerBookBatchPostResponse.code shouldBe StatusCode.Conflict
-          customerBookBatchPostResponse.body.left.value shouldBe smithy.Conflict(
-            message = "A customer with the given name already exists in this organization"
-          )
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe
-            List(customerBusinessDetailsRowExisting.customerID)
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue shouldBe Nil
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe Nil
-
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe List(customerBusinessDetailsRowExisting)
-      }
-
-      "fail with an InternalServerError when the user details do not exist" in withContext { context =>
-        import context.*
-
-        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
-          customerBusinesses = List(
-            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
-          ),
-          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
-        )
-        val customerBookBatchPostRequestSmithy =
-          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
-
-        val userID         = arbitrarySample[UserID]
-        val organizationID = arbitrarySample[OrganizationID]
-        val accessJwt      = jwtService.generateAccessToken(userID).zioValue
-
-        val customerBookBatchPostResponse = gatewayClient
-          .customerBookBatchPost[smithy.InternalServerError](
-            customerBookBatchPostRequestSmithy,
-            Some(organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBatchPostResponse.code shouldBe StatusCode.InternalServerError
-        customerBookBatchPostResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
-        import context.*
-
-        val customerBookBatchPostRequest = CustomerBookBatchPostRequest(
-          customerBusinesses = List(
-            arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
-          ),
-          customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
-        )
-        val customerBookBatchPostRequestSmithy =
-          customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest]
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBatchPostResponse = gatewayClient
-          .customerBookBatchPost[smithy.InternalServerError](
-            customerBookBatchPostRequestSmithy,
-            Some(arbitrarySample[OrganizationID]),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBatchPostResponse.code shouldBe StatusCode.InternalServerError
-        customerBookBatchPostResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-    }
-
-    "PUT /customer-book/individual/{customerID}" should {
-      "successfully replace the supplied name and contact lists" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
-          .copy(
-            organizationID = organizationUserRow.organizationID,
-            isArchived = false,
-            emails = List(CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = true)),
-            phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-            addresses =
-              List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-          )
-        val customerBookIndividualPostRequest = arbitrarySample[CustomerBookIndividualPostRequest]
-          .copy(
-            emails = List(CustomerEmailEntry(arbitrarySample[CustomerEmail], isDefault = true)),
-            phoneNumbers = List(CustomerPhoneNumberEntry(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-            addresses =
-              List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-          )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-          .zioValue
-
-        val customerBookIndividualPutRequestSmithy = CustomerBookIndividualPutRequest(
-          fullName = Some(customerBookIndividualPostRequest.fullName),
-          emails = Some(customerBookIndividualPostRequest.emails),
-          phoneNumbers = Some(customerBookIndividualPostRequest.phoneNumbers),
-          addresses = Some(customerBookIndividualPostRequest.addresses),
-        ).transformInto[smithy.CustomerBookIndividualPutRequest]
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPutResponse = gatewayClient
-          .customerBookIndividualPut[smithy.InternalServerError](
-            customerIndividualDetailsRow.customerID,
-            customerBookIndividualPutRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
-        customerBookIndividualPutResponse.body.value shouldBe ()
-
-        val customerIndividualDetailsRowsAll =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
-
-        customerIndividualDetailsRowsAll shouldBe List(
-          customerIndividualDetailsRow.copy(
+            customerID = CustomerID(customerBookIndividualPostResponse.body.value.customerID),
             fullName = customerBookIndividualPostRequest.fullName,
             emails = customerBookIndividualPostRequest.emails.map(customerEmailEntry =>
               CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
@@ -1535,520 +95,1453 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               )
             ),
             addresses = customerBookIndividualPostRequest.addresses,
+            isArchived = false,
+            createdAt = customerIndividualDetailsRowsAll.head.createdAt,
             updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
           )
-        )
-        customerIndividualDetailsRowsAll.head should not equal customerIndividualDetailsRow
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List(
-          customerIndividualDetailsRow.customerID
-        )
+          _ =
+            customerIndividualDetailsRowsAll.head.updatedAt.value shouldBe customerIndividualDetailsRowsAll.head.createdAt.value
+          _ = customerIndividualDetailsRowsAll.head.createdAt.value.isBefore(instantNow) shouldBe false
+
+          _ = customerBookIndividualPostResponse.body.value shouldBe smithy.CustomerBookIndividualPostResponse(
+            customerID = customerIndividualDetailsRowsAll.head.customerID.value
+          )
+        } yield ()
       }
 
-      "successfully retain omitted lists when updating the name" in withContext { context =>
+      "successfully insert a customer individual with a partial address" in withContext { context =>
         import context.*
 
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
-          .copy(
+          addressPartial = arbitrarySample[Address].copy(addressLine1 = None, city = Some(City.assume("Limassol")))
+          customerBookIndividualPostRequest = arbitrarySample[CustomerBookIndividualPostRequest]
+            .copy(addresses = List(CustomerAddressEntry(AddressEntry(addressPartial, AddressType.ShippingAndBilling))))
+          instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualPostResponse <- gatewayClient
+            .customerBookIndividualPost[smithy.InternalServerError](
+              customerBookIndividualPostRequest.transformInto[smithy.CustomerBookIndividualPostRequest],
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookIndividualPostResponse.code shouldBe StatusCode.Ok
+
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+          )
+          customerIDsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+
+          _ = customerIndividualDetailsRowsAll should have size 1
+          _ = customerIDsAll should have size 1
+
+          _ = customerIndividualDetailsRowsAll.head shouldBe CustomerIndividualDetailsRow(
             organizationID = organizationUserRow.organizationID,
-            isArchived = false,
-            emails = List(CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = true)),
-            phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-            addresses =
-              List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-          )
-        val customerBookIndividualPostRequest = arbitrarySample[CustomerBookIndividualPostRequest]
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-          .zioValue
-
-        val customerBookIndividualPutRequestSmithy =
-          smithy.CustomerBookIndividualPutRequest(fullName = Some(customerBookIndividualPostRequest.fullName.value))
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPutResponse = gatewayClient
-          .customerBookIndividualPut[smithy.InternalServerError](
-            customerIndividualDetailsRow.customerID,
-            customerBookIndividualPutRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
-        customerBookIndividualPutResponse.body.value shouldBe ()
-
-        val customerIndividualDetailsRowsAll =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
-
-        customerIndividualDetailsRowsAll shouldBe List(
-          customerIndividualDetailsRow.copy(
+            customerID = CustomerID(customerBookIndividualPostResponse.body.value.customerID),
             fullName = customerBookIndividualPostRequest.fullName,
+            emails = customerBookIndividualPostRequest.emails.map(customerEmailEntry =>
+              CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
+            ),
+            phoneNumbers = customerBookIndividualPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
+              CustomerPhoneNumberEntryInput(
+                customerPhoneNumberEntry.phoneNumber,
+                isDefault = customerPhoneNumberEntry.isDefault,
+              )
+            ),
+            addresses = List(CustomerAddressEntry(AddressEntry(addressPartial, AddressType.ShippingAndBilling))),
+            isArchived = false,
+            createdAt = customerIndividualDetailsRowsAll.head.createdAt,
             updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
           )
-        )
-        customerIndividualDetailsRowsAll.head should not equal customerIndividualDetailsRow
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List(
-          customerIndividualDetailsRow.customerID
-        )
+          _ =
+            customerIndividualDetailsRowsAll.head.updatedAt.value shouldBe customerIndividualDetailsRowsAll.head.createdAt.value
+          _ = customerIndividualDetailsRowsAll.head.createdAt.value.isBefore(instantNow) shouldBe false
+
+          _ = customerBookIndividualPostResponse.body.value shouldBe smithy.CustomerBookIndividualPostResponse(
+            customerID = customerIndividualDetailsRowsAll.head.customerID.value
+          )
+        } yield ()
       }
 
-      "successfully clear explicitly empty lists while retaining the omitted name" in withContext { context =>
+      "successfully insert a customer individual with only its required fields" in withContext { context =>
         import context.*
 
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
-          .copy(
+          customerFullName                        = CustomerFullName.assume("Maria Georgiou")
+          customerBookIndividualPostRequestSmithy = smithy.CustomerBookIndividualPostRequest(fullName =
+            customerFullName.value
+          )
+          instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualPostResponse <- gatewayClient
+            .customerBookIndividualPost[smithy.InternalServerError](
+              customerBookIndividualPostRequestSmithy,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookIndividualPostResponse.code shouldBe StatusCode.Ok
+
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+          )
+          customerIDsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+
+          _ = customerIndividualDetailsRowsAll should have size 1
+          _ = customerIDsAll should have size 1
+
+          _ = customerIndividualDetailsRowsAll.head shouldBe CustomerIndividualDetailsRow(
             organizationID = organizationUserRow.organizationID,
-            isArchived = false,
-            emails = List(CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = true)),
-            phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-            addresses =
-              List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-          )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-          .zioValue
-
-        val customerBookIndividualPutRequestSmithy =
-          smithy.CustomerBookIndividualPutRequest(emails = Some(Nil), phoneNumbers = Some(Nil), addresses = Some(Nil))
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPutResponse = gatewayClient
-          .customerBookIndividualPut[smithy.InternalServerError](
-            customerIndividualDetailsRow.customerID,
-            customerBookIndividualPutRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
-        customerBookIndividualPutResponse.body.value shouldBe ()
-
-        val customerIndividualDetailsRowsAll =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
-
-        customerIndividualDetailsRowsAll shouldBe List(
-          customerIndividualDetailsRow.copy(
+            customerID = CustomerID(customerBookIndividualPostResponse.body.value.customerID),
+            fullName = customerFullName,
             emails = Nil,
             phoneNumbers = Nil,
             addresses = Nil,
+            isArchived = false,
+            createdAt = customerIndividualDetailsRowsAll.head.createdAt,
             updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
           )
-        )
-        customerIndividualDetailsRowsAll.head should not equal customerIndividualDetailsRow
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe List(
-          customerIndividualDetailsRow.customerID
-        )
-      }
+          _ =
+            customerIndividualDetailsRowsAll.head.updatedAt.value shouldBe customerIndividualDetailsRowsAll.head.createdAt.value
+          _ = customerIndividualDetailsRowsAll.head.createdAt.value.isBefore(instantNow) shouldBe false
 
-      "successfully do nothing when the customer is missing" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPutResponse = gatewayClient
-          .customerBookIndividualPut[smithy.InternalServerError](
-            arbitrarySample[CustomerID],
-            smithy.CustomerBookIndividualPutRequest(
-              fullName = Some("changed name"),
-              emails = Some(Nil),
-              phoneNumbers = Some(Nil),
-              addresses = Some(Nil),
-            ),
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
+          _ = customerBookIndividualPostResponse.body.value shouldBe smithy.CustomerBookIndividualPostResponse(
+            customerID = customerIndividualDetailsRowsAll.head.customerID.value
           )
-          .zioValue
-
-        customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
-        customerBookIndividualPutResponse.body.value shouldBe ()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "successfully retain an archived customer unchanged" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
-          .copy(organizationID = organizationUserRow.organizationID, isArchived = true)
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPutResponse = gatewayClient
-          .customerBookIndividualPut[smithy.InternalServerError](
-            customerIndividualDetailsRow.customerID,
-            smithy.CustomerBookIndividualPutRequest(
-              fullName = Some("changed name"),
-              emails = Some(Nil),
-              phoneNumbers = Some(Nil),
-              addresses = Some(Nil),
-            ),
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
-        customerBookIndividualPutResponse.body.value shouldBe ()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe List(customerIndividualDetailsRow)
-      }
-
-      "successfully retain another organization customer unchanged" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
-          .copy(isArchived = false)
-
-        customerIndividualDetailsRow.organizationID should not be organizationUserRow.organizationID
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPutResponse = gatewayClient
-          .customerBookIndividualPut[smithy.InternalServerError](
-            customerIndividualDetailsRow.customerID,
-            smithy.CustomerBookIndividualPutRequest(
-              fullName = Some("changed name"),
-              emails = Some(Nil),
-              phoneNumbers = Some(Nil),
-              addresses = Some(Nil),
-            ),
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
-        customerBookIndividualPutResponse.body.value shouldBe ()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe List(customerIndividualDetailsRow)
-      }
-
-      "successfully retain a business addressed as an individual unchanged" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
-          .copy(organizationID = organizationUserRow.organizationID, isArchived = false)
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPutResponse = gatewayClient
-          .customerBookIndividualPut[smithy.InternalServerError](
-            customerBusinessDetailsRow.customerID,
-            smithy.CustomerBookIndividualPutRequest(
-              fullName = Some("changed name"),
-              emails = Some(Nil),
-              phoneNumbers = Some(Nil),
-              addresses = Some(Nil),
-            ),
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
-        customerBookIndividualPutResponse.body.value shouldBe ()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue shouldBe List(customerBusinessDetailsRow)
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
+        } yield ()
       }
 
       "fail with a ValidationError when the full name is invalid" in withContext { context =>
         import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        val customerBookIndividualPutRequestSmithy =
-          smithy.CustomerBookIndividualPutRequest(fullName = Some(""))
+          customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
+            .transformInto[smithy.CustomerBookIndividualPostRequest]
+            .copy(fullName = "")
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        val customerBookIndividualPutResponse =
-          gatewayClient
-            .customerBookIndividualPut[smithy.ValidationError](
-              arbitrarySample[CustomerID],
-              customerBookIndividualPutRequestSmithy,
+          customerBookIndividualPostResponse <- gatewayClient
+            .customerBookIndividualPost[smithy.ValidationError](
+              customerBookIndividualPostRequestSmithy,
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-        customerBookIndividualPutResponse.code shouldBe StatusCode.BadRequest
-        customerBookIndividualPutResponse.body.left.value shouldBe smithy.ValidationError(fields = List("fullName"))
+          _ = customerBookIndividualPostResponse.code shouldBe StatusCode.BadRequest
+          _ = customerBookIndividualPostResponse.body.left.value shouldBe smithy.ValidationError(fields =
+            List("fullName")
+          )
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
+          customerIDsAll <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+
+          _ = customerIDsAll shouldBe Nil
+        } yield ()
       }
 
-      "fail with a BadRequest when the organization id header is missing" in withContext { context =>
+      "fail with a ValidationError when an address has no fields" in withContext { context =>
         import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        val customerBookIndividualPutRequestSmithy =
-          smithy.CustomerBookIndividualPutRequest()
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPutResponse =
-          gatewayClient
-            .customerBookIndividualPut[smithy.BadRequest](
-              arbitrarySample[CustomerID],
-              customerBookIndividualPutRequestSmithy,
-              None,
-              Some(accessJwt.accessToken),
+          customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
+            .transformInto[smithy.CustomerBookIndividualPostRequest]
+            .copy(addresses =
+              List(
+                smithy.CustomerAddressEntry(
+                  address = smithy.AddressRequest(),
+                  addressType = smithy.AddressType.ShippingAndBilling,
+                )
+              )
             )
-            .zioValue
 
-        customerBookIndividualPutResponse.code shouldBe StatusCode.BadRequest
-        customerBookIndividualPutResponse.body.left.value shouldBe smithy.BadRequest()
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is missing" in withContext { context =>
-        import context.*
-
-        val customerBookIndividualPutRequestSmithy =
-          smithy.CustomerBookIndividualPutRequest()
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookIndividualPutResponse =
-          gatewayClient
-            .customerBookIndividualPut[smithy.Unauthorized](
-              arbitrarySample[CustomerID],
-              customerBookIndividualPutRequestSmithy,
-              Some(organizationID),
-              None,
-            )
-            .zioValue
-
-        customerBookIndividualPutResponse.code shouldBe StatusCode.Unauthorized
-        customerBookIndividualPutResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is invalid" in withContext { context =>
-        import context.*
-
-        val customerBookIndividualPutRequestSmithy =
-          smithy.CustomerBookIndividualPutRequest()
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookIndividualPutResponse =
-          gatewayClient
-            .customerBookIndividualPut[smithy.Unauthorized](
-              arbitrarySample[CustomerID],
-              customerBookIndividualPutRequestSmithy,
-              Some(organizationID),
-              Some(AccessToken("invalidtoken")),
-            )
-            .zioValue
-
-        customerBookIndividualPutResponse.code shouldBe StatusCode.Unauthorized
-        customerBookIndividualPutResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
-        import context.*
-
-        val onboardStageInvalid =
-          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStageInvalid)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBookIndividualPutRequestSmithy =
-          smithy.CustomerBookIndividualPutRequest()
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualPutResponse =
-          gatewayClient
-            .customerBookIndividualPut[smithy.Forbidden](
-              arbitrarySample[CustomerID],
-              customerBookIndividualPutRequestSmithy,
+          customerBookIndividualPostResponse <- gatewayClient
+            .customerBookIndividualPost[smithy.ValidationError](
+              customerBookIndividualPostRequestSmithy,
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-        customerBookIndividualPutResponse.code shouldBe StatusCode.Forbidden
-        customerBookIndividualPutResponse.body.left.value shouldBe smithy.Forbidden()
+          _ = customerBookIndividualPostResponse.code shouldBe StatusCode.BadRequest
+          _ = customerBookIndividualPostResponse.body.left.value shouldBe smithy.ValidationError(fields =
+            List("address")
+          )
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
+          customerIDsAll <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+
+          _ = customerIDsAll shouldBe Nil
+        } yield ()
       }
 
-      "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
+      "fail with a ValidationError when the address types are not an allowed combination" in withContext { context =>
         import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRoleInvalid =
-          Random.shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRoleInvalid)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        val customerBookIndividualPutRequestSmithy =
-          smithy.CustomerBookIndividualPutRequest()
+          customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
+            .copy(addresses =
+              List(
+                CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.Shipping)),
+                CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.Shipping)),
+              )
+            )
+            .transformInto[smithy.CustomerBookIndividualPostRequest]
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        val customerBookIndividualPutResponse =
-          gatewayClient
-            .customerBookIndividualPut[smithy.Forbidden](
-              arbitrarySample[CustomerID],
-              customerBookIndividualPutRequestSmithy,
+          customerBookIndividualPostResponse <- gatewayClient
+            .customerBookIndividualPost[smithy.ValidationError](
+              customerBookIndividualPostRequestSmithy,
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-        customerBookIndividualPutResponse.code shouldBe StatusCode.Forbidden
-        customerBookIndividualPutResponse.body.left.value shouldBe smithy.Forbidden()
+          _ = customerBookIndividualPostResponse.code shouldBe StatusCode.BadRequest
+          _ = customerBookIndividualPostResponse.body.left.value shouldBe smithy.ValidationError(fields =
+            List("addresses")
+          )
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
+          customerIDsAll <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+
+          _ = customerIDsAll shouldBe Nil
+        } yield ()
       }
 
-      "fail with a Conflict when renaming to an active individual name and retain both complete rows" in withContext {
+      "fail with a Conflict when the full name already exists in the organization" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerBookIndividualPostRequest    = arbitrarySample[CustomerBookIndividualPostRequest]
+          customerIndividualDetailsRowExisting = arbitrarySample[CustomerIndividualDetailsRow]
+            .copy(
+              organizationID = organizationUserRow.organizationID,
+              isArchived = false,
+              fullName = customerBookIndividualPostRequest.fullName,
+            )
+
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRowExisting))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualPostResponse <- gatewayClient
+            .customerBookIndividualPost[smithy.Conflict](
+              customerBookIndividualPostRequest.transformInto[smithy.CustomerBookIndividualPostRequest],
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookIndividualPostResponse.code shouldBe StatusCode.Conflict
+          _ = customerBookIndividualPostResponse.body.left.value shouldBe smithy.Conflict(message =
+            "A customer with the given name already exists in this organization"
+          )
+
+          customerIDsAll                   <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+
+          _ = customerIDsAll shouldBe
+            List(customerIndividualDetailsRowExisting.customerID)
+          _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRowExisting)
+        } yield ()
+      }
+    }
+
+    "POST /customer-book/business" should {
+      "successfully insert a customer business with its inline contact" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerBusinessContactInsert   = arbitrarySample[CustomerBusinessContactInsert]
+          customerBookBusinessPostRequest = arbitrarySample[CustomerBookBusinessPostRequest]
+            .copy(customerBusinessContacts = List(customerBusinessContactInsert))
+          instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookBusinessPostResponse <- gatewayClient
+            .customerBookBusinessPost[smithy.InternalServerError](
+              customerBookBusinessPostRequest.transformInto[smithy.CustomerBookBusinessPostRequest],
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookBusinessPostResponse.code shouldBe StatusCode.Ok
+
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerIDsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerBusinessDetailsRowsAll should have size 1
+          _ = customerIDsAll should have size 1
+
+          _ = customerBusinessDetailsRowsAll.head shouldBe CustomerBusinessDetailsRow(
+            organizationID = organizationUserRow.organizationID,
+            customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
+            businessName = customerBookBusinessPostRequest.businessName,
+            emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
+              CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
+            ),
+            phoneNumbers = customerBookBusinessPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
+              CustomerPhoneNumberEntryInput(
+                customerPhoneNumberEntry.phoneNumber,
+                isDefault = customerPhoneNumberEntry.isDefault,
+              )
+            ),
+            taxID = customerBookBusinessPostRequest.taxID,
+            addresses = customerBookBusinessPostRequest.addresses,
+            isArchived = false,
+            createdAt = customerBusinessDetailsRowsAll.head.createdAt,
+            updatedAt = customerBusinessDetailsRowsAll.head.updatedAt,
+          )
+          _ =
+            customerBusinessDetailsRowsAll.head.updatedAt.value shouldBe customerBusinessDetailsRowsAll.head.createdAt.value
+          _ = customerBusinessDetailsRowsAll.head.createdAt.value.isBefore(instantNow) shouldBe false
+
+          _ =
+            customerBusinessContactRowsAll should have size customerBookBusinessPostRequest.customerBusinessContacts.size
+          _ = customerBusinessContactRowsAll.head shouldBe CustomerBusinessContactRow(
+            organizationID = organizationUserRow.organizationID,
+            customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
+            customerBusinessContactID = customerBusinessContactRowsAll.head.customerBusinessContactID,
+            fullName = customerBusinessContactInsert.fullName,
+            role = customerBusinessContactInsert.role,
+            email = customerBusinessContactInsert.email,
+            phoneNumber = customerBusinessContactInsert.phoneNumber,
+            createdAt = customerBusinessContactRowsAll.head.createdAt,
+            updatedAt = customerBusinessContactRowsAll.head.updatedAt,
+            isArchived = false,
+          )
+          _ =
+            customerBusinessContactRowsAll.head.createdAt.value shouldBe customerBusinessDetailsRowsAll.head.createdAt.value
+          _ =
+            customerBusinessContactRowsAll.head.updatedAt.value shouldBe customerBusinessDetailsRowsAll.head.createdAt.value
+
+          _ = customerBookBusinessPostResponse.body.value shouldBe smithy.CustomerBookBusinessPostResponse(
+            customerID = customerBusinessDetailsRowsAll.head.customerID.value
+          )
+        } yield ()
+      }
+
+      "successfully insert both inline contacts sharing the same email" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerEmail                  = arbitrarySample[CustomerEmail]
+          customerBusinessContactInsert1 = arbitrarySample[CustomerBusinessContactInsert]
+            .copy(fullName = CustomerFullName.assume("contact one"), email = Some(customerEmail), phoneNumber = None)
+          customerBusinessContactInsert2 = arbitrarySample[CustomerBusinessContactInsert]
+            .copy(fullName = CustomerFullName.assume("contact two"), email = Some(customerEmail), phoneNumber = None)
+          customerBookBusinessPostRequest = arbitrarySample[CustomerBookBusinessPostRequest]
+            .copy(customerBusinessContacts = List(customerBusinessContactInsert1, customerBusinessContactInsert2))
+          instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookBusinessPostResponse <- gatewayClient
+            .customerBookBusinessPost[smithy.InternalServerError](
+              customerBookBusinessPostRequest.transformInto[smithy.CustomerBookBusinessPostRequest],
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookBusinessPostResponse.code shouldBe StatusCode.Ok
+
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+          customerIDsAll <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+
+          _ = customerBusinessDetailsRowsAll should have size 1
+
+          _ =
+            customerBusinessContactRowsAll should have size customerBookBusinessPostRequest.customerBusinessContacts.size
+
+          _ = customerIDsAll shouldBe List(
+            CustomerID(customerBookBusinessPostResponse.body.value.customerID)
+          )
+
+          _ = customerBusinessDetailsRowsAll.head shouldBe CustomerBusinessDetailsRow(
+            organizationID = organizationUserRow.organizationID,
+            customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
+            businessName = customerBookBusinessPostRequest.businessName,
+            taxID = customerBookBusinessPostRequest.taxID,
+            emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
+              CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
+            ),
+            phoneNumbers = customerBookBusinessPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
+              CustomerPhoneNumberEntryInput(
+                customerPhoneNumberEntry.phoneNumber,
+                isDefault = customerPhoneNumberEntry.isDefault,
+              )
+            ),
+            addresses = customerBookBusinessPostRequest.addresses,
+            isArchived = false,
+            createdAt = customerBusinessDetailsRowsAll.head.createdAt,
+            updatedAt = UpdatedAt(customerBusinessDetailsRowsAll.head.createdAt.value),
+          )
+          _ = customerBusinessDetailsRowsAll.head.createdAt.value.isBefore(instantNow) shouldBe false
+
+          _ =
+            customerBusinessContactRowsAll should contain theSameElementsAs customerBookBusinessPostRequest.customerBusinessContacts.map {
+              customerBusinessContactInsert =>
+                val customerBusinessContactRow =
+                  customerBusinessContactRowsAll.find(_.fullName == customerBusinessContactInsert.fullName).value
+                CustomerBusinessContactRow(
+                  organizationID = organizationUserRow.organizationID,
+                  customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
+                  customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID,
+                  fullName = customerBusinessContactInsert.fullName,
+                  role = customerBusinessContactInsert.role,
+                  email = customerBusinessContactInsert.email,
+                  phoneNumber = customerBusinessContactInsert.phoneNumber,
+                  createdAt = customerBusinessDetailsRowsAll.head.createdAt,
+                  updatedAt = UpdatedAt(customerBusinessDetailsRowsAll.head.createdAt.value),
+                  isArchived = false,
+                )
+            }
+
+          _ = customerBookBusinessPostResponse.body.value shouldBe smithy.CustomerBookBusinessPostResponse(
+            customerID = customerBusinessDetailsRowsAll.head.customerID.value
+          )
+        } yield ()
+      }
+
+      "successfully insert both inline contacts sharing the same phone number" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerPhoneNumber            = arbitrarySample[CustomerPhoneNumber]
+          customerBusinessContactInsert1 = arbitrarySample[CustomerBusinessContactInsert]
+            .copy(
+              fullName = CustomerFullName.assume("contact one"),
+              email = None,
+              phoneNumber = Some(customerPhoneNumber),
+            )
+          customerBusinessContactInsert2 = arbitrarySample[CustomerBusinessContactInsert]
+            .copy(
+              fullName = CustomerFullName.assume("contact two"),
+              email = None,
+              phoneNumber = Some(customerPhoneNumber),
+            )
+          customerBookBusinessPostRequest = arbitrarySample[CustomerBookBusinessPostRequest]
+            .copy(customerBusinessContacts = List(customerBusinessContactInsert1, customerBusinessContactInsert2))
+          instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookBusinessPostResponse <- gatewayClient
+            .customerBookBusinessPost[smithy.InternalServerError](
+              customerBookBusinessPostRequest.transformInto[smithy.CustomerBookBusinessPostRequest],
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookBusinessPostResponse.code shouldBe StatusCode.Ok
+
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+          customerIDsAll <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+
+          _ = customerBusinessDetailsRowsAll should have size 1
+
+          _ =
+            customerBusinessContactRowsAll should have size customerBookBusinessPostRequest.customerBusinessContacts.size
+
+          _ = customerIDsAll shouldBe List(
+            CustomerID(customerBookBusinessPostResponse.body.value.customerID)
+          )
+
+          _ = customerBusinessDetailsRowsAll.head shouldBe CustomerBusinessDetailsRow(
+            organizationID = organizationUserRow.organizationID,
+            customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
+            businessName = customerBookBusinessPostRequest.businessName,
+            taxID = customerBookBusinessPostRequest.taxID,
+            emails = customerBookBusinessPostRequest.emails.map(customerEmailEntry =>
+              CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
+            ),
+            phoneNumbers = customerBookBusinessPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
+              CustomerPhoneNumberEntryInput(
+                customerPhoneNumberEntry.phoneNumber,
+                isDefault = customerPhoneNumberEntry.isDefault,
+              )
+            ),
+            addresses = customerBookBusinessPostRequest.addresses,
+            isArchived = false,
+            createdAt = customerBusinessDetailsRowsAll.head.createdAt,
+            updatedAt = UpdatedAt(customerBusinessDetailsRowsAll.head.createdAt.value),
+          )
+          _ = customerBusinessDetailsRowsAll.head.createdAt.value.isBefore(instantNow) shouldBe false
+
+          _ =
+            customerBusinessContactRowsAll should contain theSameElementsAs customerBookBusinessPostRequest.customerBusinessContacts.map {
+              customerBusinessContactInsert =>
+                val customerBusinessContactRow =
+                  customerBusinessContactRowsAll.find(_.fullName == customerBusinessContactInsert.fullName).value
+                CustomerBusinessContactRow(
+                  organizationID = organizationUserRow.organizationID,
+                  customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
+                  customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID,
+                  fullName = customerBusinessContactInsert.fullName,
+                  role = customerBusinessContactInsert.role,
+                  email = customerBusinessContactInsert.email,
+                  phoneNumber = customerBusinessContactInsert.phoneNumber,
+                  createdAt = customerBusinessDetailsRowsAll.head.createdAt,
+                  updatedAt = UpdatedAt(customerBusinessDetailsRowsAll.head.createdAt.value),
+                  isArchived = false,
+                )
+            }
+
+          _ = customerBookBusinessPostResponse.body.value shouldBe smithy.CustomerBookBusinessPostResponse(
+            customerID = customerBusinessDetailsRowsAll.head.customerID.value
+          )
+        } yield ()
+      }
+
+      "successfully insert a customer business with only its required fields and a contact without email or phone number" in withContext {
         context =>
           import context.*
 
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerBusinessName                  = CustomerBusinessName.assume("Acme Trading")
+            customerBusinessContactFullName       = CustomerFullName.assume("Nikos Ioannou")
+            customerBookBusinessPostRequestSmithy = smithy.CustomerBookBusinessPostRequest(
+              businessName = customerBusinessName.value,
+              customerBusinessContacts =
+                List(smithy.CustomerBusinessContactInsert(fullName = customerBusinessContactFullName.value)),
+            )
+            instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookBusinessPostResponse <- gatewayClient
+              .customerBookBusinessPost[smithy.InternalServerError](
+                customerBookBusinessPostRequestSmithy,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookBusinessPostResponse.code shouldBe StatusCode.Ok
+
+            customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+            )
+            customerIDsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+            customerBusinessContactRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessContactRowsTesting
+            )
+
+            _ = customerBusinessDetailsRowsAll should have size 1
+            _ = customerIDsAll should have size 1
+
+            _ = customerBusinessDetailsRowsAll.head shouldBe CustomerBusinessDetailsRow(
+              organizationID = organizationUserRow.organizationID,
+              customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
+              businessName = customerBusinessName,
+              emails = Nil,
+              phoneNumbers = Nil,
+              taxID = None,
+              addresses = Nil,
+              isArchived = false,
+              createdAt = customerBusinessDetailsRowsAll.head.createdAt,
+              updatedAt = customerBusinessDetailsRowsAll.head.updatedAt,
+            )
+            _ =
+              customerBusinessDetailsRowsAll.head.updatedAt.value shouldBe customerBusinessDetailsRowsAll.head.createdAt.value
+            _ = customerBusinessDetailsRowsAll.head.createdAt.value.isBefore(instantNow) shouldBe false
+
+            _ = customerBusinessContactRowsAll should have size 1
+            _ = customerBusinessContactRowsAll.head shouldBe CustomerBusinessContactRow(
+              organizationID = organizationUserRow.organizationID,
+              customerID = CustomerID(customerBookBusinessPostResponse.body.value.customerID),
+              customerBusinessContactID = customerBusinessContactRowsAll.head.customerBusinessContactID,
+              fullName = customerBusinessContactFullName,
+              role = None,
+              email = None,
+              phoneNumber = None,
+              createdAt = customerBusinessContactRowsAll.head.createdAt,
+              updatedAt = customerBusinessContactRowsAll.head.updatedAt,
+              isArchived = false,
+            )
+            _ =
+              customerBusinessContactRowsAll.head.createdAt.value shouldBe customerBusinessDetailsRowsAll.head.createdAt.value
+            _ =
+              customerBusinessContactRowsAll.head.updatedAt.value shouldBe customerBusinessDetailsRowsAll.head.createdAt.value
+
+            _ = customerBookBusinessPostResponse.body.value shouldBe smithy.CustomerBookBusinessPostResponse(
+              customerID = customerBusinessDetailsRowsAll.head.customerID.value
+            )
+          } yield ()
+      }
+
+      "fail with a ValidationError when the business name is invalid" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
             .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+          customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
+            .transformInto[smithy.CustomerBookBusinessPostRequest]
+            .copy(businessName = "")
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookBusinessPostResponse <- gatewayClient
+            .customerBookBusinessPost[smithy.ValidationError](
+              customerBookBusinessPostRequestSmithy,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookBusinessPostResponse.code shouldBe StatusCode.BadRequest
+          _ = customerBookBusinessPostResponse.body.left.value shouldBe smithy.ValidationError(fields =
+            List("businessName")
+          )
+
+          customerIDsAll                 <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIDsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
+      }
+
+      "fail with a Conflict when the business name already exists in the organization" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerBusinessContactInsert   = arbitrarySample[CustomerBusinessContactInsert]
+          customerBookBusinessPostRequest = arbitrarySample[CustomerBookBusinessPostRequest]
+            .copy(customerBusinessContacts = List(customerBusinessContactInsert))
+          customerBusinessDetailsRowExisting = arbitrarySample[CustomerBusinessDetailsRow]
             .copy(
               organizationID = organizationUserRow.organizationID,
               isArchived = false,
-              fullName = CustomerFullName.assume("first customer"),
+              businessName = customerBookBusinessPostRequest.businessName,
             )
-          val customerIndividualDetailsRowExisting = arbitrarySample[CustomerIndividualDetailsRow]
+
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRowExisting))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookBusinessPostResponse <- gatewayClient
+            .customerBookBusinessPost[smithy.Conflict](
+              customerBookBusinessPostRequest.transformInto[smithy.CustomerBookBusinessPostRequest],
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookBusinessPostResponse.code shouldBe StatusCode.Conflict
+          _ = customerBookBusinessPostResponse.body.left.value shouldBe smithy.Conflict(message =
+            "A customer with the given name already exists in this organization"
+          )
+
+          customerIDsAll                 <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIDsAll shouldBe
+            List(customerBusinessDetailsRowExisting.customerID)
+          _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRowExisting)
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
+      }
+    }
+
+    "POST /customer-book/batch" should {
+      "successfully insert individuals before businesses in the response and persist every customer and inline contact" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerFullName1                  = CustomerFullName.assume("Zeta Individual")
+            customerFullName2                  = CustomerFullName.assume("Alpha Individual")
+            customerBusinessName1              = CustomerBusinessName.assume("Zeta Business")
+            customerBusinessName2              = CustomerBusinessName.assume("Alpha Business")
+            customerBusinessContactInsert      = arbitrarySample[CustomerBusinessContactInsert]
+            customerBookIndividualPostRequest1 = arbitrarySample[CustomerBookIndividualPostRequest]
+              .copy(fullName = customerFullName1)
+            customerBookIndividualPostRequest2 = arbitrarySample[CustomerBookIndividualPostRequest]
+              .copy(fullName = customerFullName2)
+            customerBookBusinessPostRequest1 = arbitrarySample[CustomerBookBusinessPostRequest]
+              .copy(businessName = customerBusinessName1)
+              .copy(customerBusinessContacts = List(customerBusinessContactInsert))
+            customerBookBusinessPostRequest2 = arbitrarySample[CustomerBookBusinessPostRequest]
+              .copy(businessName = customerBusinessName2, customerBusinessContacts = List.empty)
+            customerIndividuals          = List(customerBookIndividualPostRequest1, customerBookIndividualPostRequest2)
+            customerBusinesses           = List(customerBookBusinessPostRequest1, customerBookBusinessPostRequest2)
+            customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+              customerBusinesses = customerBusinesses,
+              customerIndividuals = customerIndividuals,
+            )
+            instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookBatchPostResponse <- gatewayClient.customerBookBatchPost[smithy.InternalServerError](
+              customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest],
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+            _ = customerBookBatchPostResponse.code shouldBe StatusCode.Ok
+
+            customerIndividualDetailsRows <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+            )
+            customerBusinessDetailsRows <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+            )
+            customerBusinessContactRows <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessContactRowsTesting
+            )
+            customerIDsAll <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+
+            _ = customerIndividualDetailsRows should have size customerIndividuals.size
+
+            _ = customerBusinessDetailsRows should have size customerBusinesses.size
+
+            _ = customerBusinessContactRows should have size customerBusinesses.flatMap(_.customerBusinessContacts).size
+
+            _ = customerIDsAll should have size (customerIndividuals.size + customerBusinesses.size)
+
+            customerIndividualDetailsRow1 = customerIndividualDetailsRows.find(_.fullName == customerFullName1).value
+            customerIndividualDetailsRow2 = customerIndividualDetailsRows.find(_.fullName == customerFullName2).value
+            customerBusinessDetailsRow1   = customerBusinessDetailsRows
+              .find(_.businessName == customerBusinessName1)
+              .value
+            customerBusinessDetailsRow2 = customerBusinessDetailsRows
+              .find(_.businessName == customerBusinessName2)
+              .value
+
+            _ = customerBookBatchPostResponse.body.value shouldBe smithy.CustomerBookBatchPostResponse(
+              customerIDs = List(
+                customerIndividualDetailsRow1.customerID.value,
+                customerIndividualDetailsRow2.customerID.value,
+                customerBusinessDetailsRow1.customerID.value,
+                customerBusinessDetailsRow2.customerID.value,
+              )
+            )
+
+            _ = customerIndividualDetailsRow1 shouldBe CustomerIndividualDetailsRow(
+              organizationID = organizationUserRow.organizationID,
+              customerID = customerIndividualDetailsRow1.customerID,
+              fullName = customerBookIndividualPostRequest1.fullName,
+              emails = customerBookIndividualPostRequest1.emails.map(customerEmailEntry =>
+                CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
+              ),
+              phoneNumbers = customerBookIndividualPostRequest1.phoneNumbers.map(customerPhoneNumberEntry =>
+                CustomerPhoneNumberEntryInput(
+                  customerPhoneNumberEntry.phoneNumber,
+                  isDefault = customerPhoneNumberEntry.isDefault,
+                )
+              ),
+              addresses = customerBookIndividualPostRequest1.addresses,
+              isArchived = false,
+              createdAt = customerIndividualDetailsRow1.createdAt,
+              updatedAt = customerIndividualDetailsRow1.updatedAt,
+            )
+            _ = customerIndividualDetailsRow1.updatedAt.value shouldBe customerIndividualDetailsRow1.createdAt.value
+            _ = customerIndividualDetailsRow1.createdAt.value.isBefore(instantNow) shouldBe false
+
+            _ = customerIndividualDetailsRow2 shouldBe CustomerIndividualDetailsRow(
+              organizationID = organizationUserRow.organizationID,
+              customerID = customerIndividualDetailsRow2.customerID,
+              fullName = customerBookIndividualPostRequest2.fullName,
+              emails = customerBookIndividualPostRequest2.emails.map(customerEmailEntry =>
+                CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
+              ),
+              phoneNumbers = customerBookIndividualPostRequest2.phoneNumbers.map(customerPhoneNumberEntry =>
+                CustomerPhoneNumberEntryInput(
+                  customerPhoneNumberEntry.phoneNumber,
+                  isDefault = customerPhoneNumberEntry.isDefault,
+                )
+              ),
+              addresses = customerBookIndividualPostRequest2.addresses,
+              isArchived = false,
+              createdAt = customerIndividualDetailsRow2.createdAt,
+              updatedAt = customerIndividualDetailsRow2.updatedAt,
+            )
+            _ = customerIndividualDetailsRow2.createdAt.value shouldBe customerIndividualDetailsRow1.createdAt.value
+            _ = customerIndividualDetailsRow2.updatedAt.value shouldBe customerIndividualDetailsRow1.createdAt.value
+
+            _ = customerBusinessDetailsRow1 shouldBe CustomerBusinessDetailsRow(
+              organizationID = organizationUserRow.organizationID,
+              customerID = customerBusinessDetailsRow1.customerID,
+              businessName = customerBookBusinessPostRequest1.businessName,
+              emails = customerBookBusinessPostRequest1.emails.map(customerEmailEntry =>
+                CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
+              ),
+              phoneNumbers = customerBookBusinessPostRequest1.phoneNumbers.map(customerPhoneNumberEntry =>
+                CustomerPhoneNumberEntryInput(
+                  customerPhoneNumberEntry.phoneNumber,
+                  isDefault = customerPhoneNumberEntry.isDefault,
+                )
+              ),
+              taxID = customerBookBusinessPostRequest1.taxID,
+              addresses = customerBookBusinessPostRequest1.addresses,
+              isArchived = false,
+              createdAt = customerBusinessDetailsRow1.createdAt,
+              updatedAt = customerBusinessDetailsRow1.updatedAt,
+            )
+            _ = customerBusinessDetailsRow1.createdAt.value shouldBe customerIndividualDetailsRow1.createdAt.value
+            _ = customerBusinessDetailsRow1.updatedAt.value shouldBe customerIndividualDetailsRow1.createdAt.value
+
+            _ = customerBusinessDetailsRow2 shouldBe CustomerBusinessDetailsRow(
+              organizationID = organizationUserRow.organizationID,
+              customerID = customerBusinessDetailsRow2.customerID,
+              businessName = customerBookBusinessPostRequest2.businessName,
+              emails = customerBookBusinessPostRequest2.emails.map(customerEmailEntry =>
+                CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
+              ),
+              phoneNumbers = customerBookBusinessPostRequest2.phoneNumbers.map(customerPhoneNumberEntry =>
+                CustomerPhoneNumberEntryInput(
+                  customerPhoneNumberEntry.phoneNumber,
+                  isDefault = customerPhoneNumberEntry.isDefault,
+                )
+              ),
+              taxID = customerBookBusinessPostRequest2.taxID,
+              addresses = customerBookBusinessPostRequest2.addresses,
+              isArchived = false,
+              createdAt = customerBusinessDetailsRow2.createdAt,
+              updatedAt = customerBusinessDetailsRow2.updatedAt,
+            )
+            _ = customerBusinessDetailsRow2.createdAt.value shouldBe customerIndividualDetailsRow1.createdAt.value
+            _ = customerBusinessDetailsRow2.updatedAt.value shouldBe customerIndividualDetailsRow1.createdAt.value
+
+            _ = customerBusinessContactRows shouldBe List(
+              CustomerBusinessContactRow(
+                organizationID = organizationUserRow.organizationID,
+                customerID = customerBusinessDetailsRow1.customerID,
+                customerBusinessContactID = customerBusinessContactRows.head.customerBusinessContactID,
+                fullName = customerBusinessContactInsert.fullName,
+                role = customerBusinessContactInsert.role,
+                email = customerBusinessContactInsert.email,
+                phoneNumber = customerBusinessContactInsert.phoneNumber,
+                createdAt = customerBusinessContactRows.head.createdAt,
+                updatedAt = customerBusinessContactRows.head.updatedAt,
+                isArchived = false,
+              )
+            )
+            _ = customerBusinessContactRows.head.createdAt.value shouldBe customerIndividualDetailsRow1.createdAt.value
+            _ = customerBusinessContactRows.head.updatedAt.value shouldBe customerIndividualDetailsRow1.createdAt.value
+          } yield ()
+      }
+
+      "successfully insert an empty batch without persisting customers or contacts" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+          customerBookBatchPostRequestSmithy = smithy.CustomerBookBatchPostRequest(
+            customerBusinesses = Nil,
+            customerIndividuals = Nil,
+          )
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookBatchPostResponse <- gatewayClient
+            .customerBookBatchPost[smithy.InternalServerError](
+              customerBookBatchPostRequestSmithy,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookBatchPostResponse.code shouldBe StatusCode.Ok
+          _ = customerBookBatchPostResponse.body.value shouldBe smithy.CustomerBookBatchPostResponse(customerIDs = Nil)
+
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
+      }
+
+      "fail with a ValidationError for invalid businesses and individuals without persisting any customer" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
+              .copy(customerBusinessContacts = Nil)
+              .transformInto[smithy.CustomerBookBusinessPostRequest]
+            customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
+              .transformInto[smithy.CustomerBookIndividualPostRequest]
+            customerBookBatchPostRequestSmithy = smithy.CustomerBookBatchPostRequest(
+              customerBusinesses = List(customerBookBusinessPostRequestSmithy.copy(businessName = "")),
+              customerIndividuals = List(customerBookIndividualPostRequestSmithy.copy(fullName = "")),
+            )
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookBatchPostResponse <- gatewayClient
+              .customerBookBatchPost[smithy.ValidationError](
+                customerBookBatchPostRequestSmithy,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookBatchPostResponse.code shouldBe StatusCode.BadRequest
+            _ = customerBookBatchPostResponse.body.left.value shouldBe smithy.ValidationError(fields =
+              List("customerBusiness", "customerIndividual")
+            )
+
+            customerIDsAll                 <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerIDsAll shouldBe Nil
+            _ = customerBusinessContactRowsAll shouldBe Nil
+          } yield ()
+      }
+
+      "fail with a Conflict for an existing individual name and leave the accompanying business unpersisted" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerIndividualDetailsRowExisting = arbitrarySample[CustomerIndividualDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              isArchived = false,
+            )
+
+            _ <- postgresClient
+              .executeQuery(
+                customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRowExisting)
+              )
+
+            customerBusinessContactInsert = arbitrarySample[CustomerBusinessContactInsert]
+            customerBookBatchPostRequest  = CustomerBookBatchPostRequest(
+              customerBusinesses = List(
+                arbitrarySample[CustomerBookBusinessPostRequest]
+                  .copy(customerBusinessContacts = List(customerBusinessContactInsert))
+              ),
+              customerIndividuals = List(
+                arbitrarySample[CustomerBookIndividualPostRequest]
+                  .copy(fullName = customerIndividualDetailsRowExisting.fullName)
+              ),
+            )
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookBatchPostResponse <- gatewayClient
+              .customerBookBatchPost[smithy.Conflict](
+                customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest],
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookBatchPostResponse.code shouldBe StatusCode.Conflict
+            _ = customerBookBatchPostResponse.body.left.value shouldBe smithy.Conflict(
+              message = "A customer with the given name already exists in this organization"
+            )
+
+            customerIDsAll                 <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+            customerIndividualDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+
+            _ = customerIDsAll shouldBe
+              List(customerIndividualDetailsRowExisting.customerID)
+            _ = customerBusinessDetailsRowsAll shouldBe Nil
+            _ = customerBusinessContactRowsAll shouldBe Nil
+            _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRowExisting)
+          } yield ()
+      }
+
+      "fail with a Conflict for an existing business name and roll back the accompanying individual" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerBusinessDetailsRowExisting = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              isArchived = false,
+            )
+
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRowExisting))
+
+            customerBusinessContactInsert = arbitrarySample[CustomerBusinessContactInsert]
+            customerBookBatchPostRequest  = CustomerBookBatchPostRequest(
+              customerBusinesses = List(
+                arbitrarySample[CustomerBookBusinessPostRequest]
+                  .copy(
+                    businessName = customerBusinessDetailsRowExisting.businessName,
+                    customerBusinessContacts = List(customerBusinessContactInsert),
+                  )
+              ),
+              customerIndividuals = List(
+                arbitrarySample[CustomerBookIndividualPostRequest]
+              ),
+            )
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookBatchPostResponse <- gatewayClient
+              .customerBookBatchPost[smithy.Conflict](
+                customerBookBatchPostRequest.transformInto[smithy.CustomerBookBatchPostRequest],
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookBatchPostResponse.code shouldBe StatusCode.Conflict
+            _ = customerBookBatchPostResponse.body.left.value shouldBe smithy.Conflict(
+              message = "A customer with the given name already exists in this organization"
+            )
+
+            customerIDsAll <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+            customerIndividualDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+
+            _ = customerIDsAll shouldBe
+              List(customerBusinessDetailsRowExisting.customerID)
+            _ = customerIndividualDetailsRowsAll shouldBe Nil
+            _ = customerBusinessContactRowsAll shouldBe Nil
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRowExisting)
+          } yield ()
+      }
+    }
+
+    "PUT /customer-book/individual/{customerID}" should {
+      "successfully replace the name and the email, phone number and address lists" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
             .copy(
               organizationID = organizationUserRow.organizationID,
               isArchived = false,
-              fullName = CustomerFullName.assume("second customer"),
+              emails = List(CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = true)),
+              phoneNumbers =
+                List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+            )
+          customerBookIndividualPostRequest = arbitrarySample[CustomerBookIndividualPostRequest]
+            .copy(
+              emails = List(CustomerEmailEntry(arbitrarySample[CustomerEmail], isDefault = true)),
+              phoneNumbers = List(CustomerPhoneNumberEntry(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
             )
 
-          postgresClient
+          _ <- postgresClient
             .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-            .zioValue
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRowExisting))
-            .zioValue
 
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+          customerBookIndividualPutRequestSmithy = CustomerBookIndividualPutRequest(
+            fullName = Some(customerBookIndividualPostRequest.fullName),
+            emails = Some(customerBookIndividualPostRequest.emails),
+            phoneNumbers = Some(customerBookIndividualPostRequest.phoneNumbers),
+            addresses = Some(customerBookIndividualPostRequest.addresses),
+          ).transformInto[smithy.CustomerBookIndividualPutRequest]
+          instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
-          val customerBookIndividualPutResponse = gatewayClient
-            .customerBookIndividualPut[smithy.Conflict](
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualPutResponse <- gatewayClient
+            .customerBookIndividualPut[smithy.InternalServerError](
               customerIndividualDetailsRow.customerID,
+              customerBookIndividualPutRequestSmithy,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookIndividualPutResponse.body.value shouldBe ()
+
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+          )
+          customerIDsAll <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+
+          _ = customerIndividualDetailsRowsAll shouldBe List(
+            customerIndividualDetailsRow.copy(
+              fullName = customerBookIndividualPostRequest.fullName,
+              emails = customerBookIndividualPostRequest.emails.map(customerEmailEntry =>
+                CustomerEmailEntryInput(customerEmailEntry.email, isDefault = customerEmailEntry.isDefault)
+              ),
+              phoneNumbers = customerBookIndividualPostRequest.phoneNumbers.map(customerPhoneNumberEntry =>
+                CustomerPhoneNumberEntryInput(
+                  customerPhoneNumberEntry.phoneNumber,
+                  isDefault = customerPhoneNumberEntry.isDefault,
+                )
+              ),
+              addresses = customerBookIndividualPostRequest.addresses,
+              updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
+            )
+          )
+          _ = customerIndividualDetailsRowsAll.head should not equal customerIndividualDetailsRow
+          _ = customerIndividualDetailsRowsAll.head.updatedAt.value.isBefore(instantNow) shouldBe false
+          _ = customerIDsAll shouldBe List(
+            customerIndividualDetailsRow.customerID
+          )
+        } yield ()
+      }
+
+      "successfully retain omitted lists when updating the name" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+            .copy(
+              organizationID = organizationUserRow.organizationID,
+              isArchived = false,
+              emails = List(CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = true)),
+              phoneNumbers =
+                List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+            )
+          customerBookIndividualPostRequest = arbitrarySample[CustomerBookIndividualPostRequest]
+
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+
+          customerBookIndividualPutRequestSmithy = smithy.CustomerBookIndividualPutRequest(fullName =
+            Some(customerBookIndividualPostRequest.fullName.value)
+          )
+          instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualPutResponse <- gatewayClient
+            .customerBookIndividualPut[smithy.InternalServerError](
+              customerIndividualDetailsRow.customerID,
+              customerBookIndividualPutRequestSmithy,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookIndividualPutResponse.body.value shouldBe ()
+
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+          )
+          customerIDsAll <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+
+          _ = customerIndividualDetailsRowsAll shouldBe List(
+            customerIndividualDetailsRow.copy(
+              fullName = customerBookIndividualPostRequest.fullName,
+              updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
+            )
+          )
+          _ = customerIndividualDetailsRowsAll.head should not equal customerIndividualDetailsRow
+          _ = customerIndividualDetailsRowsAll.head.updatedAt.value.isBefore(instantNow) shouldBe false
+          _ = customerIDsAll shouldBe List(
+            customerIndividualDetailsRow.customerID
+          )
+        } yield ()
+      }
+
+      "successfully clear explicitly empty lists while retaining the omitted name" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+            .copy(
+              organizationID = organizationUserRow.organizationID,
+              isArchived = false,
+              emails = List(CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = true)),
+              phoneNumbers =
+                List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+            )
+
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+
+          customerBookIndividualPutRequestSmithy = smithy.CustomerBookIndividualPutRequest(
+            emails = Some(Nil),
+            phoneNumbers = Some(Nil),
+            addresses = Some(Nil),
+          )
+          instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualPutResponse <- gatewayClient
+            .customerBookIndividualPut[smithy.InternalServerError](
+              customerIndividualDetailsRow.customerID,
+              customerBookIndividualPutRequestSmithy,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookIndividualPutResponse.body.value shouldBe ()
+
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+          )
+          customerIDsAll <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+
+          _ = customerIndividualDetailsRowsAll shouldBe List(
+            customerIndividualDetailsRow.copy(
+              emails = Nil,
+              phoneNumbers = Nil,
+              addresses = Nil,
+              updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
+            )
+          )
+          _ = customerIndividualDetailsRowsAll.head should not equal customerIndividualDetailsRow
+          _ = customerIndividualDetailsRowsAll.head.updatedAt.value.isBefore(instantNow) shouldBe false
+          _ = customerIDsAll shouldBe List(
+            customerIndividualDetailsRow.customerID
+          )
+        } yield ()
+      }
+
+      "successfully do nothing when the customer individual does not exist" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualPutResponse <- gatewayClient
+            .customerBookIndividualPut[smithy.InternalServerError](
+              arbitrarySample[CustomerID],
               smithy.CustomerBookIndividualPutRequest(
-                fullName = Some(customerIndividualDetailsRowExisting.fullName.value),
+                fullName = Some("changed name"),
                 emails = Some(Nil),
                 phoneNumbers = Some(Nil),
                 addresses = Some(Nil),
@@ -2056,79 +1549,262 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-          customerBookIndividualPutResponse.code shouldBe StatusCode.Conflict
-          customerBookIndividualPutResponse.body.left.value shouldBe smithy.Conflict(message =
-            "A customer with the given name already exists in this organization"
-          )
+          _ = customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookIndividualPutResponse.body.value shouldBe ()
 
-          val customerIndividualDetailsRowsAll =
-            postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
+          customerIDsAll <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
 
-          customerIndividualDetailsRowsAll should contain theSameElementsAs List(
-            customerIndividualDetailsRow,
-            customerIndividualDetailsRowExisting,
-          )
+          _ = customerIDsAll shouldBe Nil
+        } yield ()
       }
 
-      "fail with an InternalServerError when the user details do not exist" in withContext { context =>
+      "successfully leave an archived customer individual unchanged" in withContext { context =>
         import context.*
 
-        val userID         = arbitrarySample[UserID]
-        val organizationID = arbitrarySample[OrganizationID]
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-        val customerBookIndividualPutRequestSmithy =
-          smithy.CustomerBookIndividualPutRequest()
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        val accessJwt = jwtService.generateAccessToken(userID).zioValue
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+            .copy(organizationID = organizationUserRow.organizationID, isArchived = true)
 
-        val customerBookIndividualPutResponse =
-          gatewayClient
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualPutResponse <- gatewayClient
             .customerBookIndividualPut[smithy.InternalServerError](
-              arbitrarySample[CustomerID],
-              customerBookIndividualPutRequestSmithy,
-              Some(organizationID),
+              customerIndividualDetailsRow.customerID,
+              smithy.CustomerBookIndividualPutRequest(
+                fullName = Some("changed name"),
+                emails = Some(Nil),
+                phoneNumbers = Some(Nil),
+                addresses = Some(Nil),
+              ),
+              Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-        customerBookIndividualPutResponse.code shouldBe StatusCode.InternalServerError
-        customerBookIndividualPutResponse.body.left.value shouldBe smithy.InternalServerError()
+          _ = customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookIndividualPutResponse.body.value shouldBe ()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+
+          _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+        } yield ()
       }
 
-      "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
+      "successfully leave another organization's customer individual unchanged" in withContext { context =>
         import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        val organizationID = arbitrarySample[OrganizationID]
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+            .copy(isArchived = false)
 
-        val customerBookIndividualPutRequestSmithy =
-          smithy.CustomerBookIndividualPutRequest()
+          _ = customerIndividualDetailsRow.organizationID should not be organizationUserRow.organizationID
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
 
-        val customerBookIndividualPutResponse =
-          gatewayClient
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualPutResponse <- gatewayClient
             .customerBookIndividualPut[smithy.InternalServerError](
-              arbitrarySample[CustomerID],
-              customerBookIndividualPutRequestSmithy,
-              Some(organizationID),
+              customerIndividualDetailsRow.customerID,
+              smithy.CustomerBookIndividualPutRequest(
+                fullName = Some("changed name"),
+                emails = Some(Nil),
+                phoneNumbers = Some(Nil),
+                addresses = Some(Nil),
+              ),
+              Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-        customerBookIndividualPutResponse.code shouldBe StatusCode.InternalServerError
-        customerBookIndividualPutResponse.body.left.value shouldBe smithy.InternalServerError()
+          _ = customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookIndividualPutResponse.body.value shouldBe ()
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+
+          _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+        } yield ()
+      }
+
+      "successfully leave a customer business targeted as an individual unchanged" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+            .copy(organizationID = organizationUserRow.organizationID, isArchived = false)
+
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualPutResponse <- gatewayClient
+            .customerBookIndividualPut[smithy.InternalServerError](
+              customerBusinessDetailsRow.customerID,
+              smithy.CustomerBookIndividualPutRequest(
+                fullName = Some("changed name"),
+                emails = Some(Nil),
+                phoneNumbers = Some(Nil),
+                addresses = Some(Nil),
+              ),
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookIndividualPutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookIndividualPutResponse.body.value shouldBe ()
+
+          customerBusinessDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+
+          _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+        } yield ()
+      }
+
+      "fail with a ValidationError when the full name is invalid" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+            .copy(organizationID = organizationUserRow.organizationID, isArchived = false)
+
+          _ <- postgresClient.executeQuery(
+            customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow)
+          )
+
+          customerBookIndividualPutRequestSmithy = smithy.CustomerBookIndividualPutRequest(fullName = Some(""))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualPutResponse <- gatewayClient
+            .customerBookIndividualPut[smithy.ValidationError](
+              customerIndividualDetailsRow.customerID,
+              customerBookIndividualPutRequestSmithy,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookIndividualPutResponse.code shouldBe StatusCode.BadRequest
+          _ = customerBookIndividualPutResponse.body.left.value shouldBe smithy.ValidationError(fields =
+            List("fullName")
+          )
+
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+          )
+
+          _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+        } yield ()
+      }
+
+      "fail with a Conflict when renaming to an active individual name and retain both complete rows" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+              .copy(
+                organizationID = organizationUserRow.organizationID,
+                isArchived = false,
+                fullName = CustomerFullName.assume("first customer"),
+              )
+            customerIndividualDetailsRowExisting = arbitrarySample[CustomerIndividualDetailsRow]
+              .copy(
+                organizationID = organizationUserRow.organizationID,
+                isArchived = false,
+                fullName = CustomerFullName.assume("second customer"),
+              )
+
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+            _ <- postgresClient
+              .executeQuery(
+                customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRowExisting)
+              )
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookIndividualPutResponse <- gatewayClient
+              .customerBookIndividualPut[smithy.Conflict](
+                customerIndividualDetailsRow.customerID,
+                smithy.CustomerBookIndividualPutRequest(
+                  fullName = Some(customerIndividualDetailsRowExisting.fullName.value),
+                  emails = Some(Nil),
+                  phoneNumbers = Some(Nil),
+                  addresses = Some(Nil),
+                ),
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookIndividualPutResponse.code shouldBe StatusCode.Conflict
+            _ = customerBookIndividualPutResponse.body.left.value shouldBe smithy.Conflict(message =
+              "A customer with the given name already exists in this organization"
+            )
+
+            customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+            )
+
+            _ = customerIndividualDetailsRowsAll should contain theSameElementsAs List(
+              customerIndividualDetailsRow,
+              customerIndividualDetailsRowExisting,
+            )
+          } yield ()
       }
     }
 
@@ -2137,819 +1813,212 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
         context =>
           import context.*
 
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  =
-            arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            businessName = CustomerBusinessName.assume("Original Business"),
-            taxID = Some(CustomerTaxID.assume("OriginalTax")),
-            emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
-            phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-            addresses =
-              List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-            isArchived = false,
-          )
-          val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-            organizationID = customerBusinessDetailsRow.organizationID,
-            customerID = customerBusinessDetailsRow.customerID,
-            role = Some(arbitrarySample[CustomerBusinessContactRole]),
-            email = Some(CustomerEmail.assume("contact@example.com")),
-            phoneNumber = Some(
-              CustomerPhoneNumber(
-                PhoneNumber(
-                  PhoneRegion.assume("CY"),
-                  PhoneCountryCode.assume("+357"),
-                  PhoneNationalNumber.assume("99123123"),
-                  PhoneNumberE164.assume("+35799123123"),
-                )
-              )
-            ),
-            isArchived = false,
-          )
-
-          val customerBusinessContactRowArchive =
-            customerBusinessContactRow.copy(customerBusinessContactID = arbitrarySample[CustomerBusinessContactID])
-          val customerBusinessContactRowRetained =
-            customerBusinessContactRow.copy(customerBusinessContactID = arbitrarySample[CustomerBusinessContactID])
-          val customerBusinessContactRowAlreadyArchived = customerBusinessContactRow.copy(
-            customerBusinessContactID = arbitrarySample[CustomerBusinessContactID],
-            isArchived = true,
-          )
-          val customerBusinessContactRows = List(
-            customerBusinessContactRow,
-            customerBusinessContactRowArchive,
-            customerBusinessContactRowRetained,
-            customerBusinessContactRowAlreadyArchived,
-          )
-
-          customerBusinessContactRows
-            .map(_.customerBusinessContactID)
-            .distinct
-            .size shouldBe customerBusinessContactRows.size
-
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-            .zioValue
-
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(customerBusinessContactRows))
-            .zioValue
-
-          val customerEmailReplacement       = CustomerEmail.assume("shared-replacement@example.com")
-          val customerPhoneNumberReplacement = CustomerPhoneNumber(
-            PhoneNumber(
-              PhoneRegion.assume("GB"),
-              PhoneCountryCode.assume("+44"),
-              PhoneNationalNumber.assume("7754767565"),
-              PhoneNumberE164.assume("+447754767565"),
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRole,
             )
-          )
-          val customerBusinessContactInsert = CustomerBusinessContactInsert(
-            CustomerFullName.assume("Inserted Contact"),
-            customerBusinessContactRow.role,
-            Some(customerEmailReplacement),
-            Some(customerPhoneNumberReplacement),
-          )
-          val customerBookBusinessPutRequest = CustomerBookBusinessPutRequest(
-            Some(CustomerBusinessName.assume("Replacement Business")),
-            Some(List(CustomerEmailEntry(CustomerEmail.assume("replacement@example.com"), isDefault = true))),
-            Some(Some(CustomerTaxID.assume("ReplacementTax"))),
-            Some(List(CustomerPhoneNumberEntry(arbitrarySample[CustomerPhoneNumber], isDefault = true))),
-            Some(List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling)))),
-            List(customerBusinessContactInsert),
-            List(
-              CustomerBusinessContactUpdate(
-                customerBusinessContactRow.customerBusinessContactID,
-                Some(CustomerFullName.assume("Updated Contact")),
-                Some(Some(CustomerBusinessContactRole.assume("Updated Role"))),
-                Some(Some(customerEmailReplacement)),
-                Some(Some(customerPhoneNumberReplacement)),
-              )
-            ),
-            List(CustomerBusinessContactArchive(customerBusinessContactRowArchive.customerBusinessContactID)),
-          )
-          val customerBookBusinessPutRequestSmithy =
-            customerBookBusinessPutRequest.transformInto[smithy.CustomerBookBusinessPutRequest]
-          val accessJwt                       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-          val customerBookBusinessPutResponse = gatewayClient
-            .customerBookBusinessPut[smithy.InternalServerError](
-              customerBusinessDetailsRow.customerID,
-              customerBookBusinessPutRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              businessName = CustomerBusinessName.assume("Original Business"),
+              taxID = Some(CustomerTaxID.assume("OriginalTax")),
+              emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
+              phoneNumbers =
+                List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+              isArchived = false,
             )
-            .zioValue
-
-          customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
-          customerBookBusinessPutResponse.body.value shouldBe ()
-
-          val customerBusinessDetailsRows =
-            postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
-          val customerBusinessDetailsRowUpdated = customerBusinessDetailsRows.head
-
-          customerBusinessDetailsRows shouldBe List(
-            customerBusinessDetailsRow.copy(
-              businessName = CustomerBusinessName.assume("Replacement Business"),
-              emails = List(CustomerEmailEntryInput(CustomerEmail.assume("replacement@example.com"), isDefault = true)),
-              taxID = Some(CustomerTaxID.assume("ReplacementTax")),
-              phoneNumbers = customerBookBusinessPutRequest.phoneNumbers.value.map(customerPhoneNumberEntry =>
-                CustomerPhoneNumberEntryInput(
-                  customerPhoneNumberEntry.phoneNumber,
-                  isDefault = customerPhoneNumberEntry.isDefault,
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              role = Some(arbitrarySample[CustomerBusinessContactRole]),
+              email = Some(CustomerEmail.assume("contact@example.com")),
+              phoneNumber = Some(
+                CustomerPhoneNumber(
+                  PhoneNumber(
+                    PhoneRegion.assume("CY"),
+                    PhoneCountryCode.assume("+357"),
+                    PhoneNationalNumber.assume("99123123"),
+                    PhoneNumberE164.assume("+35799123123"),
+                  )
                 )
               ),
-              addresses = customerBookBusinessPutRequest.addresses.value,
-              updatedAt = customerBusinessDetailsRowUpdated.updatedAt,
-            )
-          )
-          customerBusinessDetailsRowUpdated should not equal customerBusinessDetailsRow
-
-          val customerBusinessContactRowsPersisted =
-            postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue
-          val customerBusinessContactRowInserted =
-            customerBusinessContactRowsPersisted.find(_.fullName == customerBusinessContactInsert.fullName).value
-          val customerBusinessContactRowUpdated = customerBusinessContactRowsPersisted
-            .find(
-              _.customerBusinessContactID == customerBusinessContactRow.customerBusinessContactID
-            )
-            .value
-
-          customerBusinessContactRowUpdated.email shouldNot equal(customerBusinessContactRow.email)
-          customerBusinessContactRowUpdated.phoneNumber shouldNot equal(customerBusinessContactRow.phoneNumber)
-          customerBusinessContactRowInserted.email shouldBe customerBusinessContactRowUpdated.email
-          customerBusinessContactRowInserted.phoneNumber shouldBe customerBusinessContactRowUpdated.phoneNumber
-          customerBusinessContactRowsPersisted should contain theSameElementsAs List(
-            customerBusinessContactRow.copy(
-              fullName = CustomerFullName.assume("Updated Contact"),
-              role = Some(CustomerBusinessContactRole.assume("Updated Role")),
-              email = Some(customerEmailReplacement),
-              phoneNumber = Some(customerPhoneNumberReplacement),
-              updatedAt = customerBusinessDetailsRowUpdated.updatedAt,
-            ),
-            customerBusinessContactRowArchive
-              .copy(isArchived = true, updatedAt = customerBusinessDetailsRowUpdated.updatedAt),
-            customerBusinessContactRowRetained,
-            customerBusinessContactRowAlreadyArchived,
-            CustomerBusinessContactRow(
-              customerBusinessDetailsRow.organizationID,
-              customerBusinessDetailsRow.customerID,
-              customerBusinessContactRowInserted.customerBusinessContactID,
-              customerBusinessContactInsert.fullName,
-              customerBusinessContactInsert.role,
-              customerBusinessContactInsert.email,
-              customerBusinessContactInsert.phoneNumber,
-              CreatedAt(customerBusinessDetailsRowUpdated.updatedAt.value),
-              customerBusinessDetailsRowUpdated.updatedAt,
               isArchived = false,
-            ),
-          )
+            )
+            customerBusinessContactRowArchive = customerBusinessContactRow.copy(customerBusinessContactID =
+              arbitrarySample[CustomerBusinessContactID]
+            )
+            customerBusinessContactRowRetained = customerBusinessContactRow.copy(customerBusinessContactID =
+              arbitrarySample[CustomerBusinessContactID]
+            )
+            customerBusinessContactRowAlreadyArchived = customerBusinessContactRow.copy(
+              customerBusinessContactID = arbitrarySample[CustomerBusinessContactID],
+              isArchived = true,
+            )
+            customerBusinessContactRows = List(
+              customerBusinessContactRow,
+              customerBusinessContactRowArchive,
+              customerBusinessContactRowRetained,
+              customerBusinessContactRowAlreadyArchived,
+            )
+
+            _ = customerBusinessContactRows
+              .map(_.customerBusinessContactID)
+              .distinct
+              .size shouldBe customerBusinessContactRows.size
+
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(customerBusinessContactRows))
+
+            customerEmailReplacement       = CustomerEmail.assume("shared-replacement@example.com")
+            customerPhoneNumberReplacement = CustomerPhoneNumber(
+              PhoneNumber(
+                PhoneRegion.assume("GB"),
+                PhoneCountryCode.assume("+44"),
+                PhoneNationalNumber.assume("7754767565"),
+                PhoneNumberE164.assume("+447754767565"),
+              )
+            )
+            customerBusinessContactInsert = CustomerBusinessContactInsert(
+              CustomerFullName.assume("Inserted Contact"),
+              customerBusinessContactRow.role,
+              Some(customerEmailReplacement),
+              Some(customerPhoneNumberReplacement),
+            )
+            customerBookBusinessPutRequest = CustomerBookBusinessPutRequest(
+              Some(CustomerBusinessName.assume("Replacement Business")),
+              Some(List(CustomerEmailEntry(CustomerEmail.assume("replacement@example.com"), isDefault = true))),
+              Some(Some(CustomerTaxID.assume("ReplacementTax"))),
+              Some(List(CustomerPhoneNumberEntry(arbitrarySample[CustomerPhoneNumber], isDefault = true))),
+              Some(List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling)))),
+              List(customerBusinessContactInsert),
+              List(
+                CustomerBusinessContactUpdate(
+                  customerBusinessContactRow.customerBusinessContactID,
+                  Some(CustomerFullName.assume("Updated Contact")),
+                  Some(Some(CustomerBusinessContactRole.assume("Updated Role"))),
+                  Some(Some(customerEmailReplacement)),
+                  Some(Some(customerPhoneNumberReplacement)),
+                )
+              ),
+              List(CustomerBusinessContactArchive(customerBusinessContactRowArchive.customerBusinessContactID)),
+            )
+            customerBookBusinessPutRequestSmithy = customerBookBusinessPutRequest
+              .transformInto[smithy.CustomerBookBusinessPutRequest]
+            instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookBusinessPutResponse <- gatewayClient
+              .customerBookBusinessPut[smithy.InternalServerError](
+                customerBusinessDetailsRow.customerID,
+                customerBookBusinessPutRequestSmithy,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
+            _ = customerBookBusinessPutResponse.body.value shouldBe ()
+
+            customerBusinessDetailsRows <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+            )
+
+            customerBusinessDetailsRowUpdated = customerBusinessDetailsRows.head
+
+            _ = customerBusinessDetailsRows shouldBe List(
+              customerBusinessDetailsRow.copy(
+                businessName = CustomerBusinessName.assume("Replacement Business"),
+                emails =
+                  List(CustomerEmailEntryInput(CustomerEmail.assume("replacement@example.com"), isDefault = true)),
+                taxID = Some(CustomerTaxID.assume("ReplacementTax")),
+                phoneNumbers = customerBookBusinessPutRequest.phoneNumbers.value.map(customerPhoneNumberEntry =>
+                  CustomerPhoneNumberEntryInput(
+                    customerPhoneNumberEntry.phoneNumber,
+                    isDefault = customerPhoneNumberEntry.isDefault,
+                  )
+                ),
+                addresses = customerBookBusinessPutRequest.addresses.value,
+                updatedAt = customerBusinessDetailsRowUpdated.updatedAt,
+              )
+            )
+
+            _ = customerBusinessDetailsRowUpdated should not equal customerBusinessDetailsRow
+            _ = customerBusinessDetailsRowUpdated.updatedAt.value.isBefore(instantNow) shouldBe false
+
+            customerBusinessContactRowsPersisted <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessContactRowsTesting
+            )
+
+            customerBusinessContactRowInserted = customerBusinessContactRowsPersisted
+              .find(_.fullName == customerBusinessContactInsert.fullName)
+              .value
+            customerBusinessContactRowUpdated = customerBusinessContactRowsPersisted
+              .find(
+                _.customerBusinessContactID == customerBusinessContactRow.customerBusinessContactID
+              )
+              .value
+
+            _ = customerBusinessContactRowUpdated.email shouldNot equal(customerBusinessContactRow.email)
+            _ = customerBusinessContactRowUpdated.phoneNumber shouldNot equal(customerBusinessContactRow.phoneNumber)
+
+            _ = customerBusinessContactRowInserted.email shouldBe customerBusinessContactRowUpdated.email
+            _ = customerBusinessContactRowInserted.phoneNumber shouldBe customerBusinessContactRowUpdated.phoneNumber
+
+            _ = customerBusinessContactRowsPersisted should contain theSameElementsAs List(
+              customerBusinessContactRow.copy(
+                fullName = CustomerFullName.assume("Updated Contact"),
+                role = Some(CustomerBusinessContactRole.assume("Updated Role")),
+                email = Some(customerEmailReplacement),
+                phoneNumber = Some(customerPhoneNumberReplacement),
+                updatedAt = customerBusinessDetailsRowUpdated.updatedAt,
+              ),
+              customerBusinessContactRowArchive
+                .copy(isArchived = true, updatedAt = customerBusinessDetailsRowUpdated.updatedAt),
+              customerBusinessContactRowRetained,
+              customerBusinessContactRowAlreadyArchived,
+              CustomerBusinessContactRow(
+                customerBusinessDetailsRow.organizationID,
+                customerBusinessDetailsRow.customerID,
+                customerBusinessContactRowInserted.customerBusinessContactID,
+                customerBusinessContactInsert.fullName,
+                customerBusinessContactInsert.role,
+                customerBusinessContactInsert.email,
+                customerBusinessContactInsert.phoneNumber,
+                CreatedAt(customerBusinessDetailsRowUpdated.updatedAt.value),
+                customerBusinessDetailsRowUpdated.updatedAt,
+                isArchived = false,
+              ),
+            )
+          } yield ()
       }
 
       "successfully keep omitted fields and default empty contact actions" in withContext { context =>
         import context.*
 
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  =
-          arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          businessName = CustomerBusinessName.assume("Original Business"),
-          taxID = Some(CustomerTaxID.assume("OriginalTax")),
-          emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
-          phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-          addresses =
-            List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-          isArchived = false,
-        )
-        val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-          organizationID = customerBusinessDetailsRow.organizationID,
-          customerID = customerBusinessDetailsRow.customerID,
-          role = Some(arbitrarySample[CustomerBusinessContactRole]),
-          email = Some(CustomerEmail.assume("contact@example.com")),
-          phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
-          isArchived = false,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-          .zioValue
-
-        val customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest()
-        val accessJwt                            = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-        val customerBookBusinessPutResponse      = gatewayClient
-          .customerBookBusinessPut[smithy.InternalServerError](
-            customerBusinessDetailsRow.customerID,
-            customerBookBusinessPutRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRole,
           )
-          .zioValue
 
-        customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
-        customerBookBusinessPutResponse.body.value shouldBe ()
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        val customerBusinessDetailsRows =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
-
-        customerBusinessDetailsRows shouldBe List(
-          customerBusinessDetailsRow.copy(updatedAt = customerBusinessDetailsRows.head.updatedAt)
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue shouldBe List(customerBusinessContactRow)
-      }
-
-      "successfully clear supplied empty customer lists and nullable tax and contact fields" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  =
-          arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          businessName = CustomerBusinessName.assume("Original Business"),
-          taxID = Some(CustomerTaxID.assume("OriginalTax")),
-          emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
-          phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-          addresses =
-            List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-          isArchived = false,
-        )
-        val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-          organizationID = customerBusinessDetailsRow.organizationID,
-          customerID = customerBusinessDetailsRow.customerID,
-          role = Some(arbitrarySample[CustomerBusinessContactRole]),
-          email = Some(CustomerEmail.assume("contact@example.com")),
-          phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
-          isArchived = false,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-          .zioValue
-
-        val customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
-          emails = Some(Nil),
-          taxID = Some(Nullable.Null),
-          phoneNumbers = Some(Nil),
-          addresses = Some(Nil),
-          customerBusinessContactsUpdate = List(
-            smithy.CustomerBusinessContactUpdate(
-              customerBusinessContactRow.customerBusinessContactID.value,
-              role = Some(Nullable.Null),
-              email = Some(Nullable.Null),
-              phoneNumber = Some(Nullable.Null),
-            )
-          ),
-        )
-        val accessJwt                       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-        val customerBookBusinessPutResponse = gatewayClient
-          .customerBookBusinessPut[smithy.InternalServerError](
-            customerBusinessDetailsRow.customerID,
-            customerBookBusinessPutRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
-        customerBookBusinessPutResponse.body.value shouldBe ()
-
-        val customerBusinessDetailsRows =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
-
-        customerBusinessDetailsRows shouldBe List(
-          customerBusinessDetailsRow.copy(
-            taxID = None,
-            emails = Nil,
-            phoneNumbers = Nil,
-            addresses = Nil,
-            updatedAt = customerBusinessDetailsRows.head.updatedAt,
-          )
-        )
-        customerBusinessDetailsRows.head should not equal customerBusinessDetailsRow
-
-        val customerBusinessContactRows =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue
-
-        customerBusinessContactRows shouldBe List(
-          customerBusinessContactRow.copy(
-            role = None,
-            email = None,
-            phoneNumber = None,
-            updatedAt = customerBusinessDetailsRows.head.updatedAt,
-          )
-        )
-        customerBusinessContactRows.head should not equal customerBusinessContactRow
-      }
-
-      "silently succeed without changes when the customer target is missing" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  =
-          arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          businessName = CustomerBusinessName.assume("Original Business"),
-          taxID = Some(CustomerTaxID.assume("OriginalTax")),
-          emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
-          phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-          addresses =
-            List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-          isArchived = false,
-        )
-        val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-          organizationID = customerBusinessDetailsRow.organizationID,
-          customerID = customerBusinessDetailsRow.customerID,
-          role = Some(arbitrarySample[CustomerBusinessContactRole]),
-          email = Some(CustomerEmail.assume("contact@example.com")),
-          phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
-          isArchived = false,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-          .zioValue
-
-        val customerBusinessContactIDUpdate  = arbitrarySample[CustomerBusinessContactID]
-        val customerBusinessContactIDArchive = arbitrarySample[CustomerBusinessContactID]
-
-        customerBusinessContactIDUpdate shouldNot equal(customerBusinessContactIDArchive)
-
-        val customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
-          businessName = Some("Replacement Business"),
-          customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
-          customerBusinessContactsUpdate =
-            List(smithy.CustomerBusinessContactUpdate(customerBusinessContactIDUpdate.value)),
-          customerBusinessContactsArchive =
-            List(smithy.CustomerBusinessContactArchive(customerBusinessContactIDArchive.value)),
-        )
-        val customerIDMissing = arbitrarySample[CustomerID]
-
-        customerIDMissing shouldNot equal(customerBusinessDetailsRow.customerID)
-
-        val accessJwt                       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-        val customerBookBusinessPutResponse = gatewayClient
-          .customerBookBusinessPut[smithy.InternalServerError](
-            customerIDMissing,
-            customerBookBusinessPutRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
-        customerBookBusinessPutResponse.body.value shouldBe ()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue shouldBe List(customerBusinessDetailsRow)
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue shouldBe List(customerBusinessContactRow)
-      }
-
-      "silently succeed without changes when the customer target is archived" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  =
-          arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          businessName = CustomerBusinessName.assume("Original Business"),
-          taxID = Some(CustomerTaxID.assume("OriginalTax")),
-          emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
-          phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-          addresses =
-            List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-          isArchived = true,
-        )
-        val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-          organizationID = customerBusinessDetailsRow.organizationID,
-          customerID = customerBusinessDetailsRow.customerID,
-          role = Some(arbitrarySample[CustomerBusinessContactRole]),
-          email = Some(CustomerEmail.assume("contact@example.com")),
-          phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
-          isArchived = false,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-          .zioValue
-
-        val customerBusinessContactIDUpdate  = arbitrarySample[CustomerBusinessContactID]
-        val customerBusinessContactIDArchive = arbitrarySample[CustomerBusinessContactID]
-
-        customerBusinessContactIDUpdate shouldNot equal(customerBusinessContactIDArchive)
-
-        val customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
-          businessName = Some("Replacement Business"),
-          customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
-          customerBusinessContactsUpdate =
-            List(smithy.CustomerBusinessContactUpdate(customerBusinessContactIDUpdate.value)),
-          customerBusinessContactsArchive =
-            List(smithy.CustomerBusinessContactArchive(customerBusinessContactIDArchive.value)),
-        )
-        val accessJwt                       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-        val customerBookBusinessPutResponse = gatewayClient
-          .customerBookBusinessPut[smithy.InternalServerError](
-            customerBusinessDetailsRow.customerID,
-            customerBookBusinessPutRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
-        customerBookBusinessPutResponse.body.value shouldBe ()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue shouldBe List(customerBusinessDetailsRow)
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue shouldBe List(customerBusinessContactRow)
-      }
-
-      "silently succeed without changes when the customer target is wrong type" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  =
-          arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          isArchived = false,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-          .zioValue
-
-        val customerBusinessContactIDUpdate  = arbitrarySample[CustomerBusinessContactID]
-        val customerBusinessContactIDArchive = arbitrarySample[CustomerBusinessContactID]
-
-        customerBusinessContactIDUpdate shouldNot equal(customerBusinessContactIDArchive)
-
-        val customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
-          businessName = Some("Replacement Business"),
-          customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
-          customerBusinessContactsUpdate =
-            List(smithy.CustomerBusinessContactUpdate(customerBusinessContactIDUpdate.value)),
-          customerBusinessContactsArchive =
-            List(smithy.CustomerBusinessContactArchive(customerBusinessContactIDArchive.value)),
-        )
-        val accessJwt                       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-        val customerBookBusinessPutResponse = gatewayClient
-          .customerBookBusinessPut[smithy.InternalServerError](
-            customerIndividualDetailsRow.customerID,
-            customerBookBusinessPutRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
-        customerBookBusinessPutResponse.body.value shouldBe ()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe List(customerIndividualDetailsRow)
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "silently succeed without changes when the customer target is foreign" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  =
-          arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          organizationID = arbitrarySample[OrganizationID],
-          businessName = CustomerBusinessName.assume("Original Business"),
-          taxID = Some(CustomerTaxID.assume("OriginalTax")),
-          emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
-          phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-          addresses =
-            List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-          isArchived = false,
-        )
-        val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-          organizationID = customerBusinessDetailsRow.organizationID,
-          customerID = customerBusinessDetailsRow.customerID,
-          role = Some(arbitrarySample[CustomerBusinessContactRole]),
-          email = Some(CustomerEmail.assume("contact@example.com")),
-          phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
-          isArchived = false,
-        )
-
-        customerBusinessDetailsRow.organizationID shouldNot equal(organizationUserRow.organizationID)
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-          .zioValue
-
-        val customerBusinessContactIDUpdate  = arbitrarySample[CustomerBusinessContactID]
-        val customerBusinessContactIDArchive = arbitrarySample[CustomerBusinessContactID]
-
-        customerBusinessContactIDUpdate shouldNot equal(customerBusinessContactIDArchive)
-
-        val customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
-          businessName = Some("Replacement Business"),
-          customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
-          customerBusinessContactsUpdate =
-            List(smithy.CustomerBusinessContactUpdate(customerBusinessContactIDUpdate.value)),
-          customerBusinessContactsArchive =
-            List(smithy.CustomerBusinessContactArchive(customerBusinessContactIDArchive.value)),
-        )
-        val accessJwt                       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-        val customerBookBusinessPutResponse = gatewayClient
-          .customerBookBusinessPut[smithy.InternalServerError](
-            customerBusinessDetailsRow.customerID,
-            customerBookBusinessPutRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
-        customerBookBusinessPutResponse.body.value shouldBe ()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue shouldBe List(customerBusinessDetailsRow)
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue shouldBe List(customerBusinessContactRow)
-      }
-
-      "successfully ignore missing archived and foreign archive references" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  =
-          arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          businessName = CustomerBusinessName.assume("Original Business"),
-          taxID = Some(CustomerTaxID.assume("OriginalTax")),
-          emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
-          phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-          addresses =
-            List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-          isArchived = false,
-        )
-        val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-          organizationID = customerBusinessDetailsRow.organizationID,
-          customerID = customerBusinessDetailsRow.customerID,
-          role = Some(arbitrarySample[CustomerBusinessContactRole]),
-          email = Some(CustomerEmail.assume("contact@example.com")),
-          phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
-          isArchived = false,
-        )
-
-        val customerBusinessDetailsRowOther = customerBusinessDetailsRow.copy(
-          customerID = arbitrarySample[CustomerID],
-          businessName = CustomerBusinessName.assume("Other Business"),
-        )
-        val customerBusinessContactRowArchived = customerBusinessContactRow.copy(isArchived = true)
-        val customerBusinessContactRowOther    =
-          customerBusinessContactRow.copy(customerID = customerBusinessDetailsRowOther.customerID)
-
-        customerBusinessDetailsRowOther.customerID shouldNot equal(customerBusinessDetailsRow.customerID)
-
-        val customerBusinessContactIDMissing = arbitrarySample[CustomerBusinessContactID]
-
-        customerBusinessContactIDMissing shouldNot equal(customerBusinessContactRow.customerBusinessContactID)
-
-        postgresClient
-          .executeQuery(
-            customerBookQueries.insertCustomerBusinessDetailsRows(
-              List(customerBusinessDetailsRow, customerBusinessDetailsRowOther)
-            )
-          )
-          .zioValue
-
-        postgresClient
-          .executeQuery(
-            customerBookQueries.insertCustomerBusinessContactRows(
-              List(customerBusinessContactRowArchived, customerBusinessContactRowOther)
-            )
-          )
-          .zioValue
-
-        val customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
-          customerBusinessContactsArchive = List(
-            smithy.CustomerBusinessContactArchive(customerBusinessContactRowArchived.customerBusinessContactID.value),
-            smithy.CustomerBusinessContactArchive(customerBusinessContactIDMissing.value),
-          )
-        )
-        val accessJwt                       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-        val customerBookBusinessPutResponse = gatewayClient
-          .customerBookBusinessPut[smithy.InternalServerError](
-            customerBusinessDetailsRow.customerID,
-            customerBookBusinessPutRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
-        customerBookBusinessPutResponse.body.value shouldBe ()
-
-        val customerBusinessDetailsRows =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
-        val customerBusinessDetailsRowUpdated =
-          customerBusinessDetailsRows.find(_.customerID == customerBusinessDetailsRow.customerID).value
-
-        customerBusinessDetailsRows should contain theSameElementsAs List(
-          customerBusinessDetailsRow.copy(updatedAt = customerBusinessDetailsRowUpdated.updatedAt),
-          customerBusinessDetailsRowOther,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue should contain theSameElementsAs List(
-          customerBusinessContactRowArchived,
-          customerBusinessContactRowOther,
-        )
-      }
-
-      "fail with a ValidationError for invalid nested contact fields without any writes" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  =
-          arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          businessName = CustomerBusinessName.assume("Original Business"),
-          taxID = Some(CustomerTaxID.assume("OriginalTax")),
-          emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
-          phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-          addresses =
-            List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-          isArchived = false,
-        )
-        val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-          organizationID = customerBusinessDetailsRow.organizationID,
-          customerID = customerBusinessDetailsRow.customerID,
-          role = Some(arbitrarySample[CustomerBusinessContactRole]),
-          email = Some(CustomerEmail.assume("contact@example.com")),
-          phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
-          isArchived = false,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-          .zioValue
-
-        val customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
-          businessName = Some("Replacement Business"),
-          customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("")),
-          customerBusinessContactsUpdate = List(
-            smithy.CustomerBusinessContactUpdate(
-              customerBusinessContactRow.customerBusinessContactID.value,
-              role = Some(Nullable.Value("")),
-            )
-          ),
-        )
-        val accessJwt                       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-        val customerBookBusinessPutResponse = gatewayClient
-          .customerBookBusinessPut[smithy.ValidationError](
-            customerBusinessDetailsRow.customerID,
-            customerBookBusinessPutRequestSmithy,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBusinessPutResponse.code shouldBe StatusCode.BadRequest
-        customerBookBusinessPutResponse.body.left.value shouldBe smithy.ValidationError(fields =
-          List("customerBusinessContactInsert", "customerBusinessContactUpdate")
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue shouldBe List(customerBusinessDetailsRow)
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue shouldBe List(customerBusinessContactRow)
-      }
-
-      "fail with a ValidationError for duplicate and overlapping contact IDs without any writes" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  =
-            arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
             organizationID = organizationUserRow.organizationID,
             businessName = CustomerBusinessName.assume("Original Business"),
             taxID = Some(CustomerTaxID.assume("OriginalTax")),
@@ -2959,7 +2028,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
             isArchived = false,
           )
-          val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+          customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
             organizationID = customerBusinessDetailsRow.organizationID,
             customerID = customerBusinessDetailsRow.customerID,
             role = Some(arbitrarySample[CustomerBusinessContactRole]),
@@ -2968,1156 +2037,1384 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             isArchived = false,
           )
 
-          postgresClient
+          _ <- postgresClient
             .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-            .zioValue
-
-          postgresClient
+          _ <- postgresClient
             .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-            .zioValue
 
-          val customerBusinessContactUpdateSmithy =
-            smithy.CustomerBusinessContactUpdate(customerBusinessContactRow.customerBusinessContactID.value)
-          val customerBusinessContactArchiveSmithy =
-            smithy.CustomerBusinessContactArchive(customerBusinessContactRow.customerBusinessContactID.value)
-          val customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+          customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest()
+          instantNow                           = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookBusinessPutResponse <- gatewayClient
+            .customerBookBusinessPut[smithy.InternalServerError](
+              customerBusinessDetailsRow.customerID,
+              customerBookBusinessPutRequestSmithy,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookBusinessPutResponse.body.value shouldBe ()
+
+          customerBusinessDetailsRows <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+          _ = customerBusinessDetailsRows shouldBe List(
+            customerBusinessDetailsRow.copy(updatedAt = customerBusinessDetailsRows.head.updatedAt)
+          )
+          _ = customerBusinessDetailsRows.head.updatedAt.value.isBefore(instantNow) shouldBe false
+          _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+        } yield ()
+      }
+
+      "successfully clear supplied empty customer lists and nullable tax and contact fields" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRole,
+          )
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            businessName = CustomerBusinessName.assume("Original Business"),
+            taxID = Some(CustomerTaxID.assume("OriginalTax")),
+            emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
+            phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+            addresses =
+              List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+            isArchived = false,
+          )
+          customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+            organizationID = customerBusinessDetailsRow.organizationID,
+            customerID = customerBusinessDetailsRow.customerID,
+            role = Some(arbitrarySample[CustomerBusinessContactRole]),
+            email = Some(CustomerEmail.assume("contact@example.com")),
+            phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
+            isArchived = false,
+          )
+
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
+
+          customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+            emails = Some(Nil),
+            taxID = Some(Nullable.Null),
+            phoneNumbers = Some(Nil),
+            addresses = Some(Nil),
+            customerBusinessContactsUpdate = List(
+              smithy.CustomerBusinessContactUpdate(
+                customerBusinessContactRow.customerBusinessContactID.value,
+                role = Some(Nullable.Null),
+                email = Some(Nullable.Null),
+                phoneNumber = Some(Nullable.Null),
+              )
+            ),
+          )
+          instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookBusinessPutResponse <- gatewayClient
+            .customerBookBusinessPut[smithy.InternalServerError](
+              customerBusinessDetailsRow.customerID,
+              customerBookBusinessPutRequestSmithy,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookBusinessPutResponse.body.value shouldBe ()
+
+          customerBusinessDetailsRows <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRows <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerBusinessDetailsRows shouldBe List(
+            customerBusinessDetailsRow.copy(
+              taxID = None,
+              emails = Nil,
+              phoneNumbers = Nil,
+              addresses = Nil,
+              updatedAt = customerBusinessDetailsRows.head.updatedAt,
+            )
+          )
+          _ = customerBusinessDetailsRows.head should not equal customerBusinessDetailsRow
+          _ = customerBusinessDetailsRows.head.updatedAt.value.isBefore(instantNow) shouldBe false
+          _ = customerBusinessContactRows shouldBe List(
+            customerBusinessContactRow.copy(
+              role = None,
+              email = None,
+              phoneNumber = None,
+              updatedAt = customerBusinessDetailsRows.head.updatedAt,
+            )
+          )
+          _ = customerBusinessContactRows.head should not equal customerBusinessContactRow
+        } yield ()
+      }
+
+      "successfully leave the business and its contacts unchanged when the customer business does not exist" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRole,
+            )
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              businessName = CustomerBusinessName.assume("Original Business"),
+              taxID = Some(CustomerTaxID.assume("OriginalTax")),
+              emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
+              phoneNumbers =
+                List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+              isArchived = false,
+            )
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              role = Some(arbitrarySample[CustomerBusinessContactRole]),
+              email = Some(CustomerEmail.assume("contact@example.com")),
+              phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
+              isArchived = false,
+            )
+
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
+
+            customerBusinessContactIDUpdate  = arbitrarySample[CustomerBusinessContactID]
+            customerBusinessContactIDArchive = arbitrarySample[CustomerBusinessContactID]
+
+            _ = customerBusinessContactIDUpdate shouldNot equal(customerBusinessContactIDArchive)
+
+            customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+              businessName = Some("Replacement Business"),
+              customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+              customerBusinessContactsUpdate =
+                List(smithy.CustomerBusinessContactUpdate(customerBusinessContactIDUpdate.value)),
+              customerBusinessContactsArchive =
+                List(smithy.CustomerBusinessContactArchive(customerBusinessContactIDArchive.value)),
+            )
+            customerIDMissing = arbitrarySample[CustomerID]
+
+            _ = customerIDMissing shouldNot equal(customerBusinessDetailsRow.customerID)
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookBusinessPutResponse <- gatewayClient
+              .customerBookBusinessPut[smithy.InternalServerError](
+                customerIDMissing,
+                customerBookBusinessPutRequestSmithy,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
+            _ = customerBookBusinessPutResponse.body.value shouldBe ()
+
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+          } yield ()
+      }
+
+      "successfully leave the business and its contacts unchanged when the customer business is archived" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRole,
+            )
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              businessName = CustomerBusinessName.assume("Original Business"),
+              taxID = Some(CustomerTaxID.assume("OriginalTax")),
+              emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
+              phoneNumbers =
+                List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+              isArchived = true,
+            )
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              role = Some(arbitrarySample[CustomerBusinessContactRole]),
+              email = Some(CustomerEmail.assume("contact@example.com")),
+              phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
+              isArchived = false,
+            )
+
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
+
+            customerBusinessContactIDUpdate  = arbitrarySample[CustomerBusinessContactID]
+            customerBusinessContactIDArchive = arbitrarySample[CustomerBusinessContactID]
+
+            _ = customerBusinessContactIDUpdate shouldNot equal(customerBusinessContactIDArchive)
+
+            customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+              businessName = Some("Replacement Business"),
+              customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+              customerBusinessContactsUpdate =
+                List(smithy.CustomerBusinessContactUpdate(customerBusinessContactIDUpdate.value)),
+              customerBusinessContactsArchive =
+                List(smithy.CustomerBusinessContactArchive(customerBusinessContactIDArchive.value)),
+            )
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookBusinessPutResponse <- gatewayClient
+              .customerBookBusinessPut[smithy.InternalServerError](
+                customerBusinessDetailsRow.customerID,
+                customerBookBusinessPutRequestSmithy,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
+            _ = customerBookBusinessPutResponse.body.value shouldBe ()
+
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+          } yield ()
+      }
+
+      "successfully leave a customer individual targeted as a business unchanged" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRole,
+          )
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            isArchived = false,
+          )
+
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+
+          customerBusinessContactIDUpdate  = arbitrarySample[CustomerBusinessContactID]
+          customerBusinessContactIDArchive = arbitrarySample[CustomerBusinessContactID]
+
+          _ = customerBusinessContactIDUpdate shouldNot equal(customerBusinessContactIDArchive)
+
+          customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
             businessName = Some("Replacement Business"),
             customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
             customerBusinessContactsUpdate =
-              List(customerBusinessContactUpdateSmithy, customerBusinessContactUpdateSmithy),
+              List(smithy.CustomerBusinessContactUpdate(customerBusinessContactIDUpdate.value)),
             customerBusinessContactsArchive =
-              List(customerBusinessContactArchiveSmithy, customerBusinessContactArchiveSmithy),
+              List(smithy.CustomerBusinessContactArchive(customerBusinessContactIDArchive.value)),
           )
-          val accessJwt                       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-          val customerBookBusinessPutResponse = gatewayClient
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookBusinessPutResponse <- gatewayClient
+            .customerBookBusinessPut[smithy.InternalServerError](
+              customerIndividualDetailsRow.customerID,
+              customerBookBusinessPutRequestSmithy,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookBusinessPutResponse.body.value shouldBe ()
+
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
+      }
+
+      "successfully leave the business and its contacts unchanged when the customer business belongs to another organization" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRole,
+            )
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = arbitrarySample[OrganizationID],
+              businessName = CustomerBusinessName.assume("Original Business"),
+              taxID = Some(CustomerTaxID.assume("OriginalTax")),
+              emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
+              phoneNumbers =
+                List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+              isArchived = false,
+            )
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              role = Some(arbitrarySample[CustomerBusinessContactRole]),
+              email = Some(CustomerEmail.assume("contact@example.com")),
+              phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
+              isArchived = false,
+            )
+
+            _ = customerBusinessDetailsRow.organizationID shouldNot equal(organizationUserRow.organizationID)
+
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
+
+            customerBusinessContactIDUpdate  = arbitrarySample[CustomerBusinessContactID]
+            customerBusinessContactIDArchive = arbitrarySample[CustomerBusinessContactID]
+
+            _ = customerBusinessContactIDUpdate shouldNot equal(customerBusinessContactIDArchive)
+
+            customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+              businessName = Some("Replacement Business"),
+              customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+              customerBusinessContactsUpdate =
+                List(smithy.CustomerBusinessContactUpdate(customerBusinessContactIDUpdate.value)),
+              customerBusinessContactsArchive =
+                List(smithy.CustomerBusinessContactArchive(customerBusinessContactIDArchive.value)),
+            )
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookBusinessPutResponse <- gatewayClient
+              .customerBookBusinessPut[smithy.InternalServerError](
+                customerBusinessDetailsRow.customerID,
+                customerBookBusinessPutRequestSmithy,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
+            _ = customerBookBusinessPutResponse.body.value shouldBe ()
+
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+          } yield ()
+      }
+
+      "successfully ignore archive references to a missing or already archived contact without touching another business's contact with the same ID" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRole,
+            )
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              businessName = CustomerBusinessName.assume("Original Business"),
+              taxID = Some(CustomerTaxID.assume("OriginalTax")),
+              emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
+              phoneNumbers =
+                List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+              isArchived = false,
+            )
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              role = Some(arbitrarySample[CustomerBusinessContactRole]),
+              email = Some(CustomerEmail.assume("contact@example.com")),
+              phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
+              isArchived = false,
+            )
+            customerBusinessDetailsRowOther = customerBusinessDetailsRow.copy(
+              customerID = arbitrarySample[CustomerID],
+              businessName = CustomerBusinessName.assume("Other Business"),
+            )
+            customerBusinessContactRowArchived = customerBusinessContactRow.copy(isArchived = true)
+            customerBusinessContactRowOther    = customerBusinessContactRow.copy(customerID =
+              customerBusinessDetailsRowOther.customerID
+            )
+
+            _ = customerBusinessDetailsRowOther.customerID shouldNot equal(customerBusinessDetailsRow.customerID)
+
+            customerBusinessContactIDMissing = arbitrarySample[CustomerBusinessContactID]
+
+            _ = customerBusinessContactIDMissing shouldNot equal(customerBusinessContactRow.customerBusinessContactID)
+
+            _ <- postgresClient
+              .executeQuery(
+                customerBookQueries.insertCustomerBusinessDetailsRows(
+                  List(customerBusinessDetailsRow, customerBusinessDetailsRowOther)
+                )
+              )
+            _ <- postgresClient
+              .executeQuery(
+                customerBookQueries.insertCustomerBusinessContactRows(
+                  List(customerBusinessContactRowArchived, customerBusinessContactRowOther)
+                )
+              )
+
+            customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+              customerBusinessContactsArchive = List(
+                smithy.CustomerBusinessContactArchive(
+                  customerBusinessContactRowArchived.customerBusinessContactID.value
+                ),
+                smithy.CustomerBusinessContactArchive(customerBusinessContactIDMissing.value),
+              )
+            )
+            instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookBusinessPutResponse <- gatewayClient
+              .customerBookBusinessPut[smithy.InternalServerError](
+                customerBusinessDetailsRow.customerID,
+                customerBookBusinessPutRequestSmithy,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookBusinessPutResponse.code shouldBe StatusCode.NoContent
+            _ = customerBookBusinessPutResponse.body.value shouldBe ()
+
+            customerBusinessDetailsRows <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+            )
+
+            customerBusinessDetailsRowUpdated = customerBusinessDetailsRows
+              .find(_.customerID == customerBusinessDetailsRow.customerID)
+              .value
+
+            _ = customerBusinessDetailsRows should contain theSameElementsAs List(
+              customerBusinessDetailsRow.copy(updatedAt = customerBusinessDetailsRowUpdated.updatedAt),
+              customerBusinessDetailsRowOther,
+            )
+            _ = customerBusinessDetailsRowUpdated.updatedAt.value.isBefore(instantNow) shouldBe false
+
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerBusinessContactRowsAll should contain theSameElementsAs List(
+              customerBusinessContactRowArchived,
+              customerBusinessContactRowOther,
+            )
+          } yield ()
+      }
+
+      "fail with a ValidationError for invalid nested contact fields without any writes" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRole,
+          )
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            businessName = CustomerBusinessName.assume("Original Business"),
+            taxID = Some(CustomerTaxID.assume("OriginalTax")),
+            emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
+            phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+            addresses =
+              List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+            isArchived = false,
+          )
+          customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+            organizationID = customerBusinessDetailsRow.organizationID,
+            customerID = customerBusinessDetailsRow.customerID,
+            role = Some(arbitrarySample[CustomerBusinessContactRole]),
+            email = Some(CustomerEmail.assume("contact@example.com")),
+            phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
+            isArchived = false,
+          )
+
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
+
+          customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+            businessName = Some("Replacement Business"),
+            customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("")),
+            customerBusinessContactsUpdate = List(
+              smithy.CustomerBusinessContactUpdate(
+                customerBusinessContactRow.customerBusinessContactID.value,
+                role = Some(Nullable.Value("")),
+              )
+            ),
+          )
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookBusinessPutResponse <- gatewayClient
             .customerBookBusinessPut[smithy.ValidationError](
               customerBusinessDetailsRow.customerID,
               customerBookBusinessPutRequestSmithy,
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-          customerBookBusinessPutResponse.code shouldBe StatusCode.BadRequest
-          customerBookBusinessPutResponse.body.left.value shouldBe smithy.ValidationError(fields =
-            List(
-              "customerBusinessContactsUpdate",
-              "customerBusinessContactsArchive",
-              "customerBusinessContactsArchive",
-              "customerBusinessContactsArchive",
-            )
+          _ = customerBookBusinessPutResponse.code shouldBe StatusCode.BadRequest
+          _ = customerBookBusinessPutResponse.body.left.value shouldBe smithy.ValidationError(fields =
+            List("customerBusinessContactInsert", "customerBusinessContactUpdate")
           )
 
-          postgresClient
+          customerBusinessDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe List(customerBusinessDetailsRow)
-
-          postgresClient
+          customerBusinessContactRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe List(customerBusinessContactRow)
+
+          _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+          _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+        } yield ()
       }
 
-      "fail with a BadRequest when the organization id header is missing" in withContext { context =>
-        import context.*
+      "fail with a ValidationError for duplicate and overlapping contact IDs without any writes" in withContext {
+        context =>
+          import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val customerBookBusinessPutRequestSmithy =
-          smithy.CustomerBookBusinessPutRequest()
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessPutResponse =
-          gatewayClient
-            .customerBookBusinessPut[smithy.BadRequest](
-              arbitrarySample[CustomerID],
-              customerBookBusinessPutRequestSmithy,
-              None,
-              Some(accessJwt.accessToken),
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRole,
             )
-            .zioValue
 
-        customerBookBusinessPutResponse.code shouldBe StatusCode.BadRequest
-        customerBookBusinessPutResponse.body.left.value shouldBe smithy.BadRequest()
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is missing" in withContext { context =>
-        import context.*
-
-        val customerBookBusinessPutRequestSmithy =
-          smithy.CustomerBookBusinessPutRequest()
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookBusinessPutResponse =
-          gatewayClient
-            .customerBookBusinessPut[smithy.Unauthorized](
-              arbitrarySample[CustomerID],
-              customerBookBusinessPutRequestSmithy,
-              Some(organizationID),
-              None,
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              businessName = CustomerBusinessName.assume("Original Business"),
+              taxID = Some(CustomerTaxID.assume("OriginalTax")),
+              emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
+              phoneNumbers =
+                List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+              isArchived = false,
             )
-            .zioValue
-
-        customerBookBusinessPutResponse.code shouldBe StatusCode.Unauthorized
-        customerBookBusinessPutResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is invalid" in withContext { context =>
-        import context.*
-
-        val customerBookBusinessPutRequestSmithy =
-          smithy.CustomerBookBusinessPutRequest()
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookBusinessPutResponse =
-          gatewayClient
-            .customerBookBusinessPut[smithy.Unauthorized](
-              arbitrarySample[CustomerID],
-              customerBookBusinessPutRequestSmithy,
-              Some(organizationID),
-              Some(AccessToken("invalidtoken")),
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              role = Some(arbitrarySample[CustomerBusinessContactRole]),
+              email = Some(CustomerEmail.assume("contact@example.com")),
+              phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
+              isArchived = false,
             )
-            .zioValue
 
-        customerBookBusinessPutResponse.code shouldBe StatusCode.Unauthorized
-        customerBookBusinessPutResponse.body.left.value shouldBe smithy.Unauthorized()
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
-        import context.*
-
-        val onboardStageInvalid =
-          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStageInvalid)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBookBusinessPutRequestSmithy =
-          smithy.CustomerBookBusinessPutRequest()
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessPutResponse =
-          gatewayClient
-            .customerBookBusinessPut[smithy.Forbidden](
-              arbitrarySample[CustomerID],
-              customerBookBusinessPutRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
+            customerBusinessContactUpdateSmithy = smithy.CustomerBusinessContactUpdate(
+              customerBusinessContactRow.customerBusinessContactID.value
             )
-            .zioValue
-
-        customerBookBusinessPutResponse.code shouldBe StatusCode.Forbidden
-        customerBookBusinessPutResponse.body.left.value shouldBe smithy.Forbidden()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRoleInvalid =
-          Random.shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRoleInvalid)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBookBusinessPutRequestSmithy =
-          smithy.CustomerBookBusinessPutRequest()
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessPutResponse =
-          gatewayClient
-            .customerBookBusinessPut[smithy.Forbidden](
-              arbitrarySample[CustomerID],
-              customerBookBusinessPutRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
+            customerBusinessContactArchiveSmithy = smithy.CustomerBusinessContactArchive(
+              customerBusinessContactRow.customerBusinessContactID.value
             )
-            .zioValue
+            customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+              businessName = Some("Replacement Business"),
+              customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+              customerBusinessContactsUpdate =
+                List(customerBusinessContactUpdateSmithy, customerBusinessContactUpdateSmithy),
+              customerBusinessContactsArchive =
+                List(customerBusinessContactArchiveSmithy, customerBusinessContactArchiveSmithy),
+            )
 
-        customerBookBusinessPutResponse.code shouldBe StatusCode.Forbidden
-        customerBookBusinessPutResponse.body.left.value shouldBe smithy.Forbidden()
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
+            customerBookBusinessPutResponse <- gatewayClient
+              .customerBookBusinessPut[smithy.ValidationError](
+                customerBusinessDetailsRow.customerID,
+                customerBookBusinessPutRequestSmithy,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
+            _ = customerBookBusinessPutResponse.code shouldBe StatusCode.BadRequest
+            _ = customerBookBusinessPutResponse.body.left.value shouldBe smithy.ValidationError(fields =
+              List(
+                "customerBusinessContactsUpdate",
+                "customerBusinessContactsArchive",
+                "customerBusinessContactsArchive",
+                "customerBusinessContactsArchive",
+              )
+            )
+
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+          } yield ()
       }
 
       "fail with a Conflict on an active business name and roll back requested contact changes" in withContext {
         context =>
           import context.*
 
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  =
-            arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRole,
+            )
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              businessName = CustomerBusinessName.assume("Original Business"),
+              taxID = Some(CustomerTaxID.assume("OriginalTax")),
+              emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
+              phoneNumbers =
+                List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+              isArchived = false,
+            )
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              role = Some(arbitrarySample[CustomerBusinessContactRole]),
+              email = Some(CustomerEmail.assume("contact@example.com")),
+              phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
+              isArchived = false,
+            )
+            customerBusinessDetailsRowExisting = customerBusinessDetailsRow.copy(
+              customerID = arbitrarySample[CustomerID],
+              businessName = CustomerBusinessName.assume("Taken Business"),
+            )
 
-          val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            businessName = CustomerBusinessName.assume("Original Business"),
-            taxID = Some(CustomerTaxID.assume("OriginalTax")),
-            emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
-            phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-            addresses =
-              List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-            isArchived = false,
-          )
-          val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-            organizationID = customerBusinessDetailsRow.organizationID,
-            customerID = customerBusinessDetailsRow.customerID,
-            role = Some(arbitrarySample[CustomerBusinessContactRole]),
-            email = Some(CustomerEmail.assume("contact@example.com")),
-            phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
-            isArchived = false,
-          )
+            _ = customerBusinessDetailsRowExisting.customerID shouldNot equal(customerBusinessDetailsRow.customerID)
 
-          val customerBusinessDetailsRowExisting = customerBusinessDetailsRow.copy(
-            customerID = arbitrarySample[CustomerID],
-            businessName = CustomerBusinessName.assume("Taken Business"),
-          )
-
-          customerBusinessDetailsRowExisting.customerID shouldNot equal(customerBusinessDetailsRow.customerID)
-
-          postgresClient
-            .executeQuery(
-              customerBookQueries.insertCustomerBusinessDetailsRows(
-                List(customerBusinessDetailsRow, customerBusinessDetailsRowExisting)
+            _ <- postgresClient
+              .executeQuery(
+                customerBookQueries.insertCustomerBusinessDetailsRows(
+                  List(customerBusinessDetailsRow, customerBusinessDetailsRowExisting)
+                )
               )
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
+
+            customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+              businessName = Some("Taken Business"),
+              customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+              customerBusinessContactsUpdate = List(
+                smithy.CustomerBusinessContactUpdate(
+                  customerBusinessContactRow.customerBusinessContactID.value,
+                  fullName = Some("Updated Contact"),
+                )
+              ),
             )
-            .zioValue
 
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-            .zioValue
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          val customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
-            businessName = Some("Taken Business"),
-            customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
-            customerBusinessContactsUpdate = List(
-              smithy.CustomerBusinessContactUpdate(
-                customerBusinessContactRow.customerBusinessContactID.value,
-                fullName = Some("Updated Contact"),
+            customerBookBusinessPutResponse <- gatewayClient
+              .customerBookBusinessPut[smithy.Conflict](
+                customerBusinessDetailsRow.customerID,
+                customerBookBusinessPutRequestSmithy,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
               )
-            ),
-          )
-          val accessJwt                       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-          val customerBookBusinessPutResponse = gatewayClient
-            .customerBookBusinessPut[smithy.Conflict](
-              customerBusinessDetailsRow.customerID,
-              customerBookBusinessPutRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
+
+            _ = customerBookBusinessPutResponse.code shouldBe StatusCode.Conflict
+            _ = customerBookBusinessPutResponse.body.left.value shouldBe smithy.Conflict(
+              message = "A customer with the given name already exists in this organization"
             )
-            .zioValue
 
-          customerBookBusinessPutResponse.code shouldBe StatusCode.Conflict
-          customerBookBusinessPutResponse.body.left.value shouldBe smithy.Conflict(
-            message = "A customer with the given name already exists in this organization"
-          )
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
 
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue should contain theSameElementsAs List(
-            customerBusinessDetailsRow,
-            customerBusinessDetailsRowExisting,
-          )
-
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe List(customerBusinessContactRow)
-      }
-
-      "fail with an InternalServerError when the user details do not exist" in withContext { context =>
-        import context.*
-
-        val userID         = arbitrarySample[UserID]
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookBusinessPutRequestSmithy =
-          smithy.CustomerBookBusinessPutRequest()
-
-        val accessJwt = jwtService.generateAccessToken(userID).zioValue
-
-        val customerBookBusinessPutResponse =
-          gatewayClient
-            .customerBookBusinessPut[smithy.InternalServerError](
-              arbitrarySample[CustomerID],
-              customerBookBusinessPutRequestSmithy,
-              Some(organizationID),
-              Some(accessJwt.accessToken),
+            _ = customerBusinessDetailsRowsAll should contain theSameElementsAs List(
+              customerBusinessDetailsRow,
+              customerBusinessDetailsRowExisting,
             )
-            .zioValue
-
-        customerBookBusinessPutResponse.code shouldBe StatusCode.InternalServerError
-        customerBookBusinessPutResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookBusinessPutRequestSmithy =
-          smithy.CustomerBookBusinessPutRequest()
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessPutResponse =
-          gatewayClient
-            .customerBookBusinessPut[smithy.InternalServerError](
-              arbitrarySample[CustomerID],
-              customerBookBusinessPutRequestSmithy,
-              Some(organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessPutResponse.code shouldBe StatusCode.InternalServerError
-        customerBookBusinessPutResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
+            _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+          } yield ()
       }
 
       "fail with an InternalServerError and roll back business and contacts when an update reference is missing" in withContext {
         context =>
           import context.*
 
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  =
-            arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            businessName = CustomerBusinessName.assume("Original Business"),
-            taxID = Some(CustomerTaxID.assume("OriginalTax")),
-            emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
-            phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-            addresses =
-              List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-            isArchived = false,
-          )
-          val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-            organizationID = customerBusinessDetailsRow.organizationID,
-            customerID = customerBusinessDetailsRow.customerID,
-            role = Some(arbitrarySample[CustomerBusinessContactRole]),
-            email = Some(CustomerEmail.assume("contact@example.com")),
-            phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
-            isArchived = false,
-          )
-          val customerBusinessContactIDInvalid = arbitrarySample[CustomerBusinessContactID]
-
-          customerBusinessContactIDInvalid shouldNot equal(customerBusinessContactRow.customerBusinessContactID)
-
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-            .zioValue
-
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-            .zioValue
-
-          val customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
-            businessName = Some("Replacement Business"),
-            taxID = Some(Nullable.Null),
-            customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
-            customerBusinessContactsUpdate = List(
-              smithy.CustomerBusinessContactUpdate(
-                customerBusinessContactRow.customerBusinessContactID.value,
-                fullName = Some("Updated Contact"),
-              ),
-              smithy.CustomerBusinessContactUpdate(
-                customerBusinessContactIDInvalid.value,
-                fullName = Some("Invalid Update"),
-              ),
-            ),
-          )
-          val accessJwt                       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-          val customerBookBusinessPutResponse = gatewayClient
-            .customerBookBusinessPut[smithy.InternalServerError](
-              customerBusinessDetailsRow.customerID,
-              customerBookBusinessPutRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRole,
             )
-            .zioValue
 
-          customerBookBusinessPutResponse.code shouldBe StatusCode.InternalServerError
-          customerBookBusinessPutResponse.body.left.value shouldBe smithy.InternalServerError()
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe List(customerBusinessDetailsRow)
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              businessName = CustomerBusinessName.assume("Original Business"),
+              taxID = Some(CustomerTaxID.assume("OriginalTax")),
+              emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
+              phoneNumbers =
+                List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+              isArchived = false,
+            )
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              role = Some(arbitrarySample[CustomerBusinessContactRole]),
+              email = Some(CustomerEmail.assume("contact@example.com")),
+              phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
+              isArchived = false,
+            )
+            customerBusinessContactIDInvalid = arbitrarySample[CustomerBusinessContactID]
 
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe List(customerBusinessContactRow)
+            _ = customerBusinessContactIDInvalid shouldNot equal(customerBusinessContactRow.customerBusinessContactID)
+
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
+
+            customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+              businessName = Some("Replacement Business"),
+              taxID = Some(Nullable.Null),
+              customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+              customerBusinessContactsUpdate = List(
+                smithy.CustomerBusinessContactUpdate(
+                  customerBusinessContactRow.customerBusinessContactID.value,
+                  fullName = Some("Updated Contact"),
+                ),
+                smithy.CustomerBusinessContactUpdate(
+                  customerBusinessContactIDInvalid.value,
+                  fullName = Some("Invalid Update"),
+                ),
+              ),
+            )
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookBusinessPutResponse <- gatewayClient
+              .customerBookBusinessPut[smithy.InternalServerError](
+                customerBusinessDetailsRow.customerID,
+                customerBookBusinessPutRequestSmithy,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookBusinessPutResponse.code shouldBe StatusCode.InternalServerError
+            _ = customerBookBusinessPutResponse.body.left.value shouldBe smithy.InternalServerError()
+
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+          } yield ()
       }
 
       "fail with an InternalServerError and roll back business and contacts when an update reference is archived" in withContext {
         context =>
           import context.*
 
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  =
-            arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRole,
+            )
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              businessName = CustomerBusinessName.assume("Original Business"),
+              taxID = Some(CustomerTaxID.assume("OriginalTax")),
+              emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
+              phoneNumbers =
+                List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+              isArchived = false,
+            )
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              role = Some(arbitrarySample[CustomerBusinessContactRole]),
+              email = Some(CustomerEmail.assume("contact@example.com")),
+              phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
+              isArchived = false,
+            )
+            customerBusinessContactRowInvalid = customerBusinessContactRow.copy(
+              customerBusinessContactID = arbitrarySample[CustomerBusinessContactID],
+              isArchived = true,
+            )
 
-          val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            businessName = CustomerBusinessName.assume("Original Business"),
-            taxID = Some(CustomerTaxID.assume("OriginalTax")),
-            emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
-            phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-            addresses =
-              List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-            isArchived = false,
-          )
-          val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-            organizationID = customerBusinessDetailsRow.organizationID,
-            customerID = customerBusinessDetailsRow.customerID,
-            role = Some(arbitrarySample[CustomerBusinessContactRole]),
-            email = Some(CustomerEmail.assume("contact@example.com")),
-            phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
-            isArchived = false,
-          )
-          val customerBusinessContactRowInvalid = customerBusinessContactRow.copy(
-            customerBusinessContactID = arbitrarySample[CustomerBusinessContactID],
-            isArchived = true,
-          )
+            _ = customerBusinessContactRowInvalid.customerBusinessContactID shouldNot equal(
+              customerBusinessContactRow.customerBusinessContactID
+            )
 
-          customerBusinessContactRowInvalid.customerBusinessContactID shouldNot equal(
-            customerBusinessContactRow.customerBusinessContactID
-          )
+            customerBusinessContactIDInvalid = customerBusinessContactRowInvalid.customerBusinessContactID
 
-          val customerBusinessContactIDInvalid = customerBusinessContactRowInvalid.customerBusinessContactID
-
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-            .zioValue
-
-          postgresClient
-            .executeQuery(
-              customerBookQueries.insertCustomerBusinessContactRows(
-                List(customerBusinessContactRow, customerBusinessContactRowInvalid)
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+            _ <- postgresClient
+              .executeQuery(
+                customerBookQueries.insertCustomerBusinessContactRows(
+                  List(customerBusinessContactRow, customerBusinessContactRowInvalid)
+                )
               )
-            )
-            .zioValue
 
-          val customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
-            businessName = Some("Replacement Business"),
-            taxID = Some(Nullable.Null),
-            customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
-            customerBusinessContactsUpdate = List(
-              smithy.CustomerBusinessContactUpdate(
-                customerBusinessContactRow.customerBusinessContactID.value,
-                fullName = Some("Updated Contact"),
+            customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+              businessName = Some("Replacement Business"),
+              taxID = Some(Nullable.Null),
+              customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+              customerBusinessContactsUpdate = List(
+                smithy.CustomerBusinessContactUpdate(
+                  customerBusinessContactRow.customerBusinessContactID.value,
+                  fullName = Some("Updated Contact"),
+                ),
+                smithy.CustomerBusinessContactUpdate(
+                  customerBusinessContactIDInvalid.value,
+                  fullName = Some("Invalid Update"),
+                ),
               ),
-              smithy.CustomerBusinessContactUpdate(
-                customerBusinessContactIDInvalid.value,
-                fullName = Some("Invalid Update"),
-              ),
-            ),
-          )
-          val accessJwt                       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-          val customerBookBusinessPutResponse = gatewayClient
-            .customerBookBusinessPut[smithy.InternalServerError](
-              customerBusinessDetailsRow.customerID,
-              customerBookBusinessPutRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
             )
-            .zioValue
 
-          customerBookBusinessPutResponse.code shouldBe StatusCode.InternalServerError
-          customerBookBusinessPutResponse.body.left.value shouldBe smithy.InternalServerError()
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe List(customerBusinessDetailsRow)
+            customerBookBusinessPutResponse <- gatewayClient
+              .customerBookBusinessPut[smithy.InternalServerError](
+                customerBusinessDetailsRow.customerID,
+                customerBookBusinessPutRequestSmithy,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
 
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue should contain theSameElementsAs List(
-            customerBusinessContactRow,
-            customerBusinessContactRowInvalid,
-          )
+            _ = customerBookBusinessPutResponse.code shouldBe StatusCode.InternalServerError
+            _ = customerBookBusinessPutResponse.body.left.value shouldBe smithy.InternalServerError()
+
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll should contain theSameElementsAs List(
+              customerBusinessContactRow,
+              customerBusinessContactRowInvalid,
+            )
+          } yield ()
       }
 
       "fail with an InternalServerError and roll back business and contacts when an update reference is another business" in withContext {
         context =>
           import context.*
 
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  =
-            arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRole,
+            )
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              businessName = CustomerBusinessName.assume("Original Business"),
+              taxID = Some(CustomerTaxID.assume("OriginalTax")),
+              emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
+              phoneNumbers =
+                List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
+              addresses =
+                List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
+              isArchived = false,
+            )
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              role = Some(arbitrarySample[CustomerBusinessContactRole]),
+              email = Some(CustomerEmail.assume("contact@example.com")),
+              phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
+              isArchived = false,
+            )
+            customerBusinessDetailsRowOther = customerBusinessDetailsRow.copy(
+              customerID = arbitrarySample[CustomerID],
+              businessName = CustomerBusinessName.assume("Other Business"),
+            )
+            customerBusinessContactRowInvalid = customerBusinessContactRow.copy(
+              customerID = customerBusinessDetailsRowOther.customerID,
+              customerBusinessContactID = arbitrarySample[CustomerBusinessContactID],
+            )
 
-          val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            businessName = CustomerBusinessName.assume("Original Business"),
-            taxID = Some(CustomerTaxID.assume("OriginalTax")),
-            emails = List(CustomerEmailEntryInput(CustomerEmail.assume("original@example.com"), isDefault = true)),
-            phoneNumbers = List(CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true)),
-            addresses =
-              List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
-            isArchived = false,
-          )
-          val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-            organizationID = customerBusinessDetailsRow.organizationID,
-            customerID = customerBusinessDetailsRow.customerID,
-            role = Some(arbitrarySample[CustomerBusinessContactRole]),
-            email = Some(CustomerEmail.assume("contact@example.com")),
-            phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
-            isArchived = false,
-          )
-          val customerBusinessDetailsRowOther = customerBusinessDetailsRow.copy(
-            customerID = arbitrarySample[CustomerID],
-            businessName = CustomerBusinessName.assume("Other Business"),
-          )
-          val customerBusinessContactRowInvalid = customerBusinessContactRow.copy(
-            customerID = customerBusinessDetailsRowOther.customerID,
-            customerBusinessContactID = arbitrarySample[CustomerBusinessContactID],
-          )
+            _ = customerBusinessDetailsRowOther.customerID shouldNot equal(customerBusinessDetailsRow.customerID)
 
-          customerBusinessDetailsRowOther.customerID shouldNot equal(customerBusinessDetailsRow.customerID)
-          customerBusinessContactRowInvalid.customerBusinessContactID shouldNot equal(
-            customerBusinessContactRow.customerBusinessContactID
-          )
+            _ = customerBusinessContactRowInvalid.customerBusinessContactID shouldNot equal(
+              customerBusinessContactRow.customerBusinessContactID
+            )
 
-          val customerBusinessContactIDInvalid = customerBusinessContactRowInvalid.customerBusinessContactID
+            customerBusinessContactIDInvalid = customerBusinessContactRowInvalid.customerBusinessContactID
 
-          postgresClient
-            .executeQuery(
-              customerBookQueries.insertCustomerBusinessDetailsRows(
-                List(customerBusinessDetailsRow, customerBusinessDetailsRowOther)
+            _ <- postgresClient
+              .executeQuery(
+                customerBookQueries.insertCustomerBusinessDetailsRows(
+                  List(customerBusinessDetailsRow, customerBusinessDetailsRowOther)
+                )
               )
-            )
-            .zioValue
-
-          postgresClient
-            .executeQuery(
-              customerBookQueries.insertCustomerBusinessContactRows(
-                List(customerBusinessContactRow, customerBusinessContactRowInvalid)
+            _ <- postgresClient
+              .executeQuery(
+                customerBookQueries.insertCustomerBusinessContactRows(
+                  List(customerBusinessContactRow, customerBusinessContactRowInvalid)
+                )
               )
-            )
-            .zioValue
 
-          val customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
-            businessName = Some("Replacement Business"),
-            taxID = Some(Nullable.Null),
-            customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
-            customerBusinessContactsUpdate = List(
-              smithy.CustomerBusinessContactUpdate(
-                customerBusinessContactRow.customerBusinessContactID.value,
-                fullName = Some("Updated Contact"),
+            customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+              businessName = Some("Replacement Business"),
+              taxID = Some(Nullable.Null),
+              customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+              customerBusinessContactsUpdate = List(
+                smithy.CustomerBusinessContactUpdate(
+                  customerBusinessContactRow.customerBusinessContactID.value,
+                  fullName = Some("Updated Contact"),
+                ),
+                smithy.CustomerBusinessContactUpdate(
+                  customerBusinessContactIDInvalid.value,
+                  fullName = Some("Invalid Update"),
+                ),
               ),
-              smithy.CustomerBusinessContactUpdate(
-                customerBusinessContactIDInvalid.value,
-                fullName = Some("Invalid Update"),
-              ),
-            ),
-          )
-          val accessJwt                       = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-          val customerBookBusinessPutResponse = gatewayClient
-            .customerBookBusinessPut[smithy.InternalServerError](
-              customerBusinessDetailsRow.customerID,
-              customerBookBusinessPutRequestSmithy,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
             )
-            .zioValue
 
-          customerBookBusinessPutResponse.code shouldBe StatusCode.InternalServerError
-          customerBookBusinessPutResponse.body.left.value shouldBe smithy.InternalServerError()
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue should contain theSameElementsAs List(customerBusinessDetailsRow, customerBusinessDetailsRowOther)
+            customerBookBusinessPutResponse <- gatewayClient
+              .customerBookBusinessPut[smithy.InternalServerError](
+                customerBusinessDetailsRow.customerID,
+                customerBookBusinessPutRequestSmithy,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
 
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue should contain theSameElementsAs List(
-            customerBusinessContactRow,
-            customerBusinessContactRowInvalid,
-          )
+            _ = customerBookBusinessPutResponse.code shouldBe StatusCode.InternalServerError
+            _ = customerBookBusinessPutResponse.body.left.value shouldBe smithy.InternalServerError()
+
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerBusinessDetailsRowsAll should contain theSameElementsAs List(
+              customerBusinessDetailsRow,
+              customerBusinessDetailsRowOther,
+            )
+            _ = customerBusinessContactRowsAll should contain theSameElementsAs List(
+              customerBusinessContactRow,
+              customerBusinessContactRowInvalid,
+            )
+          } yield ()
       }
-
     }
 
     "PUT /customer-book/{customerID}/archive" should {
-      "successfully archive a customer" in withContext { context =>
+      "successfully archive a customer individual" in withContext { context =>
         import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+            .copy(organizationID = organizationUserRow.organizationID, isArchived = false)
 
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
-          .copy(organizationID = organizationUserRow.organizationID, isArchived = false)
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
 
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-          .zioValue
+          instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        val customerBookArchivePutResponse =
-          gatewayClient
+          customerBookArchivePutResponse <- gatewayClient
             .customerBookArchivePut[smithy.InternalServerError](
               customerIndividualDetailsRow.customerID,
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-        customerBookArchivePutResponse.code shouldBe StatusCode.NoContent
-        customerBookArchivePutResponse.body.value shouldBe ()
+          _ = customerBookArchivePutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookArchivePutResponse.body.value shouldBe ()
 
-        val customerIndividualDetailsRowsAll =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue
-
-        customerIndividualDetailsRowsAll shouldBe List(
-          customerIndividualDetailsRow.copy(
-            isArchived = true,
-            updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
           )
-        )
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "silently succeed with no side effect when no customer matches the id" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookArchivePutResponse =
-          gatewayClient
-            .customerBookArchivePut[smithy.InternalServerError](
-              arbitrarySample[CustomerID],
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
+          _ = customerIndividualDetailsRowsAll shouldBe List(
+            customerIndividualDetailsRow.copy(
+              isArchived = true,
+              updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
             )
-            .zioValue
-
-        customerBookArchivePutResponse.code shouldBe StatusCode.NoContent
-        customerBookArchivePutResponse.body.value shouldBe ()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting).zioValue shouldBe empty
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
+          )
+          _ = customerIndividualDetailsRowsAll.head.updatedAt.value.isBefore(instantNow) shouldBe false
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
       }
 
       "successfully archive a business while retaining active and archived contacts in full" in withContext { context =>
         import context.*
 
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  =
-          arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRole,
+          )
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            isArchived = false,
+          )
+          customerBusinessContactRowActive = arbitrarySample[CustomerBusinessContactRow].copy(
+            organizationID = customerBusinessDetailsRow.organizationID,
+            customerID = customerBusinessDetailsRow.customerID,
+            isArchived = false,
+          )
+          customerBusinessContactRowArchived = customerBusinessContactRowActive.copy(
+            customerBusinessContactID = arbitrarySample[CustomerBusinessContactID],
+            isArchived = true,
+          )
 
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          isArchived = false,
-        )
-        val customerBusinessContactRowActive = arbitrarySample[CustomerBusinessContactRow].copy(
-          organizationID = customerBusinessDetailsRow.organizationID,
-          customerID = customerBusinessDetailsRow.customerID,
-          isArchived = false,
-        )
-        val customerBusinessContactRowArchived = customerBusinessContactRowActive.copy(
-          customerBusinessContactID = arbitrarySample[CustomerBusinessContactID],
-          isArchived = true,
-        )
+          _ = customerBusinessContactRowArchived.customerBusinessContactID shouldNot equal(
+            customerBusinessContactRowActive.customerBusinessContactID
+          )
 
-        customerBusinessContactRowArchived.customerBusinessContactID shouldNot equal(
-          customerBusinessContactRowActive.customerBusinessContactID
-        )
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          _ <- postgresClient
+            .executeQuery(
+              customerBookQueries.insertCustomerBusinessContactRows(
+                List(customerBusinessContactRowActive, customerBusinessContactRowArchived)
+              )
+            )
 
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
+          instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
-        postgresClient
-          .executeQuery(
-            customerBookQueries.insertCustomerBusinessContactRows(
-              List(customerBusinessContactRowActive, customerBusinessContactRowArchived)
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookArchivePutResponse <- gatewayClient
+            .customerBookArchivePut[smithy.InternalServerError](
+              customerBusinessDetailsRow.customerID,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookArchivePutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookArchivePutResponse.body.value shouldBe ()
+
+          customerBusinessDetailsRows <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessContactRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+          _ = customerBusinessDetailsRows shouldBe List(
+            customerBusinessDetailsRow.copy(
+              isArchived = true,
+              updatedAt = customerBusinessDetailsRows.head.updatedAt,
             )
           )
-          .zioValue
-
-        val accessJwt                      = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-        val customerBookArchivePutResponse = gatewayClient
-          .customerBookArchivePut[smithy.InternalServerError](
-            customerBusinessDetailsRow.customerID,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
+          _ = customerBusinessDetailsRows.head should not equal customerBusinessDetailsRow
+          _ = customerBusinessDetailsRows.head.updatedAt.value.isBefore(instantNow) shouldBe false
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll should contain theSameElementsAs List(
+            customerBusinessContactRowActive,
+            customerBusinessContactRowArchived,
           )
-          .zioValue
-
-        customerBookArchivePutResponse.code shouldBe StatusCode.NoContent
-        customerBookArchivePutResponse.body.value shouldBe ()
-
-        val customerBusinessDetailsRows =
-          postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue
-
-        customerBusinessDetailsRows shouldBe List(
-          customerBusinessDetailsRow.copy(
-            isArchived = true,
-            updatedAt = customerBusinessDetailsRows.head.updatedAt,
-          )
-        )
-        customerBusinessDetailsRows.head should not equal customerBusinessDetailsRow
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue should contain theSameElementsAs List(
-          customerBusinessContactRowActive,
-          customerBusinessContactRowArchived,
-        )
+        } yield ()
       }
 
-      "silently succeed without changing the complete customer or contacts when the customer is already archived" in withContext {
-        context =>
-          import context.*
+      "successfully do nothing when the customer does not exist" in withContext { context =>
+        import context.*
 
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  =
-            arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+          customerBookArchivePutResponse <- gatewayClient
+            .customerBookArchivePut[smithy.InternalServerError](
+              arbitrarySample[CustomerID],
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookArchivePutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookArchivePutResponse.body.value shouldBe ()
+
+          customerIDsAll                   <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIDsAll shouldBe Nil
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
+      }
+
+      "successfully leave an already archived customer business and its contacts unchanged" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRole,
+          )
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
             organizationID = organizationUserRow.organizationID,
             isArchived = true,
           )
-          val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+          customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
             organizationID = customerBusinessDetailsRow.organizationID,
             customerID = customerBusinessDetailsRow.customerID,
           )
 
-          postgresClient
+          _ <- postgresClient
             .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-            .zioValue
-
-          postgresClient
+          _ <- postgresClient
             .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-            .zioValue
 
-          val accessJwt                      = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-          val customerBookArchivePutResponse = gatewayClient
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookArchivePutResponse <- gatewayClient
             .customerBookArchivePut[smithy.InternalServerError](
               customerBusinessDetailsRow.customerID,
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-          customerBookArchivePutResponse.code shouldBe StatusCode.NoContent
-          customerBookArchivePutResponse.body.value shouldBe ()
+          _ = customerBookArchivePutResponse.code shouldBe StatusCode.NoContent
+          _ = customerBookArchivePutResponse.body.value shouldBe ()
 
-          postgresClient
+          customerBusinessDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe List(customerBusinessDetailsRow)
-
-          postgresClient
+          customerIndividualDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue shouldBe Nil
-
-          postgresClient
+          customerBusinessContactRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe List(customerBusinessContactRow)
+
+          _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+        } yield ()
       }
 
-      "silently succeed without changing the complete customer or contacts when the customer is in another organization" in withContext {
+      "successfully leave another organization's customer business and its contacts unchanged" in withContext {
         context =>
           import context.*
 
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-          val organizationUserRow  =
-            arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-            organizationID = arbitrarySample[OrganizationID],
-            isArchived = false,
-          )
-          val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-            organizationID = customerBusinessDetailsRow.organizationID,
-            customerID = customerBusinessDetailsRow.customerID,
-          )
-
-          customerBusinessDetailsRow.organizationID shouldNot equal(organizationUserRow.organizationID)
-
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-            .zioValue
-
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-            .zioValue
-
-          val accessJwt                      = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-          val customerBookArchivePutResponse = gatewayClient
-            .customerBookArchivePut[smithy.InternalServerError](
-              customerBusinessDetailsRow.customerID,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRole,
             )
-            .zioValue
 
-          customerBookArchivePutResponse.code shouldBe StatusCode.NoContent
-          customerBookArchivePutResponse.body.value shouldBe ()
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe List(customerBusinessDetailsRow)
-
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue shouldBe Nil
-
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe List(customerBusinessContactRow)
-      }
-
-      "fail with a BadRequest when the organization id header is missing" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
-          .copy(isArchived = false)
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookArchivePutResponse =
-          gatewayClient
-            .customerBookArchivePut[smithy.BadRequest](
-              customerIndividualDetailsRow.customerID,
-              None,
-              Some(accessJwt.accessToken),
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = arbitrarySample[OrganizationID],
+              isArchived = false,
             )
-            .zioValue
-
-        customerBookArchivePutResponse.code shouldBe StatusCode.BadRequest
-        customerBookArchivePutResponse.body.left.value shouldBe smithy.BadRequest()
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting).zioValue shouldBe
-          List(customerIndividualDetailsRow)
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is missing" in withContext { context =>
-        import context.*
-
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val customerBookArchivePutResponse =
-          gatewayClient
-            .customerBookArchivePut[smithy.Unauthorized](
-              arbitrarySample[CustomerID],
-              Some(organizationID),
-              None,
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
             )
-            .zioValue
 
-        customerBookArchivePutResponse.code shouldBe StatusCode.Unauthorized
-        customerBookArchivePutResponse.body.left.value shouldBe smithy.Unauthorized()
+            _ = customerBusinessDetailsRow.organizationID shouldNot equal(organizationUserRow.organizationID)
 
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
+            customerBookArchivePutResponse <- gatewayClient
+              .customerBookArchivePut[smithy.InternalServerError](
+                customerBusinessDetailsRow.customerID,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
 
-      "fail with an Unauthorized when the access token is invalid" in withContext { context =>
-        import context.*
+            _ = customerBookArchivePutResponse.code shouldBe StatusCode.NoContent
+            _ = customerBookArchivePutResponse.body.value shouldBe ()
 
-        val organizationID = arbitrarySample[OrganizationID]
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerIndividualDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
 
-        val customerBookArchivePutResponse =
-          gatewayClient
-            .customerBookArchivePut[smithy.Unauthorized](
-              arbitrarySample[CustomerID],
-              Some(organizationID),
-              Some(AccessToken("invalidtoken")),
-            )
-            .zioValue
-
-        customerBookArchivePutResponse.code shouldBe StatusCode.Unauthorized
-        customerBookArchivePutResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
-        import context.*
-
-        val onboardStageInvalid =
-          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStageInvalid)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookArchivePutResponse =
-          gatewayClient
-            .customerBookArchivePut[smithy.Forbidden](
-              arbitrarySample[CustomerID],
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookArchivePutResponse.code shouldBe StatusCode.Forbidden
-        customerBookArchivePutResponse.body.left.value shouldBe smithy.Forbidden()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the organization user role is not allowed" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRoleInvalid =
-          Random.shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRoleInvalid)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookArchivePutResponse =
-          gatewayClient
-            .customerBookArchivePut[smithy.Forbidden](
-              arbitrarySample[CustomerID],
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookArchivePutResponse.code shouldBe StatusCode.Forbidden
-        customerBookArchivePutResponse.body.left.value shouldBe smithy.Forbidden()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError when the user details do not exist" in withContext { context =>
-        import context.*
-
-        val userID         = arbitrarySample[UserID]
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val accessJwt = jwtService.generateAccessToken(userID).zioValue
-
-        val customerBookArchivePutResponse =
-          gatewayClient
-            .customerBookArchivePut[smithy.InternalServerError](
-              arbitrarySample[CustomerID],
-              Some(organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookArchivePutResponse.code shouldBe StatusCode.InternalServerError
-        customerBookArchivePutResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val organizationID = arbitrarySample[OrganizationID]
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookArchivePutResponse =
-          gatewayClient
-            .customerBookArchivePut[smithy.InternalServerError](
-              arbitrarySample[CustomerID],
-              Some(organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookArchivePutResponse.code shouldBe StatusCode.InternalServerError
-        customerBookArchivePutResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerIndividualDetailsRowsAll shouldBe Nil
+            _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+          } yield ()
       }
     }
 
@@ -4125,241 +3422,166 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
       "successfully return the customer individual's details" in withContext { context =>
         import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val addressFull = Address(
-          addressLine1 = Some(arbitrarySample[AddressLine1]),
-          addressLine2 = Some(arbitrarySample[AddressLine2]),
-          city = Some(arbitrarySample[City]),
-          postalCode = Some(arbitrarySample[PostalCode]),
-          country = Some(arbitrarySample[Country]),
-        )
-        val addressWithoutLine2          = addressFull.copy(addressLine2 = None)
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          isArchived = false,
-          emails = List(
-            CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = true),
-            CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = false),
-          ),
-          phoneNumbers = List(
-            CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true),
-            CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = false),
-          ),
-          addresses = List(
-            CustomerAddressEntry(AddressEntry(addressFull, AddressType.Shipping)),
-            CustomerAddressEntry(AddressEntry(addressWithoutLine2, AddressType.Billing)),
-          ),
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualGetResponse =
-          gatewayClient
-            .customerBookIndividualGet[smithy.InternalServerError](
-              customerIndividualDetailsRow.customerID,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookIndividualGetResponse.code shouldBe StatusCode.Ok
-        customerBookIndividualGetResponse.body.value shouldBe smithy.CustomerBookIndividualGetResponse(
-          customerID = customerIndividualDetailsRow.customerID.value,
-          fullName = customerIndividualDetailsRow.fullName.value,
-          emails = customerIndividualDetailsRow.emails.map(customerEmailEntryInput =>
-            smithy.CustomerEmailEntry(
-              email = customerEmailEntryInput.email.value,
-              isDefault = customerEmailEntryInput.isDefault,
-            )
-          ),
-          phoneNumbers = customerIndividualDetailsRow.phoneNumbers.map(customerPhoneNumberEntryInput =>
-            smithy.CustomerPhoneNumberEntry(
-              phoneNumber = smithy.PhoneNumberRequest(
-                customerPhoneNumberEntryInput.phoneNumber.value.phoneNationalNumber.value,
-                customerPhoneNumberEntryInput.phoneNumber.value.phoneCountryCode.value,
-              ),
-              isDefault = customerPhoneNumberEntryInput.isDefault,
-            )
-          ),
-          addresses = customerIndividualDetailsRow.addresses.map(customerAddressEntry =>
-            smithy.CustomerAddressEntry(
-              address = smithy.AddressRequest(
-                addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
-                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
-                city = customerAddressEntry.value.address.city.map(_.value),
-                postalCode = customerAddressEntry.value.address.postalCode.map(_.value),
-                country = customerAddressEntry.value.address.country.map(_.value),
-              ),
-              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
-            )
-          ),
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe List(customerIndividualDetailsRow)
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a BadRequest when the organization id header is missing" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualGetResponse =
-          gatewayClient
-            .customerBookIndividualGet[smithy.BadRequest](
-              arbitrarySample[CustomerID],
-              None,
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookIndividualGetResponse.code shouldBe StatusCode.BadRequest
-        customerBookIndividualGetResponse.body.left.value shouldBe smithy.BadRequest()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is missing" in withContext { context =>
-        import context.*
-
-        val customerBookIndividualGetResponse =
-          gatewayClient
-            .customerBookIndividualGet[smithy.Unauthorized](
-              arbitrarySample[CustomerID],
-              Some(arbitrarySample[OrganizationID]),
-              None,
-            )
-            .zioValue
-
-        customerBookIndividualGetResponse.code shouldBe StatusCode.Unauthorized
-        customerBookIndividualGetResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is invalid" in withContext { context =>
-        import context.*
-
-        val customerBookIndividualGetResponse =
-          gatewayClient
-            .customerBookIndividualGet[smithy.Unauthorized](
-              arbitrarySample[CustomerID],
-              Some(arbitrarySample[OrganizationID]),
-              Some(AccessToken("invalidtoken")),
-            )
-            .zioValue
-
-        customerBookIndividualGetResponse.code shouldBe StatusCode.Unauthorized
-        customerBookIndividualGetResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
-        import context.*
-
-        val onboardStageInvalid =
-          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStageInvalid)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualGetResponse =
-          gatewayClient
-            .customerBookIndividualGet[smithy.Forbidden](
-              arbitrarySample[CustomerID],
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookIndividualGetResponse.code shouldBe StatusCode.Forbidden
-        customerBookIndividualGetResponse.body.left.value shouldBe smithy.Forbidden()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError for an archived individual while retaining its complete state" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow]
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
             .copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
             .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val addressFull = Address(
+          addressFull = Address(
             addressLine1 = Some(arbitrarySample[AddressLine1]),
             addressLine2 = Some(arbitrarySample[AddressLine2]),
             city = Some(arbitrarySample[City]),
             postalCode = Some(arbitrarySample[PostalCode]),
             country = Some(arbitrarySample[Country]),
           )
-          val addressWithoutLine2          = addressFull.copy(addressLine2 = None)
-          val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
+          addressWithoutLine2          = addressFull.copy(addressLine2 = None)
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            isArchived = false,
+            emails = List(
+              CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = true),
+              CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = false),
+            ),
+            phoneNumbers = List(
+              CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true),
+              CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = false),
+            ),
+            addresses = List(
+              CustomerAddressEntry(AddressEntry(addressFull, AddressType.Shipping)),
+              CustomerAddressEntry(AddressEntry(addressWithoutLine2, AddressType.Billing)),
+            ),
+          )
+
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualGetResponse <- gatewayClient
+            .customerBookIndividualGet[smithy.InternalServerError](
+              customerIndividualDetailsRow.customerID,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookIndividualGetResponse.code shouldBe StatusCode.Ok
+          _ = customerBookIndividualGetResponse.body.value shouldBe smithy.CustomerBookIndividualGetResponse(
+            customerID = customerIndividualDetailsRow.customerID.value,
+            fullName = customerIndividualDetailsRow.fullName.value,
+            emails = customerIndividualDetailsRow.emails.map(customerEmailEntryInput =>
+              smithy.CustomerEmailEntry(
+                email = customerEmailEntryInput.email.value,
+                isDefault = customerEmailEntryInput.isDefault,
+              )
+            ),
+            phoneNumbers = customerIndividualDetailsRow.phoneNumbers.map(customerPhoneNumberEntryInput =>
+              smithy.CustomerPhoneNumberEntry(
+                phoneNumber = smithy.PhoneNumberRequest(
+                  customerPhoneNumberEntryInput.phoneNumber.value.phoneNationalNumber.value,
+                  customerPhoneNumberEntryInput.phoneNumber.value.phoneCountryCode.value,
+                ),
+                isDefault = customerPhoneNumberEntryInput.isDefault,
+              )
+            ),
+            addresses = customerIndividualDetailsRow.addresses.map(customerAddressEntry =>
+              smithy.CustomerAddressEntry(
+                address = smithy.AddressRequest(
+                  addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
+                  addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
+                  city = customerAddressEntry.value.address.city.map(_.value),
+                  postalCode = customerAddressEntry.value.address.postalCode.map(_.value),
+                  country = customerAddressEntry.value.address.country.map(_.value),
+                ),
+                addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
+              )
+            ),
+          )
+
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
+      }
+
+      "fail with an InternalServerError when the customer individual does not exist" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualGetResponse <- gatewayClient
+            .customerBookIndividualGet[smithy.InternalServerError](
+              arbitrarySample[CustomerID],
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookIndividualGetResponse.code shouldBe StatusCode.InternalServerError
+          _ = customerBookIndividualGetResponse.body.left.value shouldBe smithy.InternalServerError()
+
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
+      }
+
+      "fail with an InternalServerError when the customer individual is archived" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          addressFull = Address(
+            addressLine1 = Some(arbitrarySample[AddressLine1]),
+            addressLine2 = Some(arbitrarySample[AddressLine2]),
+            city = Some(arbitrarySample[City]),
+            postalCode = Some(arbitrarySample[PostalCode]),
+            country = Some(arbitrarySample[Country]),
+          )
+          addressWithoutLine2          = addressFull.copy(addressLine2 = None)
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
             organizationID = organizationUserRow.organizationID,
             isArchived = true,
             emails = List(
@@ -4376,261 +3598,358 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             ),
           )
 
-          postgresClient
+          _ <- postgresClient
             .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-            .zioValue
 
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          val customerBookIndividualGetResponse =
-            gatewayClient
-              .customerBookIndividualGet[smithy.InternalServerError](
-                customerIndividualDetailsRow.customerID,
-                Some(organizationUserRow.organizationID),
-                Some(accessJwt.accessToken),
-              )
-              .zioValue
-
-          customerBookIndividualGetResponse.code shouldBe StatusCode.InternalServerError
-          customerBookIndividualGetResponse.body.left.value shouldBe smithy.InternalServerError()
-
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue shouldBe List(customerIndividualDetailsRow)
-
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe Nil
-
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError when the customer individual does not exist" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualGetResponse =
-          gatewayClient
-            .customerBookIndividualGet[smithy.InternalServerError](
-              arbitrarySample[CustomerID],
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookIndividualGetResponse.code shouldBe StatusCode.InternalServerError
-        customerBookIndividualGetResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError for a business ID while retaining the business and its contacts" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-          val organizationUserRow  =
-            arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            isArchived = false,
-          )
-          val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-            organizationID = customerBusinessDetailsRow.organizationID,
-            customerID = customerBusinessDetailsRow.customerID,
-          )
-
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-            .zioValue
-
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-            .zioValue
-
-          val accessJwt                         = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-          val customerBookIndividualGetResponse = gatewayClient
-            .customerBookIndividualGet[smithy.InternalServerError](
-              customerBusinessDetailsRow.customerID,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-          customerBookIndividualGetResponse.code shouldBe StatusCode.InternalServerError
-          customerBookIndividualGetResponse.body.left.value shouldBe smithy.InternalServerError()
-
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue shouldBe Nil
-
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe List(customerBusinessDetailsRow)
-
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe List(customerBusinessContactRow)
-      }
-
-      "fail with an InternalServerError for a foreign individual while retaining its complete row" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-          val organizationUserRow  =
-            arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerIndividualDetailsRow =
-            arbitrarySample[CustomerIndividualDetailsRow].copy(isArchived = false)
-
-          customerIndividualDetailsRow.organizationID shouldNot equal(organizationUserRow.organizationID)
-
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-            .zioValue
-
-          val accessJwt                         = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-          val customerBookIndividualGetResponse = gatewayClient
+          customerBookIndividualGetResponse <- gatewayClient
             .customerBookIndividualGet[smithy.InternalServerError](
               customerIndividualDetailsRow.customerID,
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-          customerBookIndividualGetResponse.code shouldBe StatusCode.InternalServerError
-          customerBookIndividualGetResponse.body.left.value shouldBe smithy.InternalServerError()
+          _ = customerBookIndividualGetResponse.code shouldBe StatusCode.InternalServerError
+          _ = customerBookIndividualGetResponse.body.left.value shouldBe smithy.InternalServerError()
 
-          postgresClient
+          customerIndividualDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue shouldBe List(customerIndividualDetailsRow)
-
-          postgresClient
+          customerBusinessDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe Nil
-
-          postgresClient
+          customerBusinessContactRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe Nil
+
+          _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
       }
 
-      "fail with an InternalServerError when the user details do not exist" in withContext { context =>
+      "fail with an InternalServerError when the customer individual is a customer business" in withContext { context =>
         import context.*
 
-        val accessJwt = jwtService.generateAccessToken(arbitrarySample[UserID]).zioValue
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRole,
+          )
 
-        val customerBookIndividualGetResponse =
-          gatewayClient
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            isArchived = false,
+          )
+          customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+            organizationID = customerBusinessDetailsRow.organizationID,
+            customerID = customerBusinessDetailsRow.customerID,
+          )
+
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookIndividualGetResponse <- gatewayClient
             .customerBookIndividualGet[smithy.InternalServerError](
-              arbitrarySample[CustomerID],
-              Some(arbitrarySample[OrganizationID]),
+              customerBusinessDetailsRow.customerID,
+              Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-        customerBookIndividualGetResponse.code shouldBe StatusCode.InternalServerError
-        customerBookIndividualGetResponse.body.left.value shouldBe smithy.InternalServerError()
+          _ = customerBookIndividualGetResponse.code shouldBe StatusCode.InternalServerError
+          _ = customerBookIndividualGetResponse.body.left.value shouldBe smithy.InternalServerError()
 
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+          customerBusinessContactRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+          _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+        } yield ()
       }
 
-      "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
-        import context.*
+      "fail with an InternalServerError when the customer individual belongs to another organization" in withContext {
+        context =>
+          import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookIndividualGetResponse =
-          gatewayClient
-            .customerBookIndividualGet[smithy.InternalServerError](
-              arbitrarySample[CustomerID],
-              Some(arbitrarySample[OrganizationID]),
-              Some(accessJwt.accessToken),
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRole,
             )
-            .zioValue
 
-        customerBookIndividualGetResponse.code shouldBe StatusCode.InternalServerError
-        customerBookIndividualGetResponse.body.left.value shouldBe smithy.InternalServerError()
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
+            customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(isArchived = false)
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
+            _ = customerIndividualDetailsRow.organizationID shouldNot equal(organizationUserRow.organizationID)
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookIndividualGetResponse <- gatewayClient
+              .customerBookIndividualGet[smithy.InternalServerError](
+                customerIndividualDetailsRow.customerID,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookIndividualGetResponse.code shouldBe StatusCode.InternalServerError
+            _ = customerBookIndividualGetResponse.body.left.value shouldBe smithy.InternalServerError()
+
+            customerIndividualDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+            _ = customerBusinessDetailsRowsAll shouldBe Nil
+            _ = customerBusinessContactRowsAll shouldBe Nil
+          } yield ()
       }
     }
 
     "GET /customer-book/business/{customerID}" should {
-      "successfully return complete business values and active contacts in creation-time and identifier order" in withContext {
+      "successfully return complete business values and only active contacts in creation-time and identifier order" in withContext {
         context =>
           import context.*
 
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            addressFull = Address(
+              addressLine1 = Some(arbitrarySample[AddressLine1]),
+              addressLine2 = Some(arbitrarySample[AddressLine2]),
+              city = Some(arbitrarySample[City]),
+              postalCode = Some(arbitrarySample[PostalCode]),
+              country = Some(arbitrarySample[Country]),
+            )
+            addressWithoutLine2        = addressFull.copy(addressLine2 = None)
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              isArchived = false,
+              taxID = Some(arbitrarySample[CustomerTaxID]),
+              emails = List(
+                CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = true),
+                CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = false),
+              ),
+              phoneNumbers = List(
+                CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true),
+                CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = false),
+              ),
+              addresses = List(
+                CustomerAddressEntry(AddressEntry(addressFull, AddressType.Shipping)),
+                CustomerAddressEntry(AddressEntry(addressWithoutLine2, AddressType.Billing)),
+              ),
+            )
+            createdAtEarlierText                = "2026-01-01T10:00:00Z"
+            createdAtLaterText                  = "2026-01-02T10:00:00Z"
+            customerBusinessContactIDFirstText  = "00000000-0000-0000-0000-000000000001"
+            customerBusinessContactIDSecondText = "00000000-0000-0000-0000-000000000002"
+            createdAtEarlier                    = CreatedAt(java.time.Instant.parse(createdAtEarlierText))
+            createdAtLater                      = CreatedAt(java.time.Instant.parse(createdAtLaterText))
+            customerBusinessContactIDFirst      = CustomerBusinessContactID(
+              java.util.UUID.fromString(customerBusinessContactIDFirstText)
+            )
+            customerBusinessContactIDSecond = CustomerBusinessContactID(
+              java.util.UUID.fromString(customerBusinessContactIDSecondText)
+            )
+            customerBusinessContactRowEarlier = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              createdAt = createdAtEarlier,
+              updatedAt = UpdatedAt(createdAtEarlier.value),
+              role = Some(arbitrarySample[CustomerBusinessContactRole]),
+              email = Some(arbitrarySample[CustomerEmail]),
+              phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
+              isArchived = false,
+            )
+            customerBusinessContactRowFirst = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              customerBusinessContactID = customerBusinessContactIDFirst,
+              createdAt = createdAtLater,
+              updatedAt = UpdatedAt(createdAtLater.value),
+              role = None,
+              email = None,
+              phoneNumber = None,
+              isArchived = false,
+            )
+            customerBusinessContactRowSecond = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              customerBusinessContactID = customerBusinessContactIDSecond,
+              createdAt = createdAtLater,
+              updatedAt = UpdatedAt(createdAtLater.value),
+              role = Some(arbitrarySample[CustomerBusinessContactRole]),
+              email = None,
+              phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
+              isArchived = false,
+            )
+            customerBusinessContactRowArchived = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = customerBusinessDetailsRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              createdAt = createdAtEarlier,
+              updatedAt = UpdatedAt(createdAtEarlier.value),
+              isArchived = true,
+            )
+            customerBusinessContactCount = 4
+
+            _ = Set(
+              customerBusinessContactRowEarlier.customerBusinessContactID,
+              customerBusinessContactRowFirst.customerBusinessContactID,
+              customerBusinessContactRowSecond.customerBusinessContactID,
+              customerBusinessContactRowArchived.customerBusinessContactID,
+            ).size shouldBe customerBusinessContactCount
+
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+            _ <- postgresClient
+              .executeQuery(
+                customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRowSecond))
+              )
+            _ <- postgresClient
+              .executeQuery(
+                customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRowArchived))
+              )
+            _ <- postgresClient
+              .executeQuery(
+                customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRowFirst))
+              )
+            _ <- postgresClient
+              .executeQuery(
+                customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRowEarlier))
+              )
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookBusinessGetResponse <- gatewayClient
+              .customerBookBusinessGet[smithy.InternalServerError](
+                customerBusinessDetailsRow.customerID,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookBusinessGetResponse.code shouldBe StatusCode.Ok
+            _ = customerBookBusinessGetResponse.body.value shouldBe smithy.CustomerBookBusinessGetResponse(
+              customerID = customerBusinessDetailsRow.customerID.value,
+              businessName = customerBusinessDetailsRow.businessName.value,
+              emails = customerBusinessDetailsRow.emails.map(customerEmailEntryInput =>
+                smithy.CustomerEmailEntry(
+                  email = customerEmailEntryInput.email.value,
+                  isDefault = customerEmailEntryInput.isDefault,
+                )
+              ),
+              taxID = customerBusinessDetailsRow.taxID.map(_.value),
+              phoneNumbers = customerBusinessDetailsRow.phoneNumbers.map(customerPhoneNumberEntryInput =>
+                smithy.CustomerPhoneNumberEntry(
+                  smithy.PhoneNumberRequest(
+                    customerPhoneNumberEntryInput.phoneNumber.value.phoneNationalNumber.value,
+                    customerPhoneNumberEntryInput.phoneNumber.value.phoneCountryCode.value,
+                  ),
+                  isDefault = customerPhoneNumberEntryInput.isDefault,
+                )
+              ),
+              addresses = customerBusinessDetailsRow.addresses.map(customerAddressEntry =>
+                smithy.CustomerAddressEntry(
+                  address = smithy.AddressRequest(
+                    addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
+                    addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
+                    city = customerAddressEntry.value.address.city.map(_.value),
+                    postalCode = customerAddressEntry.value.address.postalCode.map(_.value),
+                    country = customerAddressEntry.value.address.country.map(_.value),
+                  ),
+                  addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
+                )
+              ),
+              customerBusinessContacts = List(
+                customerBusinessContactRowEarlier,
+                customerBusinessContactRowFirst,
+                customerBusinessContactRowSecond,
+              )
+                .map(customerBusinessContactRow =>
+                  smithy.CustomerBusinessContact(
+                    customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID.value,
+                    fullName = customerBusinessContactRow.fullName.value,
+                    role = customerBusinessContactRow.role.map(_.value),
+                    email = customerBusinessContactRow.email.map(_.value),
+                    phoneNumber = customerBusinessContactRow.phoneNumber.map(customerPhoneNumber =>
+                      smithy.PhoneNumberRequest(
+                        phoneNationalNumber = customerPhoneNumber.value.phoneNationalNumber.value,
+                        phoneCountryCode = customerPhoneNumber.value.phoneCountryCode.value,
+                      )
+                    ),
+                  )
+                ),
+            )
+
+            customerIndividualDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerIndividualDetailsRowsAll shouldBe Nil
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll should contain theSameElementsAs List(
+              customerBusinessContactRowSecond,
+              customerBusinessContactRowArchived,
+              customerBusinessContactRowFirst,
+              customerBusinessContactRowEarlier,
+            )
+          } yield ()
+      }
+
+      "successfully return a required empty contact list for a business with no contacts" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
             .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val addressFull = Address(
+          addressFull = Address(
             addressLine1 = Some(arbitrarySample[AddressLine1]),
             addressLine2 = Some(arbitrarySample[AddressLine2]),
             city = Some(arbitrarySample[City]),
             postalCode = Some(arbitrarySample[PostalCode]),
             country = Some(arbitrarySample[Country]),
           )
-          val addressWithoutLine2        = addressFull.copy(addressLine2 = None)
-          val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+          addressWithoutLine2        = addressFull.copy(addressLine2 = None)
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
             organizationID = organizationUserRow.organizationID,
             isArchived = false,
             taxID = Some(arbitrarySample[CustomerTaxID]),
@@ -4648,100 +3967,20 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             ),
           )
 
-          val createdAtEarlierText                = "2026-01-01T10:00:00Z"
-          val createdAtLaterText                  = "2026-01-02T10:00:00Z"
-          val customerBusinessContactIDFirstText  = "00000000-0000-0000-0000-000000000001"
-          val customerBusinessContactIDSecondText = "00000000-0000-0000-0000-000000000002"
-          val createdAtEarlier                    = CreatedAt(java.time.Instant.parse(createdAtEarlierText))
-          val createdAtLater                      = CreatedAt(java.time.Instant.parse(createdAtLaterText))
-          val customerBusinessContactIDFirst      =
-            CustomerBusinessContactID(java.util.UUID.fromString(customerBusinessContactIDFirstText))
-          val customerBusinessContactIDSecond =
-            CustomerBusinessContactID(java.util.UUID.fromString(customerBusinessContactIDSecondText))
-          val customerBusinessContactRowEarlier = arbitrarySample[CustomerBusinessContactRow].copy(
-            organizationID = customerBusinessDetailsRow.organizationID,
-            customerID = customerBusinessDetailsRow.customerID,
-            createdAt = createdAtEarlier,
-            updatedAt = UpdatedAt(createdAtEarlier.value),
-            role = Some(arbitrarySample[CustomerBusinessContactRole]),
-            email = Some(arbitrarySample[CustomerEmail]),
-            phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
-            isArchived = false,
-          )
-          val customerBusinessContactRowFirst = arbitrarySample[CustomerBusinessContactRow].copy(
-            organizationID = customerBusinessDetailsRow.organizationID,
-            customerID = customerBusinessDetailsRow.customerID,
-            customerBusinessContactID = customerBusinessContactIDFirst,
-            createdAt = createdAtLater,
-            updatedAt = UpdatedAt(createdAtLater.value),
-            role = None,
-            email = None,
-            phoneNumber = None,
-            isArchived = false,
-          )
-          val customerBusinessContactRowSecond = arbitrarySample[CustomerBusinessContactRow].copy(
-            organizationID = customerBusinessDetailsRow.organizationID,
-            customerID = customerBusinessDetailsRow.customerID,
-            customerBusinessContactID = customerBusinessContactIDSecond,
-            createdAt = createdAtLater,
-            updatedAt = UpdatedAt(createdAtLater.value),
-            role = Some(arbitrarySample[CustomerBusinessContactRole]),
-            email = None,
-            phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]),
-            isArchived = false,
-          )
-          val customerBusinessContactRowArchived = arbitrarySample[CustomerBusinessContactRow].copy(
-            organizationID = customerBusinessDetailsRow.organizationID,
-            customerID = customerBusinessDetailsRow.customerID,
-            createdAt = createdAtEarlier,
-            updatedAt = UpdatedAt(createdAtEarlier.value),
-            isArchived = true,
-          )
-
-          val customerBusinessContactCount = 4
-          Set(
-            customerBusinessContactRowEarlier.customerBusinessContactID,
-            customerBusinessContactRowFirst.customerBusinessContactID,
-            customerBusinessContactRowSecond.customerBusinessContactID,
-            customerBusinessContactRowArchived.customerBusinessContactID,
-          ).size shouldBe customerBusinessContactCount
-
-          postgresClient
+          _ <- postgresClient
             .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-            .zioValue
 
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRowSecond)))
-            .zioValue
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          postgresClient
-            .executeQuery(
-              customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRowArchived))
-            )
-            .zioValue
-
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRowFirst)))
-            .zioValue
-
-          postgresClient
-            .executeQuery(
-              customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRowEarlier))
-            )
-            .zioValue
-
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-          val customerBookBusinessGetResponse = gatewayClient
+          customerBookBusinessGetResponse <- gatewayClient
             .customerBookBusinessGet[smithy.InternalServerError](
               customerBusinessDetailsRow.customerID,
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-          customerBookBusinessGetResponse.code shouldBe StatusCode.Ok
-          customerBookBusinessGetResponse.body.value shouldBe smithy.CustomerBookBusinessGetResponse(
+          _ = customerBookBusinessGetResponse.code shouldBe StatusCode.Ok
+          _ = customerBookBusinessGetResponse.body.value shouldBe smithy.CustomerBookBusinessGetResponse(
             customerID = customerBusinessDetailsRow.customerID.value,
             businessName = customerBusinessDetailsRow.businessName.value,
             emails = customerBusinessDetailsRow.emails.map(customerEmailEntryInput =>
@@ -4772,395 +4011,193 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
                 addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
               )
             ),
-            customerBusinessContacts =
-              List(customerBusinessContactRowEarlier, customerBusinessContactRowFirst, customerBusinessContactRowSecond)
-                .map(customerBusinessContactRow =>
-                  smithy.CustomerBusinessContact(
-                    customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID.value,
-                    fullName = customerBusinessContactRow.fullName.value,
-                    role = customerBusinessContactRow.role.map(_.value),
-                    email = customerBusinessContactRow.email.map(_.value),
-                    phoneNumber = customerBusinessContactRow.phoneNumber.map(customerPhoneNumber =>
-                      smithy.PhoneNumberRequest(
-                        phoneNationalNumber = customerPhoneNumber.value.phoneNationalNumber.value,
-                        phoneCountryCode = customerPhoneNumber.value.phoneCountryCode.value,
-                      )
-                    ),
-                  )
-                ),
+            customerBusinessContacts = Nil,
           )
 
-          postgresClient
+          customerIndividualDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue shouldBe Nil
-
-          postgresClient
+          customerBusinessDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe List(customerBusinessDetailsRow)
-
-          postgresClient
+          customerBusinessContactRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue should contain theSameElementsAs List(
-            customerBusinessContactRowSecond,
-            customerBusinessContactRowArchived,
-            customerBusinessContactRowFirst,
-            customerBusinessContactRowEarlier,
-          )
-      }
 
-      "successfully return a required empty contact list for a business with no contacts" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val addressFull = Address(
-          addressLine1 = Some(arbitrarySample[AddressLine1]),
-          addressLine2 = Some(arbitrarySample[AddressLine2]),
-          city = Some(arbitrarySample[City]),
-          postalCode = Some(arbitrarySample[PostalCode]),
-          country = Some(arbitrarySample[Country]),
-        )
-        val addressWithoutLine2        = addressFull.copy(addressLine2 = None)
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          isArchived = false,
-          taxID = Some(arbitrarySample[CustomerTaxID]),
-          emails = List(
-            CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = true),
-            CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = false),
-          ),
-          phoneNumbers = List(
-            CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true),
-            CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = false),
-          ),
-          addresses = List(
-            CustomerAddressEntry(AddressEntry(addressFull, AddressType.Shipping)),
-            CustomerAddressEntry(AddressEntry(addressWithoutLine2, AddressType.Billing)),
-          ),
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessGetResponse = gatewayClient
-          .customerBookBusinessGet[smithy.InternalServerError](
-            customerBusinessDetailsRow.customerID,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBusinessGetResponse.code shouldBe StatusCode.Ok
-        customerBookBusinessGetResponse.body.value shouldBe smithy.CustomerBookBusinessGetResponse(
-          customerID = customerBusinessDetailsRow.customerID.value,
-          businessName = customerBusinessDetailsRow.businessName.value,
-          emails = customerBusinessDetailsRow.emails.map(customerEmailEntryInput =>
-            smithy.CustomerEmailEntry(
-              email = customerEmailEntryInput.email.value,
-              isDefault = customerEmailEntryInput.isDefault,
-            )
-          ),
-          taxID = customerBusinessDetailsRow.taxID.map(_.value),
-          phoneNumbers = customerBusinessDetailsRow.phoneNumbers.map(customerPhoneNumberEntryInput =>
-            smithy.CustomerPhoneNumberEntry(
-              smithy.PhoneNumberRequest(
-                customerPhoneNumberEntryInput.phoneNumber.value.phoneNationalNumber.value,
-                customerPhoneNumberEntryInput.phoneNumber.value.phoneCountryCode.value,
-              ),
-              isDefault = customerPhoneNumberEntryInput.isDefault,
-            )
-          ),
-          addresses = customerBusinessDetailsRow.addresses.map(customerAddressEntry =>
-            smithy.CustomerAddressEntry(
-              address = smithy.AddressRequest(
-                addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
-                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
-                city = customerAddressEntry.value.address.city.map(_.value),
-                postalCode = customerAddressEntry.value.address.postalCode.map(_.value),
-                country = customerAddressEntry.value.address.country.map(_.value),
-              ),
-              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
-            )
-          ),
-          customerBusinessContacts = Nil,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue shouldBe List(customerBusinessDetailsRow)
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
       }
 
       "successfully return a required empty contact list when all contacts are archived" in withContext { context =>
         import context.*
 
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val addressFull = Address(
-          addressLine1 = Some(arbitrarySample[AddressLine1]),
-          addressLine2 = Some(arbitrarySample[AddressLine2]),
-          city = Some(arbitrarySample[City]),
-          postalCode = Some(arbitrarySample[PostalCode]),
-          country = Some(arbitrarySample[Country]),
-        )
-        val addressWithoutLine2        = addressFull.copy(addressLine2 = None)
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          isArchived = false,
-          taxID = Some(arbitrarySample[CustomerTaxID]),
-          emails = List(
-            CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = true),
-            CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = false),
-          ),
-          phoneNumbers = List(
-            CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true),
-            CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = false),
-          ),
-          addresses = List(
-            CustomerAddressEntry(AddressEntry(addressFull, AddressType.Shipping)),
-            CustomerAddressEntry(AddressEntry(addressWithoutLine2, AddressType.Billing)),
-          ),
-        )
-
-        val customerBusinessContactRowArchived = arbitrarySample[CustomerBusinessContactRow].copy(
-          organizationID = customerBusinessDetailsRow.organizationID,
-          customerID = customerBusinessDetailsRow.customerID,
-          isArchived = true,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRowArchived)))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessGetResponse = gatewayClient
-          .customerBookBusinessGet[smithy.InternalServerError](
-            customerBusinessDetailsRow.customerID,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookBusinessGetResponse.code shouldBe StatusCode.Ok
-        customerBookBusinessGetResponse.body.value shouldBe smithy.CustomerBookBusinessGetResponse(
-          customerID = customerBusinessDetailsRow.customerID.value,
-          businessName = customerBusinessDetailsRow.businessName.value,
-          emails = customerBusinessDetailsRow.emails.map(customerEmailEntryInput =>
-            smithy.CustomerEmailEntry(
-              email = customerEmailEntryInput.email.value,
-              isDefault = customerEmailEntryInput.isDefault,
-            )
-          ),
-          taxID = customerBusinessDetailsRow.taxID.map(_.value),
-          phoneNumbers = customerBusinessDetailsRow.phoneNumbers.map(customerPhoneNumberEntryInput =>
-            smithy.CustomerPhoneNumberEntry(
-              smithy.PhoneNumberRequest(
-                customerPhoneNumberEntryInput.phoneNumber.value.phoneNationalNumber.value,
-                customerPhoneNumberEntryInput.phoneNumber.value.phoneCountryCode.value,
-              ),
-              isDefault = customerPhoneNumberEntryInput.isDefault,
-            )
-          ),
-          addresses = customerBusinessDetailsRow.addresses.map(customerAddressEntry =>
-            smithy.CustomerAddressEntry(
-              address = smithy.AddressRequest(
-                addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
-                addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
-                city = customerAddressEntry.value.address.city.map(_.value),
-                postalCode = customerAddressEntry.value.address.postalCode.map(_.value),
-                country = customerAddressEntry.value.address.country.map(_.value),
-              ),
-              addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
-            )
-          ),
-          customerBusinessContacts = Nil,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue shouldBe List(customerBusinessDetailsRow)
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue should contain theSameElementsAs List(customerBusinessContactRowArchived)
-      }
-
-      "fail with a BadRequest when the organization id header is missing" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessGetResponse =
-          gatewayClient
-            .customerBookBusinessGet[smithy.BadRequest](
-              arbitrarySample[CustomerID],
-              None,
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessGetResponse.code shouldBe StatusCode.BadRequest
-        customerBookBusinessGetResponse.body.left.value shouldBe smithy.BadRequest()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is missing" in withContext { context =>
-        import context.*
-
-        val customerBookBusinessGetResponse =
-          gatewayClient
-            .customerBookBusinessGet[smithy.Unauthorized](
-              arbitrarySample[CustomerID],
-              Some(arbitrarySample[OrganizationID]),
-              None,
-            )
-            .zioValue
-
-        customerBookBusinessGetResponse.code shouldBe StatusCode.Unauthorized
-        customerBookBusinessGetResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is invalid" in withContext { context =>
-        import context.*
-
-        val customerBookBusinessGetResponse =
-          gatewayClient
-            .customerBookBusinessGet[smithy.Unauthorized](
-              arbitrarySample[CustomerID],
-              Some(arbitrarySample[OrganizationID]),
-              Some(AccessToken("invalidtoken")),
-            )
-            .zioValue
-
-        customerBookBusinessGetResponse.code shouldBe StatusCode.Unauthorized
-        customerBookBusinessGetResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
-        import context.*
-
-        val onboardStageInvalid =
-          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStageInvalid)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessGetResponse =
-          gatewayClient
-            .customerBookBusinessGet[smithy.Forbidden](
-              arbitrarySample[CustomerID],
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessGetResponse.code shouldBe StatusCode.Forbidden
-        customerBookBusinessGetResponse.body.left.value shouldBe smithy.Forbidden()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError for an archived business while retaining its complete state" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
             .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val addressFull = Address(
+          addressFull = Address(
             addressLine1 = Some(arbitrarySample[AddressLine1]),
             addressLine2 = Some(arbitrarySample[AddressLine2]),
             city = Some(arbitrarySample[City]),
             postalCode = Some(arbitrarySample[PostalCode]),
             country = Some(arbitrarySample[Country]),
           )
-          val addressWithoutLine2        = addressFull.copy(addressLine2 = None)
-          val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+          addressWithoutLine2        = addressFull.copy(addressLine2 = None)
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            isArchived = false,
+            taxID = Some(arbitrarySample[CustomerTaxID]),
+            emails = List(
+              CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = true),
+              CustomerEmailEntryInput(arbitrarySample[CustomerEmail], isDefault = false),
+            ),
+            phoneNumbers = List(
+              CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = true),
+              CustomerPhoneNumberEntryInput(arbitrarySample[CustomerPhoneNumber], isDefault = false),
+            ),
+            addresses = List(
+              CustomerAddressEntry(AddressEntry(addressFull, AddressType.Shipping)),
+              CustomerAddressEntry(AddressEntry(addressWithoutLine2, AddressType.Billing)),
+            ),
+          )
+          customerBusinessContactRowArchived = arbitrarySample[CustomerBusinessContactRow].copy(
+            organizationID = customerBusinessDetailsRow.organizationID,
+            customerID = customerBusinessDetailsRow.customerID,
+            isArchived = true,
+          )
+
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          _ <- postgresClient
+            .executeQuery(
+              customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRowArchived))
+            )
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookBusinessGetResponse <- gatewayClient
+            .customerBookBusinessGet[smithy.InternalServerError](
+              customerBusinessDetailsRow.customerID,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookBusinessGetResponse.code shouldBe StatusCode.Ok
+          _ = customerBookBusinessGetResponse.body.value shouldBe smithy.CustomerBookBusinessGetResponse(
+            customerID = customerBusinessDetailsRow.customerID.value,
+            businessName = customerBusinessDetailsRow.businessName.value,
+            emails = customerBusinessDetailsRow.emails.map(customerEmailEntryInput =>
+              smithy.CustomerEmailEntry(
+                email = customerEmailEntryInput.email.value,
+                isDefault = customerEmailEntryInput.isDefault,
+              )
+            ),
+            taxID = customerBusinessDetailsRow.taxID.map(_.value),
+            phoneNumbers = customerBusinessDetailsRow.phoneNumbers.map(customerPhoneNumberEntryInput =>
+              smithy.CustomerPhoneNumberEntry(
+                smithy.PhoneNumberRequest(
+                  customerPhoneNumberEntryInput.phoneNumber.value.phoneNationalNumber.value,
+                  customerPhoneNumberEntryInput.phoneNumber.value.phoneCountryCode.value,
+                ),
+                isDefault = customerPhoneNumberEntryInput.isDefault,
+              )
+            ),
+            addresses = customerBusinessDetailsRow.addresses.map(customerAddressEntry =>
+              smithy.CustomerAddressEntry(
+                address = smithy.AddressRequest(
+                  addressLine1 = customerAddressEntry.value.address.addressLine1.map(_.value),
+                  addressLine2 = customerAddressEntry.value.address.addressLine2.map(_.value),
+                  city = customerAddressEntry.value.address.city.map(_.value),
+                  postalCode = customerAddressEntry.value.address.postalCode.map(_.value),
+                  country = customerAddressEntry.value.address.country.map(_.value),
+                ),
+                addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
+              )
+            ),
+            customerBusinessContacts = Nil,
+          )
+
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+          customerBusinessContactRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+          _ = customerBusinessContactRowsAll should contain theSameElementsAs List(customerBusinessContactRowArchived)
+        } yield ()
+      }
+
+      "fail with an InternalServerError when the customer business does not exist" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookBusinessGetResponse <- gatewayClient
+            .customerBookBusinessGet[smithy.InternalServerError](
+              arbitrarySample[CustomerID],
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookBusinessGetResponse.code shouldBe StatusCode.InternalServerError
+          _ = customerBookBusinessGetResponse.body.left.value shouldBe smithy.InternalServerError()
+
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
+      }
+
+      "fail with an InternalServerError when the customer business is archived" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          addressFull = Address(
+            addressLine1 = Some(arbitrarySample[AddressLine1]),
+            addressLine2 = Some(arbitrarySample[AddressLine2]),
+            city = Some(arbitrarySample[City]),
+            postalCode = Some(arbitrarySample[PostalCode]),
+            country = Some(arbitrarySample[Country]),
+          )
+          addressWithoutLine2        = addressFull.copy(addressLine2 = None)
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
             organizationID = organizationUserRow.organizationID,
             isArchived = true,
             taxID = Some(arbitrarySample[CustomerTaxID]),
@@ -5177,8 +4214,7 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               CustomerAddressEntry(AddressEntry(addressWithoutLine2, AddressType.Billing)),
             ),
           )
-
-          val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+          customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
             organizationID = customerBusinessDetailsRow.organizationID,
             customerID = customerBusinessDetailsRow.customerID,
             role = Some(arbitrarySample[CustomerBusinessContactRole]),
@@ -5187,887 +4223,432 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
             isArchived = false,
           )
 
-          postgresClient
+          _ <- postgresClient
             .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-            .zioValue
-
-          postgresClient
+          _ <- postgresClient
             .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-            .zioValue
 
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          val customerBookBusinessGetResponse = gatewayClient
+          customerBookBusinessGetResponse <- gatewayClient
             .customerBookBusinessGet[smithy.InternalServerError](
               customerBusinessDetailsRow.customerID,
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-          customerBookBusinessGetResponse.code shouldBe StatusCode.InternalServerError
-          customerBookBusinessGetResponse.body.left.value shouldBe smithy.InternalServerError()
+          _ = customerBookBusinessGetResponse.code shouldBe StatusCode.InternalServerError
+          _ = customerBookBusinessGetResponse.body.left.value shouldBe smithy.InternalServerError()
 
-          postgresClient
+          customerIndividualDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue shouldBe Nil
-
-          postgresClient
+          customerBusinessDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe List(customerBusinessDetailsRow)
-
-          postgresClient
+          customerBusinessContactRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue should contain theSameElementsAs List(customerBusinessContactRow)
+
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+          _ = customerBusinessContactRowsAll should contain theSameElementsAs List(customerBusinessContactRow)
+        } yield ()
       }
 
-      "fail with an InternalServerError when the customer business does not exist" in withContext { context =>
+      "fail with an InternalServerError when the customer business is a customer individual" in withContext { context =>
         import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessGetResponse =
-          gatewayClient
-            .customerBookBusinessGet[smithy.InternalServerError](
-              arbitrarySample[CustomerID],
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessGetResponse.code shouldBe StatusCode.InternalServerError
-        customerBookBusinessGetResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError for an individual target while retaining its complete row" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
             .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            isArchived = false,
+          )
 
-          val customerIndividualDetailsRow =
-            arbitrarySample[CustomerIndividualDetailsRow].copy(
-              organizationID = organizationUserRow.organizationID,
-              isArchived = false,
-            )
-
-          postgresClient
+          _ <- postgresClient
             .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-            .zioValue
 
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          val customerBookBusinessGetResponse = gatewayClient
+          customerBookBusinessGetResponse <- gatewayClient
             .customerBookBusinessGet[smithy.InternalServerError](
               customerIndividualDetailsRow.customerID,
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-          customerBookBusinessGetResponse.code shouldBe StatusCode.InternalServerError
-          customerBookBusinessGetResponse.body.left.value shouldBe smithy.InternalServerError()
+          _ = customerBookBusinessGetResponse.code shouldBe StatusCode.InternalServerError
+          _ = customerBookBusinessGetResponse.body.left.value shouldBe smithy.InternalServerError()
 
-          postgresClient
+          customerIndividualDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue shouldBe List(customerIndividualDetailsRow)
-
-          postgresClient
+          customerBusinessDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe Nil
-
-          postgresClient
+          customerBusinessContactRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe Nil
+
+          _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
       }
 
-      "fail with an InternalServerError for a foreign business while retaining its complete row" in withContext {
+      "fail with an InternalServerError when the customer business belongs to another organization" in withContext {
         context =>
           import context.*
 
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(isArchived = false)
 
-          val customerBusinessDetailsRow =
-            arbitrarySample[CustomerBusinessDetailsRow].copy(isArchived = false)
+            _ = customerBusinessDetailsRow.organizationID shouldNot equal(organizationUserRow.organizationID)
 
-          customerBusinessDetailsRow.organizationID shouldNot equal(organizationUserRow.organizationID)
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
 
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-            .zioValue
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+            customerBookBusinessGetResponse <- gatewayClient
+              .customerBookBusinessGet[smithy.InternalServerError](
+                customerBusinessDetailsRow.customerID,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
 
-          val customerBookBusinessGetResponse = gatewayClient
-            .customerBookBusinessGet[smithy.InternalServerError](
-              customerBusinessDetailsRow.customerID,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
+            _ = customerBookBusinessGetResponse.code shouldBe StatusCode.InternalServerError
+            _ = customerBookBusinessGetResponse.body.left.value shouldBe smithy.InternalServerError()
 
-          customerBookBusinessGetResponse.code shouldBe StatusCode.InternalServerError
-          customerBookBusinessGetResponse.body.left.value shouldBe smithy.InternalServerError()
+            customerIndividualDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
 
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue shouldBe Nil
-
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue shouldBe List(customerBusinessDetailsRow)
-
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError when the user details do not exist" in withContext { context =>
-        import context.*
-
-        val accessJwt = jwtService.generateAccessToken(arbitrarySample[UserID]).zioValue
-
-        val customerBookBusinessGetResponse =
-          gatewayClient
-            .customerBookBusinessGet[smithy.InternalServerError](
-              arbitrarySample[CustomerID],
-              Some(arbitrarySample[OrganizationID]),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessGetResponse.code shouldBe StatusCode.InternalServerError
-        customerBookBusinessGetResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookBusinessGetResponse =
-          gatewayClient
-            .customerBookBusinessGet[smithy.InternalServerError](
-              arbitrarySample[CustomerID],
-              Some(arbitrarySample[OrganizationID]),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookBusinessGetResponse.code shouldBe StatusCode.InternalServerError
-        customerBookBusinessGetResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
+            _ = customerIndividualDetailsRowsAll shouldBe Nil
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll shouldBe Nil
+          } yield ()
       }
     }
 
     "GET /customer-book/summary" should {
-      "successfully return every active customer sorted case-insensitively by display name" in withContext { context =>
-        import context.*
+      "successfully return every active customer sorted case-insensitively by name when no IDs are supplied" in withContext {
+        context =>
+          import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+            customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+              .copy(
+                organizationID = organizationUserRow.organizationID,
+                isArchived = false,
+                fullName = CustomerFullName.assume("alpha individual"),
+              )
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+              .copy(
+                organizationID = organizationUserRow.organizationID,
+                isArchived = false,
+                businessName = CustomerBusinessName.assume("Zeta Business"),
+              )
+            customerIndividualDetailsRowArchived = arbitrarySample[CustomerIndividualDetailsRow]
+              .copy(organizationID = organizationUserRow.organizationID, isArchived = true)
 
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
-          .copy(
-            organizationID = organizationUserRow.organizationID,
-            isArchived = false,
-            fullName = CustomerFullName.assume("alpha individual"),
-          )
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+            _ <- postgresClient
+              .executeQuery(
+                customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRowArchived)
+              )
 
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
-          .copy(
-            organizationID = organizationUserRow.organizationID,
-            isArchived = false,
-            businessName = CustomerBusinessName.assume("Zeta Business"),
-          )
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        val customerIndividualDetailsRowArchived = arbitrarySample[CustomerIndividualDetailsRow]
-          .copy(organizationID = organizationUserRow.organizationID, isArchived = true)
+            customerBookSummaryGetResponse <- gatewayClient
+              .customerBookSummaryGet[smithy.InternalServerError](
+                Nil,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
 
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-          .zioValue
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRowArchived))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookSummaryGetResponse =
-          gatewayClient
-            .customerBookSummaryGet[smithy.InternalServerError](
-              Nil,
-              Some(organizationUserRow.organizationID),
-              Some(accessJwt.accessToken),
+            _ = customerBookSummaryGetResponse.code shouldBe StatusCode.Ok
+            _ = customerBookSummaryGetResponse.body.value shouldBe smithy.CustomerBookSummaryGetResponse(
+              customers = List(
+                smithy.CustomerSummary(
+                  customerIndividualDetailsRow.customerID.value,
+                  customerIndividualDetailsRow.fullName.value,
+                  smithy.CustomerType.Individual,
+                ),
+                smithy.CustomerSummary(
+                  customerBusinessDetailsRow.customerID.value,
+                  customerBusinessDetailsRow.businessName.value,
+                  smithy.CustomerType.Business,
+                ),
+              )
             )
-            .zioValue
 
-        customerBookSummaryGetResponse.code shouldBe StatusCode.Ok
+            customerIndividualDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessContactRowsTesting
+            )
 
-        customerBookSummaryGetResponse.body.value shouldBe smithy.CustomerBookSummaryGetResponse(
-          customers = List(
-            smithy.CustomerSummary(
-              customerIndividualDetailsRow.customerID.value,
-              customerIndividualDetailsRow.fullName.value,
-              smithy.CustomerType.Individual,
-            ),
-            smithy.CustomerSummary(
-              customerBusinessDetailsRow.customerID.value,
-              customerBusinessDetailsRow.businessName.value,
-              smithy.CustomerType.Business,
-            ),
-          )
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs List(
-          customerIndividualDetailsRow,
-          customerIndividualDetailsRowArchived,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue shouldBe List(customerBusinessDetailsRow)
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
+            _ = customerIndividualDetailsRowsAll should contain theSameElementsAs List(
+              customerIndividualDetailsRow,
+              customerIndividualDetailsRowArchived,
+            )
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll shouldBe Nil
+          } yield ()
       }
 
       "successfully return an empty summary when the customer book is empty" in withContext { context =>
         import context.*
 
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  =
-          arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val accessJwt                      = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-        val customerBookSummaryGetResponse = gatewayClient
-          .customerBookSummaryGet[smithy.InternalServerError](
-            Nil,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookSummaryGetResponse.code shouldBe StatusCode.Ok
-        customerBookSummaryGetResponse.body.value shouldBe smithy.CustomerBookSummaryGetResponse(customers = Nil)
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "successfully filter requested active customers of both kinds once in display name order" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-          val organizationUserRow  =
-            arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            isArchived = false,
-            fullName = CustomerFullName.assume("alpha individual"),
-          )
-          val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            isArchived = false,
-            businessName = CustomerBusinessName.assume("Beta Business"),
-          )
-          val customerIndividualDetailsRowArchived = customerIndividualDetailsRow.copy(
-            customerID = arbitrarySample[CustomerID],
-            isArchived = true,
-          )
-          val customerBusinessDetailsRowForeign = customerBusinessDetailsRow.copy(
-            organizationID = arbitrarySample[OrganizationID],
-            customerID = arbitrarySample[CustomerID],
-          )
-          val customerBusinessDetailsRowUnrequested = customerBusinessDetailsRow.copy(
-            customerID = arbitrarySample[CustomerID],
-            businessName = CustomerBusinessName.assume("Aardvark Unrequested"),
-          )
-          val customerIDUnknown             = arbitrarySample[CustomerID]
-          val customerIndividualDetailsRows = List(customerIndividualDetailsRowArchived, customerIndividualDetailsRow)
-          val customerBusinessDetailsRows   =
-            List(customerBusinessDetailsRowUnrequested, customerBusinessDetailsRowForeign, customerBusinessDetailsRow)
-          val uniqueCustomerIDsCountExpected = 6
-          val customerIDs                    = List(
-            customerBusinessDetailsRow.customerID,
-            customerIndividualDetailsRow.customerID,
-            customerIndividualDetailsRow.customerID,
-            customerIndividualDetailsRowArchived.customerID,
-            customerBusinessDetailsRowForeign.customerID,
-            customerIDUnknown,
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRole,
           )
 
-          customerBusinessDetailsRowForeign.organizationID shouldNot equal(customerBusinessDetailsRow.organizationID)
-          (customerIndividualDetailsRows.map(_.customerID) ++ customerBusinessDetailsRows.map(
-            _.customerID
-          ) :+ customerIDUnknown).distinct.size shouldBe uniqueCustomerIDsCountExpected
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRows(customerIndividualDetailsRows))
-            .zioValue
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRows(customerBusinessDetailsRows))
-            .zioValue
-
-          val accessJwt                      = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-          val customerBookSummaryGetResponse = gatewayClient
+          customerBookSummaryGetResponse <- gatewayClient
             .customerBookSummaryGet[smithy.InternalServerError](
-              customerIDs,
+              Nil,
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-          customerBookSummaryGetResponse.code shouldBe StatusCode.Ok
-          customerBookSummaryGetResponse.body.value shouldBe smithy.CustomerBookSummaryGetResponse(
-            customers = List(
-              smithy.CustomerSummary(
-                customerIndividualDetailsRow.customerID.value,
-                customerIndividualDetailsRow.fullName.value,
-                smithy.CustomerType.Individual,
-              ),
-              smithy.CustomerSummary(
-                customerBusinessDetailsRow.customerID.value,
-                customerBusinessDetailsRow.businessName.value,
-                smithy.CustomerType.Business,
-              ),
-            )
+          _ = customerBookSummaryGetResponse.code shouldBe StatusCode.Ok
+          _ = customerBookSummaryGetResponse.body.value shouldBe smithy.CustomerBookSummaryGetResponse(customers = Nil)
+
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
           )
 
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue should contain theSameElementsAs customerIndividualDetailsRows
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
+      }
 
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue should contain theSameElementsAs customerBusinessDetailsRows
+      "successfully return requested active customers of both kinds once in case-insensitive name order, skipping archived, foreign, unknown and unrequested IDs" in withContext {
+        context =>
+          import context.*
 
-          postgresClient
-            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue shouldBe Nil
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRole,
+            )
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              isArchived = false,
+              fullName = CustomerFullName.assume("alpha individual"),
+            )
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              isArchived = false,
+              businessName = CustomerBusinessName.assume("Beta Business"),
+            )
+            customerIndividualDetailsRowArchived = customerIndividualDetailsRow.copy(
+              customerID = arbitrarySample[CustomerID],
+              isArchived = true,
+            )
+            customerBusinessDetailsRowForeign = customerBusinessDetailsRow.copy(
+              organizationID = arbitrarySample[OrganizationID],
+              customerID = arbitrarySample[CustomerID],
+            )
+            customerBusinessDetailsRowUnrequested = customerBusinessDetailsRow.copy(
+              customerID = arbitrarySample[CustomerID],
+              businessName = CustomerBusinessName.assume("Aardvark Unrequested"),
+            )
+            customerIDUnknown             = arbitrarySample[CustomerID]
+            customerIndividualDetailsRows = List(customerIndividualDetailsRowArchived, customerIndividualDetailsRow)
+            customerBusinessDetailsRows   = List(
+              customerBusinessDetailsRowUnrequested,
+              customerBusinessDetailsRowForeign,
+              customerBusinessDetailsRow,
+            )
+            uniqueCustomerIDsCountExpected = 6
+            customerIDs                    = List(
+              customerBusinessDetailsRow.customerID,
+              customerIndividualDetailsRow.customerID,
+              customerIndividualDetailsRow.customerID,
+              customerIndividualDetailsRowArchived.customerID,
+              customerBusinessDetailsRowForeign.customerID,
+              customerIDUnknown,
+            )
+
+            _ = customerBusinessDetailsRowForeign.organizationID shouldNot equal(
+              customerBusinessDetailsRow.organizationID
+            )
+
+            _ = (customerIndividualDetailsRows.map(_.customerID) ++ customerBusinessDetailsRows.map(
+              _.customerID
+            ) :+ customerIDUnknown).distinct.size shouldBe uniqueCustomerIDsCountExpected
+
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRows(customerIndividualDetailsRows))
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRows(customerBusinessDetailsRows))
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookSummaryGetResponse <- gatewayClient
+              .customerBookSummaryGet[smithy.InternalServerError](
+                customerIDs,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookSummaryGetResponse.code shouldBe StatusCode.Ok
+            _ = customerBookSummaryGetResponse.body.value shouldBe smithy.CustomerBookSummaryGetResponse(
+              customers = List(
+                smithy.CustomerSummary(
+                  customerIndividualDetailsRow.customerID.value,
+                  customerIndividualDetailsRow.fullName.value,
+                  smithy.CustomerType.Individual,
+                ),
+                smithy.CustomerSummary(
+                  customerBusinessDetailsRow.customerID.value,
+                  customerBusinessDetailsRow.businessName.value,
+                  smithy.CustomerType.Business,
+                ),
+              )
+            )
+
+            customerIndividualDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerIndividualDetailsRowsAll should contain theSameElementsAs customerIndividualDetailsRows
+            _ = customerBusinessDetailsRowsAll should contain theSameElementsAs customerBusinessDetailsRows
+            _ = customerBusinessContactRowsAll shouldBe Nil
+          } yield ()
       }
 
       "successfully return no matches instead of all customers for an unknown requested ID" in withContext { context =>
         import context.*
 
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  =
-          arbitrarySample[OrganizationUserRow].copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          isArchived = false,
-        )
-        val customerIDUnknown = arbitrarySample[CustomerID]
-
-        customerIDUnknown shouldNot equal(customerIndividualDetailsRow.customerID)
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-          .zioValue
-
-        val accessJwt                      = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-        val customerBookSummaryGetResponse = gatewayClient
-          .customerBookSummaryGet[smithy.InternalServerError](
-            List(customerIDUnknown),
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRole,
           )
-          .zioValue
 
-        customerBookSummaryGetResponse.code shouldBe StatusCode.Ok
-        customerBookSummaryGetResponse.body.value shouldBe smithy.CustomerBookSummaryGetResponse(customers = Nil)
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe List(customerIndividualDetailsRow)
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            isArchived = false,
+          )
+          customerIDUnknown = arbitrarySample[CustomerID]
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
+          _ = customerIDUnknown shouldNot equal(customerIndividualDetailsRow.customerID)
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
 
-      "fail with a BadRequest when the organization id header is missing" in withContext { context =>
-        import context.*
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookSummaryGetResponse =
-          gatewayClient
-            .customerBookSummaryGet[smithy.BadRequest](Nil, None, Some(accessJwt.accessToken))
-            .zioValue
-
-        customerBookSummaryGetResponse.code shouldBe StatusCode.BadRequest
-        customerBookSummaryGetResponse.body.left.value shouldBe smithy.BadRequest()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is missing" in withContext { context =>
-        import context.*
-
-        val customerBookSummaryGetResponse =
-          gatewayClient
-            .customerBookSummaryGet[smithy.Unauthorized](Nil, Some(arbitrarySample[OrganizationID]), None)
-            .zioValue
-
-        customerBookSummaryGetResponse.code shouldBe StatusCode.Unauthorized
-        customerBookSummaryGetResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is invalid" in withContext { context =>
-        import context.*
-
-        val customerBookSummaryGetResponse =
-          gatewayClient
-            .customerBookSummaryGet[smithy.Unauthorized](
-              Nil,
-              Some(arbitrarySample[OrganizationID]),
-              Some(AccessToken("invalidtoken")),
-            )
-            .zioValue
-
-        customerBookSummaryGetResponse.code shouldBe StatusCode.Unauthorized
-        customerBookSummaryGetResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
-        import context.*
-
-        val onboardStageInvalid =
-          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStageInvalid)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookSummaryGetResponse =
-          gatewayClient
-            .customerBookSummaryGet[smithy.Forbidden](
-              Nil,
+          customerBookSummaryGetResponse <- gatewayClient
+            .customerBookSummaryGet[smithy.InternalServerError](
+              List(customerIDUnknown),
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-        customerBookSummaryGetResponse.code shouldBe StatusCode.Forbidden
-        customerBookSummaryGetResponse.body.left.value shouldBe smithy.Forbidden()
+          _ = customerBookSummaryGetResponse.code shouldBe StatusCode.Ok
+          _ = customerBookSummaryGetResponse.body.value shouldBe smithy.CustomerBookSummaryGetResponse(customers = Nil)
 
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError when the user details do not exist" in withContext { context =>
-        import context.*
-
-        val accessJwt = jwtService.generateAccessToken(arbitrarySample[UserID]).zioValue
-
-        val customerBookSummaryGetResponse =
-          gatewayClient
-            .customerBookSummaryGet[smithy.InternalServerError](
-              Nil,
-              Some(arbitrarySample[OrganizationID]),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookSummaryGetResponse.code shouldBe StatusCode.InternalServerError
-        customerBookSummaryGetResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookSummaryGetResponse =
-          gatewayClient
-            .customerBookSummaryGet[smithy.InternalServerError](
-              Nil,
-              Some(arbitrarySample[OrganizationID]),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookSummaryGetResponse.code shouldBe StatusCode.InternalServerError
-        customerBookSummaryGetResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
+          _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
       }
     }
+
     "GET /customer-book/uniqueness" should {
       "successfully report an available name in an empty customer book without reserving it" in withContext { context =>
         import context.*
 
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(customerID = None)
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookUniquenessGetResponse = gatewayClient
-          .customerBookUniquenessGet[smithy.InternalServerError](
-            Some(customerBookUniquenessGetRequest.name.value),
-            Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
-            customerBookUniquenessGetRequest.customerID,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
-        customerBookUniquenessGetResponse.body.value shouldBe smithy.CustomerBookUniquenessGetResponse(isNameUnique =
-          true
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
-      }
-
-      "successfully report an active individual name as taken" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          isArchived = false,
-        )
-        val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(
-          name = customerIndividualDetailsRow.fullName.to[CustomerName],
-          customerType = CustomerType.Individual,
-          customerID = None,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookUniquenessGetResponse = gatewayClient
-          .customerBookUniquenessGet[smithy.InternalServerError](
-            Some(customerBookUniquenessGetRequest.name.value),
-            Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
-            customerBookUniquenessGetRequest.customerID,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
-        customerBookUniquenessGetResponse.body.value shouldBe smithy.CustomerBookUniquenessGetResponse(isNameUnique =
-          false
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs List(customerIndividualDetailsRow)
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
-      }
-
-      "successfully report an active business name as taken and retain its contacts" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          isArchived = false,
-        )
-        val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-          organizationID = customerBusinessDetailsRow.organizationID,
-          customerID = customerBusinessDetailsRow.customerID,
-        )
-        val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(
-          name = customerBusinessDetailsRow.businessName.to[CustomerName],
-          customerType = CustomerType.Business,
-          customerID = None,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookUniquenessGetResponse = gatewayClient
-          .customerBookUniquenessGet[smithy.InternalServerError](
-            Some(customerBookUniquenessGetRequest.name.value),
-            Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
-            customerBookUniquenessGetRequest.customerID,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
-        customerBookUniquenessGetResponse.body.value shouldBe smithy.CustomerBookUniquenessGetResponse(isNameUnique =
-          false
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs List(customerBusinessDetailsRow)
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue should contain theSameElementsAs List(customerBusinessContactRow)
-      }
-
-      "successfully ignore matching names belonging only to another kind archived customers or another organization" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
             .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(customerID = None)
 
-          val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(
-            customerType = CustomerType.Individual,
-            customerID = None,
-          )
-          val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            businessName = customerBookUniquenessGetRequest.name.to[CustomerBusinessName],
-            isArchived = false,
-          )
-          val customerIndividualDetailsRowArchived = arbitrarySample[CustomerIndividualDetailsRow].copy(
-            organizationID = organizationUserRow.organizationID,
-            fullName = customerBookUniquenessGetRequest.name.to[CustomerFullName],
-            isArchived = true,
-          )
-          val customerIndividualDetailsRowForeign = arbitrarySample[CustomerIndividualDetailsRow].copy(
-            fullName = customerBookUniquenessGetRequest.name.to[CustomerFullName],
-            isArchived = false,
-          )
-          val customerIndividualDetailsRows =
-            List(customerIndividualDetailsRowArchived, customerIndividualDetailsRowForeign)
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          customerIndividualDetailsRowForeign.organizationID shouldNot equal(organizationUserRow.organizationID)
-          customerIndividualDetailsRowArchived.customerID shouldNot equal(customerBusinessDetailsRow.customerID)
-
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-            .zioValue
-
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRows(customerIndividualDetailsRows))
-            .zioValue
-
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-          val customerBookUniquenessGetResponse = gatewayClient
+          customerBookUniquenessGetResponse <- gatewayClient
             .customerBookUniquenessGet[smithy.InternalServerError](
               Some(customerBookUniquenessGetRequest.name.value),
               Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
@@ -6075,125 +4656,362 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-          customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
-          customerBookUniquenessGetResponse.body.value shouldBe smithy.CustomerBookUniquenessGetResponse(isNameUnique =
-            true
+          _ = customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
+          _ = customerBookUniquenessGetResponse.body.value shouldBe smithy
+            .CustomerBookUniquenessGetResponse(isNameUnique = true)
+
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+          customerBusinessContactRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
+      }
+
+      "successfully report an active individual name as taken" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            isArchived = false,
+          )
+          customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(
+            name = customerIndividualDetailsRow.fullName.to[CustomerName],
+            customerType = CustomerType.Individual,
+            customerID = None,
           )
 
-          postgresClient
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookUniquenessGetResponse <- gatewayClient
+            .customerBookUniquenessGet[smithy.InternalServerError](
+              Some(customerBookUniquenessGetRequest.name.value),
+              Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
+              customerBookUniquenessGetRequest.customerID,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
+          _ = customerBookUniquenessGetResponse.body.value shouldBe smithy
+            .CustomerBookUniquenessGetResponse(isNameUnique = false)
+
+          customerIndividualDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue should contain theSameElementsAs customerIndividualDetailsRows
-
-          postgresClient
+          customerBusinessDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue should contain theSameElementsAs List(customerBusinessDetailsRow)
-
-          postgresClient
+          customerBusinessContactRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue should contain theSameElementsAs Nil
+
+          _ = customerIndividualDetailsRowsAll should contain theSameElementsAs List(customerIndividualDetailsRow)
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
+      }
+
+      "successfully report an active business name as taken and retain its contacts" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            isArchived = false,
+          )
+          customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+            organizationID = customerBusinessDetailsRow.organizationID,
+            customerID = customerBusinessDetailsRow.customerID,
+          )
+          customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(
+            name = customerBusinessDetailsRow.businessName.to[CustomerName],
+            customerType = CustomerType.Business,
+            customerID = None,
+          )
+
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookUniquenessGetResponse <- gatewayClient
+            .customerBookUniquenessGet[smithy.InternalServerError](
+              Some(customerBookUniquenessGetRequest.name.value),
+              Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
+              customerBookUniquenessGetRequest.customerID,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+          _ = customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
+          _ = customerBookUniquenessGetResponse.body.value shouldBe smithy
+            .CustomerBookUniquenessGetResponse(isNameUnique = false)
+
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+          customerBusinessContactRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll should contain theSameElementsAs List(customerBusinessDetailsRow)
+          _ = customerBusinessContactRowsAll should contain theSameElementsAs List(customerBusinessContactRow)
+        } yield ()
+      }
+
+      "successfully report a name as unique when only another kind, an archived customer or another organization uses it" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(
+              customerType = CustomerType.Individual,
+              customerID = None,
+            )
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              businessName = customerBookUniquenessGetRequest.name.to[CustomerBusinessName],
+              isArchived = false,
+            )
+            customerIndividualDetailsRowArchived = arbitrarySample[CustomerIndividualDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              fullName = customerBookUniquenessGetRequest.name.to[CustomerFullName],
+              isArchived = true,
+            )
+            customerIndividualDetailsRowForeign = arbitrarySample[CustomerIndividualDetailsRow].copy(
+              fullName = customerBookUniquenessGetRequest.name.to[CustomerFullName],
+              isArchived = false,
+            )
+            customerIndividualDetailsRows = List(
+              customerIndividualDetailsRowArchived,
+              customerIndividualDetailsRowForeign,
+            )
+
+            _ = customerIndividualDetailsRowForeign.organizationID shouldNot equal(organizationUserRow.organizationID)
+
+            _ = customerIndividualDetailsRowArchived.customerID shouldNot equal(customerBusinessDetailsRow.customerID)
+
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRows(customerIndividualDetailsRows))
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookUniquenessGetResponse <- gatewayClient
+              .customerBookUniquenessGet[smithy.InternalServerError](
+                Some(customerBookUniquenessGetRequest.name.value),
+                Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
+                customerBookUniquenessGetRequest.customerID,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
+            _ = customerBookUniquenessGetResponse.body.value shouldBe smithy
+              .CustomerBookUniquenessGetResponse(isNameUnique = true)
+
+            customerIndividualDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerIndividualDetailsRowsAll should contain theSameElementsAs customerIndividualDetailsRows
+            _ = customerBusinessDetailsRowsAll should contain theSameElementsAs List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll shouldBe Nil
+          } yield ()
       }
 
       "successfully exclude the current active customer when checking its own name" in withContext { context =>
         import context.*
 
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          isArchived = false,
-        )
-        val customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
-          organizationID = customerBusinessDetailsRow.organizationID,
-          customerID = customerBusinessDetailsRow.customerID,
-        )
-        val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(
-          name = customerBusinessDetailsRow.businessName.to[CustomerName],
-          customerType = CustomerType.Business,
-          customerID = Some(customerBusinessDetailsRow.customerID),
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookUniquenessGetResponse = gatewayClient
-          .customerBookUniquenessGet[smithy.InternalServerError](
-            Some(customerBookUniquenessGetRequest.name.value),
-            Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
-            customerBookUniquenessGetRequest.customerID,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
+            organizationID = organizationUserRow.organizationID,
+            isArchived = false,
           )
-          .zioValue
+          customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+            organizationID = customerBusinessDetailsRow.organizationID,
+            customerID = customerBusinessDetailsRow.customerID,
+          )
+          customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(
+            name = customerBusinessDetailsRow.businessName.to[CustomerName],
+            customerType = CustomerType.Business,
+            customerID = Some(customerBusinessDetailsRow.customerID),
+          )
 
-        customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
-        customerBookUniquenessGetResponse.body.value shouldBe smithy.CustomerBookUniquenessGetResponse(isNameUnique =
-          true
-        )
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow)))
 
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs List(customerBusinessDetailsRow)
+          customerBookUniquenessGetResponse <- gatewayClient
+            .customerBookUniquenessGet[smithy.InternalServerError](
+              Some(customerBookUniquenessGetRequest.name.value),
+              Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
+              customerBookUniquenessGetRequest.customerID,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
 
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue should contain theSameElementsAs List(customerBusinessContactRow)
+          _ = customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
+          _ = customerBookUniquenessGetResponse.body.value shouldBe smithy
+            .CustomerBookUniquenessGetResponse(isNameUnique = true)
+
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+          customerBusinessContactRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll should contain theSameElementsAs List(customerBusinessDetailsRow)
+          _ = customerBusinessContactRowsAll should contain theSameElementsAs List(customerBusinessContactRow)
+        } yield ()
       }
 
       "successfully report a matching active name as taken when the exclusion ID is unrelated" in withContext {
         context =>
           import context.*
 
-          val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-          val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-          val organizationUserRow  = arbitrarySample[OrganizationUserRow]
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              isArchived = false,
+            )
+            customerIDUnrelated              = arbitrarySample[CustomerID]
+            customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(
+              name = customerIndividualDetailsRow.fullName.to[CustomerName],
+              customerType = CustomerType.Individual,
+              customerID = Some(customerIDUnrelated),
+            )
+
+            _ = customerIDUnrelated shouldNot equal(customerIndividualDetailsRow.customerID)
+
+            _ <- postgresClient
+              .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            customerBookUniquenessGetResponse <- gatewayClient
+              .customerBookUniquenessGet[smithy.InternalServerError](
+                Some(customerBookUniquenessGetRequest.name.value),
+                Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
+                customerBookUniquenessGetRequest.customerID,
+                Some(organizationUserRow.organizationID),
+                Some(accessJwt.accessToken),
+              )
+
+            _ = customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
+            _ = customerBookUniquenessGetResponse.body.value shouldBe smithy
+              .CustomerBookUniquenessGetResponse(isNameUnique = false)
+
+            customerIndividualDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+            customerBusinessDetailsRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+            customerBusinessContactRowsAll <- postgresClient
+              .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
+
+            _ = customerIndividualDetailsRowsAll should contain theSameElementsAs List(customerIndividualDetailsRow)
+            _ = customerBusinessDetailsRowsAll shouldBe Nil
+            _ = customerBusinessContactRowsAll shouldBe Nil
+          } yield ()
+      }
+
+      "successfully report a name as unique when only a differently cased name is taken" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
             .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-          val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow].copy(
+          customerBusinessNameRaw    = "Case Sensitive Name"
+          customerNameRaw            = "case sensitive name"
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
             organizationID = organizationUserRow.organizationID,
+            businessName = CustomerBusinessName.either(customerBusinessNameRaw).toOption.value,
             isArchived = false,
           )
-          val customerIDUnrelated              = arbitrarySample[CustomerID]
-          val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(
-            name = customerIndividualDetailsRow.fullName.to[CustomerName],
-            customerType = CustomerType.Individual,
-            customerID = Some(customerIDUnrelated),
+          customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(
+            name = CustomerName.either(customerNameRaw).toOption.value,
+            customerType = CustomerType.Business,
+            customerID = None,
           )
 
-          customerIDUnrelated shouldNot equal(customerIndividualDetailsRow.customerID)
+          _ <- postgresClient
+            .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
 
-          postgresClient
-            .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
-            .zioValue
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-          val customerBookUniquenessGetResponse = gatewayClient
+          customerBookUniquenessGetResponse <- gatewayClient
             .customerBookUniquenessGet[smithy.InternalServerError](
               Some(customerBookUniquenessGetRequest.name.value),
               Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
@@ -6201,373 +5019,1074 @@ class CustomerBookApiSpec extends GatewayAcceptanceTest, CustomerBookSmithyArbit
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-          customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
-          customerBookUniquenessGetResponse.body.value shouldBe smithy.CustomerBookUniquenessGetResponse(isNameUnique =
-            false
-          )
+          _ = customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
+          _ = customerBookUniquenessGetResponse.body.value shouldBe smithy
+            .CustomerBookUniquenessGetResponse(isNameUnique = true)
 
-          postgresClient
+          customerIndividualDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-            .zioValue should contain theSameElementsAs List(customerIndividualDetailsRow)
-
-          postgresClient
+          customerBusinessDetailsRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-            .zioValue should contain theSameElementsAs Nil
-
-          postgresClient
+          customerBusinessContactRowsAll <- postgresClient
             .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-            .zioValue should contain theSameElementsAs Nil
-      }
 
-      "successfully treat differently cased names as distinct" in withContext { context =>
-        import context.*
-
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBusinessNameRaw    = "Case Sensitive Name"
-        val customerNameRaw            = "case sensitive name"
-        val customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow].copy(
-          organizationID = organizationUserRow.organizationID,
-          businessName = CustomerBusinessName.either(customerBusinessNameRaw).toOption.value,
-          isArchived = false,
-        )
-        val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest].copy(
-          name = CustomerName.either(customerNameRaw).toOption.value,
-          customerType = CustomerType.Business,
-          customerID = None,
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow))
-          .zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookUniquenessGetResponse = gatewayClient
-          .customerBookUniquenessGet[smithy.InternalServerError](
-            Some(customerBookUniquenessGetRequest.name.value),
-            Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
-            customerBookUniquenessGetRequest.customerID,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookUniquenessGetResponse.code shouldBe StatusCode.Ok
-        customerBookUniquenessGetResponse.body.value shouldBe smithy.CustomerBookUniquenessGetResponse(isNameUnique =
-          true
-        )
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs List(customerBusinessDetailsRow)
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
-      }
-
-      "fail with a BadRequest when the organization id header is missing" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookUniquenessGetResponse =
-          gatewayClient
-            .customerBookUniquenessGet[smithy.BadRequest](
-              Some(customerBookUniquenessGetRequest.name.value),
-              Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
-              customerBookUniquenessGetRequest.customerID,
-              None,
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookUniquenessGetResponse.code shouldBe StatusCode.BadRequest
-        customerBookUniquenessGetResponse.body.left.value shouldBe smithy.BadRequest()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll should contain theSameElementsAs List(customerBusinessDetailsRow)
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
       }
 
       "fail with a ValidationError naming both missing required query fields" in withContext { context =>
         import context.*
 
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+          customerBookUniquenessGetResponse <- gatewayClient
+            .customerBookUniquenessGet[smithy.ValidationError](
+              None,
+              None,
+              None,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
 
-        val customerBookUniquenessGetResponse = gatewayClient
-          .customerBookUniquenessGet[smithy.ValidationError](
-            None,
-            None,
-            None,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
+          _ = customerBookUniquenessGetResponse.code shouldBe StatusCode.BadRequest
+          _ = customerBookUniquenessGetResponse.body.left.value shouldBe smithy.ValidationError(fields =
+            List("name", "customerType")
           )
-          .zioValue
 
-        customerBookUniquenessGetResponse.code shouldBe StatusCode.BadRequest
-        customerBookUniquenessGetResponse.body.left.value shouldBe smithy.ValidationError(fields =
-          List("name", "customerType")
-        )
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+          customerBusinessContactRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
 
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
       }
 
       "fail with a ValidationError for an invalid supplied name" in withContext { context =>
         import context.*
 
-        val onboardStage         = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow       = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow]
+            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
+          nameInvalid                      = ""
 
-        val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
-        val nameInvalid                      = ""
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookUniquenessGetResponse = gatewayClient
-          .customerBookUniquenessGet[smithy.ValidationError](
-            Some(nameInvalid),
-            Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
-            None,
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        customerBookUniquenessGetResponse.code shouldBe StatusCode.BadRequest
-        customerBookUniquenessGetResponse.body.left.value shouldBe smithy.ValidationError(fields = List("name"))
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
-          .zioValue should contain theSameElementsAs Nil
-      }
-
-      "fail with an Unauthorized when the access token is missing" in withContext { context =>
-        import context.*
-
-        val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
-
-        val customerBookUniquenessGetResponse =
-          gatewayClient
-            .customerBookUniquenessGet[smithy.Unauthorized](
-              Some(customerBookUniquenessGetRequest.name.value),
+          customerBookUniquenessGetResponse <- gatewayClient
+            .customerBookUniquenessGet[smithy.ValidationError](
+              Some(nameInvalid),
               Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
-              customerBookUniquenessGetRequest.customerID,
-              Some(arbitrarySample[OrganizationID]),
               None,
-            )
-            .zioValue
-
-        customerBookUniquenessGetResponse.code shouldBe StatusCode.Unauthorized
-        customerBookUniquenessGetResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an Unauthorized when the access token is invalid" in withContext { context =>
-        import context.*
-
-        val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
-
-        val customerBookUniquenessGetResponse =
-          gatewayClient
-            .customerBookUniquenessGet[smithy.Unauthorized](
-              Some(customerBookUniquenessGetRequest.name.value),
-              Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
-              customerBookUniquenessGetRequest.customerID,
-              Some(arbitrarySample[OrganizationID]),
-              Some(AccessToken("invalidtoken")),
-            )
-            .zioValue
-
-        customerBookUniquenessGetResponse.code shouldBe StatusCode.Unauthorized
-        customerBookUniquenessGetResponse.body.left.value shouldBe smithy.Unauthorized()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with a Forbidden when the user is not in a completed onboard stage" in withContext { context =>
-        import context.*
-
-        val onboardStageInvalid =
-          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStageInvalid)
-        val organizationUserRole = Random.shuffle(OrganizationUserRole.userRoles).zioValue.head
-        val organizationUserRow  = arbitrarySample[OrganizationUserRow]
-          .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookUniquenessGetResponse =
-          gatewayClient
-            .customerBookUniquenessGet[smithy.Forbidden](
-              Some(customerBookUniquenessGetRequest.name.value),
-              Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
-              customerBookUniquenessGetRequest.customerID,
               Some(organizationUserRow.organizationID),
               Some(accessJwt.accessToken),
             )
-            .zioValue
 
-        customerBookUniquenessGetResponse.code shouldBe StatusCode.Forbidden
-        customerBookUniquenessGetResponse.body.left.value shouldBe smithy.Forbidden()
+          _ = customerBookUniquenessGetResponse.code shouldBe StatusCode.BadRequest
+          _ = customerBookUniquenessGetResponse.body.left.value shouldBe smithy.ValidationError(fields = List("name"))
 
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
+          customerIndividualDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
+          customerBusinessDetailsRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting)
+          customerBusinessContactRowsAll <- postgresClient
+            .executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting)
 
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError when the user details do not exist" in withContext { context =>
-        import context.*
-
-        val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
-
-        val accessJwt = jwtService.generateAccessToken(arbitrarySample[UserID]).zioValue
-
-        val customerBookUniquenessGetResponse =
-          gatewayClient
-            .customerBookUniquenessGet[smithy.InternalServerError](
-              Some(customerBookUniquenessGetRequest.name.value),
-              Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
-              customerBookUniquenessGetRequest.customerID,
-              Some(arbitrarySample[OrganizationID]),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookUniquenessGetResponse.code shouldBe StatusCode.InternalServerError
-        customerBookUniquenessGetResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
-      }
-
-      "fail with an InternalServerError when the user is not a member of the organization" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val customerBookUniquenessGetResponse =
-          gatewayClient
-            .customerBookUniquenessGet[smithy.InternalServerError](
-              Some(customerBookUniquenessGetRequest.name.value),
-              Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
-              customerBookUniquenessGetRequest.customerID,
-              Some(arbitrarySample[OrganizationID]),
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-        customerBookUniquenessGetResponse.code shouldBe StatusCode.InternalServerError
-        customerBookUniquenessGetResponse.body.left.value shouldBe smithy.InternalServerError()
-
-        postgresClient
-          .executeQuery(customerBookQueries.getAllCustomerIndividualDetailsRowsTesting)
-          .zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessDetailsRowsTesting).zioValue shouldBe Nil
-
-        postgresClient.executeQuery(customerBookQueries.getAllCustomerBusinessContactRowsTesting).zioValue shouldBe Nil
+          _ = customerIndividualDetailsRowsAll shouldBe Nil
+          _ = customerBusinessDetailsRowsAll shouldBe Nil
+          _ = customerBusinessContactRowsAll shouldBe Nil
+        } yield ()
       }
     }
 
+    "middleware" should {
+      "fail with a BadRequest when the organization id header is missing on every endpoint" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+
+          organizationID               = arbitrarySample[OrganizationID]
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+            .copy(organizationID = organizationID, isArchived = false)
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+            .copy(organizationID = organizationID, isArchived = false)
+          customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+            organizationID = organizationID,
+            customerID = customerBusinessDetailsRow.customerID,
+            isArchived = false,
+          )
+
+          _ <- postgresClient.executeQuery(
+            customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow)
+          )
+          _ <- postgresClient.executeQuery(
+            customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)
+          )
+          _ <- postgresClient.executeQuery(
+            customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow))
+          )
+
+          customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
+            .transformInto[smithy.CustomerBookIndividualPostRequest]
+          customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
+            .transformInto[smithy.CustomerBookBusinessPostRequest]
+          customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+            customerBusinesses = List(
+              arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+            ),
+            customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+          )
+          customerBookBatchPostRequestSmithy = customerBookBatchPostRequest
+            .transformInto[smithy.CustomerBookBatchPostRequest]
+          customerBookIndividualPutRequestSmithy = smithy.CustomerBookIndividualPutRequest(
+            fullName = Some("changed name"),
+            emails = Some(Nil),
+            phoneNumbers = Some(Nil),
+            addresses = Some(Nil),
+          )
+          customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+            businessName = Some("Replacement Business"),
+            taxID = Some(Nullable.Null),
+            customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+            customerBusinessContactsUpdate = List(
+              smithy.CustomerBusinessContactUpdate(
+                customerBusinessContactRow.customerBusinessContactID.value,
+                fullName = Some("Updated Contact"),
+              )
+            ),
+          )
+          customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          responses <- ZIO.collectAllPar(
+            List(
+              gatewayClient.customerBookIndividualPost[smithy.BadRequest](
+                customerBookIndividualPostRequestSmithy,
+                None,
+                Some(accessJwt.accessToken),
+              ),
+              gatewayClient.customerBookBusinessPost[smithy.BadRequest](
+                customerBookBusinessPostRequestSmithy,
+                None,
+                Some(accessJwt.accessToken),
+              ),
+              gatewayClient.customerBookBatchPost[smithy.BadRequest](
+                customerBookBatchPostRequestSmithy,
+                None,
+                Some(accessJwt.accessToken),
+              ),
+              gatewayClient.customerBookIndividualPut[smithy.BadRequest](
+                customerIndividualDetailsRow.customerID,
+                customerBookIndividualPutRequestSmithy,
+                None,
+                Some(accessJwt.accessToken),
+              ),
+              gatewayClient.customerBookBusinessPut[smithy.BadRequest](
+                customerBusinessDetailsRow.customerID,
+                customerBookBusinessPutRequestSmithy,
+                None,
+                Some(accessJwt.accessToken),
+              ),
+              gatewayClient.customerBookArchivePut[smithy.BadRequest](
+                customerIndividualDetailsRow.customerID,
+                None,
+                Some(accessJwt.accessToken),
+              ),
+              gatewayClient.customerBookIndividualGet[smithy.BadRequest](
+                customerIndividualDetailsRow.customerID,
+                None,
+                Some(accessJwt.accessToken),
+              ),
+              gatewayClient.customerBookBusinessGet[smithy.BadRequest](
+                customerBusinessDetailsRow.customerID,
+                None,
+                Some(accessJwt.accessToken),
+              ),
+              gatewayClient.customerBookSummaryGet[smithy.BadRequest](
+                Nil,
+                None,
+                Some(accessJwt.accessToken),
+              ),
+              gatewayClient.customerBookUniquenessGet[smithy.BadRequest](
+                Some(customerBookUniquenessGetRequest.name.value),
+                Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
+                customerBookUniquenessGetRequest.customerID,
+                None,
+                Some(accessJwt.accessToken),
+              ),
+            )
+          )
+
+          _ = responses.map(_.code) shouldBe List.fill(10)(StatusCode.BadRequest)
+          _ = responses.map(_.body.left.toOption) shouldBe List.fill(10)(Some(smithy.BadRequest()))
+
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+          )
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+          _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+          _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+        } yield ()
+      }
+
+      "fail with an Unauthorized when the access token is missing on every endpoint" in withContext { context =>
+        import context.*
+
+        for {
+          organizationID               = arbitrarySample[OrganizationID]
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+            .copy(organizationID = organizationID, isArchived = false)
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+            .copy(organizationID = organizationID, isArchived = false)
+          customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+            organizationID = organizationID,
+            customerID = customerBusinessDetailsRow.customerID,
+            isArchived = false,
+          )
+
+          _ <- postgresClient.executeQuery(
+            customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow)
+          )
+          _ <- postgresClient.executeQuery(
+            customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)
+          )
+          _ <- postgresClient.executeQuery(
+            customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow))
+          )
+
+          customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
+            .transformInto[smithy.CustomerBookIndividualPostRequest]
+          customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
+            .transformInto[smithy.CustomerBookBusinessPostRequest]
+          customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+            customerBusinesses = List(
+              arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+            ),
+            customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+          )
+          customerBookBatchPostRequestSmithy = customerBookBatchPostRequest
+            .transformInto[smithy.CustomerBookBatchPostRequest]
+          customerBookIndividualPutRequestSmithy = smithy.CustomerBookIndividualPutRequest(
+            fullName = Some("changed name"),
+            emails = Some(Nil),
+            phoneNumbers = Some(Nil),
+            addresses = Some(Nil),
+          )
+          customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+            businessName = Some("Replacement Business"),
+            taxID = Some(Nullable.Null),
+            customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+            customerBusinessContactsUpdate = List(
+              smithy.CustomerBusinessContactUpdate(
+                customerBusinessContactRow.customerBusinessContactID.value,
+                fullName = Some("Updated Contact"),
+              )
+            ),
+          )
+          customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
+
+          responses <- ZIO.collectAllPar(
+            List(
+              gatewayClient.customerBookIndividualPost[smithy.Unauthorized](
+                customerBookIndividualPostRequestSmithy,
+                Some(organizationID),
+                None,
+              ),
+              gatewayClient.customerBookBusinessPost[smithy.Unauthorized](
+                customerBookBusinessPostRequestSmithy,
+                Some(organizationID),
+                None,
+              ),
+              gatewayClient.customerBookBatchPost[smithy.Unauthorized](
+                customerBookBatchPostRequestSmithy,
+                Some(organizationID),
+                None,
+              ),
+              gatewayClient.customerBookIndividualPut[smithy.Unauthorized](
+                customerIndividualDetailsRow.customerID,
+                customerBookIndividualPutRequestSmithy,
+                Some(organizationID),
+                None,
+              ),
+              gatewayClient.customerBookBusinessPut[smithy.Unauthorized](
+                customerBusinessDetailsRow.customerID,
+                customerBookBusinessPutRequestSmithy,
+                Some(organizationID),
+                None,
+              ),
+              gatewayClient.customerBookArchivePut[smithy.Unauthorized](
+                customerIndividualDetailsRow.customerID,
+                Some(organizationID),
+                None,
+              ),
+              gatewayClient.customerBookIndividualGet[smithy.Unauthorized](
+                customerIndividualDetailsRow.customerID,
+                Some(organizationID),
+                None,
+              ),
+              gatewayClient.customerBookBusinessGet[smithy.Unauthorized](
+                customerBusinessDetailsRow.customerID,
+                Some(organizationID),
+                None,
+              ),
+              gatewayClient.customerBookSummaryGet[smithy.Unauthorized](
+                Nil,
+                Some(organizationID),
+                None,
+              ),
+              gatewayClient.customerBookUniquenessGet[smithy.Unauthorized](
+                Some(customerBookUniquenessGetRequest.name.value),
+                Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
+                customerBookUniquenessGetRequest.customerID,
+                Some(organizationID),
+                None,
+              ),
+            )
+          )
+
+          _ = responses.map(_.code) shouldBe List.fill(10)(StatusCode.Unauthorized)
+          _ = responses.map(_.body.left.toOption) shouldBe List.fill(10)(Some(smithy.Unauthorized()))
+
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+          )
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+          _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+          _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+        } yield ()
+      }
+
+      "fail with an Unauthorized when the access token is invalid on every endpoint" in withContext { context =>
+        import context.*
+
+        for {
+          organizationID               = arbitrarySample[OrganizationID]
+          customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+            .copy(organizationID = organizationID, isArchived = false)
+          customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+            .copy(organizationID = organizationID, isArchived = false)
+          customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+            organizationID = organizationID,
+            customerID = customerBusinessDetailsRow.customerID,
+            isArchived = false,
+          )
+
+          _ <- postgresClient.executeQuery(
+            customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow)
+          )
+          _ <- postgresClient.executeQuery(
+            customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)
+          )
+          _ <- postgresClient.executeQuery(
+            customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow))
+          )
+
+          customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
+            .transformInto[smithy.CustomerBookIndividualPostRequest]
+          customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
+            .transformInto[smithy.CustomerBookBusinessPostRequest]
+          customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+            customerBusinesses = List(
+              arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+            ),
+            customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+          )
+          customerBookBatchPostRequestSmithy = customerBookBatchPostRequest
+            .transformInto[smithy.CustomerBookBatchPostRequest]
+          customerBookIndividualPutRequestSmithy = smithy.CustomerBookIndividualPutRequest(
+            fullName = Some("changed name"),
+            emails = Some(Nil),
+            phoneNumbers = Some(Nil),
+            addresses = Some(Nil),
+          )
+          customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+            businessName = Some("Replacement Business"),
+            taxID = Some(Nullable.Null),
+            customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+            customerBusinessContactsUpdate = List(
+              smithy.CustomerBusinessContactUpdate(
+                customerBusinessContactRow.customerBusinessContactID.value,
+                fullName = Some("Updated Contact"),
+              )
+            ),
+          )
+          customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
+
+          responses <- ZIO.collectAllPar(
+            List(
+              gatewayClient.customerBookIndividualPost[smithy.Unauthorized](
+                customerBookIndividualPostRequestSmithy,
+                Some(organizationID),
+                Some(AccessToken("invalidtoken")),
+              ),
+              gatewayClient.customerBookBusinessPost[smithy.Unauthorized](
+                customerBookBusinessPostRequestSmithy,
+                Some(organizationID),
+                Some(AccessToken("invalidtoken")),
+              ),
+              gatewayClient.customerBookBatchPost[smithy.Unauthorized](
+                customerBookBatchPostRequestSmithy,
+                Some(organizationID),
+                Some(AccessToken("invalidtoken")),
+              ),
+              gatewayClient.customerBookIndividualPut[smithy.Unauthorized](
+                customerIndividualDetailsRow.customerID,
+                customerBookIndividualPutRequestSmithy,
+                Some(organizationID),
+                Some(AccessToken("invalidtoken")),
+              ),
+              gatewayClient.customerBookBusinessPut[smithy.Unauthorized](
+                customerBusinessDetailsRow.customerID,
+                customerBookBusinessPutRequestSmithy,
+                Some(organizationID),
+                Some(AccessToken("invalidtoken")),
+              ),
+              gatewayClient.customerBookArchivePut[smithy.Unauthorized](
+                customerIndividualDetailsRow.customerID,
+                Some(organizationID),
+                Some(AccessToken("invalidtoken")),
+              ),
+              gatewayClient.customerBookIndividualGet[smithy.Unauthorized](
+                customerIndividualDetailsRow.customerID,
+                Some(organizationID),
+                Some(AccessToken("invalidtoken")),
+              ),
+              gatewayClient.customerBookBusinessGet[smithy.Unauthorized](
+                customerBusinessDetailsRow.customerID,
+                Some(organizationID),
+                Some(AccessToken("invalidtoken")),
+              ),
+              gatewayClient.customerBookSummaryGet[smithy.Unauthorized](
+                Nil,
+                Some(organizationID),
+                Some(AccessToken("invalidtoken")),
+              ),
+              gatewayClient.customerBookUniquenessGet[smithy.Unauthorized](
+                Some(customerBookUniquenessGetRequest.name.value),
+                Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
+                customerBookUniquenessGetRequest.customerID,
+                Some(organizationID),
+                Some(AccessToken("invalidtoken")),
+              ),
+            )
+          )
+
+          _ = responses.map(_.code) shouldBe List.fill(10)(StatusCode.Unauthorized)
+          _ = responses.map(_.body.left.toOption) shouldBe List.fill(10)(Some(smithy.Unauthorized()))
+
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+          )
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+          _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+          _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+        } yield ()
+      }
+
+      "fail with a Forbidden when the user is not in a completed onboard stage on every endpoint" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStageInvalid <- Random
+              .shuffle(OnboardStage.values.toList diff OnboardStage.completedStages)
+              .map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStageInvalid)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+              .copy(organizationID = organizationUserRow.organizationID, isArchived = false)
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+              .copy(organizationID = organizationUserRow.organizationID, isArchived = false)
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              isArchived = false,
+            )
+
+            _ <- postgresClient.executeQuery(
+              customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow)
+            )
+            _ <- postgresClient.executeQuery(
+              customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)
+            )
+            _ <- postgresClient.executeQuery(
+              customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow))
+            )
+
+            customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
+              .transformInto[smithy.CustomerBookIndividualPostRequest]
+            customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
+              .transformInto[smithy.CustomerBookBusinessPostRequest]
+            customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+              customerBusinesses = List(
+                arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+              ),
+              customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+            )
+            customerBookBatchPostRequestSmithy = customerBookBatchPostRequest
+              .transformInto[smithy.CustomerBookBatchPostRequest]
+            customerBookIndividualPutRequestSmithy = smithy.CustomerBookIndividualPutRequest(
+              fullName = Some("changed name"),
+              emails = Some(Nil),
+              phoneNumbers = Some(Nil),
+              addresses = Some(Nil),
+            )
+            customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+              businessName = Some("Replacement Business"),
+              taxID = Some(Nullable.Null),
+              customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+              customerBusinessContactsUpdate = List(
+                smithy.CustomerBusinessContactUpdate(
+                  customerBusinessContactRow.customerBusinessContactID.value,
+                  fullName = Some("Updated Contact"),
+                )
+              ),
+            )
+            customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            responses <- ZIO.collectAllPar(
+              List(
+                gatewayClient.customerBookIndividualPost[smithy.Forbidden](
+                  customerBookIndividualPostRequestSmithy,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBusinessPost[smithy.Forbidden](
+                  customerBookBusinessPostRequestSmithy,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBatchPost[smithy.Forbidden](
+                  customerBookBatchPostRequestSmithy,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookIndividualPut[smithy.Forbidden](
+                  customerIndividualDetailsRow.customerID,
+                  customerBookIndividualPutRequestSmithy,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBusinessPut[smithy.Forbidden](
+                  customerBusinessDetailsRow.customerID,
+                  customerBookBusinessPutRequestSmithy,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookArchivePut[smithy.Forbidden](
+                  customerIndividualDetailsRow.customerID,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookIndividualGet[smithy.Forbidden](
+                  customerIndividualDetailsRow.customerID,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBusinessGet[smithy.Forbidden](
+                  customerBusinessDetailsRow.customerID,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookSummaryGet[smithy.Forbidden](
+                  Nil,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookUniquenessGet[smithy.Forbidden](
+                  Some(customerBookUniquenessGetRequest.name.value),
+                  Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
+                  customerBookUniquenessGetRequest.customerID,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+              )
+            )
+
+            _ = responses.map(_.code) shouldBe List.fill(10)(StatusCode.Forbidden)
+            _ = responses.map(_.body.left.toOption) shouldBe List.fill(10)(Some(smithy.Forbidden()))
+
+            customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+            )
+            customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+            )
+            customerBusinessContactRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessContactRowsTesting
+            )
+
+            _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+          } yield ()
+      }
+
+      "fail with a Forbidden when the organization user role is not allowed on every write endpoint" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+            organizationUserRoleInvalid <- Random
+              .shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles)
+              .map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRoleInvalid)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+              .copy(organizationID = organizationUserRow.organizationID, isArchived = false)
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+              .copy(organizationID = organizationUserRow.organizationID, isArchived = false)
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              isArchived = false,
+            )
+
+            _ <- postgresClient.executeQuery(
+              customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow)
+            )
+            _ <- postgresClient.executeQuery(
+              customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)
+            )
+            _ <- postgresClient.executeQuery(
+              customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow))
+            )
+
+            customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
+              .transformInto[smithy.CustomerBookIndividualPostRequest]
+            customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
+              .transformInto[smithy.CustomerBookBusinessPostRequest]
+            customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+              customerBusinesses = List(
+                arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+              ),
+              customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+            )
+            customerBookBatchPostRequestSmithy = customerBookBatchPostRequest
+              .transformInto[smithy.CustomerBookBatchPostRequest]
+            customerBookIndividualPutRequestSmithy = smithy.CustomerBookIndividualPutRequest(
+              fullName = Some("changed name"),
+              emails = Some(Nil),
+              phoneNumbers = Some(Nil),
+              addresses = Some(Nil),
+            )
+            customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+              businessName = Some("Replacement Business"),
+              taxID = Some(Nullable.Null),
+              customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+              customerBusinessContactsUpdate = List(
+                smithy.CustomerBusinessContactUpdate(
+                  customerBusinessContactRow.customerBusinessContactID.value,
+                  fullName = Some("Updated Contact"),
+                )
+              ),
+            )
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            responses <- ZIO.collectAllPar(
+              List(
+                gatewayClient.customerBookIndividualPost[smithy.Forbidden](
+                  customerBookIndividualPostRequestSmithy,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBusinessPost[smithy.Forbidden](
+                  customerBookBusinessPostRequestSmithy,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBatchPost[smithy.Forbidden](
+                  customerBookBatchPostRequestSmithy,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookIndividualPut[smithy.Forbidden](
+                  customerIndividualDetailsRow.customerID,
+                  customerBookIndividualPutRequestSmithy,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBusinessPut[smithy.Forbidden](
+                  customerBusinessDetailsRow.customerID,
+                  customerBookBusinessPutRequestSmithy,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookArchivePut[smithy.Forbidden](
+                  customerIndividualDetailsRow.customerID,
+                  Some(organizationUserRow.organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+              )
+            )
+
+            _ = responses.map(_.code) shouldBe List.fill(6)(StatusCode.Forbidden)
+            _ = responses.map(_.body.left.toOption) shouldBe List.fill(6)(Some(smithy.Forbidden()))
+
+            customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+            )
+            customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+            )
+            customerBusinessContactRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessContactRowsTesting
+            )
+
+            _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+          } yield ()
+      }
+
+      "fail with an InternalServerError when the user details do not exist on every endpoint" in withContext {
+        context =>
+          import context.*
+
+          for {
+            userID                       = arbitrarySample[UserID]
+            organizationID               = arbitrarySample[OrganizationID]
+            customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+              .copy(organizationID = organizationID, isArchived = false)
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+              .copy(organizationID = organizationID, isArchived = false)
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              isArchived = false,
+            )
+
+            _ <- postgresClient.executeQuery(
+              customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow)
+            )
+            _ <- postgresClient.executeQuery(
+              customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)
+            )
+            _ <- postgresClient.executeQuery(
+              customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow))
+            )
+
+            customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
+              .transformInto[smithy.CustomerBookIndividualPostRequest]
+            customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
+              .transformInto[smithy.CustomerBookBusinessPostRequest]
+            customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+              customerBusinesses = List(
+                arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+              ),
+              customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+            )
+            customerBookBatchPostRequestSmithy = customerBookBatchPostRequest
+              .transformInto[smithy.CustomerBookBatchPostRequest]
+            customerBookIndividualPutRequestSmithy = smithy.CustomerBookIndividualPutRequest(
+              fullName = Some("changed name"),
+              emails = Some(Nil),
+              phoneNumbers = Some(Nil),
+              addresses = Some(Nil),
+            )
+            customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+              businessName = Some("Replacement Business"),
+              taxID = Some(Nullable.Null),
+              customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+              customerBusinessContactsUpdate = List(
+                smithy.CustomerBusinessContactUpdate(
+                  customerBusinessContactRow.customerBusinessContactID.value,
+                  fullName = Some("Updated Contact"),
+                )
+              ),
+            )
+            customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
+
+            accessJwt <- jwtService.generateAccessToken(userID)
+
+            responses <- ZIO.collectAllPar(
+              List(
+                gatewayClient.customerBookIndividualPost[smithy.InternalServerError](
+                  customerBookIndividualPostRequestSmithy,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBusinessPost[smithy.InternalServerError](
+                  customerBookBusinessPostRequestSmithy,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBatchPost[smithy.InternalServerError](
+                  customerBookBatchPostRequestSmithy,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookIndividualPut[smithy.InternalServerError](
+                  customerIndividualDetailsRow.customerID,
+                  customerBookIndividualPutRequestSmithy,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBusinessPut[smithy.InternalServerError](
+                  customerBusinessDetailsRow.customerID,
+                  customerBookBusinessPutRequestSmithy,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookArchivePut[smithy.InternalServerError](
+                  customerIndividualDetailsRow.customerID,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookIndividualGet[smithy.InternalServerError](
+                  customerIndividualDetailsRow.customerID,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBusinessGet[smithy.InternalServerError](
+                  customerBusinessDetailsRow.customerID,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookSummaryGet[smithy.InternalServerError](
+                  Nil,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookUniquenessGet[smithy.InternalServerError](
+                  Some(customerBookUniquenessGetRequest.name.value),
+                  Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
+                  customerBookUniquenessGetRequest.customerID,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+              )
+            )
+
+            _ = responses.map(_.code) shouldBe List.fill(10)(StatusCode.InternalServerError)
+            _ = responses.map(_.body.left.toOption) shouldBe List.fill(10)(Some(smithy.InternalServerError()))
+
+            customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+            )
+            customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+            )
+            customerBusinessContactRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessContactRowsTesting
+            )
+
+            _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+          } yield ()
+      }
+
+      "fail with an InternalServerError when the user is not a member of the organization on every endpoint" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+
+            organizationID               = arbitrarySample[OrganizationID]
+            customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
+              .copy(organizationID = organizationID, isArchived = false)
+            customerBusinessDetailsRow = arbitrarySample[CustomerBusinessDetailsRow]
+              .copy(organizationID = organizationID, isArchived = false)
+            customerBusinessContactRow = arbitrarySample[CustomerBusinessContactRow].copy(
+              organizationID = organizationID,
+              customerID = customerBusinessDetailsRow.customerID,
+              isArchived = false,
+            )
+
+            _ <- postgresClient.executeQuery(
+              customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow)
+            )
+            _ <- postgresClient.executeQuery(
+              customerBookQueries.insertCustomerBusinessDetailsRow(customerBusinessDetailsRow)
+            )
+            _ <- postgresClient.executeQuery(
+              customerBookQueries.insertCustomerBusinessContactRows(List(customerBusinessContactRow))
+            )
+
+            customerBookIndividualPostRequestSmithy = arbitrarySample[CustomerBookIndividualPostRequest]
+              .transformInto[smithy.CustomerBookIndividualPostRequest]
+            customerBookBusinessPostRequestSmithy = arbitrarySample[CustomerBookBusinessPostRequest]
+              .transformInto[smithy.CustomerBookBusinessPostRequest]
+            customerBookBatchPostRequest = CustomerBookBatchPostRequest(
+              customerBusinesses = List(
+                arbitrarySample[CustomerBookBusinessPostRequest].copy(customerBusinessContacts = Nil)
+              ),
+              customerIndividuals = List(arbitrarySample[CustomerBookIndividualPostRequest]),
+            )
+            customerBookBatchPostRequestSmithy = customerBookBatchPostRequest
+              .transformInto[smithy.CustomerBookBatchPostRequest]
+            customerBookIndividualPutRequestSmithy = smithy.CustomerBookIndividualPutRequest(
+              fullName = Some("changed name"),
+              emails = Some(Nil),
+              phoneNumbers = Some(Nil),
+              addresses = Some(Nil),
+            )
+            customerBookBusinessPutRequestSmithy = smithy.CustomerBookBusinessPutRequest(
+              businessName = Some("Replacement Business"),
+              taxID = Some(Nullable.Null),
+              customerBusinessContactsInsert = List(smithy.CustomerBusinessContactInsert("Inserted Contact")),
+              customerBusinessContactsUpdate = List(
+                smithy.CustomerBusinessContactUpdate(
+                  customerBusinessContactRow.customerBusinessContactID.value,
+                  fullName = Some("Updated Contact"),
+                )
+              ),
+            )
+            customerBookUniquenessGetRequest = arbitrarySample[CustomerBookUniquenessGetRequest]
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            responses <- ZIO.collectAllPar(
+              List(
+                gatewayClient.customerBookIndividualPost[smithy.InternalServerError](
+                  customerBookIndividualPostRequestSmithy,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBusinessPost[smithy.InternalServerError](
+                  customerBookBusinessPostRequestSmithy,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBatchPost[smithy.InternalServerError](
+                  customerBookBatchPostRequestSmithy,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookIndividualPut[smithy.InternalServerError](
+                  customerIndividualDetailsRow.customerID,
+                  customerBookIndividualPutRequestSmithy,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBusinessPut[smithy.InternalServerError](
+                  customerBusinessDetailsRow.customerID,
+                  customerBookBusinessPutRequestSmithy,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookArchivePut[smithy.InternalServerError](
+                  customerIndividualDetailsRow.customerID,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookIndividualGet[smithy.InternalServerError](
+                  customerIndividualDetailsRow.customerID,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookBusinessGet[smithy.InternalServerError](
+                  customerBusinessDetailsRow.customerID,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookSummaryGet[smithy.InternalServerError](
+                  Nil,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+                gatewayClient.customerBookUniquenessGet[smithy.InternalServerError](
+                  Some(customerBookUniquenessGetRequest.name.value),
+                  Some(customerBookUniquenessGetRequest.customerType.transformInto[smithy.CustomerType]),
+                  customerBookUniquenessGetRequest.customerID,
+                  Some(organizationID),
+                  Some(accessJwt.accessToken),
+                ),
+              )
+            )
+
+            _ = responses.map(_.code) shouldBe List.fill(10)(StatusCode.InternalServerError)
+            _ = responses.map(_.body.left.toOption) shouldBe List.fill(10)(Some(smithy.InternalServerError()))
+
+            customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+            )
+            customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+            )
+            customerBusinessContactRowsAll <- postgresClient.executeQuery(
+              customerBookQueries.getAllCustomerBusinessContactRowsTesting
+            )
+
+            _ = customerIndividualDetailsRowsAll shouldBe List(customerIndividualDetailsRow)
+            _ = customerBusinessDetailsRowsAll shouldBe List(customerBusinessDetailsRow)
+            _ = customerBusinessContactRowsAll shouldBe List(customerBusinessContactRow)
+          } yield ()
+      }
+    }
   }
 }

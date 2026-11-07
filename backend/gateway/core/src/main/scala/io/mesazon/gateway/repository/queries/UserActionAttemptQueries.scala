@@ -30,7 +30,7 @@ final class UserActionAttemptQueries(
         |updated_at
          """.stripMargin
 
-  def getAndIncrease(userActionAttemptRow: UserActionAttemptRow): TranzactIO[UserActionAttemptRow] =
+  def getAndIncrease(userActionAttemptRow: UserActionAttemptRow): TranzactIO[Option[UserActionAttemptRow]] =
     tzio {
       val select =
         fr"SELECT" ++ frUserActionAttemptFields ++
@@ -49,13 +49,12 @@ final class UserActionAttemptQueries(
               fr"attempts = t.attempts + 1",
               fr"updated_at = EXCLUDED.updated_at",
             )
-          ) ++
-          fr"RETURNING" ++ frUserActionAttemptFields
+          )
 
       for {
         userActionAttemptRowOldOpt <- select.query[UserActionAttemptRow].option
-        userActionAttemptRowUpsert <- upsert.query[UserActionAttemptRow].unique
-      } yield userActionAttemptRowOldOpt.getOrElse(userActionAttemptRowUpsert)
+        _                          <- upsert.update.run
+      } yield userActionAttemptRowOldOpt
     }
 
   def delete(userID: UserID, actionAttemptType: ActionAttemptType): TranzactIO[Unit] =
