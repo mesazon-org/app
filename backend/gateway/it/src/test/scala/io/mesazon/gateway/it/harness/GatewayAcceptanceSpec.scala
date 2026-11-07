@@ -19,6 +19,7 @@ class GatewayAcceptanceSpec
       new CustomerBookApiSpec,
       new CatalogueApiSpec,
       new CatalogueFileApiSpec,
+      new CustomerBookFileApiSpec,
       new OrganizationManagementApiSpec,
       new FileApiSpec,
       new UserOnboardApiSpec,

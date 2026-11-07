@@ -6,4 +6,7 @@ case class Address(
     city: Option[City],
     postalCode: Option[PostalCode],
     country: Option[Country],
-)
+) {
+  def isEmpty: Boolean =
+    addressLine1.isEmpty && addressLine2.isEmpty && city.isEmpty && postalCode.isEmpty && country.isEmpty
+}

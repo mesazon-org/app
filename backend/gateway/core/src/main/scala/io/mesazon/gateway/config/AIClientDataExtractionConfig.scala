@@ -19,6 +19,7 @@ final case class AIClientDataExtractionConfig(
     csvReasoningEffort: String,
     noteCompactionModel: String,
     noteCompactionReasoningEffort: String,
+    noteCompactionRequestTimeout: Duration,
 ) {
   val baseUri: Uri = Uri.unsafeApply(scheme, host, port).addPath("v1")
 }

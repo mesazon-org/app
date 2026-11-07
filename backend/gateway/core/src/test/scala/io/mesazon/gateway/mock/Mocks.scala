@@ -14,12 +14,12 @@ object Mocks {
   final class AIClientDataExtractionMock[A](
       val extractFromImageCallsRef: Ref[List[(FileScannedPath, SupportedMediaType, String)]],
       val extractFromCsvCallsRef: Ref[List[(List[CSVRecord], String)]],
-      val noteCompactionCallsRef: Ref[List[(Long, Long, List[Long], List[Long], List[String], String)]],
       extractFromImageOptResult: Option[IO[ServiceError, A]] = None,
       extractFromCsvOptResult: Option[IO[ServiceError, NonEmptyChunk[A]]] = None,
-      noteCompactionOptResult: Option[IO[ServiceError, NoteCompactionOutput]] = None,
       extractFromImageProcessingMessagesRefOpt: Option[Ref[List[Option[String]]]] = None,
       extractFromCsvProcessingMessagesRefOpt: Option[Ref[List[Option[String]]]] = None,
+      noteCompactionCallsRefOpt: Option[Ref[List[(List[String], String)]]] = None,
+      noteCompactionOptResult: Option[IO[ServiceError, NoteCompactionOutput]] = None,
   ) extends AIClientDataExtraction {
     override def extractFromImage[B](
         imageScannedPath: FileScannedPath,
@@ -51,26 +51,8 @@ object Mocks {
           .map(_.asInstanceOf[NonEmptyChunk[B]])
       } yield result
 
-    override def noteCompaction(
-        entriesIdentified: Long,
-        entriesProcessed: Long,
-        emptyEntryRows: List[Long],
-        unidentifiedEntryRows: List[Long],
-        unidentifiedEntriesNotes: List[String],
-        instructions: String,
-    ): IO[ServiceError, NoteCompactionOutput] =
-      noteCompactionCallsRef.update(
-        _ :+ (
-          entriesIdentified,
-          entriesProcessed,
-          emptyEntryRows,
-          unidentifiedEntryRows,
-          unidentifiedEntriesNotes,
-          instructions,
-        )
-      ) *>
-        noteCompactionOptResult
-          .getOrElse(ZIO.die(new NotImplementedError("noteCompaction should not be called")))
-
+    override def noteCompaction(notes: List[String], instructions: String): IO[ServiceError, NoteCompactionOutput] =
+      ZIO.foreachDiscard(noteCompactionCallsRefOpt)(_.update(_ :+ (notes, instructions))) *>
+        noteCompactionOptResult.getOrElse(ZIO.die(new NotImplementedError("noteCompaction should not be called")))
   }
 }

@@ -5,6 +5,8 @@ import com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker
 import io.github.iltotore.iron.jsoniter.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.json.tapir.{
+  addressTypeCodec,
+  addressTypeSchema,
   catalogueItemVariantSaleUnitCodec,
   catalogueItemVariantSaleUnitSchema,
   currencyCodec,
@@ -37,15 +39,39 @@ object ai {
   given catalogueFileAIExtractOpenAIJsonSchema: OpenAIJsonSchema[CatalogueFileAIExtract] =
     fromTapir(catalogueFileAIExtractSchema)
 
-  given extractCustomersPostResponseOpenAIJsonSchema: OpenAIJsonSchema[ExtractCustomersPostResponse] =
-    fromTapir(tapir.extractCustomersPostResponseSchema)
+  given customerPhoneNumberAIExtractSchema: Schema[CustomerPhoneNumberAIExtract] =
+    Schema.derived[CustomerPhoneNumberAIExtract]
+
+  given customerAddressAIExtractSchema: Schema[CustomerAddressAIExtract] = Schema.derived[CustomerAddressAIExtract]
+
+  given customerAddressEntryAIExtractSchema: Schema[CustomerAddressEntryAIExtract] =
+    Schema.derived[CustomerAddressEntryAIExtract]
+
+  given customerBusinessContactAIExtractSchema: Schema[CustomerBusinessContactAIExtract] =
+    Schema.derived[CustomerBusinessContactAIExtract]
+
+  given customerIndividualAIExtractSchema: Schema[CustomerIndividualAIExtract] =
+    Schema.derived[CustomerIndividualAIExtract]
+
+  given customerBusinessAIExtractSchema: Schema[CustomerBusinessAIExtract] = Schema.derived[CustomerBusinessAIExtract]
+
+  given customerBookFileAIExtractSchema: Schema[CustomerBookFileAIExtract] = Schema.derived[CustomerBookFileAIExtract]
+
+  given customerBookFileAIExtractCodec: JsonValueCodec[CustomerBookFileAIExtract] =
+    JsonCodecMaker.make[CustomerBookFileAIExtract]
+
+  given customerBookFileAIExtractOpenAIJsonSchema: OpenAIJsonSchema[CustomerBookFileAIExtract] =
+    fromTapir(customerBookFileAIExtractSchema)
 
   given noteCompactionOutputSchema: Schema[NoteCompactionOutput] = Schema.derived[NoteCompactionOutput]
+
+  given noteCompactionOutputCodec: JsonValueCodec[NoteCompactionOutput] = JsonCodecMaker.make[NoteCompactionOutput]
 
   given noteCompactionOutputOpenAIJsonSchema: OpenAIJsonSchema[NoteCompactionOutput] =
     fromTapir(noteCompactionOutputSchema)
 
-  given noteCompactionOutputCodec: JsonValueCodec[NoteCompactionOutput] = JsonCodecMaker.make[NoteCompactionOutput]
+  // Not a given: JsonCodecMaker.make would pick an implicit List[String] codec up for every List[String] field it derives.
+  val noteCompactionNotesCodec: JsonValueCodec[List[String]] = JsonCodecMaker.make[List[String]]
 
   private def requireAllPropertiesLike(schemaLike: SchemaLike): SchemaLike = schemaLike match {
     case schema: ApiSchema    => requireAllProperties(schema)

@@ -648,12 +648,15 @@ Nothing changes and the check reserves nothing.
 
 ### 8. User Extracts Customers from an Image or File
 
+**Status: available.** The rules below for how the AI reads an image or file, and combines a spreadsheet's general notes, have so far been checked only against a stand-in for the AI service, not the real one; until they are, treat them as intended behaviour. A file without a label row loses its first customer ([gap 6](#6-a-file-without-a-label-row-skips-its-first-customer)).
+
 **Who can reach this step: an owner or admin of the organization.**
 
 - User already keeps a customer list somewhere else — on paper or in a spreadsheet — and wants it in the book without retyping it.
 - There are three ways in: an image of something on paper (a business card, a printed grid, a handwritten note), a CSV file, or an Excel file (`.xls` or `.xlsx`).
+- The user may add a short message to guide how the image or file is read.
 - An AI model reads the image or file.
-- The user gets back candidate people and businesses to look over, how many entries were found versus turned into candidates, and a short note on anything worth checking again.
+- The user gets back candidate people and businesses to look over, each saying which of its details were worked out, are missing, or are duplicated, marked when it needs attention, and carrying its own notes, plus processing notes on how many entries were found versus turned into candidates and general notes about the source.
 - Nothing is stored. Candidates the user wants to keep are added the normal way, in [step 1](#1-user-adds-a-customer).
 
 This step helps a business move its existing customer list into the product quickly, with as little retyping as possible.
@@ -663,49 +666,78 @@ This step helps a business move its existing customer list into the product quic
 | **Scenarios** | **Requirements** |
 | --- | --- |
 | 1. User sends an image, CSV file or Excel file with several clear entries | - Each comes back as a candidate person or business, whichever the AI judges it to be |
-| 2. An entry has a name, but other details are unclear or missing | - Still a candidate, with a short note saying what was unclear |
-| 3. An entry has no readable name, and no email that looks like a person's name | - Not a candidate, but counted as missed - For a spreadsheet, its row number is listed as unidentified |
-| 4. An entry has no readable name at all, but an email that looks like a person's name, such as `john.smith@example.com` | - The name is worked out from the email, for a person or a business contact, and the candidate notes it - Never for role mailboxes like `info@…`, or when any part of a name was readable |
-| 5. Two candidates in the same image or file share a name, ignoring capitalisation | - Each is marked as a possible duplicate if they are the same kind - A person and a business with the same name are not duplicates |
-| 6. Some entries could not be turned into candidates | - The counts show how many were found and how many became candidates |
-| 7. The image or file has nothing recognizable as a customer | - Empty lists, with both counts at zero - Not an error - The notes explain that the AI could not detect relevant customer data in the image or file |
+| 2. An entry has a name, but other details are unclear or missing | - Still a candidate, with a short note saying what was unclear - Optional details that the source simply does not show never mark it as needing attention |
+| 3. An entry has content, but no readable name, no email a name can be worked out from, and no usable customer detail | - Not a candidate, but counted as missed - Its row number appears in the unidentified-rows info note; for an image, this is the AI's best estimate of its position (requirement 5) |
+| 4. An entry has no readable name at all, but an email a name can be worked out from | - For a person or a business contact, an email that looks like a person's name, such as `john.smith@example.com`, gives the name; never a role mailbox like `info@…` - For a business, one of its own emails on a company domain, such as `orders@acme-tools.com`, gives `Acme Tools`; never free email providers such as Gmail, Outlook, Hotmail, Yahoo or iCloud, and never a contact's email - The name is listed as an inferred field, the AI notes how it was worked out, and the candidate is not marked as needing attention - Never when any part of the name was readable, unless the processing message asks for it (scenario 28) |
+| 5. Two candidates of the same kind in the same image or file share exactly the same name, as written when adding a customer (capital letters count) | - Both are marked as needing attention, each listing its name as a duplicate field - They are not merged - A person and a business with the same name are not duplicates - Candidates without a name are never duplicates - Never compared with customers already in the book |
+| 6. Some entries could not be turned into candidates | - The first info note shows how many entries were processed out of the total, such as `Processed 3 of 4 entries` |
+| 7. The image or file has nothing recognizable as a customer | - No candidates, and the first info note reads `Processed 0 of 0 entries`, or `Processed 0 of <n> entries` when the source has empty or unidentified rows - Not an error - The general extraction notes explain that the AI could not detect relevant customer data in the image or file |
 | 8. The file's name is missing, malformed, has an unsupported extension, or does not match the actual content | - Rejected with `400 BAD_REQUEST_ERROR` - The file is never sent to the AI |
 | 9. The file cannot really be read as a CSV or Excel file, or is larger than 20 MB | - Rejected with a server error |
-| 10. The AI service has a temporary failure | - Tried again up to two more times - If every attempt fails, a server error and no candidates |
-| 11. The AI service rejects the request or sends back something unusable | - Not retried - A server error |
+| 10. The AI service has a temporary failure that does not clear | - A server error and no candidates |
+| 11. The AI service rejects the request or sends back something unusable | - A server error |
 | 12. A member with the ordinary user role tries this step | - Rejected, the same as adding a customer |
 | 13. User reads the same image or file again | - Allowed freely; nothing is ever stored |
-| 14. A spreadsheet row names a contact person for a business | - The business candidate may include that contact, best-effort only |
+| 14. The source shows a contact person for a business | - The business candidate includes that contact only when it is on the business's own entry or row, under a clear contact label or grouping, or, in a spreadsheet, on a following row with no name of its own that only adds contact details - An uncertain link is noted - A separate entry with its own name is never made a contact just because it shares the company name |
 | 15. User uploads an Excel workbook with several sheets | - Only the first sheet is read; the others are never mentioned |
 | 16. User uploads a legacy `.xls` file | - Read the same way as `.xlsx` |
-| 17. A spreadsheet row is completely blank | - Not counted as an entry - Its row number is listed as empty |
-| 18. User uploads a spreadsheet with a very large number of rows | - Every row is read, in groups of up to 50, with up to 3 groups at a time - If any group fails, the whole read fails with no partial result - Row numbers and duplicate marks still refer to the whole file |
+| 17. A spreadsheet row is completely blank | - Never a candidate, but counted in the total of the first info note - Its row number appears in the empty-rows info note, such as `Empty rows (1) at [6]` |
+| 18. User uploads a spreadsheet with a very large number of rows | - Every row is read, in groups (requirement 14) - Row numbers and duplicate-name checks still refer to the whole file - General notes that say the same thing are combined (requirement 22) |
 | 19. User sends a supported file whose name matches it | - Accepted and read - The name's extension is matched ignoring capitalisation |
-| 20. An entry has one address with at least one non-empty text field | - It always comes back marked as both shipping and billing (`ShippingAndBilling`), whatever the source says - Missing or unclear fields are noted |
+| 20. An entry has one address with at least one non-empty text field | - It comes back as both shipping and billing (`ShippingAndBilling`), whatever the source says (requirement 16) - Missing or unclear fields are noted |
 | 21. An address has some text fields missing, but at least one field has content | - The partial address is returned with a note saying what was missing or unclear - The rest of the read carries on |
-| 22. An address has all five text fields empty | - That address is omitted - If no address has any non-empty text field, the candidate's address list is empty - The candidate itself is still returned |
-| 23. An entry has two or more distinct addresses with at least one non-empty text field | - One comes back as shipping and the other as billing, as the source shows - When the source does not say which is which, the first is shipping and the second billing, and the candidate notes that the types were assumed - If there are more than two, the best shipping and billing pair is kept, or else the first two, with a note that further addresses were left out |
-| 24. The same address appears more than once for one customer | - Identical addresses are merged before assigning their types or choosing which to keep - If only one distinct address remains, it is marked as both shipping and billing - Addresses belonging to different customers are not merged |
+| 22. The source shows an address, but all five of its text fields are empty or unreadable | - That address is left out, and the AI notes that an empty address was left out - The candidate is still returned and is not marked as needing attention - If no address has any non-empty text field, the candidate's address list is empty - Empty address cells, or no address at all, are simply absent |
+| 23. An entry has two or more distinct addresses with at least one non-empty text field | - The first two are kept, one shipping and one billing (requirement 16) - Each address left out gets its own note, such as `Address left out: 12 Main Street` - None of this marks the candidate as needing attention |
+| 24. The same address appears more than once for one customer | - Identical addresses are merged before requirement 16 picks and types them - Addresses belonging to different customers are not merged |
+| 25. The source shows a phone number, for a customer or a contact, but its country code cannot be read | - The code is worked out from context, or guessed when the clues disagree, and listed as an inferred field (requirement 19) - Only when no country is plausible is the number kept without a code, listed as missing, and the candidate marked as needing attention - A phone number whose number itself cannot be read is left out and noted, and the candidate is not marked |
+| 26. The source shows an email, for a customer or a contact, that cannot be read | - That email is left out with a note - The rest of the entry is kept, and the candidate is not marked as needing attention |
+| 27. A business shows a contact with no readable name, and no email that looks like a person's name | - If the contact has a readable role, email or phone number (a readable national number is enough, even without a country code), it stays in the list without a name - The contact's name is listed as a missing field with the contact's position, and the business is marked as needing attention - With none of those, there is no contact and no note |
+| 28. User supplies a processing message | - It takes priority over the default reading rules, within the limits of requirement 24 - It may, for example, split one row into several customers, or complete a missing last name from the entry's email as an inferred field - A detail it asks to leave out is meant to count as absent, not missing; today a dropped country code or name is still reported missing ([gap 7](#7-a-detail-dropped-on-request-is-still-reported-missing)) |
+| 29. The message is empty, whitespace-only, ambiguous, or conflicts with the source | - An empty message is treated as no message - Otherwise it is applied as far as the source supports; anything it could not settle is described in the notes - The request is not rejected only for being ambiguous |
+| 30. The processing message is longer than 2,000 characters after trimming | - Rejected with `400 BAD_REQUEST_ERROR` - The file is never sent to the AI |
+| 31. A candidate has several email addresses or phone numbers | - The first in each list is marked as the default - When the source clearly marks one as the main one, it is listed first and so becomes the default; otherwise the source order decides |
+| 32. An entry has no readable name and no email a name can be worked out from, but has at least one usable customer detail, such as a phone number with a readable national number even without a country code | - It comes back as a candidate without a name, as the person or business the AI judges it to be - Its name is listed as a missing field, and it is marked as needing attention - It counts as processed |
+| 33. An entry shows only a name | - It comes back as a candidate with no other details, marked by the usual rules - Unless it is clearly a section heading that groups the entries below it - When unsure, it is kept with a note |
+| 34. The source has titles, the uploader's own letterhead, dates, column label lines, repeated labels, totals, page numbers or footers | - None of these is an entry: not counted, and in neither row note - The AI notes each one in the general extraction notes |
+| 35. A file column, or a kind of detail in an image, has no matching customer field, such as a balance, comment, birthday or loyalty tier | - Left out, and noted once in the general extraction notes, not per row or candidate - Columns that are completely empty are skipped |
+| 36. A file's first row looks like a customer rather than column labels | - It is used only to understand the columns - It is not read as a customer and not counted - One general note says the first row looked like data and was skipped, so the user can add that customer by hand - See [gap 6](#6-a-file-without-a-label-row-skips-its-first-customer) |
+| 37. A phone number's country code is written with it, such as `+357` or `00357`, or in its own dialling-code column | - The country code counts as read, not inferred |
+| 38. An entry's name is in another language, or its kind is not stated | - Names are kept as written, never translated - Person or business is decided from evidence: a company name, a legal suffix, a tax ID, or listed contacts |
+| 39. The processing message makes entries give several candidates, such as "for each entry create 2 candidates" | - Each such entry still counts once as processed - A second info note, such as `Candidates created 440`, gives the number of candidates - That note is left out when every processed entry gave exactly one candidate |
 
 #### Requirements
 
-1. Every candidate has the same shape as a person or business added in [step 1](#1-user-adds-a-customer), whatever the source, and the AI decides which kind each entry is.
-2. A candidate's name, and any contact's name, is never empty, and every other returned detail follows its field rule from step 1, or the whole read fails with a server error. The AI instruction explicitly says to return an address when at least one of its five text fields has content, even when the address is partial, and to omit an address when all five fields are empty. Missing or unclear fields in a returned partial address are noted; if no address has any content, the candidate's address list is empty.
-3. Whether a phone number is real for its country, whether exactly one default is marked, and whether the addresses are an allowed combination, is only checked when a candidate is actually added.
-4. When no name at all can be read but an email plainly looks like a person's name, the name is worked out from that email, noted on the candidate, and counted as an ordinary candidate — never for a role mailbox, a meaningless address, a business's own name, or a name that was partly readable.
-5. The response always says how many entries were found and how many became candidates; for a spreadsheet, missed rows are listed by the row numbers the person sees in their own file, and for an image any detail goes in the notes.
-6. Candidates of the same kind whose names match, ignoring capitalisation, are each marked as a possible duplicate across the whole image or file, but never compared with customers already in the book.
+1. Every candidate carries the same details as a person or business added in [step 1](#1-user-adds-a-customer), whatever the source, plus its inferred, missing and duplicate fields, whether it needs attention, and its own extraction notes, and the AI decides which kind each entry is.
+2. A candidate's name, and any contact's name, may be absent but is never empty when returned, and every other returned detail follows its field rule from step 1, or the whole read fails with a server error. Which addresses are returned is set out in requirement 15.
+3. Whether a phone number is real for its country, and whether an email meets the full email standard, is only checked when a candidate is actually added; until then an email is returned as read, not lower-cased. A candidate's addresses are always an allowed combination (functional rule 6), because the system sets their number and types (requirement 16). The first email and the first phone number in each of a candidate's lists are marked as the default by the system, so the exactly-one-default rule never fails.
+4. When no name at all can be read, a name may be worked out from an email, listed as an inferred field, noted by the AI, and counted as an ordinary candidate that does not need attention: a person's or a contact's name from an email that plainly looks like a person's name, never a role mailbox or a meaningless address; a business's own name from the company domain of one of its own emails, never a free email provider, a meaningless or generic domain, or a contact's email. Never when any part of the name was readable, unless the processing message asks for it (requirement 24).
+5. An entry is one original customer row of a file, or one visible entry of an image, and counts once as processed when it gives at least one candidate, with or without a name. The info notes are, in order, `Processed <processed> of <total> entries`, then `Candidates created <count>` only when the candidates differ from the processed entries, then `Empty rows (<count>) at [<rows>]` and `Unidentified rows (<count>) at [<rows>]` only when they have rows, using the row numbers the person sees in their own file (the label row is row 1). The total is processed plus empty plus unidentified entries, so a file with 347 rows below the label row, one of them empty, reads `Processed 346 of 347 entries`. An image has no empty rows, and its row positions are the AI's top-to-bottom estimate, starting at 1. An unidentified row has content but no readable name or usable customer detail, or, in an image, is an entry too unclear to return.
+6. Candidates of the same kind whose names are exactly the same, with capital letters counting as they do when a customer is added, are each marked as needing attention across the whole image or file, but never compared with customers already in the book. Only candidates with a name are compared.
 7. Only PNG, JPEG or WEBP images and files genuinely readable as CSV or Excel (`.xls` or `.xlsx`) are accepted, up to 20 MB, with no limit on the number of rows.
 8. The file's name is required, 1–255 trimmed characters, and must end in `.png`, `.jpg`, `.jpeg`, `.webp`, `.csv`, `.xls` or `.xlsx` matching the actual file, ignoring capitalisation, or the request is rejected with `400 BAD_REQUEST_ERROR` and the file is never sent to the AI.
 9. Nothing is ever kept — no customer, no contact, and no copy of the image or file — and a candidate only becomes a customer once added through [step 1](#1-user-adds-a-customer).
-10. A business candidate may include contacts when the source identifies one, best-effort only and with no required layout.
+10. A business candidate includes a contact only when it is on the business's own entry or row, under a clear contact label or grouping, or, in a spreadsheet, on a following row with no name of its own that only adds contact details. An uncertain link is noted, and a separate named entry is never made a contact because it shares the company name.
 11. Only the first sheet of an Excel workbook is read.
-12. A completely blank spreadsheet row is never counted as an entry, but its row number is listed as empty.
-13. Each AI attempt may take up to three minutes by default, and temporary failures are tried again up to two more times, while rejections and unusable answers are not.
-14. Large spreadsheets are read in groups of up to 50 rows, up to 3 groups at a time, and if any group fails the whole read fails with no partial candidates.
-15. When a spreadsheet read in groups has something worth flagging, the person gets one short combined message, and failing to combine the messages never fails the read.
-16. The AI instruction treats missing, null, empty, and whitespace-only address text as empty, and treats any non-whitespace content as present after trimming. It returns each address that has at least one non-empty text field, including partial addresses, and notes missing or unclear fields; it omits each address whose five text fields are all empty. If none remain, the candidate's address list is empty rather than the candidate being dropped.
-17. The AI is asked to return at most two non-empty addresses per candidate: one alone is always marked `ShippingAndBilling`; two are marked one shipping and one billing as the source shows, or first shipping and second billing with a note that the types were assumed when it does not say; and from three or more, two are kept — the best shipping and billing pair, or else the first two — with a note that further addresses were left out.
+12. A completely blank spreadsheet row is never a candidate, but it counts towards the total in the first info note and its row number appears in the empty-rows info note.
+13. When the AI service cannot be reached, or its answer cannot be used, the read ends with a server error and no candidates.
+14. Large spreadsheets are read in groups of up to 100 rows, up to 4 groups at a time, and if any group fails the whole read fails with no partial candidates.
+15. An address is returned when at least one of its five text fields has content, even if it is partial, with a note for missing or unclear fields; an address whose five fields are all blank is left out, and a candidate with none left keeps an empty address list.
+16. The AI marks each address as shipping or billing as best it can, and the system keeps the first two non-empty ones: one alone is `ShippingAndBilling`; two stay as marked when they are one `Shipping` and one `Billing`, in either order, and otherwise the first becomes `Shipping` and the second `Billing`. Each address left out gets one note, `Address left out: <value>`, using its first non-empty field of address line 1, address line 2, city, postal code and country, in that order; setting a type adds no note.
+17. Every candidate lists its inferred fields (worked out rather than read), its missing fields (absent), and its duplicate fields (its name matches another candidate of the same kind in the same upload), each as a path to that value in the candidate, listed under **FieldInfo** below. The client uses each path to mark the matching input red (missing or duplicate) or yellow (inferred).
+18. A candidate needs attention when it has any missing or duplicate field: its name is missing (requirement 26) or duplicated (requirement 6), a contact's name is missing, or a phone number, its own or a contact's, has no country code. Inferred fields never mark a candidate.
+19. A country code written with the number, such as `+357` or `00357`, or in its own dialling-code column, counts as read. A missing code may be worked out from clear context, such as the entry's own address or a country used across the source, and is then listed as an inferred field and noted. When the clues conflict, the AI still gives its most plausible code, trusting the number's length and format and the country used across the source or the processing message over the address, and notes that the guess does not match, such as `Country code +357 guessed, but the city is in Greece`. Only when no country is plausible is the number kept without a code, the code listed as missing, and the reason noted.
+20. A detail that cannot be read is left out and noted, and never marks a candidate: an unreadable email, a phone number whose number cannot be read, or an address whose five text fields are all empty. Details the source does not show, such as empty cells or columns, are simply absent. Partial addresses and addresses left out because only two are kept never mark a candidate either. A detail left out at the processing message's request is meant to be absent rather than missing, but today a dropped country code or name is still reported missing ([gap 7](#7-a-detail-dropped-on-request-is-still-reported-missing)).
+21. Each candidate's extraction notes are the AI's short observations, such as `An email address could not be read`, plus one system note per address left out, in this order: about the candidate, about its addresses, the left-out address notes, then about each contact; they are never de-duplicated. Every note the AI writes, here and in the general extraction notes, has at most ten words, one point, plain everyday words and no semicolon, such as `Country code +357 added, based on the other numbers`.
+22. The general extraction notes are the AI's comments about the source as a whole. For a spreadsheet read in two or more groups, notes that say the same thing are combined into one, and every other note is kept exactly as written, in file order. If combining fails, each group's notes come back unchanged, so a note may repeat, and the read still succeeds.
+23. An optional processing message is 1–2,000 characters after trimming; an empty or whitespace-only message counts as none, and a longer one is rejected with `400 BAD_REQUEST_ERROR` before the file is sent to the AI.
+24. The processing message applies to the whole upload and every spreadsheet group, and may change anything about how the source is read, taking priority over the default reading rules, including how details are worked out and how unreadable details are handled. Three things stay fixed: every result still fits the response's rules, and a request that cannot fit is applied as far as possible and explained in a note; it never adds details the source does not support; and the system still works out the counts, the duplicate and missing fields and needs-attention, so the message cannot hide missing or unclear data. An entry it asks to skip is counted nowhere, not even as unidentified; a detail it asks to leave out is covered by requirement 20. It is never stored or returned.
+25. When the source clearly marks one email address or phone number as the main one, the AI lists it first, so it becomes the default; otherwise each list keeps the source order.
+26. When no name can be read or worked out from an email, the AI is asked to still return the entry as a candidate, without a name, if it has at least one usable customer detail: a readable email, a phone number with a readable national number (a country code is not needed), an address with at least one non-empty text field, a tax ID, or a contact. It is asked to keep a contact without a name only if the contact has a readable role, email or phone number, where a phone number with a readable national number counts even without a country code; otherwise there is no contact and no note.
+27. An entry with only a name is a candidate with no other details, unless it is clearly a section heading that groups the entries below it; when unsure, it is kept with a note.
+28. Titles, the uploader's own letterhead, dates, column label lines, repeated labels, totals, page numbers and footers are not entries: they are not counted, appear in neither row note, and the AI notes each one in the general extraction notes.
+29. A file column, or a kind of detail in an image, with no matching customer field is left out and noted once in the general extraction notes, never per row or candidate. Columns that are completely empty are skipped.
+30. A file's first row is always treated as the label row. When it looks like a customer instead, it is used only to understand the columns, is not read as a customer or counted, and gets one general note saying it looked like data and was skipped, so the user can add that customer by hand ([gap 6](#6-a-file-without-a-label-row-skips-its-first-customer)).
+31. Names are kept as written, never translated. Whether an entry is a person or a business is decided from evidence: a company name, a legal suffix, a tax ID, or listed contacts.
 
 #### Request / Response / Outcome
 
@@ -713,57 +745,105 @@ One upload carries whichever of the three the user has — an image, a CSV file,
 
 **Request**
 
-The body is the image or file itself, as with every other upload in this product. The organization travels in a header, since the body carries the file. The file's name is a required header; its extension must match the actual file, and it is never stored.
+The body is the image or file itself, as with every other upload in this product. The organization travels in a header, since the body carries the file. The file's name is a required header; its extension must match the actual file, and it is never stored. The processing message is an optional header and is never stored either.
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Organization ID | `UUID` | Canonical 36-character form | ✅ | Which organization's book this is for. Travels in the request's header |
 | File | Binary | PNG, JPEG or WEBP; or genuinely readable as CSV or Excel (`.xls` or `.xlsx`); up to 20 MB | ✅ | The image or file to read, sent as the request body |
 | File Name | `String` | 1–255 characters, trimmed; supported extension matching the actual format | ✅ | The file's name, sent as a header. It is never stored |
+| Processing Message | `String` | 1–2,000 characters after trimming; empty or whitespace-only counts as none | ❌ | Optional instructions for reading the uploaded source, which take priority over the default reading rules (requirement 24), sent as a header. It is never stored |
 
-**Response — `ExtractCustomersPostResponse`**
+**Response — `CustomerBookFileAiExtractPostResponse`**
 
-| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
-| --- | --- | --- | --- | --- |
-| Entries Identified | `Long` | Whole number, zero or more | ✅ | How many entries the source seemed to contain, including ones not turned into a candidate |
-| Entries Processed | `Long` | Whole number, zero or more | ✅ | How many of those became a candidate person or business |
-| Customer Individual Candidates | `ExtractCustomerIndividualData[]` | May be empty | ✅ | Recognized people, in whatever order the source listed them |
-| Customer Business Candidates | `ExtractCustomerBusinessData[]` | May be empty | ✅ | Recognized businesses, in whatever order the source listed them |
-| Empty Entry Rows | `Long[]` | May be empty | ✅ | Spreadsheet rows that were completely blank, numbered as in the person's own file (header is row 1). Always empty for an image |
-| Unidentified Entry Rows | `Long[]` | May be empty | ✅ | Spreadsheet rows with content but no readable name, numbered as in the person's own file (header is row 1). Always empty for an image |
-| Unidentified Entries Notes | `String` | Concise, plain text | ❌ | Anything else worth flagging, including when no relevant customer data could be detected. For an image, describes missed entries. For a spreadsheet read in groups, one combined message |
-
-**ExtractCustomerIndividualData**
-
-A `candidate` part with the same fields and constraints as **CustomerIndividual** ([step 1](#1-user-adds-a-customer)) — Full Name, Emails, Phone Numbers, and Addresses — where each phone number has only a national number and a country dialling code, and each address carries its type. Alongside it:
+In this response, a list with nothing in it is left out rather than sent empty, so a client treats a missing list as empty. That is why those lists are marked not required below.
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Is Duplicate | `Boolean` | — | ✅ | True when another candidate of the same kind in this same response has a matching name, ignoring capitalisation |
-| Extraction Notes | `String` | Concise, plain text | ❌ | One short line, only when something was missing or unclear, or the name was worked out from an email |
+| Individual Candidates | `CustomerIndividualCandidate[]` | Left out when empty | ❌ | Recognized people, in whatever order the source listed them |
+| Business Candidates | `CustomerBusinessCandidate[]` | Left out when empty | ❌ | Recognized businesses, in whatever order the source listed them |
+| Info Notes | `String[]` | Always starts with the processed-of-total summary; a candidates-created count only when it differs from the processed entries; empty-row and unidentified-row summaries only when they have rows | ✅ | Processing summaries for this source |
+| Extraction Notes | `String[]` | Left out when empty; plain strings, one point each, no bullet prefix | ❌ | The AI's general comments about the source, including when no customer data could be detected; for a spreadsheet read in two or more groups, notes that say the same thing are combined into one, but may repeat if combining fails (requirement 22) |
 
-**ExtractCustomerBusinessData**
+**CustomerIndividualCandidate**
 
-A `candidate` part with the same fields and constraints as **CustomerBusiness** ([step 1](#1-user-adds-a-customer)) — Business Name, Emails, Phone Numbers, Tax ID, Addresses, and Customer Business Contacts — where each phone number has only a national number and a country dialling code, and each address carries its type. Alongside it:
+The details follow the same field rules as **CustomerBookIndividualPostRequest** ([step 1](#1-user-adds-a-customer)). The checks in requirement 3 are left until the candidate is added.
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
-| Is Duplicate | `Boolean` | — | ✅ | True when another candidate of the same kind in this same response has a matching name, ignoring capitalisation |
-| Extraction Notes | `String` | Concise, plain text | ❌ | One short line, only when something about the business or one of its contacts was missing or unclear, or a name was worked out from an email |
+| Full Name | `String` | 1–255 characters, trimmed | ❌ | The person's name, as read or worked out from an email; absent when not readable, which marks the candidate |
+| Emails | `CustomerEmailEntry[]` | Left out when empty; the first entry is the default | ❌ | Readable email addresses; one that cannot be read is left out and noted |
+| Phone Numbers | `CustomerPhoneNumberEntryCandidate[]` | Left out when empty; the first entry is the default | ❌ | Phone numbers as read. See **CustomerPhoneNumberEntryCandidate** below |
+| Addresses | `CustomerAddressEntry[]` | Left out when empty; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Addresses as read, at most two, each with its type |
+| Inferred Fields | `FieldInfo[]` | Left out when empty | ❌ | Details worked out rather than read. See **FieldInfo** below |
+| Missing Fields | `FieldInfo[]` | Left out when empty | ❌ | Details that are absent and must be supplied before adding |
+| Duplicate Fields | `FieldInfo[]` | Left out when empty | ❌ | Details that match another candidate of the same kind in the same upload |
+| Needs Attention | `Boolean` | True exactly when Missing Fields or Duplicate Fields is non-empty | ✅ | Whether the user must fix something before adding |
+| Extraction Notes | `String[]` | Left out when empty; plain strings, one point each, no bullet prefix | ❌ | The AI's own observations about the person, then about each of its addresses, then a note for each address left out |
+
+**FieldInfo**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Path | `String` | A JSON Pointer ([RFC 6901](https://www.rfc-editor.org/rfc/rfc6901)) from the candidate object, with 0-based list positions; one of `/fullName`, `/businessName`, `/phoneNumbers/{i}/phoneNumber/phoneCountryCode`, `/customerBusinessContacts/{i}/fullName`, `/customerBusinessContacts/{i}/phoneNumber/phoneCountryCode` | ✅ | The exact value in the candidate this is about, such as `/phoneNumbers/1/phoneNumber/phoneCountryCode` for the second phone's country code |
+
+**CustomerPhoneNumberEntryCandidate**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Phone Number | `CustomerPhoneNumberCandidate` | — | ✅ | One phone number. See **CustomerPhoneNumberCandidate** below |
+| Is Default | `Boolean` | True for the first entry in the list only | ✅ | Marks the number to use by default |
+
+**CustomerPhoneNumberCandidate**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Phone National Number | `String` | 1–255 characters, trimmed | ✅ | The number without its country code |
+| Phone Country Code | `String` | 1–255 characters, trimmed | ❌ | The country dialling code, as read, or worked out or guessed from context; absent only when no country is plausible, which marks the candidate |
+
+**CustomerBusinessCandidate**
+
+The details follow the same field rules as **CustomerBookBusinessPostRequest** ([step 1](#1-user-adds-a-customer)), handled the same way as **CustomerIndividualCandidate**.
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Business Name | `String` | 1–255 characters, trimmed | ❌ | The company's name, as read or worked out from its email domain; absent when not readable, which marks the candidate |
+| Emails | `CustomerEmailEntry[]` | Left out when empty; the first entry is the default | ❌ | Readable email addresses; one that cannot be read is left out and noted |
+| Tax ID | `String` | 1–255 characters, trimmed | ❌ | The company's tax reference, when readable |
+| Phone Numbers | `CustomerPhoneNumberEntryCandidate[]` | Left out when empty; the first entry is the default | ❌ | Phone numbers as read |
+| Addresses | `CustomerAddressEntry[]` | Left out when empty; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Addresses as read, at most two, each with its type |
+| Customer Business Contacts | `CustomerBusinessContactCandidate[]` | Left out when empty; best-effort | ❌ | People inside the business, when the source identifies them. See **CustomerBusinessContactCandidate** below |
+| Inferred Fields | `FieldInfo[]` | Left out when empty | ❌ | Details of the business or its contacts worked out rather than read. See **FieldInfo** above |
+| Missing Fields | `FieldInfo[]` | Left out when empty | ❌ | Details of the business or its contacts that are absent and must be supplied before adding |
+| Duplicate Fields | `FieldInfo[]` | Left out when empty | ❌ | Details that match another business candidate in the same upload |
+| Needs Attention | `Boolean` | True exactly when Missing Fields or Duplicate Fields is non-empty | ✅ | Whether the user must fix something before adding |
+| Extraction Notes | `String[]` | Left out when empty; plain strings, one point each, no bullet prefix | ❌ | The AI's own observations about the business, then about each of its addresses, then a note for each address left out, then the AI's observations about each contact |
+
+**CustomerBusinessContactCandidate**
+
+| **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
+| --- | --- | --- | --- | --- |
+| Full Name | `String` | 1–255 characters, trimmed | ❌ | The contact's name, as read or worked out from an email; absent when not readable, which marks the business |
+| Role | `String` | 1–255 characters, trimmed | ❌ | What they do there, when readable |
+| Email | `String` | Shaped like `name@domain.tld`, with no spaces; max 255 characters; the full email standard is checked only when added (requirement 3) | ❌ | The contact's email, when readable; one that cannot be read is left out and noted |
+| Phone Number | `CustomerPhoneNumberCandidate` | — | ❌ | The contact's phone number, when its number is readable; its country code may be absent, which marks the business |
+
+Examples: `Processed 12 of 16 entries`, `Empty rows (2) at [3, 5]`, and `Unidentified rows (2) at [7, 11]` are separate info notes; one row reads `Empty rows (1) at [6]` or `Unidentified rows (1) at [7]`. When the processing message turns 346 entries into 440 candidates, the notes read `Processed 346 of 347 entries`, `Candidates created 440` and `Empty rows (1) at [6]`. An image with 3 candidates and two entries it could not read reads `Processed 3 of 5 entries` and `Unidentified rows (2) at [4, 9]`. `The image is cropped` belongs in the general extraction notes, and `An email address could not be read` in a candidate's extraction notes, as does `Address left out: 12 Main Street` for a third address with line 1 `12 Main Street` and city `Nicosia`, or `Address left out: Nicosia` for one with only a city. A business whose name matches another business candidate lists `/businessName` as a duplicate field; a person without a name lists `/fullName` as a missing field; a business whose second contact has no name lists `/customerBusinessContacts/1/fullName` as a missing field; a person whose first phone number's country code was worked out from their address lists `/phoneNumbers/0/phoneNumber/phoneCountryCode` as an inferred field, and so does a person whose 8-digit number `96334221` was given `+357` even though their city is `Θεσσαλονίκη`, with a note saying the code is a guess that does not match the city. Only missing and duplicate fields mark a candidate as needing attention; inferred fields and notes never do.
 
 **Outcome**
 
-- Nothing is stored: no customer, no contact, and no copy of the image or file. The response is not remembered either.
+- Nothing is stored: no customer, no contact, no processing message, and no copy of the image or file. The response is not remembered either.
 - The image or file is read by an outside AI service and not kept afterwards.
-- A missing, malformed or mismatched file name stops the request before the file is sent to the AI.
-- Using a candidate means adding it through [step 1](#1-user-adds-a-customer), like anything typed in by hand.
-- The two counts show when entries were missed — say four found but three processed — and for a spreadsheet the row lists point straight to them.
+- A missing, malformed or mismatched file name, or a processing message over 2,000 characters, stops the request before the file is sent to the AI.
+- Each candidate shows which of its details were worked out, which are missing (a name, a contact's name, or a phone country code), and whether its name is duplicated, so the user can fix it first, and its notes explain anything that was left out. An entry with usable details but no readable name still comes back, without a name, for the user to complete.
+- Using a candidate means adding it through [step 1](#1-user-adds-a-customer), like anything typed in by hand, where every check is made.
+- The first info note shows when entries were missed — say `Processed 3 of 4 entries` — and the row notes point straight to them; for an image the positions are the AI's best estimate. A `Candidates created` note appears only when the number of candidates differs from the entries processed.
 
 #### Http Error Responses
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `BAD_REQUEST_ERROR` | - The organization id header is missing - The required file name header is missing or malformed - The filename extension is missing, unsupported, or does not match the actual file, including a file that is not a supported image, CSV or Excel file |
+| 400 | `BAD_REQUEST_ERROR` | - The organization id header is missing - The required file name header is missing or malformed - The filename extension is missing, unsupported, or does not match the actual file, including a file that is not a supported image, CSV or Excel file - The processing message is longer than 2,000 characters after trimming |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow this |
 | 500 | `INTERNAL_SERVER_ERROR` | - The upload could not be read, or is larger than 20 MB - The file is not genuinely readable as a CSV or Excel file - The person does not belong to the organization - The AI service could not be reached, or sent back something that could not be used - Unexpected error |
@@ -813,5 +893,21 @@ Nothing today creates such a record, but a future change or a direct data fix co
 [Extracting customers from an image or file](#8-user-extracts-customers-from-an-image-or-file) can be used as often as an owner or admin likes, with no limit per person, per organization, or overall. Each read goes to an outside AI service, which costs money, so nothing stops it being used far more than the migration it is meant for needs.
 
 **To decide:** whether a limit is needed, and if so what it should be.
+
+#### 6. A file without a label row skips its first customer
+
+When [extracting customers from a file](#8-user-extracts-customers-from-an-image-or-file), the first row is always treated as the label row. In a file without labels, that first customer is skipped with a note.
+
+The user has to add that customer by hand.
+
+**To decide:** whether files without a label row should be detected, so the first customer is read.
+
+#### 7. A detail dropped on request is still reported missing
+
+When [extracting customers](#8-user-extracts-customers-from-an-image-or-file) with a processing message that asks for phone country codes to be left out, each number comes back without its code but is still listed as missing, and the candidate is marked as needing attention. A name, or a contact's name, that the message asks to leave out is treated the same way. Scenario 28 and requirements 20 and 24 intend such a detail to count as absent, so it would not mark the candidate.
+
+Every such candidate then looks as though it needs fixing, and it cannot be added until the user supplies the very detail they asked to drop.
+
+**To decide:** whether a detail dropped on request should stop counting as missing, and if so how the system should tell it apart from one that could not be read.
 
 {% include abbreviations.md %}

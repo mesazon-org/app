@@ -1,3 +1,3 @@
 package io.mesazon.domain.gateway
 
-case class NoteCompactionOutput(note: String)
+case class NoteCompactionOutput(notes: List[String])

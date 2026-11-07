@@ -1,0 +1,22 @@
+{
+  "priority": 2,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "contains": "Return exactly one CustomerBookFileAIExtract"
+      },
+      {
+        "contains": "json_schema"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"chatcmpl-customer-book-file-acceptance\",\"object\":\"chat.completion\",\"created\":1700000000,\"model\":\"test-model\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"entriesIdentified\\\":2,\\\"entriesProcessed\\\":2,\\\"individualCandidates\\\":[{\\\"fullName\\\":\\\"John Smith\\\",\\\"emails\\\":[\\\"john.smith@example.com\\\"],\\\"phoneNumbers\\\":[],\\\"addresses\\\":[],\\\"fullNameInferred\\\":false,\\\"extractionNotes\\\":[]},{\\\"fullName\\\":\\\"Jane Doe\\\",\\\"emails\\\":[\\\"jane.doe@example.com\\\"],\\\"phoneNumbers\\\":[],\\\"addresses\\\":[],\\\"fullNameInferred\\\":false,\\\"extractionNotes\\\":[]}],\\\"businessCandidates\\\":[],\\\"emptyEntryRowIndexes\\\":[],\\\"unidentifiedEntryRowIndexes\\\":[],\\\"extractionNotes\\\":[]}\"}}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}"
+  }
+}
