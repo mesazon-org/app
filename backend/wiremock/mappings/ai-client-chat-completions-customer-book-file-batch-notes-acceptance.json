@@ -1,0 +1,25 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "contains": "Return exactly one CustomerBookFileAIExtract"
+      },
+      {
+        "contains": "json_schema"
+      },
+      {
+        "contains": "AI_CLIENT_SPEC_BATCH_NOTES"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"chatcmpl-customer-book-file-batch-notes-acceptance\",\"object\":\"chat.completion\",\"created\":1700000000,\"model\":\"test-model\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"entriesIdentified\\\":0,\\\"entriesProcessed\\\":0,\\\"individualCandidates\\\":[],\\\"businessCandidates\\\":[],\\\"emptyEntryRowIndexes\\\":[],\\\"unidentifiedEntryRowIndexes\\\":[],\\\"extractionNotes\\\":[\\\"Column Balance was ignored\\\"]}\"}}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}"
+  }
+}

@@ -15,7 +15,12 @@ import zio.stream.ZStream
 class CatalogueFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, GatewayArbitraries {
 
   private val apiKey =
-    sys.env.getOrElse("AI_CLIENT_DATA_EXTRACTION_API_KEY", "")
+    sys.env.getOrElse(
+      "AI_CLIENT_DATA_EXTRACTION_API_KEY",
+      "",
+    )
+
+  private inline val JsonIndentionStep = 2
 
   private def buildCatalogueFileService: CatalogueFileService[ServiceTask] = ZIO
     .service[CatalogueFileService[ServiceTask]]
@@ -60,7 +65,7 @@ class CatalogueFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, GatewayAr
         val catalogueFileExtractFileName   = CatalogueFileExtractFileName.assume("catalogue-file-ai-extract-1.jpeg")
         val catalogueFileExtractByteStream = ZStream.fromResource(s"assets/${catalogueFileExtractFileName.value}")
         val catalogueFileProcessingMessage = CatalogueFileProcessingMessage.assume(
-          "Ignore prices, currently is by 1 kg but I want 12 kg box that my sale unit dont create variants with 1kg the rest remain the same"
+          "ignore cost, each item now is represente with 1 kg but I want a single item with 12 kg per box, keep fruits with 1 kg"
         )
 
         val catalogueFileAiExtractPostResponse = buildCatalogueFileService
@@ -73,7 +78,7 @@ class CatalogueFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, GatewayAr
           .zioValue
 
         info(
-          s"${catalogueFileExtractFileName.value} response:\n${writeToString(catalogueFileAiExtractPostResponse, WriterConfig.withIndentionStep(2))}"
+          s"${catalogueFileExtractFileName.value} response:\n${writeToString(catalogueFileAiExtractPostResponse, WriterConfig.withIndentionStep(JsonIndentionStep))}"
         )
       }
 
@@ -92,7 +97,7 @@ class CatalogueFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, GatewayAr
 //          .zioValue
 //
 //        info(
-//          s"${catalogueFileExtractFileName.value} response:\n${writeToString(catalogueFileAiExtractPostResponse, WriterConfig.withIndentionStep(2))}"
+//          s"${catalogueFileExtractFileName.value} response:\n${writeToString(catalogueFileAiExtractPostResponse, WriterConfig.withIndentionStep(JsonIndentionStep))}"
 //        )
 //      }
     }

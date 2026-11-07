@@ -163,14 +163,14 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 
 - **Status:** Mitigated 2026-09-13
 - **Severity:** Medium
-- **Signature:** `gateway-it/testOnly *GatewayAcceptanceSpec -- -z /extract/customers` builds the images and reports success, but executes zero tests. Running `FileApiSpec` directly instead bypasses the parent context initialization. Running ScalaTest's standalone runner from the repository root can also abort with `Unable to parse YAML file` / missing `compose.yaml` before starting tests.
+- **Signature:** `gateway-it/testOnly *GatewayAcceptanceSpec -- -z /extract/customers` (the old customer-extraction route, since replaced by `/customer-book/file/ai/extract`) builds the images and reports success, but executes zero tests. Running `FileApiSpec` directly instead bypasses the parent context initialization. Running ScalaTest's standalone runner from the repository root can also abort with `Unable to parse YAML file` / missing `compose.yaml` before starting tests.
 - **Cause:** sbt's ScalaTest wildcard test selector targets the selected parent's own test names, not its nested specs. The compose harness also depends on the gateway-it working directory. Nested suite selection is supported by the standalone [ScalaTest runner](https://www.scalatest.org/user_guide/using_the_runner), not sbt's suite-argument parser.
 - **Fix:** After publishing the current gateway and WireMock images, select the nested file suite through its parent and set the forked runner's working directory for this invocation only:
   ```sh
   sbt "set backendGatewayIt / Test / run / forkOptions := Def.uncached((backendGatewayIt / Test / run / forkOptions).value.withWorkingDirectory(Some((backendGatewayIt / baseDirectory).value))); gateway-it/Test/runMain org.scalatest.tools.Runner -o -s io.mesazon.gateway.it.harness.GatewayAcceptanceSpec -i io.mesazon.gateway.it.FileApiSpec"
   ```
 - **Prevention:** `Test/runMain` does not invoke the build's test-entrypoint Docker publish hooks; publish fresh images first. Do not count a successful zero-test command as proof, run a child without its parent, or assume adding `-z` to this nested selection narrows the suite: the verified invocation with `-z` still ran the entire file suite.
-- **Verify:** The shared stack starts and the runner reports 34 passing `FileApiSpec` tests, including all twelve unified customer-extraction cases. No shared harness/build changes are required.
+- **Verify:** The shared stack starts and the runner reports a non-zero passing `FileApiSpec` count: 9 organization-logo cases on 2026-10-30, after customer extraction was removed. No shared harness/build changes are required.
 
 ## DigitalOcean deploy fails readiness with connection refused despite a healthy app
 
@@ -189,3 +189,13 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Cause:** Each attempt exceeded the golden's 60-second read deadline; the client allowed two retries with exponential delay. The exception does not identify whether provider latency, request complexity, or connectivity caused the delay. No completion reached JSON decoding.
 - **Adjustment:** The catalogue image manual golden now uses 180 seconds per attempt, retaining two retries. A timeout-only run can therefore take roughly nine minutes. The shared production default is also 180 seconds per attempt, with the existing environment override and client retry/error behavior retained.
 - **Verify:** Compile/lint the spec without sending data. A person can then run it with their configured key and asset to observe whether a complete response arrives within the longer deadline; canceled or timed-out runs are not extraction-quality evidence.
+
+## `gateway-core/testOnly` runs no tests when Docker is not running
+
+- **Status:** Workaround available
+- **Severity:** Low
+- **Signature:** `sbt "gateway-core/testOnly io.mesazon.gateway.fun.<Spec>"` fails before any test starts with `failed to connect to the docker API at unix:///Users/<user>/.docker/run/docker.sock`, even though the functional specs use no containers.
+- **Cause:** `gateway-core` sets `Settings.testAfterDockerPublish(backendWiremock / Docker / publishLocal)` (`build.sbt`), so the `Test / test*` tasks first publish the WireMock image.
+- **Fix:** Start Docker, or run the same specs through `Test / testOnly`, which skips the Docker publish: `sbt "gateway-core/Test/testOnly io.mesazon.gateway.fun.CustomerBookFileServiceSpec"`.
+- **Prevention:** The `CLAUDE.md` command `gateway-core/testOnly io.mesazon.gateway.fun.*` ("no containers") needs Docker for the image publish. Use the `Test/testOnly` form when Docker is down; acceptance (`gateway-it/test`) always needs Docker.
+- **Verify:** With Docker stopped, the `Test/testOnly` command runs the spec (`CustomerBookFileServiceSpec` has 53 tests) and reports `All tests passed`.

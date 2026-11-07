@@ -11,6 +11,6 @@
   "response": {
     "status": 200,
     "headers": { "Content-Type": "application/json" },
-    "body": "{\"id\":\"chatcmpl-ai-client-spec-note-compaction-success\",\"object\":\"chat.completion\",\"created\":1700000000,\"model\":\"test-model\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"note\\\":\\\"Two rows were blank and one had no readable name.\\\"}\"}}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}"
+    "body": "{\"id\":\"chatcmpl-ai-client-spec-note-compaction-success\",\"object\":\"chat.completion\",\"created\":1700000000,\"model\":\"test-model\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"notes\\\":[\\\"Two rows were blank\\\",\\\"One row had no readable name\\\"]}\"}}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}"
   }
 }

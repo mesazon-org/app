@@ -52,6 +52,7 @@ object Main extends ZIOAppDefault {
       AuthorizationService.tapir,
       FileService.live,
       CatalogueFileService.live,
+      CustomerBookFileService.live,
       HealthCheckService.live,
       WahaService.live,
       UserSignUpService.live,
@@ -118,6 +119,7 @@ object Main extends ZIOAppDefault {
       S3ClientOrganizationMediaConfig.live,
       FileServiceConfig.live,
       CatalogueFileServiceConfig.live,
+      CustomerBookFileServiceConfig.live,
 
       // Domain validators
       EmailValidator.live,

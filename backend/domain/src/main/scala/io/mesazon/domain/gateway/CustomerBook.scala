@@ -84,64 +84,114 @@ case class CustomerBookUniquenessGetRequest(
     customerID: Option[CustomerID],
 )
 
-// File extraction
-
-case class ExtractCustomerEmailEntry(
-    email: CustomerEmail,
-    isDefault: Boolean,
-)
-
-case class ExtractCustomerPhoneNumber(
+// AI
+case class CustomerPhoneNumberAIExtract(
     phoneNationalNumber: PhoneNationalNumber,
-    phoneCountryCode: PhoneCountryCode,
+    phoneCountryCode: Option[PhoneCountryCode],
+    phoneCountryCodeInferred: Boolean,
 )
 
-case class ExtractCustomerPhoneNumberEntry(
-    phoneNumber: ExtractCustomerPhoneNumber,
-    isDefault: Boolean,
+case class CustomerAddressAIExtract(
+    addressLine1: Option[AddressLine1],
+    addressLine2: Option[AddressLine2],
+    city: Option[City],
+    postalCode: Option[PostalCode],
+    country: Option[Country],
+    extractionNotes: List[String],
 )
 
-case class ExtractCustomerIndividual(
-    fullName: CustomerFullName,
-    emails: List[ExtractCustomerEmailEntry],
-    phoneNumbers: List[ExtractCustomerPhoneNumberEntry],
-    addresses: List[CustomerAddressEntry],
+case class CustomerAddressEntryAIExtract(
+    address: CustomerAddressAIExtract,
+    addressType: AddressType,
 )
 
-case class ExtractCustomerBusinessContact(
-    fullName: CustomerFullName,
+case class CustomerBusinessContactAIExtract(
+    fullName: Option[CustomerFullName],
     role: Option[CustomerBusinessContactRole],
     email: Option[CustomerEmail],
-    phoneNumber: Option[ExtractCustomerPhoneNumber],
+    phoneNumber: Option[CustomerPhoneNumberAIExtract],
+    fullNameInferred: Boolean,
+    extractionNotes: List[String],
 )
 
-case class ExtractCustomerBusiness(
-    businessName: CustomerBusinessName,
-    emails: List[ExtractCustomerEmailEntry],
+case class CustomerIndividualAIExtract(
+    fullName: Option[CustomerFullName],
+    emails: List[CustomerEmail],
+    phoneNumbers: List[CustomerPhoneNumberAIExtract],
+    addresses: List[CustomerAddressEntryAIExtract],
+    fullNameInferred: Boolean,
+    extractionNotes: List[String],
+)
+
+case class CustomerBusinessAIExtract(
+    businessName: Option[CustomerBusinessName],
+    emails: List[CustomerEmail],
     taxID: Option[CustomerTaxID],
-    phoneNumbers: List[ExtractCustomerPhoneNumberEntry],
-    addresses: List[CustomerAddressEntry],
-    customerBusinessContacts: List[ExtractCustomerBusinessContact],
+    phoneNumbers: List[CustomerPhoneNumberAIExtract],
+    addresses: List[CustomerAddressEntryAIExtract],
+    customerBusinessContacts: List[CustomerBusinessContactAIExtract],
+    businessNameInferred: Boolean,
+    extractionNotes: List[String],
 )
 
-case class ExtractCustomerIndividualData(
-    candidate: ExtractCustomerIndividual,
-    isDuplicate: Boolean,
-    extractionNotes: Option[String],
-)
-
-case class ExtractCustomerBusinessData(
-    candidate: ExtractCustomerBusiness,
-    isDuplicate: Boolean,
-    extractionNotes: Option[String],
-)
-
-case class ExtractCustomersPostResponse(
+case class CustomerBookFileAIExtract(
     entriesIdentified: Long,
     entriesProcessed: Long,
-    customerIndividualCandidates: List[ExtractCustomerIndividualData],
-    customerBusinessCandidates: List[ExtractCustomerBusinessData],
-    emptyEntryRows: List[Long],
-    unidentifiedEntryRows: List[Long],
-    unidentifiedEntriesNotes: Option[String],
+    individualCandidates: List[CustomerIndividualAIExtract],
+    businessCandidates: List[CustomerBusinessAIExtract],
+    emptyEntryRowIndexes: List[Long],
+    unidentifiedEntryRowIndexes: List[Long],
+    extractionNotes: List[String],
+)
+
+// Customer Book File
+
+case class CustomerPhoneNumberCandidate(
+    phoneNationalNumber: PhoneNationalNumber,
+    phoneCountryCode: Option[PhoneCountryCode],
+)
+
+case class CustomerPhoneNumberEntryCandidate(
+    phoneNumber: CustomerPhoneNumberCandidate,
+    isDefault: Boolean,
+)
+
+case class CustomerBusinessContactCandidate(
+    fullName: Option[CustomerFullName],
+    role: Option[CustomerBusinessContactRole],
+    email: Option[CustomerEmail],
+    phoneNumber: Option[CustomerPhoneNumberCandidate],
+)
+
+case class CustomerIndividualCandidate(
+    fullName: Option[CustomerFullName],
+    emails: List[CustomerEmailEntry],
+    phoneNumbers: List[CustomerPhoneNumberEntryCandidate],
+    addresses: List[CustomerAddressEntry],
+    inferredFields: List[FieldInfo],
+    missingFields: List[FieldInfo],
+    duplicateFields: List[FieldInfo],
+    needsAttention: Boolean,
+    extractionNotes: List[String],
+)
+
+case class CustomerBusinessCandidate(
+    businessName: Option[CustomerBusinessName],
+    emails: List[CustomerEmailEntry],
+    taxID: Option[CustomerTaxID],
+    phoneNumbers: List[CustomerPhoneNumberEntryCandidate],
+    addresses: List[CustomerAddressEntry],
+    customerBusinessContacts: List[CustomerBusinessContactCandidate],
+    inferredFields: List[FieldInfo],
+    missingFields: List[FieldInfo],
+    duplicateFields: List[FieldInfo],
+    needsAttention: Boolean,
+    extractionNotes: List[String],
+)
+
+case class CustomerBookFileAiExtractPostResponse(
+    individualCandidates: List[CustomerIndividualCandidate],
+    businessCandidates: List[CustomerBusinessCandidate],
+    infoNotes: List[String],
+    extractionNotes: List[String],
 )

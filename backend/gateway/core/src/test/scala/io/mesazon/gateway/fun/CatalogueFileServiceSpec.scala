@@ -499,7 +499,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
         )
 
@@ -532,7 +531,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           (fileScannedPath, SupportedMediaType.JPEG, AIInstructions.extractCatalogueItemsFromImageInstructions)
         )
         extractFromCsvCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "map usable variants to inserts and preserve general notes without requiring attention" in new TestContext {
@@ -589,7 +587,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
         )
         val response = buildCatalogueFileService(aiClientDataExtraction)
@@ -666,7 +663,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
         )
         val response = buildCatalogueFileService(aiClientDataExtraction)
@@ -731,7 +727,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
         )
         val response = buildCatalogueFileService(aiClientDataExtraction)
@@ -807,7 +802,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
         )
         val response = buildCatalogueFileService(aiClientDataExtraction)
@@ -881,7 +875,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
         )
         val response = buildCatalogueFileService(aiClientDataExtraction)
@@ -955,7 +948,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
         )
         val response = buildCatalogueFileService(aiClientDataExtraction)
@@ -997,7 +989,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
         )
         val response = buildCatalogueFileService(aiClientDataExtraction)
@@ -1030,7 +1021,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
         )
         val response = buildCatalogueFileService(aiClientDataExtraction)
@@ -1063,7 +1053,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
         )
         val response = buildCatalogueFileService(aiClientDataExtraction)
@@ -1096,7 +1085,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
           extractFromImageProcessingMessagesRefOpt = Some(extractFromImageProcessingMessagesRef),
         )
@@ -1114,7 +1102,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         )
         extractFromImageProcessingMessagesRef.refValue shouldBe List(catalogueFileProcessingMessageOpt.map(_.value))
         extractFromCsvCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "forward photo processing guidance" in new TestContext {
@@ -1138,7 +1125,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromImageOptResult = Some(ZIO.succeed(catalogueFileAIExtract)),
           extractFromImageProcessingMessagesRefOpt = Some(extractFromImageProcessingMessagesRef),
         )
@@ -1156,7 +1142,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         )
         extractFromImageProcessingMessagesRef.refValue shouldBe List(catalogueFileProcessingMessageOpt.map(_.value))
         extractFromCsvCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "extract catalogue items from CSV" in new TestContext {
@@ -1200,7 +1185,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(catalogueFileAIExtract))),
           extractFromCsvProcessingMessagesRefOpt = Some(extractFromCsvProcessingMessagesRef),
         )
@@ -1230,7 +1214,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         )
         extractFromCsvProcessingMessagesRef.refValue shouldBe List(Some(catalogueFileProcessingMessage.value))
         extractFromImageCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "extract catalogue items from XLS" in new TestContext {
@@ -1276,7 +1259,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(catalogueFileAIExtract))),
           extractFromCsvProcessingMessagesRefOpt = Some(extractFromCsvProcessingMessagesRef),
         )
@@ -1301,7 +1283,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         )
         extractFromCsvProcessingMessagesRef.refValue shouldBe List(None)
         extractFromImageCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "extract catalogue items from XLSX" in new TestContext {
@@ -1347,7 +1328,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk.single(catalogueFileAIExtract))),
           extractFromCsvProcessingMessagesRefOpt = Some(extractFromCsvProcessingMessagesRef),
         )
@@ -1372,7 +1352,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         )
         extractFromCsvProcessingMessagesRef.refValue shouldBe List(None)
         extractFromImageCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "preserve spreadsheet batch order and combine counts and row findings" in new TestContext {
@@ -1432,7 +1411,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromCsvOptResult =
             Some(ZIO.succeed(NonEmptyChunk(catalogueFileAIExtractFirst, catalogueFileAIExtractSecond))),
         )
@@ -1463,7 +1441,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
         )
         extractFromImageCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "mark duplicate names and SKUs ignoring case" in new TestContext {
@@ -1551,7 +1528,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromCsvOptResult =
             Some(ZIO.succeed(NonEmptyChunk(catalogueFileAIExtractFirst, catalogueFileAIExtractSecond))),
         )
@@ -1593,7 +1569,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
         )
         extractFromImageCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "fail with an UnexpectedError when extraction file scanning fails" in new TestContext {
@@ -1636,7 +1611,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[CatalogueFileAIExtract](
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromImageOptResult = Some(ZIO.fail(serviceError)),
         )
 
@@ -1647,7 +1621,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           (fileScannedPath, SupportedMediaType.JPEG, AIInstructions.extractCatalogueItemsFromImageInstructions)
         )
         extractFromCsvCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
       "fail with an UnexpectedError when spreadsheet conversion fails" in new TestContext {
         val organizationID                 = arbitrarySample[OrganizationID]
@@ -1671,7 +1644,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[CatalogueFileAIExtract](
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromCsvOptResult = Some(ZIO.fail(serviceError)),
         )
         buildCatalogueFileService(aiClientDataExtraction)
@@ -1679,7 +1651,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           .zioError shouldBe serviceError
         extractFromCsvCallsRef.refValue shouldBe Nil
         extractFromImageCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
       "fail with an UnexpectedError when spreadsheet AI extraction fails" in new TestContext {
@@ -1705,7 +1676,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[CatalogueFileAIExtract](
           extractFromImageCallsRef,
           extractFromCsvCallsRef,
-          noteCompactionCallsRef,
           extractFromCsvOptResult = Some(ZIO.fail(serviceError)),
         )
         buildCatalogueFileService(aiClientDataExtraction)
@@ -1715,7 +1685,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           (csvRecords, AIInstructions.extractCatalogueItemsFromFileInstructions)
         )
         extractFromImageCallsRef.refValue shouldBe Nil
-        noteCompactionCallsRef.refValue shouldBe Nil
       }
 
     }
@@ -1736,8 +1705,6 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
 
     val extractFromImageCallsRef = Ref.make(List.empty[(FileScannedPath, SupportedMediaType, String)]).zioValue
     val extractFromCsvCallsRef   = Ref.make(List.empty[(List[CSVRecord], String)]).zioValue
-    val noteCompactionCallsRef   =
-      Ref.make(List.empty[(Long, Long, List[Long], List[Long], List[String], String)]).zioValue
 
     def buildCatalogueFileService(
         aiClientDataExtraction: AIClientDataExtraction = aiClientDataExtractionMock

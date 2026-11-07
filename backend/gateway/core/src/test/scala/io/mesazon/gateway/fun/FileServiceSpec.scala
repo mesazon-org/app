@@ -3,19 +3,15 @@ package io.mesazon.gateway.fun
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.config.FileServiceConfig
-import io.mesazon.gateway.mock.Mocks
 import io.mesazon.gateway.repository.*
 import io.mesazon.gateway.repository.domain.*
 import io.mesazon.gateway.service.*
 import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.ZWordSpecBase
-import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import zio.*
 import zio.stream.ZStream
 
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import scala.jdk.CollectionConverters.*
 
 class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries, RepositoryArbitraries {
 
@@ -92,7 +88,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
             .once(),
         )
 
-        val fileService = buildFileService(aiClientDataExtractionMock)
+        val fileService = buildFileService
 
         val response = fileService
           .uploadOrganizationLogo(
@@ -124,7 +120,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
             .once()
         )
 
-        val fileService = buildFileService(aiClientDataExtractionMock)
+        val fileService = buildFileService
 
         val serviceError = fileService
           .uploadOrganizationLogo(
@@ -168,7 +164,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
             .once(),
         )
 
-        val fileService = buildFileService(aiClientDataExtractionMock)
+        val fileService = buildFileService
 
         val serviceError = fileService
           .uploadOrganizationLogo(
@@ -222,7 +218,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
             .once(),
         )
 
-        val fileService = buildFileService(aiClientDataExtractionMock)
+        val fileService = buildFileService
 
         val serviceError = fileService
           .uploadOrganizationLogo(
@@ -308,7 +304,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
             .once(),
         )
 
-        val fileService = buildFileService(aiClientDataExtractionMock)
+        val fileService = buildFileService
 
         val serviceError = fileService
           .uploadOrganizationLogo(
@@ -321,524 +317,6 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
         serviceError shouldBe updateError
       }
     }
-
-    "extractCustomers" should {
-      "return the AI's extracted candidates for an image" in new TestContext {
-        val organizationID                 = arbitrarySample[OrganizationID]
-        val extractCustomersFileName       = ExtractCustomersFileName.assume("customers.jpeg")
-        val extractCustomersFileByteStream = ZStream.fromResource("assets/contact-book-image-test-11.jpeg")
-        val fileScannedPath                = FileScannedPath(Files.createTempFile("file-service-spec-", ".jpeg"))
-        fileScannedPath.value.toFile.deleteOnExit()
-        val fileScannerScanOutput: FileScannerScanOutput = (
-          fileScannedPath = fileScannedPath,
-          supportedMediaType = SupportedMediaType.JPEG,
-          fileBytesSize = FileBytesSize.assume(1L),
-        )
-        val entriesIdentified            = 0L
-        val entriesProcessed             = 0L
-        val extractCustomersPostResponse = ExtractCustomersPostResponse(
-          entriesIdentified = entriesIdentified,
-          entriesProcessed = entriesProcessed,
-          customerIndividualCandidates = List.empty,
-          customerBusinessCandidates = List.empty,
-          emptyEntryRows = List.empty,
-          unidentifiedEntryRows = List.empty,
-          unidentifiedEntriesNotes = None,
-        )
-
-        fileScannerMock.scan
-          .expects(
-            extractCustomersFileByteStream,
-            extractCustomersFileName.value,
-            SupportedMediaType.extractData,
-            fileServiceConfig.fileBytesMax,
-          )
-          .returns(ZIO.succeed(fileScannerScanOutput))
-          .once()
-
-        val extractFromImageCallsRef =
-          Ref.make(List.empty[(FileScannedPath, SupportedMediaType, String)]).zioValue
-        val extractFromCsvCallsRef = Ref.make(List.empty[(List[CSVRecord], String)]).zioValue
-        val noteCompactionCallsRef =
-          Ref.make(List.empty[(Long, Long, List[Long], List[Long], List[String], String)]).zioValue
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          noteCompactionCallsRef,
-          extractFromImageOptResult = Some(ZIO.succeed(extractCustomersPostResponse)),
-        )
-        val fileService = buildFileService(aiClientDataExtraction)
-
-        val response = fileService
-          .extractCustomers(organizationID, extractCustomersFileName, extractCustomersFileByteStream)
-          .zioValue
-
-        response shouldBe extractCustomersPostResponse
-        extractFromImageCallsRef.refValue shouldBe List(
-          (fileScannedPath, SupportedMediaType.JPEG, AIInstructions.extractCustomersFromImageInstructions)
-        )
-        extractFromCsvCallsRef.refValue shouldBe List.empty
-      }
-
-      "return the AI's extracted candidates for a spreadsheet after CSV conversion" in new TestContext {
-        val organizationID                 = arbitrarySample[OrganizationID]
-        val extractCustomersFileName       = ExtractCustomersFileName.assume("customers.csv")
-        val customerBookCsvBytes           = "Full Name,Email".getBytes(StandardCharsets.UTF_8)
-        val extractCustomersFileByteStream = ZStream.fromIterable(customerBookCsvBytes)
-        val fileScannedPath                = FileScannedPath(Files.createTempFile("file-service-spec-", ".csv"))
-        fileScannedPath.value.toFile.deleteOnExit()
-        val fileScannerScanOutput: FileScannerScanOutput = (
-          fileScannedPath = fileScannedPath,
-          supportedMediaType = SupportedMediaType.CSV,
-          fileBytesSize = FileBytesSize.assume(1L),
-        )
-        val csvRecordsFixture: List[CSVRecord] =
-          CSVParser.parse("Full Name,Email", CSVFormat.DEFAULT).getRecords.asScala.toList
-        val entriesIdentified            = 0L
-        val entriesProcessed             = 0L
-        val extractCustomersPostResponse = ExtractCustomersPostResponse(
-          entriesIdentified = entriesIdentified,
-          entriesProcessed = entriesProcessed,
-          customerIndividualCandidates = List.empty,
-          customerBusinessCandidates = List.empty,
-          emptyEntryRows = List.empty,
-          unidentifiedEntryRows = List.empty,
-          unidentifiedEntriesNotes = None,
-        )
-
-        inSequence(
-          fileScannerMock.scan
-            .expects(
-              extractCustomersFileByteStream,
-              extractCustomersFileName.value,
-              SupportedMediaType.extractData,
-              fileServiceConfig.fileBytesMax,
-            )
-            .returns(ZIO.succeed(fileScannerScanOutput))
-            .once(),
-          spreadsheetToolMock.convertToCsv
-            .expects(fileScannedPath)
-            .returns(ZStream.fromIterable(csvRecordsFixture))
-            .once(),
-        )
-
-        val extractFromImageCallsRef =
-          Ref.make(List.empty[(FileScannedPath, SupportedMediaType, String)]).zioValue
-        val extractFromCsvCallsRef = Ref.make(List.empty[(List[CSVRecord], String)]).zioValue
-        val noteCompactionCallsRef =
-          Ref.make(List.empty[(Long, Long, List[Long], List[Long], List[String], String)]).zioValue
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          noteCompactionCallsRef,
-          extractFromImageOptResult = Some(ZIO.succeed(extractCustomersPostResponse)),
-        )
-        val fileService = buildFileService(aiClientDataExtraction)
-
-        val response = fileService
-          .extractCustomers(organizationID, extractCustomersFileName, extractCustomersFileByteStream)
-          .zioValue
-
-        response shouldBe extractCustomersPostResponse
-        extractFromImageCallsRef.refValue shouldBe List.empty
-        extractFromCsvCallsRef.refValue shouldBe List(
-          (csvRecordsFixture, AIInstructions.extractCustomersFromFileInstructions)
-        )
-      }
-
-      "merge and deduplicate candidates from multiple CSV batches" in new TestContext {
-        val organizationID                 = arbitrarySample[OrganizationID]
-        val extractCustomersFileName       = ExtractCustomersFileName.assume("customers.csv")
-        val customerBookCsvBytes           = "Full Name,Email".getBytes(StandardCharsets.UTF_8)
-        val extractCustomersFileByteStream = ZStream.fromIterable(customerBookCsvBytes)
-        val fileScannedPath                = FileScannedPath(Files.createTempFile("file-service-spec-", ".csv"))
-        fileScannedPath.value.toFile.deleteOnExit()
-        val fileScannerScanOutput: FileScannerScanOutput = (
-          fileScannedPath = fileScannedPath,
-          supportedMediaType = SupportedMediaType.CSV,
-          fileBytesSize = FileBytesSize.assume(1L),
-        )
-        val csvRecordsFixture: List[CSVRecord] =
-          CSVParser.parse("Full Name,Email", CSVFormat.DEFAULT).getRecords.asScala.toList
-
-        val extractCustomerIndividualDataBatch1 = ExtractCustomerIndividualData(
-          candidate = ExtractCustomerIndividual(
-            fullName = CustomerFullName.assume("John Smith"),
-            emails = List.empty,
-            phoneNumbers = List.empty,
-            addresses = List.empty,
-          ),
-          isDuplicate = false,
-          extractionNotes = None,
-        )
-        val extractCustomerIndividualDataBatch2 = extractCustomerIndividualDataBatch1
-
-        val extractCustomersPostResponseBatch1 = ExtractCustomersPostResponse(
-          entriesIdentified = 1L,
-          entriesProcessed = 1L,
-          customerIndividualCandidates = List(extractCustomerIndividualDataBatch1),
-          customerBusinessCandidates = List.empty,
-          emptyEntryRows = List(3L),
-          unidentifiedEntryRows = List(7L),
-          unidentifiedEntriesNotes = None,
-        )
-        val extractCustomersPostResponseBatch2 = ExtractCustomersPostResponse(
-          entriesIdentified = 1L,
-          entriesProcessed = 1L,
-          customerIndividualCandidates = List(extractCustomerIndividualDataBatch2),
-          customerBusinessCandidates = List.empty,
-          emptyEntryRows = List(12L),
-          unidentifiedEntryRows = List(20L),
-          unidentifiedEntriesNotes = Some("Second batch summary"),
-        )
-        val noteCompactionOutputExpected =
-          NoteCompactionOutput(note = "Rows 3 and 12 were blank; rows 7 and 20 had no readable name.")
-
-        inSequence(
-          fileScannerMock.scan
-            .expects(
-              extractCustomersFileByteStream,
-              extractCustomersFileName.value,
-              SupportedMediaType.extractData,
-              fileServiceConfig.fileBytesMax,
-            )
-            .returns(ZIO.succeed(fileScannerScanOutput))
-            .once(),
-          spreadsheetToolMock.convertToCsv
-            .expects(fileScannedPath)
-            .returns(ZStream.fromIterable(csvRecordsFixture))
-            .once(),
-        )
-
-        val extractFromImageCallsRef =
-          Ref.make(List.empty[(FileScannedPath, SupportedMediaType, String)]).zioValue
-        val extractFromCsvCallsRef = Ref.make(List.empty[(List[CSVRecord], String)]).zioValue
-        val noteCompactionCallsRef =
-          Ref.make(List.empty[(Long, Long, List[Long], List[Long], List[String], String)]).zioValue
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[ExtractCustomersPostResponse](
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          noteCompactionCallsRef,
-          extractFromCsvOptResult = Some(
-            ZIO.succeed(NonEmptyChunk(extractCustomersPostResponseBatch1, extractCustomersPostResponseBatch2))
-          ),
-          noteCompactionOptResult = Some(ZIO.succeed(noteCompactionOutputExpected)),
-        )
-        val fileService = buildFileService(aiClientDataExtraction)
-
-        val response = fileService
-          .extractCustomers(organizationID, extractCustomersFileName, extractCustomersFileByteStream)
-          .zioValue
-
-        response shouldBe ExtractCustomersPostResponse(
-          entriesIdentified = 2L,
-          entriesProcessed = 2L,
-          customerIndividualCandidates = List(
-            extractCustomerIndividualDataBatch1.copy(isDuplicate = true),
-            extractCustomerIndividualDataBatch2.copy(isDuplicate = true),
-          ),
-          customerBusinessCandidates = List.empty,
-          emptyEntryRows = List(3L, 12L),
-          unidentifiedEntryRows = List(7L, 20L),
-          unidentifiedEntriesNotes = Some(noteCompactionOutputExpected.note),
-        )
-        noteCompactionCallsRef.refValue shouldBe List(
-          (
-            2L,
-            2L,
-            List(3L, 12L),
-            List(7L, 20L),
-            List("Second batch summary"),
-            AIInstructions.noteCompactionInstructions,
-          )
-        )
-      }
-
-      "successfully use a local fallback message when note compaction fails" in new TestContext {
-        val organizationID                 = arbitrarySample[OrganizationID]
-        val extractCustomersFileName       = ExtractCustomersFileName.assume("customers.csv")
-        val customerBookCsvBytes           = "Full Name,Email".getBytes(StandardCharsets.UTF_8)
-        val extractCustomersFileByteStream = ZStream.fromIterable(customerBookCsvBytes)
-        val fileScannedPath                = FileScannedPath(Files.createTempFile("file-service-spec-", ".csv"))
-        fileScannedPath.value.toFile.deleteOnExit()
-        val fileScannerScanOutput: FileScannerScanOutput = (
-          fileScannedPath = fileScannedPath,
-          supportedMediaType = SupportedMediaType.CSV,
-          fileBytesSize = FileBytesSize.assume(1L),
-        )
-        val csvRecordsFixture: List[CSVRecord] =
-          CSVParser.parse("Full Name,Email", CSVFormat.DEFAULT).getRecords.asScala.toList
-
-        val extractCustomerIndividualDataFallback = ExtractCustomerIndividualData(
-          candidate = ExtractCustomerIndividual(
-            fullName = CustomerFullName.assume("Jane Roe"),
-            emails = List.empty,
-            phoneNumbers = List.empty,
-            addresses = List.empty,
-          ),
-          isDuplicate = false,
-          extractionNotes = None,
-        )
-
-        val extractCustomersPostResponseFallback = ExtractCustomersPostResponse(
-          entriesIdentified = 4L,
-          entriesProcessed = 1L,
-          customerIndividualCandidates = List(extractCustomerIndividualDataFallback),
-          customerBusinessCandidates = List.empty,
-          emptyEntryRows = List(3L, 5L),
-          unidentifiedEntryRows = List(9L),
-          unidentifiedEntriesNotes = Some("A raw batch note the fallback must not repeat"),
-        )
-        val noteCompactionErrorExpected =
-          ServiceError.InternalServerError.UnexpectedError("Unable to send message to AI")
-
-        inSequence(
-          fileScannerMock.scan
-            .expects(
-              extractCustomersFileByteStream,
-              extractCustomersFileName.value,
-              SupportedMediaType.extractData,
-              fileServiceConfig.fileBytesMax,
-            )
-            .returns(ZIO.succeed(fileScannerScanOutput))
-            .once(),
-          spreadsheetToolMock.convertToCsv
-            .expects(fileScannedPath)
-            .returns(ZStream.fromIterable(csvRecordsFixture))
-            .once(),
-        )
-
-        val extractFromImageCallsRef =
-          Ref.make(List.empty[(FileScannedPath, SupportedMediaType, String)]).zioValue
-        val extractFromCsvCallsRef = Ref.make(List.empty[(List[CSVRecord], String)]).zioValue
-        val noteCompactionCallsRef =
-          Ref.make(List.empty[(Long, Long, List[Long], List[Long], List[String], String)]).zioValue
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[ExtractCustomersPostResponse](
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          noteCompactionCallsRef,
-          extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk(extractCustomersPostResponseFallback))),
-          noteCompactionOptResult = Some(ZIO.fail(noteCompactionErrorExpected)),
-        )
-        val fileService = buildFileService(aiClientDataExtraction)
-
-        val response = fileService
-          .extractCustomers(organizationID, extractCustomersFileName, extractCustomersFileByteStream)
-          .zioValue
-
-        response shouldBe ExtractCustomersPostResponse(
-          entriesIdentified = 4L,
-          entriesProcessed = 1L,
-          customerIndividualCandidates = List(extractCustomerIndividualDataFallback),
-          customerBusinessCandidates = List.empty,
-          emptyEntryRows = List(3L, 5L),
-          unidentifiedEntryRows = List(9L),
-          unidentifiedEntriesNotes =
-            Some("1 of 4 entries could be added automatically. Rows 3, 5 were blank. Rows 9 had no name we could read."),
-        )
-        noteCompactionCallsRef.refValue shouldBe List(
-          (
-            4L,
-            1L,
-            List(3L, 5L),
-            List(9L),
-            List("A raw batch note the fallback must not repeat"),
-            AIInstructions.noteCompactionInstructions,
-          )
-        )
-      }
-
-      "successfully skip note compaction when there is nothing to report" in new TestContext {
-        val organizationID                 = arbitrarySample[OrganizationID]
-        val extractCustomersFileName       = ExtractCustomersFileName.assume("customers.csv")
-        val customerBookCsvBytes           = "Full Name,Email".getBytes(StandardCharsets.UTF_8)
-        val extractCustomersFileByteStream = ZStream.fromIterable(customerBookCsvBytes)
-        val fileScannedPath                = FileScannedPath(Files.createTempFile("file-service-spec-", ".csv"))
-        fileScannedPath.value.toFile.deleteOnExit()
-        val fileScannerScanOutput: FileScannerScanOutput = (
-          fileScannedPath = fileScannedPath,
-          supportedMediaType = SupportedMediaType.CSV,
-          fileBytesSize = FileBytesSize.assume(1L),
-        )
-        val csvRecordsFixture: List[CSVRecord] =
-          CSVParser.parse("Full Name,Email", CSVFormat.DEFAULT).getRecords.asScala.toList
-
-        val extractCustomerIndividualDataClean = ExtractCustomerIndividualData(
-          candidate = ExtractCustomerIndividual(
-            fullName = CustomerFullName.assume("Alice Clean"),
-            emails = List.empty,
-            phoneNumbers = List.empty,
-            addresses = List.empty,
-          ),
-          isDuplicate = false,
-          extractionNotes = None,
-        )
-
-        val extractCustomersPostResponseClean = ExtractCustomersPostResponse(
-          entriesIdentified = 1L,
-          entriesProcessed = 1L,
-          customerIndividualCandidates = List(extractCustomerIndividualDataClean),
-          customerBusinessCandidates = List.empty,
-          emptyEntryRows = List.empty,
-          unidentifiedEntryRows = List.empty,
-          unidentifiedEntriesNotes = None,
-        )
-
-        inSequence(
-          fileScannerMock.scan
-            .expects(
-              extractCustomersFileByteStream,
-              extractCustomersFileName.value,
-              SupportedMediaType.extractData,
-              fileServiceConfig.fileBytesMax,
-            )
-            .returns(ZIO.succeed(fileScannerScanOutput))
-            .once(),
-          spreadsheetToolMock.convertToCsv
-            .expects(fileScannedPath)
-            .returns(ZStream.fromIterable(csvRecordsFixture))
-            .once(),
-        )
-
-        val extractFromImageCallsRef =
-          Ref.make(List.empty[(FileScannedPath, SupportedMediaType, String)]).zioValue
-        val extractFromCsvCallsRef = Ref.make(List.empty[(List[CSVRecord], String)]).zioValue
-        val noteCompactionCallsRef =
-          Ref.make(List.empty[(Long, Long, List[Long], List[Long], List[String], String)]).zioValue
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[ExtractCustomersPostResponse](
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          noteCompactionCallsRef,
-          extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk(extractCustomersPostResponseClean))),
-        )
-        val fileService = buildFileService(aiClientDataExtraction)
-
-        val response = fileService
-          .extractCustomers(organizationID, extractCustomersFileName, extractCustomersFileByteStream)
-          .zioValue
-
-        response shouldBe extractCustomersPostResponseClean
-        noteCompactionCallsRef.refValue shouldBe List.empty
-      }
-
-      "successfully skip note compaction when row lists have entries but no batch wrote a note" in new TestContext {
-        val organizationID                 = arbitrarySample[OrganizationID]
-        val extractCustomersFileName       = ExtractCustomersFileName.assume("customers.csv")
-        val customerBookCsvBytes           = "Full Name,Email".getBytes(StandardCharsets.UTF_8)
-        val extractCustomersFileByteStream = ZStream.fromIterable(customerBookCsvBytes)
-        val fileScannedPath                = FileScannedPath(Files.createTempFile("file-service-spec-", ".csv"))
-        fileScannedPath.value.toFile.deleteOnExit()
-        val fileScannerScanOutput: FileScannerScanOutput = (
-          fileScannedPath = fileScannedPath,
-          supportedMediaType = SupportedMediaType.CSV,
-          fileBytesSize = FileBytesSize.assume(1L),
-        )
-        val csvRecordsFixture: List[CSVRecord] =
-          CSVParser.parse("Full Name,Email", CSVFormat.DEFAULT).getRecords.asScala.toList
-
-        val extractCustomerIndividualDataNoNotes = ExtractCustomerIndividualData(
-          candidate = ExtractCustomerIndividual(
-            fullName = CustomerFullName.assume("Bob NoNotes"),
-            emails = List.empty,
-            phoneNumbers = List.empty,
-            addresses = List.empty,
-          ),
-          isDuplicate = false,
-          extractionNotes = None,
-        )
-
-        val extractCustomersPostResponseNoNotes = ExtractCustomersPostResponse(
-          entriesIdentified = 3L,
-          entriesProcessed = 1L,
-          customerIndividualCandidates = List(extractCustomerIndividualDataNoNotes),
-          customerBusinessCandidates = List.empty,
-          emptyEntryRows = List(3L),
-          unidentifiedEntryRows = List(4L, 5L),
-          unidentifiedEntriesNotes = None,
-        )
-
-        inSequence(
-          fileScannerMock.scan
-            .expects(
-              extractCustomersFileByteStream,
-              extractCustomersFileName.value,
-              SupportedMediaType.extractData,
-              fileServiceConfig.fileBytesMax,
-            )
-            .returns(ZIO.succeed(fileScannerScanOutput))
-            .once(),
-          spreadsheetToolMock.convertToCsv
-            .expects(fileScannedPath)
-            .returns(ZStream.fromIterable(csvRecordsFixture))
-            .once(),
-        )
-
-        val extractFromImageCallsRef =
-          Ref.make(List.empty[(FileScannedPath, SupportedMediaType, String)]).zioValue
-        val extractFromCsvCallsRef = Ref.make(List.empty[(List[CSVRecord], String)]).zioValue
-        val noteCompactionCallsRef =
-          Ref.make(List.empty[(Long, Long, List[Long], List[Long], List[String], String)]).zioValue
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock[ExtractCustomersPostResponse](
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          noteCompactionCallsRef,
-          extractFromCsvOptResult = Some(ZIO.succeed(NonEmptyChunk(extractCustomersPostResponseNoNotes))),
-        )
-        val fileService = buildFileService(aiClientDataExtraction)
-
-        val response = fileService
-          .extractCustomers(organizationID, extractCustomersFileName, extractCustomersFileByteStream)
-          .zioValue
-
-        response shouldBe extractCustomersPostResponseNoNotes
-        noteCompactionCallsRef.refValue shouldBe List.empty
-      }
-
-      "propagate the validation error without calling AI when the scanner rejects the declared filename" in new TestContext {
-        val organizationID                 = arbitrarySample[OrganizationID]
-        val extractCustomersFileName       = ExtractCustomersFileName.assume("customers.png")
-        val extractCustomersFileByteStream = ZStream.fromResource("assets/contact-book-image-test-11.jpeg")
-        val scanError                      = ServiceError.BadRequestError.ValidationError(
-          Seq(
-            ServiceError.BadRequestError.InvalidFieldError(
-              "fileNameDeclared",
-              "File name declaration does not match detected media type [image/jpeg]",
-              extractCustomersFileName.value,
-            )
-          )
-        )
-
-        fileScannerMock.scan
-          .expects(
-            extractCustomersFileByteStream,
-            extractCustomersFileName.value,
-            SupportedMediaType.extractData,
-            fileServiceConfig.fileBytesMax,
-          )
-          .returns(ZIO.fail(scanError))
-          .once()
-
-        val extractFromImageCallsRef =
-          Ref.make(List.empty[(FileScannedPath, SupportedMediaType, String)]).zioValue
-        val extractFromCsvCallsRef = Ref.make(List.empty[(List[CSVRecord], String)]).zioValue
-        val noteCompactionCallsRef =
-          Ref.make(List.empty[(Long, Long, List[Long], List[Long], List[String], String)]).zioValue
-        val aiClientDataExtraction = new Mocks.AIClientDataExtractionMock(
-          extractFromImageCallsRef,
-          extractFromCsvCallsRef,
-          noteCompactionCallsRef,
-        )
-        val fileService = buildFileService(aiClientDataExtraction)
-
-        val serviceError = fileService
-          .extractCustomers(organizationID, extractCustomersFileName, extractCustomersFileByteStream)
-          .zioError
-
-        serviceError shouldBe scanError
-        extractFromImageCallsRef.refValue shouldBe List.empty
-        extractFromCsvCallsRef.refValue shouldBe List.empty
-      }
-    }
   }
 
   trait TestContext {
@@ -848,21 +326,17 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
 
     val fileScannerMock                      = mock[FileScanner]
     val imageProcessingMock                  = mock[ImageProcessing]
-    val spreadsheetToolMock                  = mock[SpreadsheetTool]
     val organizationManagementRepositoryMock = mock[OrganizationManagementRepository]
     val s3ClientOrganizationMediaMock        = mock[S3ClientOrganizationMedia]
-    val aiClientDataExtractionMock           = mock[AIClientDataExtraction]
 
-    def buildFileService(aiClientDataExtraction: AIClientDataExtraction): FileService[ServiceTask] = ZIO
+    def buildFileService: FileService[ServiceTask] = ZIO
       .service[FileService[ServiceTask]]
       .provide(
         FileService.local,
         ZLayer.succeed(fileServiceConfig),
         ZLayer.succeed(fileScannerMock),
         ZLayer.succeed(imageProcessingMock),
-        ZLayer.succeed(spreadsheetToolMock),
         ZLayer.succeed(organizationManagementRepositoryMock),
-        ZLayer.succeed(aiClientDataExtraction),
         ZLayer.succeed(s3ClientOrganizationMediaMock),
       )
       .zioValue

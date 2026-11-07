@@ -38,13 +38,25 @@ One block per operation; successes (including no-ops) first, then every owned fa
 - A validation-failure case sets no downstream expectations, proving the repository/client is untouched.
 - Dependency failures propagate the same `ServiceError` unchanged — test one generic instance propagating, not every subtype; test a specific subtype only when the service handles it differently (retries it, translates it, counts it, etc.). For tolerated/retried failures, count invocations and assert both the eventual successful response and `maxRetries + 1` calls.
 
-## Known limitation: generic methods with typeclass `using` bounds can't be mocked
+## Generic methods with typeclass `using` parameters
 
-ScalaMock's `mock[T]` macro cannot correctly mock a method shaped like `def m[A](...)(using OpenAIJsonSchema[A], JsonValueCodec[A]): F[A]` (a type parameter plus typeclass `using` parameters depending on it) — e.g. `AIClient.extractFromImage`; the unchanged `OpenAIClient.sendMessage` has the same generic-method shape with ordinary `Schema[A]`. Verified against ScalaMock 7.5.5's own `MockMaker.scala` source, not a syntax mistake: the macro's generated override erases `A` to `Any`, so the `using` clause becomes `OpenAIJsonSchema[Any]`/`JsonValueCodec[Any]` in the generated class, which then fails to resolve (or resolves ambiguously against unrelated concrete givens) rather than picking up the real `OpenAIJsonSchema[ExtractCustomersResponse]`/`JsonValueCodec[ExtractCustomersResponse]` the call site actually needs. This is the same reason this codebase's one prior attempt to test `OpenAIClient.sendMessage[A]` (in `ReplyingToMessagesCronJobStreamSpec`) is left fully commented out rather than using `mock[OpenAIClient]`.
+A method shaped like `def m[A](...)(using OpenAIJsonSchema[A], JsonValueCodec[A]): F[A]`, such as `AIClientDataExtraction.extractFromImage`/`extractFromCsv`, is mocked with `mock[T]` like any other dependency (ScalaMock 7.6.2). Only the explicit placeholder form compiles: name the type argument, type every placeholder including both `using` parameters, and match those parameters against the exact givens from `io.mesazon.gateway.json.ai`, never `*`. The short form `mock.method[A].expects(...)` fails with E172 "No given instance of OpenAIJsonSchema".
 
-Resolution: for a dependency with this method shape, use a small hand-written test double implementing the trait directly instead of `mock[T]`, backed by `Ref`s to capture the exact arguments received per call and to hold the canned response/failure, then assert on the captured `Ref` value the same way a `.expects(...)` call would, keeping the "no wildcards" spirit without ScalaMock's DSL. Every other dependency without this method shape stays a normal ScalaMock mock in the same spec.
+```scala
+(aiClientDataExtractionMock.extractFromImage[CustomerBookFileAIExtract](
+  _: FileScannedPath, _: SupportedMediaType, _: String, _: Option[String],
+)(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+  .expects(
+    fileScannedPath, SupportedMediaType.JPEG, AIInstructions.extractCustomersFromImageInstructions, None,
+    ai.customerBookFileAIExtractOpenAIJsonSchema, ai.customerBookFileAIExtractCodec,
+  )
+  .returns(ZIO.succeed(customerBookFileAIExtract))
+  .once()
+```
 
-These hand-written doubles live in their own `mock/Mocks.scala` file (package `io.mesazon.gateway.mock`, `object Mocks`), one member per dependency that needs this treatment — e.g. `Mocks.AIClientMock` for `AIClient.extractFromImage` — kept separate from the feature spec that uses them so the workaround doesn't clutter the spec itself.
+A `ZStream` argument has no useful equality, so it is the one allowed `*`. Prove its contents by draining it in `.onCall` and asserting the collected elements; when the stream itself must fail (a failed spreadsheet conversion), drain it and let its error propagate: `csvRecordStream.runCollect *> ZIO.die(...)`. Write the full expectation inline in each test's `inSequence`, even when specs repeat it; do not wrap it in a `<method>Expectation` helper. See `CustomerBookFileServiceSpec`.
+
+`Mocks.AIClientDataExtractionMock` in `mock/Mocks.scala` is the earlier `Ref`-backed hand-written double; it remains only for `CatalogueFileServiceSpec` until that spec is migrated. Do not use it in new specs.
 
 ## Config and time
 
