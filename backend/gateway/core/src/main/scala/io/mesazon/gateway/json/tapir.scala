@@ -75,8 +75,6 @@ object tapir {
       schemaType = SchemaType.SString(),
     )
 
-  given priceSchema: Schema[Price] = Schema.derived[Price]
-
   given catalogueItemVariantUnitSchema: Schema[CatalogueItemVariantUnit] =
     Schema.derivedEnumeration[CatalogueItemVariantUnit](
       encode = Some(_.toString),
@@ -112,8 +110,12 @@ object tapir {
     summon[Schema[Map[String, String]]]
       .as[Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue]]
 
-  given catalogueItemVariantInsertSchema: Schema[CatalogueItemVariantInsert] =
-    Schema.derived[CatalogueItemVariantInsert]
+  given catalogueItemVariantPriceCandidateSchema: Schema[CatalogueItemVariantPriceCandidate] =
+    Schema.derived[CatalogueItemVariantPriceCandidate]
+
+  // The response codec omits an empty map, but Tapir marks only iterables, not maps, optional.
+  given catalogueItemVariantCandidateSchema: Schema[CatalogueItemVariantCandidate] =
+    Schema.derived[CatalogueItemVariantCandidate].modify(_.attributes)(_.copy(isOptional = true))
 
   given catalogueItemCandidateSchema: Schema[CatalogueItemCandidate] = Schema.derived[CatalogueItemCandidate]
 
@@ -133,8 +135,6 @@ object tapir {
   given catalogueItemVariantUnitUnitSizeCodec: JsonValueCodec[CatalogueItemVariantUnit.UnitSize] =
     JsonCodecMaker.makeWithoutDiscriminator[CatalogueItemVariantUnit.UnitSize]
 
-  given priceCodec: JsonValueCodec[Price] = JsonCodecMaker.make[Price]
-
   given catalogueItemVariantQuantityCodec: JsonValueCodec[CatalogueItemVariantQuantity] =
     JsonCodecMaker.make[CatalogueItemVariantQuantity]
 
@@ -146,9 +146,6 @@ object tapir {
 
   given catalogueItemVariantSaleUnitCodec: JsonValueCodec[CatalogueItemVariantSaleUnit] =
     JsonCodecMaker.make[CatalogueItemVariantSaleUnit]
-
-  given catalogueItemVariantInsertCodec: JsonValueCodec[CatalogueItemVariantInsert] =
-    JsonCodecMaker.make[CatalogueItemVariantInsert]
 
   given catalogueItemCandidateCodec: JsonValueCodec[CatalogueItemCandidate] =
     JsonCodecMaker.make[CatalogueItemCandidate]

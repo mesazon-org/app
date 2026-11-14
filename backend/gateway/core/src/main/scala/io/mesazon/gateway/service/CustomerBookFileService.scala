@@ -119,14 +119,6 @@ object CustomerBookFileService {
       ).flatten
     }
 
-    private def computeFieldInfo(pathSegments: (String | Int)*): FieldInfo =
-      FieldInfo(
-        pathSegments.map {
-          case pathSegmentProperty: String => s"/${pathSegmentProperty.replace("~", "~0").replace("/", "~1")}"
-          case pathSegmentIndex: Int       => s"/$pathSegmentIndex"
-        }.mkString
-      )
-
     private def computeCustomerEmailEntries(emails: List[CustomerEmail]): List[CustomerEmailEntry] =
       emails match {
         case Nil          => Nil
@@ -157,10 +149,10 @@ object CustomerBookFileService {
               )
         },
         missingFields = missingCountryCode.map { case (_, index) =>
-          computeFieldInfo(PhoneNumbersProperty, index, PhoneNumberProperty, PhoneCountryCodeProperty)
+          FieldInfo.fromPathSegments(PhoneNumbersProperty, index, PhoneNumberProperty, PhoneCountryCodeProperty)
         },
         inferredFields = inferredCountryCode.map { case (_, index) =>
-          computeFieldInfo(PhoneNumbersProperty, index, PhoneNumberProperty, PhoneCountryCodeProperty)
+          FieldInfo.fromPathSegments(PhoneNumbersProperty, index, PhoneNumberProperty, PhoneCountryCodeProperty)
         },
       )
     }
@@ -225,14 +217,14 @@ object CustomerBookFileService {
         customerIndividualFullNameCounts: Map[CustomerFullName, Int],
     ): CustomerNameFieldsComputed = (
       missingFields =
-        Option.when(customerIndividualAIExtract.fullName.isEmpty)(computeFieldInfo(FullNameProperty)).toList,
+        Option.when(customerIndividualAIExtract.fullName.isEmpty)(FieldInfo.fromPathSegments(FullNameProperty)).toList,
       inferredFields =
-        Option.when(customerIndividualAIExtract.fullNameInferred)(computeFieldInfo(FullNameProperty)).toList,
+        Option.when(customerIndividualAIExtract.fullNameInferred)(FieldInfo.fromPathSegments(FullNameProperty)).toList,
       duplicateFields = Option
         .when(
           customerIndividualAIExtract.fullName
             .exists(fullName => customerIndividualFullNameCounts.get(fullName).exists(_ > SingleOccurrenceCount))
-        )(computeFieldInfo(FullNameProperty))
+        )(FieldInfo.fromPathSegments(FullNameProperty))
         .toList,
     )
 
@@ -241,15 +233,17 @@ object CustomerBookFileService {
         customerBusinessNameCounts: Map[CustomerBusinessName, Int],
     ): CustomerNameFieldsComputed =
       (
-        missingFields =
-          Option.when(customerBusinessAIExtract.businessName.isEmpty)(computeFieldInfo(BusinessNameProperty)).toList,
-        inferredFields =
-          Option.when(customerBusinessAIExtract.businessNameInferred)(computeFieldInfo(BusinessNameProperty)).toList,
+        missingFields = Option
+          .when(customerBusinessAIExtract.businessName.isEmpty)(FieldInfo.fromPathSegments(BusinessNameProperty))
+          .toList,
+        inferredFields = Option
+          .when(customerBusinessAIExtract.businessNameInferred)(FieldInfo.fromPathSegments(BusinessNameProperty))
+          .toList,
         duplicateFields = Option
           .when(
             customerBusinessAIExtract.businessName
               .exists(businessName => customerBusinessNameCounts.get(businessName).exists(_ > SingleOccurrenceCount))
-          )(computeFieldInfo(BusinessNameProperty))
+          )(FieldInfo.fromPathSegments(BusinessNameProperty))
           .toList,
       )
 
@@ -263,21 +257,31 @@ object CustomerBookFileService {
 
           val missingFields = Option
             .when(customerBusinessContactAIExtract.fullName.isEmpty)(
-              computeFieldInfo(CustomerBusinessContactsProperty, index, FullNameProperty)
+              FieldInfo.fromPathSegments(CustomerBusinessContactsProperty, index, FullNameProperty)
             )
             .toList ++ Option
             .when(customerPhoneNumberEntriesComputed.missingFields.nonEmpty)(
-              computeFieldInfo(CustomerBusinessContactsProperty, index, PhoneNumberProperty, PhoneCountryCodeProperty)
+              FieldInfo.fromPathSegments(
+                CustomerBusinessContactsProperty,
+                index,
+                PhoneNumberProperty,
+                PhoneCountryCodeProperty,
+              )
             )
             .toList
 
           val inferredFields = Option
             .when(customerBusinessContactAIExtract.fullNameInferred)(
-              computeFieldInfo(CustomerBusinessContactsProperty, index, FullNameProperty)
+              FieldInfo.fromPathSegments(CustomerBusinessContactsProperty, index, FullNameProperty)
             )
             .toList ++ Option
             .when(customerPhoneNumberEntriesComputed.inferredFields.nonEmpty)(
-              computeFieldInfo(CustomerBusinessContactsProperty, index, PhoneNumberProperty, PhoneCountryCodeProperty)
+              FieldInfo.fromPathSegments(
+                CustomerBusinessContactsProperty,
+                index,
+                PhoneNumberProperty,
+                PhoneCountryCodeProperty,
+              )
             )
             .toList
 

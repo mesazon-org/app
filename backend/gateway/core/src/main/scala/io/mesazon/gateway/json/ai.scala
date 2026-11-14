@@ -10,7 +10,7 @@ import io.mesazon.gateway.json.tapir.{
   catalogueItemVariantSaleUnitCodec,
   catalogueItemVariantSaleUnitSchema,
   currencyCodec,
-  priceSchema,
+  currencySchema,
 }
 import sttp.apispec.{AnySchema, Schema as ApiSchema, SchemaLike}
 import sttp.tapir.Schema
@@ -25,6 +25,9 @@ object ai {
 
   given catalogueItemVariantAttributesAIExtractSchema: Schema[CatalogueItemVariantAttributesAIExtract] =
     Schema.derived[CatalogueItemVariantAttributesAIExtract]
+
+  given catalogueItemVariantPriceAIExtractSchema: Schema[CatalogueItemVariantPriceAIExtract] =
+    Schema.derived[CatalogueItemVariantPriceAIExtract]
 
   given catalogueItemVariantAIExtractSchema: Schema[CatalogueItemVariantAIExtract] =
     Schema.derived[CatalogueItemVariantAIExtract]

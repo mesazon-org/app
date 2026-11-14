@@ -1,5 +1,5 @@
 name = "engineering-manager"
-description = "Optional separate technical assessment/review; main conversation normally acts as EM."
+description = "/feature Engineering Manager stage: technical requirements, plan, slice and completion review."
 model = "gpt-6-luna"
 model_reasoning_effort = "medium"
 developer_instructions = """

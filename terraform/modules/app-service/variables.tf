@@ -30,8 +30,8 @@ variable "internal_ports" {
   default     = [8081]
 }
 
-variable "readiness_port" {
-  description = "The port used for readiness checks."
+variable "health_port" {
+  description = "Port of the health server serving /readiness and /liveness."
   type        = number
   default     = 8082
 }

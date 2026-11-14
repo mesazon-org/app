@@ -14,6 +14,14 @@ If a future ask here would add a resource that outlives or is shared beyond this
 - Naming: build every resolved value, including hostnames, from `local.environment`/`local.region` — never hardcode `dev`. E.g. `app_domain = "${local.environment}-api.${local.dns_zone}"`.
 - `terraform/modules/app-service` (long-running app, e.g. `gateway_core_app`) and `terraform/modules/app-job` (one-shot job, e.g. Flyway) — reusable DigitalOcean App Platform wrappers. Both take `env_vars`/`secret_vars` maps and emit them as `digitalocean_app` `env` blocks (`type = "GENERAL"` vs `"SECRET"`).
 
+## Health checks
+
+`modules/app-service` probes the health server on `health_port` (8082, internal); 8081 is the internal server and must not be probed.
+
+- **Readiness:** `health_check` on `/readiness`, 20 s delay + 10 s × 5 failures = 70 s, sized for the ~44 s JVM cold start ([known issue](../known-issues.md#digitalocean-deploy-fails-readiness-with-connection-refused-despite-a-healthy-app)).
+- **Liveness:** `liveness_health_check` on `/liveness` (no dependency checks): delay 60 s, period 15 s, timeout 5 s, success 1, failure 3, so the earliest restart is about 90 s. Keep liveness slower than readiness whenever either changes.
+- `liveness_health_check` needs DigitalOcean provider ≥ 2.91.0, enforced by the module's `>= 2.91.0, < 3.0.0` constraint.
+
 ## Adding a new external dependency (e.g. a bucket)
 
 Mirror the existing `organization_logos_bucket` / `organization_media_bucket` pair in `terraform/dev/gateway/{locals,app}.tf`. All three steps are required — the first two alone provision the infra but never connect it to the app:

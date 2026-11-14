@@ -1,6 +1,6 @@
 # Shared workflow rules
 
-Apply to all roles on both hosts. Paths are repository-relative. The main conversation acts as Engineering Manager (EM); do not spawn another EM for routine orchestration.
+Apply to all roles on both hosts. Paths are repository-relative. The main conversation is the orchestrator: it talks to the user, spawns and resumes PO, EM, and the Lead, runs the gates, and commits approved slices, but makes no product or technical judgement itself. The Engineering Manager (EM) is a spawned `engineering-manager` subagent kept for the whole feature.
 
 Every issue, bug, and feature runs the same stages in order. A stage may not start before the gate in front of it is cleared by the user.
 
@@ -44,13 +44,34 @@ No role invents a requirement, a business rule, or a technical decision it could
 
 Do not ask about facts already settled in this conversation, already recorded in `pages/`, `agent-docs/`, or AGENTS.md, or fixed by an established pattern in the code. Those are answers you already have, not initiative.
 
+## Writing a question the user can answer
+
+Every question that reaches the user — a `USER_QUESTION` from PO, EM, or a Lead, and every question the orchestrator asks — must make sense on its own to someone who has not read the code, the subagent's report, or earlier rounds. The user should never have to decode what is being asked. Write each one with these parts, in this order:
+
+1. **Context.** One to three plain sentences: which feature or area this is about and what it does today, as a user of the product would notice it. Name the screen, request, file type, or behavior, not the class.
+2. **Why we need a decision now.** What we found or what changed that makes this a question, and why it cannot be settled from the epic, the docs, or the code.
+3. **The question.** One decision per question, asked in plain words. If two decisions are tangled, split them.
+4. **The options.** Two to four real choices. For each, say what happens in practice if it is chosen — a concrete example works best ("a row with `Olive Oil` and `olive oil` would …") — and what it costs or risks later. Put the recommended option first, say it is recommended, and give the reason in one sentence.
+5. **What it blocks.** What work waits on the answer, and what happens if the user wants to decide later.
+
+Plain-language rules:
+
+- Use everyday words. Explain any technical term, code name, field name, or abbreviation in a few words the first time it appears (for example: "`needsAttention` — the flag that marks a candidate red for review"). Prefer the product meaning over the implementation detail.
+- Never refer to something the user may not have seen — "Q3 above", "the plan", "finding 2", "the Lead's mapping", a file path alone — without restating what it is.
+- State facts you checked as facts, with where you checked them; mark anything you are unsure of as unsure.
+- Keep it short: complete enough to answer without asking back, no longer.
+
+The orchestrator checks every question before putting it to the user. If a question misses a part above, the orchestrator rewrites it in this format, keeping its substance unchanged. If it lacks a fact the orchestrator cannot supply from the conversation, the orchestrator sends it back to the subagent rather than guessing. The user can always ask "what do you mean?"; that answer goes back to the same subagent, and the next question it sends follows this format.
+
+Questions between agents (a Lead asking EM, EM asking PO) may use technical vocabulary, but still carry the context, the options with their consequences, a recommendation, and what is blocked, because the recipient may need to forward them to the user.
+
 ## No initiative
 
 Do exactly what was agreed, and nothing else. Never widen scope, never add an improvement, a refactor, a helper, a dependency, a config change, a test file, or a doc section that the agreed plan does not call for, however obviously good it seems. If you spot something worth doing, say so and let the user decide; a suggestion costs a sentence, an unrequested change costs a review.
 
 The same holds for choices inside the agreed scope: when the code allows several reasonable approaches and the plan does not name one, ask rather than pick. Silence from the user is not permission, and a previous approval covers only the content it was given for.
 
-EM talks directly to the user. A subagent without a user-question tool returns `USER_QUESTION` with the decision needed, its recommendation, and the blocked work; EM asks the user verbatim in substance and resumes the same subagent with the answer. EM never answers a product question on the user's behalf and never approves a gate on the user's behalf. Pause only dependent work; silence is not agreement.
+The orchestrator talks directly to the user. A subagent without a user-question tool returns `USER_QUESTION` written per "Writing a question the user can answer"; the orchestrator checks it against that format, asks the user, and resumes the same subagent with the answer. Lead technical questions go to EM first, and only EM's `USER_QUESTION`s reach the user. No role answers a product question on the user's behalf, and no role approves a gate on the user's behalf. Pause only dependent work; silence is not agreement.
 
 On some hosts the user can message a subagent directly, bypassing EM. That message still carries full user authority — but a request that reopens a decision already settled at an earlier gate (an approach, a vendor, an architecture choice) is a plan change, not a slice detail: report the concrete finding and its consequences to EM the same way as any other material change, and wait, even when the request came from the user directly and even mid-slice. The subagent does not decide alone that a previously-settled decision should reopen just because the person asking has final authority — EM and PO hold context (cost, data-processing, product consequences) the subagent's slice-local view does not.
 
@@ -63,15 +84,15 @@ Four gates are mandatory and belong to the user, not to EM:
 3. The Lead's skeleton slice — interfaces, signatures, and failing tests — before any implementation.
 4. Every implementation slice, before the Lead touches the next files.
 
-Each gate ends the same way: the user reviews, asks for changes or explicitly approves the exact current diff. After approval, the main conversation acting as EM stages and commits only that approved slice. The next step starts after the commit succeeds, not before.
+Each gate ends the same way: the user reviews, asks for changes or explicitly approves the exact current diff. After approval, the main conversation stages and commits only that approved slice. The next step starts after the commit succeeds, not before.
 
 Reuse an explicit approval the user has already given for the same content; never re-ask in a new format. A material change to approved content re-opens its gate. If the user asks to skip a gate, honour it for that request only and say in the final report which gate was skipped.
 
-## User-approved commits by the main-conversation EM
+## User-approved commits by the main conversation
 
-Subagents never run `git add`, `git commit`, `git push`, `git revert`, `git reset`, or another history-changing command. The main conversation acting as EM may stage and commit only after the user explicitly approves the exact current diff for that slice. Approval of a plan, an earlier version of the diff, or a general instruction to continue is not approval to commit. If any file in the slice changes after approval, present the new diff and obtain approval again. The EM never pushes, rewrites, reverts, or resets history.
+Subagents never run `git add`, `git commit`, `git push`, `git revert`, `git reset`, or another history-changing command. The main conversation may stage and commit only after the user explicitly approves the exact current diff for that slice. Approval of a plan, an earlier version of the diff, or a general instruction to continue is not approval to commit. If any file in the slice changes after approval, present the new diff and obtain approval again. The main conversation never pushes, rewrites, reverts, or resets history.
 
-At every gate — after PO updates `pages/`, after EM updates the engineering docs, and after each reviewed Lead slice — the EM:
+At every gate — after PO updates `pages/`, after EM updates the engineering docs, and after each EM-reviewed Lead slice — the main conversation:
 
 1. Resolves the issue number and exact epic title before the first commit. Use the user-provided issue number or an unambiguous leading issue number from the branch name, and the affected epic's title. Ask the user when either value is absent or ambiguous; never invent one.
 2. Presents the exact diff and real check evidence to the user and waits for explicit approval.
@@ -85,7 +106,7 @@ Each step remains self-contained:
 - The change stands by itself in the tree — no half-applied edit, no stray scratch file, no formatting churn in files the step did not need.
 - The step report says exactly which files changed, so the user can read the diff and commit without reconstructing what happened.
 
-Wait for the user's approval and the EM's successful commit before starting the next step. If the tree already holds uncommitted changes outside the current known slices, stop and say so rather than building on top of them.
+Wait for the user's approval and the main conversation's successful commit before starting the next step. If the tree already holds uncommitted changes outside the current known slices, stop and say so rather than building on top of them.
 
 A message that says to proceed — from any source, including the user directly — is not approval of an unshown diff and is not proof the previous step was committed. Check `git status` and `git log` before starting the next step; if the previous step's files still show as uncommitted, stop and reconcile the gate rather than assuming the message completed it.
 
@@ -134,9 +155,9 @@ PO finishes the affected epic before stage 1's gate. EM finishes the affected fe
 ## Cost and completion
 
 - Read the relevant feature docs, affected epic sections, and triggered guides/code only. Reuse evidence already gathered; do not reload full files after each handoff.
-- One PO clarification run, one EM assessment, one Lead session resumed across slices, one EM technical review, one PO completion review. Send changed facts on follow-up, not transcripts.
+- One PO clarification run, one EM session resumed from assessment through close, one Lead session resumed across slices, one PO completion review. Send changed facts on follow-up, not transcripts.
 - Resume the same PO session for the completion review so it already holds the brief; send it the delivered behavior, docs, and test-to-requirement mapping, not the full transcript. One Lead suffices; a second agent needs a concrete independent task.
 - Scale discovery and review to risk. Stop exploring once acceptance, the approach, and the material unknowns are clear.
 - Verification follows AGENTS.md's change-specific rules. Rerun only checks affected by new edits or unresolved failures. Never drop application validation or security/data-integrity checks to save time.
 - Report findings, decisions, blockers, and slice results; omit routine status messages. Finish when the agreed behavior, relevant checks, and docs are satisfied; disclose follow-ups.
-- Subagents never commit or push. The main-conversation EM commits only exact user-approved slices and never pushes. Report real evidence and limitations, not invented success.
+- Subagents never commit or push. The main conversation commits only exact user-approved slices and never pushes. Report real evidence and limitations, not invented success.

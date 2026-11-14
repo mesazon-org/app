@@ -52,24 +52,27 @@ case class CatalogueItemVariantAttributesAIExtract(
     value: CatalogueItemVariantAttributeValue,
 )
 
+case class CatalogueItemVariantPriceAIExtract(
+    amount: PriceAmount,
+    currency: Option[Currency],
+    currencyInferred: Boolean,
+)
+
 case class CatalogueItemVariantAIExtract(
     sku: Option[CatalogueItemVariantSku],
     label: Option[CatalogueItemVariantLabel],
     description: Option[CatalogueItemVariantDescription],
     attributes: List[CatalogueItemVariantAttributesAIExtract],
-    price: Option[CatalogueItemVariantPrice],
+    price: Option[CatalogueItemVariantPriceAIExtract],
     sellingUnit: Option[CatalogueItemVariantSaleUnit],
-    missingRequiredSaleUnit: Boolean,
-    skuIsDuplicate: Boolean,
+    sellingUnitInferred: Boolean,
     extractionNotes: List[String],
 )
 
 case class CatalogueItemAIExtract(
-    name: CatalogueItemName,
+    name: Option[CatalogueItemName],
     description: Option[CatalogueItemDescription],
     variants: List[CatalogueItemVariantAIExtract],
-    atLeastOneVariant: Boolean,
-    nameIsDuplicate: Boolean,
     extractionNotes: List[String],
 )
 
@@ -84,10 +87,27 @@ case class CatalogueFileAIExtract(
 
 // Catalogue File
 
+case class CatalogueItemVariantPriceCandidate(
+    amount: PriceAmount,
+    currency: Option[Currency],
+)
+
+case class CatalogueItemVariantCandidate(
+    sku: Option[CatalogueItemVariantSku],
+    label: Option[CatalogueItemVariantLabel],
+    description: Option[CatalogueItemVariantDescription],
+    attributes: Map[CatalogueItemVariantAttributeName, CatalogueItemVariantAttributeValue],
+    price: Option[CatalogueItemVariantPriceCandidate],
+    sellingUnit: Option[CatalogueItemVariantSaleUnit],
+)
+
 case class CatalogueItemCandidate(
-    name: CatalogueItemName,
+    name: Option[CatalogueItemName],
     description: Option[CatalogueItemDescription],
-    variants: List[CatalogueItemVariantInsert],
+    variants: List[CatalogueItemVariantCandidate],
+    inferredFields: List[FieldInfo],
+    missingFields: List[FieldInfo],
+    duplicateFields: List[FieldInfo],
     needsAttention: Boolean,
     extractionNotes: List[String],
 )
