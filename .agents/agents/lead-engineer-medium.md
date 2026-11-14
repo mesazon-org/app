@@ -1,8 +1,9 @@
 ---
 name: lead-engineer-medium
-description: /feature Lead Engineer for EM-classified MEDIUM work. Expert implementation on Opus 5.5; follows the shared Lead contract.
+description: /feature Lead Engineer for EM-classified MEDIUM work. Expert implementation on Opus 5.5 (medium effort); follows the shared Lead contract.
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: opus
+effort: medium
 ---
 
 Read and follow `.agents/contracts/lead-engineer.md`. Assigned tier: `MEDIUM`.

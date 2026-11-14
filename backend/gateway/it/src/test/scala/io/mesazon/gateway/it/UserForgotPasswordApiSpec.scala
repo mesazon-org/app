@@ -1,5 +1,6 @@
 package io.mesazon.gateway.it
 
+import com.dimafeng.testcontainers.DockerComposeContainer
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient
 import io.mesazon.gateway.it.client.GatewayClient.given
@@ -16,1117 +17,1321 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 @DoNotDiscover
-class UserForgotPasswordApiSpec
-    extends GatewayAcceptanceTest,
+class UserForgotPasswordApiSpec(dockerComposeContainer: => DockerComposeContainer)
+    extends GatewayAcceptanceTest(dockerComposeContainer),
       SmithyArbitraries,
       UserForgotPasswordSmithyArbitraries,
       RepositoryArbitraries,
       IronRefinedTypeTransformer {
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+
+    withContext { context =>
+      import context.*
+
+      for {
+        _ <- postgresClient.truncateTable(
+          repositoryConfig.schema,
+          repositoryConfig.userDetailsTable,
+          repositoryConfig.userCredentialsTable,
+          repositoryConfig.userOtpTable,
+          repositoryConfig.userActionAttemptTable,
+          repositoryConfig.userTokenTable,
+        )
+        _ <- mailHogClient.clearInbox()
+      } yield ()
+    }
+  }
+
   "User Forgot Password API" when {
     "POST /forgot/password" should {
-      "successfully send forgot password" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        // Should delete this action attempt when new otp or expired is sent
-        val userActionAttemptRowForgotPasswordVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
-          userID = userDetailsRow.userID,
-          actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
-        )
-
-        postgresClient
-          .executeQuery(
-            userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPasswordVerifyOTP)
-          )
-          .zioValue
-
-        val userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
-
-        postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
-
-        val forgotPasswordPostResponse =
-          gatewayClient.forgotPasswordPost[smithy.InternalServerError](userDetailsRow.email).zioValue
-
-        val userOtpRowAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowAll should have size 1
-
-        forgotPasswordPostResponse.code shouldBe StatusCode.Ok
-        forgotPasswordPostResponse.body.value.otpID shouldBe userOtpRowAll.head.otpID.value
-        forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf default value
-
-        mailHogClient.readInbox().zioValue.total shouldBe 1
-
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
-
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
-
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-        userActionAttemptRowsAll should have size 0
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll shouldBe empty
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 1
-        userCredentialsRowsAll.head shouldBe userCredentialsRow
-      }
-
-      "successfully send forgot password with existing not expired OTP and update the expired time" in withContext {
+      "successfully create and email a new OTP, clearing the verify attempts counter but keeping the request counter, when the user has no OTP" in withContext {
         context =>
           import context.*
 
-          val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow]
-            .copy(onboardStage = onboardStage)
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.forgotPasswordAllowedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+            // Cleared because a new OTP is created
+            userActionAttemptRowForgotPasswordVerifyOTP = arbitrarySample[UserActionAttemptRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
+              )
+            // Kept because only a correct verify clears the request counter
+            userActionAttemptRowForgotPassword = arbitrarySample[UserActionAttemptRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                actionAttemptType = ActionAttemptType.ForgotPassword,
+              )
+            userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
 
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-          // Should not delete this action attempt for non expired otp
-          val userActionAttemptRowForgotPasswordVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
-            userID = userDetailsRow.userID,
-            actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
-          )
-
-          postgresClient
-            .executeQuery(
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(
               userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPasswordVerifyOTP)
             )
-            .zioValue
+            _ <- postgresClient.executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPassword)
+            )
+            _ <- postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow))
 
-          val userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+            forgotPasswordPostResponse <- gatewayClient.forgotPasswordPost[smithy.InternalServerError](
+              userDetailsRow.email
+            )
 
-          postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
+            userOtpRowsAll <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
 
-          val userOtpRow = arbitrarySample[UserOtpRow].copy(
-            userID = userDetailsRow.userID,
-            otpType = OtpType.ForgotPassword,
-            expiresAt = ExpiresAt(Instant.now.plusSeconds(100).truncatedTo(ChronoUnit.MILLIS)),
-          )
+            _ = userOtpRowsAll should have size 1
+            _ = userOtpRowsAll shouldBe List(
+              UserOtpRow(
+                otpID = OtpID.assume(forgotPasswordPostResponse.body.value.otpID),
+                userID = userDetailsRow.userID,
+                otp = userOtpRowsAll.head.otp,
+                otpType = OtpType.ForgotPassword,
+                createdAt = userOtpRowsAll.head.createdAt,
+                updatedAt = userOtpRowsAll.head.updatedAt,
+                expiresAt = userOtpRowsAll.head.expiresAt,
+              )
+            )
 
-          postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+            _ = forgotPasswordPostResponse.code shouldBe StatusCode.Ok
+            _ = forgotPasswordPostResponse.body.value.otpID shouldBe userOtpRowsAll.head.otpID.value
+            _ = forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf default value
 
-          val forgotPasswordPostResponse =
-            gatewayClient.forgotPasswordPost[smithy.InternalServerError](userDetailsRow.email).zioValue
+            mailHogResponse <- mailHogClient.readInbox()
 
-          val userOtpRowAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+            _ = mailHogResponse.total shouldBe 1
 
-          userOtpRowAll should have size 1
-          userOtpRowAll.head.expiresAt should not be userOtpRow.expiresAt
-          userOtpRowAll.head.updatedAt should not be userOtpRow.updatedAt
-          userOtpRowAll.head shouldBe userOtpRow.copy(
-            expiresAt = userOtpRowAll.head.expiresAt,
-            updatedAt = userOtpRowAll.head.updatedAt,
-          )
+            userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+            userActionAttemptRowsAll <- postgresClient.executeQuery(
+              userActionAttemptQueries.getAllUserActionAttemptsTesting
+            )
+            userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+            userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
 
-          forgotPasswordPostResponse.code shouldBe StatusCode.Ok
-          forgotPasswordPostResponse.body.value.otpID shouldBe userOtpRowAll.head.otpID.value
-          forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe (userOtpRowAll.head.expiresAt.value.getEpochSecond - Instant.now
-            .truncatedTo(ChronoUnit.MILLIS)
-            .getEpochSecond) +- 1
-
-          mailHogClient.readInbox().zioValue.total shouldBe 0
-
-          val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
-
-          userDetailsRowsAll should have size 1
-          userDetailsRowsAll.head shouldBe userDetailsRow
-
-          val userActionAttemptRowsAll =
-            postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-          userActionAttemptRowsAll should have size 2
-
-          val userActionAttemptRowForgotPasswordVerifyOTPResult =
-            userActionAttemptRowsAll.filter(_.actionAttemptType == ActionAttemptType.ForgotPasswordVerifyOTP).head
-          userActionAttemptRowForgotPasswordVerifyOTPResult shouldBe userActionAttemptRowForgotPasswordVerifyOTP
-
-          val userActionAttemptRowForgotPasswordResult =
-            userActionAttemptRowsAll.filter(_.actionAttemptType == ActionAttemptType.ForgotPassword).head
-          userActionAttemptRowForgotPasswordResult shouldBe UserActionAttemptRow(
-            actionAttemptID = userActionAttemptRowForgotPasswordResult.actionAttemptID,
-            userID = userDetailsRow.userID,
-            actionAttemptType = ActionAttemptType.ForgotPassword,
-            attempts = Attempts.assume(1),
-            createdAt = userActionAttemptRowForgotPasswordResult.createdAt,
-            updatedAt = userActionAttemptRowForgotPasswordResult.updatedAt,
-          )
-
-          val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-          userTokenRowsAll shouldBe empty
-
-          val userCredentialsRowsAll =
-            postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-          userCredentialsRowsAll should have size 1
-          userCredentialsRowsAll.head shouldBe userCredentialsRow
+            _ = userDetailsRowsAll should have size 1
+            _ = userDetailsRowsAll.head shouldBe userDetailsRow
+            _ = userActionAttemptRowsAll shouldBe List(userActionAttemptRowForgotPassword)
+            _ = userTokenRowsAll shouldBe empty
+            _ = userCredentialsRowsAll should have size 1
+            _ = userCredentialsRowsAll.head shouldBe userCredentialsRow
+          } yield ()
       }
 
-      "successfully send forgot password with existing non expired OTP and maxed attempts" in withContext { context =>
+      "successfully replace a stale OTP with a new one, email it and clear the verify attempts counter" in withContext {
+        context =>
+          import context.*
+
+          for {
+            instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+            onboardStage <- Random.shuffle(OnboardStage.forgotPasswordAllowedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+            // Cleared because a new OTP is created
+            userActionAttemptRowForgotPasswordVerifyOTP = arbitrarySample[UserActionAttemptRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
+              )
+            userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+            // Not yet expired, but inside the resend cooldown (application.conf otp-resend-cooldown 15 seconds)
+            userOtpRowStale = arbitrarySample[UserOtpRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                otpType = OtpType.ForgotPassword,
+                expiresAt = ExpiresAt(instantNow.plusSeconds(10)),
+              )
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPasswordVerifyOTP)
+            )
+            _ <- postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow))
+            _ <- postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRowStale))
+
+            forgotPasswordPostResponse <- gatewayClient.forgotPasswordPost[smithy.InternalServerError](
+              userDetailsRow.email
+            )
+
+            _ = forgotPasswordPostResponse.code shouldBe StatusCode.Ok
+            _ = forgotPasswordPostResponse.body.value.otpID should not be userOtpRowStale.otpID.value
+            _ = forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf default value
+
+            userOtpRowsAll <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+
+            _ = userOtpRowsAll should have size 1
+            _ = userOtpRowsAll.head.expiresAt should not be userOtpRowStale.expiresAt
+            _ = userOtpRowsAll shouldBe List(
+              UserOtpRow(
+                otpID = OtpID.assume(forgotPasswordPostResponse.body.value.otpID),
+                userID = userDetailsRow.userID,
+                otp = userOtpRowsAll.head.otp,
+                otpType = OtpType.ForgotPassword,
+                createdAt = userOtpRowsAll.head.createdAt,
+                updatedAt = userOtpRowsAll.head.updatedAt,
+                expiresAt = userOtpRowsAll.head.expiresAt,
+              )
+            )
+
+            mailHogResponse <- mailHogClient.readInbox()
+
+            _ = mailHogResponse.total shouldBe 1
+
+            userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+            userActionAttemptRowsAll <- postgresClient.executeQuery(
+              userActionAttemptQueries.getAllUserActionAttemptsTesting
+            )
+            userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+            userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
+
+            _ = userDetailsRowsAll shouldBe List(userDetailsRow)
+            _ = userActionAttemptRowsAll shouldBe empty
+            _ = userTokenRowsAll shouldBe empty
+            _ = userCredentialsRowsAll shouldBe List(userCredentialsRow)
+          } yield ()
+      }
+
+      "successfully reuse the existing OTP, reset its expiry and count the request without sending an email" in withContext {
+        context =>
+          import context.*
+
+          for {
+            instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+            onboardStage <- Random.shuffle(OnboardStage.forgotPasswordAllowedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+            // Should not delete this action attempt for non expired otp
+            userActionAttemptRowForgotPasswordVerifyOTP = arbitrarySample[UserActionAttemptRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
+              )
+            userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+            userOtpRow         = arbitrarySample[UserOtpRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                otpType = OtpType.ForgotPassword,
+                expiresAt = ExpiresAt(instantNow.plusSeconds(100)),
+              )
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPasswordVerifyOTP)
+            )
+            _ <- postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow))
+            _ <- postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow))
+
+            forgotPasswordPostResponse <- gatewayClient.forgotPasswordPost[smithy.InternalServerError](
+              userDetailsRow.email
+            )
+
+            instantNowAfterForgotPasswordPost = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+            userOtpRowsAll <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+
+            _ = userOtpRowsAll should have size 1
+            _ = userOtpRowsAll.head.expiresAt should not be userOtpRow.expiresAt
+            _ = userOtpRowsAll.head.updatedAt should not be userOtpRow.updatedAt
+            _ = userOtpRowsAll.head shouldBe userOtpRow.copy(
+              expiresAt = userOtpRowsAll.head.expiresAt,
+              updatedAt = userOtpRowsAll.head.updatedAt,
+            )
+
+            _ = forgotPasswordPostResponse.code shouldBe StatusCode.Ok
+            _ = forgotPasswordPostResponse.body.value.otpID shouldBe userOtpRowsAll.head.otpID.value
+            _ = forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe
+              (userOtpRowsAll.head.expiresAt.value.getEpochSecond - instantNowAfterForgotPasswordPost.getEpochSecond) +- 1
+
+            mailHogResponse <- mailHogClient.readInbox()
+
+            _ = mailHogResponse.total shouldBe 0
+
+            userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+            userActionAttemptRowsAll <- postgresClient.executeQuery(
+              userActionAttemptQueries.getAllUserActionAttemptsTesting
+            )
+
+            _ = userDetailsRowsAll should have size 1
+            _ = userDetailsRowsAll.head shouldBe userDetailsRow
+            _ = userActionAttemptRowsAll should have size 2
+
+            userActionAttemptRowForgotPasswordVerifyOTPResult = userActionAttemptRowsAll
+              .filter(_.actionAttemptType == ActionAttemptType.ForgotPasswordVerifyOTP)
+              .head
+            userActionAttemptRowForgotPasswordResult = userActionAttemptRowsAll
+              .filter(_.actionAttemptType == ActionAttemptType.ForgotPassword)
+              .head
+
+            _ = userActionAttemptRowForgotPasswordVerifyOTPResult shouldBe userActionAttemptRowForgotPasswordVerifyOTP
+
+            _ = userActionAttemptRowForgotPasswordResult shouldBe UserActionAttemptRow(
+              actionAttemptID = userActionAttemptRowForgotPasswordResult.actionAttemptID,
+              userID = userDetailsRow.userID,
+              actionAttemptType = ActionAttemptType.ForgotPassword,
+              attempts = Attempts.assume(2), // stored one ahead: the next request's number
+              createdAt = userActionAttemptRowForgotPasswordResult.createdAt,
+              updatedAt = userActionAttemptRowForgotPasswordResult.updatedAt,
+            )
+
+            userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+            userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
+
+            _ = userTokenRowsAll shouldBe empty
+            _ = userCredentialsRowsAll should have size 1
+            _ = userCredentialsRowsAll.head shouldBe userCredentialsRow
+          } yield ()
+      }
+
+      "successfully reset the expiry of the existing OTP without sending an email on the last allowed repeat request" in withContext {
+        context =>
+          import context.*
+
+          for {
+            instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+            onboardStage <- Random.shuffle(OnboardStage.forgotPasswordAllowedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+            userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+            userOtpRow         = arbitrarySample[UserOtpRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                otpType = OtpType.ForgotPassword,
+                expiresAt = ExpiresAt(instantNow.plusSeconds(100)),
+              )
+            otpResetAttemptsMaxRetries = 3 // application.conf otp-reset-attempts-max-retries
+            userActionAttemptRow       = arbitrarySample[UserActionAttemptRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                actionAttemptType = ActionAttemptType.ForgotPassword,
+                attempts = Attempts.assume(otpResetAttemptsMaxRetries),
+              )
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow))
+            _ <- postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow))
+            _ <- postgresClient.executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRow)
+            )
+
+            forgotPasswordPostResponse <- gatewayClient.forgotPasswordPost[smithy.InternalServerError](
+              userDetailsRow.email
+            )
+
+            instantNowAfterForgotPasswordPost = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+            userOtpRowsAll <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+
+            _ = userOtpRowsAll should have size 1
+            _ = userOtpRowsAll.head.expiresAt should not be userOtpRow.expiresAt
+            _ = userOtpRowsAll.head.updatedAt should not be userOtpRow.updatedAt
+            _ = userOtpRowsAll.head shouldBe userOtpRow.copy(
+              expiresAt = userOtpRowsAll.head.expiresAt,
+              updatedAt = userOtpRowsAll.head.updatedAt,
+            )
+
+            _ = forgotPasswordPostResponse.code shouldBe StatusCode.Ok
+            _ = forgotPasswordPostResponse.body.value.otpID shouldBe userOtpRowsAll.head.otpID.value
+            _ = forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe
+              (userOtpRowsAll.head.expiresAt.value.getEpochSecond - instantNowAfterForgotPasswordPost.getEpochSecond) +- 1
+
+            mailHogResponse <- mailHogClient.readInbox()
+
+            _ = mailHogResponse.total shouldBe 0
+
+            userActionAttemptRowsAll <- postgresClient.executeQuery(
+              userActionAttemptQueries.getAllUserActionAttemptsTesting
+            )
+
+            _ = userActionAttemptRowsAll should have size 1
+            _ = userActionAttemptRowsAll.head shouldBe userActionAttemptRow.copy(
+              attempts = Attempts.assume(otpResetAttemptsMaxRetries + 1),
+              updatedAt = userActionAttemptRowsAll.head.updatedAt,
+            )
+          } yield ()
+      }
+
+      "successfully return the existing OTP without changing its expiry or sending an email when the requests are over the limit" in withContext {
+        context =>
+          import context.*
+
+          for {
+            instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+            onboardStage <- Random.shuffle(OnboardStage.forgotPasswordAllowedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+            // Should not delete this action attempt
+            userActionAttemptRowForgotPasswordVerifyOTP = arbitrarySample[UserActionAttemptRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
+              )
+            userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+            userOtpRow         = arbitrarySample[UserOtpRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                otpType = OtpType.ForgotPassword,
+                expiresAt = ExpiresAt(instantNow.plusSeconds(100)),
+              )
+            otpResetAttemptsMaxRetries = 3 // application.conf otp-reset-attempts-max-retries
+            userActionAttemptRow       = arbitrarySample[UserActionAttemptRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                actionAttemptType = ActionAttemptType.ForgotPassword,
+                attempts = Attempts.assume(otpResetAttemptsMaxRetries + 1),
+              )
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPasswordVerifyOTP)
+            )
+            _ <- postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow))
+            _ <- postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow))
+            _ <- postgresClient.executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRow)
+            )
+
+            forgotPasswordPostResponse <- gatewayClient.forgotPasswordPost[smithy.InternalServerError](
+              userDetailsRow.email
+            )
+
+            userOtpRowsAll <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+
+            _ = userOtpRowsAll should have size 1
+            _ = userOtpRowsAll.head shouldBe userOtpRow
+
+            _ = forgotPasswordPostResponse.code shouldBe StatusCode.Ok
+            _ = forgotPasswordPostResponse.body.value.otpID shouldBe userOtpRow.otpID.value
+            _ = forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf default value
+
+            mailHogResponse <- mailHogClient.readInbox()
+
+            _ = mailHogResponse.total shouldBe 0
+
+            userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+            userActionAttemptRowsAll <- postgresClient.executeQuery(
+              userActionAttemptQueries.getAllUserActionAttemptsTesting
+            )
+
+            _ = userDetailsRowsAll should have size 1
+            _ = userDetailsRowsAll.head shouldBe userDetailsRow
+            _ = userActionAttemptRowsAll should have size 2
+
+            userActionAttemptRowForgotPasswordVerifyOTPResult = userActionAttemptRowsAll
+              .filter(_.actionAttemptType == ActionAttemptType.ForgotPasswordVerifyOTP)
+              .head
+            userActionAttemptRowForgotPasswordResult = userActionAttemptRowsAll
+              .filter(_.actionAttemptType == ActionAttemptType.ForgotPassword)
+              .head
+
+            _ = userActionAttemptRowForgotPasswordVerifyOTPResult shouldBe userActionAttemptRowForgotPasswordVerifyOTP
+
+            _ = userActionAttemptRowForgotPasswordResult shouldBe userActionAttemptRow.copy(
+              attempts = Attempts.assume(otpResetAttemptsMaxRetries + 2),
+              updatedAt = userActionAttemptRowForgotPasswordResult.updatedAt,
+            )
+
+            userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+            userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
+
+            _ = userTokenRowsAll shouldBe empty
+            _ = userCredentialsRowsAll should have size 1
+            _ = userCredentialsRowsAll.head shouldBe userCredentialsRow
+          } yield ()
+      }
+
+      "successfully return a made-up OTP ID without storing or sending anything when no user has the email" in withContext {
+        context =>
+          import context.*
+
+          for {
+            email = arbitrarySample[Email]
+
+            forgotPasswordPostResponse <- gatewayClient.forgotPasswordPost[smithy.InternalServerError](email)
+
+            _ = forgotPasswordPostResponse.code shouldBe StatusCode.Ok
+            _ = forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf default value
+
+            mailHogResponse <- mailHogClient.readInbox()
+
+            _ = mailHogResponse.total shouldBe 0
+
+            userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+            userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+            userActionAttemptRowsAll <- postgresClient.executeQuery(
+              userActionAttemptQueries.getAllUserActionAttemptsTesting
+            )
+            userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+            userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
+
+            _ = userDetailsRowsAll should have size 0
+            _ = userOtpRowsAll shouldBe empty
+            _ = userActionAttemptRowsAll should have size 0
+            _ = userTokenRowsAll shouldBe empty
+            _ = userCredentialsRowsAll shouldBe empty
+          } yield ()
+      }
+
+      "fail with BadRequest ValidationError when the email is invalid" in withContext { context =>
         import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        // Should not delete this action attempt
-        val userActionAttemptRowForgotPasswordVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
-          userID = userDetailsRow.userID,
-          actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
-        )
-
-        postgresClient
-          .executeQuery(
-            userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPasswordVerifyOTP)
+        for {
+          forgotPasswordPostResponse <- gatewayClient.forgotPasswordPost[smithy.ValidationError](
+            Email.assume("invalid-email")
           )
-          .zioValue
 
-        val userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+          _ = forgotPasswordPostResponse.code shouldBe StatusCode.BadRequest
+          _ = forgotPasswordPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("email"))
 
-        postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
+          mailHogResponse <- mailHogClient.readInbox()
 
-        val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          userID = userDetailsRow.userID,
-          otpType = OtpType.ForgotPassword,
-          expiresAt = ExpiresAt(Instant.now.plusSeconds(100).truncatedTo(ChronoUnit.MILLIS)),
-        )
+          _ = mailHogResponse.total shouldBe 0
 
-        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
+          userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+          userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+          userActionAttemptRowsAll <- postgresClient.executeQuery(
+            userActionAttemptQueries.getAllUserActionAttemptsTesting
+          )
+          userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+          userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
 
-        val userActionAttemptRow = arbitrarySample[UserActionAttemptRow].copy(
-          userID = userDetailsRow.userID,
-          actionAttemptType = ActionAttemptType.ForgotPassword,
-          attempts = Attempts.assume(20),
-        )
-
-        postgresClient
-          .executeQuery(userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRow))
-          .zioValue
-
-        val forgotPasswordPostResponse =
-          gatewayClient.forgotPasswordPost[smithy.InternalServerError](userDetailsRow.email).zioValue
-
-        val userOtpRowAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowAll should have size 1
-        userOtpRowAll.head shouldBe userOtpRow
-
-        forgotPasswordPostResponse.code shouldBe StatusCode.Ok
-        forgotPasswordPostResponse.body.value.otpID shouldBe userOtpRow.otpID.value
-        forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf default value
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
-
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
-
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-        userActionAttemptRowsAll should have size 2
-
-        val userActionAttemptRowForgotPasswordVerifyOTPResult =
-          userActionAttemptRowsAll.filter(_.actionAttemptType == ActionAttemptType.ForgotPasswordVerifyOTP).head
-        userActionAttemptRowForgotPasswordVerifyOTPResult shouldBe userActionAttemptRowForgotPasswordVerifyOTP
-
-        val userActionAttemptRowForgotPasswordResult =
-          userActionAttemptRowsAll.filter(_.actionAttemptType == ActionAttemptType.ForgotPassword).head
-        userActionAttemptRowForgotPasswordResult shouldBe userActionAttemptRow.copy(
-          attempts = Attempts.assume(21),
-          updatedAt = userActionAttemptRowForgotPasswordResult.updatedAt,
-        )
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll shouldBe empty
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 1
-        userCredentialsRowsAll.head shouldBe userCredentialsRow
-      }
-
-      "successfully send forgot password with non existing user for that email" in withContext { context =>
-        import context.*
-
-        val email = arbitrarySample[Email]
-
-        val forgotPasswordPostResponse =
-          gatewayClient.forgotPasswordPost[smithy.InternalServerError](email).zioValue
-
-        forgotPasswordPostResponse.code shouldBe StatusCode.Ok
-        forgotPasswordPostResponse.body.value.otpExpiresInSeconds shouldBe 45 // application.conf default value
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
-
-        userDetailsRowsAll should have size 0
-
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-        userActionAttemptRowsAll should have size 0
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll shouldBe empty
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll shouldBe empty
-      }
-
-      "fail with BadRequest ValidationError when request is invalid" in withContext { context =>
-        import context.*
-
-        val forgotPasswordPostResponse =
-          gatewayClient.forgotPasswordPost[smithy.ValidationError](Email.assume("invalid-email")).zioValue
-
-        forgotPasswordPostResponse.code shouldBe StatusCode.BadRequest
-        forgotPasswordPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("email"))
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
-
-        userDetailsRowsAll should have size 0
-
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-        userActionAttemptRowsAll should have size 0
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll should have size 0
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 0
-      }
-
-      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
-        import context.*
-
-        val onboardStage =
-          Random.shuffle(OnboardStage.values.toList.diff(OnboardStage.forgotPasswordAllowedStages)).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val forgotPasswordPostResponse =
-          gatewayClient.forgotPasswordPost[smithy.Forbidden](userDetailsRow.email).zioValue
-
-        forgotPasswordPostResponse.code shouldBe StatusCode.Forbidden
-        forgotPasswordPostResponse.body.left.value shouldBe smithy.Forbidden()
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
-
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
-
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-        userActionAttemptRowsAll should have size 0
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll should have size 0
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 0
+          _ = userDetailsRowsAll should have size 0
+          _ = userOtpRowsAll shouldBe empty
+          _ = userActionAttemptRowsAll should have size 0
+          _ = userTokenRowsAll should have size 0
+          _ = userCredentialsRowsAll should have size 0
+        } yield ()
       }
     }
 
     "POST /forgot/password/verify-otp" should {
-      "successfully verify OTP and generate reset password token" in withContext { context =>
-        import context.*
+      "successfully verify the OTP on the last allowed attempt, clear both attempt counters, delete the user's existing tokens and issue a reset password token" in withContext {
+        context =>
+          import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
+          for {
+            instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+            onboardStage <- Random.shuffle(OnboardStage.forgotPasswordAllowedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+            // Cleared once the OTP is verified
+            userActionAttemptRowForgotPassword = arbitrarySample[UserActionAttemptRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                actionAttemptType = ActionAttemptType.ForgotPassword,
+              )
+            otpVerifyAttemptsMaxRetries                 = 5 // application.conf otp-verify-attempts-max-retries
+            userActionAttemptRowForgotPasswordVerifyOTP = arbitrarySample[UserActionAttemptRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
+                attempts = Attempts.assume(otpVerifyAttemptsMaxRetries),
+              )
+            userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+            userOtpRow         = arbitrarySample[UserOtpRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                otpType = OtpType.ForgotPassword,
+                expiresAt = ExpiresAt(instantNow.plusSeconds(100)),
+              )
+            // Should be deleted once the OTP is verified successfully
+            userTokenRowExisting = arbitrarySample[UserTokenRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                tokenType = TokenType.RefreshToken,
+              )
 
-        // Should delete this action attempt when otp is verified
-        val userActionAttemptRowForgotPassword = arbitrarySample[UserActionAttemptRow].copy(
-          userID = userDetailsRow.userID,
-          actionAttemptType = ActionAttemptType.ForgotPassword,
-        )
-
-        postgresClient
-          .executeQuery(
-            userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPassword)
-          )
-          .zioValue
-
-        val userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
-
-        postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
-
-        val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          userID = userDetailsRow.userID,
-          otpType = OtpType.ForgotPassword,
-          expiresAt = ExpiresAt(Instant.now.plusSeconds(100).truncatedTo(ChronoUnit.MILLIS)),
-        )
-
-        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
-
-        // Should be deleted once the OTP is verified successfully
-        val userTokenRowExisting = arbitrarySample[UserTokenRow].copy(
-          userID = userDetailsRow.userID,
-          tokenType = TokenType.RefreshToken,
-        )
-
-        postgresClient.executeQuery(userTokenQueries.insertUserToken(userTokenRowExisting)).zioValue
-
-        val forgotPasswordVerifyOTPPostResponse =
-          gatewayClient
-            .forgotPasswordVerifyOTPPost[smithy.InternalServerError](
-              userOtpRow.otpID,
-              userOtpRow.otp,
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPassword)
             )
-            .zioValue
+            _ <- postgresClient.executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPasswordVerifyOTP)
+            )
+            _ <- postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow))
+            _ <- postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow))
+            _ <- postgresClient.executeQuery(userTokenQueries.insertUserToken(userTokenRowExisting))
 
-        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.Ok
-        forgotPasswordVerifyOTPPostResponse.body.value.resetPasswordToken should not be empty
-        forgotPasswordVerifyOTPPostResponse.body.value.resetPasswordTokenExpiresInSeconds shouldBe (2.minutes.toSeconds +- 1) // application.conf default value
+            forgotPasswordVerifyOTPPostResponse <- gatewayClient
+              .forgotPasswordVerifyOTPPost[smithy.InternalServerError](
+                userOtpRow.otpID,
+                userOtpRow.otp,
+              )
 
-        mailHogClient.readInbox().zioValue.total shouldBe 0
+            _ = forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.Ok
+            _ = forgotPasswordVerifyOTPPostResponse.body.value.resetPasswordToken should not be empty
+            _ = forgotPasswordVerifyOTPPostResponse.body.value.resetPasswordTokenExpiresInSeconds shouldBe
+              (2.minutes.toSeconds +- 1) // application.conf default value
 
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+            mailHogResponse <- mailHogClient.readInbox()
 
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
+            _ = mailHogResponse.total shouldBe 0
 
-        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+            userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+            userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+            userActionAttemptRowsAll <- postgresClient.executeQuery(
+              userActionAttemptQueries.getAllUserActionAttemptsTesting
+            )
 
-        userOtpRowsAll should have size 0
+            _ = userDetailsRowsAll should have size 1
+            _ = userDetailsRowsAll.head shouldBe userDetailsRow
+            _ = userOtpRowsAll should have size 0
+            _ = userActionAttemptRowsAll should have size 0
 
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+            userTokenRowsAll <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
 
-        userActionAttemptRowsAll should have size 0
+            authedUserResetPassword <- jwtService.verifyResetPasswordToken(
+              ResetPasswordToken.assume(forgotPasswordVerifyOTPPostResponse.body.value.resetPasswordToken)
+            )
 
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+            _ = userTokenRowsAll should have size 1
+            _ = userTokenRowsAll.head.userID shouldBe userDetailsRow.userID
+            _ = userTokenRowsAll.head.tokenType shouldBe TokenType.ResetPasswordToken
+            _ = userTokenRowsAll.head.tokenID shouldBe authedUserResetPassword.tokenID
+            _ = userTokenRowsAll.head.tokenID should not be userTokenRowExisting.tokenID
 
-        val authedUserResetPassword = jwtService
-          .verifyResetPasswordToken(
-            ResetPasswordToken.assume(forgotPasswordVerifyOTPPostResponse.body.value.resetPasswordToken)
-          )
-          .zioValue
+            userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
 
-        userTokenRowsAll should have size 1
-        userTokenRowsAll.head.userID shouldBe userDetailsRow.userID
-        userTokenRowsAll.head.tokenType shouldBe TokenType.ResetPasswordToken
-        userTokenRowsAll.head.tokenID shouldBe authedUserResetPassword.tokenID
-        userTokenRowsAll.head.tokenID should not be userTokenRowExisting.tokenID
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 1
-        userCredentialsRowsAll.head shouldBe userCredentialsRow
+            _ = userCredentialsRowsAll should have size 1
+            _ = userCredentialsRowsAll.head shouldBe userCredentialsRow
+          } yield ()
       }
 
-      "fail with BadRequest ValidationError when request is invalid" in withContext { context =>
+      "fail with BadRequest when the OTP is wrong, counting the attempt and keeping the OTP" in withContext { context =>
         import context.*
 
-        val otpID = arbitrarySample[OtpID]
+        for {
+          instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
-        val forgotPasswordVerifyOTPPostResponse =
-          gatewayClient
-            .forgotPasswordVerifyOTPPost[smithy.ValidationError](
-              otpID = otpID,
-              otp = Otp.assume("invalid-otp"),
+          onboardStage <- Random.shuffle(OnboardStage.forgotPasswordAllowedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          // Should not delete this action attempt when OTP is wrong
+          userActionAttemptRowForgotPassword = arbitrarySample[UserActionAttemptRow]
+            .copy(
+              userID = userDetailsRow.userID,
+              actionAttemptType = ActionAttemptType.ForgotPassword,
             )
-            .zioValue
+          userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+          userOtpRow         = arbitrarySample[UserOtpRow]
+            .copy(
+              userID = userDetailsRow.userID,
+              otpType = OtpType.ForgotPassword,
+              expiresAt = ExpiresAt(instantNow.plusSeconds(100)),
+            )
 
-        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
-        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("otp"))
-
-        mailHogClient.readInbox().zioValue.total shouldBe 0
-
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
-
-        userDetailsRowsAll should have size 0
-
-        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowsAll should have size 0
-
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-        userActionAttemptRowsAll should have size 0
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll should have size 0
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 0
-      }
-
-      "fail with BadRequest when OTP is wrong" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        // Should not delete this action attempt when OTP is wrong
-        val userActionAttemptRowForgotPassword = arbitrarySample[UserActionAttemptRow].copy(
-          userID = userDetailsRow.userID,
-          actionAttemptType = ActionAttemptType.ForgotPassword,
-        )
-
-        postgresClient
-          .executeQuery(
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(
             userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPassword)
           )
-          .zioValue
+          _ <- postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow))
+          _ <- postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow))
 
-        val userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
-
-        postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
-
-        val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          userID = userDetailsRow.userID,
-          otpType = OtpType.ForgotPassword,
-          expiresAt = ExpiresAt(Instant.now.plusSeconds(100).truncatedTo(ChronoUnit.MILLIS)),
-        )
-
-        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
-
-        val forgotPasswordVerifyOTPPostResponse =
-          gatewayClient
+          forgotPasswordVerifyOTPPostResponse <- gatewayClient
             .forgotPasswordVerifyOTPPost[smithy.BadRequest](
               userOtpRow.otpID,
               Otp.assume("111AAA"), // wrong otp
             )
-            .zioValue
 
-        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
-        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.BadRequest()
+          _ = forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
+          _ = forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.BadRequest()
 
-        mailHogClient.readInbox().zioValue.total shouldBe 0
+          mailHogResponse <- mailHogClient.readInbox()
 
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+          _ = mailHogResponse.total shouldBe 0
 
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
+          userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+          userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+          userActionAttemptRowsAll <- postgresClient.executeQuery(
+            userActionAttemptQueries.getAllUserActionAttemptsTesting
+          )
 
-        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+          _ = userDetailsRowsAll should have size 1
+          _ = userDetailsRowsAll.head shouldBe userDetailsRow
+          _ = userOtpRowsAll should have size 1
+          _ = userOtpRowsAll.head shouldBe userOtpRow
+          _ = userActionAttemptRowsAll should have size 2
 
-        userOtpRowsAll should have size 1
-        userOtpRowsAll.head shouldBe userOtpRow
+          userActionAttemptRowForgotPasswordResult = userActionAttemptRowsAll
+            .filter(_.actionAttemptType == ActionAttemptType.ForgotPassword)
+            .head
+          userActionAttemptRowForgotPasswordVerifyOTPResult = userActionAttemptRowsAll
+            .filter(_.actionAttemptType == ActionAttemptType.ForgotPasswordVerifyOTP)
+            .head
 
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+          _ = userActionAttemptRowForgotPasswordResult shouldBe userActionAttemptRowForgotPassword
 
-        userActionAttemptRowsAll should have size 2
+          _ = userActionAttemptRowForgotPasswordVerifyOTPResult shouldBe UserActionAttemptRow(
+            actionAttemptID = userActionAttemptRowForgotPasswordVerifyOTPResult.actionAttemptID,
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
+            attempts = Attempts.assume(2), // stored one ahead: the next attempt's number
+            createdAt = userActionAttemptRowForgotPasswordVerifyOTPResult.createdAt,
+            updatedAt = userActionAttemptRowForgotPasswordVerifyOTPResult.updatedAt,
+          )
 
-        val userActionAttemptRowForgotPasswordResult =
-          userActionAttemptRowsAll.filter(_.actionAttemptType == ActionAttemptType.ForgotPassword).head
-        userActionAttemptRowForgotPasswordResult shouldBe userActionAttemptRowForgotPassword
+          userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+          userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
 
-        val userActionAttemptRowForgotPasswordVerifyOTPResult =
-          userActionAttemptRowsAll.filter(_.actionAttemptType == ActionAttemptType.ForgotPasswordVerifyOTP).head
-        userActionAttemptRowForgotPasswordVerifyOTPResult shouldBe UserActionAttemptRow(
-          actionAttemptID = userActionAttemptRowForgotPasswordVerifyOTPResult.actionAttemptID,
-          userID = userDetailsRow.userID,
-          actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
-          attempts = Attempts.assume(1),
-          createdAt = userActionAttemptRowForgotPasswordVerifyOTPResult.createdAt,
-          updatedAt = userActionAttemptRowForgotPasswordVerifyOTPResult.updatedAt,
-        )
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll should have size 0
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 1
-        userCredentialsRowsAll.head shouldBe userCredentialsRow
+          _ = userTokenRowsAll should have size 0
+          _ = userCredentialsRowsAll should have size 1
+          _ = userCredentialsRowsAll.head shouldBe userCredentialsRow
+        } yield ()
       }
 
-      "fail with BadRequest when OTP is expired" in withContext { context =>
+      "fail with BadRequest when the OTP is expired, deleting the OTP" in withContext { context =>
         import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
+        for {
+          instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          onboardStage <- Random.shuffle(OnboardStage.forgotPasswordAllowedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          // Should not delete this action attempt when OTP is expired
+          userActionAttemptRowForgotPassword = arbitrarySample[UserActionAttemptRow]
+            .copy(
+              userID = userDetailsRow.userID,
+              actionAttemptType = ActionAttemptType.ForgotPassword,
+            )
+          userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+          userOtpRow         = arbitrarySample[UserOtpRow]
+            .copy(
+              userID = userDetailsRow.userID,
+              otpType = OtpType.ForgotPassword,
+              expiresAt = ExpiresAt(instantNow.minusSeconds(100)),
+            )
 
-        // Should not delete this action attempt when OTP is expired
-        val userActionAttemptRowForgotPassword = arbitrarySample[UserActionAttemptRow].copy(
-          userID = userDetailsRow.userID,
-          actionAttemptType = ActionAttemptType.ForgotPassword,
-        )
-
-        postgresClient
-          .executeQuery(
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(
             userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPassword)
           )
-          .zioValue
+          _ <- postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow))
+          _ <- postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow))
 
-        val userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
-
-        postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
-
-        val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          userID = userDetailsRow.userID,
-          otpType = OtpType.ForgotPassword,
-          expiresAt = ExpiresAt(Instant.now.minusSeconds(100).truncatedTo(ChronoUnit.MILLIS)),
-        )
-
-        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
-
-        val forgotPasswordVerifyOTPPostResponse =
-          gatewayClient
+          forgotPasswordVerifyOTPPostResponse <- gatewayClient
             .forgotPasswordVerifyOTPPost[smithy.BadRequest](
               userOtpRow.otpID,
               userOtpRow.otp,
             )
-            .zioValue
 
-        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
-        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.BadRequest()
+          _ = forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
+          _ = forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.BadRequest()
 
-        mailHogClient.readInbox().zioValue.total shouldBe 0
+          mailHogResponse <- mailHogClient.readInbox()
 
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+          _ = mailHogResponse.total shouldBe 0
 
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
+          userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+          userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+          userActionAttemptRowsAll <- postgresClient.executeQuery(
+            userActionAttemptQueries.getAllUserActionAttemptsTesting
+          )
 
-        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+          _ = userDetailsRowsAll should have size 1
+          _ = userDetailsRowsAll.head shouldBe userDetailsRow
+          _ = userOtpRowsAll should have size 0
+          _ = userActionAttemptRowsAll should have size 2
 
-        userOtpRowsAll should have size 0
+          userActionAttemptRowForgotPasswordResult = userActionAttemptRowsAll
+            .filter(_.actionAttemptType == ActionAttemptType.ForgotPassword)
+            .head
+          userActionAttemptRowForgotPasswordVerifyOTPResult = userActionAttemptRowsAll
+            .filter(_.actionAttemptType == ActionAttemptType.ForgotPasswordVerifyOTP)
+            .head
 
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+          _ = userActionAttemptRowForgotPasswordResult shouldBe userActionAttemptRowForgotPassword
 
-        userActionAttemptRowsAll should have size 2
+          _ = userActionAttemptRowForgotPasswordVerifyOTPResult shouldBe UserActionAttemptRow(
+            actionAttemptID = userActionAttemptRowForgotPasswordVerifyOTPResult.actionAttemptID,
+            userID = userDetailsRow.userID,
+            actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
+            attempts = Attempts.assume(2), // stored one ahead: the next attempt's number
+            createdAt = userActionAttemptRowForgotPasswordVerifyOTPResult.createdAt,
+            updatedAt = userActionAttemptRowForgotPasswordVerifyOTPResult.updatedAt,
+          )
 
-        val userActionAttemptRowForgotPasswordResult =
-          userActionAttemptRowsAll.filter(_.actionAttemptType == ActionAttemptType.ForgotPassword).head
-        userActionAttemptRowForgotPasswordResult shouldBe userActionAttemptRowForgotPassword
+          userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+          userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
 
-        val userActionAttemptRowForgotPasswordVerifyOTPResult =
-          userActionAttemptRowsAll.filter(_.actionAttemptType == ActionAttemptType.ForgotPasswordVerifyOTP).head
-        userActionAttemptRowForgotPasswordVerifyOTPResult shouldBe UserActionAttemptRow(
-          actionAttemptID = userActionAttemptRowForgotPasswordVerifyOTPResult.actionAttemptID,
-          userID = userDetailsRow.userID,
-          actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
-          attempts = Attempts.assume(1),
-          createdAt = userActionAttemptRowForgotPasswordVerifyOTPResult.createdAt,
-          updatedAt = userActionAttemptRowForgotPasswordVerifyOTPResult.updatedAt,
-        )
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll should have size 0
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 1
-        userCredentialsRowsAll.head shouldBe userCredentialsRow
+          _ = userTokenRowsAll should have size 0
+          _ = userCredentialsRowsAll should have size 1
+          _ = userCredentialsRowsAll.head shouldBe userCredentialsRow
+        } yield ()
       }
 
-      "fail with BadRequest when verify attempts has reached the limit" in withContext { context =>
-        import context.*
+      "fail with BadRequest and delete the OTP when the verify attempts are over the limit, even with the correct OTP" in withContext {
+        context =>
+          import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
+          for {
+            instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+            onboardStage <- Random.shuffle(OnboardStage.forgotPasswordAllowedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+            userActionAttemptRowForgotPassword = arbitrarySample[UserActionAttemptRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                actionAttemptType = ActionAttemptType.ForgotPassword,
+              )
+            userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+            userOtpRow         = arbitrarySample[UserOtpRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                otpType = OtpType.ForgotPassword,
+                expiresAt = ExpiresAt(instantNow.plusSeconds(100)),
+              )
+            otpVerifyAttemptsMaxRetries                 = 5 // application.conf otp-verify-attempts-max-retries
+            userActionAttemptRowForgotPasswordVerifyOTP = arbitrarySample[UserActionAttemptRow]
+              .copy(
+                userID = userDetailsRow.userID,
+                actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
+                attempts = Attempts.assume(otpVerifyAttemptsMaxRetries + 1),
+              )
 
-        val userActionAttemptRowForgotPassword = arbitrarySample[UserActionAttemptRow].copy(
-          userID = userDetailsRow.userID,
-          actionAttemptType = ActionAttemptType.ForgotPassword,
-        )
-
-        postgresClient
-          .executeQuery(
-            userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPassword)
-          )
-          .zioValue
-
-        val userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
-
-        postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
-
-        val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          userID = userDetailsRow.userID,
-          otpType = OtpType.ForgotPassword,
-          expiresAt = ExpiresAt(Instant.now.plusSeconds(100).truncatedTo(ChronoUnit.MILLIS)),
-        )
-
-        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
-
-        val userActionAttemptRowForgotPasswordVerifyOTP = arbitrarySample[UserActionAttemptRow].copy(
-          userID = userDetailsRow.userID,
-          actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
-          attempts = Attempts.assume(6), // application.conf
-        )
-
-        postgresClient
-          .executeQuery(
-            userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPasswordVerifyOTP)
-          )
-          .zioValue
-
-        val forgotPasswordVerifyOTPPostResponse =
-          gatewayClient
-            .forgotPasswordVerifyOTPPost[smithy.BadRequest](
-              userOtpRow.otpID,
-              userOtpRow.otp,
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPassword)
             )
-            .zioValue
+            _ <- postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow))
+            _ <- postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow))
+            _ <- postgresClient.executeQuery(
+              userActionAttemptQueries.insertUserActionAttemptTesting(userActionAttemptRowForgotPasswordVerifyOTP)
+            )
 
-        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
-        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.BadRequest()
+            forgotPasswordVerifyOTPPostResponse <- gatewayClient
+              .forgotPasswordVerifyOTPPost[smithy.BadRequest](
+                userOtpRow.otpID,
+                userOtpRow.otp,
+              )
 
-        mailHogClient.readInbox().zioValue.total shouldBe 0
+            _ = forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
+            _ = forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.BadRequest()
 
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+            mailHogResponse <- mailHogClient.readInbox()
 
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
+            _ = mailHogResponse.total shouldBe 0
 
-        // OTP is deleted when the verify attempt limit is exceeded
-        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+            userDetailsRowsAll <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
 
-        userOtpRowsAll should have size 0
+            _ = userDetailsRowsAll should have size 1
+            _ = userDetailsRowsAll.head shouldBe userDetailsRow
 
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+            // OTP is deleted when the verify attempt limit is exceeded
+            userOtpRowsAll <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
 
-        userActionAttemptRowsAll should have size 2
+            _ = userOtpRowsAll should have size 0
 
-        userActionAttemptRowsAll
-          .filter(_.actionAttemptType == ActionAttemptType.ForgotPassword)
-          .head shouldBe userActionAttemptRowForgotPassword
+            userActionAttemptRowsAll <- postgresClient.executeQuery(
+              userActionAttemptQueries.getAllUserActionAttemptsTesting
+            )
 
-        val userActionAttemptRowForgotPasswordVerifyOTPResult =
-          userActionAttemptRowsAll.filter(_.actionAttemptType == ActionAttemptType.ForgotPasswordVerifyOTP).head
+            _ = userActionAttemptRowsAll should have size 2
 
-        userActionAttemptRowForgotPasswordVerifyOTPResult shouldBe userActionAttemptRowForgotPasswordVerifyOTP.copy(
-          attempts = Attempts.assume(7), // attempts should be increased by 1
-          updatedAt = userActionAttemptRowForgotPasswordVerifyOTPResult.updatedAt,
-        )
+            userActionAttemptRowForgotPasswordResult = userActionAttemptRowsAll
+              .filter(_.actionAttemptType == ActionAttemptType.ForgotPassword)
+              .head
+            userActionAttemptRowForgotPasswordVerifyOTPResult = userActionAttemptRowsAll
+              .filter(_.actionAttemptType == ActionAttemptType.ForgotPasswordVerifyOTP)
+              .head
 
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+            _ = userActionAttemptRowForgotPasswordResult shouldBe userActionAttemptRowForgotPassword
 
-        userTokenRowsAll should have size 0
+            _ = userActionAttemptRowForgotPasswordVerifyOTPResult shouldBe userActionAttemptRowForgotPasswordVerifyOTP
+              .copy(
+                attempts = Attempts.assume(otpVerifyAttemptsMaxRetries + 2),
+                updatedAt = userActionAttemptRowForgotPasswordVerifyOTPResult.updatedAt,
+              )
 
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
+            userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+            userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
 
-        userCredentialsRowsAll should have size 1
-        userCredentialsRowsAll.head shouldBe userCredentialsRow
+            _ = userTokenRowsAll should have size 0
+            _ = userCredentialsRowsAll should have size 1
+            _ = userCredentialsRowsAll.head shouldBe userCredentialsRow
+          } yield ()
       }
 
-      "fail with BadRequest when OTP ID is not recognized" in withContext { context =>
+      "fail with BadRequest when the OTP ID is not recognized" in withContext { context =>
         import context.*
 
-        val otpID = arbitrarySample[OtpID]
+        for {
+          otpID = arbitrarySample[OtpID]
 
-        val forgotPasswordVerifyOTPPostResponse =
-          gatewayClient
+          forgotPasswordVerifyOTPPostResponse <- gatewayClient
             .forgotPasswordVerifyOTPPost[smithy.BadRequest](
               otpID = otpID,
               otp = Otp.assume("111AAA"),
             )
-            .zioValue
 
-        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
-        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.BadRequest()
+          _ = forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
+          _ = forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.BadRequest()
 
-        mailHogClient.readInbox().zioValue.total shouldBe 0
+          mailHogResponse <- mailHogClient.readInbox()
 
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+          _ = mailHogResponse.total shouldBe 0
 
-        userDetailsRowsAll should have size 0
+          userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+          userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+          userActionAttemptRowsAll <- postgresClient.executeQuery(
+            userActionAttemptQueries.getAllUserActionAttemptsTesting
+          )
+          userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+          userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
 
-        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowsAll should have size 0
-
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-        userActionAttemptRowsAll should have size 0
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll should have size 0
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 0
+          _ = userDetailsRowsAll should have size 0
+          _ = userOtpRowsAll should have size 0
+          _ = userActionAttemptRowsAll should have size 0
+          _ = userTokenRowsAll should have size 0
+          _ = userCredentialsRowsAll should have size 0
+        } yield ()
       }
 
-      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
+      "fail with BadRequest ValidationError when the OTP is invalid" in withContext { context =>
         import context.*
 
-        val onboardStage =
-          Random.shuffle(OnboardStage.values.toList.diff(OnboardStage.forgotPasswordAllowedStages)).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
+        for {
+          otpID = arbitrarySample[OtpID]
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val userOtpRow = arbitrarySample[UserOtpRow].copy(
-          userID = userDetailsRow.userID,
-          otpType = OtpType.ForgotPassword,
-          expiresAt = ExpiresAt(Instant.now.plusSeconds(100).truncatedTo(ChronoUnit.MILLIS)),
-        )
-
-        postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow)).zioValue
-
-        val forgotPasswordVerifyOTPPostResponse =
-          gatewayClient
-            .forgotPasswordVerifyOTPPost[smithy.Forbidden](
-              userOtpRow.otpID,
-              userOtpRow.otp,
+          forgotPasswordVerifyOTPPostResponse <- gatewayClient
+            .forgotPasswordVerifyOTPPost[smithy.ValidationError](
+              otpID = otpID,
+              otp = Otp.assume("invalid-otp"),
             )
-            .zioValue
 
-        forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.Forbidden
-        forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.Forbidden()
+          _ = forgotPasswordVerifyOTPPostResponse.code shouldBe StatusCode.BadRequest
+          _ = forgotPasswordVerifyOTPPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("otp"))
 
-        mailHogClient.readInbox().zioValue.total shouldBe 0
+          mailHogResponse <- mailHogClient.readInbox()
 
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+          _ = mailHogResponse.total shouldBe 0
 
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
+          userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+          userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+          userActionAttemptRowsAll <- postgresClient.executeQuery(
+            userActionAttemptQueries.getAllUserActionAttemptsTesting
+          )
+          userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+          userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
 
-        // Stage check fails before the OTP is consumed, so it must survive untouched
-        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowsAll should have size 1
-        userOtpRowsAll.head shouldBe userOtpRow
-
-        // Stage check fails before the verify-attempt counter is incremented
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-        userActionAttemptRowsAll should have size 0
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll should have size 0
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 0
+          _ = userDetailsRowsAll should have size 0
+          _ = userOtpRowsAll should have size 0
+          _ = userActionAttemptRowsAll should have size 0
+          _ = userTokenRowsAll should have size 0
+          _ = userCredentialsRowsAll should have size 0
+        } yield ()
       }
     }
 
     "POST /forgot/password/reset" should {
-      "successfully reset password with valid reset password token" in withContext { context =>
-        import context.*
+      "successfully reset the password, delete the reset password token and send a confirmation email" in withContext {
+        context =>
+          import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.forgotPasswordAllowedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+            userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow))
 
-        val userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+            resetPasswordJwt <- jwtService.generateResetPasswordToken(userDetailsRow.userID)
 
-        postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
+            userTokenRow = arbitrarySample[UserTokenRow]
+              .copy(
+                tokenID = resetPasswordJwt.tokenID,
+                userID = userDetailsRow.userID,
+                tokenType = TokenType.ResetPasswordToken,
+                expiresAt = resetPasswordJwt.expiresAt,
+              )
 
-        val resetPasswordJwt = jwtService.generateResetPasswordToken(userDetailsRow.userID).zioValue
+            _ <- postgresClient.executeQuery(userTokenQueries.insertUserToken(userTokenRow))
 
-        val userTokenRow = arbitrarySample[UserTokenRow].copy(
-          tokenID = resetPasswordJwt.tokenID,
-          userID = userDetailsRow.userID,
-          tokenType = TokenType.ResetPasswordToken,
-          expiresAt = resetPasswordJwt.expiresAt,
-        )
+            passwordNew = arbitrarySample[Password]
 
-        postgresClient.executeQuery(userTokenQueries.insertUserToken(userTokenRow)).zioValue
+            forgotPasswordResetPostResponse <- gatewayClient
+              .forgotPasswordResetPost[smithy.InternalServerError](
+                resetPasswordJwt.resetPasswordToken,
+                passwordNew,
+              )
 
-        val passwordNew = arbitrarySample[Password]
+            _ = forgotPasswordResetPostResponse.code shouldBe StatusCode.NoContent
 
-        val forgotPasswordResetPostResponse =
-          gatewayClient
-            .forgotPasswordResetPost[smithy.InternalServerError](
-              resetPasswordJwt.resetPasswordToken,
+            mailHogResponse <- mailHogClient.readInbox()
+
+            _ = mailHogResponse.total shouldBe 1
+
+            userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+            userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+            userActionAttemptRowsAll <- postgresClient.executeQuery(
+              userActionAttemptQueries.getAllUserActionAttemptsTesting
+            )
+            userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+            userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
+
+            _ = userDetailsRowsAll should have size 1
+            _ = userDetailsRowsAll.head shouldBe userDetailsRow
+            _ = userOtpRowsAll should have size 0
+            _ = userActionAttemptRowsAll should have size 0
+            _ = userTokenRowsAll should have size 0
+            _ = userCredentialsRowsAll should have size 1
+            _ = userCredentialsRowsAll.head.passwordHash should not be userCredentialsRow.passwordHash
+            _ = userCredentialsRowsAll.head shouldBe userCredentialsRow.copy(
+              passwordHash = userCredentialsRowsAll.head.passwordHash,
+              updatedAt = userCredentialsRowsAll.head.updatedAt,
+            )
+
+            isPasswordNewVerified <- passwordService.verifyPassword(
               passwordNew,
+              userCredentialsRowsAll.head.passwordHash,
             )
-            .zioValue
 
-        forgotPasswordResetPostResponse.code shouldBe StatusCode.NoContent
-
-        mailHogClient.readInbox().zioValue.total shouldBe 1
-
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
-
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
-
-        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowsAll should have size 0
-
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-        userActionAttemptRowsAll should have size 0
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll should have size 0
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 1
-        userCredentialsRowsAll.head.passwordHash should not be userCredentialsRow.passwordHash
-        userCredentialsRowsAll.head shouldBe userCredentialsRow.copy(
-          passwordHash = userCredentialsRowsAll.head.passwordHash,
-          updatedAt = userCredentialsRowsAll.head.updatedAt,
-        )
+            _ = isPasswordNewVerified shouldBe true
+          } yield ()
       }
 
-      "fail with BadRequest ValidationError when request is invalid" in withContext { context =>
-        import context.*
+      "fail with BadRequest ValidationError when the password is invalid, keeping the reset password token usable" in withContext {
+        context =>
+          import context.*
 
-        val userID           = arbitrarySample[UserID]
-        val resetPasswordJwt = jwtService.generateResetPasswordToken(userID).zioValue
+          for {
+            userID = arbitrarySample[UserID]
 
-        val forgotPasswordResetPostResponse =
-          gatewayClient
-            .forgotPasswordResetPost[smithy.ValidationError](
-              resetPasswordToken = resetPasswordJwt.resetPasswordToken,
-              password = Password.assume("short"),
+            resetPasswordJwt <- jwtService.generateResetPasswordToken(userID)
+
+            userTokenRow = arbitrarySample[UserTokenRow]
+              .copy(
+                tokenID = resetPasswordJwt.tokenID,
+                userID = userID,
+                tokenType = TokenType.ResetPasswordToken,
+                expiresAt = resetPasswordJwt.expiresAt,
+              )
+
+            _ <- postgresClient.executeQuery(userTokenQueries.insertUserToken(userTokenRow))
+
+            forgotPasswordResetPostResponse <- gatewayClient
+              .forgotPasswordResetPost[smithy.ValidationError](
+                resetPasswordToken = resetPasswordJwt.resetPasswordToken,
+                password = Password.assume("short"),
+              )
+
+            _ = forgotPasswordResetPostResponse.code shouldBe StatusCode.BadRequest
+            _ = forgotPasswordResetPostResponse.body.left.value shouldBe smithy.ValidationError(fields =
+              List("password")
             )
-            .zioValue
 
-        forgotPasswordResetPostResponse.code shouldBe StatusCode.BadRequest
-        forgotPasswordResetPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("password"))
+            mailHogResponse <- mailHogClient.readInbox()
 
-        mailHogClient.readInbox().zioValue.total shouldBe 0
+            _ = mailHogResponse.total shouldBe 0
 
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+            userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+            userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+            userActionAttemptRowsAll <- postgresClient.executeQuery(
+              userActionAttemptQueries.getAllUserActionAttemptsTesting
+            )
+            userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+            userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
 
-        userDetailsRowsAll should have size 0
-
-        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowsAll should have size 0
-
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-        userActionAttemptRowsAll should have size 0
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll should have size 0
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 0
+            _ = userDetailsRowsAll should have size 0
+            _ = userOtpRowsAll should have size 0
+            _ = userActionAttemptRowsAll should have size 0
+            _ = userTokenRowsAll shouldBe List(userTokenRow)
+            _ = userCredentialsRowsAll should have size 0
+          } yield ()
       }
 
-      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
+      "fail with Unauthorized when the reset password token is invalid" in withContext { context =>
         import context.*
 
-        val onboardStage =
-          Random.shuffle(OnboardStage.values.toList.diff(OnboardStage.forgotPasswordAllowedStages)).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
+        for {
+          passwordNew = arbitrarySample[Password]
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
-
-        postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
-
-        val resetPasswordJwt = jwtService.generateResetPasswordToken(userDetailsRow.userID).zioValue
-
-        val passwordNew = arbitrarySample[Password]
-
-        val forgotPasswordResetPostResponse =
-          gatewayClient
-            .forgotPasswordResetPost[smithy.Forbidden](
-              resetPasswordToken = resetPasswordJwt.resetPasswordToken,
+          forgotPasswordResetPostResponse <- gatewayClient
+            .forgotPasswordResetPost[smithy.Unauthorized](
+              resetPasswordToken = ResetPasswordToken.assume("invalid-reset-password-token"),
               password = passwordNew,
             )
-            .zioValue
 
-        forgotPasswordResetPostResponse.code shouldBe StatusCode.Forbidden
-        forgotPasswordResetPostResponse.body.left.value shouldBe smithy.Forbidden()
+          _ = forgotPasswordResetPostResponse.code shouldBe StatusCode.Unauthorized
+          _ = forgotPasswordResetPostResponse.body.left.value shouldBe smithy.Unauthorized()
 
-        mailHogClient.readInbox().zioValue.total shouldBe 0
+          mailHogResponse <- mailHogClient.readInbox()
 
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+          _ = mailHogResponse.total shouldBe 0
 
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
+          userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+          userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+          userActionAttemptRowsAll <- postgresClient.executeQuery(
+            userActionAttemptQueries.getAllUserActionAttemptsTesting
+          )
+          userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+          userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
 
-        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowsAll should have size 0
-
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-        userActionAttemptRowsAll should have size 0
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll should have size 0
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 1
-        userCredentialsRowsAll.head shouldBe userCredentialsRow
+          _ = userDetailsRowsAll shouldBe empty
+          _ = userOtpRowsAll shouldBe empty
+          _ = userActionAttemptRowsAll shouldBe empty
+          _ = userTokenRowsAll shouldBe empty
+          _ = userCredentialsRowsAll shouldBe empty
+        } yield ()
       }
 
-      "fail with InternalServerError when reset password token is not found" in withContext { context =>
+      "fail with Unauthorized when a refresh token is sent as the reset password token" in withContext { context =>
         import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow]
-          .copy(onboardStage = onboardStage)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.forgotPasswordAllowedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow))
 
-        val userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+          refreshJwt <- jwtService.generateRefreshToken(userDetailsRow.userID)
 
-        postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow)).zioValue
+          // Stored as a reset password token so that only the JWT audience check can reject the request
+          userTokenRow = arbitrarySample[UserTokenRow]
+            .copy(
+              tokenID = refreshJwt.tokenID,
+              userID = userDetailsRow.userID,
+              tokenType = TokenType.ResetPasswordToken,
+            )
 
-        val resetPasswordJwt = jwtService.generateResetPasswordToken(userDetailsRow.userID).zioValue
+          _ <- postgresClient.executeQuery(userTokenQueries.insertUserToken(userTokenRow))
 
-        val passwordNew = arbitrarySample[Password]
+          passwordNew = arbitrarySample[Password]
 
-        val forgotPasswordResetPostResponse =
-          gatewayClient
+          forgotPasswordResetPostResponse <- gatewayClient
+            .forgotPasswordResetPost[smithy.Unauthorized](
+              resetPasswordToken = ResetPasswordToken.assume(refreshJwt.refreshToken.value),
+              password = passwordNew,
+            )
+
+          _ = forgotPasswordResetPostResponse.code shouldBe StatusCode.Unauthorized
+          _ = forgotPasswordResetPostResponse.body.left.value shouldBe smithy.Unauthorized()
+
+          mailHogResponse <- mailHogClient.readInbox()
+
+          _ = mailHogResponse.total shouldBe 0
+
+          userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+          userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+          userActionAttemptRowsAll <- postgresClient.executeQuery(
+            userActionAttemptQueries.getAllUserActionAttemptsTesting
+          )
+          userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+          userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
+
+          _ = userDetailsRowsAll shouldBe List(userDetailsRow)
+          _ = userOtpRowsAll shouldBe empty
+          _ = userActionAttemptRowsAll shouldBe empty
+          _ = userTokenRowsAll shouldBe List(userTokenRow)
+          _ = userCredentialsRowsAll shouldBe List(userCredentialsRow)
+        } yield ()
+      }
+      "fail with InternalServerError when the reset password token is valid but not stored" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.forgotPasswordAllowedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow]
+            .copy(onboardStage = onboardStage)
+          userCredentialsRow = arbitrarySample[UserCredentialsRow].copy(userID = userDetailsRow.userID)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(userCredentialsQueries.insertUserCredentials(userCredentialsRow))
+
+          resetPasswordJwt <- jwtService.generateResetPasswordToken(userDetailsRow.userID)
+
+          passwordNew = arbitrarySample[Password]
+
+          forgotPasswordResetPostResponse <- gatewayClient
             .forgotPasswordResetPost[smithy.InternalServerError](
               resetPasswordToken = resetPasswordJwt.resetPasswordToken,
               password = passwordNew,
             )
-            .zioValue
 
-        forgotPasswordResetPostResponse.code shouldBe StatusCode.InternalServerError
-        forgotPasswordResetPostResponse.body.left.value shouldBe smithy.InternalServerError()
+          _ = forgotPasswordResetPostResponse.code shouldBe StatusCode.InternalServerError
+          _ = forgotPasswordResetPostResponse.body.left.value shouldBe smithy.InternalServerError()
 
-        mailHogClient.readInbox().zioValue.total shouldBe 0
+          mailHogResponse <- mailHogClient.readInbox()
 
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+          _ = mailHogResponse.total shouldBe 0
 
-        userDetailsRowsAll should have size 1
-        userDetailsRowsAll.head shouldBe userDetailsRow
+          userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+          userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+          userActionAttemptRowsAll <- postgresClient.executeQuery(
+            userActionAttemptQueries.getAllUserActionAttemptsTesting
+          )
+          userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+          userCredentialsRowsAll <- postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting)
 
-        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
+          _ = userDetailsRowsAll should have size 1
+          _ = userDetailsRowsAll.head shouldBe userDetailsRow
+          _ = userOtpRowsAll should have size 0
+          _ = userActionAttemptRowsAll should have size 0
+          _ = userTokenRowsAll should have size 0
+          _ = userCredentialsRowsAll should have size 1
+          _ = userCredentialsRowsAll.head shouldBe userCredentialsRow
+        } yield ()
+      }
+    }
 
-        userOtpRowsAll should have size 0
+    "middleware" should {
+      "fail with a Forbidden when the user is not in an onboard stage the endpoint allows on every endpoint" in withContext {
+        context =>
+          import context.*
 
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
+          for {
+            instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
-        userActionAttemptRowsAll should have size 0
+            onboardStageInvalidForgotPassword <- Random
+              .shuffle(OnboardStage.values.toList.diff(OnboardStage.forgotPasswordAllowedStages))
+              .map(_.head)
+            onboardStageInvalidForgotPasswordVerifyOTP <- Random
+              .shuffle(OnboardStage.values.toList.diff(OnboardStage.forgotPasswordAllowedStages))
+              .map(_.head)
+            onboardStageInvalidForgotPasswordReset <- Random
+              .shuffle(OnboardStage.values.toList.diff(OnboardStage.forgotPasswordAllowedStages))
+              .map(_.head)
+            userDetailsRowForgotPassword = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStageInvalidForgotPassword, phoneNumber = None)
+            userDetailsRowForgotPasswordVerifyOTP = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStageInvalidForgotPasswordVerifyOTP, phoneNumber = None)
+            userDetailsRowForgotPasswordReset = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStageInvalidForgotPasswordReset, phoneNumber = None)
+            userOtpRowForgotPasswordVerifyOTP = arbitrarySample[UserOtpRow]
+              .copy(
+                userID = userDetailsRowForgotPasswordVerifyOTP.userID,
+                otpType = OtpType.ForgotPassword,
+                expiresAt = ExpiresAt(instantNow.plusSeconds(100)),
+              )
+            userCredentialsRowForgotPasswordReset = arbitrarySample[UserCredentialsRow]
+              .copy(userID = userDetailsRowForgotPasswordReset.userID)
 
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRowForgotPassword))
+            _ <- postgresClient.executeQuery(
+              userDetailsQueries.insertUserDetails(userDetailsRowForgotPasswordVerifyOTP)
+            )
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRowForgotPasswordReset))
+            _ <- postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRowForgotPasswordVerifyOTP))
+            _ <- postgresClient.executeQuery(
+              userCredentialsQueries.insertUserCredentials(userCredentialsRowForgotPasswordReset)
+            )
 
-        userTokenRowsAll should have size 0
+            resetPasswordJwt <- jwtService.generateResetPasswordToken(userDetailsRowForgotPasswordReset.userID)
 
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
+            passwordNew = arbitrarySample[Password]
 
-        userCredentialsRowsAll should have size 1
-        userCredentialsRowsAll.head shouldBe userCredentialsRow
+            responses <- ZIO.collectAllPar(
+              List(
+                gatewayClient.forgotPasswordPost[smithy.Forbidden](userDetailsRowForgotPassword.email),
+                gatewayClient.forgotPasswordVerifyOTPPost[smithy.Forbidden](
+                  userOtpRowForgotPasswordVerifyOTP.otpID,
+                  userOtpRowForgotPasswordVerifyOTP.otp,
+                ),
+                gatewayClient.forgotPasswordResetPost[smithy.Forbidden](
+                  resetPasswordToken = resetPasswordJwt.resetPasswordToken,
+                  password = passwordNew,
+                ),
+              )
+            )
+
+            _ = responses.map(_.code) shouldBe List.fill(3)(StatusCode.Forbidden)
+            _ = responses.map(_.body.left.toOption) shouldBe List.fill(3)(Some(smithy.Forbidden()))
+
+            mailHogResponse <- mailHogClient.readInbox()
+
+            _ = mailHogResponse.total shouldBe 0
+
+            userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+            userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+            userActionAttemptRowsAll <- postgresClient.executeQuery(
+              userActionAttemptQueries.getAllUserActionAttemptsTesting
+            )
+            userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+            userCredentialsRowsAll <- postgresClient.executeQuery(
+              userCredentialsQueries.getAllUserCredentialsTesting
+            )
+
+            _ = userDetailsRowsAll.toSet shouldBe Set(
+              userDetailsRowForgotPassword,
+              userDetailsRowForgotPasswordVerifyOTP,
+              userDetailsRowForgotPasswordReset,
+            )
+            _ = userOtpRowsAll shouldBe List(userOtpRowForgotPasswordVerifyOTP)
+            _ = userActionAttemptRowsAll shouldBe empty
+            _ = userTokenRowsAll shouldBe empty
+            _ = userCredentialsRowsAll shouldBe List(userCredentialsRowForgotPasswordReset)
+          } yield ()
       }
 
-      "fail with InternalServerError when user is not found" in withContext { context =>
-        import context.*
+      "fail with an InternalServerError when the user details do not exist on every endpoint that loads the user by ID" in withContext {
+        context =>
+          import context.*
 
-        val resetPasswordJwt = jwtService.generateResetPasswordToken(arbitrarySample[UserID]).zioValue
+          for {
+            instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
-        val passwordNew = arbitrarySample[Password]
+            userID     = arbitrarySample[UserID]
+            userOtpRow = arbitrarySample[UserOtpRow]
+              .copy(
+                userID = userID,
+                otpType = OtpType.ForgotPassword,
+                expiresAt = ExpiresAt(instantNow.plusSeconds(100)),
+              )
 
-        val forgotPasswordResetPostResponse =
-          gatewayClient
-            .forgotPasswordResetPost[smithy.InternalServerError](
-              resetPasswordToken = resetPasswordJwt.resetPasswordToken,
-              password = passwordNew,
+            _ <- postgresClient.executeQuery(userOtpQueries.insertUserOtp(userOtpRow))
+
+            resetPasswordJwt <- jwtService.generateResetPasswordToken(userID)
+
+            passwordNew = arbitrarySample[Password]
+
+            responses <- ZIO.collectAllPar(
+              List(
+                gatewayClient.forgotPasswordVerifyOTPPost[smithy.InternalServerError](
+                  userOtpRow.otpID,
+                  userOtpRow.otp,
+                ),
+                gatewayClient.forgotPasswordResetPost[smithy.InternalServerError](
+                  resetPasswordToken = resetPasswordJwt.resetPasswordToken,
+                  password = passwordNew,
+                ),
+              )
             )
-            .zioValue
 
-        forgotPasswordResetPostResponse.code shouldBe StatusCode.InternalServerError
-        forgotPasswordResetPostResponse.body.left.value shouldBe smithy.InternalServerError()
+            _ = responses.map(_.code) shouldBe List.fill(2)(StatusCode.InternalServerError)
+            _ = responses.map(_.body.left.toOption) shouldBe List.fill(2)(Some(smithy.InternalServerError()))
 
-        mailHogClient.readInbox().zioValue.total shouldBe 0
+            mailHogResponse <- mailHogClient.readInbox()
 
-        val userDetailsRowsAll = postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting).zioValue
+            _ = mailHogResponse.total shouldBe 0
 
-        userDetailsRowsAll should have size 0
+            userDetailsRowsAll       <- postgresClient.executeQuery(userDetailsQueries.getAllUserDetailsTesting)
+            userOtpRowsAll           <- postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting)
+            userActionAttemptRowsAll <- postgresClient.executeQuery(
+              userActionAttemptQueries.getAllUserActionAttemptsTesting
+            )
+            userTokenRowsAll       <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+            userCredentialsRowsAll <- postgresClient.executeQuery(
+              userCredentialsQueries.getAllUserCredentialsTesting
+            )
 
-        val userOtpRowsAll = postgresClient.executeQuery(userOtpQueries.getAllUserOtpsTesting).zioValue
-
-        userOtpRowsAll should have size 0
-
-        val userActionAttemptRowsAll =
-          postgresClient.executeQuery(userActionAttemptQueries.getAllUserActionAttemptsTesting).zioValue
-
-        userActionAttemptRowsAll should have size 0
-
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-
-        userTokenRowsAll should have size 0
-
-        val userCredentialsRowsAll =
-          postgresClient.executeQuery(userCredentialsQueries.getAllUserCredentialsTesting).zioValue
-
-        userCredentialsRowsAll should have size 0
+            _ = userDetailsRowsAll shouldBe empty
+            _ = userOtpRowsAll shouldBe List(userOtpRow)
+            _ = userActionAttemptRowsAll shouldBe empty
+            _ = userTokenRowsAll shouldBe empty
+            _ = userCredentialsRowsAll shouldBe empty
+          } yield ()
       }
     }
   }

@@ -1,5 +1,6 @@
 package io.mesazon.gateway.it
 
+import com.dimafeng.testcontainers.DockerComposeContainer
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient
 import io.mesazon.gateway.it.client.GatewayClient.given
@@ -10,96 +11,167 @@ import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.*
 import org.scalatest.DoNotDiscover
 import sttp.model.*
+import zio.*
 
 @DoNotDiscover
-class UserTokenRefreshApiSpec
-    extends GatewayAcceptanceTest,
+class UserTokenRefreshApiSpec(dockerComposeContainer: => DockerComposeContainer)
+    extends GatewayAcceptanceTest(dockerComposeContainer),
       SmithyArbitraries,
       UserTokenSmithyArbitraries,
       RepositoryArbitraries,
       IronRefinedTypeTransformer {
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+
+    withContext { context =>
+      import context.*
+
+      postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.userTokenTable)
+    }
+  }
+
   "User Token Refresh API" when {
     "POST /token/refresh" should {
-      "successfully refresh user token with valid refresh token" in withContext { context =>
-        import context.*
+      "successfully refresh user token with valid refresh token and reject the old refresh token afterwards" in withContext {
+        context =>
+          import context.*
 
-        val userID     = arbitrarySample[UserID]
-        val refreshJwt = jwtService.generateRefreshToken(userID).zioValue
+          for {
+            userID = arbitrarySample[UserID]
 
-        val userTokenRow = arbitrarySample[UserTokenRow]
-          .copy(
-            tokenID = refreshJwt.tokenID,
-            userID = userID,
-            tokenType = TokenType.RefreshToken,
-          )
+            refreshJwt <- jwtService.generateRefreshToken(userID)
 
-        postgresClient.executeQuery(userTokenQueries.insertUserToken(userTokenRow)).zioValue
+            userTokenRow = arbitrarySample[UserTokenRow]
+              .copy(
+                tokenID = refreshJwt.tokenID,
+                userID = userID,
+                tokenType = TokenType.RefreshToken,
+              )
 
-        val tokenRefreshPostResponse =
-          gatewayClient.tokenRefreshPost[smithy.InternalServerError](refreshJwt.refreshToken).zioValue
+            _ <- postgresClient.executeQuery(userTokenQueries.insertUserToken(userTokenRow))
 
-        tokenRefreshPostResponse.code shouldBe StatusCode.Ok
-        tokenRefreshPostResponse.body.value.accessTokenExpiresInSeconds should be > 0L
+            tokenRefreshPostResponse <- gatewayClient.tokenRefreshPost[smithy.InternalServerError](
+              refreshJwt.refreshToken
+            )
 
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
-        userTokenRowsAll should have size 1
+            _ = tokenRefreshPostResponse.code shouldBe StatusCode.Ok
+            _ = tokenRefreshPostResponse.body.value.accessTokenExpiresInSeconds should be > 0L
 
-        userTokenRowsAll.head.tokenID should not be refreshJwt.tokenID
-        userTokenRowsAll.head.userID shouldBe userTokenRow.userID
-        userTokenRowsAll.head.tokenType shouldBe TokenType.RefreshToken
+            authedUserRefreshNew <- jwtService.verifyRefreshToken(
+              RefreshToken.assume(tokenRefreshPostResponse.body.value.refreshToken)
+            )
+
+            userTokenRowsAll <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+
+            _ = userTokenRowsAll should have size 1
+            _ = userTokenRowsAll.head.tokenID should not be refreshJwt.tokenID
+            _ = userTokenRowsAll.head.tokenID shouldBe authedUserRefreshNew.tokenID
+            _ = userTokenRowsAll.head.userID shouldBe userTokenRow.userID
+            _ = userTokenRowsAll.head.tokenType shouldBe TokenType.RefreshToken
+
+            tokenRefreshPostResponseOldRefreshToken <- gatewayClient.tokenRefreshPost[smithy.Unauthorized](
+              refreshJwt.refreshToken
+            )
+
+            _ = tokenRefreshPostResponseOldRefreshToken.code shouldBe StatusCode.Unauthorized
+            _ = tokenRefreshPostResponseOldRefreshToken.body.left.value shouldBe smithy.Unauthorized()
+
+            userTokenRowsAllAfterOldRefreshToken <- postgresClient.executeQuery(
+              userTokenQueries.getAllUserTokensTesting
+            )
+
+            _ = userTokenRowsAllAfterOldRefreshToken shouldBe userTokenRowsAll
+          } yield ()
       }
 
       "fail with BadRequest ValidationError when refresh token is missing" in withContext { context =>
         import context.*
 
-        val tokenRefreshPostResponse =
-          gatewayClient.tokenRefreshPost[smithy.ValidationError](RefreshToken.assume("")).zioValue
+        for {
+          tokenRefreshPostResponse <- gatewayClient.tokenRefreshPost[smithy.ValidationError](
+            RefreshToken.assume("")
+          )
 
-        tokenRefreshPostResponse.code shouldBe StatusCode.BadRequest
-        tokenRefreshPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("refreshToken"))
+          _ = tokenRefreshPostResponse.code shouldBe StatusCode.BadRequest
+          _ = tokenRefreshPostResponse.body.left.value shouldBe smithy.ValidationError(fields = List("refreshToken"))
 
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+          userTokenRowsAll <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
 
-        userTokenRowsAll shouldBe empty
+          _ = userTokenRowsAll shouldBe empty
+        } yield ()
       }
 
       "fail with Unauthorized when refresh token is invalid" in withContext { context =>
         import context.*
 
-        val invalidRefreshToken = RefreshToken.assume("invalid-refresh-token")
+        for {
+          invalidRefreshToken = RefreshToken.assume("invalid-refresh-token")
 
-        val tokenRefreshPostResponse =
-          gatewayClient.tokenRefreshPost[smithy.Unauthorized](invalidRefreshToken).zioValue
+          tokenRefreshPostResponse <- gatewayClient.tokenRefreshPost[smithy.Unauthorized](invalidRefreshToken)
 
-        tokenRefreshPostResponse.code shouldBe StatusCode.Unauthorized
-        tokenRefreshPostResponse.body.left.value shouldBe smithy.Unauthorized()
+          _ = tokenRefreshPostResponse.code shouldBe StatusCode.Unauthorized
+          _ = tokenRefreshPostResponse.body.left.value shouldBe smithy.Unauthorized()
 
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+          userTokenRowsAll <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
 
-        userTokenRowsAll shouldBe empty
+          _ = userTokenRowsAll shouldBe empty
+        } yield ()
       }
 
       "fail with Unauthorized when refresh token is valid but not found in database" in withContext { context =>
         import context.*
 
-        val userTokenRow = arbitrarySample[UserTokenRow]
-          .copy(
-            tokenType = TokenType.RefreshToken
+        for {
+          userTokenRow = arbitrarySample[UserTokenRow]
+            .copy(
+              tokenType = TokenType.RefreshToken
+            )
+
+          refreshJwt <- jwtService.generateRefreshToken(userTokenRow.userID)
+
+          tokenRefreshPostResponse <- gatewayClient.tokenRefreshPost[smithy.Unauthorized](
+            refreshJwt.refreshToken
           )
 
-        // Note: we do not insert the user token row into database, so it will be missing when service tries to look it up
-        val refreshJwt = jwtService.generateRefreshToken(userTokenRow.userID).zioValue
+          _ = tokenRefreshPostResponse.code shouldBe StatusCode.Unauthorized
+          _ = tokenRefreshPostResponse.body.left.value shouldBe smithy.Unauthorized()
 
-        val tokenRefreshPostResponse =
-          gatewayClient.tokenRefreshPost[smithy.Unauthorized](refreshJwt.refreshToken).zioValue
+          userTokenRowsAll <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
 
-        tokenRefreshPostResponse.code shouldBe StatusCode.Unauthorized
-        tokenRefreshPostResponse.body.left.value shouldBe smithy.Unauthorized()
+          _ = userTokenRowsAll shouldBe empty
+        } yield ()
+      }
 
-        val userTokenRowsAll = postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting).zioValue
+      "fail with Unauthorized when a stored reset-password token is sent as the refresh token" in withContext {
+        context =>
+          import context.*
 
-        userTokenRowsAll shouldBe empty
+          for {
+            userID = arbitrarySample[UserID]
+
+            resetPasswordJwt <- jwtService.generateResetPasswordToken(userID)
+
+            userTokenRow = arbitrarySample[UserTokenRow]
+              .copy(
+                tokenID = resetPasswordJwt.tokenID,
+                userID = userID,
+                tokenType = TokenType.ResetPasswordToken,
+              )
+
+            _ <- postgresClient.executeQuery(userTokenQueries.insertUserToken(userTokenRow))
+
+            tokenRefreshPostResponse <- gatewayClient.tokenRefreshPost[smithy.Unauthorized](
+              RefreshToken.assume(resetPasswordJwt.resetPasswordToken.value)
+            )
+
+            _ = tokenRefreshPostResponse.code shouldBe StatusCode.Unauthorized
+            _ = tokenRefreshPostResponse.body.left.value shouldBe smithy.Unauthorized()
+
+            userTokenRowsAll <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+
+            _ = userTokenRowsAll shouldBe List(userTokenRow)
+          } yield ()
       }
     }
   }

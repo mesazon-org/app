@@ -25,6 +25,15 @@ Cross-transport results:
 - missing membership → 500;
 - malformed organization UUID: Tapir 400, Smithy currently 500 (`UnexpectedError`).
 
+## Rejected request bodies
+
+When `AuthenticationService.auth` or `AuthorizationService.auth` fails, `ServerMiddleware` drains the unread request body before it re-raises the original error. Status codes and error bodies are unchanged; success paths never touch the body.
+
+- **Why:** the middleware rejects before Smithy reads the body. Ember (http4s 0.23.38) then writes the response and closes a connection whose fixed-length body is still unread. The kernel answers that close with a TCP RST, which can destroy the response before the client reads it. The client sees `EOF reached while reading` instead of the 401/403/500. See [Known issues](../known-issues.md#catalogue-batch-rejection-closes-the-connection-before-an-http-response).
+- **Bounds:** `EntityLimiter` caps the drain at 5 MiB (`SmithyMaxEntitySize` in `HttpApp`). `ServerMiddleware.DrainTimeout` (5 s) stops a stalled body. Drain failures and timeouts are ignored; the original auth error is returned either way.
+- **Cost:** a rejected caller, including an unauthenticated one, can make the gateway read up to 5 MiB of body for at most 5 s per request. Any public endpoint already accepts a body that size. The tradeoff buys clients a real 401/403/500 instead of an EOF.
+- **Gap:** Tapir `securedEndpoint` security logic also rejects before the body is decoded and does not drain; adding the drain is on hold by the user's decision (2026-11-12). Large uploads (up to 20 MiB) with a rejected token may see the same connection close.
+
 ## Basic auth
 
 `AuthenticationService`, in order:
@@ -70,7 +79,7 @@ Tapir logo upload uses the same header, completed-stage requirement, and admin r
 
 - Unit-test `AuthorizationService`: allowed role, missing/invalid header, missing membership, disallowed role, and token/stage paths changed.
 - Functional-test auth orchestration and brute-force/retry behavior.
-- Every affected endpoint repeats the complete middleware matrix from [Acceptance testing](acceptance-testing.md); never rely on another route's test.
+- Every affected endpoint is in each applicable middleware gate test ([Acceptance testing](acceptance-testing.md#organization-scoped-middleware-gates)); never rely on another route's test.
 - Keep Smithy and Tapir contract descriptions/security inputs in parity.
 
-Known gap: `ServerMiddleware` has no direct spec (issue #25); acceptance matrices exercise its route wiring.
+`fun/ServerMiddlewareSpec` covers dispatch to the endpoint, drain-on-reject and the drain timeout; acceptance matrices exercise its route wiring.

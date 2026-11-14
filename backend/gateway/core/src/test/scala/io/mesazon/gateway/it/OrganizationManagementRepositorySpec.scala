@@ -44,8 +44,13 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
     import context.*
 
     eventually {
-      postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.organizationDetailsTable).zioValue
-      postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.organizationUserTable).zioValue
+      postgresClient
+        .truncateTable(
+          repositoryConfig.schema,
+          repositoryConfig.organizationDetailsTable,
+          repositoryConfig.organizationUserTable,
+        )
+        .zioValue
     }
   }
 
@@ -109,6 +114,8 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
 
         val organizationDetailsRowsAll =
           postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
+        val organizationUserRowsAll =
+          postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUsersTesting).zioValue
 
         organizationDetailsRowsAll should have size 1
         organizationDetailsRowsAll.head shouldBe organizationDetailsRowInsert
@@ -117,10 +124,6 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
         )
-
-        val organizationUserRowsAll =
-          postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUsersTesting).zioValue
-
         organizationUserRowsAll should have size 1
         organizationUserRowsAll.head shouldBe OrganizationUserRow(
           organizationID = organizationDetailsRow.organizationID,
@@ -201,6 +204,8 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
 
         val organizationDetailsRowsAll =
           postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
+        val organizationUserRowsAll =
+          postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUsersTesting).zioValue
 
         organizationDetailsRowsAll should have size 2
         organizationDetailsRowsAll should contain theSameElementsAs List(
@@ -215,10 +220,6 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
             logoImageAsset = None
           ),
         )
-
-        val organizationUserRowsAll =
-          postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUsersTesting).zioValue
-
         organizationUserRowsAll should have size 2
         organizationUserRowsAll should contain theSameElementsAs List(
           OrganizationUserRow(
@@ -279,13 +280,11 @@ class OrganizationManagementRepositorySpec extends ZWordSpecBase, RepositoryArbi
 
         val organizationDetailsRowsAll =
           postgresClient.executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting).zioValue
-
-        organizationDetailsRowsAll should have size 1
-        organizationDetailsRowsAll.head shouldBe organizationDetailsRow
-
         val organizationUserRowsAll =
           postgresClient.executeQuery(organizationUserQueries.getAllOrganizationUsersTesting).zioValue
 
+        organizationDetailsRowsAll should have size 1
+        organizationDetailsRowsAll.head shouldBe organizationDetailsRow
         organizationUserRowsAll shouldBe empty
       }
     }

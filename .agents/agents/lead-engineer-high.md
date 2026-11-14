@@ -1,8 +1,9 @@
 ---
 name: lead-engineer-high
-description: /feature Lead Engineer for EM-classified HIGH work. Expert implementation on Opus 5.5 with explicit risk and rollback reasoning; follows the shared Lead contract.
+description: /feature Lead Engineer for EM-classified HIGH work. Expert implementation on Opus 5.5 (high effort) with explicit risk and rollback reasoning; follows the shared Lead contract.
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: opus
+effort: high
 ---
 
 Read and follow `.agents/contracts/lead-engineer.md`. Assigned tier: `HIGH`.

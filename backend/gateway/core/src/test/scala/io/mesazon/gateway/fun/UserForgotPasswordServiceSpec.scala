@@ -135,7 +135,7 @@ class UserForgotPasswordServiceSpec
         forgotPasswordPostResponse.otpExpiresInSeconds shouldBe userForgotPasswordConfig.otpExpiresAtOffset.toSeconds
       }
 
-      "successfully process forgot password request with resend otp within cooldown and action attempts registered but under max retries" in new TestContext {
+      "successfully process forgot password request with resend otp within cooldown, resetting the otp expiry on the last allowed request" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -152,14 +152,11 @@ class UserForgotPasswordServiceSpec
             ),
           )
 
-        val otpResetAttemptsMaxRetriesBuffer =
-          Random.nextIntBetween(0, userForgotPasswordConfig.otpResetAttemptsMaxRetries).zioValue
         val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
           .copy(
             userID = userDetailsRow.userID,
             actionAttemptType = ActionAttemptType.ForgotPassword,
-            attempts =
-              Attempts.assume(userForgotPasswordConfig.otpResetAttemptsMaxRetries - otpResetAttemptsMaxRetriesBuffer),
+            attempts = Attempts.assume(userForgotPasswordConfig.otpResetAttemptsMaxRetries),
           )
 
         inSequence(
@@ -198,7 +195,7 @@ class UserForgotPasswordServiceSpec
         forgotPasswordPostResponse.otpExpiresInSeconds shouldBe userForgotPasswordConfig.otpExpiresAtOffset.toSeconds
       }
 
-      "successfully process forgot password request with resend otp within cooldown and action attempts registered at max retries" in new TestContext {
+      "successfully process forgot password request with resend otp within cooldown, keeping the otp expiry on the first request over the limit" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -215,14 +212,11 @@ class UserForgotPasswordServiceSpec
             ),
           )
 
-        val otpResetAttemptsMaxRetriesBuffer =
-          Random.nextIntBetween(1, userForgotPasswordConfig.otpResetAttemptsMaxRetries).zioValue
         val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
           .copy(
             userID = userDetailsRow.userID,
             actionAttemptType = ActionAttemptType.ForgotPassword,
-            attempts =
-              Attempts.assume(userForgotPasswordConfig.otpResetAttemptsMaxRetries + otpResetAttemptsMaxRetriesBuffer),
+            attempts = Attempts.assume(userForgotPasswordConfig.otpResetAttemptsMaxRetries + 1),
           )
 
         inSequence(
@@ -452,7 +446,7 @@ class UserForgotPasswordServiceSpec
     }
 
     "forgotPasswordVerifyOTPPost" should {
-      "successfully forgot password verify otp" in new TestContext {
+      "successfully forgot password verify otp on the last allowed attempt" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.forgotPasswordAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -468,8 +462,8 @@ class UserForgotPasswordServiceSpec
         val userActionAttemptRow = arbitrarySample[UserActionAttemptRow]
           .copy(
             userID = userDetailsRow.userID,
-            actionAttemptType = ActionAttemptType.ForgotPassword,
-            attempts = Attempts.assume(1),
+            actionAttemptType = ActionAttemptType.ForgotPasswordVerifyOTP,
+            attempts = Attempts.assume(userForgotPasswordConfig.otpVerifyAttemptsMaxRetries),
           )
 
         val resetPasswordJwt = arbitrarySample[ResetPasswordJwt]
@@ -1167,13 +1161,13 @@ class UserForgotPasswordServiceSpec
 
     lazy val userForgotPasswordConfig = UserForgotPasswordConfig(
       isDev = false,
-      otpExpiresAtOffset = Duration.fromSeconds(60),
-      otpResendCooldown = Duration.fromSeconds(20),
+      otpExpiresAtOffset = Duration.fromSeconds(45),
+      otpResendCooldown = Duration.fromSeconds(15),
       otpResetAttemptsMaxRetries = 3,
-      sendForgotPasswordEmailMaxRetries = 3,
+      sendForgotPasswordEmailMaxRetries = 5,
       sendForgotPasswordEmailRetryDelay = Duration.fromMillis(100),
-      otpVerifyAttemptsMaxRetries = 3,
-      sendPasswordChangeConfirmationEmailMaxRetries = 3,
+      otpVerifyAttemptsMaxRetries = 5,
+      sendPasswordChangeConfirmationEmailMaxRetries = 5,
       sendPasswordChangeConfirmationEmailRetryDelay = Duration.fromMillis(100),
     )
 

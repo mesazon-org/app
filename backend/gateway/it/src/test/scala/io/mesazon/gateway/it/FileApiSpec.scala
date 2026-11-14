@@ -1,5 +1,6 @@
 package io.mesazon.gateway.it
 
+import com.dimafeng.testcontainers.DockerComposeContainer
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient
 import io.mesazon.gateway.it.client.GatewayClient.given
@@ -14,339 +15,635 @@ import zio.*
 import zio.stream.ZStream
 
 @DoNotDiscover
-class FileApiSpec extends GatewayAcceptanceTest, SmithyArbitraries, RepositoryArbitraries, IronRefinedTypeTransformer {
+class FileApiSpec(dockerComposeContainer: => DockerComposeContainer)
+    extends GatewayAcceptanceTest(dockerComposeContainer),
+      SmithyArbitraries,
+      RepositoryArbitraries,
+      IronRefinedTypeTransformer {
 
   // Mirrors the gateway container's s3-client-organization-media config (application.conf)
   private val organizationMediaBucket          = "organization-media"
   private val organizationLogoBucketPathPrefix = "organization/logos"
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+
+    withContext { context =>
+      import context.*
+
+      for {
+        _ <- postgresClient.truncateTable(
+          repositoryConfig.schema,
+          repositoryConfig.userDetailsTable,
+          repositoryConfig.organizationDetailsTable,
+          repositoryConfig.organizationUserTable,
+        )
+        _ <- s3TestClient.emptyAllBuckets()
+      } yield ()
+    }
+  }
+
   "File Service API" when {
     "/upload/organization/logo" should {
-      "upload the logo and store the original and normalized objects in S3" in withContext { context =>
+      "successfully upload the logo, store the original and normalized objects in S3, save the logo asset and move the organization to LogoProvided" in withContext {
+        context =>
+          import context.*
+
+          for {
+            organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+              .copy(
+                logoImageAsset = None
+              )
+
+            _ <- postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+
+            organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              organizationID = organizationDetailsRow.organizationID,
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRoleAllowed,
+            )
+
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
+            organizationID                        = organizationDetailsRow.organizationID
+            logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+
+            uploadOrganizationLogoResponse <- gatewayClient.uploadOrganizationLogoPost[smithy.InternalServerError](
+              Some(organizationID),
+              Some(organizationLogoImageOriginalFileName),
+              logoBytes,
+              Some(accessJwt.accessToken),
+            )
+
+            _ = uploadOrganizationLogoResponse.code shouldBe StatusCode.Ok
+            _ = assert(uploadOrganizationLogoResponse.body.isRight)
+
+            expectedBucketKeyPrefix = s"$organizationLogoBucketPathPrefix/${organizationID.value}"
+
+            logoOriginalObjectBytes <- s3TestClient.getObject(
+              organizationMediaBucket,
+              s"$expectedBucketKeyPrefix/original",
+            )
+            logoNormalizedObjectBytes <- s3TestClient.getObject(
+              organizationMediaBucket,
+              s"$expectedBucketKeyPrefix/normalized",
+            )
+
+            _ = logoOriginalObjectBytes shouldBe logoBytes
+
+            _ = logoNormalizedObjectBytes.size should be > 0
+
+            organizationDetailsRowUpdated <- postgresClient
+              .executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting)
+              .map(_.head)
+
+            _ = organizationDetailsRowUpdated.organizationStage shouldBe OrganizationStage.LogoProvided
+
+            logoImageAssetValue = organizationDetailsRowUpdated.logoImageAsset.value.value
+
+            _ = logoImageAssetValue.imageOriginalFileName shouldBe organizationLogoImageOriginalFileName
+            _ = logoImageAssetValue.imageOriginalS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/original"
+            _ = logoImageAssetValue.imageNormalizedS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/normalized"
+          } yield ()
+      }
+
+      "successfully overwrite the saved logo on a repeat logo upload" in withContext { context =>
         import context.*
 
-        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
-          .copy(
-            logoImageAsset = None
+        for {
+          organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+            .copy(
+              logoImageAsset = None
+            )
+
+          _ <- postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+
+          organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            organizationID = organizationDetailsRow.organizationID,
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleAllowed,
           )
 
-        postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          organizationLogoImageOriginalFileNameFirst  = ImageOriginalFileName.assume("organization-logo-first.jpeg")
+          organizationLogoImageOriginalFileNameSecond = ImageOriginalFileName.assume("organization-logo-second.jpeg")
+          organizationID                              = organizationDetailsRow.organizationID
+          logoBytes <- ZStream.fromResource("assets/organization-image-it-1.jpeg").runCollect
 
-        val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
-          organizationID = organizationDetailsRow.organizationID,
-          userID = userDetailsRow.userID,
-          userRole = organizationUserRoleAllowed,
-        )
-
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-        val organizationID                        = organizationDetailsRow.organizationID
-        val logoBytes                             =
-          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
-
-        val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.InternalServerError](
+          uploadOrganizationLogoResponseFirst <- gatewayClient.uploadOrganizationLogoPost[smithy.InternalServerError](
             Some(organizationID),
-            Some(organizationLogoImageOriginalFileName),
+            Some(organizationLogoImageOriginalFileNameFirst),
             logoBytes,
             Some(accessJwt.accessToken),
           )
-          .zioValue
 
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.Ok
+          _ = uploadOrganizationLogoResponseFirst.code shouldBe StatusCode.Ok
 
-        assert(uploadOrganizationLogoResponse.body.isRight)
+          organizationDetailsRowAfterFirstUpload <- postgresClient
+            .executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting)
+            .map(_.head)
 
-        val expectedBucketKeyPrefix = s"$organizationLogoBucketPathPrefix/${organizationID.value}"
+          uploadOrganizationLogoResponseSecond <- gatewayClient.uploadOrganizationLogoPost[smithy.InternalServerError](
+            Some(organizationID),
+            Some(organizationLogoImageOriginalFileNameSecond),
+            logoBytes,
+            Some(accessJwt.accessToken),
+          )
 
-        val logoOriginalObjectBytes = s3TestClient
-          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
-          .zioValue
+          _ = uploadOrganizationLogoResponseSecond.code shouldBe StatusCode.Ok
 
-        val logoNormalizedObjectBytes = s3TestClient
-          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
-          .zioValue
+          expectedBucketKeyPrefix          = s"$organizationLogoBucketPathPrefix/${organizationID.value}"
+          organizationLogoImageAssetSecond = OrganizationLogoImageAsset.assume(
+            ImageAsset(
+              imageOriginalS3BucketKey = ImageOriginalS3BucketKey.assume(s"$expectedBucketKeyPrefix/original"),
+              imageNormalizedS3BucketKey = ImageNormalizedS3BucketKey.assume(s"$expectedBucketKeyPrefix/normalized"),
+              imageOriginalFileName = organizationLogoImageOriginalFileNameSecond,
+            )
+          )
 
-        logoOriginalObjectBytes shouldBe logoBytes
-        logoNormalizedObjectBytes.size should be > 0
+          organizationDetailsRowsAll <- postgresClient.executeQuery(
+            organizationDetailsQueries.getAllOrganizationDetailsTesting
+          )
 
-        val organizationDetailsRowUpdated = postgresClient
-          .executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting)
-          .zioValue
-          .head
+          _ = organizationDetailsRowsAll should have size 1
+          _ = organizationDetailsRowsAll.head.organizationStage shouldBe OrganizationStage.LogoProvided
+          _ = organizationDetailsRowsAll.head.logoImageAsset shouldBe Some(organizationLogoImageAssetSecond)
+          _ = organizationDetailsRowsAll.head.logoImageAsset shouldNot equal(
+            organizationDetailsRowAfterFirstUpload.logoImageAsset
+          )
 
-        organizationDetailsRowUpdated.organizationStage shouldBe OrganizationStage.LogoProvided
+          organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
 
-        val logoImageAssetValue = organizationDetailsRowUpdated.logoImageAsset.value.value
+          _ = organizationMediaS3BucketKeysAll should contain theSameElementsAs List(
+            s"$expectedBucketKeyPrefix/original",
+            s"$expectedBucketKeyPrefix/normalized",
+          )
 
-        logoImageAssetValue.imageOriginalFileName shouldBe organizationLogoImageOriginalFileName
-        logoImageAssetValue.imageOriginalS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/original"
-        logoImageAssetValue.imageNormalizedS3BucketKey.value shouldBe s"$expectedBucketKeyPrefix/normalized"
+          logoOriginalObjectBytes <- s3TestClient.getObject(
+            organizationMediaBucket,
+            s"$expectedBucketKeyPrefix/original",
+          )
+
+          _ = logoOriginalObjectBytes shouldBe logoBytes
+        } yield ()
       }
 
       "fail with BadRequest when the file name header is missing" in withContext { context =>
         import context.*
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
 
-        val organizationUserRoleAllowed = Random.shuffle(OrganizationUserRole.adminRoles).zioValue.head
-        val organizationUserRow         = arbitrarySample[OrganizationUserRow].copy(
-          userID = userDetailsRow.userID,
-          userRole = organizationUserRoleAllowed,
-        )
+          organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleAllowed,
+          )
 
-        postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        val logoBytes = ZStream.fromResource("assets/organization-image-it-1.jpeg").runCollect.zioValue
+          logoBytes <- ZStream.fromResource("assets/organization-image-it-1.jpeg").runCollect
 
-        val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.BadRequest](
+          uploadOrganizationLogoResponse <- gatewayClient.uploadOrganizationLogoPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
             None,
             logoBytes,
             Some(accessJwt.accessToken),
           )
-          .zioValue
 
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.BadRequest
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.BadRequest()
-      }
+          _ = uploadOrganizationLogoResponse.code shouldBe StatusCode.BadRequest
+          _ = uploadOrganizationLogoResponse.body.left.value shouldBe smithy.BadRequest()
 
-      "fail with BadRequest when the organization id header is missing" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-        val logoBytes                             =
-          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
-
-        val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.BadRequest](
-            None,
-            Some(organizationLogoImageOriginalFileName),
-            logoBytes,
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.BadRequest
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.BadRequest()
-      }
-
-      "fail with Unauthorized when access token is missing" in withContext { context =>
-        import context.*
-
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-        val organizationID                        = arbitrarySample[OrganizationID]
-        val logoBytes                             =
-          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
-
-        val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.Unauthorized](
-            Some(organizationID),
-            Some(organizationLogoImageOriginalFileName),
-            logoBytes,
-            None,
-          )
-          .zioValue
-
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.Unauthorized
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized()
-      }
-
-      "fail with Unauthorized when access token is invalid" in withContext { context =>
-        import context.*
-
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-        val organizationID                        = arbitrarySample[OrganizationID]
-        val logoBytes                             =
-          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
-
-        val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.Unauthorized](
-            Some(organizationID),
-            Some(organizationLogoImageOriginalFileName),
-            logoBytes,
-            Some(AccessToken("invalidtoken")),
-          )
-          .zioValue
-
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.Unauthorized
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Unauthorized()
-      }
-
-      "fail with Forbidden when the user is assigned to the organization with a disallowed role" in withContext {
-        context =>
-          import context.*
-
-          val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-          val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-
-          postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-          val organizationUserRoleDisallowed = Random
-            .shuffle(
-              OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles
-            )
-            .zioValue
-            .head
-
-          val organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
-            userID = userDetailsRow.userID,
-            userRole = organizationUserRoleDisallowed,
+          organizationDetailsRowsAll <- postgresClient.executeQuery(
+            organizationDetailsQueries.getAllOrganizationDetailsTesting
           )
 
-          postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow)).zioValue
+          _ = organizationDetailsRowsAll shouldBe empty
 
-          val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
+          organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
 
-          val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-          val logoBytes                             =
-            ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
-
-          val uploadOrganizationLogoResponse = gatewayClient
-            .uploadOrganizationLogoPost[smithy.Forbidden](
-              Some(organizationUserRow.organizationID),
-              Some(organizationLogoImageOriginalFileName),
-              logoBytes,
-              Some(accessJwt.accessToken),
-            )
-            .zioValue
-
-          uploadOrganizationLogoResponse.code shouldBe StatusCode.Forbidden
-          uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Forbidden()
-      }
-
-      "fail with Forbidden when user is not in an allowed onboard stage" in withContext { context =>
-        import context.*
-
-        val onboardStageInvalid =
-          Random.shuffle(OnboardStage.values.toList diff OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-        val organizationID                        = arbitrarySample[OrganizationID]
-        val logoBytes                             =
-          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
-
-        val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.Forbidden](
-            Some(organizationID),
-            Some(organizationLogoImageOriginalFileName),
-            logoBytes,
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.Forbidden
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.Forbidden()
-      }
-
-      "fail with InternalServerError when the user is not assigned to the organization" in withContext { context =>
-        import context.*
-
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
-
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
-
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-        val organizationID                        = arbitrarySample[OrganizationID]
-        val logoBytes                             =
-          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
-
-        val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.InternalServerError](
-            Some(organizationID),
-            Some(organizationLogoImageOriginalFileName),
-            logoBytes,
-            Some(accessJwt.accessToken),
-          )
-          .zioValue
-
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.InternalServerError
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.InternalServerError()
+          _ = organizationMediaS3BucketKeysAll shouldBe empty
+        } yield ()
       }
 
       "fail with InternalServerError when the uploaded file is not a supported image" in withContext { context =>
         import context.*
 
-        val organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
-          .copy(
-            logoImageAsset = None
+        for {
+          organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+            .copy(
+              logoImageAsset = None
+            )
+
+          _ <- postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+
+          organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            organizationID = organizationDetailsRow.organizationID,
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleAllowed,
           )
 
-        postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow)).zioValue
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-        val onboardStage   = Random.shuffle(OnboardStage.completedStages).zioValue.head
-        val userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-        postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow)).zioValue
+          organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-malformed-it-1.png")
+          organizationID                        = organizationDetailsRow.organizationID
+          logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
 
-        val accessJwt = jwtService.generateAccessToken(userDetailsRow.userID).zioValue
-
-        val organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-malformed-it-1.png")
-        val organizationID                        = organizationDetailsRow.organizationID
-        val logoBytes                             =
-          ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect.zioValue
-
-        val uploadOrganizationLogoResponse = gatewayClient
-          .uploadOrganizationLogoPost[smithy.InternalServerError](
+          uploadOrganizationLogoResponse <- gatewayClient.uploadOrganizationLogoPost[smithy.InternalServerError](
             Some(organizationID),
             Some(organizationLogoImageOriginalFileName),
             logoBytes,
             Some(accessJwt.accessToken),
           )
-          .zioValue
 
-        uploadOrganizationLogoResponse.code shouldBe StatusCode.InternalServerError
-        uploadOrganizationLogoResponse.body.left.value shouldBe smithy.InternalServerError()
+          _ = uploadOrganizationLogoResponse.code shouldBe StatusCode.InternalServerError
+          _ = uploadOrganizationLogoResponse.body.left.value shouldBe smithy.InternalServerError()
 
-        val organizationDetailsRowUpdated = postgresClient
-          .executeQuery(organizationDetailsQueries.getAllOrganizationDetailsTesting)
-          .zioValue
-          .head
+          organizationDetailsRowsAll <- postgresClient.executeQuery(
+            organizationDetailsQueries.getAllOrganizationDetailsTesting
+          )
 
-        organizationDetailsRowUpdated.organizationStage shouldBe organizationDetailsRowUpdated.organizationStage
-        organizationDetailsRowUpdated.logoImageAsset shouldBe None
+          _ = organizationDetailsRowsAll shouldBe List(organizationDetailsRow)
 
-        val expectedBucketKeyPrefix = s"$organizationLogoBucketPathPrefix/${organizationID.value}"
+          expectedBucketKeyPrefix = s"$organizationLogoBucketPathPrefix/${organizationID.value}"
 
-        s3TestClient
-          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
-          .zioEither
-          .isLeft shouldBe true
+          logoOriginalObjectBytesEither <- s3TestClient
+            .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/original")
+            .either
+          logoNormalizedObjectBytesEither <- s3TestClient
+            .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
+            .either
 
-        s3TestClient
-          .getObject(organizationMediaBucket, s"$expectedBucketKeyPrefix/normalized")
-          .zioEither
-          .isLeft shouldBe true
+          _ = logoOriginalObjectBytesEither.isLeft shouldBe true
+
+          _ = logoNormalizedObjectBytesEither.isLeft shouldBe true
+        } yield ()
+      }
+    }
+
+    "middleware" should {
+      "fail with a BadRequest when the organization id header is missing on every endpoint" in withContext { context =>
+        import context.*
+
+        for {
+          organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+            .copy(logoImageAsset = None)
+
+          _ <- postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
+          logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+
+          responses <- ZIO.collectAllPar(
+            List(
+              gatewayClient.uploadOrganizationLogoPost[smithy.BadRequest](
+                None,
+                Some(organizationLogoImageOriginalFileName),
+                logoBytes,
+                Some(accessJwt.accessToken),
+              )
+            )
+          )
+
+          _ = responses.map(_.code) shouldBe List.fill(1)(StatusCode.BadRequest)
+          _ = responses.map(_.body.left.toOption) shouldBe List.fill(1)(Some(smithy.BadRequest()))
+
+          organizationDetailsRowsAll <- postgresClient.executeQuery(
+            organizationDetailsQueries.getAllOrganizationDetailsTesting
+          )
+
+          _ = organizationDetailsRowsAll shouldBe List(organizationDetailsRow)
+
+          organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+          _ = organizationMediaS3BucketKeysAll shouldBe empty
+        } yield ()
+      }
+
+      "fail with an Unauthorized when the access token is missing on every endpoint" in withContext { context =>
+        import context.*
+
+        for {
+          organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+            .copy(logoImageAsset = None)
+
+          _ <- postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+
+          organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
+          logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+
+          responses <- ZIO.collectAllPar(
+            List(
+              gatewayClient.uploadOrganizationLogoPost[smithy.Unauthorized](
+                Some(organizationDetailsRow.organizationID),
+                Some(organizationLogoImageOriginalFileName),
+                logoBytes,
+                None,
+              )
+            )
+          )
+
+          _ = responses.map(_.code) shouldBe List.fill(1)(StatusCode.Unauthorized)
+          _ = responses.map(_.body.left.toOption) shouldBe List.fill(1)(Some(smithy.Unauthorized()))
+
+          organizationDetailsRowsAll <- postgresClient.executeQuery(
+            organizationDetailsQueries.getAllOrganizationDetailsTesting
+          )
+
+          _ = organizationDetailsRowsAll shouldBe List(organizationDetailsRow)
+
+          organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+          _ = organizationMediaS3BucketKeysAll shouldBe empty
+        } yield ()
+      }
+
+      "fail with an Unauthorized when the access token is invalid on every endpoint" in withContext { context =>
+        import context.*
+
+        for {
+          organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+            .copy(logoImageAsset = None)
+
+          _ <- postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+
+          organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
+          logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+
+          responses <- ZIO.collectAllPar(
+            List(
+              gatewayClient.uploadOrganizationLogoPost[smithy.Unauthorized](
+                Some(organizationDetailsRow.organizationID),
+                Some(organizationLogoImageOriginalFileName),
+                logoBytes,
+                Some(AccessToken("invalidtoken")),
+              )
+            )
+          )
+
+          _ = responses.map(_.code) shouldBe List.fill(1)(StatusCode.Unauthorized)
+          _ = responses.map(_.body.left.toOption) shouldBe List.fill(1)(Some(smithy.Unauthorized()))
+
+          organizationDetailsRowsAll <- postgresClient.executeQuery(
+            organizationDetailsQueries.getAllOrganizationDetailsTesting
+          )
+
+          _ = organizationDetailsRowsAll shouldBe List(organizationDetailsRow)
+
+          organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+          _ = organizationMediaS3BucketKeysAll shouldBe empty
+        } yield ()
+      }
+
+      "fail with a Forbidden when the user is not in a completed onboard stage on every endpoint" in withContext {
+        context =>
+          import context.*
+
+          for {
+            organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+              .copy(logoImageAsset = None)
+
+            _ <- postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+
+            onboardStageInvalid <- Random
+              .shuffle(OnboardStage.values.toList diff OnboardStage.completedStages)
+              .map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStageInvalid)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+
+            organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              organizationID = organizationDetailsRow.organizationID,
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRoleAllowed,
+            )
+
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
+            logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+
+            responses <- ZIO.collectAllPar(
+              List(
+                gatewayClient.uploadOrganizationLogoPost[smithy.Forbidden](
+                  Some(organizationDetailsRow.organizationID),
+                  Some(organizationLogoImageOriginalFileName),
+                  logoBytes,
+                  Some(accessJwt.accessToken),
+                )
+              )
+            )
+
+            _ = responses.map(_.code) shouldBe List.fill(1)(StatusCode.Forbidden)
+            _ = responses.map(_.body.left.toOption) shouldBe List.fill(1)(Some(smithy.Forbidden()))
+
+            organizationDetailsRowsAll <- postgresClient.executeQuery(
+              organizationDetailsQueries.getAllOrganizationDetailsTesting
+            )
+
+            _ = organizationDetailsRowsAll shouldBe List(organizationDetailsRow)
+
+            organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+            _ = organizationMediaS3BucketKeysAll shouldBe empty
+          } yield ()
+      }
+
+      "fail with a Forbidden when the organization user role is not allowed on every endpoint" in withContext {
+        context =>
+          import context.*
+
+          for {
+            organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+              .copy(logoImageAsset = None)
+
+            _ <- postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+
+            organizationUserRoleInvalid <- Random
+              .shuffle(OrganizationUserRole.values.toList diff OrganizationUserRole.adminRoles)
+              .map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              organizationID = organizationDetailsRow.organizationID,
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRoleInvalid,
+            )
+
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
+            logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+
+            responses <- ZIO.collectAllPar(
+              List(
+                gatewayClient.uploadOrganizationLogoPost[smithy.Forbidden](
+                  Some(organizationDetailsRow.organizationID),
+                  Some(organizationLogoImageOriginalFileName),
+                  logoBytes,
+                  Some(accessJwt.accessToken),
+                )
+              )
+            )
+
+            _ = responses.map(_.code) shouldBe List.fill(1)(StatusCode.Forbidden)
+            _ = responses.map(_.body.left.toOption) shouldBe List.fill(1)(Some(smithy.Forbidden()))
+
+            organizationDetailsRowsAll <- postgresClient.executeQuery(
+              organizationDetailsQueries.getAllOrganizationDetailsTesting
+            )
+
+            _ = organizationDetailsRowsAll shouldBe List(organizationDetailsRow)
+
+            organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+            _ = organizationMediaS3BucketKeysAll shouldBe empty
+          } yield ()
+      }
+
+      "fail with an InternalServerError when the user details do not exist on every endpoint" in withContext {
+        context =>
+          import context.*
+
+          for {
+            organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+              .copy(logoImageAsset = None)
+
+            _ <- postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+
+            userID = arbitrarySample[UserID]
+
+            organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              organizationID = organizationDetailsRow.organizationID,
+              userID = userID,
+              userRole = organizationUserRoleAllowed,
+            )
+
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            accessJwt <- jwtService.generateAccessToken(userID)
+
+            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
+            logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+
+            responses <- ZIO.collectAllPar(
+              List(
+                gatewayClient.uploadOrganizationLogoPost[smithy.InternalServerError](
+                  Some(organizationDetailsRow.organizationID),
+                  Some(organizationLogoImageOriginalFileName),
+                  logoBytes,
+                  Some(accessJwt.accessToken),
+                )
+              )
+            )
+
+            _ = responses.map(_.code) shouldBe List.fill(1)(StatusCode.InternalServerError)
+            _ = responses.map(_.body.left.toOption) shouldBe List.fill(1)(Some(smithy.InternalServerError()))
+
+            organizationDetailsRowsAll <- postgresClient.executeQuery(
+              organizationDetailsQueries.getAllOrganizationDetailsTesting
+            )
+
+            _ = organizationDetailsRowsAll shouldBe List(organizationDetailsRow)
+
+            organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+            _ = organizationMediaS3BucketKeysAll shouldBe empty
+          } yield ()
+      }
+
+      "fail with an InternalServerError when the user is not a member of the organization on every endpoint" in withContext {
+        context =>
+          import context.*
+
+          for {
+            organizationDetailsRow = arbitrarySample[OrganizationDetailsRow]
+              .copy(logoImageAsset = None)
+
+            _ <- postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
+
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
+            logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+
+            responses <- ZIO.collectAllPar(
+              List(
+                gatewayClient.uploadOrganizationLogoPost[smithy.InternalServerError](
+                  Some(organizationDetailsRow.organizationID),
+                  Some(organizationLogoImageOriginalFileName),
+                  logoBytes,
+                  Some(accessJwt.accessToken),
+                )
+              )
+            )
+
+            _ = responses.map(_.code) shouldBe List.fill(1)(StatusCode.InternalServerError)
+            _ = responses.map(_.body.left.toOption) shouldBe List.fill(1)(Some(smithy.InternalServerError()))
+
+            organizationDetailsRowsAll <- postgresClient.executeQuery(
+              organizationDetailsQueries.getAllOrganizationDetailsTesting
+            )
+
+            _ = organizationDetailsRowsAll shouldBe List(organizationDetailsRow)
+
+            organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+            _ = organizationMediaS3BucketKeysAll shouldBe empty
+          } yield ()
       }
     }
   }

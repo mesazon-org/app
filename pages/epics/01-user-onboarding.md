@@ -32,7 +32,7 @@ Throughout this epic, a **one-time passcode** (OTP) is a short code we send to s
 #### Non-functional
 
 1. Signing up and verifying an email do not need a sign in. They are protected instead by limits on resending passcodes and by never revealing whether an email is already registered.
-2. The resend cooldown is the last 15 seconds before a passcode expires, for email and phone alike. Asking for a passcode again while the current one still has more than that left reuses it and sends nothing. Once it is inside that last stretch, or has expired, a new passcode is made and sent.
+2. The **resend window** is the last 15 seconds before a passcode expires, for email and phone alike. Asking for a passcode again before that window reuses the current one and sends nothing (sign up limits how many times in a row, see step 1). Inside the window, or once it has expired, a new passcode is made and sent.
 3. If a verification email or text cannot be sent, the request fails and the person is told. The welcome email is the exception: if it cannot be sent, the person carries on.
 4. After 5 wrong tries in a row on the same passcode, the next attempt is rejected like an expired passcode and the passcode is deleted. The count restarts only when a genuinely new passcode is issued or the passcode is verified correctly; reusing a passcode does not restart it. The person is never told how many tries are left.
 5. A passcode id we no longer hold, such as a stale browser tab, a reused link, or a passcode already used, is rejected like an expired passcode.
@@ -70,8 +70,8 @@ A new account starts at `EmailVerification`; there is no earlier stage.
 | --- | --- |
 | 1. Signs up for the first time | - Account created at `EmailVerification` - A new passcode is emailed |
 | 2. Signs up again after verifying their email but before setting a password | - Stage goes back to `EmailVerification` - They verify again, with the passcode handled as in scenarios 3 to 5 |
-| 3. Signs up again once the earlier passcode has expired or is inside its resend cooldown | - A new passcode is emailed |
-| 4. Signs up again while the passcode still has more than its resend cooldown left | - Same passcode kept and no email sent - Its expiry restarts at a full window - A new passcode id is returned |
+| 3. Signs up again once the earlier passcode has expired or is inside its resend window | - A new passcode is emailed |
+| 4. Signs up again while the passcode is not yet inside its resend window | - Same passcode kept and no email sent - Its expiry restarts at a full window - A new passcode id is returned |
 | 5. Signs up again as in scenario 4, for the sixth time in a row on the same passcode | - The passcode is replaced even though it still works - The new one is emailed and its wrong-try count starts over |
 | 6. Signs up with an email that already has a password | - Same reply as for a new email, with a fake passcode id - Nothing sent, nothing saved, stage unchanged |
 
@@ -227,8 +227,8 @@ This response looks the same whatever the email turns out to be. For an email th
 | **Scenarios** | **Requirements** |
 | --- | --- |
 | 1. Submits their details | - Details saved; moves to `PhoneVerification` - A passcode is texted |
-| 2. Submits again while the passcode still has more than its resend cooldown left | - Details saved, including a changed number - Same passcode kept and no text sent |
-| 3. Submits again once the passcode is inside its resend cooldown or expired | - Details saved - A new passcode is texted |
+| 2. Submits again while the passcode is not yet inside its resend window | - Details saved, including a changed number - Same passcode kept and no text sent |
+| 3. Submits again once the passcode is inside its resend window or expired | - Details saved - A new passcode is texted |
 | 4. Gives a phone number that belongs to a different account | - Rejected as a conflict - Nothing saved and no text sent |
 | 5. Gives the number already saved on their own account | - Not a conflict; behaves as scenario 2 or 3 |
 
@@ -335,7 +335,7 @@ When looking up a passcode already waiting:
 - The person is at `PhoneVerified`, the passcode cannot be used again, and they can create an organization.
 - A wrong passcode changes nothing. An expired passcode, or a try after 5 wrong ones, deletes it, and the person goes back to providing details for a new one.
 - An unknown passcode id, or no passcode waiting, changes nothing.
-- Looking up a passcode normally changes nothing, but deletes it when it is inside its resend cooldown — see [gap 1](#1-opening-the-phone-verification-page-can-destroy-a-usable-passcode).
+- Looking up a passcode normally changes nothing, but deletes it when it is inside its resend window — see [gap 1](#1-opening-the-phone-verification-page-can-destroy-a-usable-passcode).
 
 #### Http Error Responses
 
@@ -354,7 +354,7 @@ Everything above describes what the product does today. Nothing here exists yet;
 
 #### 1. Opening the phone verification page can destroy a usable passcode
 
-Today, looking up a waiting phone passcode deletes it and reports it as expired once it is inside its resend cooldown, even though submitting it would still work. A person who reloads the page in that last stretch loses a passcode they could have used.
+Today, looking up a waiting phone passcode deletes it and reports it as expired once it is inside its resend window, even though submitting it would still work. A person who reloads the page in that last stretch loses a passcode they could have used.
 
 **To decide:** whether the lookup should ever delete a passcode, or only report how long is left.
 

@@ -41,6 +41,8 @@ A **one-time passcode** (OTP) here is the same kind of short code used elsewhere
 
 Every account has an **onboard stage** saying how far through sign up it has got. Recovery only accepts accounts at `PasswordProvided` or later — accounts that actually have a password. [User Onboarding]({{ site.baseurl }}{% link epics/01-user-onboarding.md %}) explains the stages.
 
+The **resend window** is the last 15 seconds of a code's life.
+
 Two counters sit behind several rules below:
 
 | **Counter** | **What it counts** |
@@ -61,9 +63,9 @@ Two counters sit behind several rules below:
 | **Scenarios** | **Requirements** |
 | --- | --- |
 | 1. User asks for a code and has none outstanding | - A new code is created and emailed - The wrong-attempt counter is cleared - User moves on to entering the code |
-| 2. User asks again after their previous code went stale (expired, or inside the resend cooldown before it expires) | - Same as scenario 1: a new code is created and emailed |
-| 3. User asks again while their code is still fresh, having asked only a few times | - The same code id comes back and **no** new email is sent - The code's expiry is extended |
-| 4. User asks again while their code is still fresh, having already asked too many times | - The same code id comes back and no email is sent - The expiry is **not** extended, and the answer does not show this |
+| 2. User asks again after their previous code went stale (expired, or inside the resend window before it expires) | - Same as scenario 1: a new code is created and emailed |
+| 3. User asks again while their code is still fresh, having asked only a few times | - The same code id comes back and **no** new email is sent - The code's expiry restarts at a full window |
+| 4. User asks again while their code is still fresh, having already asked too many times | - The same code id comes back and no email is sent - The expiry is **not** restarted, and the answer does not show this |
 | 5. User asks for a code for an email with no account | - Nothing is saved or sent - A made-up code id comes back, so the page moves on exactly as for a real account |
 | 6. User asks for a code for an account that has not set a password yet | - Rejected: there is no password to recover - See [gap 1](#1-a-registered-email-can-be-told-apart-from-an-unregistered-one) |
 
@@ -71,7 +73,7 @@ Two counters sit behind several rules below:
 
 1. Anyone who has set a password can ask for a recovery code with their email address.
 2. While a code is still fresh, asking again reuses it and sends no new email.
-3. Each of the first 3 repeat requests extends a fresh code's life; from the 4th on, the code keeps its expiry.
+3. Each of the first 3 repeat requests restarts a fresh code's expiry at a full window; from the 4th on, the code keeps its expiry.
 
 #### Request / Response / Outcome
 
@@ -91,7 +93,7 @@ Two counters sit behind several rules below:
 **Outcome**
 
 - No code, or a stale one: a new code is emailed and the wrong-attempt counter is cleared.
-- Fresh code, few requests so far: the code's expiry is pushed out; nothing is sent.
+- Fresh code, few requests so far: the code's expiry restarts at a full window; nothing is sent.
 - Fresh code, too many requests: only the request count changes. The code keeps its original expiry, although the answer implies otherwise — see [gap 2](#2-the-countdown-we-hand-back-can-be-wrong).
 - Unregistered email: nothing changes.
 
@@ -226,7 +228,7 @@ Today an unknown email gets a normal answer with a made-up code id, but a regist
 
 #### 2. The countdown we hand back can be wrong
 
-Today, once someone has asked too many times, the code's expiry is no longer extended, but the answer still reports a full fresh lifetime. A countdown on the page keeps running after the code has stopped working.
+Today, once someone has asked too many times, the code's expiry is no longer restarted, but the answer still reports a full fresh lifetime. A countdown on the page keeps running after the code has stopped working.
 
 **To decide:** whether the answer should report the code's real remaining time rather than the configured maximum.
 
@@ -238,13 +240,13 @@ Today a reset token that has already been used — a second click, or a refresh 
 
 #### 4. The request counter never resets except on success
 
-Today the request counter is cleared only when a code is entered correctly, not when a new code is created. The limit becomes "requests ever, until a successful recovery": someone who abandons recovery a few times, even months apart, stops getting extensions with nothing to explain why.
+Today the request counter is cleared only when a code is entered correctly, not when a new code is created. The limit becomes "requests ever, until a successful recovery": someone who abandons recovery a few times, even months apart, stops having the code's expiry restarted, with nothing to explain why.
 
 **To decide:** whether this counter should reset whenever a new code is created, as the wrong-attempt counter already does.
 
 #### 5. The code may not live long enough to be usable
 
-Today the code lasts **45 seconds** by default, with the resend cooldown at **15 seconds**. That must cover sending, delivery, noticing, opening the email and typing the code; email delivery alone can take longer, which pushes people to ask again — exactly what [gap 4](#4-the-request-counter-never-resets-except-on-success) then penalises.
+Today the code lasts **45 seconds** by default, with the resend window at **15 seconds**. That must cover sending, delivery, noticing, opening the email and typing the code; email delivery alone can take longer, which pushes people to ask again — exactly what [gap 4](#4-the-request-counter-never-resets-except-on-success) then penalises.
 
 **To decide:** what the lifetime of an emailed code should be, given that the phone and email verification codes elsewhere in the product may want different values.
 

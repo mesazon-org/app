@@ -8,6 +8,7 @@ Reusable Scala code/name/test rules. Boundaries: [Chimney](chimney.md), [Iron](i
 - Pass Boolean constructor and method parameters by name, even when surrounding arguments are positional: `isArchived = false`, never a bare `false`. This also applies to generated Boolean fixture values. A named Boolean literal is self-describing and needs no separate constant. Boolean return values and assertions are not field arguments.
 - Keep business status separate from record availability. Follow the feature's explicit archive/eligibility policy; never infer that a business status disables a row or invent enabled/disabled enum groups when archive state has its own field.
 - Put all private non-method members first, including private types, givens, vals, and lazy vals; private vals precede public givens. Then order public members as `given`, `val` (including `lazy val`), and `def`, with private defs immediately before public defs. A private def does not move ahead of public givens or vals. Apply this order to objects, classes, traits, and package-level declarations, preserving safe initialization dependencies; test environment-selection overrides retain the exception below. Never split a value that is always meant to be public into a private `lazy val` holding the real derivation plus a public `given`/`val` that merely aliases it, purely to satisfy this ordering — declare it once, directly as the public `given`/`val`, positioned wherever public members of its kind belong. The private-then-public split exists only for a member that is genuinely private in part of its life (e.g. shared by more than one public given) or requires strict declaration-order control the ordering rule would otherwise break.
+- The member order above applies inside extension blocks too: an extension block is its own scope, so its private defs (e.g. `zioEnv`, `runOrRethrow` in `ZIOTestOps`) come directly before its public extension methods.
 - A class's constructor parameter list groups every `val`/`var` (public, field-exposing) parameter together, either all before or all after the plain (private-to-the-body) parameters — never interleaved. The same rule applies to any body member introduced solely to adapt one constructor parameter (e.g. a `private val` derived from one parameter with a fallback default) — do not let it interrupt a class's member ordering either; place it with the other private non-method members at the top, not wherever it was first needed. Every parameter/field that plays an equivalent role across a class's several related operations (e.g. a mock's per-operation call-log ref, or its per-operation canned result) follows one consistent naming pattern across all of them — `<operation><noun>` for every one or none of them, never a shorter/generic name for just one while its siblings spell out the operation.
 - For ZIO durations, add `import zio.*` and use `Duration`; never write `zio.Duration` in type declarations or expressions.
 - Derive a schema once per model in its owning schema registry. Other registrations, including consumer-specific adapters such as OpenAI schemas, reuse that schema instead of calling `Schema.derived` again. Compatibility delegates must reuse the original registration, not create another derivation.
@@ -67,16 +68,65 @@ Form: `<concept><source/state><role>`; concept first, qualifiers last.
 ## Tests
 
 - Add dedicated JSON codec tests only when the user explicitly requests them. Do not create serialization, deserialization, or codec round-trip specs by default.
+- Don't write tests for test-only code (test-kit helpers, harnesses, arbitraries); they're exercised by the specs that use them.
+- A test takes its own reference "now" from `Instant.now.truncatedTo(ChronoUnit.MILLIS)`, bound as `instantNow`, never from `TimeProvider` or ZIO `Clock`: a test reading the same clock as the code under test would share any bug in it (wrong clock, truncation, or zone) and could not catch it. Unit and functional tests still mock `TimeProvider` to pin the time the code under test sees.
 
 ### Structure and names
 
-- Add a blank line immediately after a test-class declaration. Environment-selection overrides (such as `dockerComposeFile` and `exposedServices`) stay at the top of the test class, before models, givens, vals, and helper defs; this is an explicit exception to the general member-ordering rule. Lifecycle hooks such as `beforeAll` and `afterEach` may follow the context helper as in existing integration specs.
+- Blank-line layout is in [Formatting](#formatting). Environment-selection overrides (such as `dockerComposeFile` and `exposedServices`) stay at the top of the test class, before models, givens, vals, and helper defs; this is an explicit exception to the general member-ordering rule. Lifecycle hooks such as `beforeAll` and `afterEach` may follow the context helper as in existing integration specs.
+- A test body written as a `for`-comprehension puts every binding inside it, pure values included, as `=` bindings in declaration order; never declare plain `val`s before the `for`. The comprehension may start with an `=` binding (Scala 3 better fors, SIP-62, enabled by `--preview` in `Settings.ScalaCompiler`): `for { userID = arbitrarySample[UserID]; refreshJwt <- jwtService.generateRefreshToken(userID) } yield ()`.
 - Each test owns its data/state and runs alone; no shared test-data fixtures. Share only stable SUT infrastructure or repetition whose inlining is materially worse.
 - Exactly one `should` section per public operation, named after that operation. Put all successes (including no-ops) first, then failures. Never split one operation across scenario sections or combine operations. A genuine cross-operation invariant may have its own section.
 - One test exercises one operation. Arrange preconditions directly rather than calling another public operation.
 - Success test name = observable success. Failure test name starts `fail with a[n] <concrete error>` then states the condition/side-effect proof.
 - Write test descriptions in clear business terms that state the condition and observable outcome. Name the rule being exercised, such as `case-insensitive SKU`. Include archive state when it determines the result.
 - A test description never embeds a concrete config value or a model/provider identifier (a row-count limit, a batch size, a specific model name) — describe only observable behavior, and assert the concrete value in the test body instead, so the description stays accurate if the value later changes.
+
+### Formatting
+
+The single source for blank lines and statement grouping in every test style.
+
+- Add a blank line after the test-class declaration, after `super.beforeEach()` (or another `super` lifecycle call), and after `import context.*`.
+- Blank lines are semantic separators, not decoration.
+- Pure values and data built together stay together: related model bindings and their `.copy(...)` chains have no blank lines between them.
+- Every call to a service or client (`postgresClient`, `gatewayClient`, `jwtService`, `mailHogClient`, `s3TestClient`, …) is its own block, separated by blank lines. Consecutive calls on the same client stay together (for example, two `postgresClient` inserts); switching to a different client starts a new block. This holds even when the call is needed to build later data: `refreshJwt <- jwtService.generateRefreshToken(userID)` is its own block between the values it uses and the values that use it.
+- Exception: reset calls in `beforeEach` (truncates, inbox/bucket clears) form one block with no blank lines, even across clients.
+- A request or query whose result is bound is followed by a blank line before the assertions on it.
+- Verification reads after the action are grouped: all consecutive database queries form one block, then one blank line, then all their assertions together in query order. Never alternate query → assert → query → assert. A read that needs a value derived after an earlier read's assertions, or that follows a write or another client's call, starts its own block.
+- Assertions on the same value stay together, including assertions on its fields (`response.code` with `response.body…`; `rows should have size 1` with `rows.head.x …`). Assertions on a different value start a new group.
+- An assertion group is followed by a blank line before the next call.
+- Order follows data dependencies, not a fixed phase list.
+
+#### `for`-comprehension style
+
+Acceptance specs (via `withContext`) and specs migrated to it. Bind every read (`userTokenRowsAll <- postgresClient.executeQuery(...)`); bind consecutive verification reads one after another with no blank lines, leave one blank line, then assert all of them with `_ = …`:
+
+```scala
+for {
+  userID = arbitrarySample[UserID]
+
+  refreshJwt <- jwtService.generateRefreshToken(userID)
+
+  userTokenRow = arbitrarySample[UserTokenRow]
+    .copy(tokenID = refreshJwt.tokenID, userID = userID, tokenType = TokenType.RefreshToken)
+
+  _ <- postgresClient.executeQuery(userTokenQueries.insertUserToken(userTokenRow))
+
+  tokenRefreshPostResponse <- gatewayClient.tokenRefreshPost[smithy.InternalServerError](refreshJwt.refreshToken)
+
+  _ = tokenRefreshPostResponse.code shouldBe StatusCode.Ok
+  _ = tokenRefreshPostResponse.body.value.accessTokenExpiresInSeconds should be > 0L
+
+  userTokenRowsAll <- postgresClient.executeQuery(userTokenQueries.getAllUserTokensTesting)
+
+  _ = userTokenRowsAll should have size 1
+  _ = userTokenRowsAll.head.userID shouldBe userTokenRow.userID
+} yield ()
+```
+
+#### `.zioValue` style
+
+Existing repository and functional specs not yet migrated. Keep a single-use database read inside its assertion (`postgresClient.executeQuery(...).zioValue shouldBe ...`); bind it only when the exact result is reused. The general rules above still apply.
 
 ### Data and assertions
 

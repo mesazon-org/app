@@ -36,6 +36,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Us
             userID = userDetailsRow.userID,
             actionAttemptType = ActionAttemptType.SignIn,
             attempts = Attempts.assume(1),
+            updatedAt = UpdatedAt(instantNow),
           )
 
         val password = arbitrarySample[Password]
@@ -78,7 +79,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Us
         assert(authenticationResponse.isRight)
       }
 
-      "successfully authenticate user with sign in attempts under max and block duration passed" in new TestContext {
+      "successfully authenticate user on the last allowed sign in attempt within the block duration" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -91,11 +92,9 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Us
           .copy(
             userID = userDetailsRow.userID,
             actionAttemptType = ActionAttemptType.SignIn,
-            attempts = Attempts.assume(authenticationConfig.signInAttemptsMax), // Under max attempts or equals
+            attempts = Attempts.assume(authenticationConfig.signInAttemptsMax),
             updatedAt = UpdatedAt(
-              instantNow.minusSeconds(
-                authenticationConfig.signInAttemptsBlockDuration.toSeconds + 1
-              ) // Block duration passed
+              instantNow.minusSeconds(authenticationConfig.signInAttemptsBlockDuration.toSeconds - 1)
             ),
           )
 
@@ -139,7 +138,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Us
         assert(authenticationResponse.isRight)
       }
 
-      "successfully authenticate user with sign in attempts at max but block duration passed" in new TestContext {
+      "successfully authenticate user on the first sign in attempt past the max once the block duration has passed" in new TestContext {
         val onboardStage   = Random.shuffle(OnboardStage.signInAllowedStages).zioValue.head
         val userDetailsRow = arbitrarySample[UserDetailsRow]
           .copy(onboardStage = onboardStage)
@@ -152,11 +151,9 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Us
           .copy(
             userID = userDetailsRow.userID,
             actionAttemptType = ActionAttemptType.SignIn,
-            attempts = Attempts.assume(authenticationConfig.signInAttemptsMax + 1), // At max attempts
+            attempts = Attempts.assume(authenticationConfig.signInAttemptsMax + 1),
             updatedAt = UpdatedAt(
-              instantNow.minusSeconds(
-                authenticationConfig.signInAttemptsBlockDuration.toSeconds + 1
-              ) // Block duration passed
+              instantNow.minusSeconds(authenticationConfig.signInAttemptsBlockDuration.toSeconds + 1)
             ),
           )
 
@@ -288,6 +285,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Us
             userID = userDetailsRow.userID,
             actionAttemptType = ActionAttemptType.SignIn,
             attempts = Attempts.assume(1),
+            updatedAt = UpdatedAt(instantNow),
           )
 
         inSequence(
@@ -388,6 +386,7 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Us
             userID = userDetailsRow.userID,
             actionAttemptType = ActionAttemptType.SignIn,
             attempts = Attempts.assume(1),
+            updatedAt = UpdatedAt(instantNow),
           )
 
         val password = arbitrarySample[Password]
@@ -462,8 +461,8 @@ class AuthenticationServiceSpec extends ZWordSpecBase, RepositoryArbitraries, Us
     val instantNow = Instant.now().truncatedTo(ChronoUnit.MILLIS)
 
     val authenticationConfig = AuthenticationConfig(
-      signInAttemptsMax = 5,
-      signInAttemptsBlockDuration = Duration.fromSeconds(2),
+      signInAttemptsMax = 10,
+      signInAttemptsBlockDuration = 15.minutes,
     )
 
     val userDetailsRepositoryMock       = mock[UserDetailsRepository]

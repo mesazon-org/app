@@ -9,8 +9,8 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.it.client.GatewayClient.GatewayClientConfig
 import io.mesazon.gateway.json.tapir.given
 import io.mesazon.gateway.smithy
-import io.mesazon.testkit.base.SttpTestBackend
 import io.scalaland.chimney.dsl.*
+import org.testcontainers.containers.wait.strategy.Wait
 import smithy4s.Nullable
 import sttp.client4.*
 import sttp.client4.jsoniter.*
@@ -40,6 +40,20 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
       out.writeVal(onboardStage.stringValue)
 
     override def nullValue: smithy.OnboardStage = null
+  }
+
+  given JsonValueCodec[smithy.OrganizationUserRole] = new JsonValueCodec[smithy.OrganizationUserRole] {
+    override def decodeValue(in: JsonReader, default: smithy.OrganizationUserRole): smithy.OrganizationUserRole = {
+      val organizationUserRoleRaw = in.readString(null)
+      smithy.OrganizationUserRole
+        .fromString(organizationUserRoleRaw)
+        .getOrElse(in.decodeError(s"Unknown OrganizationUserRole: [$organizationUserRoleRaw]"))
+    }
+
+    override def encodeValue(organizationUserRole: smithy.OrganizationUserRole, out: JsonWriter): Unit =
+      out.writeVal(organizationUserRole.stringValue)
+
+    override def nullValue: smithy.OrganizationUserRole = null
   }
 
   given JsonValueCodec[smithy.AddressType] = new JsonValueCodec[smithy.AddressType] {
@@ -367,6 +381,16 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     basicRequest
       .post(externalUri.addPath("signin"))
       .pipe(request => if (addBasicAuth) request.auth.basic(email.value, password.value) else request)
+      .response(asJsonEitherOrFail[E, smithy.SignInPostResponse])
+      .send(sttpBackend)
+
+  def signInPostBearerAuth[E: JsonValueCodec](
+      accessToken: AccessToken
+  ): Task[Response[Either[E, smithy.SignInPostResponse]]] =
+    basicRequest
+      .post(externalUri.addPath("signin"))
+      .auth
+      .bearer(accessToken.value)
       .response(asJsonEitherOrFail[E, smithy.SignInPostResponse])
       .send(sttpBackend)
 
@@ -1013,7 +1037,15 @@ object GatewayClient {
   lazy val ExposedServices = Set(
     ExposedService(ServiceName, ExternalPort),
     ExposedService(ServiceName, InternalPort),
-    ExposedService(ServiceName, HealthPort),
+    ExposedService(
+      ServiceName,
+      HealthPort,
+      Wait
+        .forHttp("/readiness")
+        .forPort(HealthPort)
+        .forStatusCode(204)
+        .withStartupTimeout(java.time.Duration.ofMinutes(1)),
+    ),
   )
 
   given Network[Task] = Network.forAsync[Task]
@@ -1085,5 +1117,5 @@ object GatewayClient {
     }
   }
 
-  val live = SttpTestBackend.live >>> ZLayer.fromFunction(GatewayClient.apply)
+  val live = ZLayer.fromFunction(GatewayClient.apply)
 }

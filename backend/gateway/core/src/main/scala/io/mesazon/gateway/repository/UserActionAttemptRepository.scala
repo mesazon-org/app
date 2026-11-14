@@ -30,8 +30,9 @@ object UserActionAttemptRepository {
       idGenerator: IDGenerator,
   ) extends UserActionAttemptRepository {
 
-    private lazy val attemptsDefault =
-      Attempts.applyUnsafe(1) // Starting with 1 attempt when there is no existing record
+    // The stored count is one ahead: it holds the number the next attempt will get
+    private lazy val attemptsFirstStored   = Attempts.applyUnsafe(2)
+    private lazy val attemptsFirstReturned = Attempts.applyUnsafe(1)
 
     override def getAndIncreaseUserActionAttempt(
         userID: UserID,
@@ -51,11 +52,11 @@ object UserActionAttemptRepository {
         actionAttemptID,
         userID,
         actionAttemptType,
-        attemptsDefault,
+        attemptsFirstStored,
         CreatedAt(instantNow),
         UpdatedAt(instantNow),
       )
-      userActionAttemptRowUpdated <- database
+      userActionAttemptRowOldOpt <- database
         .transactionOrWiden(
           userActionAttemptQueries
             .getAndIncrease(userActionAttemptRow)
@@ -66,7 +67,7 @@ object UserActionAttemptRepository {
             e,
           )
         )
-    } yield userActionAttemptRowUpdated
+    } yield userActionAttemptRowOldOpt.getOrElse(userActionAttemptRow.copy(attempts = attemptsFirstReturned))
 
     override def deleteUserActionAttempt(
         userID: UserID,

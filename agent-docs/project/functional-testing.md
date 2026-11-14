@@ -12,7 +12,7 @@ Feature specs live in `backend/gateway/core/src/test/scala/io/mesazon/gateway/fu
 
 - Extend `ZWordSpecBase` plus the feature's/Row's/token arbitraries.
 - Every test uses a fresh `TestContext`; provide `<Feature>Service.local`, real request/domain validators and validator config, and strict mocks for every other dependency. Never use `.live`/`.observed` — those wire production error translation/logging, which acceptance tests already exercise over real HTTP.
-- ZIO test helpers: `.zioValue`, `.zioError`, `.zioEither`, `.zioCause`, `Ref#refValue`, `counterRef`. Stub helpers: `.returningZIO`, `.returnsZIOUnit`, `.failingZIO`, `.dyingZIO`, or plain `.returns(effect)` when the effect itself is under test.
+- ZIO test helpers: `.zioValue`, `.zioEither`, `.zioError` (all rethrow the original defect — and `.zioValue` a `Throwable` typed failure — instead of a `FiberFailure`, so a ScalaTest assertion failing inside an effect keeps its spec file/line; `.zioError` also fails the test at the call site with the success value when the effect succeeds), `.zioCause`, `Ref#refValue`, `counterRef`. Stub helpers: `.returningZIO`, `.returnsZIOUnit`, `.failingZIO`, `.dyingZIO`, or plain `.returns(effect)` when the effect itself is under test.
 - Parameterless effects use eta expansion: `(() => authState.get).expects()`.
 
 ## Structure and naming

@@ -1,6 +1,8 @@
 package io.mesazon.testkit.base
 
+import org.scalactic.source.Position
 import org.scalamock.handlers.CallHandler
+import org.scalatest.exceptions.TestFailedException
 import zio.*
 import zio.config.typesafe.TypesafeConfigProvider
 import zio.logging.backend.SLF4J
@@ -19,19 +21,20 @@ trait ZIOTestOps {
       .provideLayer(loggerLayer)
       .withConfigProvider(configProvider)
 
-    def zioEither: Either[E, A] =
+    private def runOrRethrow: A =
       Unsafe.unsafe { implicit unsafe =>
-        Runtime.default.unsafe
-          .run[Nothing, Either[E, A]](zioEnv.either)
-          .getOrThrowFiberFailure()
+        Runtime.default.unsafe.run[E, A](zio) match {
+          case Exit.Success(value) => value
+          case Exit.Failure(cause) =>
+            throw cause.dieOption
+              .orElse(cause.failureOption.collect { case throwable: Throwable => throwable })
+              .getOrElse(FiberFailure(cause))
+        }
       }
 
-    def zioValue: A =
-      Unsafe.unsafe { implicit unsafe =>
-        Runtime.default.unsafe
-          .run[E, A](zioEnv)
-          .getOrThrowFiberFailure()
-      }
+    def zioEither: Either[E, A] = zioEnv.either.runOrRethrow
+
+    def zioValue: A = zioEnv.runOrRethrow
 
     def zioCause: Cause[E] =
       Unsafe.unsafe { implicit unsafe =>
@@ -42,12 +45,16 @@ trait ZIOTestOps {
           .getOrThrowFiberFailure()
       }
 
-    def zioError: E =
-      Unsafe.unsafe { implicit unsafe =>
-        Runtime.default.unsafe
-          .run[Nothing, Either[E, A]](zioEnv.either)
-          .getOrThrowFiberFailure()
-      }.swap.toOption.get
+    def zioError(using position: Position): E =
+      zioEnv.either.runOrRethrow match {
+        case Left(error)  => error
+        case Right(value) =>
+          throw new TestFailedException(
+            _ => Some(s"Expected the effect to fail, but it succeeded with: $value"),
+            None,
+            position,
+          )
+      }
   }
 
   extension [A](ref: Ref[A]) {

@@ -6,59 +6,28 @@ import io.mesazon.gateway.it.client.GatewayClient
 import io.mesazon.gateway.utils.MailHogClient
 import io.mesazon.test.postgresql.PostgreSQLTestClient
 import io.mesazon.test.s3.S3TestClient
-import io.mesazon.testkit.base.{DockerComposeBase, ZIOTestOps}
-import org.scalatest.Suites
-import org.scalatest.concurrent.Eventually
-import org.scalatest.matchers.should
-import org.scalatest.time.{Minutes, Seconds, Span}
-import sttp.model.StatusCode
-import zio.*
+import io.mesazon.testkit.base.DockerComposeBase
+import org.scalatest.Suite
 
-class GatewayAcceptanceSpec
-    extends Suites(
-      new CustomerBookApiSpec,
-      new CatalogueApiSpec,
-      new CatalogueFileApiSpec,
-      new CustomerBookFileApiSpec,
-      new OrganizationManagementApiSpec,
-      new FileApiSpec,
-      new UserOnboardApiSpec,
-      new UserSignUpApiSpec,
-      new UserSignInApiSpec,
-      new UserForgotPasswordApiSpec,
-      new UserTokenRefreshApiSpec,
-    ),
-      DockerComposeBase,
-      should.Matchers,
-      Eventually,
-      ZIOTestOps {
+class GatewayAcceptanceSpec extends Suite, DockerComposeBase {
 
-  override implicit val patienceConfig: PatienceConfig =
-    PatienceConfig(timeout = Span(1, Minutes), interval = Span(2, Seconds))
+  override val nestedSuites: IndexedSeq[Suite] = Vector(
+    new UserTokenRefreshApiSpec(withContainers(identity)),
+    new OrganizationManagementApiSpec(withContainers(identity)),
+    new UserSignInApiSpec(withContainers(identity)),
+    new FileApiSpec(withContainers(identity)),
+    new UserSignUpApiSpec(withContainers(identity)),
+    new UserForgotPasswordApiSpec(withContainers(identity)),
+    new UserOnboardApiSpec(withContainers(identity)),
+    new CustomerBookFileApiSpec(withContainers(identity)),
+    new CatalogueFileApiSpec(withContainers(identity)),
+    new CatalogueApiSpec(withContainers(identity)),
+    new CustomerBookApiSpec(withContainers(identity)),
+  )
 
   override def exposedServices: Set[ExposedService] =
     GatewayClient.ExposedServices ++
       PostgreSQLTestClient.ExposedServices ++
       MailHogClient.ExposedServices ++
       S3TestClient.ExposedServices
-
-  override def afterContainersStart(containers: Containers): Unit = {
-    super.afterContainersStart(containers)
-
-    val context = GatewayItContext.build(containers).zioValue
-
-    eventually(context.gatewayClient.readiness.zioValue shouldBe StatusCode.NoContent)
-    eventually(
-      ZIO
-        .foreach(context.repositoryConfig.allTableNames)(tableName =>
-          context.postgresClient.checkIfTableExists(context.repositoryConfig.schema, tableName)
-        )
-        .zioValue should contain only true
-    )
-
-    nestedSuites.foreach {
-      case spec: GatewayAcceptanceTest => spec.setContext(context)
-      case _                           => ()
-    }
-  }
 }

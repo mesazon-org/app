@@ -2,6 +2,11 @@ services:
   gateway:
     image: local/gateway-core:latest
     restart: always
+    depends_on:
+      postgres:
+        condition: service_started
+      flyway:
+        condition: service_completed_successfully
     ports:
       - "8080:8080" # External
       - "8081:8081" # Internal

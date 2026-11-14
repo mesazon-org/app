@@ -35,10 +35,10 @@ EM speaks directly to the user and handles agent dispatch. If a subagent cannot 
 |---|---|---|---|
 | PO | `opus` (Opus 5.5) | `gpt-6-luna`/medium | clarify the product by asking, never assuming; accountable for `pages/`; final product-completeness review |
 | EM | main session; optional separate profile `opus` (Opus 5.5) | main session; optional separate profile `gpt-6-luna`/medium | technical concerns, plan, complexity, dispatch, approval relay, technical-completion review, close |
-| Lead MEDIUM | `opus` (Opus 5.5) | `gpt-6.1-sol`/medium | contained feature/integration work |
-| Lead HIGH | `opus` (Opus 5.5) | `gpt-6.1-sol`/medium | high-risk implementation |
+| Lead MEDIUM | `opus` (Opus 5.5), effort `medium` | `gpt-6.1-sol`/medium | contained feature/integration work |
+| Lead HIGH | `opus` (Opus 5.5), effort `high` | `gpt-6.1-sol`/medium | high-risk implementation |
 
-Only two Leads exist. On Claude every role runs Opus 5.5 and there is no lower tier; on Codex both Leads run the same current coding model, so the tiers differ by role contract, depth of reasoning, and review rather than by model. The [complexity contract](../.agents/contracts/complexity.md) decides between them; on Claude it changes only the depth of reasoning and review, and it never changes the process, since both tiers run every gate and keep slices at three hand-written files or fewer. Model availability depends on the account/host. Main EM uses the user's selected session model; the optional EM profile does not change it.
+Only two Leads exist. On Claude every role runs Opus 5.5 and there is no lower tier; on Codex both Leads run the same current coding model, so the tiers differ by role contract, depth of reasoning, and review rather than by model. The [complexity contract](../.agents/contracts/complexity.md) decides between them; on Claude it sets the Lead's reasoning effort (`high` or `medium`) and the depth of review, and it never changes the process, since both tiers run every gate and keep slices at three hand-written files or fewer. Model availability depends on the account/host. Main EM uses the user's selected session model; the optional EM profile does not change it.
 
 Documentation ownership is accountability, not a write restriction. PO finishes `pages/` before gate 1 and EM finishes `agent-docs/` before gate 2; the Lead updates reference docs beside the code it changes. All roles may make verified factual edits within agreed scope. One writer per file. EM's review covers code and docs together; PO is consulted again for product ambiguity and always for the completion review that closes the loop.
 

@@ -49,7 +49,7 @@ SBT (Simple Build Tool) is Scala's build tool ([docs](https://www.scala-sbt.org/
 | Service | Image | Ports | Purpose |
 |---|---|---|---|
 | `postgres` | `postgres:17.5-alpine` | 5432 | Primary DB. `POSTGRES_DB=local_db`, user/pass `postgres`/`postgres`. Bootstraps `local_schema` + roles once via `backend/schemas/local/postgres/init.sql` (only runs on first volume creation). |
-| `flyway` | `flyway/flyway:12.0.0-alpine` | — | Applies migrations from `backend/schemas/migrations` against `local_schema`. Depends on `postgres` but there's no startup healthcheck, so if it races Postgres on a cold start, just re-run it (`docker compose -f compose/compose.yaml up flyway`). |
+| `flyway` | `flyway/flyway:12.0.0-alpine` | — | Applies migrations from `backend/schemas/migrations` against `local_schema`. Starts after `postgres` and retries the connection up to 60 times (`-connectRetries=60`) while Postgres comes up. `gateway` starts only after `flyway` completes successfully, so a failed migration keeps the gateway down. |
 | `gateway` | `local/gateway-core:latest` | 8080/8081/8082/8083 | The actual service. **Not pulled from a registry** — build it first with `sbt "gateway-core/Docker/publishLocal"`. |
 | `wiremock` | `local/wiremock:latest` | (internal only) | Stubs external HTTP deps. Also built locally, not pulled — same `sbt` step covers it if you run the full `gateway-build`. |
 | `mailhog` | `mailhog/mailhog:v1.0.1` | 1025 (SMTP), 8025 (UI) | Local email catcher — `application.conf` already points email at it by default. |

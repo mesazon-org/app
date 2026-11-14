@@ -12,65 +12,47 @@ All eight JSON operations have acceptance sections. Current coverage and verifie
 
 **Accepted decimal precision limitation:** rounding beyond 34 significant digits in HTTP and database JSON decoding is documented in the [Catalogue review](features/catalogue.md#known-issues-edge-cases-and-larger-follow-ups). The user deferred codec changes and dedicated precision tests because such values are outside expected business use. This is not pending acceptance work for the current scope. If the business needs greater precision later, use typed requests and independent exact database/response assertions; the acceptance client's current rounding codec must not hide the result.
 
-**Behaviour:** [Catalogue](../pages/epics/06-catalogue.md), opening an item and browsing all/chosen items with an image. The detail and summary acceptance successes currently use absent images. Presigned image URLs are covered by functional tests, but their HTTP response branches remain untested.
-
-**Where:** the detail and summary sections of the registered `CatalogueApiSpec`. A response-mapping or wire-codec regression in the populated-image branch could pass the current no-image HTTP cases. Add coverage only in a separately agreed endpoint slice, following [Acceptance testing](project/acceptance-testing.md).
-
 **Deliberately reduced HTTP scope:** at the user’s request, PUT has exactly two simple successes (name update and clearing the item description) plus 14 failures. Dedicated omitted-field and missing/archived/foreign-parent no-op successes, mixed variant insertion, exhaustive field/status replacement, variant nullable clearing, and empty attributes-map replacement are excluded. Item/variant archive no-op combinations are also outside the current HTTP suite. Their production rules remain documented and lower-layer coverage remains; do not claim HTTP proof or restore the removed cases without agreement. Ordinary business statuses share one policy and use arbitraries, rather than duplicate per-status successes.
 
 **Typed-model limit:** unknown closed-enum strings and omitted required transport members cannot be constructed through the approved typed clients. These decoding cases are outside HTTP coverage. Do not add raw JSON clients or mutate serialized payloads to cover them. Representable invalid strings, numbers and empty collections still use typed requests. Exact nested validation indexes remain validator-level proof because HTTP errors expose ordered field names only.
 
-## Blocked on harness work
+## Deliberately not checked in acceptance
 
-### 1. No SMS is ever verified, anywhere
+These are proven by lower-layer specs and are deliberately not checked in acceptance: the acceptance suite does not inspect WireMock's request journal, nor decode processed images or follow presigned URLs. Each stays listed so nobody reads the HTTP suite as proof of them.
+
+**Impact:** a wiring bug between layers, such as a service that never calls Twilio, still passes acceptance. Only the lower-layer spec for each piece fails. This is the user's accepted tradeoff for a faster, more stable suite. Restoring end-to-end proof would need agreement first.
+
+### 1. The text message itself is never checked over HTTP
 
 **Behaviour:** "User should receive an SMS with OTP" — [User Onboarding](../pages/epics/01-user-onboarding.md), step 4, scenario 1.
 
-`grep -ril "twilio|sms|sendSms"` over `backend/gateway/it/` returns nothing, and `GatewayItContext` exposes no Twilio or wiremock client. Email is observable through `mailHogClient`; SMS has no equivalent. The onboard-details success test asserts `mailHogClient.readInbox().total shouldBe 0`, which proves no *email* went out but says nothing about the text message.
+Open part: only that the SMS is sent, to which number, with which code. `UserOnboardApiSpec` proves the OTP row, response and details over HTTP, against a WireMock Twilio stub. The send itself is covered by `it/TwilioClientSpec` (the Twilio request) and `fun/UserOnboardServiceSpec` (sent only for a new OTP, retried, skipped in dev mode, a final failure fails the request).
 
-So the phone half of onboarding is verified only as far as the OTP row in Postgres. Whether a message was ever dispatched, to which number, carrying which code, is untested at every level.
-
-**Prerequisite:** a way to observe Twilio from the harness — most likely the existing `backend/wiremock` module wired into `GatewayItContext.build`, since `application.conf`'s `twilio-client` already points at `localhost:8080` and looks intended for exactly that. `compose.yaml` does not expose wiremock on a host port today, so this needs deciding before any test can be written. See [External client](project/external-client.md).
-
-**Do first.** Gaps 5 and 6 below want the same assertion, so building this unblocks three entries at once.
-
-## Ready to write
-
-### 2. Reset password token that is invalid or expired
-
-**Behaviour:** `401 UNAUTHORIZED_ERROR` — [Forgot Password](../pages/epics/02-forgot-password.md), step 3.
-
-`ForgotPasswordResetPost` declares `Unauthorized` in `UserForgotPasswordService.smithy`, and the epic documents it. The reset section of `UserForgotPasswordApiSpec` has five tests — success, validation, forbidden, 500 token-not-found, 500 user-not-found — and none of them is a 401.
-
-A declared error path with no coverage at all. A signature or audience check could regress silently.
-
-**Where:** `UserForgotPasswordApiSpec`, `"POST /forgot/password/reset"`.
-
-### 3. Recovery code that exists but has gone stale
-
-**Behaviour:** [Forgot Password](../pages/epics/02-forgot-password.md), step 1, scenario 2 — asking again after the previous code went stale regenerates and re-sends.
-
-Step 1 tests cover three branches: no code at all, a fresh code that gets extended, and a fresh code with attempts maxed out. The fourth — a code that exists but is outside the resend-cooldown window — is a different branch of `UserForgotPasswordService.forgotPasswordPost` and is never taken.
-
-**Where:** `UserForgotPasswordApiSpec`, `"POST /forgot/password"`. Assert a *new* code replaces the old one and a second email is sent.
-
-### 5. Re-submitting a genuinely different number while the code is still inside its waiting period
+### 5. Re-submitting a changed number while the OTP is still fresh
 
 **Behaviour:** [User Onboarding](../pages/epics/01-user-onboarding.md), step 4, scenario 2 — details are saved again (including a changed phone number), the existing code is reused, and no new text is sent.
 
-**Updated 2026-09-06**, alongside the phone-uniqueness fix: `"POST /onboard/details"` now has several tests exercising the cooldown-reuse branch — "successfully re-submit onboard details within the OTP cooldown and not reset the verify attempts counter" (OTP/action-attempt only, asserts nothing about `user_details`), plus two new ones covering the caller resubmitting their *own* already-stored number, and a different account's number being rejected as a conflict, both while on cooldown. That fixed a real pre-existing gap: the reuse branch previously never wrote `full_name`/`phone_number` to the database at all (contradicting this very scenario's text); the write is now unconditional and this is proven for the self-resubmission case.
+`UserOnboardApiSpec`, `"POST /onboard/details"`, proves over HTTP that a changed number is saved, the OTP is reused and the verify counter is kept. Open part: only that no new text is sent, covered by the lower-layer specs in entry 1.
 
-What's still missing is narrower than originally scoped: a case where the resubmitted number is *different from and not in conflict with* the caller's current one, proving the **new** value persists (a plain DB read, no longer blocked on anything) and that no new text is sent (still needs gap 1).
+### 6. Re-submitting details once the OTP is about to expire
 
-**Where:** `UserOnboardApiSpec`, `"POST /onboard/details"`. The persistence half can be written today; the "no new text sent" half still needs gap 1.
+**Behaviour:** [User Onboarding](../pages/epics/01-user-onboarding.md), step 4, scenario 3 — a pre-existing code that is about to expire is replaced: details saved, a genuinely new code generated, a new text sent.
 
-### 6. Re-submitting details once the waiting period has passed
+`UserOnboardApiSpec`, `"POST /onboard/details"`, proves over HTTP that the about-to-expire OTP is replaced by a new `otpID` and expiry and the verify counter is cleared. Open part: only that a new text is sent, covered by the lower-layer specs in entry 1.
 
-**Behaviour:** [User Onboarding](../pages/epics/01-user-onboarding.md), step 4, scenario 3 — a *stale, pre-existing* code is superseded: details saved, a genuinely new code generated (replacing the old one), a new text sent.
+### 15. Email recipient and content
 
-Unlike gap 5, this branch (`case _` when an OTP row exists but is outside its cooldown) is still never exercised with a pre-existing OTP row: every current test in this branch starts from *no* OTP row at all (a first-ever submission), which takes the same code path but does not prove an existing, now-stale OTP gets replaced rather than just created.
+**Behaviour:** each email the gateway sends (email verification, welcome, forgot password, password-change confirmation, organization created) reaches the right recipient with the right content, including any code.
 
-**Where:** `UserOnboardApiSpec`, `"POST /onboard/details"`. Seed a pre-existing OTP row past its cooldown, then assert the OTP id/value changes and (needs gap 1) a new text is sent.
+Acceptance reads the MailHog inbox and asserts only its count (`mailHogResponse.total`: 1 when sent, 0 when not). A wrong recipient, subject or code still passes. These are covered by `it/EmailClientSpec` and the `fun/` service specs that send email (`UserSignUpServiceSpec`, `UserOnboardServiceSpec`, `UserForgotPasswordServiceSpec`, `OrganizationManagementServiceSpec`).
+
+### 16. Processed image output and presigned URL contents
+
+**Behaviour:** an uploaded logo or item image is stored as the original plus a normalized WebP, and reads return a working presigned URL to the normalized image.
+
+Acceptance compares the stored original's bytes exactly, but checks only that the normalized object is non-empty. It takes a presigned URL from the response as-is, without parsing or fetching it. A normalized object that is not valid WebP, or a URL that does not resolve, still passes. The WebP output is covered by `unit/utils/ImageProcessingSpec` and the `fun/` file service specs. Presigning is covered by `it/S3ClientOrganizationMediaSpec`.
+
+## Ready to write
 
 ### 7. Confirmation email failing does not break a password reset
 
@@ -79,38 +61,6 @@ Unlike gap 5, this branch (`case _` when an OTP row exists but is outside its co
 `UserForgotPasswordService` wraps this send in `catchAllCause`, deliberately making it best-effort. Nothing proves that. If the `catchAllCause` were dropped, a mail outage would start failing password resets and every existing test would still pass.
 
 **Where:** `UserForgotPasswordApiSpec`, `"POST /forgot/password/reset"`. Needs a way to make MailHog reject a send.
-
-### 8. Signing in with an email address that has no account
-
-**Behaviour:** [Sign In](../pages/epics/03-sign-in.md), step 1, scenario 4 — an unknown address is refused in exactly the same way as a wrong password.
-
-`"fail with Unauthorized when credentials are invalid"` inserts a user and then signs in with `userDetailsRow.email` and a wrong password. It only ever exercises a *known* email. Nothing tries an address with no account behind it.
-
-That is the case the whole anti-enumeration guarantee rests on: the two refusals must be indistinguishable. `HttpErrorHandler` returns a bare `smithy.Unauthorized()` today, so they are — but nothing would catch a change that started returning a distinguishing message or status for an unknown address.
-
-**Where:** `UserSignInApiSpec`, `"POST /signin"`. Assert the response is byte-for-byte the same shape as the wrong-password case, and that no attempt row is written for an account that does not exist.
-
-### 9. Signing in destroys an outstanding password-reset token
-
-**Behaviour:** [Sign In](../pages/epics/03-sign-in.md), step 1 outcome — every token the account held is deleted, including a reset token in flight.
-
-`"successfully sign in ... should delete all users refresh tokens and create a new one"` seeds only `TokenType.RefreshToken` and asserts `all(userTokenRowsAll.map(_.tokenType)) shouldBe TokenType.RefreshToken`. The handler calls `deleteAllUserTokens`, which removes *every* type, but no test seeds a `ResetPasswordToken` to prove it.
-
-This is a cross-feature interaction: someone asks for a password reset, then signs in with their old password while the reset email is still unread. Whether that reset token still works afterwards is a real product question, and nothing pins the answer.
-
-**Where:** `UserSignInApiSpec`, `"POST /signin"`. Seed both token types, then assert only the new refresh token survives.
-
-### 10. Creating an organization with only the required fields
-
-**Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 1, scenarios 3, 4 and 7 — contact and address lists may be empty, and tagline, registration number and tax id may all be omitted.
-
-Every test in `OrganizationManagementApiSpec` builds its request from a fully-populated arbitrary. Nothing ever deterministically sends empty `emails`/`phoneNumbers`/`addresses` lists or omits the optional fields; `addresses` is sampled from the allowed combinations (empty, one `ShippingAndBilling`, or a `Shipping` + `Billing` pair), so each shape is covered only by chance per run, and no acceptance test sends a rejected combination (the rule is proven in `AddressValidatorSpec` only; by the testing rule in `features/flow/02-validation.md` the request validator specs do not re-test it) (the same holds for the customer insert/get happy paths in `CustomerBookApiSpec`).
-
-This is a transport-level risk rather than a logic one, which is exactly what acceptance tests are for. Empty lists are the known hazard here: a client codec that drops an empty list turns a `@default([])` member into a missing one, and the request shape changes underneath the service. The validator unit spec cannot see that, because it starts from an already-decoded request.
-
-The "exactly one default" rule is deliberately *not* listed here — `OrganizationManagementRequestValidatorSpec` covers it directly.
-
-**Where:** `OrganizationManagementApiSpec`, `"POST /create/organization"`. Send a request carrying only name and slug and assert it succeeds with empty contact lists stored.
 
 ### 11. ~~A logo upload larger than the cap, over real HTTP~~ — do not write this test
 
@@ -126,16 +76,16 @@ Leaving this entry in place, struck through, so nobody re-adds it believing it w
 
 **Behaviour:** [Organization Onboarding](../pages/epics/04-organization-onboarding.md), step 1, scenario 9, and [Customer Book](../pages/epics/05-customer-book.md), step 1, scenario 11 — an address whose type is not `Shipping`, `Billing` or `ShippingAndBilling`, or that omits its required address object or type, is rejected and nothing is stored. All five text fields are optional; a partial address with at least one valid populated field is accepted.
 
-`addressType` is a Smithy enum; the address object and type remain required, so these malformed bodies fail while the request is decoded, before any validator runs. No test sends such a body: the typed `GatewayClient` cannot express an unknown enum value or a missing required member, and a raw-JSON client method was deliberately not added. The exact status body for a decode failure is therefore unproven. Missing text fields reach validation normally; an all-missing address produces the indexed `address` error. Blank, whitespace-only, untrimmed and over-long parts are covered in `AddressValidatorSpec`, and the request validator specs prove the entry index. Deterministic HTTP coverage for partial and all-empty addresses remains missing.
+`addressType` is a Smithy enum; the address object and type remain required, so these malformed bodies fail while the request is decoded, before any validator runs. No test sends such a body: the typed `GatewayClient` cannot express an unknown enum value or a missing required member, and a raw-JSON client method was deliberately not added. The exact status body for a decode failure is therefore unproven. Missing text fields reach validation normally; an all-missing address produces the indexed `address` error. Blank, whitespace-only, untrimmed and over-long parts are covered in `AddressValidatorSpec`, and the request validator specs prove the entry index. For Customer Book the representable cases are covered: `CustomerBookApiSpec` POST individual stores a partial address exactly as sent and rejects an all-missing address (`address`) and two `Shipping` entries (`addresses`) with nothing stored; see the [Customer Book tests](features/customer-book.md#tests). Organization Management still has no HTTP case for a partial or all-empty address.
 
-**Where:** `OrganizationManagementApiSpec` and `CustomerBookApiSpec`. Unknown enum values and omitted required members remain a documented decoding coverage limitation under the [typed-request standard](project/acceptance-testing.md#typed-requests-only); do not add a raw-body client to cover them. Add the representable partial/all-empty address cases through the typed client and assert the complete response and stored/unchanged state.
+**Where:** `OrganizationManagementApiSpec`. Unknown enum values and omitted required members remain a documented decoding coverage limitation, in both specs, under the [typed-request standard](project/acceptance-testing.md#typed-requests-only); do not add a raw-body client to cover them. Add the representable partial/all-empty organization address cases through the typed client and assert the complete response and stored/unchanged state.
 
 ## Behaviour that only a live AI run can show
 
 ### 14. Address, note and processing-message rules in customer extraction
 
-**Behaviour:** [Customer Book](../pages/epics/05-customer-book.md), step 8, scenarios 20–24 — the AI merges identical addresses of one customer and marks each remaining address shipping or billing as best it can with no limit, and the service then makes one address shipping and billing, keeps a genuine shipping/billing pair or else sets the first shipping and the second billing, and cuts three or more to the first two with a note per address left out (the service rules are covered by `CustomerBookFileServiceSpec`; only the AI's merging and best-effort typing are unverified live). Partial addresses are retained when at least one text field has non-whitespace content, with populated values trimmed and a note for missing or unclear fields; all-empty addresses are omitted. The prompts also state rules that no mocked or stubbed test can check: every AI note has at most ten words and one point (requirement 21), and the processing message takes priority over the default reading rules within the three fixed limits, for example splitting a row or completing a missing name part from the email as an inferred field (scenario 28, requirement 24).
+**Behaviour:** [Customer Book](../pages/epics/05-customer-book.md), step 8, scenarios 20–24 — the AI merges identical addresses of one customer and marks each remaining address shipping or billing as best it can with no limit, and the service then makes one address shipping and billing, keeps a genuine shipping/billing pair or else sets the first shipping and the second billing, and cuts three or more to the first two with a note per address left out (the service rules are covered by `CustomerBookFileServiceSpec` and, over HTTP, by `CustomerBookFileApiSpec`; only the AI's merging and best-effort typing are unverified live). Partial addresses are retained when at least one text field has non-whitespace content, with populated values trimmed and a note for missing or unclear fields; all-empty addresses are omitted. The prompts also state rules that no mocked or stubbed test can check: every AI note has at most ten words and one point (requirement 21), and the processing message takes priority over the default reading rules within the three fixed limits, for example splitting a row or completing a missing name part from the email as an inferred field (scenario 28, requirement 24).
 
-Customer extraction is `CustomerBookFileService`, exposed at `POST /customer-book/file/ai/extract`. `CustomerBookFileApiSpec` runs against a stubbed WireMock response with no addresses, so it proves transport, middleware and failure handling, not what the model does with addresses. The earlier golden specs were manual, needed a live key, and were not run after the address shape changed — so it was never confirmed that the real service accepts the strict schema or follows the updated instructions. Live-AI verification was accepted as a risk on 2026-10-01 and remains outstanding.
+Customer extraction is `CustomerBookFileService`, exposed at `POST /customer-book/file/ai/extract`. `CustomerBookFileApiSpec` runs against stubbed WireMock responses. Besides transport, middleware and failure handling, its rich-candidate case (stub marker `AI_CLIENT_SPEC_CUSTOMER_BOOK_FILE_RICH`) proves the service's own rules over real HTTP: the address cap, retyping and `Address left out: …` note, the duplicate, missing and inferred field paths with `needsAttention`, first-entry defaults, candidate note order and the info notes. A stub cannot show what the model itself returns, so the AI's address merging and typing, note length, and processing-message priority stay unverified. The earlier golden specs were manual, needed a live key, and were not run after the address shape changed — so it was never confirmed that the real service accepts the strict schema or follows the updated instructions. Live-AI verification was accepted as a risk on 2026-10-01 and remains outstanding.
 
 **Where:** `golden/CustomerBookFileAiExtractFromImageGoldenSpec`, `golden/CustomerBookFileAiExtractFromSpreadsheetGoldenSpec` and `golden/CustomerBookFileNotesCompactionGoldenSpec` exist and compile; they are canceled without a key and have not yet been run against the live service. Run them manually with a key (command in the [feature doc](features/customer-book.md)) and inspect the printed responses against these rules (the image spec's processing-message case for the priority rule), and the compaction output against epic requirement 22, before deleting this entry.

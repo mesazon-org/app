@@ -44,10 +44,8 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
     val context = new TestContext {}
     import context.*
 
-    repositoryConfig.allTableNames.foreach { tableName =>
-      eventually {
-        postgresClient.truncateTable(repositoryConfig.schema, tableName).zioValue
-      }
+    eventually {
+      postgresClient.truncateTable(repositoryConfig.schema, repositoryConfig.allTableNames*).zioValue
     }
   }
 
