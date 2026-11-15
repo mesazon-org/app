@@ -4,14 +4,14 @@ Both hosts use the [shared workflow](../.agents/commands/feature.md). Every issu
 
 1. PO clarifies the product until nothing material is unanswered and updates `pages/`.
 2. **User approves** the `PRODUCT_BRIEF` and the `pages/` diff.
-3. EM reads the code, raises technical concerns (new dependency, refactor blast radius, approach, contradictions, risk), gets the user's answers, updates the engineering docs, and proposes a plan with ordered ≤3-file slices and a `MEDIUM`/`HIGH` classification.
+3. EM (a spawned `engineering-manager`) captures the technical requirements the brief leaves out, reads the code, raises technical concerns (new dependency, refactor blast radius, approach, contradictions, risk), gets the user's answers, updates the engineering docs, and proposes a plan with ordered ≤3-file slices and a `MEDIUM`/`HIGH` classification.
 4. **User approves** the plan, docs, and tier.
 5. The selected Lead delivers the skeleton slice (interfaces and failing tests), then implements slice by slice, keeping docs current inside each slice and stopping for approval each time.
 6. EM reviews the real diff, docs, and evidence for technical completeness against the plan.
 7. PO reviews the delivered behavior and the tests against the brief and the epic for product completeness, returning `PRODUCT_ACCEPTANCE` or gaps.
 8. EM routes any gap to its owner and closes with the user.
 
-The main conversation is EM and never approves a gate on the user's behalf. No separate orchestrator.
+The main conversation is the orchestrator: it relays between the user and the agents, runs the gates, and commits, but makes no product or technical judgement and never approves a gate on the user's behalf. EM is a spawned subagent kept for the whole feature.
 
 New features and changes to features that already ship run the same stages and the same gates. For an existing feature each stage starts from the existing epic, feature doc, and code and works as a delta — stated as "today X, after this Y", with those documents updated in place rather than replaced, and the work sliced by kind of edit: update the docs, adapt or add the test, add the new function, change the existing function, migrate the data. Existing tests are adapted only because the user agreed the behavior changes, never to make a slice pass.
 
@@ -19,7 +19,7 @@ Three rules bind every role at every tier, small work included:
 
 - **Read the repository's own instructions first.** `AGENTS.md` (served to Claude as `CLAUDE.md`) is the entry point; its documentation router names the `agent-docs/` feature docs, flow slices, standards, and project guides a change triggers, and its validation flow names the required checks. Those standards are requirements — deviating needs the user's decision, not a quiet exception.
 - **Ask, do not assume, and take no initiative.** Every role opens its stage by listing its open questions and would-be assumptions with recommendations, and waits. Nothing outside the agreed scope gets added, improved, or refactored on an agent's own judgement.
-- **The user approves; the main-conversation EM commits.** Subagents never stage, commit, or push. After the user explicitly approves the exact current diff, the EM stages and commits only that slice and never pushes. Each commit message is `feat: <issue number> <epic title> <slice description>`, and each step remains self-contained.
+- **The user approves; the main conversation commits.** Subagents never stage, commit, or push. After the user explicitly approves the exact current diff, the main conversation stages and commits only that slice and never pushes. Each commit message is `feat: <issue number> <epic title> <slice description>`, and each step remains self-contained.
 
 ## Shared sources and hosts
 
@@ -27,14 +27,14 @@ Three rules bind every role at every tier, small work included:
 
 Codex uses the [native TOML format](https://learn.chatgpt.com/docs/agent-configuration/subagents); Claude uses [Markdown subagents](https://code.claude.com/docs/en/sub-agents). Open a fresh session after profile changes. Claude: `/feature "<description>"`. Codex: `Use the feature workflow for <description>`; AGENTS.md routes the request without requiring a native slash-menu entry.
 
-EM speaks directly to the user and handles agent dispatch. If a subagent cannot ask the user directly, it returns `USER_QUESTION` to EM. Use the same workflow sequentially if agents are unavailable and disclose self-review. Ordinary ChatGPT without repository/tools access cannot automatically load this setup. Codex uses its configured provider; OmniRoute below is optional Claude infrastructure.
+The main conversation speaks directly to the user and handles agent dispatch. If a subagent cannot ask the user directly, it returns `USER_QUESTION` to the main conversation, which relays it. Every question that reaches the user follows the plain-language format in the shared workflow (`.agents/contracts/workflow.md` § "Writing a question the user can answer"): context, why it needs deciding, the question, options with consequences and a recommendation, and what it blocks. If an agent cannot be spawned, stop and tell the user rather than doing its stage in the main conversation. Ordinary ChatGPT without repository/tools access cannot automatically load this setup. Codex uses its configured provider; OmniRoute below is optional Claude infrastructure.
 
 ## Roles and effort
 
 | Role | Claude profile | Codex profile | Use |
 |---|---|---|---|
 | PO | `opus` (Opus 5.5) | `gpt-6-luna`/medium | clarify the product by asking, never assuming; accountable for `pages/`; final product-completeness review |
-| EM | main session; optional separate profile `opus` (Opus 5.5) | main session; optional separate profile `gpt-6-luna`/medium | technical concerns, plan, complexity, dispatch, approval relay, technical-completion review, close |
+| EM | `opus` (Opus 5.5) | `gpt-6-luna`/medium | technical requirements PO left out, concerns, `agent-docs/`, plan, complexity, Lead answers, slice review, technical-completion review, close |
 | Lead MEDIUM | `opus` (Opus 5.5), effort `medium` | `gpt-6.1-sol`/medium | contained feature/integration work |
 | Lead HIGH | `opus` (Opus 5.5), effort `high` | `gpt-6.1-sol`/medium | high-risk implementation |
 

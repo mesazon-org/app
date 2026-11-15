@@ -20,7 +20,7 @@ One Lead handles stages 2 and 4 — the same session resumed, so the investigati
 
 ## Gates and commits
 
-`.agents/contracts/workflow.md`'s stage 1, 3, 4 and 5 gates collapse into the single report-and-plan gate at stage 3. The pre-commit approval of the exact diff is not a pipeline gate but the standing rule from that file's §"User-approved commits by the main-conversation EM", which applies unmodified. Two user touchpoints, then; only the first is called "the gate". This collapse is specific to a bump and weakens that section for no other work.
+`.agents/contracts/workflow.md`'s stage 1, 3, 4 and 5 gates collapse into the single report-and-plan gate at stage 3. The pre-commit approval of the exact diff is not a pipeline gate but the standing rule from that file's §"User-approved commits by the main conversation", which applies unmodified. Two user touchpoints, then; only the first is called "the gate". This collapse is specific to a bump and weakens that section for no other work.
 
 Subagents never run `git add`, `git commit`, `git push`, `git revert`, or `git reset`. The main-conversation EM stages and commits only the exact diff the user has explicitly approved, and never pushes. A local `PreToolUse` hook in `.claude/settings.local.json` additionally denies `git commit` and `git push` outright, so in practice the user runs the commit themselves; that is the standing condition, not a workaround.
 

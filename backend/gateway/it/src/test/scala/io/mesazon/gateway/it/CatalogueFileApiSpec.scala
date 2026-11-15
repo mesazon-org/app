@@ -1042,10 +1042,10 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           catalogueFileAiExtractPostResponseExpected = CatalogueFileAiExtractPostResponse(
             candidates = List(
               CatalogueItemCandidate(
-                name = CatalogueItemName.assume("Bolt"),
+                name = Some(CatalogueItemName.assume("Bolt")),
                 description = None,
                 variants = List(
-                  CatalogueItemVariantInsert(
+                  CatalogueItemVariantCandidate(
                     sku = Some(CatalogueItemVariantSku.assume("BOLT-1")),
                     label = None,
                     description = None,
@@ -1054,16 +1054,21 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
                         CatalogueItemVariantAttributeValue.assume("Silver")
                     ),
                     price = None,
-                    sellingUnit = CatalogueItemVariantSaleUnit(
-                      quantity = CatalogueItemVariantQuantity(
-                        value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
-                        unit = CatalogueItemVariantUnit.PerUnit.Piece,
-                      ),
-                      perUnit = None,
-                      unitSize = None,
+                    sellingUnit = Some(
+                      CatalogueItemVariantSaleUnit(
+                        quantity = CatalogueItemVariantQuantity(
+                          value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
+                          unit = CatalogueItemVariantUnit.PerUnit.Piece,
+                        ),
+                        perUnit = None,
+                        unitSize = None,
+                      )
                     ),
                   )
                 ),
+                inferredFields = List.empty,
+                missingFields = List.empty,
+                duplicateFields = List.empty,
                 needsAttention = false,
                 extractionNotes = List.empty,
               )
@@ -1121,10 +1126,10 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           catalogueFileAiExtractPostResponseExpected = CatalogueFileAiExtractPostResponse(
             candidates = List(
               CatalogueItemCandidate(
-                name = CatalogueItemName.assume("Bolt"),
+                name = Some(CatalogueItemName.assume("Bolt")),
                 description = None,
                 variants = List(
-                  CatalogueItemVariantInsert(
+                  CatalogueItemVariantCandidate(
                     sku = Some(CatalogueItemVariantSku.assume("BOLT-1")),
                     label = None,
                     description = None,
@@ -1133,16 +1138,21 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
                         CatalogueItemVariantAttributeValue.assume("Silver")
                     ),
                     price = None,
-                    sellingUnit = CatalogueItemVariantSaleUnit(
-                      quantity = CatalogueItemVariantQuantity(
-                        value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
-                        unit = CatalogueItemVariantUnit.PerUnit.Piece,
-                      ),
-                      perUnit = None,
-                      unitSize = None,
+                    sellingUnit = Some(
+                      CatalogueItemVariantSaleUnit(
+                        quantity = CatalogueItemVariantQuantity(
+                          value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
+                          unit = CatalogueItemVariantUnit.PerUnit.Piece,
+                        ),
+                        perUnit = None,
+                        unitSize = None,
+                      )
                     ),
                   )
                 ),
+                inferredFields = List.empty,
+                missingFields = List.empty,
+                duplicateFields = List.empty,
                 needsAttention = false,
                 extractionNotes = List.empty,
               )
@@ -1200,10 +1210,10 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           catalogueFileAiExtractPostResponseExpected = CatalogueFileAiExtractPostResponse(
             candidates = List(
               CatalogueItemCandidate(
-                name = CatalogueItemName.assume("Bolt"),
+                name = Some(CatalogueItemName.assume("Bolt")),
                 description = None,
                 variants = List(
-                  CatalogueItemVariantInsert(
+                  CatalogueItemVariantCandidate(
                     sku = Some(CatalogueItemVariantSku.assume("BOLT-1")),
                     label = None,
                     description = None,
@@ -1212,16 +1222,21 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
                         CatalogueItemVariantAttributeValue.assume("Silver")
                     ),
                     price = None,
-                    sellingUnit = CatalogueItemVariantSaleUnit(
-                      quantity = CatalogueItemVariantQuantity(
-                        value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
-                        unit = CatalogueItemVariantUnit.PerUnit.Piece,
-                      ),
-                      perUnit = None,
-                      unitSize = None,
+                    sellingUnit = Some(
+                      CatalogueItemVariantSaleUnit(
+                        quantity = CatalogueItemVariantQuantity(
+                          value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
+                          unit = CatalogueItemVariantUnit.PerUnit.Piece,
+                        ),
+                        perUnit = None,
+                        unitSize = None,
+                      )
                     ),
                   )
                 ),
+                inferredFields = List.empty,
+                missingFields = List.empty,
+                duplicateFields = List.empty,
                 needsAttention = false,
                 extractionNotes = List.empty,
               )
@@ -1279,10 +1294,10 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           catalogueFileAiExtractPostResponseExpected = CatalogueFileAiExtractPostResponse(
             candidates = List(
               CatalogueItemCandidate(
-                name = CatalogueItemName.assume("Bolt"),
+                name = Some(CatalogueItemName.assume("Bolt")),
                 description = None,
                 variants = List(
-                  CatalogueItemVariantInsert(
+                  CatalogueItemVariantCandidate(
                     sku = Some(CatalogueItemVariantSku.assume("BOLT-1")),
                     label = None,
                     description = None,
@@ -1291,16 +1306,21 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
                         CatalogueItemVariantAttributeValue.assume("Silver")
                     ),
                     price = None,
-                    sellingUnit = CatalogueItemVariantSaleUnit(
-                      quantity = CatalogueItemVariantQuantity(
-                        value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
-                        unit = CatalogueItemVariantUnit.PerUnit.Piece,
-                      ),
-                      perUnit = None,
-                      unitSize = None,
+                    sellingUnit = Some(
+                      CatalogueItemVariantSaleUnit(
+                        quantity = CatalogueItemVariantQuantity(
+                          value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
+                          unit = CatalogueItemVariantUnit.PerUnit.Piece,
+                        ),
+                        perUnit = None,
+                        unitSize = None,
+                      )
                     ),
                   )
                 ),
+                inferredFields = List.empty,
+                missingFields = List.empty,
+                duplicateFields = List.empty,
                 needsAttention = false,
                 extractionNotes = List.empty,
               )
@@ -1334,6 +1354,304 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
         } yield ()
       }
 
+      "successfully extract every candidate detail and processing note from an image without storing data" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRoleAllowed,
+            )
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+            catalogueFileExtractFileBytes <- ZStream
+              .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+              .runCollect
+            // Matched by the rich-candidate WireMock stub, which returns every candidate shape the service maps
+            catalogueFileProcessingMessage    = "AI_CLIENT_SPEC_CATALOGUE_FILE_RICH"
+            catalogueItemVariantSaleUnitPiece = CatalogueItemVariantSaleUnit(
+              quantity = CatalogueItemVariantQuantity(
+                value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
+                unit = CatalogueItemVariantUnit.PerUnit.Piece,
+              ),
+              perUnit = None,
+              unitSize = None,
+            )
+            catalogueItemCandidateBolt = CatalogueItemCandidate(
+              name = Some(CatalogueItemName.assume("Bolt")),
+              description = None,
+              variants = List(
+                CatalogueItemVariantCandidate(
+                  sku = Some(CatalogueItemVariantSku.assume("AB-1")),
+                  label = None,
+                  description = None,
+                  // The AI sent Color twice; the last value wins
+                  attributes = Map(
+                    CatalogueItemVariantAttributeName.assume("Color") ->
+                      CatalogueItemVariantAttributeValue.assume("Black")
+                  ),
+                  price = Some(
+                    CatalogueItemVariantPriceCandidate(
+                      amount = PriceAmount.assume(BigDecimal("12.5")),
+                      currency = Some(Currency.EUR),
+                    )
+                  ),
+                  sellingUnit = Some(catalogueItemVariantSaleUnitPiece),
+                )
+              ),
+              inferredFields = List.empty,
+              missingFields = List.empty,
+              duplicateFields = List(FieldInfo("/name"), FieldInfo("/variants/0/sku")),
+              needsAttention = true,
+              extractionNotes = List("Item photo is blurry", "SKU is partly obscured"),
+            )
+            catalogueItemCandidateBoltDuplicate = CatalogueItemCandidate(
+              name = Some(CatalogueItemName.assume("Bolt")),
+              description = None,
+              variants = List(
+                CatalogueItemVariantCandidate(
+                  sku = None,
+                  label = None,
+                  description = None,
+                  attributes = Map.empty,
+                  price = Some(
+                    CatalogueItemVariantPriceCandidate(
+                      amount = PriceAmount.assume(BigDecimal("3.2")),
+                      currency = None,
+                    )
+                  ),
+                  sellingUnit = Some(catalogueItemVariantSaleUnitPiece),
+                )
+              ),
+              inferredFields = List.empty,
+              missingFields = List(FieldInfo("/variants/0/price/currency")),
+              duplicateFields = List(FieldInfo("/name")),
+              needsAttention = true,
+              extractionNotes = List("Currency symbol could not be read"),
+            )
+            catalogueItemCandidateNameless = CatalogueItemCandidate(
+              name = None,
+              description = None,
+              variants = List(
+                CatalogueItemVariantCandidate(
+                  sku = Some(CatalogueItemVariantSku.assume("ab-1")),
+                  label = None,
+                  description = None,
+                  attributes = Map.empty,
+                  price = None,
+                  sellingUnit = None,
+                )
+              ),
+              inferredFields = List.empty,
+              missingFields = List(FieldInfo("/name"), FieldInfo("/variants/0/sellingUnit")),
+              duplicateFields = List(FieldInfo("/variants/0/sku")),
+              needsAttention = true,
+              extractionNotes = List.empty,
+            )
+            catalogueItemCandidateWasherWithoutVariants = CatalogueItemCandidate(
+              name = Some(CatalogueItemName.assume("Washer")),
+              description = None,
+              variants = List.empty,
+              inferredFields = List.empty,
+              missingFields = List(FieldInfo("/variants")),
+              duplicateFields = List.empty,
+              needsAttention = true,
+              extractionNotes = List.empty,
+            )
+            // Differs from "Bolt" only in letter case, so it is not a name duplicate
+            catalogueItemCandidateBoltLowerCaseInferred = CatalogueItemCandidate(
+              name = Some(CatalogueItemName.assume("bolt")),
+              description = None,
+              variants = List(
+                CatalogueItemVariantCandidate(
+                  sku = Some(CatalogueItemVariantSku.assume("NUT-5")),
+                  label = None,
+                  description = None,
+                  attributes = Map.empty,
+                  price = Some(
+                    CatalogueItemVariantPriceCandidate(
+                      amount = PriceAmount.assume(BigDecimal("4.75")),
+                      currency = Some(Currency.GBP),
+                    )
+                  ),
+                  sellingUnit = Some(
+                    CatalogueItemVariantSaleUnit(
+                      quantity = CatalogueItemVariantQuantity(
+                        value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
+                        unit = CatalogueItemVariantUnit.UnitSize.Kilogram,
+                      ),
+                      perUnit = None,
+                      unitSize = None,
+                    )
+                  ),
+                )
+              ),
+              inferredFields = List(FieldInfo("/variants/0/sellingUnit"), FieldInfo("/variants/0/price/currency")),
+              missingFields = List.empty,
+              duplicateFields = List.empty,
+              needsAttention = false,
+              extractionNotes = List("Unit taken from the product wording", "Currency taken from the price header"),
+            )
+            catalogueFileAiExtractPostResponseExpected = CatalogueFileAiExtractPostResponse(
+              candidates = List(
+                catalogueItemCandidateBolt,
+                catalogueItemCandidateBoltDuplicate,
+                catalogueItemCandidateNameless,
+                catalogueItemCandidateWasherWithoutVariants,
+                catalogueItemCandidateBoltLowerCaseInferred,
+              ),
+              infoNotes = List(
+                "Processed 4 of 5 entries",
+                "Catalogue items created 5",
+                "Unidentified rows (1) at [7]",
+              ),
+              extractionNotes = List("One entry at the bottom could not be read"),
+            )
+
+            catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.InternalServerError](
+              Some(organizationUserRow.organizationID),
+              Some(catalogueFileExtractFileName),
+              catalogueFileExtractFileBytes,
+              Some(accessJwt.accessToken),
+              Some(catalogueFileProcessingMessage),
+            )
+
+            _ = catalogueFileAiExtractPostResponse.code shouldBe StatusCode.Ok
+            _ = catalogueFileAiExtractPostResponse.body.value shouldBe catalogueFileAiExtractPostResponseExpected
+
+            catalogueItemRowsAll        <- postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting)
+            catalogueItemVariantRowsAll <- postgresClient.executeQuery(
+              catalogueQueries.getAllCatalogueItemVariantRowsTesting
+            )
+
+            _ = catalogueItemRowsAll shouldBe empty
+            _ = catalogueItemVariantRowsAll shouldBe empty
+
+            organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+            _ = organizationMediaS3BucketKeysAll shouldBe empty
+          } yield ()
+      }
+
+      "successfully extract item candidates from a CSV read in two groups and combine their repeated general notes without storing data" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+            organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+              userID = userDetailsRow.userID,
+              userRole = organizationUserRoleAllowed,
+            )
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            // 101 data rows, so the default batch size of 100 reads the file in two groups
+            catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-spreadsheet-it-4.csv")
+            catalogueFileExtractFileBytes <- ZStream
+              .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+              .runCollect
+            // Matched by the batch-notes WireMock stubs, which return one shared general note per group
+            catalogueFileProcessingMessage    = "AI_CLIENT_SPEC_CATALOGUE_FILE_BATCH_NOTES"
+            catalogueItemVariantSaleUnitPiece = CatalogueItemVariantSaleUnit(
+              quantity = CatalogueItemVariantQuantity(
+                value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
+                unit = CatalogueItemVariantUnit.PerUnit.Piece,
+              ),
+              perUnit = None,
+              unitSize = None,
+            )
+            catalogueItemCandidateItem001 = CatalogueItemCandidate(
+              name = Some(CatalogueItemName.assume("Item 001")),
+              description = None,
+              variants = List(
+                CatalogueItemVariantCandidate(
+                  sku = Some(CatalogueItemVariantSku.assume("ITEM-001")),
+                  label = None,
+                  description = None,
+                  attributes = Map.empty,
+                  price = None,
+                  sellingUnit = Some(catalogueItemVariantSaleUnitPiece),
+                )
+              ),
+              inferredFields = List.empty,
+              missingFields = List.empty,
+              duplicateFields = List.empty,
+              needsAttention = false,
+              extractionNotes = List.empty,
+            )
+            catalogueItemCandidateItem101 = CatalogueItemCandidate(
+              name = Some(CatalogueItemName.assume("Item 101")),
+              description = None,
+              variants = List(
+                CatalogueItemVariantCandidate(
+                  sku = Some(CatalogueItemVariantSku.assume("ITEM-101")),
+                  label = None,
+                  description = None,
+                  attributes = Map.empty,
+                  price = None,
+                  sellingUnit = Some(catalogueItemVariantSaleUnitPiece),
+                )
+              ),
+              inferredFields = List.empty,
+              missingFields = List.empty,
+              duplicateFields = List.empty,
+              needsAttention = false,
+              extractionNotes = List.empty,
+            )
+            catalogueFileAiExtractPostResponseExpected = CatalogueFileAiExtractPostResponse(
+              candidates = List(catalogueItemCandidateItem001, catalogueItemCandidateItem101),
+              infoNotes = List(
+                "Processed 100 of 101 entries",
+                "Catalogue items created 2",
+                "Unidentified rows (1) at [51]",
+              ),
+              extractionNotes = List(
+                "The Price column was not used in the file",
+                "Some names look like placeholders",
+                "Last row was read on its own",
+              ),
+            )
+
+            catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.InternalServerError](
+              Some(organizationUserRow.organizationID),
+              Some(catalogueFileExtractFileName),
+              catalogueFileExtractFileBytes,
+              Some(accessJwt.accessToken),
+              Some(catalogueFileProcessingMessage),
+            )
+
+            _ = catalogueFileAiExtractPostResponse.code shouldBe StatusCode.Ok
+            _ = catalogueFileAiExtractPostResponse.body.value shouldBe catalogueFileAiExtractPostResponseExpected
+
+            catalogueItemRowsAll        <- postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting)
+            catalogueItemVariantRowsAll <- postgresClient.executeQuery(
+              catalogueQueries.getAllCatalogueItemVariantRowsTesting
+            )
+
+            _ = catalogueItemRowsAll shouldBe empty
+            _ = catalogueItemVariantRowsAll shouldBe empty
+
+            organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+            _ = organizationMediaS3BucketKeysAll shouldBe empty
+          } yield ()
+      }
+
       "successfully accept processing guidance at the length limit after trimming without storing data" in withContext {
         context =>
           import context.*
@@ -1361,10 +1679,10 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
             catalogueFileAiExtractPostResponseExpected = CatalogueFileAiExtractPostResponse(
               candidates = List(
                 CatalogueItemCandidate(
-                  name = CatalogueItemName.assume("Bolt"),
+                  name = Some(CatalogueItemName.assume("Bolt")),
                   description = None,
                   variants = List(
-                    CatalogueItemVariantInsert(
+                    CatalogueItemVariantCandidate(
                       sku = Some(CatalogueItemVariantSku.assume("BOLT-1")),
                       label = None,
                       description = None,
@@ -1373,16 +1691,21 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
                           CatalogueItemVariantAttributeValue.assume("Silver")
                       ),
                       price = None,
-                      sellingUnit = CatalogueItemVariantSaleUnit(
-                        quantity = CatalogueItemVariantQuantity(
-                          value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
-                          unit = CatalogueItemVariantUnit.PerUnit.Piece,
-                        ),
-                        perUnit = None,
-                        unitSize = None,
+                      sellingUnit = Some(
+                        CatalogueItemVariantSaleUnit(
+                          quantity = CatalogueItemVariantQuantity(
+                            value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
+                            unit = CatalogueItemVariantUnit.PerUnit.Piece,
+                          ),
+                          perUnit = None,
+                          unitSize = None,
+                        )
                       ),
                     )
                   ),
+                  inferredFields = List.empty,
+                  missingFields = List.empty,
+                  duplicateFields = List.empty,
                   needsAttention = false,
                   extractionNotes = List.empty,
                 )

@@ -62,10 +62,10 @@ class CatalogueFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, GatewayAr
         )
 
         val organizationID                 = arbitrarySample[OrganizationID]
-        val catalogueFileExtractFileName   = CatalogueFileExtractFileName.assume("catalogue-file-ai-extract-1.jpeg")
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName.assume("catalogue-file-ai-extract-2.jpeg")
         val catalogueFileExtractByteStream = ZStream.fromResource(s"assets/${catalogueFileExtractFileName.value}")
         val catalogueFileProcessingMessage = CatalogueFileProcessingMessage.assume(
-          "ignore cost, each item now is represente with 1 kg but I want a single item with 12 kg per box, keep fruits with 1 kg"
+          "ignore cost, the items that are represented with 1 kg make them 12 kg per box, keep fruits keep them as it is, rest keep them as it is"
         )
 
         val catalogueFileAiExtractPostResponse = buildCatalogueFileService

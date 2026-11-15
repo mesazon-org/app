@@ -2,7 +2,7 @@ terraform {
   required_providers {
     digitalocean = {
       source  = "digitalocean/digitalocean"
-      version = "~> 2.0"
+      version = ">= 2.91.0, < 3.0.0"
     }
   }
 }
@@ -34,7 +34,7 @@ resource "digitalocean_app" "app_service" {
 
       health_check {
         http_path = "/readiness"
-        port      = var.readiness_port
+        port      = var.health_port
         # 20 + 10*5 = 70s budget. JVM cold start (JIT/class-loading after the DB pool is up) has been
         # observed taking ~44s to bind the readiness port; the old 5/10/3 (35s budget) killed the app
         # as unhealthy before it ever got a chance to answer.
@@ -45,15 +45,15 @@ resource "digitalocean_app" "app_service" {
         failure_threshold     = 5
       }
 
-      # Only directly through app platform is available, until new release contains those features
-      # liveness_health_check {
-      #   http_path             = "/liveness"
-      #   port                  = 8081
-      #   initial_delay_seconds = 10
-      #   period_seconds        = 15
-      #   timeout_seconds       = 5
-      #   failure_threshold     = 3
-      # }
+      liveness_health_check {
+        http_path             = "/liveness"
+        port                  = var.health_port
+        initial_delay_seconds = 60
+        period_seconds        = 15
+        timeout_seconds       = 5
+        success_threshold     = 1
+        failure_threshold     = 3
+      }
 
       dynamic "env" {
         for_each = var.env_vars

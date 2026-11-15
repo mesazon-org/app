@@ -17,13 +17,12 @@ Reusable model-transformation rules. Related: [Scala](scala.md), [Smithy](smithy
 - Prefer transforming the complete owning product when Chimney can derive it, rather than transforming one of its collection fields separately.
 - For gateway `NonEmptyChunk[Source]` → `List[Target]` conversions, import `io.mesazon.gateway.transform.given`. The shared transformer in `transform/transform.scala` preserves element order and uses the element transformer; complete owning products derive without per-field `.toList` customizations or request-specific transformers.
 
-## Partial preview mappings
+## Preview mappings
 
-- Use `.intoPartial[Target]` when an incomplete source may not satisfy the target, such as an optional AI selling unit becoming a required insert field. Let Chimney handle that conversion; do not force it with `.get` or invent a default.
-- Keep representation changes in `.withFieldComputed`, such as converting attribute name/value entries to a map. Let Chimney derive the unchanged fields.
-- If the feature explicitly allows unusable preview entries to be omitted, use `.transform.asOption` and collect the successful results. This is a preview policy, not a general way to discard validation or persistence errors.
-- Compute diagnostics from the original source before collecting successful mappings. A retained item must still explain omitted variants and expose the required attention state.
-- Keep pure business computations in named helpers, then bind their results with `.withFieldConst`. Do not bury note-generation or attention rules inside transformer overrides.
+- A preview type that can hold every value the AI may return maps with a total `.into[Target]`. A missing value stays `None` in the preview, and the service reports it in `missingFields` (see the [AI extraction standard](ai-extraction.md#structured-field-reporting)). Both extraction features follow this, including Catalogue's `CatalogueItemVariantCandidate`; Catalogue maps its variants' attributes inline with `.withFieldComputedFrom(_.variants.everyItem)(_.variants.everyItem.attributes, …)`.
+- Use `.intoPartial[Target]` only when a feature's agreed contract drops entries that cannot fit the target. Then use `.transform.asOption` and collect the successful results. This is a preview policy, not a general way to discard validation or persistence errors. Never force such a conversion with `.get` or an invented default.
+- Keep representation changes in `.withFieldComputed`, such as converting attribute name/value entries to a map. Let Chimney derive the unchanged fields, and let it drop AI-only source fields such as `…Inferred` flags.
+- Compute the reported field lists, attention and notes from the original source in pure `compute...` functions, then bind their results with `.withFieldConst`. Do not bury reporting or attention rules inside transformer overrides.
 
 ## Enums
 
