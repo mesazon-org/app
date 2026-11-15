@@ -58,9 +58,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
           customerBookFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+            .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
             .runCollect
           customerBookFileAiExtractPostResponseExpected = CustomerBookFileAiExtractPostResponse(
             individualCandidates = List(
@@ -148,8 +148,10 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.JPEG")
-            customerBookFileExtractFileBytes <- ZStream.fromResource("assets/contact-book-image-it-1.jpeg").runCollect
+            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.JPEG")
+            customerBookFileExtractFileBytes <- ZStream
+              .fromResource("assets-test/CustomerBookFileApiSpec/image-1.jpeg")
+              .runCollect
             customerBookFileAiExtractPostResponseExpected = CustomerBookFileAiExtractPostResponse(
               individualCandidates = List(
                 CustomerIndividualCandidate(
@@ -235,9 +237,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-2.webp")
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-2.webp")
           customerBookFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+            .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
             .runCollect
           customerBookFileAiExtractPostResponseExpected = CustomerBookFileAiExtractPostResponse(
             individualCandidates = List(
@@ -324,9 +326,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-spreadsheet-it-1.csv")
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("spreadsheet-1.csv")
           customerBookFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+            .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
             .runCollect
           customerBookFileAiExtractPostResponseExpected = CustomerBookFileAiExtractPostResponse(
             individualCandidates = List(
@@ -413,9 +415,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-spreadsheet-it-2.xlsx")
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("spreadsheet-2.xlsx")
           customerBookFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+            .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
             .runCollect
           customerBookFileAiExtractPostResponseExpected = CustomerBookFileAiExtractPostResponse(
             individualCandidates = List(
@@ -502,9 +504,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-spreadsheet-it-3.xls")
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("spreadsheet-3.xls")
           customerBookFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+            .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
             .runCollect
           customerBookFileAiExtractPostResponseExpected = CustomerBookFileAiExtractPostResponse(
             individualCandidates = List(
@@ -574,6 +576,114 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
         } yield ()
       }
 
+      "successfully extract customer candidates from a PDF without storing data" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleAllowed,
+          )
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("pdf-1.pdf")
+          customerBookFileExtractFileBytes <- ZStream
+            .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
+            .runCollect
+          customerBookFileAiExtractPostResponseExpected = CustomerBookFileAiExtractPostResponse(
+            individualCandidates = List(
+              CustomerIndividualCandidate(
+                fullName = Some(CustomerFullName.assume("Elena Varga")),
+                emails = List(
+                  CustomerEmailEntry(email = CustomerEmail.assume("elena.varga@example.com"), isDefault = true)
+                ),
+                phoneNumbers = List.empty,
+                addresses = List.empty,
+                inferredFields = List.empty,
+                missingFields = List.empty,
+                duplicateFields = List.empty,
+                needsAttention = false,
+                extractionNotes = List.empty,
+              )
+            ),
+            businessCandidates = List(
+              CustomerBusinessCandidate(
+                businessName = Some(CustomerBusinessName.assume("Northwind Marine Services Ltd")),
+                emails = List(
+                  CustomerEmailEntry(
+                    email = CustomerEmail.assume("info@northwind-marine.example.com"),
+                    isDefault = true,
+                  )
+                ),
+                taxID = Some(CustomerTaxID.assume("CY10000013Z")),
+                phoneNumbers = List.empty,
+                addresses = List.empty,
+                customerBusinessContacts = List(
+                  CustomerBusinessContactCandidate(
+                    fullName = Some(CustomerFullName.assume("Leo Brandt")),
+                    role = Some(CustomerBusinessContactRole.assume("Fleet manager")),
+                    email = None,
+                    phoneNumber = None,
+                  ),
+                  CustomerBusinessContactCandidate(
+                    fullName = Some(CustomerFullName.assume("Mira Solberg")),
+                    role = Some(CustomerBusinessContactRole.assume("Accounts")),
+                    email = Some(CustomerEmail.assume("mira.solberg@northwind-marine.example.com")),
+                    phoneNumber = None,
+                  ),
+                ),
+                inferredFields = List.empty,
+                missingFields = List.empty,
+                duplicateFields = List.empty,
+                needsAttention = false,
+                extractionNotes = List("Contact list continues on page 2"),
+              )
+            ),
+            infoNotes = List("Processed 2 of 3 entries", "Unidentified rows (1) at [23]"),
+            extractionNotes = List("Left out the page footer"),
+          )
+
+          customerBookFileAiExtractPostResponse <- gatewayClient
+            .customerBookFileAiExtractPost[smithy.InternalServerError](
+              Some(organizationUserRow.organizationID),
+              Some(customerBookFileExtractFileName),
+              customerBookFileExtractFileBytes,
+              Some(accessJwt.accessToken),
+              None,
+            )
+
+          _ = customerBookFileAiExtractPostResponse.code shouldBe StatusCode.Ok
+          _ = customerBookFileAiExtractPostResponse.body.value shouldBe customerBookFileAiExtractPostResponseExpected
+
+          customerIDsAll                   <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+          )
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIDsAll shouldBe empty
+          _ = customerIndividualDetailsRowsAll shouldBe empty
+          _ = customerBusinessDetailsRowsAll shouldBe empty
+          _ = customerBusinessContactRowsAll shouldBe empty
+
+          organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+          _ = organizationMediaS3BucketKeysAll shouldBe empty
+        } yield ()
+      }
+
       "successfully extract every candidate detail and processing note from an image without storing data" in withContext {
         context =>
           import context.*
@@ -592,9 +702,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
             customerBookFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+              .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
               .runCollect
             // Matched by the rich-candidate WireMock stub, which returns every candidate shape the service maps
             customerBookFileProcessingMessage     = "AI_CLIENT_SPEC_CUSTOMER_BOOK_FILE_RICH"
@@ -817,9 +927,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
             customerBookFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+              .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
               .runCollect
             processingMessageMaxLength                    = 2000
             customerBookFileProcessingMessage             = s"  ${"a" * processingMessageMaxLength}  "
@@ -908,9 +1018,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
           customerBookFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+            .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
             .runCollect
           customerBookFileProcessingMessage             = "   "
           customerBookFileAiExtractPostResponseExpected = CustomerBookFileAiExtractPostResponse(
@@ -1000,10 +1110,10 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
             customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume(
-              "contact-book-spreadsheet-it-4.csv"
+              "spreadsheet-4.csv"
             )
             customerBookFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+              .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
               .runCollect
             // Matched by the batch-notes WireMock stub, which returns the same general note for every group
             customerBookFileProcessingMessage             = "AI_CLIENT_SPEC_BATCH_NOTES"
@@ -1065,9 +1175,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
           customerBookFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+            .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
             .runCollect
 
           customerBookFileAiExtractPostResponse <- gatewayClient.customerBookFileAiExtractPost[smithy.BadRequest](
@@ -1121,7 +1231,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("   ")
-          customerBookFileExtractFileBytes <- ZStream.fromResource("assets/contact-book-image-it-1.jpeg").runCollect
+          customerBookFileExtractFileBytes <- ZStream
+            .fromResource("assets-test/CustomerBookFileApiSpec/image-1.jpeg")
+            .runCollect
 
           customerBookFileAiExtractPostResponse <- gatewayClient.customerBookFileAiExtractPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
@@ -1178,7 +1290,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
             customerBookFileExtractFileName              = CustomerBookFileExtractFileName.assume(
               "a" * (customerBookFileExtractFileNameOverMaxLength - ".jpeg".length) + ".jpeg"
             )
-            customerBookFileExtractFileBytes <- ZStream.fromResource("assets/contact-book-image-it-1.jpeg").runCollect
+            customerBookFileExtractFileBytes <- ZStream
+              .fromResource("assets-test/CustomerBookFileApiSpec/image-1.jpeg")
+              .runCollect
 
             customerBookFileAiExtractPostResponse <- gatewayClient.customerBookFileAiExtractPost[smithy.BadRequest](
               Some(organizationUserRow.organizationID),
@@ -1230,9 +1344,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
           customerBookFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+            .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
             .runCollect
           processingMessageOverMaxLength    = 2001
           customerBookFileProcessingMessage = "a" * processingMessageOverMaxLength
@@ -1288,7 +1402,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image")
-          customerBookFileExtractFileBytes <- ZStream.fromResource("assets/contact-book-image-it-1.jpeg").runCollect
+          customerBookFileExtractFileBytes <- ZStream
+            .fromResource("assets-test/CustomerBookFileApiSpec/image-1.jpeg")
+            .runCollect
 
           customerBookFileAiExtractPostResponse <- gatewayClient.customerBookFileAiExtractPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
@@ -1340,8 +1456,10 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image.pdf")
-          customerBookFileExtractFileBytes <- ZStream.fromResource("assets/contact-book-image-it-1.jpeg").runCollect
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image.gif")
+          customerBookFileExtractFileBytes <- ZStream
+            .fromResource("assets-test/CustomerBookFileApiSpec/image-1.jpeg")
+            .runCollect
 
           customerBookFileAiExtractPostResponse <- gatewayClient.customerBookFileAiExtractPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
@@ -1394,7 +1512,64 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image.png")
-          customerBookFileExtractFileBytes <- ZStream.fromResource("assets/contact-book-image-it-1.jpeg").runCollect
+          customerBookFileExtractFileBytes <- ZStream
+            .fromResource("assets-test/CustomerBookFileApiSpec/image-1.jpeg")
+            .runCollect
+
+          customerBookFileAiExtractPostResponse <- gatewayClient.customerBookFileAiExtractPost[smithy.BadRequest](
+            Some(organizationUserRow.organizationID),
+            Some(customerBookFileExtractFileName),
+            customerBookFileExtractFileBytes,
+            Some(accessJwt.accessToken),
+            None,
+          )
+
+          _ = customerBookFileAiExtractPostResponse.code shouldBe StatusCode.BadRequest
+          _ = customerBookFileAiExtractPostResponse.body.left.value shouldBe smithy.BadRequest()
+
+          customerIDsAll                   <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+          )
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIDsAll shouldBe empty
+          _ = customerIndividualDetailsRowsAll shouldBe empty
+          _ = customerBusinessDetailsRowsAll shouldBe empty
+          _ = customerBusinessContactRowsAll shouldBe empty
+
+          organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+          _ = organizationMediaS3BucketKeysAll shouldBe empty
+        } yield ()
+      }
+
+      "fail with a BadRequest when a PDF file name has image content without storing data" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleAllowed,
+          )
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image.pdf")
+          customerBookFileExtractFileBytes <- ZStream
+            .fromResource("assets-test/CustomerBookFileApiSpec/image-1.jpeg")
+            .runCollect
 
           customerBookFileAiExtractPostResponse <- gatewayClient.customerBookFileAiExtractPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
@@ -1449,7 +1624,7 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book.xlsx")
             customerBookFileExtractFileBytes <- ZStream
-              .fromResource("assets/contact-book-compressed-it-1.zip")
+              .fromResource("assets-test/CustomerBookFileApiSpec/compressed-1.zip")
               .runCollect
 
             customerBookFileAiExtractPostResponse <- gatewayClient
@@ -1503,9 +1678,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
           customerBookFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+            .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
             .runCollect
           customerBookFileProcessingMessage = "AI_CLIENT_SPEC_ERROR"
 
@@ -1561,9 +1736,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
             customerBookFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+              .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
               .runCollect
             customerBookFileProcessingMessage = "AI_CLIENT_SPEC_MALFORMED"
 
@@ -1620,10 +1795,10 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
             customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume(
-              "contact-book-spreadsheet-it-1.csv"
+              "spreadsheet-1.csv"
             )
             customerBookFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+              .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
               .runCollect
             customerBookFileProcessingMessage = "AI_CLIENT_SPEC_ERROR"
 
@@ -1695,9 +1870,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
           customerBookFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+            .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
             .runCollect
 
           responses <- ZIO.collectAllPar(
@@ -1777,9 +1952,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
           _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
           customerBookFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+            .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
             .runCollect
 
           responses <- ZIO.collectAllPar(
@@ -1859,9 +2034,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
           _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
           customerBookFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+            .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
             .runCollect
 
           responses <- ZIO.collectAllPar(
@@ -1946,9 +2121,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
             customerBookFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+              .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
               .runCollect
 
             responses <- ZIO.collectAllPar(
@@ -2033,9 +2208,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
             customerBookFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+              .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
               .runCollect
 
             responses <- ZIO.collectAllPar(
@@ -2116,9 +2291,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userID)
 
-            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
             customerBookFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+              .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
               .runCollect
 
             responses <- ZIO.collectAllPar(
@@ -2194,9 +2369,9 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-it-1.jpeg")
+            customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("image-1.jpeg")
             customerBookFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+              .fromResource(s"assets-test/CustomerBookFileApiSpec/${customerBookFileExtractFileName.value}")
               .runCollect
 
             responses <- ZIO.collectAllPar(

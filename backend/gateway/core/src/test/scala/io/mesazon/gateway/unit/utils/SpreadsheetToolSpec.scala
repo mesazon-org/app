@@ -43,8 +43,10 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
 
         val csvRecordValues = ZIO
           .scoped(for {
-            excelFileScannedPath <- fileScannedPath(ZStream.fromResource("assets/contact-book-spreadsheet-test-3.xlsx"))
-            csvRecords           <- spreadsheetTool.convertExcelToCsv(excelFileScannedPath).runCollect
+            excelFileScannedPath <- fileScannedPath(
+              ZStream.fromResource("assets-test/SpreadsheetToolSpec/spreadsheet-1.xlsx")
+            )
+            csvRecords <- spreadsheetTool.convertExcelToCsv(excelFileScannedPath).runCollect
           } yield csvRecords.toList.map(_.asScala.toList))
           .zioValue
 
@@ -59,8 +61,10 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
 
         val csvRecordValues = ZIO
           .scoped(for {
-            excelFileScannedPath <- fileScannedPath(ZStream.fromResource("assets/contact-book-spreadsheet-test-2.xls"))
-            csvRecords           <- spreadsheetTool.convertExcelToCsv(excelFileScannedPath).runCollect
+            excelFileScannedPath <- fileScannedPath(
+              ZStream.fromResource("assets-test/SpreadsheetToolSpec/spreadsheet-2.xls")
+            )
+            csvRecords <- spreadsheetTool.convertExcelToCsv(excelFileScannedPath).runCollect
           } yield csvRecords.toList.map(_.asScala.toList))
           .zioValue
 

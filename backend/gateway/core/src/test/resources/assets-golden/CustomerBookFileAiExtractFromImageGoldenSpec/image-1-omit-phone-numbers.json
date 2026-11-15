@@ -1,0 +1,119 @@
+{
+  "individualCandidates": [
+    {
+      "fullName": "Daniel Mercer",
+      "emails": [
+        {
+          "email": "dan.mercer@gmail.com",
+          "isDefault": true
+        }
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "7700900341",
+            "phoneCountryCode": "+44"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "18 Pine Rd",
+            "city": "Bristol",
+            "postalCode": "BS1 4DJ",
+            "country": "UK"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "fullName": "Sofia Lang",
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "7718334921",
+            "phoneCountryCode": "+44"
+          },
+          "isDefault": true
+        }
+      ],
+      "needsAttention": false
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "Evia Flowers Ltd",
+      "emails": [
+        {
+          "email": "orders@eviaflowers.co.uk",
+          "isDefault": true
+        }
+      ],
+      "taxID": "GB381552122",
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "2079462013",
+            "phoneCountryCode": "+44"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "7 Market Lane",
+            "addressLine2": "Unit 2",
+            "city": "London",
+            "postalCode": "E8 3RT",
+            "country": "UK"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Maria Cole",
+          "role": "buyer"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "businessName": "Aegean Repairs",
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "22 Dock Street",
+            "city": "Southampton",
+            "postalCode": "SO14 3JQ",
+            "country": "UK"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "A. Reed"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Phone number could not be read"
+      ]
+    }
+  ],
+  "infoNotes": [
+    "Processed 4 of 5 entries",
+    "Unidentified rows (1) at [5]"
+  ],
+  "extractionNotes": [
+    "Left out title \"Customers\", with date \"12/03/25\" beside it",
+    "Comments were not used",
+    "Last entry could not be read"
+  ]
+}

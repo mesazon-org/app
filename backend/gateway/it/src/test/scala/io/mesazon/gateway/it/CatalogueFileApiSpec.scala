@@ -78,9 +78,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
+            catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
             catalogueItemImageBytes <- ZStream
-              .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+              .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
               .runCollect
             catalogueItemImageBucketKeyPrefix =
               s"$catalogueItemImageBucketPathPrefix/${catalogueItemRow.organizationID.value}/${catalogueItemRow.catalogueItemID.value}"
@@ -150,7 +150,7 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
         for {
           catalogueItemImageOriginalFileNamePrevious = ImageOriginalFileName.assume("catalogue-image-previous.jpeg")
-          catalogueItemImageOriginalFileName         = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
+          catalogueItemImageOriginalFileName         = ImageOriginalFileName.assume("image-1.jpeg")
           organizationID                             = arbitrarySample[OrganizationID]
           catalogueItemID                            = arbitrarySample[CatalogueItemID]
           catalogueItemImageBucketKeyPrefix          =
@@ -209,7 +209,7 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           catalogueItemImageBytes <- ZStream
-            .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
             .runCollect
 
           catalogueFileUploadImageItemPostResponse <- gatewayClient
@@ -290,9 +290,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
             catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow))
           )
 
-          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
+          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
           catalogueItemImageBytes <- ZStream
-            .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
             .runCollect
 
           catalogueFileUploadImageItemPostResponse <- gatewayClient.catalogueFileUploadImageItemPost[smithy.BadRequest](
@@ -354,7 +354,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           _ <- postgresClient.executeQuery(
             catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow))
           )
-          catalogueItemImageBytes <- ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect
+          catalogueItemImageBytes <- ZStream
+            .fromResource("assets-test/CatalogueFileApiSpec/image-1.jpeg")
+            .runCollect
 
           catalogueFileUploadImageItemPostResponse <- gatewayClient.catalogueFileUploadImageItemPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
@@ -417,7 +419,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("   ")
-          catalogueItemImageBytes <- ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect
+          catalogueItemImageBytes <- ZStream
+            .fromResource("assets-test/CatalogueFileApiSpec/image-1.jpeg")
+            .runCollect
 
           catalogueFileUploadImageItemPostResponse <- gatewayClient.catalogueFileUploadImageItemPost[smithy.BadRequest](
             Some(catalogueItemRow.organizationID),
@@ -483,7 +487,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           catalogueItemImageOriginalFileName              = ImageOriginalFileName.assume(
             "a" * (catalogueItemImageOriginalFileNameOverMaxLength - ".jpeg".length) + ".jpeg"
           )
-          catalogueItemImageBytes <- ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect
+          catalogueItemImageBytes <- ZStream
+            .fromResource("assets-test/CatalogueFileApiSpec/image-1.jpeg")
+            .runCollect
 
           catalogueFileUploadImageItemPostResponse <- gatewayClient.catalogueFileUploadImageItemPost[smithy.BadRequest](
             Some(catalogueItemRow.organizationID),
@@ -546,7 +552,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image")
-          catalogueItemImageBytes <- ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect
+          catalogueItemImageBytes <- ZStream
+            .fromResource("assets-test/CatalogueFileApiSpec/image-1.jpeg")
+            .runCollect
 
           catalogueFileUploadImageItemPostResponse <- gatewayClient.catalogueFileUploadImageItemPost[smithy.BadRequest](
             Some(catalogueItemRow.organizationID),
@@ -609,7 +617,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image.pdf")
-          catalogueItemImageBytes <- ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect
+          catalogueItemImageBytes <- ZStream
+            .fromResource("assets-test/CatalogueFileApiSpec/image-1.jpeg")
+            .runCollect
 
           catalogueFileUploadImageItemPostResponse <- gatewayClient.catalogueFileUploadImageItemPost[smithy.BadRequest](
             Some(catalogueItemRow.organizationID),
@@ -671,9 +681,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-malformed-it-1.png")
+          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("malformed-1.png")
           catalogueItemImageBytes <- ZStream
-            .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
             .runCollect
 
           catalogueFileUploadImageItemPostResponse <- gatewayClient.catalogueFileUploadImageItemPost[smithy.BadRequest](
@@ -721,9 +731,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           catalogueItemID                    = arbitrarySample[CatalogueItemID]
-          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
+          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
           catalogueItemImageBytes <- ZStream
-            .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
             .runCollect
 
           catalogueFileUploadImageItemPostResponse <- gatewayClient
@@ -787,9 +797,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
+          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
           catalogueItemImageBytes <- ZStream
-            .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
             .runCollect
 
           catalogueFileUploadImageItemPostResponse <- gatewayClient
@@ -853,9 +863,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
+          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
           catalogueItemImageBytes <- ZStream
-            .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
             .runCollect
 
           catalogueFileUploadImageItemPostResponse <- gatewayClient
@@ -919,9 +929,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
+            catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
             catalogueItemImageBytes <- ZStream
-              .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+              .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
               .runCollect
 
             catalogueFileUploadImageItemPostResponse <- gatewayClient
@@ -985,9 +995,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-malformed-it-2.png")
+          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("malformed-2.png")
           catalogueItemImageBytes <- ZStream
-            .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
             .runCollect
 
           catalogueFileUploadImageItemPostResponse <- gatewayClient
@@ -1035,9 +1045,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("image-1.jpeg")
           catalogueFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueFileExtractFileName.value}")
             .runCollect
           catalogueFileAiExtractPostResponseExpected = CatalogueFileAiExtractPostResponse(
             candidates = List(
@@ -1119,9 +1129,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-spreadsheet-it-1.csv")
+          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("spreadsheet-1.csv")
           catalogueFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueFileExtractFileName.value}")
             .runCollect
           catalogueFileAiExtractPostResponseExpected = CatalogueFileAiExtractPostResponse(
             candidates = List(
@@ -1203,9 +1213,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-spreadsheet-it-2.xlsx")
+          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("spreadsheet-2.xlsx")
           catalogueFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueFileExtractFileName.value}")
             .runCollect
           catalogueFileAiExtractPostResponseExpected = CatalogueFileAiExtractPostResponse(
             candidates = List(
@@ -1287,9 +1297,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-spreadsheet-it-3.xls")
+          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("spreadsheet-3.xls")
           catalogueFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueFileExtractFileName.value}")
             .runCollect
           catalogueFileAiExtractPostResponseExpected = CatalogueFileAiExtractPostResponse(
             candidates = List(
@@ -1354,6 +1364,90 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
         } yield ()
       }
 
+      "successfully extract item candidates from a PDF without storing data" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleAllowed,
+          )
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("pdf-1.pdf")
+          catalogueFileExtractFileBytes <- ZStream
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueFileExtractFileName.value}")
+            .runCollect
+          catalogueFileAiExtractPostResponseExpected = CatalogueFileAiExtractPostResponse(
+            candidates = List(
+              CatalogueItemCandidate(
+                name = Some(CatalogueItemName.assume("Hinge")),
+                description = None,
+                variants = List(
+                  CatalogueItemVariantCandidate(
+                    sku = Some(CatalogueItemVariantSku.assume("HINGE-2")),
+                    label = None,
+                    description = None,
+                    attributes = Map(
+                      CatalogueItemVariantAttributeName.assume("Finish") ->
+                        CatalogueItemVariantAttributeValue.assume("Brass")
+                    ),
+                    price = None,
+                    sellingUnit = Some(
+                      CatalogueItemVariantSaleUnit(
+                        quantity = CatalogueItemVariantQuantity(
+                          value = CatalogueItemVariantQuantityValue.assume(BigDecimal(2)),
+                          unit = CatalogueItemVariantUnit.PerUnit.Piece,
+                        ),
+                        perUnit = None,
+                        unitSize = None,
+                      )
+                    ),
+                  )
+                ),
+                inferredFields = List.empty,
+                missingFields = List.empty,
+                duplicateFields = List.empty,
+                needsAttention = false,
+                extractionNotes = List.empty,
+              )
+            ),
+            infoNotes = List("Processed 1 of 1 entries"),
+            extractionNotes = List("Left out the page footer"),
+          )
+
+          catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.InternalServerError](
+            Some(organizationUserRow.organizationID),
+            Some(catalogueFileExtractFileName),
+            catalogueFileExtractFileBytes,
+            Some(accessJwt.accessToken),
+            None,
+          )
+
+          _ = catalogueFileAiExtractPostResponse.code shouldBe StatusCode.Ok
+          _ = catalogueFileAiExtractPostResponse.body.value shouldBe catalogueFileAiExtractPostResponseExpected
+
+          catalogueItemRowsAll        <- postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting)
+          catalogueItemVariantRowsAll <- postgresClient.executeQuery(
+            catalogueQueries.getAllCatalogueItemVariantRowsTesting
+          )
+
+          _ = catalogueItemRowsAll shouldBe empty
+          _ = catalogueItemVariantRowsAll shouldBe empty
+
+          organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+          _ = organizationMediaS3BucketKeysAll shouldBe empty
+        } yield ()
+      }
+
       "successfully extract every candidate detail and processing note from an image without storing data" in withContext {
         context =>
           import context.*
@@ -1372,9 +1466,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+            catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("image-1.jpeg")
             catalogueFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+              .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueFileExtractFileName.value}")
               .runCollect
             // Matched by the rich-candidate WireMock stub, which returns every candidate shape the service maps
             catalogueFileProcessingMessage    = "AI_CLIENT_SPEC_CATALOGUE_FILE_RICH"
@@ -1561,9 +1655,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
             // 101 data rows, so the default batch size of 100 reads the file in two groups
-            catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-spreadsheet-it-4.csv")
+            catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("spreadsheet-4.csv")
             catalogueFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+              .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueFileExtractFileName.value}")
               .runCollect
             // Matched by the batch-notes WireMock stubs, which return one shared general note per group
             catalogueFileProcessingMessage    = "AI_CLIENT_SPEC_CATALOGUE_FILE_BATCH_NOTES"
@@ -1670,9 +1764,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+            catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("image-1.jpeg")
             catalogueFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+              .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueFileExtractFileName.value}")
               .runCollect
             processingMessageMaxLength                 = 2000
             catalogueFileProcessingMessage             = s"  ${"a" * processingMessageMaxLength}  "
@@ -1756,9 +1850,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("image-1.jpeg")
           catalogueFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueFileExtractFileName.value}")
             .runCollect
 
           catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.BadRequest](
@@ -1804,7 +1898,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("   ")
-          catalogueFileExtractFileBytes <- ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect
+          catalogueFileExtractFileBytes <- ZStream
+            .fromResource("assets-test/CatalogueFileApiSpec/image-1.jpeg")
+            .runCollect
 
           catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
@@ -1853,7 +1949,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
             catalogueFileExtractFileName              = CatalogueFileExtractFileName.assume(
               "a" * (catalogueFileExtractFileNameOverMaxLength - ".jpeg".length) + ".jpeg"
             )
-            catalogueFileExtractFileBytes <- ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect
+            catalogueFileExtractFileBytes <- ZStream
+              .fromResource("assets-test/CatalogueFileApiSpec/image-1.jpeg")
+              .runCollect
 
             catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.BadRequest](
               Some(organizationUserRow.organizationID),
@@ -1897,9 +1995,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("image-1.jpeg")
           catalogueFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueFileExtractFileName.value}")
             .runCollect
           processingMessageOverMaxLength = 2001
           catalogueFileProcessingMessage = "a" * processingMessageOverMaxLength
@@ -1947,7 +2045,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image")
-          catalogueFileExtractFileBytes <- ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect
+          catalogueFileExtractFileBytes <- ZStream
+            .fromResource("assets-test/CatalogueFileApiSpec/image-1.jpeg")
+            .runCollect
 
           catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
@@ -1991,8 +2091,10 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image.pdf")
-          catalogueFileExtractFileBytes <- ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect
+          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image.gif")
+          catalogueFileExtractFileBytes <- ZStream
+            .fromResource("assets-test/CatalogueFileApiSpec/image-1.jpeg")
+            .runCollect
 
           catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
@@ -2037,7 +2139,56 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image.png")
-          catalogueFileExtractFileBytes <- ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect
+          catalogueFileExtractFileBytes <- ZStream
+            .fromResource("assets-test/CatalogueFileApiSpec/image-1.jpeg")
+            .runCollect
+
+          catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.BadRequest](
+            Some(organizationUserRow.organizationID),
+            Some(catalogueFileExtractFileName),
+            catalogueFileExtractFileBytes,
+            Some(accessJwt.accessToken),
+            None,
+          )
+
+          _ = catalogueFileAiExtractPostResponse.code shouldBe StatusCode.BadRequest
+          _ = catalogueFileAiExtractPostResponse.body.left.value shouldBe smithy.BadRequest()
+
+          catalogueItemRowsAll        <- postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting)
+          catalogueItemVariantRowsAll <- postgresClient.executeQuery(
+            catalogueQueries.getAllCatalogueItemVariantRowsTesting
+          )
+
+          _ = catalogueItemRowsAll shouldBe empty
+          _ = catalogueItemVariantRowsAll shouldBe empty
+
+          organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+          _ = organizationMediaS3BucketKeysAll shouldBe empty
+        } yield ()
+      }
+
+      "fail with a BadRequest when a PDF file name has image content without storing data" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleAllowed,
+          )
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-price-list.pdf")
+          catalogueFileExtractFileBytes <- ZStream
+            .fromResource("assets-test/CatalogueFileApiSpec/image-1.jpeg")
+            .runCollect
 
           catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
@@ -2083,7 +2234,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
             catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue.xlsx")
-            catalogueFileExtractFileBytes <- ZStream.fromResource("assets/catalogue-compressed-it-1.zip").runCollect
+            catalogueFileExtractFileBytes <- ZStream
+              .fromResource("assets-test/CatalogueFileApiSpec/compressed-1.zip")
+              .runCollect
 
             catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.InternalServerError](
               Some(organizationUserRow.organizationID),
@@ -2127,9 +2280,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("image-1.jpeg")
           catalogueFileExtractFileBytes <- ZStream
-            .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueFileExtractFileName.value}")
             .runCollect
           catalogueFileProcessingMessage = "AI_CLIENT_SPEC_ERROR"
 
@@ -2176,9 +2329,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+            catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("image-1.jpeg")
             catalogueFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+              .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueFileExtractFileName.value}")
               .runCollect
             catalogueFileProcessingMessage = "AI_CLIENT_SPEC_MALFORMED"
 
@@ -2225,9 +2378,9 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-spreadsheet-it-1.csv")
+            catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("spreadsheet-1.csv")
             catalogueFileExtractFileBytes <- ZStream
-              .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+              .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueFileExtractFileName.value}")
               .runCollect
             catalogueFileProcessingMessage = "AI_CLIENT_SPEC_ERROR"
 
@@ -2292,10 +2445,10 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
             )
           )
 
-          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
-          catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+          catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("image-1.jpeg")
           catalogueImageFileBytes <- ZStream
-            .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
             .runCollect
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
@@ -2364,10 +2517,10 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
             )
           )
 
-          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
-          catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+          catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("image-1.jpeg")
           catalogueImageFileBytes <- ZStream
-            .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
             .runCollect
 
           responses <- ZIO.collectAllPar(
@@ -2434,10 +2587,10 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
             )
           )
 
-          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
-          catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+          catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+          catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("image-1.jpeg")
           catalogueImageFileBytes <- ZStream
-            .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+            .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
             .runCollect
 
           responses <- ZIO.collectAllPar(
@@ -2516,10 +2669,10 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
               )
             )
 
-            catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
-            catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+            catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+            catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("image-1.jpeg")
             catalogueImageFileBytes <- ZStream
-              .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+              .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
               .runCollect
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
@@ -2600,10 +2753,10 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
               )
             )
 
-            catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
-            catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+            catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+            catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("image-1.jpeg")
             catalogueImageFileBytes <- ZStream
-              .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+              .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
               .runCollect
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
@@ -2679,10 +2832,10 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
               )
             )
 
-            catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
-            catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+            catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+            catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("image-1.jpeg")
             catalogueImageFileBytes <- ZStream
-              .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+              .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
               .runCollect
 
             accessJwt <- jwtService.generateAccessToken(userID)
@@ -2758,10 +2911,10 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
               )
             )
 
-            catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("catalogue-image-it-1.jpeg")
-            catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("catalogue-image-it-1.jpeg")
+            catalogueItemImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+            catalogueFileExtractFileName       = CatalogueFileExtractFileName.assume("image-1.jpeg")
             catalogueImageFileBytes <- ZStream
-              .fromResource(s"assets/${catalogueItemImageOriginalFileName.value}")
+              .fromResource(s"assets-test/CatalogueFileApiSpec/${catalogueItemImageOriginalFileName.value}")
               .runCollect
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)

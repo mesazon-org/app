@@ -1,0 +1,956 @@
+{
+  "candidates": [
+    {
+      "name": "Αγγούρια Α’",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Ντομάτες Extra",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Πατάτες Φρεσκ.",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Κρεμμύδια",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Κρεμμύδια κοκ.",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Πάρκαπα",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Κολοκυθάκια",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Καρότα",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Κραμπί",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Κραμπί κοκ.",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Κουνουπίδι",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Beetroot Cooked",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Μελιτζάνες",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Παντζάρι φρέσκο",
+      "variants": [
+        {
+          
+        }
+      ],
+      "missingFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "Πιπέρι πράσινο",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Πιπέρι χρ. (εισ.)",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "MIXED SALAD",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "BABY ROKA",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "BABY SPINACH",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Garlic",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Μπρόκολο",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Αβοκάντο (CY)",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Γλυκοπατάτες",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Μανιτάρια",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Pumpkin",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "unitSize": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Λεμόνια",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Limes",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Πορτοκάλια (χυμ.)",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Grapefruit",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Celery",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Μαρούλι",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Ρόκα",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Μαϊντανός",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Κόλιαντρος",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Σπανάκι",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Ραδίκια",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Άνηθος",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Κρεμμυδάκι Φρ.",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Βασιλικός",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Δυόσμος",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "MICRO HERBS",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Γλιστρίδα",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Lolo μαρούλι",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Chinese μαρούλι",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Iceberg",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Μπανάνες",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Αχλάδια (gr)",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Ακτινίδιο",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Pineapple",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Σταφύλι Μαύρο",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Σταφύλι Άσπρο",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Μάνγκο",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Φράουλες",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 500,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "Μήλα Marlene",
+      "variants": [
+        {
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "needsAttention": false
+    }
+  ],
+  "infoNotes": [
+    "Processed 54 of 54 entries"
+  ],
+  "extractionNotes": [
+    "\"ΕΛΛΕΙΨΗ\" columns appear to contain prices.",
+    "Left out \"FRUITHAVEN\", nothing beside the supplier logo",
+    "Left out \"M.CH. FRUITHAVEN TRADERS LTD\", company details beside it",
+    "Left out \"Tel +35799255087 +35799254569\", email beside it",
+    "Left out \"Agiou Epiktitou 17, Agios Athanasios, Limassol, Cyprus\", address",
+    "Left out \"Period:\", dates below it",
+    "Left out \"20/4/2026 - 23/4/2026\", nothing beside it",
+    "Left out \"Product Unit ΕΛΛΕΙΨΗ\", repeated across both tables",
+    "Left out the heading \"VEGETABLES\", nothing beside it",
+    "Left out the heading \"GREENS\", nothing beside it",
+    "Left out the heading \"FRUITS\", nothing beside it"
+  ]
+}

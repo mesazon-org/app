@@ -1,0 +1,22 @@
+{
+  "priority": 2,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "contains": "Return exactly one CustomerBookFileAIExtract"
+      },
+      {
+        "contains": "json_schema"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"resp_customer_book_file_acceptance\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_customer_book_file_acceptance\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"entriesIdentified\\\":2,\\\"entriesProcessed\\\":2,\\\"individualCandidates\\\":[{\\\"fullName\\\":\\\"John Smith\\\",\\\"emails\\\":[\\\"john.smith@example.com\\\"],\\\"phoneNumbers\\\":[],\\\"addresses\\\":[],\\\"fullNameInferred\\\":false,\\\"extractionNotes\\\":[]},{\\\"fullName\\\":\\\"Jane Doe\\\",\\\"emails\\\":[\\\"jane.doe@example.com\\\"],\\\"phoneNumbers\\\":[],\\\"addresses\\\":[],\\\"fullNameInferred\\\":false,\\\"extractionNotes\\\":[]}],\\\"businessCandidates\\\":[],\\\"emptyEntryRowIndexes\\\":[],\\\"unidentifiedEntryRowIndexes\\\":[],\\\"extractionNotes\\\":[]}\",\"annotations\":[]}]}]}"
+  }
+}

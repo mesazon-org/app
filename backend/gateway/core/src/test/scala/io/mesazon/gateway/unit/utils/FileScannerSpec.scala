@@ -27,43 +27,48 @@ class FileScannerSpec extends ZWordSpecBase {
 
         val scanSuccessCases = List(
           ScanSuccessCase(
-            fileResourcePath = "assets/contact-book-image-test-13.png",
+            fileResourcePath = "assets-test/FileScannerSpec/image-1.png",
             fileNameDeclared = "contact-book.PNG",
             supportedMediaTypeExpected = SupportedMediaType.PNG,
           ),
           ScanSuccessCase(
-            fileResourcePath = "assets/contact-book-image-test-11.jpeg",
+            fileResourcePath = "assets-test/FileScannerSpec/image-2.jpeg",
             fileNameDeclared = "contact-book.JPG",
             supportedMediaTypeExpected = SupportedMediaType.JPEG,
           ),
           ScanSuccessCase(
-            fileResourcePath = "assets/contact-book-image-test-11.jpeg",
+            fileResourcePath = "assets-test/FileScannerSpec/image-2.jpeg",
             fileNameDeclared = "contact-book.jpeg",
             supportedMediaTypeExpected = SupportedMediaType.JPEG,
           ),
           ScanSuccessCase(
-            fileResourcePath = "assets/contact-book-image-test-12.webp",
+            fileResourcePath = "assets-test/FileScannerSpec/image-3.webp",
             fileNameDeclared = "contact-book.WEBP",
             supportedMediaTypeExpected = SupportedMediaType.WEBP,
           ),
           ScanSuccessCase(
-            fileResourcePath = "assets/contact-book-spreadsheet-test-1.csv",
+            fileResourcePath = "assets-test/FileScannerSpec/spreadsheet-1.csv",
             fileNameDeclared = "customers.CSV",
             supportedMediaTypeExpected = SupportedMediaType.CSV,
           ),
           ScanSuccessCase(
-            fileResourcePath = "assets/contact-book-spreadsheet-test-2.xls",
+            fileResourcePath = "assets-test/FileScannerSpec/spreadsheet-2.xls",
             fileNameDeclared = "customers.XLS",
             supportedMediaTypeExpected = SupportedMediaType.XLS,
           ),
           ScanSuccessCase(
-            fileResourcePath = "assets/contact-book-spreadsheet-test-3.xlsx",
+            fileResourcePath = "assets-test/FileScannerSpec/spreadsheet-3.xlsx",
             fileNameDeclared = "customers.XLSX",
             supportedMediaTypeExpected = SupportedMediaType.XLSX,
           ),
+          ScanSuccessCase(
+            fileResourcePath = "assets-test/FileScannerSpec/pdf-1.pdf",
+            fileNameDeclared = "catalogue.PDF",
+            supportedMediaTypeExpected = SupportedMediaType.PDF,
+          ),
         )
         val maxByteSize5Mb      = 5 * 1024 * 1024L
-        val supportedMediaTypes = SupportedMediaType.images ++ SupportedMediaType.spreadsheets
+        val supportedMediaTypes = SupportedMediaType.aiExtractData
 
         scanSuccessCases.foreach { scanSuccessCase =>
           withClue(s"scan success case [$scanSuccessCase]") {
@@ -107,7 +112,7 @@ class FileScannerSpec extends ZWordSpecBase {
           .zioValue
 
         val maxByteSize5Mb      = 5 * 1024 * 1024L
-        val fileByteStream      = ZStream.fromResource("assets/contact-book-image-test-11.jpeg")
+        val fileByteStream      = ZStream.fromResource("assets-test/FileScannerSpec/image-2.jpeg")
         val fileNameDeclared    = "image"
         val supportedMediaTypes = SupportedMediaType.images ++ SupportedMediaType.spreadsheets
 
@@ -164,27 +169,51 @@ class FileScannerSpec extends ZWordSpecBase {
           .provide(FileScanner.live)
           .zioValue
 
+        final case class ScanMismatchCase(
+            fileResourcePath: String,
+            fileNameDeclared: String,
+            mimeTypeDetectedExpected: String,
+        )
+
+        val scanMismatchCases = List(
+          ScanMismatchCase(
+            fileResourcePath = "assets-test/FileScannerSpec/image-2.jpeg",
+            fileNameDeclared = "image.png",
+            mimeTypeDetectedExpected = "image/jpeg",
+          ),
+          ScanMismatchCase(
+            fileResourcePath = "assets-test/FileScannerSpec/image-1.png",
+            fileNameDeclared = "catalogue.pdf",
+            mimeTypeDetectedExpected = "image/png",
+          ),
+        )
         val maxByteSize5Mb      = 5 * 1024 * 1024L
-        val fileByteStream      = ZStream.fromResource("assets/contact-book-image-test-11.jpeg")
-        val fileNameDeclared    = "image.png"
-        val supportedMediaTypes = SupportedMediaType.images ++ SupportedMediaType.spreadsheets
+        val supportedMediaTypes = SupportedMediaType.aiExtractData
 
-        val serviceError = ZIO
-          .scoped(
-            fileScanner.scan(
-              fileByteStream,
-              fileNameDeclared,
-              supportedMediaTypes,
-              maxByteSize5Mb,
+        scanMismatchCases.foreach { scanMismatchCase =>
+          withClue(s"scan mismatch case [$scanMismatchCase]") {
+            val serviceError = ZIO
+              .scoped(
+                fileScanner.scan(
+                  ZStream.fromResource(scanMismatchCase.fileResourcePath),
+                  scanMismatchCase.fileNameDeclared,
+                  supportedMediaTypes,
+                  maxByteSize5Mb,
+                )
+              )
+              .zioError
+
+            serviceError shouldBe ServiceError.BadRequestError.ValidationError(
+              Seq(
+                ServiceError.BadRequestError.InvalidFieldError(
+                  "fileNameDeclared",
+                  s"File name declaration does not match detected media type [${scanMismatchCase.mimeTypeDetectedExpected}]",
+                  scanMismatchCase.fileNameDeclared,
+                )
+              )
             )
-          )
-          .zioError
-
-        serviceError shouldBe a[ServiceError.BadRequestError.ValidationError]
-        serviceError
-          .asInstanceOf[ServiceError.BadRequestError.ValidationError]
-          .invalidFields
-          .map(_.fieldName) shouldBe Seq("fileNameDeclared")
+          }
+        }
       }
 
       "fail with a ValidationError when a spreadsheet filename extension disagrees with the detected format" in {
@@ -194,7 +223,7 @@ class FileScannerSpec extends ZWordSpecBase {
           .zioValue
 
         val maxByteSize5Mb      = 5 * 1024 * 1024L
-        val fileByteStream      = ZStream.fromResource("assets/contact-book-spreadsheet-test-3.xlsx")
+        val fileByteStream      = ZStream.fromResource("assets-test/FileScannerSpec/spreadsheet-3.xlsx")
         val fileNameDeclared    = "customers.csv"
         val supportedMediaTypes = SupportedMediaType.images ++ SupportedMediaType.spreadsheets
 
@@ -284,7 +313,7 @@ class FileScannerSpec extends ZWordSpecBase {
         val bytesReadInitial       = 0L
         val bytesReadIncrement     = 1L
         val bytesReadRef           = Ref.make(bytesReadInitial).zioValue
-        val fileByteStreamExpected = ZStream.fromResource("assets/contact-book-image-test-11.jpeg")
+        val fileByteStreamExpected = ZStream.fromResource("assets-test/FileScannerSpec/image-2.jpeg")
         val fileByteStream         = fileByteStreamExpected.tap(_ => bytesReadRef.update(_ + bytesReadIncrement))
         val maxByteSize1b          = 1L
         val fileNameDeclared       = "customers.csv"

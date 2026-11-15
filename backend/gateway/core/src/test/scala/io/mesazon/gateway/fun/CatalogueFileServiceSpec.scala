@@ -41,7 +41,8 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
+        val catalogueItemImageByteStream       =
+          ZStream.fromResource("assets-test/CatalogueFileServiceSpec/image-1.jpeg")
 
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
           organizationID = organizationID,
@@ -58,8 +59,10 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           NonEmptyChunk.single(catalogueItemVariantRow),
         )
 
-        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/catalogue-image-test-1.jpeg"))
-        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/catalogue-image-test-2.webp"))
+        val originalByteStream =
+          ImageOriginalByteStream(ZStream.fromResource("assets-test/CatalogueFileServiceSpec/image-1.jpeg"))
+        val normalizedByteStream =
+          ImageNormalizedByteStream(ZStream.fromResource("assets-test/CatalogueFileServiceSpec/image-2.webp"))
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
@@ -149,7 +152,8 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
+        val catalogueItemImageByteStream       =
+          ZStream.fromResource("assets-test/CatalogueFileServiceSpec/image-1.jpeg")
 
         catalogueRepositoryMock.getCatalogueItemWithVariants
           .expects(organizationID, catalogueItemID)
@@ -174,7 +178,8 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
+        val catalogueItemImageByteStream       =
+          ZStream.fromResource("assets-test/CatalogueFileServiceSpec/image-1.jpeg")
         val scanError = ServiceError.InternalServerError.UnexpectedError("Failed to scan catalogue item image")
 
         val catalogueItemRow = arbitrarySample[CatalogueItemRow].copy(
@@ -358,7 +363,8 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         val organizationID                     = arbitrarySample[OrganizationID]
         val catalogueItemID                    = arbitrarySample[CatalogueItemID]
         val catalogueItemImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val catalogueItemImageByteStream       = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
+        val catalogueItemImageByteStream       =
+          ZStream.fromResource("assets-test/CatalogueFileServiceSpec/image-1.jpeg")
 
         val serviceError = ServiceError.InternalServerError.UnexpectedError("Failed to update catalogue image")
 
@@ -377,8 +383,10 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           NonEmptyChunk.single(catalogueItemVariantRow),
         )
 
-        val originalByteStream   = ImageOriginalByteStream(ZStream.fromResource("assets/catalogue-image-test-1.jpeg"))
-        val normalizedByteStream = ImageNormalizedByteStream(ZStream.fromResource("assets/catalogue-image-test-2.webp"))
+        val originalByteStream =
+          ImageOriginalByteStream(ZStream.fromResource("assets-test/CatalogueFileServiceSpec/image-1.jpeg"))
+        val normalizedByteStream =
+          ImageNormalizedByteStream(ZStream.fromResource("assets-test/CatalogueFileServiceSpec/image-2.webp"))
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
@@ -1840,7 +1848,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
             .expects(
               catalogueFileExtractByteStream,
               catalogueFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
             )
             .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
@@ -1890,7 +1898,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
             .expects(
               catalogueFileExtractByteStream,
               catalogueFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
             )
             .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
@@ -1926,6 +1934,129 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
         response shouldBe CatalogueFileAiExtractPostResponse(Nil, List("Processed 0 of 0 entries"), Nil)
       }
 
+      "extract a PDF without processing guidance, sending its declared file name, without note compaction" in new TestContext {
+        val catalogueFileProcessingMessageOpt: Option[CatalogueFileProcessingMessage] = None
+        val organizationID                                                            = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue-price-list.pdf")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("scanned-catalogue.pdf"))
+        val extractionNotes                = List("Left out the page footer", "Prices are in euros")
+        val catalogueFileAIExtract         = CatalogueFileAIExtract(
+          entriesIdentified = 1L,
+          entriesProcessed = 0L,
+          candidates = Nil,
+          emptyEntryRows = Nil,
+          unidentifiedEntryRows = List(23L),
+          extractionNotes = extractionNotes,
+        )
+
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              catalogueFileExtractByteStream,
+              catalogueFileExtractFileName.value,
+              SupportedMediaType.aiExtractData,
+              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+            )
+            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.PDF, FileBytesSize.assume(1L))))
+            .once(),
+          (aiClientDataExtractionMock
+            .extractFromPdf[CatalogueFileAIExtract](
+              _: FileScannedPath,
+              _: String,
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CatalogueFileAIExtract], _: JsonValueCodec[CatalogueFileAIExtract]))
+            .expects(
+              fileScannedPath,
+              catalogueFileExtractFileName.value,
+              AIInstructions.extractCatalogueItemsFromPdfInstructions,
+              None,
+              ai.catalogueFileAIExtractOpenAIJsonSchema,
+              ai.catalogueFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(catalogueFileAIExtract))
+            .once(),
+        )
+
+        val response = buildCatalogueFileService()
+          .aiExtract(
+            organizationID,
+            catalogueFileExtractFileName,
+            catalogueFileProcessingMessageOpt,
+            catalogueFileExtractByteStream,
+          )
+          .zioValue
+
+        response shouldBe CatalogueFileAiExtractPostResponse(
+          candidates = Nil,
+          infoNotes = List("Processed 0 of 1 entries", "Unidentified rows (1) at [23]"),
+          extractionNotes = extractionNotes,
+        )
+      }
+
+      "forward PDF processing guidance" in new TestContext {
+        val catalogueFileProcessingMessageOpt: Option[CatalogueFileProcessingMessage] =
+          Some(CatalogueFileProcessingMessage("Read only the second price column"))
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue-price-list.pdf")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("scanned-catalogue.pdf"))
+        val extractionNotes                = List("Left out the page footer", "Prices are in euros")
+        val catalogueFileAIExtract         = CatalogueFileAIExtract(
+          entriesIdentified = 1L,
+          entriesProcessed = 0L,
+          candidates = Nil,
+          emptyEntryRows = Nil,
+          unidentifiedEntryRows = List(23L),
+          extractionNotes = extractionNotes,
+        )
+
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              catalogueFileExtractByteStream,
+              catalogueFileExtractFileName.value,
+              SupportedMediaType.aiExtractData,
+              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+            )
+            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.PDF, FileBytesSize.assume(1L))))
+            .once(),
+          (aiClientDataExtractionMock
+            .extractFromPdf[CatalogueFileAIExtract](
+              _: FileScannedPath,
+              _: String,
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CatalogueFileAIExtract], _: JsonValueCodec[CatalogueFileAIExtract]))
+            .expects(
+              fileScannedPath,
+              catalogueFileExtractFileName.value,
+              AIInstructions.extractCatalogueItemsFromPdfInstructions,
+              catalogueFileProcessingMessageOpt.map(_.value),
+              ai.catalogueFileAIExtractOpenAIJsonSchema,
+              ai.catalogueFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(catalogueFileAIExtract))
+            .once(),
+        )
+
+        val response = buildCatalogueFileService()
+          .aiExtract(
+            organizationID,
+            catalogueFileExtractFileName,
+            catalogueFileProcessingMessageOpt,
+            catalogueFileExtractByteStream,
+          )
+          .zioValue
+
+        response shouldBe CatalogueFileAiExtractPostResponse(
+          candidates = Nil,
+          infoNotes = List("Processed 0 of 1 entries", "Unidentified rows (1) at [23]"),
+          extractionNotes = extractionNotes,
+        )
+      }
+
       "extract catalogue items from CSV" in new TestContext {
         val catalogueFileProcessingMessage = CatalogueFileProcessingMessage("Omit prices from variants")
         val organizationID                 = arbitrarySample[OrganizationID]
@@ -1955,7 +2086,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
             .expects(
               catalogueFileExtractByteStream,
               catalogueFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
             )
             .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.CSV, FileBytesSize.assume(1L))))
@@ -2038,7 +2169,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
             .expects(
               catalogueFileExtractByteStream,
               catalogueFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
             )
             .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.XLS, FileBytesSize.assume(1L))))
@@ -2119,7 +2250,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
             .expects(
               catalogueFileExtractByteStream,
               catalogueFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
             )
             .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.XLSX, FileBytesSize.assume(1L))))
@@ -2225,7 +2356,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
             .expects(
               catalogueFileExtractByteStream,
               catalogueFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
             )
             .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.CSV, FileBytesSize.assume(1L))))
@@ -2639,7 +2770,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           .expects(
             catalogueFileExtractByteStream,
             catalogueFileExtractFileName.value,
-            SupportedMediaType.extractData,
+            SupportedMediaType.aiExtractData,
             catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
           )
           .returns(ZIO.fail(serviceError))
@@ -2662,7 +2793,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
             .expects(
               catalogueFileExtractByteStream,
               catalogueFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
             )
             .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.JPEG, FileBytesSize.assume(1L))))
@@ -2691,6 +2822,53 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           .zioError shouldBe serviceError
       }
 
+      "fail with an UnexpectedError when PDF AI extraction fails" in new TestContext {
+        val catalogueFileProcessingMessageOpt: Option[CatalogueFileProcessingMessage] = None
+        val organizationID                                                            = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue-price-list.pdf")
+        val catalogueFileExtractByteStream = ZStream.empty
+        val fileScannedPath                = FileScannedPath(Path.of("scanned-catalogue.pdf"))
+        val serviceError = ServiceError.InternalServerError.UnexpectedError("Unable to extract catalogue")
+
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              catalogueFileExtractByteStream,
+              catalogueFileExtractFileName.value,
+              SupportedMediaType.aiExtractData,
+              catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
+            )
+            .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.PDF, FileBytesSize.assume(1L))))
+            .once(),
+          (aiClientDataExtractionMock
+            .extractFromPdf[CatalogueFileAIExtract](
+              _: FileScannedPath,
+              _: String,
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CatalogueFileAIExtract], _: JsonValueCodec[CatalogueFileAIExtract]))
+            .expects(
+              fileScannedPath,
+              catalogueFileExtractFileName.value,
+              AIInstructions.extractCatalogueItemsFromPdfInstructions,
+              None,
+              ai.catalogueFileAIExtractOpenAIJsonSchema,
+              ai.catalogueFileAIExtractCodec,
+            )
+            .returns(ZIO.fail(serviceError))
+            .once(),
+        )
+
+        buildCatalogueFileService()
+          .aiExtract(
+            organizationID,
+            catalogueFileExtractFileName,
+            catalogueFileProcessingMessageOpt,
+            catalogueFileExtractByteStream,
+          )
+          .zioError shouldBe serviceError
+      }
+
       "fail with an UnexpectedError when spreadsheet conversion fails" in new TestContext {
         val organizationID                 = arbitrarySample[OrganizationID]
         val catalogueFileExtractFileName   = CatalogueFileExtractFileName("catalogue.csv")
@@ -2704,7 +2882,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
             .expects(
               catalogueFileExtractByteStream,
               catalogueFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
             )
             .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.CSV, FileBytesSize.assume(1L))))
@@ -2748,7 +2926,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
             .expects(
               catalogueFileExtractByteStream,
               catalogueFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
             )
             .returns(ZIO.succeed((fileScannedPath, SupportedMediaType.CSV, FileBytesSize.assume(1L))))
@@ -2824,7 +3002,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           .expects(
             catalogueFileExtractByteStream,
             catalogueFileExtractFileName.value,
-            SupportedMediaType.extractData,
+            SupportedMediaType.aiExtractData,
             catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
           )
           .returns(ZIO.succeed(fileScannerScanOutput))
@@ -2870,7 +3048,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           .expects(
             catalogueFileExtractByteStream,
             catalogueFileExtractFileName.value,
-            SupportedMediaType.extractData,
+            SupportedMediaType.aiExtractData,
             catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
           )
           .returns(ZIO.succeed(fileScannerScanOutput))
@@ -2928,7 +3106,7 @@ class CatalogueFileServiceSpec extends ZWordSpecBase, CatalogueDomainArbitraries
           .expects(
             catalogueFileExtractByteStream,
             catalogueFileExtractFileName.value,
-            SupportedMediaType.extractData,
+            SupportedMediaType.aiExtractData,
             catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
           )
           .returns(ZIO.succeed(fileScannerScanOutput))

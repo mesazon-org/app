@@ -20,11 +20,12 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
       "successfully scan, normalize, upload and persist the organization logo" in new TestContext {
         val organizationID                        = arbitrarySample[OrganizationID]
         val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val organizationLogoImageByteStream       = ZStream.fromResource("assets/organization-image-test-1.jpeg")
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets-test/FileServiceSpec/image-1.jpeg")
 
-        val originalByteStream = ImageOriginalByteStream(ZStream.fromResource("assets/organization-image-test-1.jpeg"))
+        val originalByteStream =
+          ImageOriginalByteStream(ZStream.fromResource("assets-test/FileServiceSpec/image-1.jpeg"))
         val normalizedByteStream =
-          ImageNormalizedByteStream(ZStream.fromResource("assets/organization-image-test-2.webp"))
+          ImageNormalizedByteStream(ZStream.fromResource("assets-test/FileServiceSpec/image-2.webp"))
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
@@ -104,7 +105,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
       "fail and stop the pipeline when scanning the organization logo fails" in new TestContext {
         val organizationID                        = arbitrarySample[OrganizationID]
         val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val organizationLogoImageByteStream       = ZStream.fromResource("assets/organization-image-test-1.jpeg")
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets-test/FileServiceSpec/image-1.jpeg")
 
         val scanError = ServiceError.InternalServerError.UnexpectedError("Failed to scan organization logo")
 
@@ -136,7 +137,7 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
       "fail and stop the pipeline when normalizing the organization logo fails" in new TestContext {
         val organizationID                        = arbitrarySample[OrganizationID]
         val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val organizationLogoImageByteStream       = ZStream.fromResource("assets/organization-image-test-1.jpeg")
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets-test/FileServiceSpec/image-1.jpeg")
 
         val normalizeError = ServiceError.InternalServerError.UnexpectedError("Failed to normalize organization logo")
 
@@ -180,11 +181,12 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
       "fail and stop the pipeline when uploading the organization logo to S3 fails" in new TestContext {
         val organizationID                        = arbitrarySample[OrganizationID]
         val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val organizationLogoImageByteStream       = ZStream.fromResource("assets/organization-image-test-1.jpeg")
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets-test/FileServiceSpec/image-1.jpeg")
 
-        val originalByteStream = ImageOriginalByteStream(ZStream.fromResource("assets/organization-image-test-1.jpeg"))
+        val originalByteStream =
+          ImageOriginalByteStream(ZStream.fromResource("assets-test/FileServiceSpec/image-1.jpeg"))
         val normalizedByteStream =
-          ImageNormalizedByteStream(ZStream.fromResource("assets/organization-image-test-2.webp"))
+          ImageNormalizedByteStream(ZStream.fromResource("assets-test/FileServiceSpec/image-2.webp"))
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 
@@ -234,11 +236,12 @@ class FileServiceSpec extends ZWordSpecBase, SmithyArbitraries, TokenArbitraries
       "fail when persisting the organization logo details fails" in new TestContext {
         val organizationID                        = arbitrarySample[OrganizationID]
         val organizationLogoImageOriginalFileName = arbitrarySample[ImageOriginalFileName]
-        val organizationLogoImageByteStream       = ZStream.fromResource("assets/organization-image-test-1.jpeg")
+        val organizationLogoImageByteStream       = ZStream.fromResource("assets-test/FileServiceSpec/image-1.jpeg")
 
-        val originalByteStream = ImageOriginalByteStream(ZStream.fromResource("assets/organization-image-test-1.jpeg"))
+        val originalByteStream =
+          ImageOriginalByteStream(ZStream.fromResource("assets-test/FileServiceSpec/image-1.jpeg"))
         val normalizedByteStream =
-          ImageNormalizedByteStream(ZStream.fromResource("assets/organization-image-test-2.webp"))
+          ImageNormalizedByteStream(ZStream.fromResource("assets-test/FileServiceSpec/image-2.webp"))
         val normalizeResult: NormalizeResult =
           (imageOriginalByteStream = originalByteStream, imageNormalizedByteStream = normalizedByteStream)
 

@@ -1,0 +1,110 @@
+{
+  "individualCandidates": [
+    {
+      "fullName": "Ирина Смирнова",
+      "emails": [
+        {
+          "email": "irina.smirnova@mail.ru",
+          "isDefault": true
+        }
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "9214431872",
+            "phoneCountryCode": "+7"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Невский пр., 23",
+            "addressLine2": "кв. 4",
+            "city": "Санкт-Петербург",
+            "postalCode": "191186",
+            "country": "Россия"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "fullName": "Марина Волкова",
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "9206673321",
+            "phoneCountryCode": "+7"
+          },
+          "isDefault": true
+        }
+      ],
+      "needsAttention": false
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "ООО Балтик Сервис",
+      "emails": [
+        {
+          "email": "office@baltserv.ru",
+          "isDefault": true
+        }
+      ],
+      "taxID": "7812459031",
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "8125554219",
+            "phoneCountryCode": "+7"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "ул. Моисеенко 11",
+            "city": "Санкт-Петербург",
+            "country": "Россия"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Олег Титов",
+          "role": "закупки"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Postal code is missing"
+      ]
+    },
+    {
+      "businessName": "ИП Соколова",
+      "customerBusinessContacts": [
+        {
+          "fullName": "Светлана"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Phone number could not be read"
+      ]
+    }
+  ],
+  "infoNotes": [
+    "Processed 4 of 5 entries",
+    "Unidentified rows (1) at [5]"
+  ],
+  "extractionNotes": [
+    "Left out date \"12.03.2024\", nothing beside it",
+    "Callback reminders were not used",
+    "Crossed-out entry could not be read"
+  ]
+}

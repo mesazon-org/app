@@ -32,10 +32,12 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
   "S3ClientOrganizationMedia" when {
     "uploadImageCatalogueItem" should {
       "upload the original and normalized images and return their bucket keys" in new TestContext {
-        val organizationID            = arbitrarySample[OrganizationID]
-        val catalogueItemID           = arbitrarySample[CatalogueItemID]
-        val imageOriginalByteStream   = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
-        val imageNormalizedByteStream = ZStream.fromResource("assets/catalogue-image-test-2.webp")
+        val organizationID          = arbitrarySample[OrganizationID]
+        val catalogueItemID         = arbitrarySample[CatalogueItemID]
+        val imageOriginalByteStream =
+          ZStream.fromResource("assets-test/S3ClientOrganizationMediaSpec/image-1.jpeg")
+        val imageNormalizedByteStream =
+          ZStream.fromResource("assets-test/S3ClientOrganizationMediaSpec/image-2.webp")
 
         val uploadedImageBucketKeys = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
@@ -79,8 +81,10 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
       "overwrite the existing images when uploading again for the same catalogue item" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
         val catalogueItemID          = arbitrarySample[CatalogueItemID]
-        val imageOriginalByteStream1 = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
-        val imageOriginalByteStream2 = ZStream.fromResource("assets/catalogue-image-test-2.webp")
+        val imageOriginalByteStream1 =
+          ZStream.fromResource("assets-test/S3ClientOrganizationMediaSpec/image-1.jpeg")
+        val imageOriginalByteStream2 =
+          ZStream.fromResource("assets-test/S3ClientOrganizationMediaSpec/image-2.webp")
 
         val uploadedImageBucketKeys1 = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
@@ -136,9 +140,11 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
     "uploadImageOrganizationLogo" should {
       "upload the original and normalized logos and return their bucket keys" in new TestContext {
-        val organizationID            = arbitrarySample[OrganizationID]
-        val imageOriginalByteStream   = ZStream.fromResource("assets/organization-image-test-1.jpeg")
-        val imageNormalizedByteStream = ZStream.fromResource("assets/organization-image-test-2.webp")
+        val organizationID          = arbitrarySample[OrganizationID]
+        val imageOriginalByteStream =
+          ZStream.fromResource("assets-test/S3ClientOrganizationMediaSpec/image-1.jpeg")
+        val imageNormalizedByteStream =
+          ZStream.fromResource("assets-test/S3ClientOrganizationMediaSpec/image-2.webp")
 
         val uploadedImageBucketKeys = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
@@ -180,8 +186,10 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
 
       "overwrite the existing logo when uploading again for the same organization" in new TestContext {
         val organizationID           = arbitrarySample[OrganizationID]
-        val imageOriginalByteStream1 = ZStream.fromResource("assets/organization-image-test-1.jpeg")
-        val imageOriginalByteStream2 = ZStream.fromResource("assets/organization-image-test-2.webp")
+        val imageOriginalByteStream1 =
+          ZStream.fromResource("assets-test/S3ClientOrganizationMediaSpec/image-1.jpeg")
+        val imageOriginalByteStream2 =
+          ZStream.fromResource("assets-test/S3ClientOrganizationMediaSpec/image-2.webp")
 
         val uploadedImageBucketKeys1 = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
@@ -237,7 +245,7 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
       "return a presigned URL that serves the image at the given bucket key" in new TestContext {
         val organizationID  = arbitrarySample[OrganizationID]
         val catalogueItemID = arbitrarySample[CatalogueItemID]
-        val imageByteStream = ZStream.fromResource("assets/catalogue-image-test-1.jpeg")
+        val imageByteStream = ZStream.fromResource("assets-test/S3ClientOrganizationMediaSpec/image-1.jpeg")
 
         val uploadedImageBucketKeys = ZIO
           .serviceWithZIO[S3ClientOrganizationMedia](
@@ -245,7 +253,9 @@ class S3ClientOrganizationMediaSpec extends ZWordSpecBase, GatewayArbitraries, D
               organizationID,
               catalogueItemID,
               ImageOriginalByteStream(imageByteStream),
-              ImageNormalizedByteStream(ZStream.fromResource("assets/catalogue-image-test-2.webp")),
+              ImageNormalizedByteStream(
+                ZStream.fromResource("assets-test/S3ClientOrganizationMediaSpec/image-2.webp")
+              ),
             )
           )
           .provide(

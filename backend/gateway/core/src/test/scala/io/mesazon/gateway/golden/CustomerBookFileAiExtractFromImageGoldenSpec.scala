@@ -1,9 +1,10 @@
 package io.mesazon.gateway.golden
 
-import com.github.plokhotnyuk.jsoniter_scala.core.{writeToString, WriterConfig}
+import com.github.plokhotnyuk.jsoniter_scala.core.readFromString
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.config.{AIClientDataExtractionConfig, CustomerBookFileServiceConfig}
+import io.mesazon.gateway.golden.performance.{CustomerBookFileAiExtractPostResponsePerformance, GoldenPerformance}
 import io.mesazon.gateway.json.tapir.customerBookFileAiExtractPostResponseCodec
 import io.mesazon.gateway.service.{CustomerBookFileService, ServiceTask}
 import io.mesazon.gateway.utils.*
@@ -11,7 +12,14 @@ import io.mesazon.testkit.base.{GatewayArbitraries, SttpTestBackend, ZWordSpecBa
 import zio.*
 import zio.stream.ZStream
 
+import java.nio.file.*
+
 class CustomerBookFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, GatewayArbitraries {
+
+  private type CustomerBookFileServiceWithConfig = (
+      customerBookFileService: CustomerBookFileService[ServiceTask],
+      aiClientDataExtractionConfig: AIClientDataExtractionConfig,
+  )
 
   private val apiKey =
     sys.env.getOrElse(
@@ -19,26 +27,29 @@ class CustomerBookFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, Gatewa
       "",
     )
 
-  private val customerBookFileExtractFileNamesContactBook = List(
-    "contact-book-image-test-1.png",
-    "contact-book-image-test-2.png",
-    "contact-book-image-test-3.png",
-    "contact-book-image-test-4.png",
-    "contact-book-image-test-5.png",
-    "contact-book-image-test-6.png",
-    "contact-book-image-test-7.png",
-    "contact-book-image-test-8.png",
-    "contact-book-image-test-9.png",
-    "contact-book-image-test-10.png",
-    "contact-book-image-test-11.jpeg",
-    "contact-book-image-test-12.webp",
-    "contact-book-image-test-13.png",
-  )
+  private val goldenDirectory =
+    Paths.get("src/test/resources/assets-golden/CustomerBookFileAiExtractFromImageGoldenSpec")
 
-  private inline val JsonIndentionStep = 2
+  private def loadCustomerBookFileAiExtractPostResponseGolden(
+      customerBookFileExtractAssetFileName: String,
+      goldenVariantOpt: Option[String],
+  ): CustomerBookFileAiExtractPostResponse = {
+    val golden = goldenDirectory.resolve(
+      (customerBookFileExtractAssetFileName.take(customerBookFileExtractAssetFileName.lastIndexOf('.')) ::
+        goldenVariantOpt.toList).mkString("-") + ".json"
+    )
 
-  private def buildCustomerBookFileService: CustomerBookFileService[ServiceTask] = ZIO
-    .service[CustomerBookFileService[ServiceTask]]
+    if (!Files.exists(golden)) fail(s"Golden file is missing: ${golden.toAbsolutePath}")
+    else readFromString[CustomerBookFileAiExtractPostResponse](Files.readString(golden))
+  }
+
+  private def buildCustomerBookFileServiceWithConfig: CustomerBookFileServiceWithConfig = (for {
+    customerBookFileService      <- ZIO.service[CustomerBookFileService[ServiceTask]]
+    aiClientDataExtractionConfig <- ZIO.service[AIClientDataExtractionConfig]
+  } yield (
+    customerBookFileService = customerBookFileService,
+    aiClientDataExtractionConfig = aiClientDataExtractionConfig,
+  ): CustomerBookFileServiceWithConfig)
     .provide(
       CustomerBookFileService.local,
       ZLayer.succeed(AppName("gateway-api")),
@@ -67,82 +78,435 @@ class CustomerBookFileAiExtractFromImageGoldenSpec extends ZWordSpecBase, Gatewa
 
   "CustomerBookFileService" when {
     "aiExtract" should {
-      customerBookFileExtractFileNamesContactBook.foreach { customerBookFileExtractFileNameContactBook =>
-        s"extract customer candidates from $customerBookFileExtractFileNameContactBook" in {
-          assume(
-            apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-          )
-
-          val organizationID                  = arbitrarySample[OrganizationID]
-          val customerBookFileExtractFileName =
-            CustomerBookFileExtractFileName.assume(customerBookFileExtractFileNameContactBook)
-          val customerBookFileExtractByteStream =
-            ZStream.fromResource(s"assets/${customerBookFileExtractFileName.value}")
-
-          val customerBookFileProcessingMessage = CustomerBookFileProcessingMessage.assume(
-            "For each customers create a second entry with 1 suffix"
-          )
-
-          val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
-            .aiExtract(
-              organizationID,
-              customerBookFileExtractFileName,
-              Some(customerBookFileProcessingMessage),
-              customerBookFileExtractByteStream,
-            )
-            .zioValue
-
-          info(
-            s"${customerBookFileExtractFileName.value} response:\n${writeToString(customerBookFileAiExtractPostResponse, WriterConfig.withIndentionStep(JsonIndentionStep))}"
-          )
-        }
-      }
-
-      "extract customer candidates from contact-book-image-test-1.png following the processing message" in {
+      "report how closely the customer candidates extracted from image-1.png match the golden" in {
         assume(
           apiKey.nonEmpty,
           "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
         )
 
         val organizationID                    = arbitrarySample[OrganizationID]
-        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName.assume("contact-book-image-test-1.png")
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName.assume("image-1.png")
         val customerBookFileExtractByteStream =
-          ZStream.fromResource(s"assets/${customerBookFileExtractFileName.value}")
-        val customerBookFileProcessingMessage =
-          CustomerBookFileProcessingMessage.assume("omit phone numbers, keep everything else")
+          ZStream.fromResource(
+            s"assets-test/CustomerBookFileAiExtractFromImageGoldenSpec/${customerBookFileExtractFileName.value}"
+          )
 
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
+        val customerBookFileAiExtractPostResponseGolden =
+          loadCustomerBookFileAiExtractPostResponseGolden(customerBookFileExtractFileName.value, None)
+
+        val customerBookFileServiceWithConfig = buildCustomerBookFileServiceWithConfig
+
+        val customerBookFileAiExtractPostResponse = customerBookFileServiceWithConfig.customerBookFileService
           .aiExtract(
             organizationID,
             customerBookFileExtractFileName,
-            Some(customerBookFileProcessingMessage),
+            None,
             customerBookFileExtractByteStream,
           )
           .zioValue
 
         info(
-          s"${customerBookFileExtractFileName.value} response:\n${writeToString(customerBookFileAiExtractPostResponse, WriterConfig.withIndentionStep(JsonIndentionStep))}"
+          GoldenPerformance.renderReport(
+            customerBookFileExtractFileName.value,
+            customerBookFileServiceWithConfig.aiClientDataExtractionConfig.imageModel,
+            GoldenPerformance.measure(CustomerBookFileAiExtractPostResponsePerformance)(
+              customerBookFileAiExtractPostResponseGolden,
+              customerBookFileAiExtractPostResponse,
+            ),
+          )
         )
       }
 
-      "extract customer candidates from contact-book-image-test-14.jpeg with irrelevant content" in {
+      "report how closely the customer candidates extracted from image-2.png match the golden" in {
         assume(
           apiKey.nonEmpty,
           "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
         )
 
-        val organizationID                  = arbitrarySample[OrganizationID]
-        val customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image-test-14.jpeg")
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName.assume("image-2.png")
         val customerBookFileExtractByteStream =
-          ZStream.fromResource(s"assets/${customerBookFileExtractFileName.value}")
+          ZStream.fromResource(
+            s"assets-test/CustomerBookFileAiExtractFromImageGoldenSpec/${customerBookFileExtractFileName.value}"
+          )
 
-        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
-          .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
+        val customerBookFileAiExtractPostResponseGolden =
+          loadCustomerBookFileAiExtractPostResponseGolden(customerBookFileExtractFileName.value, None)
+
+        val customerBookFileServiceWithConfig = buildCustomerBookFileServiceWithConfig
+
+        val customerBookFileAiExtractPostResponse = customerBookFileServiceWithConfig.customerBookFileService
+          .aiExtract(
+            organizationID,
+            customerBookFileExtractFileName,
+            None,
+            customerBookFileExtractByteStream,
+          )
           .zioValue
 
         info(
-          s"${customerBookFileExtractFileName.value} response:\n${writeToString(customerBookFileAiExtractPostResponse, WriterConfig.withIndentionStep(JsonIndentionStep))}"
+          GoldenPerformance.renderReport(
+            customerBookFileExtractFileName.value,
+            customerBookFileServiceWithConfig.aiClientDataExtractionConfig.imageModel,
+            GoldenPerformance.measure(CustomerBookFileAiExtractPostResponsePerformance)(
+              customerBookFileAiExtractPostResponseGolden,
+              customerBookFileAiExtractPostResponse,
+            ),
+          )
+        )
+      }
+
+      "report how closely the customer candidates extracted from image-3.png match the golden" in {
+        assume(
+          apiKey.nonEmpty,
+          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+        )
+
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName.assume("image-3.png")
+        val customerBookFileExtractByteStream =
+          ZStream.fromResource(
+            s"assets-test/CustomerBookFileAiExtractFromImageGoldenSpec/${customerBookFileExtractFileName.value}"
+          )
+
+        val customerBookFileAiExtractPostResponseGolden =
+          loadCustomerBookFileAiExtractPostResponseGolden(customerBookFileExtractFileName.value, None)
+
+        val customerBookFileServiceWithConfig = buildCustomerBookFileServiceWithConfig
+
+        val customerBookFileAiExtractPostResponse = customerBookFileServiceWithConfig.customerBookFileService
+          .aiExtract(
+            organizationID,
+            customerBookFileExtractFileName,
+            None,
+            customerBookFileExtractByteStream,
+          )
+          .zioValue
+
+        info(
+          GoldenPerformance.renderReport(
+            customerBookFileExtractFileName.value,
+            customerBookFileServiceWithConfig.aiClientDataExtractionConfig.imageModel,
+            GoldenPerformance.measure(CustomerBookFileAiExtractPostResponsePerformance)(
+              customerBookFileAiExtractPostResponseGolden,
+              customerBookFileAiExtractPostResponse,
+            ),
+          )
+        )
+      }
+
+      "report how closely the customer candidates extracted from image-4.png match the golden" in {
+        assume(
+          apiKey.nonEmpty,
+          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+        )
+
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName.assume("image-4.png")
+        val customerBookFileExtractByteStream =
+          ZStream.fromResource(
+            s"assets-test/CustomerBookFileAiExtractFromImageGoldenSpec/${customerBookFileExtractFileName.value}"
+          )
+
+        val customerBookFileAiExtractPostResponseGolden =
+          loadCustomerBookFileAiExtractPostResponseGolden(customerBookFileExtractFileName.value, None)
+
+        val customerBookFileServiceWithConfig = buildCustomerBookFileServiceWithConfig
+
+        val customerBookFileAiExtractPostResponse = customerBookFileServiceWithConfig.customerBookFileService
+          .aiExtract(
+            organizationID,
+            customerBookFileExtractFileName,
+            None,
+            customerBookFileExtractByteStream,
+          )
+          .zioValue
+
+        info(
+          GoldenPerformance.renderReport(
+            customerBookFileExtractFileName.value,
+            customerBookFileServiceWithConfig.aiClientDataExtractionConfig.imageModel,
+            GoldenPerformance.measure(CustomerBookFileAiExtractPostResponsePerformance)(
+              customerBookFileAiExtractPostResponseGolden,
+              customerBookFileAiExtractPostResponse,
+            ),
+          )
+        )
+      }
+
+      "report how closely the customer candidates extracted from image-5.png match the golden" in {
+        assume(
+          apiKey.nonEmpty,
+          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+        )
+
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName.assume("image-5.png")
+        val customerBookFileExtractByteStream =
+          ZStream.fromResource(
+            s"assets-test/CustomerBookFileAiExtractFromImageGoldenSpec/${customerBookFileExtractFileName.value}"
+          )
+
+        val customerBookFileAiExtractPostResponseGolden =
+          loadCustomerBookFileAiExtractPostResponseGolden(customerBookFileExtractFileName.value, None)
+
+        val customerBookFileServiceWithConfig = buildCustomerBookFileServiceWithConfig
+
+        val customerBookFileAiExtractPostResponse = customerBookFileServiceWithConfig.customerBookFileService
+          .aiExtract(
+            organizationID,
+            customerBookFileExtractFileName,
+            None,
+            customerBookFileExtractByteStream,
+          )
+          .zioValue
+
+        info(
+          GoldenPerformance.renderReport(
+            customerBookFileExtractFileName.value,
+            customerBookFileServiceWithConfig.aiClientDataExtractionConfig.imageModel,
+            GoldenPerformance.measure(CustomerBookFileAiExtractPostResponsePerformance)(
+              customerBookFileAiExtractPostResponseGolden,
+              customerBookFileAiExtractPostResponse,
+            ),
+          )
+        )
+      }
+
+      "report how closely the customer candidates extracted from image-6.png match the golden" in {
+        assume(
+          apiKey.nonEmpty,
+          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+        )
+
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName.assume("image-6.png")
+        val customerBookFileExtractByteStream =
+          ZStream.fromResource(
+            s"assets-test/CustomerBookFileAiExtractFromImageGoldenSpec/${customerBookFileExtractFileName.value}"
+          )
+
+        val customerBookFileAiExtractPostResponseGolden =
+          loadCustomerBookFileAiExtractPostResponseGolden(customerBookFileExtractFileName.value, None)
+
+        val customerBookFileServiceWithConfig = buildCustomerBookFileServiceWithConfig
+
+        val customerBookFileAiExtractPostResponse = customerBookFileServiceWithConfig.customerBookFileService
+          .aiExtract(
+            organizationID,
+            customerBookFileExtractFileName,
+            None,
+            customerBookFileExtractByteStream,
+          )
+          .zioValue
+
+        info(
+          GoldenPerformance.renderReport(
+            customerBookFileExtractFileName.value,
+            customerBookFileServiceWithConfig.aiClientDataExtractionConfig.imageModel,
+            GoldenPerformance.measure(CustomerBookFileAiExtractPostResponsePerformance)(
+              customerBookFileAiExtractPostResponseGolden,
+              customerBookFileAiExtractPostResponse,
+            ),
+          )
+        )
+      }
+
+      "report how closely the customer candidates extracted from image-7.png match the golden" in {
+        assume(
+          apiKey.nonEmpty,
+          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+        )
+
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName.assume("image-7.png")
+        val customerBookFileExtractByteStream =
+          ZStream.fromResource(
+            s"assets-test/CustomerBookFileAiExtractFromImageGoldenSpec/${customerBookFileExtractFileName.value}"
+          )
+
+        val customerBookFileAiExtractPostResponseGolden =
+          loadCustomerBookFileAiExtractPostResponseGolden(customerBookFileExtractFileName.value, None)
+
+        val customerBookFileServiceWithConfig = buildCustomerBookFileServiceWithConfig
+
+        val customerBookFileAiExtractPostResponse = customerBookFileServiceWithConfig.customerBookFileService
+          .aiExtract(
+            organizationID,
+            customerBookFileExtractFileName,
+            None,
+            customerBookFileExtractByteStream,
+          )
+          .zioValue
+
+        info(
+          GoldenPerformance.renderReport(
+            customerBookFileExtractFileName.value,
+            customerBookFileServiceWithConfig.aiClientDataExtractionConfig.imageModel,
+            GoldenPerformance.measure(CustomerBookFileAiExtractPostResponsePerformance)(
+              customerBookFileAiExtractPostResponseGolden,
+              customerBookFileAiExtractPostResponse,
+            ),
+          )
+        )
+      }
+
+      "report how closely the customer candidates extracted from image-8.png match the golden" in {
+        assume(
+          apiKey.nonEmpty,
+          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+        )
+
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName.assume("image-8.png")
+        val customerBookFileExtractByteStream =
+          ZStream.fromResource(
+            s"assets-test/CustomerBookFileAiExtractFromImageGoldenSpec/${customerBookFileExtractFileName.value}"
+          )
+
+        val customerBookFileAiExtractPostResponseGolden =
+          loadCustomerBookFileAiExtractPostResponseGolden(customerBookFileExtractFileName.value, None)
+
+        val customerBookFileServiceWithConfig = buildCustomerBookFileServiceWithConfig
+
+        val customerBookFileAiExtractPostResponse = customerBookFileServiceWithConfig.customerBookFileService
+          .aiExtract(
+            organizationID,
+            customerBookFileExtractFileName,
+            None,
+            customerBookFileExtractByteStream,
+          )
+          .zioValue
+
+        info(
+          GoldenPerformance.renderReport(
+            customerBookFileExtractFileName.value,
+            customerBookFileServiceWithConfig.aiClientDataExtractionConfig.imageModel,
+            GoldenPerformance.measure(CustomerBookFileAiExtractPostResponsePerformance)(
+              customerBookFileAiExtractPostResponseGolden,
+              customerBookFileAiExtractPostResponse,
+            ),
+          )
+        )
+      }
+
+      "report how closely the customer candidates extracted from image-9.png match the golden" in {
+        assume(
+          apiKey.nonEmpty,
+          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+        )
+
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName.assume("image-9.png")
+        val customerBookFileExtractByteStream =
+          ZStream.fromResource(
+            s"assets-test/CustomerBookFileAiExtractFromImageGoldenSpec/${customerBookFileExtractFileName.value}"
+          )
+
+        val customerBookFileAiExtractPostResponseGolden =
+          loadCustomerBookFileAiExtractPostResponseGolden(customerBookFileExtractFileName.value, None)
+
+        val customerBookFileServiceWithConfig = buildCustomerBookFileServiceWithConfig
+
+        val customerBookFileAiExtractPostResponse = customerBookFileServiceWithConfig.customerBookFileService
+          .aiExtract(
+            organizationID,
+            customerBookFileExtractFileName,
+            None,
+            customerBookFileExtractByteStream,
+          )
+          .zioValue
+
+        info(
+          GoldenPerformance.renderReport(
+            customerBookFileExtractFileName.value,
+            customerBookFileServiceWithConfig.aiClientDataExtractionConfig.imageModel,
+            GoldenPerformance.measure(CustomerBookFileAiExtractPostResponsePerformance)(
+              customerBookFileAiExtractPostResponseGolden,
+              customerBookFileAiExtractPostResponse,
+            ),
+          )
+        )
+      }
+
+      "report how closely the customer candidates extracted from image-10.png match the golden" in {
+        assume(
+          apiKey.nonEmpty,
+          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+        )
+
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName.assume("image-10.png")
+        val customerBookFileExtractByteStream =
+          ZStream.fromResource(
+            s"assets-test/CustomerBookFileAiExtractFromImageGoldenSpec/${customerBookFileExtractFileName.value}"
+          )
+
+        val customerBookFileAiExtractPostResponseGolden =
+          loadCustomerBookFileAiExtractPostResponseGolden(customerBookFileExtractFileName.value, None)
+
+        val customerBookFileServiceWithConfig = buildCustomerBookFileServiceWithConfig
+
+        val customerBookFileAiExtractPostResponse = customerBookFileServiceWithConfig.customerBookFileService
+          .aiExtract(
+            organizationID,
+            customerBookFileExtractFileName,
+            None,
+            customerBookFileExtractByteStream,
+          )
+          .zioValue
+
+        info(
+          GoldenPerformance.renderReport(
+            customerBookFileExtractFileName.value,
+            customerBookFileServiceWithConfig.aiClientDataExtractionConfig.imageModel,
+            GoldenPerformance.measure(CustomerBookFileAiExtractPostResponsePerformance)(
+              customerBookFileAiExtractPostResponseGolden,
+              customerBookFileAiExtractPostResponse,
+            ),
+          )
+        )
+      }
+
+      "report how closely the customer candidates extracted again from image-1.png match the golden" in {
+        assume(
+          apiKey.nonEmpty,
+          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+        )
+
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName.assume("image-1.png")
+        val customerBookFileExtractByteStream =
+          ZStream.fromResource(
+            s"assets-test/CustomerBookFileAiExtractFromImageGoldenSpec/${customerBookFileExtractFileName.value}"
+          )
+
+        val customerBookFileAiExtractPostResponseGolden =
+          loadCustomerBookFileAiExtractPostResponseGolden(
+            customerBookFileExtractFileName.value,
+            Some("omit-phone-numbers"),
+          )
+
+        val customerBookFileServiceWithConfig = buildCustomerBookFileServiceWithConfig
+
+        val customerBookFileAiExtractPostResponse = customerBookFileServiceWithConfig.customerBookFileService
+          .aiExtract(
+            organizationID,
+            customerBookFileExtractFileName,
+            None,
+            customerBookFileExtractByteStream,
+          )
+          .zioValue
+
+        info(
+          GoldenPerformance.renderReport(
+            customerBookFileExtractFileName.value,
+            customerBookFileServiceWithConfig.aiClientDataExtractionConfig.imageModel,
+            GoldenPerformance.measure(CustomerBookFileAiExtractPostResponsePerformance)(
+              customerBookFileAiExtractPostResponseGolden,
+              customerBookFileAiExtractPostResponse,
+            ),
+          )
         )
       }
     }

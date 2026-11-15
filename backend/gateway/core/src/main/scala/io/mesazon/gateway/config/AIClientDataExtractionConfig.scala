@@ -15,6 +15,8 @@ final case class AIClientDataExtractionConfig(
     csvBatchParallelism: Int,
     imageModel: String,
     imageReasoningEffort: String,
+    pdfModel: String,
+    pdfReasoningEffort: String,
     csvModel: String,
     csvReasoningEffort: String,
     noteCompactionModel: String,

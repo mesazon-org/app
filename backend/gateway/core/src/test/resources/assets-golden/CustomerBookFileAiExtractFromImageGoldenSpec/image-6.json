@@ -1,0 +1,148 @@
+{
+  "individualCandidates": [
+    {
+      "fullName": "Δημήτρης Λάμπρου",
+      "emails": [
+        {
+          "email": "d.lamprou@mail.gr",
+          "isDefault": true
+        }
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "6973112305",
+            "phoneCountryCode": "+30"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Αγ. Νικολάου 12",
+            "city": "Πάτρα",
+            "postalCode": "26221",
+            "country": "Ελλάδα"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/phoneNumbers/0/phoneNumber/phoneCountryCode"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "fullName": "Εύα Στυλιανού",
+      "emails": [
+        {
+          "email": "eva.stylianou@gmail.com",
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Κύπρου 5",
+            "city": "Αθήνα",
+            "postalCode": "11527",
+            "country": "Ελλάδα"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "fullName": "Νίκος Παπαδόπουλος",
+      "needsAttention": false,
+      "extractionNotes": [
+        "Email address is incomplete and was left out",
+        "Empty address was left out"
+      ]
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "Κρητικά Τρόφιμα ΕΠΕ",
+      "emails": [
+        {
+          "email": "anna@kritika-trofima.gr",
+          "isDefault": true
+        }
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "2810334455",
+            "phoneCountryCode": "+30"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "ΒΙ.ΠΕ. Ηρακλείου Οδός Γ΄",
+            "city": "Ηράκλειο",
+            "postalCode": "71601",
+            "country": "Ελλάδα"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Άννα Πετράκη"
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/phoneNumbers/0/phoneNumber/phoneCountryCode"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "businessName": "Τεχνική Δομή ΑΕ",
+      "emails": [
+        {
+          "email": "k.maris@texniki-domi.gr",
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Λεωφ. Μεσογείων 278",
+            "city": "Χαλάνδρι",
+            "postalCode": "15232",
+            "country": "Ελλάδα"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Κώστας Μαρής"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Phone number could not be read"
+      ]
+    }
+  ],
+  "infoNotes": [
+    "Processed 5 of 5 entries"
+  ],
+  "extractionNotes": [
+    "Left out title \"Πελάτες\", with date beside it",
+    "Left out date \"12/03/2025\", beside the title",
+    "Left out headers \"Όνομα/Επωνυμία\" through \"Χώρα\", customer rows below",
+    "Phone country codes taken from the Greek addresses"
+  ]
+}

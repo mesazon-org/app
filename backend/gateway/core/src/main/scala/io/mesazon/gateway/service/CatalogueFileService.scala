@@ -264,7 +264,7 @@ object CatalogueFileService {
         catalogueFileScanOutput <- fileScanner.scan(
           catalogueFileExtractByteStream,
           catalogueFileExtractFileName.value,
-          SupportedMediaType.extractData,
+          SupportedMediaType.aiExtractData,
           catalogueFileServiceConfig.extractCatalogueItemsFileBytesMax,
         )
         catalogueFileAIExtract <- catalogueFileScanOutput.supportedMediaType match {
@@ -273,6 +273,13 @@ object CatalogueFileService {
               catalogueFileScanOutput.fileScannedPath,
               supportedMediaType,
               AIInstructions.extractCatalogueItemsFromImageInstructions,
+              catalogueFileProcessingMessageOpt.map(_.value),
+            )
+          case supportedMediaType if SupportedMediaType.pdfs.contains(supportedMediaType) =>
+            aiClientDataExtraction.extractFromPdf[CatalogueFileAIExtract](
+              catalogueFileScanOutput.fileScannedPath,
+              catalogueFileExtractFileName.value,
+              AIInstructions.extractCatalogueItemsFromPdfInstructions,
               catalogueFileProcessingMessageOpt.map(_.value),
             )
           case supportedMediaType if SupportedMediaType.spreadsheets.contains(supportedMediaType) =>

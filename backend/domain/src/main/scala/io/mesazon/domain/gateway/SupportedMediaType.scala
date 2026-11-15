@@ -7,6 +7,7 @@ enum SupportedMediaType(val extensions: NonEmptySet[String], val mimes: NonEmpty
   case PNG  extends SupportedMediaType(NonEmptySet.one("png"), NonEmptySet.one("image/png"))
   case JPEG extends SupportedMediaType(NonEmptySet.of("jpg", "jpeg"), NonEmptySet.one("image/jpeg"))
   case WEBP extends SupportedMediaType(NonEmptySet.one("webp"), NonEmptySet.one("image/webp"))
+  case PDF  extends SupportedMediaType(NonEmptySet.one("pdf"), NonEmptySet.one("application/pdf"))
   case CSV  extends SupportedMediaType(NonEmptySet.one("csv"), NonEmptySet.of("text/csv", "text/plain"))
   case XLS  extends SupportedMediaType(NonEmptySet.one("xls"), NonEmptySet.one("application/vnd.ms-excel"))
   case XLSX
@@ -17,9 +18,10 @@ enum SupportedMediaType(val extensions: NonEmptySet[String], val mimes: NonEmpty
 }
 
 object SupportedMediaType {
-  val images: List[SupportedMediaType]       = List(PNG, JPEG, WEBP)
-  val spreadsheets: List[SupportedMediaType] = List(CSV, XLS, XLSX)
-  val extractData: List[SupportedMediaType]  = images ++ spreadsheets
-  val excel: List[SupportedMediaType]        = List(XLS, XLSX)
-  val csv: List[SupportedMediaType]          = List(CSV)
+  lazy val images: List[SupportedMediaType]        = List(PNG, JPEG, WEBP)
+  lazy val pdfs: List[SupportedMediaType]          = List(PDF)
+  lazy val excel: List[SupportedMediaType]         = List(XLS, XLSX)
+  lazy val csv: List[SupportedMediaType]           = List(CSV)
+  lazy val spreadsheets: List[SupportedMediaType]  = csv ++ excel
+  lazy val aiExtractData: List[SupportedMediaType] = images ++ pdfs ++ spreadsheets
 }

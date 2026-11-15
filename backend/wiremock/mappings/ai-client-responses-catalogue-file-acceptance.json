@@ -1,0 +1,22 @@
+{
+  "priority": 2,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "contains": "Return exactly one CatalogueFileAIExtract JSON object"
+      },
+      {
+        "contains": "json_schema"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"resp_catalogue_file_acceptance\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_catalogue_file_acceptance\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"entriesIdentified\\\":1,\\\"entriesProcessed\\\":1,\\\"candidates\\\":[{\\\"name\\\":\\\"Bolt\\\",\\\"description\\\":null,\\\"variants\\\":[{\\\"sku\\\":\\\"BOLT-1\\\",\\\"label\\\":null,\\\"description\\\":null,\\\"attributes\\\":[{\\\"name\\\":\\\"Color\\\",\\\"value\\\":\\\"Silver\\\"}],\\\"price\\\":null,\\\"sellingUnit\\\":{\\\"quantity\\\":{\\\"value\\\":1,\\\"unit\\\":\\\"Piece\\\"},\\\"perUnit\\\":null,\\\"unitSize\\\":null},\\\"sellingUnitInferred\\\":false,\\\"extractionNotes\\\":[]}],\\\"extractionNotes\\\":[]}],\\\"emptyEntryRows\\\":[],\\\"unidentifiedEntryRows\\\":[],\\\"extractionNotes\\\":[]}\",\"annotations\":[]}]}]}"
+  }
+}

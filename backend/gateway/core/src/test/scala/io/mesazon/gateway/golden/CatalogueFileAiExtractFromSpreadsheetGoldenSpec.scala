@@ -1,9 +1,10 @@
 package io.mesazon.gateway.golden
 
-import com.github.plokhotnyuk.jsoniter_scala.core.{writeToString, WriterConfig}
+import com.github.plokhotnyuk.jsoniter_scala.core.readFromString
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.*
 import io.mesazon.gateway.config.{AIClientDataExtractionConfig, CatalogueFileServiceConfig}
+import io.mesazon.gateway.golden.performance.{CatalogueFileAiExtractPostResponsePerformance, GoldenPerformance}
 import io.mesazon.gateway.json.tapir.catalogueFileAiExtractPostResponseCodec
 import io.mesazon.gateway.repository.CatalogueRepository
 import io.mesazon.gateway.service.{CatalogueFileService, ServiceTask}
@@ -12,7 +13,14 @@ import io.mesazon.testkit.base.{GatewayArbitraries, SttpTestBackend, ZWordSpecBa
 import zio.*
 import zio.stream.ZStream
 
+import java.nio.file.*
+
 class CatalogueFileAiExtractFromSpreadsheetGoldenSpec extends ZWordSpecBase, GatewayArbitraries {
+
+  private type CatalogueFileServiceWithConfig = (
+      catalogueFileService: CatalogueFileService[ServiceTask],
+      aiClientDataExtractionConfig: AIClientDataExtractionConfig,
+  )
 
   private val apiKey =
     sys.env.getOrElse(
@@ -20,16 +28,27 @@ class CatalogueFileAiExtractFromSpreadsheetGoldenSpec extends ZWordSpecBase, Gat
       "",
     )
 
-  private val catalogueFileExtractFileNamesSpreadsheet = List(
-    "catalogue-spreadsheet-test-1.csv",
-    "catalogue-spreadsheet-test-2.xls",
-    "catalogue-spreadsheet-test-3.xlsx",
-  )
+  private val goldenDirectory =
+    Paths.get("src/test/resources/assets-golden/CatalogueFileAiExtractFromSpreadsheetGoldenSpec")
 
-  private inline val JsonIndentionStep = 2
+  private def loadCatalogueFileAiExtractPostResponseGolden(
+      catalogueFileExtractAssetFileName: String
+  ): CatalogueFileAiExtractPostResponse = {
+    val golden = goldenDirectory.resolve(
+      s"${catalogueFileExtractAssetFileName.take(catalogueFileExtractAssetFileName.lastIndexOf('.'))}.json"
+    )
 
-  private def buildCatalogueFileService: CatalogueFileService[ServiceTask] = ZIO
-    .service[CatalogueFileService[ServiceTask]]
+    if (!Files.exists(golden)) fail(s"Golden file is missing: ${golden.toAbsolutePath}")
+    else readFromString[CatalogueFileAiExtractPostResponse](Files.readString(golden))
+  }
+
+  private def buildCatalogueFileServiceWithConfig: CatalogueFileServiceWithConfig = (for {
+    catalogueFileService         <- ZIO.service[CatalogueFileService[ServiceTask]]
+    aiClientDataExtractionConfig <- ZIO.service[AIClientDataExtractionConfig]
+  } yield (
+    catalogueFileService = catalogueFileService,
+    aiClientDataExtractionConfig = aiClientDataExtractionConfig,
+  ): CatalogueFileServiceWithConfig)
     .provide(
       CatalogueFileService.local,
       ZLayer.succeed(AppName("gateway-api")),
@@ -61,32 +80,103 @@ class CatalogueFileAiExtractFromSpreadsheetGoldenSpec extends ZWordSpecBase, Gat
 
   "CatalogueFileService" when {
     "aiExtract" should {
-      catalogueFileExtractFileNamesSpreadsheet.foreach { catalogueFileExtractFileNameSpreadsheet =>
-        s"extract catalogue candidates from $catalogueFileExtractFileNameSpreadsheet" in {
-          assume(
-            apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+      "report how closely the catalogue candidates extracted from spreadsheet-1.csv match the golden" in {
+        assume(
+          apiKey.nonEmpty,
+          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+        )
+
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName.assume("spreadsheet-1.csv")
+        val catalogueFileExtractByteStream = ZStream.fromResource(
+          s"assets-test/CatalogueFileAiExtractFromSpreadsheetGoldenSpec/${catalogueFileExtractFileName.value}"
+        )
+
+        val catalogueFileAiExtractPostResponseGolden =
+          loadCatalogueFileAiExtractPostResponseGolden(catalogueFileExtractFileName.value)
+
+        val catalogueFileServiceWithConfig = buildCatalogueFileServiceWithConfig
+
+        val catalogueFileAiExtractPostResponse = catalogueFileServiceWithConfig.catalogueFileService
+          .aiExtract(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+
+        info(
+          GoldenPerformance.renderReport(
+            catalogueFileExtractFileName.value,
+            catalogueFileServiceWithConfig.aiClientDataExtractionConfig.csvModel,
+            GoldenPerformance.measure(CatalogueFileAiExtractPostResponsePerformance)(
+              catalogueFileAiExtractPostResponseGolden,
+              catalogueFileAiExtractPostResponse,
+            ),
           )
+        )
+      }
 
-          val organizationID               = arbitrarySample[OrganizationID]
-          val catalogueFileExtractFileName =
-            CatalogueFileExtractFileName.assume(catalogueFileExtractFileNameSpreadsheet)
-          val catalogueFileExtractByteStream =
-            ZStream.fromResource(s"assets/${catalogueFileExtractFileName.value}")
+      "report how closely the catalogue candidates extracted from spreadsheet-2.xls match the golden" in {
+        assume(
+          apiKey.nonEmpty,
+          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+        )
 
-          val catalogueFileAiExtractPostResponse = buildCatalogueFileService
-            .aiExtract(
-              organizationID,
-              catalogueFileExtractFileName,
-              None,
-              catalogueFileExtractByteStream,
-            )
-            .zioValue
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName.assume("spreadsheet-2.xls")
+        val catalogueFileExtractByteStream = ZStream.fromResource(
+          s"assets-test/CatalogueFileAiExtractFromSpreadsheetGoldenSpec/${catalogueFileExtractFileName.value}"
+        )
 
-          info(
-            s"${catalogueFileExtractFileName.value} response:\n${writeToString(catalogueFileAiExtractPostResponse, WriterConfig.withIndentionStep(JsonIndentionStep))}"
+        val catalogueFileAiExtractPostResponseGolden =
+          loadCatalogueFileAiExtractPostResponseGolden(catalogueFileExtractFileName.value)
+
+        val catalogueFileServiceWithConfig = buildCatalogueFileServiceWithConfig
+
+        val catalogueFileAiExtractPostResponse = catalogueFileServiceWithConfig.catalogueFileService
+          .aiExtract(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+
+        info(
+          GoldenPerformance.renderReport(
+            catalogueFileExtractFileName.value,
+            catalogueFileServiceWithConfig.aiClientDataExtractionConfig.csvModel,
+            GoldenPerformance.measure(CatalogueFileAiExtractPostResponsePerformance)(
+              catalogueFileAiExtractPostResponseGolden,
+              catalogueFileAiExtractPostResponse,
+            ),
           )
-        }
+        )
+      }
+
+      "report how closely the catalogue candidates extracted from spreadsheet-3.xlsx match the golden" in {
+        assume(
+          apiKey.nonEmpty,
+          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+        )
+
+        val organizationID                 = arbitrarySample[OrganizationID]
+        val catalogueFileExtractFileName   = CatalogueFileExtractFileName.assume("spreadsheet-3.xlsx")
+        val catalogueFileExtractByteStream = ZStream.fromResource(
+          s"assets-test/CatalogueFileAiExtractFromSpreadsheetGoldenSpec/${catalogueFileExtractFileName.value}"
+        )
+
+        val catalogueFileAiExtractPostResponseGolden =
+          loadCatalogueFileAiExtractPostResponseGolden(catalogueFileExtractFileName.value)
+
+        val catalogueFileServiceWithConfig = buildCatalogueFileServiceWithConfig
+
+        val catalogueFileAiExtractPostResponse = catalogueFileServiceWithConfig.catalogueFileService
+          .aiExtract(organizationID, catalogueFileExtractFileName, None, catalogueFileExtractByteStream)
+          .zioValue
+
+        info(
+          GoldenPerformance.renderReport(
+            catalogueFileExtractFileName.value,
+            catalogueFileServiceWithConfig.aiClientDataExtractionConfig.csvModel,
+            GoldenPerformance.measure(CatalogueFileAiExtractPostResponsePerformance)(
+              catalogueFileAiExtractPostResponseGolden,
+              catalogueFileAiExtractPostResponse,
+            ),
+          )
+        )
       }
     }
   }

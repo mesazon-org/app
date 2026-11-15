@@ -1,0 +1,7 @@
+{
+  "notes": [
+    "The Price column was not used",
+    "The first row looked like data and was skipped",
+    "Prices are in euros, as the header says"
+  ]
+}

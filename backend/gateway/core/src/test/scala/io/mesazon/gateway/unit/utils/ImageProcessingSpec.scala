@@ -10,7 +10,7 @@ import java.nio.file.{Files, Paths}
 
 class ImageProcessingSpec extends ZWordSpecBase {
 
-  private val goldenDir = Paths.get("src/test/resources/golden-assets")
+  private val goldenDir = Paths.get("src/test/resources/assets-golden/ImageProcessingSpec")
 
   private def createOrGetGolden(fileName: String, actual: Chunk[Byte]): Chunk[Byte] = {
     val golden = goldenDir.resolve(fileName)
@@ -28,7 +28,7 @@ class ImageProcessingSpec extends ZWordSpecBase {
           .provide(ImageProcessing.live)
           .zioValue
 
-        val logoOriginalByteStream = ZStream.fromResource("assets/organization-image-test-1.jpeg")
+        val logoOriginalByteStream = ZStream.fromResource("assets-test/ImageProcessingSpec/image-1.jpeg")
 
         ZIO
           .scoped(for {
@@ -52,7 +52,7 @@ class ImageProcessingSpec extends ZWordSpecBase {
           .provide(ImageProcessing.live)
           .zioValue
 
-        val logoOriginalByteStream = ZStream.fromResource("assets/organization-image-test-2.webp")
+        val logoOriginalByteStream = ZStream.fromResource("assets-test/ImageProcessingSpec/image-2.webp")
 
         ZIO
           .scoped(for {
@@ -76,7 +76,7 @@ class ImageProcessingSpec extends ZWordSpecBase {
           .provide(ImageProcessing.live)
           .zioValue
 
-        val logoOriginalByteStream = ZStream.fromResource("assets/organization-image-test-3.png")
+        val logoOriginalByteStream = ZStream.fromResource("assets-test/ImageProcessingSpec/image-3.png")
 
         ZIO
           .scoped(for {
@@ -103,7 +103,7 @@ class ImageProcessingSpec extends ZWordSpecBase {
         val result = ZIO
           .scoped(
             imageProcessing.normalize(
-              FileByteStreamScanned(ZStream.fromResource("assets/organization-malformed-test-1.png")),
+              FileByteStreamScanned(ZStream.fromResource("assets-test/ImageProcessingSpec/malformed-1.png")),
               SupportedMediaType.images,
             )
           )

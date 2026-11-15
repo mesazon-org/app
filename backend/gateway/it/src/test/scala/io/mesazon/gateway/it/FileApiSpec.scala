@@ -73,9 +73,11 @@ class FileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
+            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
             organizationID                        = organizationDetailsRow.organizationID
-            logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+            logoBytes <- ZStream
+              .fromResource(s"assets-test/FileApiSpec/${organizationLogoImageOriginalFileName.value}")
+              .runCollect
 
             uploadOrganizationLogoResponse <- gatewayClient.uploadOrganizationLogoPost[smithy.InternalServerError](
               Some(organizationID),
@@ -146,7 +148,7 @@ class FileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           organizationLogoImageOriginalFileNameFirst  = ImageOriginalFileName.assume("organization-logo-first.jpeg")
           organizationLogoImageOriginalFileNameSecond = ImageOriginalFileName.assume("organization-logo-second.jpeg")
           organizationID                              = organizationDetailsRow.organizationID
-          logoBytes <- ZStream.fromResource("assets/organization-image-it-1.jpeg").runCollect
+          logoBytes <- ZStream.fromResource("assets-test/FileApiSpec/image-1.jpeg").runCollect
 
           uploadOrganizationLogoResponseFirst <- gatewayClient.uploadOrganizationLogoPost[smithy.InternalServerError](
             Some(organizationID),
@@ -225,7 +227,7 @@ class FileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          logoBytes <- ZStream.fromResource("assets/organization-image-it-1.jpeg").runCollect
+          logoBytes <- ZStream.fromResource("assets-test/FileApiSpec/image-1.jpeg").runCollect
 
           uploadOrganizationLogoResponse <- gatewayClient.uploadOrganizationLogoPost[smithy.BadRequest](
             Some(organizationUserRow.organizationID),
@@ -276,9 +278,11 @@ class FileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-malformed-it-1.png")
+          organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("malformed-1.png")
           organizationID                        = organizationDetailsRow.organizationID
-          logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+          logoBytes <- ZStream
+            .fromResource(s"assets-test/FileApiSpec/${organizationLogoImageOriginalFileName.value}")
+            .runCollect
 
           uploadOrganizationLogoResponse <- gatewayClient.uploadOrganizationLogoPost[smithy.InternalServerError](
             Some(organizationID),
@@ -329,8 +333,10 @@ class FileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-          logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+          organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+          logoBytes <- ZStream
+            .fromResource(s"assets-test/FileApiSpec/${organizationLogoImageOriginalFileName.value}")
+            .runCollect
 
           responses <- ZIO.collectAllPar(
             List(
@@ -367,8 +373,10 @@ class FileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           _ <- postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
 
-          organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-          logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+          organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+          logoBytes <- ZStream
+            .fromResource(s"assets-test/FileApiSpec/${organizationLogoImageOriginalFileName.value}")
+            .runCollect
 
           responses <- ZIO.collectAllPar(
             List(
@@ -405,8 +413,10 @@ class FileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           _ <- postgresClient.executeQuery(organizationDetailsQueries.insert(organizationDetailsRow))
 
-          organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-          logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+          organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+          logoBytes <- ZStream
+            .fromResource(s"assets-test/FileApiSpec/${organizationLogoImageOriginalFileName.value}")
+            .runCollect
 
           responses <- ZIO.collectAllPar(
             List(
@@ -462,8 +472,10 @@ class FileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-            logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+            logoBytes <- ZStream
+              .fromResource(s"assets-test/FileApiSpec/${organizationLogoImageOriginalFileName.value}")
+              .runCollect
 
             responses <- ZIO.collectAllPar(
               List(
@@ -519,8 +531,10 @@ class FileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-            logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+            logoBytes <- ZStream
+              .fromResource(s"assets-test/FileApiSpec/${organizationLogoImageOriginalFileName.value}")
+              .runCollect
 
             responses <- ZIO.collectAllPar(
               List(
@@ -571,8 +585,10 @@ class FileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userID)
 
-            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-            logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+            logoBytes <- ZStream
+              .fromResource(s"assets-test/FileApiSpec/${organizationLogoImageOriginalFileName.value}")
+              .runCollect
 
             responses <- ZIO.collectAllPar(
               List(
@@ -617,8 +633,10 @@ class FileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
             accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("organization-image-it-1.jpeg")
-            logoBytes <- ZStream.fromResource(s"assets/${organizationLogoImageOriginalFileName.value}").runCollect
+            organizationLogoImageOriginalFileName = ImageOriginalFileName.assume("image-1.jpeg")
+            logoBytes <- ZStream
+              .fromResource(s"assets-test/FileApiSpec/${organizationLogoImageOriginalFileName.value}")
+              .runCollect
 
             responses <- ZIO.collectAllPar(
               List(
