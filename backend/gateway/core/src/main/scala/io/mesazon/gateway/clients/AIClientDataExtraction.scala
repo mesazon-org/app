@@ -9,13 +9,9 @@ import io.mesazon.gateway.utils.*
 import org.apache.commons.csv.*
 import sttp.ai.openai.OpenAI
 import sttp.ai.openai.OpenAIExceptions.OpenAIException
-import sttp.ai.openai.requests.completions.chat.ChatRequestBody.{
-  ChatBody,
-  ChatCompletionModel,
-  ReasoningEffort,
-  ResponseFormat,
-}
-import sttp.ai.openai.requests.completions.chat.message.*
+import sttp.ai.openai.requests.responses.ResponsesRequestBody.Input.{InputContentItem, InputMessage}
+import sttp.ai.openai.requests.responses.ResponsesRequestBody.{Format, ReasoningConfig, TextConfig}
+import sttp.ai.openai.requests.responses.{ResponsesModel, ResponsesRequestBody, ResponsesResponseBody}
 import sttp.client4.*
 import sttp.model.StatusCode
 import zio.*
@@ -32,6 +28,13 @@ trait AIClientDataExtraction {
   def extractFromImage[A](
       imageScannedPath: FileScannedPath,
       supportedMediaType: SupportedMediaType,
+      instructions: String,
+      processingMessageOpt: Option[String] = None,
+  )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
+
+  def extractFromPdf[A](
+      pdfScannedPath: FileScannedPath,
+      pdfFileNameDeclared: String,
       instructions: String,
       processingMessageOpt: Option[String] = None,
   )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A]
@@ -58,7 +61,11 @@ object AIClientDataExtraction {
 
     type CSVRecordWithIndex = (csvRecord: CSVRecord, index: Long)
 
-    private inline val dataRowNumberOffset = 1L
+    private inline val dataRowNumberOffset      = 1L
+    private inline val responseFormatName       = "ai_client_response"
+    private inline val inputMessageRoleUser     = "user"
+    private inline val inputImageDetailAuto     = "auto"
+    private inline val responsesStatusCompleted = "completed"
 
     private def isRetryableSendError(error: Throwable): Boolean = error match {
       case _: SttpClientException.ResponseHandlingException[?] => false
@@ -76,52 +83,89 @@ object AIClientDataExtraction {
       case _ => false
     }
 
-    private def responseFormat[A](using schema: OpenAIJsonSchema[A]): ResponseFormat.JsonSchema =
-      ResponseFormat.JsonSchema(
-        name = "ai_client_response",
-        strict = Some(true),
-        schema = Some(schema.schema),
-        description = None,
-      )
+    private def sendWithRetryPolicy[B](
+        request: Request[Either[OpenAIException, B]],
+        requestTimeout: Duration,
+    ): IO[ServiceError, B] =
+      request
+        .readTimeout(requestTimeout.toScala)
+        .send(backend)
+        .map(_.body)
+        .absolve
+        .retry(
+          Schedule.recurWhile[Throwable](isRetryableSendError) &&
+            Schedule.recurs(aiClientDataExtractionConfig.sendMaxRetries) &&
+            Schedule.exponential(aiClientDataExtractionConfig.sendRetryDelay)
+        )
+        .mapError(error =>
+          ServiceError.InternalServerError.UnexpectedError("Unable to send message to AI", Some(error))
+        )
 
     private def sendAndDecode[A](
         model: String,
         reasoningEffort: String,
         requestTimeout: Duration,
         instructions: String,
-        content: Content,
+        sourceInputContentItems: List[InputContentItem],
         processingMessageOpt: Option[String],
     )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
       for {
-        response <- openAI
-          .createChatCompletion(
-            ChatBody(
-              model = ChatCompletionModel.CustomChatCompletionModel(model),
-              reasoningEffort = Some(ReasoningEffort.CustomReasoningEffort(reasoningEffort)),
-              messages = Seq(
-                Message.System(instructions),
-                Message.User(content),
-              ) ++ processingMessageOpt.map(processingMessage => Message.User(Content.TextContent(processingMessage))),
-              responseFormat = Some(responseFormat),
+        response <- sendWithRetryPolicy(
+          openAI.createModelResponse(
+            ResponsesRequestBody(
+              model = Some(ResponsesModel.CustomResponsesModel(model)),
+              instructions = Some(instructions),
+              input = Some(
+                Right(
+                  List(
+                    InputMessage(content = sourceInputContentItems, role = inputMessageRoleUser, status = None)
+                  ) ++ processingMessageOpt.map(processingMessage =>
+                    InputMessage(
+                      content = List(InputContentItem.InputText(processingMessage)),
+                      role = inputMessageRoleUser,
+                      status = None,
+                    )
+                  )
+                )
+              ),
+              reasoning = Some(ReasoningConfig(effort = Some(reasoningEffort))),
+              store = Some(false),
+              text = Some(
+                TextConfig(
+                  format = Some(
+                    Format.JsonSchema(
+                      name = responseFormatName,
+                      strict = Some(true),
+                      schema = Some(summon[OpenAIJsonSchema[A]].schema),
+                      description = None,
+                    )
+                  )
+                )
+              ),
+            )
+          ),
+          requestTimeout,
+        )
+        outputText <- ZIO
+          .fromOption(
+            Option
+              .when(response.status == responsesStatusCompleted)(response.output)
+              .flatMap(_.collectFirst { case outputMessage: ResponsesResponseBody.OutputItem.Message =>
+                outputMessage
+              })
+              .flatMap(_.content.collectFirst { case outputText: ResponsesResponseBody.OutputContent.OutputText =>
+                outputText.text
+              })
+          )
+          .orElseFail(
+            ServiceError.InternalServerError.UnexpectedError(
+              s"Failed to parse AI response with status [${response.status}]: ${response.output.mkString("\n")}"
             )
           )
-          .readTimeout(requestTimeout.toScala)
-          .send(backend)
-          .map(_.body)
-          .absolve
-          .retry(
-            Schedule.recurWhile[Throwable](isRetryableSendError) &&
-              Schedule.recurs(aiClientDataExtractionConfig.sendMaxRetries) &&
-              Schedule.exponential(aiClientDataExtractionConfig.sendRetryDelay)
-          )
-          .mapError(error =>
-            ServiceError.InternalServerError.UnexpectedError("Unable to send message to AI", Some(error))
-          )
         result <- ZIO
-          .attempt(readFromString[A](response.choices.head.message.content))
+          .attempt(readFromString[A](outputText))
           .mapError(error =>
-            ServiceError.InternalServerError
-              .UnexpectedError(s"Failed to parse AI response ${response.choices.mkString("\n")}", Some(error))
+            ServiceError.InternalServerError.UnexpectedError(s"Failed to parse AI response $outputText", Some(error))
           )
       } yield result
 
@@ -138,11 +182,11 @@ object AIClientDataExtraction {
         aiClientDataExtractionConfig.imageReasoningEffort,
         aiClientDataExtractionConfig.requestTimeout,
         instructions,
-        Content.ArrayContent(
-          Seq(
-            Content.ContentPart.ImageUrl(
-              Content.ImageUrlDetails(url = s"data:$imageMime;base64,$imageBase64")
-            )
+        List(
+          InputContentItem.InputImage(
+            detail = inputImageDetailAuto,
+            fileId = None,
+            imageUrl = Some(s"data:$imageMime;base64,$imageBase64"),
           )
         ),
         processingMessageOpt,
@@ -189,6 +233,37 @@ object AIClientDataExtraction {
         )
         .flatMap(extractFromImageBytes[A](_, supportedMediaType, instructions, processingMessageOpt))
 
+    override def extractFromPdf[A](
+        pdfScannedPath: FileScannedPath,
+        pdfFileNameDeclared: String,
+        instructions: String,
+        processingMessageOpt: Option[String],
+    )(using OpenAIJsonSchema[A], JsonValueCodec[A]): IO[ServiceError, A] =
+      for {
+        pdfBytes <- ZIO
+          .attemptBlocking(Files.readAllBytes(pdfScannedPath.value))
+          .mapError(error =>
+            ServiceError.InternalServerError.UnexpectedError("Failed to read PDF for AI extraction", Some(error))
+          )
+        pdfBase64 = Base64.getEncoder.encodeToString(pdfBytes)
+        pdfMime   = SupportedMediaType.PDF.mimes.head
+        result <- sendAndDecode[A](
+          aiClientDataExtractionConfig.pdfModel,
+          aiClientDataExtractionConfig.pdfReasoningEffort,
+          aiClientDataExtractionConfig.requestTimeout,
+          instructions,
+          List(
+            InputContentItem.InputFile(
+              fileData = Some(s"data:$pdfMime;base64,$pdfBase64"),
+              fileId = None,
+              fileUrl = None,
+              filename = Some(pdfFileNameDeclared),
+            )
+          ),
+          processingMessageOpt,
+        )
+      } yield result
+
     override def extractFromCsv[A](
         csvRecordStream: ZStream[Scope, ServiceError, CSVRecord],
         instructions: String,
@@ -212,7 +287,7 @@ object AIClientDataExtraction {
                   aiClientDataExtractionConfig.csvReasoningEffort,
                   aiClientDataExtractionConfig.requestTimeout,
                   instructions,
-                  Content.TextContent(csvRecordsBatchText),
+                  List(InputContentItem.InputText(csvRecordsBatchText)),
                   processingMessageOpt,
                 )
               )
@@ -226,7 +301,7 @@ object AIClientDataExtraction {
         aiClientDataExtractionConfig.noteCompactionReasoningEffort,
         aiClientDataExtractionConfig.noteCompactionRequestTimeout,
         instructions,
-        Content.TextContent(writeToString(notes)(using ai.noteCompactionNotesCodec)),
+        List(InputContentItem.InputText(writeToString(notes)(using ai.noteCompactionNotesCodec))),
         None,
       )
 

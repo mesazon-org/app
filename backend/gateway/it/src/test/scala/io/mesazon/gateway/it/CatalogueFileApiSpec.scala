@@ -1354,6 +1354,90 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
         } yield ()
       }
 
+      "successfully extract item candidates from a PDF without storing data" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleAllowed,
+          )
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-pdf-it-1.pdf")
+          catalogueFileExtractFileBytes <- ZStream
+            .fromResource(s"assets/${catalogueFileExtractFileName.value}")
+            .runCollect
+          catalogueFileAiExtractPostResponseExpected = CatalogueFileAiExtractPostResponse(
+            candidates = List(
+              CatalogueItemCandidate(
+                name = Some(CatalogueItemName.assume("Hinge")),
+                description = None,
+                variants = List(
+                  CatalogueItemVariantCandidate(
+                    sku = Some(CatalogueItemVariantSku.assume("HINGE-2")),
+                    label = None,
+                    description = None,
+                    attributes = Map(
+                      CatalogueItemVariantAttributeName.assume("Finish") ->
+                        CatalogueItemVariantAttributeValue.assume("Brass")
+                    ),
+                    price = None,
+                    sellingUnit = Some(
+                      CatalogueItemVariantSaleUnit(
+                        quantity = CatalogueItemVariantQuantity(
+                          value = CatalogueItemVariantQuantityValue.assume(BigDecimal(2)),
+                          unit = CatalogueItemVariantUnit.PerUnit.Piece,
+                        ),
+                        perUnit = None,
+                        unitSize = None,
+                      )
+                    ),
+                  )
+                ),
+                inferredFields = List.empty,
+                missingFields = List.empty,
+                duplicateFields = List.empty,
+                needsAttention = false,
+                extractionNotes = List.empty,
+              )
+            ),
+            infoNotes = List("Processed 1 of 1 entries"),
+            extractionNotes = List("Left out the page footer"),
+          )
+
+          catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.InternalServerError](
+            Some(organizationUserRow.organizationID),
+            Some(catalogueFileExtractFileName),
+            catalogueFileExtractFileBytes,
+            Some(accessJwt.accessToken),
+            None,
+          )
+
+          _ = catalogueFileAiExtractPostResponse.code shouldBe StatusCode.Ok
+          _ = catalogueFileAiExtractPostResponse.body.value shouldBe catalogueFileAiExtractPostResponseExpected
+
+          catalogueItemRowsAll        <- postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting)
+          catalogueItemVariantRowsAll <- postgresClient.executeQuery(
+            catalogueQueries.getAllCatalogueItemVariantRowsTesting
+          )
+
+          _ = catalogueItemRowsAll shouldBe empty
+          _ = catalogueItemVariantRowsAll shouldBe empty
+
+          organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+          _ = organizationMediaS3BucketKeysAll shouldBe empty
+        } yield ()
+      }
+
       "successfully extract every candidate detail and processing note from an image without storing data" in withContext {
         context =>
           import context.*
@@ -1991,7 +2075,7 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image.pdf")
+          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image.gif")
           catalogueFileExtractFileBytes <- ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect
 
           catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.BadRequest](
@@ -2037,6 +2121,51 @@ class CatalogueFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-image.png")
+          catalogueFileExtractFileBytes <- ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect
+
+          catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.BadRequest](
+            Some(organizationUserRow.organizationID),
+            Some(catalogueFileExtractFileName),
+            catalogueFileExtractFileBytes,
+            Some(accessJwt.accessToken),
+            None,
+          )
+
+          _ = catalogueFileAiExtractPostResponse.code shouldBe StatusCode.BadRequest
+          _ = catalogueFileAiExtractPostResponse.body.left.value shouldBe smithy.BadRequest()
+
+          catalogueItemRowsAll        <- postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting)
+          catalogueItemVariantRowsAll <- postgresClient.executeQuery(
+            catalogueQueries.getAllCatalogueItemVariantRowsTesting
+          )
+
+          _ = catalogueItemRowsAll shouldBe empty
+          _ = catalogueItemVariantRowsAll shouldBe empty
+
+          organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+          _ = organizationMediaS3BucketKeysAll shouldBe empty
+        } yield ()
+      }
+
+      "fail with a BadRequest when a PDF file name has image content without storing data" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleAllowed,
+          )
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          catalogueFileExtractFileName = CatalogueFileExtractFileName.assume("catalogue-price-list.pdf")
           catalogueFileExtractFileBytes <- ZStream.fromResource("assets/catalogue-image-it-1.jpeg").runCollect
 
           catalogueFileAiExtractPostResponse <- gatewayClient.catalogueFileAiExtractPost[smithy.BadRequest](

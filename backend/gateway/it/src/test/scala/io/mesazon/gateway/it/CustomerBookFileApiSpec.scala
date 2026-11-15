@@ -574,6 +574,114 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
         } yield ()
       }
 
+      "successfully extract customer candidates from a PDF without storing data" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleAllowed,
+          )
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-pdf-it-1.pdf")
+          customerBookFileExtractFileBytes <- ZStream
+            .fromResource(s"assets/${customerBookFileExtractFileName.value}")
+            .runCollect
+          customerBookFileAiExtractPostResponseExpected = CustomerBookFileAiExtractPostResponse(
+            individualCandidates = List(
+              CustomerIndividualCandidate(
+                fullName = Some(CustomerFullName.assume("Elena Varga")),
+                emails = List(
+                  CustomerEmailEntry(email = CustomerEmail.assume("elena.varga@example.com"), isDefault = true)
+                ),
+                phoneNumbers = List.empty,
+                addresses = List.empty,
+                inferredFields = List.empty,
+                missingFields = List.empty,
+                duplicateFields = List.empty,
+                needsAttention = false,
+                extractionNotes = List.empty,
+              )
+            ),
+            businessCandidates = List(
+              CustomerBusinessCandidate(
+                businessName = Some(CustomerBusinessName.assume("Northwind Marine Services Ltd")),
+                emails = List(
+                  CustomerEmailEntry(
+                    email = CustomerEmail.assume("info@northwind-marine.example.com"),
+                    isDefault = true,
+                  )
+                ),
+                taxID = Some(CustomerTaxID.assume("CY10000013Z")),
+                phoneNumbers = List.empty,
+                addresses = List.empty,
+                customerBusinessContacts = List(
+                  CustomerBusinessContactCandidate(
+                    fullName = Some(CustomerFullName.assume("Leo Brandt")),
+                    role = Some(CustomerBusinessContactRole.assume("Fleet manager")),
+                    email = None,
+                    phoneNumber = None,
+                  ),
+                  CustomerBusinessContactCandidate(
+                    fullName = Some(CustomerFullName.assume("Mira Solberg")),
+                    role = Some(CustomerBusinessContactRole.assume("Accounts")),
+                    email = Some(CustomerEmail.assume("mira.solberg@northwind-marine.example.com")),
+                    phoneNumber = None,
+                  ),
+                ),
+                inferredFields = List.empty,
+                missingFields = List.empty,
+                duplicateFields = List.empty,
+                needsAttention = false,
+                extractionNotes = List("Contact list continues on page 2"),
+              )
+            ),
+            infoNotes = List("Processed 2 of 3 entries", "Unidentified rows (1) at [23]"),
+            extractionNotes = List("Left out the page footer"),
+          )
+
+          customerBookFileAiExtractPostResponse <- gatewayClient
+            .customerBookFileAiExtractPost[smithy.InternalServerError](
+              Some(organizationUserRow.organizationID),
+              Some(customerBookFileExtractFileName),
+              customerBookFileExtractFileBytes,
+              Some(accessJwt.accessToken),
+              None,
+            )
+
+          _ = customerBookFileAiExtractPostResponse.code shouldBe StatusCode.Ok
+          _ = customerBookFileAiExtractPostResponse.body.value shouldBe customerBookFileAiExtractPostResponseExpected
+
+          customerIDsAll                   <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+          )
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIDsAll shouldBe empty
+          _ = customerIndividualDetailsRowsAll shouldBe empty
+          _ = customerBusinessDetailsRowsAll shouldBe empty
+          _ = customerBusinessContactRowsAll shouldBe empty
+
+          organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+          _ = organizationMediaS3BucketKeysAll shouldBe empty
+        } yield ()
+      }
+
       "successfully extract every candidate detail and processing note from an image without storing data" in withContext {
         context =>
           import context.*
@@ -1340,7 +1448,7 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image.pdf")
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image.gif")
           customerBookFileExtractFileBytes <- ZStream.fromResource("assets/contact-book-image-it-1.jpeg").runCollect
 
           customerBookFileAiExtractPostResponse <- gatewayClient.customerBookFileAiExtractPost[smithy.BadRequest](
@@ -1394,6 +1502,59 @@ class CustomerBookFileApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image.png")
+          customerBookFileExtractFileBytes <- ZStream.fromResource("assets/contact-book-image-it-1.jpeg").runCollect
+
+          customerBookFileAiExtractPostResponse <- gatewayClient.customerBookFileAiExtractPost[smithy.BadRequest](
+            Some(organizationUserRow.organizationID),
+            Some(customerBookFileExtractFileName),
+            customerBookFileExtractFileBytes,
+            Some(accessJwt.accessToken),
+            None,
+          )
+
+          _ = customerBookFileAiExtractPostResponse.code shouldBe StatusCode.BadRequest
+          _ = customerBookFileAiExtractPostResponse.body.left.value shouldBe smithy.BadRequest()
+
+          customerIDsAll                   <- postgresClient.executeQuery(customerBookQueries.getAllCustomerIDsTesting)
+          customerIndividualDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerIndividualDetailsRowsTesting
+          )
+          customerBusinessDetailsRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessDetailsRowsTesting
+          )
+          customerBusinessContactRowsAll <- postgresClient.executeQuery(
+            customerBookQueries.getAllCustomerBusinessContactRowsTesting
+          )
+
+          _ = customerIDsAll shouldBe empty
+          _ = customerIndividualDetailsRowsAll shouldBe empty
+          _ = customerBusinessDetailsRowsAll shouldBe empty
+          _ = customerBusinessContactRowsAll shouldBe empty
+
+          organizationMediaS3BucketKeysAll <- s3TestClient.listObjectKeys(organizationMediaBucket)
+
+          _ = organizationMediaS3BucketKeysAll shouldBe empty
+        } yield ()
+      }
+
+      "fail with a BadRequest when a PDF file name has image content without storing data" in withContext { context =>
+        import context.*
+
+        for {
+          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+          userDetailsRow = arbitrarySample[UserDetailsRow].copy(onboardStage = onboardStage)
+          organizationUserRoleAllowed <- Random.shuffle(OrganizationUserRole.adminRoles).map(_.head)
+          organizationUserRow = arbitrarySample[OrganizationUserRow].copy(
+            userID = userDetailsRow.userID,
+            userRole = organizationUserRoleAllowed,
+          )
+
+          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+
+          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+          customerBookFileExtractFileName = CustomerBookFileExtractFileName.assume("contact-book-image.pdf")
           customerBookFileExtractFileBytes <- ZStream.fromResource("assets/contact-book-image-it-1.jpeg").runCollect
 
           customerBookFileAiExtractPostResponse <- gatewayClient.customerBookFileAiExtractPost[smithy.BadRequest](

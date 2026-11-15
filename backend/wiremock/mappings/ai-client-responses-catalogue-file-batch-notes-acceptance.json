@@ -1,0 +1,60 @@
+{
+  "mappings": [
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "Return exactly one CatalogueFileAIExtract JSON object"
+          },
+          {
+            "contains": "json_schema"
+          },
+          {
+            "contains": "AI_CLIENT_SPEC_CATALOGUE_FILE_BATCH_NOTES"
+          },
+          {
+            "doesNotContain": "ITEM-101"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_catalogue_file_batch_notes_group_1_acceptance\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_catalogue_file_batch_notes_group_1_acceptance\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"entriesIdentified\\\":100,\\\"entriesProcessed\\\":99,\\\"candidates\\\":[{\\\"name\\\":\\\"Item 001\\\",\\\"description\\\":null,\\\"variants\\\":[{\\\"sku\\\":\\\"ITEM-001\\\",\\\"label\\\":null,\\\"description\\\":null,\\\"attributes\\\":[],\\\"price\\\":null,\\\"sellingUnit\\\":{\\\"quantity\\\":{\\\"value\\\":1,\\\"unit\\\":\\\"Piece\\\"},\\\"perUnit\\\":null,\\\"unitSize\\\":null},\\\"sellingUnitInferred\\\":false,\\\"extractionNotes\\\":[]}],\\\"extractionNotes\\\":[]}],\\\"emptyEntryRows\\\":[],\\\"unidentifiedEntryRows\\\":[51],\\\"extractionNotes\\\":[\\\"The Price column was not used\\\",\\\"Some names look like placeholders\\\"]}\",\"annotations\":[]}]}]}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "Return exactly one CatalogueFileAIExtract JSON object"
+          },
+          {
+            "contains": "json_schema"
+          },
+          {
+            "contains": "AI_CLIENT_SPEC_CATALOGUE_FILE_BATCH_NOTES"
+          },
+          {
+            "contains": "ITEM-101"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_catalogue_file_batch_notes_group_2_acceptance\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_catalogue_file_batch_notes_group_2_acceptance\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"entriesIdentified\\\":1,\\\"entriesProcessed\\\":1,\\\"candidates\\\":[{\\\"name\\\":\\\"Item 101\\\",\\\"description\\\":null,\\\"variants\\\":[{\\\"sku\\\":\\\"ITEM-101\\\",\\\"label\\\":null,\\\"description\\\":null,\\\"attributes\\\":[],\\\"price\\\":null,\\\"sellingUnit\\\":{\\\"quantity\\\":{\\\"value\\\":1,\\\"unit\\\":\\\"Piece\\\"},\\\"perUnit\\\":null,\\\"unitSize\\\":null},\\\"sellingUnitInferred\\\":false,\\\"extractionNotes\\\":[]}],\\\"extractionNotes\\\":[]}],\\\"emptyEntryRows\\\":[],\\\"unidentifiedEntryRows\\\":[],\\\"extractionNotes\\\":[\\\"The Price column was not used\\\",\\\"Last row was read on its own\\\"]}\",\"annotations\":[]}]}]}"
+      }
+    }
+  ]
+}

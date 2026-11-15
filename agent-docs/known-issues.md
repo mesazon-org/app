@@ -196,7 +196,7 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 ## Catalogue image golden exhausts the request timeout
 
 - **Status:** Manual-check timeout adjusted; live reverification pending.
-- **Signature:** `CatalogueFileAiExtractFromImageGoldenSpec` fails after about three minutes with `Unable to send message to AI` → `SttpClientException.TimeoutException` → `java.net.http.HttpTimeoutException: request timed out` for `/v1/chat/completions`.
+- **Signature:** `CatalogueFileAiExtractFromImageGoldenSpec` fails after about three minutes with `Unable to send message to AI` → `SttpClientException.TimeoutException` → `java.net.http.HttpTimeoutException: request timed out` for `/v1/chat/completions` (recorded before the issue 607 move; the same failure now names `/v1/responses`).
 - **Cause:** Each attempt exceeded the golden's 60-second read deadline; the client allowed two retries with exponential delay. The exception does not identify whether provider latency, request complexity, or connectivity caused the delay. No completion reached JSON decoding.
 - **Adjustment:** The catalogue image manual golden now uses 180 seconds per attempt, retaining two retries. A timeout-only run can therefore take roughly nine minutes. The shared production default is also 180 seconds per attempt, with the existing environment override and client retry/error behavior retained.
 - **Verify:** Compile/lint the spec without sending data. A person can then run it with their configured key and asset to observe whether a complete response arrives within the longer deadline; canceled or timed-out runs are not extraction-quality evidence.
@@ -211,6 +211,16 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Prevention:** Draw distinct numbers when a test needs two (as `UserOnboardApiSpec` does with `Iterator.continually(...).dropWhile(_ == ...)`); a collision is now possible but negligible.
 - **Verify:** `UserOnboardApiSpec` passes repeatedly (27/27), and the phone validator specs pass with the generated numbers.
 
+## sbt forked test JVM crashes while reporting many AI-client failures
+
+- **Status:** Workaround available (seen 2026-11-16, issue 607 Responses migration red step)
+- **Severity:** Low
+- **Signature:** a `gateway-core` `testOnly` run of `it.AIClientDataExtractionSpec` with many expected failures logs `Unable to serialize throwable of type io.mesazon.domain.gateway.ServiceError$InternalServerError$UnexpectedError`, then `Fatal: ... after 3 failing attempts to read event from server socket`, then `sbt server disconnected`; no test summary is printed.
+- **Cause (suspected, not isolated):** the forked test JVM serializes each failure's throwable back to sbt. Failures whose `UnexpectedError` carries an sttp-ai `OpenAIException` cause (for example a WireMock `404` because no `/v1/responses` stub matched) cannot be serialized, and enough of them break the fork's event channel. Passing runs are unaffected.
+- **Fix:** collect red-step evidence with ScalaTest's standalone runner instead of `testOnly`, after publishing the WireMock image: `sbt "gateway-core/Test/runMain org.scalatest.tools.Runner -o -s io.mesazon.gateway.it.AIClientDataExtractionSpec"`. Green runs can use `testOnly` as usual.
+- **Prevention:** do not read a crashed fork as a pass or as a count; the runner's own summary is the evidence.
+- **Verify:** the standalone runner prints a full summary (34 cases: 2 passed, 32 failed in the red step of 2026-11-16).
+
 ## `gateway-core/testOnly` runs no tests when Docker is not running
 
 - **Status:** Workaround available
@@ -219,4 +229,4 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Cause:** `gateway-core` sets `Settings.testAfterDockerPublish(backendWiremock / Docker / publishLocal)` (`build.sbt`), so the `Test / test*` tasks first publish the WireMock image.
 - **Fix:** Start Docker, or run the same specs through `Test / testOnly`, which skips the Docker publish: `sbt "gateway-core/Test/testOnly io.mesazon.gateway.fun.CustomerBookFileServiceSpec"`.
 - **Prevention:** The `CLAUDE.md` command `gateway-core/testOnly io.mesazon.gateway.fun.*` ("no containers") needs Docker for the image publish. Use the `Test/testOnly` form when Docker is down; acceptance (`gateway-it/test`) always needs Docker.
-- **Verify:** With Docker stopped, the `Test/testOnly` command runs the spec (`CustomerBookFileServiceSpec` has 53 tests) and reports `All tests passed`.
+- **Verify:** With Docker stopped, the `Test/testOnly` command runs the spec (`CustomerBookFileServiceSpec` has 56 tests) and reports `All tests passed`.

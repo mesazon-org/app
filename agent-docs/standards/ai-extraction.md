@@ -1,6 +1,6 @@
 # AI extraction
 
-Read this standard when adding or changing extraction from uploaded images, CSV, or Excel files, including candidate models, prompts, output schemas, batching, flags, and notes. It records the agreed extraction conventions; individual feature docs define supported formats, limits, permissions, and business rules. Existing flows retain their documented contracts until an explicit change is agreed. Both extraction features use one model: a separate AI result type; service-computed duplicates, missing fields, attention and counts reported as structured `FieldInfo` lists ([Structured field reporting](#structured-field-reporting)); AI-only plain-string note lists; and a `noteCompaction` call that combines only the top-level notes of a multi-batch spreadsheet. Customer Book ships it, and Catalogue ships it since issue 607 (see [Catalogue's structured field reporting](../features/catalogue.md#structured-field-reporting-issue-607)). The legacy Catalogue issue-flag model is gone; do not reintroduce it.
+Read this standard when adding or changing extraction from uploaded images, PDF, CSV, or Excel files, including candidate models, prompts, output schemas, batching, flags, and notes. It records the agreed extraction conventions; individual feature docs define supported formats, limits, permissions, and business rules. Existing flows retain their documented contracts until an explicit change is agreed. Both extraction features use one model: a separate AI result type; service-computed duplicates, missing fields, attention and counts reported as structured `FieldInfo` lists ([Structured field reporting](#structured-field-reporting)); AI-only plain-string note lists; and a `noteCompaction` call that combines only the top-level notes of a multi-batch spreadsheet. Customer Book ships it, and Catalogue ships it since issue 607 (see [Catalogue's structured field reporting](../features/catalogue.md#structured-field-reporting-issue-607)). The legacy Catalogue issue-flag model is gone; do not reintroduce it.
 
 ## Responsibilities and boundaries
 
@@ -29,6 +29,8 @@ Keep the preview assembly readable: compute the field lists and attention from t
 Catalogue currently retains AI-reported counts and row findings, applying only batch summation/concatenation. Semantic metadata validation is explicitly deferred: do not reject or repair inconsistent counts or row positions without a new agreement. This does not change its refined decoding, candidate mapping or duplicate computation.
 
 `AIClientDataExtraction` sends `strict: true` for all output schemas. Strict output constrains structure, not factual accuracy; service checks and verification of source-grouping evidence remain necessary.
+
+A PDF (Catalogue and Customer Book, see [Catalogue PDF extraction](../features/catalogue.md#pdf-extraction) and [Customer Book PDF extraction](../features/customer-book.md#pdf-extraction)) is an image-like source: the whole document goes to the model in one request with no page splitting, PDF library or page pre-check, so there is no batching or note compaction. Positions are counted from 1 straight through the pages, and the empty-row list (Catalogue `emptyEntryRows`, Customer Book `emptyEntryRowIndexes`) is always `[]`. Provider rejection of the file fails the request like any AI failure.
 
 ## Field naming and attention
 

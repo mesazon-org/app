@@ -307,7 +307,7 @@ object CustomerBookFileService {
         customerBookFileScanOutput <- fileScanner.scan(
           customerBookFileExtractByteStream,
           customerBookFileExtractFileName.value,
-          SupportedMediaType.extractData,
+          SupportedMediaType.aiExtractData,
           customerBookFileServiceConfig.extractCustomersFileBytesMax,
         )
         customerBookFileAIExtract <- customerBookFileScanOutput.supportedMediaType match {
@@ -316,6 +316,13 @@ object CustomerBookFileService {
               customerBookFileScanOutput.fileScannedPath,
               supportedMediaType,
               AIInstructions.extractCustomersFromImageInstructions,
+              customerBookFileProcessingMessageOpt.map(_.value),
+            )
+          case supportedMediaType if SupportedMediaType.pdfs.contains(supportedMediaType) =>
+            aiClientDataExtraction.extractFromPdf[CustomerBookFileAIExtract](
+              customerBookFileScanOutput.fileScannedPath,
+              customerBookFileExtractFileName.value,
+              AIInstructions.extractCustomersFromPdfInstructions,
               customerBookFileProcessingMessageOpt.map(_.value),
             )
           case supportedMediaType if SupportedMediaType.spreadsheets.contains(supportedMediaType) =>

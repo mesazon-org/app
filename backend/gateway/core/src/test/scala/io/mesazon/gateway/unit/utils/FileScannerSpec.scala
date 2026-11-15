@@ -61,9 +61,14 @@ class FileScannerSpec extends ZWordSpecBase {
             fileNameDeclared = "customers.XLSX",
             supportedMediaTypeExpected = SupportedMediaType.XLSX,
           ),
+          ScanSuccessCase(
+            fileResourcePath = "assets/catalogue-file-ai-extract-3.pdf",
+            fileNameDeclared = "catalogue.PDF",
+            supportedMediaTypeExpected = SupportedMediaType.PDF,
+          ),
         )
         val maxByteSize5Mb      = 5 * 1024 * 1024L
-        val supportedMediaTypes = SupportedMediaType.images ++ SupportedMediaType.spreadsheets
+        val supportedMediaTypes = SupportedMediaType.aiExtractData
 
         scanSuccessCases.foreach { scanSuccessCase =>
           withClue(s"scan success case [$scanSuccessCase]") {
@@ -164,27 +169,51 @@ class FileScannerSpec extends ZWordSpecBase {
           .provide(FileScanner.live)
           .zioValue
 
+        final case class ScanMismatchCase(
+            fileResourcePath: String,
+            fileNameDeclared: String,
+            mimeTypeDetectedExpected: String,
+        )
+
+        val scanMismatchCases = List(
+          ScanMismatchCase(
+            fileResourcePath = "assets/contact-book-image-test-11.jpeg",
+            fileNameDeclared = "image.png",
+            mimeTypeDetectedExpected = "image/jpeg",
+          ),
+          ScanMismatchCase(
+            fileResourcePath = "assets/contact-book-image-test-13.png",
+            fileNameDeclared = "catalogue.pdf",
+            mimeTypeDetectedExpected = "image/png",
+          ),
+        )
         val maxByteSize5Mb      = 5 * 1024 * 1024L
-        val fileByteStream      = ZStream.fromResource("assets/contact-book-image-test-11.jpeg")
-        val fileNameDeclared    = "image.png"
-        val supportedMediaTypes = SupportedMediaType.images ++ SupportedMediaType.spreadsheets
+        val supportedMediaTypes = SupportedMediaType.aiExtractData
 
-        val serviceError = ZIO
-          .scoped(
-            fileScanner.scan(
-              fileByteStream,
-              fileNameDeclared,
-              supportedMediaTypes,
-              maxByteSize5Mb,
+        scanMismatchCases.foreach { scanMismatchCase =>
+          withClue(s"scan mismatch case [$scanMismatchCase]") {
+            val serviceError = ZIO
+              .scoped(
+                fileScanner.scan(
+                  ZStream.fromResource(scanMismatchCase.fileResourcePath),
+                  scanMismatchCase.fileNameDeclared,
+                  supportedMediaTypes,
+                  maxByteSize5Mb,
+                )
+              )
+              .zioError
+
+            serviceError shouldBe ServiceError.BadRequestError.ValidationError(
+              Seq(
+                ServiceError.BadRequestError.InvalidFieldError(
+                  "fileNameDeclared",
+                  s"File name declaration does not match detected media type [${scanMismatchCase.mimeTypeDetectedExpected}]",
+                  scanMismatchCase.fileNameDeclared,
+                )
+              )
             )
-          )
-          .zioError
-
-        serviceError shouldBe a[ServiceError.BadRequestError.ValidationError]
-        serviceError
-          .asInstanceOf[ServiceError.BadRequestError.ValidationError]
-          .invalidFields
-          .map(_.fieldName) shouldBe Seq("fileNameDeclared")
+          }
+        }
       }
 
       "fail with a ValidationError when a spreadsheet filename extension disagrees with the detected format" in {

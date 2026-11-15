@@ -14,8 +14,7 @@ import io.mesazon.testkit.base.*
 import io.mesazon.wiremock.WiremockClient
 import io.mesazon.wiremock.WiremockClient.WiremockClientConfig
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
-import sttp.ai.openai.json.OpenAIDerivedCodecs.messageCodec
-import sttp.ai.openai.requests.completions.chat.message.{Content, Message as OpenAIMessage}
+import sttp.ai.openai.requests.completions.chat.SchemaSupport
 import sttp.client4.*
 import sttp.client4.jsoniter.*
 import sttp.model.{MediaType, StatusCode}
@@ -34,10 +33,18 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
   override def exposedServices: Set[ExposedService] = WiremockClient.ExposedServices
 
   private val imageBytes = Array[Byte](1, 2, 3, 4, 5)
+  private val pdfBytes   = "%PDF-1.7\n%%EOF\n".getBytes(StandardCharsets.UTF_8)
 
   private def imageScannedPath(): FileScannedPath = {
     val path = Files.createTempFile("ai-client-data-extraction-spec-image-", ".jpg")
     Files.write(path, imageBytes)
+    path.toFile.deleteOnExit()
+    FileScannedPath(path)
+  }
+
+  private def pdfScannedPath(): FileScannedPath = {
+    val path = Files.createTempFile("ai-client-data-extraction-spec-pdf-", ".pdf")
+    Files.write(path, pdfBytes)
     path.toFile.deleteOnExit()
     FileScannedPath(path)
   }
@@ -86,14 +93,10 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
       .body
 
     aiRequestLogResponse.requests
-      .filter(_.request.url == "/v1/chat/completions")
+      .filter(_.request.url == "/v1/responses")
       .sortBy(_.request.loggedDate)
       .map(aiRequestLog => parser.parse(aiRequestLog.request.body).fold(throw _, identity))
   }
-
-  private def requestMessages(wiremockClient: WiremockClient): Seq[Seq[OpenAIMessage]] =
-    requestBodies(wiremockClient)
-      .map(_.hcursor.get[Seq[OpenAIMessage]]("messages").fold(throw _, identity))
 
   private def findPropertySchema(json: Json, propertyName: String): Option[Json] = {
     val directPropertySchema = json.hcursor.downField("properties").downField(propertyName).focus
@@ -130,6 +133,8 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
       csvBatchParallelism = 3,
       imageModel = "test-model",
       imageReasoningEffort = "medium",
+      pdfModel = "test-pdf-model",
+      pdfReasoningEffort = "high",
       csvModel = "test-model",
       csvReasoningEffort = "medium",
       noteCompactionModel = "test-note-compaction-model",
@@ -194,32 +199,39 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
         extractFromImageRequestMappings.size shouldBe 1
 
         extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
-        extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+        extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/responses"
         extractFromImageRequestMappings(0).count shouldBe 1
 
-        val imageSourceContent = Content.ArrayContent(
-          Seq(
-            Content.ContentPart.ImageUrl(
-              Content.ImageUrlDetails(
-                url =
-                  s"data:${SupportedMediaType.JPEG.mimes.head};base64,${Base64.getEncoder.encodeToString(imageBytes)}"
-              )
+        val imageInputMessage = Json.obj(
+          "type"    -> Json.fromString("message"),
+          "role"    -> Json.fromString("user"),
+          "content" -> Json.arr(
+            Json.obj(
+              "type"      -> Json.fromString("input_image"),
+              "detail"    -> Json.fromString("auto"),
+              "image_url" -> Json.fromString(
+                s"data:${SupportedMediaType.JPEG.mimes.head};base64,${Base64.getEncoder.encodeToString(imageBytes)}"
+              ),
             )
-          )
+          ),
         )
-        requestMessages(wiremockClient) shouldBe Seq(
-          Seq(
-            OpenAIMessage.System(instructions),
-            OpenAIMessage.User(imageSourceContent),
-          )
+        val responseSchemaExpected =
+          SchemaSupport.normalizeForStrict(summon[OpenAIJsonSchema[ExtractedTestResult]].schema)
+        requestBodies(wiremockClient).loneElement shouldBe Json.obj(
+          "model"        -> Json.fromString(aiClientDataExtractionConfig.imageModel),
+          "instructions" -> Json.fromString(instructions),
+          "input"        -> Json.arr(imageInputMessage),
+          "reasoning"    -> Json.obj("effort" -> Json.fromString(aiClientDataExtractionConfig.imageReasoningEffort)),
+          "store"        -> Json.False,
+          "text"         -> Json.obj(
+            "format" -> Json.obj(
+              "type"   -> Json.fromString("json_schema"),
+              "name"   -> Json.fromString("ai_client_response"),
+              "strict" -> Json.True,
+              "schema" -> responseSchemaExpected,
+            )
+          ),
         )
-
-        val requestBody = requestBodies(wiremockClient).loneElement
-        requestBody.hcursor
-          .downField("response_format")
-          .downField("json_schema")
-          .get[Boolean]("strict")
-          .value shouldBe true
       }
 
       "decode catalogue candidates with nullable fields using a strict schema" in withContext { context =>
@@ -276,24 +288,25 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             |}""".stripMargin
         val openAIResponseBody = Json
           .obj(
-            "id"      -> Json.fromString("chatcmpl-catalogue-file-extract"),
-            "object"  -> Json.fromString("chat.completion"),
-            "created" -> Json.fromLong(1700000000L),
-            "model"   -> Json.fromString("test-model"),
-            "choices" -> Json.arr(
+            "id"         -> Json.fromString("resp_catalogue_file_extract"),
+            "object"     -> Json.fromString("response"),
+            "created_at" -> Json.fromLong(1700000000L),
+            "model"      -> Json.fromString("test-model"),
+            "status"     -> Json.fromString("completed"),
+            "output"     -> Json.arr(
               Json.obj(
-                "index"         -> Json.fromInt(0),
-                "finish_reason" -> Json.fromString("stop"),
-                "message"       -> Json.obj(
-                  "role"    -> Json.fromString("assistant"),
-                  "content" -> Json.fromString(catalogueFileExtractJson),
+                "type"    -> Json.fromString("message"),
+                "id"      -> Json.fromString("msg_catalogue_file_extract"),
+                "role"    -> Json.fromString("assistant"),
+                "status"  -> Json.fromString("completed"),
+                "content" -> Json.arr(
+                  Json.obj(
+                    "type"        -> Json.fromString("output_text"),
+                    "text"        -> Json.fromString(catalogueFileExtractJson),
+                    "annotations" -> Json.arr(),
+                  )
                 ),
               )
-            ),
-            "usage" -> Json.obj(
-              "prompt_tokens"     -> Json.fromInt(10),
-              "completion_tokens" -> Json.fromInt(5),
-              "total_tokens"      -> Json.fromInt(15),
             ),
           )
           .noSpaces
@@ -302,7 +315,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             "priority" -> Json.fromInt(1),
             "request"  -> Json.obj(
               "method"       -> Json.fromString("POST"),
-              "urlPath"      -> Json.fromString("/v1/chat/completions"),
+              "urlPath"      -> Json.fromString("/v1/responses"),
               "bodyPatterns" -> Json.arr(
                 Json.obj("contains" -> Json.fromString(instructions))
               ),
@@ -432,8 +445,8 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
         val requestBody      = requestBodies(wiremockClient).loneElement
         val jsonSchemaCursor = requestBody.hcursor
-          .downField("response_format")
-          .downField("json_schema")
+          .downField("text")
+          .downField("format")
 
         jsonSchemaCursor.get[Boolean]("strict").value shouldBe true
 
@@ -513,22 +526,45 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
         extractedTestResult shouldBe ExtractedTestResult("extracted-value")
 
-        val imageSourceContent = Content.ArrayContent(
-          Seq(
-            Content.ContentPart.ImageUrl(
-              Content.ImageUrlDetails(
-                url =
-                  s"data:${SupportedMediaType.JPEG.mimes.head};base64,${Base64.getEncoder.encodeToString(imageBytes)}"
-              )
+        val imageInputMessage = Json.obj(
+          "type"    -> Json.fromString("message"),
+          "role"    -> Json.fromString("user"),
+          "content" -> Json.arr(
+            Json.obj(
+              "type"      -> Json.fromString("input_image"),
+              "detail"    -> Json.fromString("auto"),
+              "image_url" -> Json.fromString(
+                s"data:${SupportedMediaType.JPEG.mimes.head};base64,${Base64.getEncoder.encodeToString(imageBytes)}"
+              ),
             )
-          )
+          ),
         )
-        requestMessages(wiremockClient) shouldBe Seq(
-          Seq(
-            OpenAIMessage.System(instructions),
-            OpenAIMessage.User(imageSourceContent),
-            OpenAIMessage.User(Content.TextContent(processingMessage)),
-          )
+        val processingMessageInputMessage = Json.obj(
+          "type"    -> Json.fromString("message"),
+          "role"    -> Json.fromString("user"),
+          "content" -> Json.arr(
+            Json.obj(
+              "type" -> Json.fromString("input_text"),
+              "text" -> Json.fromString(processingMessage),
+            )
+          ),
+        )
+        val responseSchemaExpected =
+          SchemaSupport.normalizeForStrict(summon[OpenAIJsonSchema[ExtractedTestResult]].schema)
+        requestBodies(wiremockClient).loneElement shouldBe Json.obj(
+          "model"        -> Json.fromString(aiClientDataExtractionConfig.imageModel),
+          "instructions" -> Json.fromString(instructions),
+          "input"        -> Json.arr(imageInputMessage, processingMessageInputMessage),
+          "reasoning"    -> Json.obj("effort" -> Json.fromString(aiClientDataExtractionConfig.imageReasoningEffort)),
+          "store"        -> Json.False,
+          "text"         -> Json.obj(
+            "format" -> Json.obj(
+              "type"   -> Json.fromString("json_schema"),
+              "name"   -> Json.fromString("ai_client_response"),
+              "strict" -> Json.True,
+              "schema" -> responseSchemaExpected,
+            )
+          ),
         )
       }
 
@@ -560,7 +596,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
         extractFromImageRequestMappings.size shouldBe 3
         extractFromImageRequestMappings.foreach { extractFromImageRequestMapping =>
           extractFromImageRequestMapping.mapping.method shouldBe "POST"
-          extractFromImageRequestMapping.mapping.url shouldBe "/v1/chat/completions"
+          extractFromImageRequestMapping.mapping.url shouldBe "/v1/responses"
           extractFromImageRequestMapping.count shouldBe 3
         }
       }
@@ -624,7 +660,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
         extractFromImageRequestMappings.size shouldBe 3
         extractFromImageRequestMappings.foreach { extractFromImageRequestMapping =>
           extractFromImageRequestMapping.mapping.method shouldBe "POST"
-          extractFromImageRequestMapping.mapping.url shouldBe "/v1/chat/completions"
+          extractFromImageRequestMapping.mapping.url shouldBe "/v1/responses"
           extractFromImageRequestMapping.count shouldBe 3
         }
       }
@@ -658,7 +694,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
           extractFromImageRequestMappings.size shouldBe 1
           extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
-          extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+          extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/responses"
           extractFromImageRequestMappings(0).count shouldBe 1
       }
 
@@ -691,7 +727,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
         extractFromImageRequestMappings.size shouldBe 3
         extractFromImageRequestMappings.foreach { extractFromImageRequestMapping =>
           extractFromImageRequestMapping.mapping.method shouldBe "POST"
-          extractFromImageRequestMapping.mapping.url shouldBe "/v1/chat/completions"
+          extractFromImageRequestMapping.mapping.url shouldBe "/v1/responses"
           extractFromImageRequestMapping.count shouldBe 3
         }
       }
@@ -728,7 +764,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
         extractFromImageRequestMappings.size shouldBe 3
         extractFromImageRequestMappings.foreach { extractFromImageRequestMapping =>
           extractFromImageRequestMapping.mapping.method shouldBe "POST"
-          extractFromImageRequestMapping.mapping.url shouldBe "/v1/chat/completions"
+          extractFromImageRequestMapping.mapping.url shouldBe "/v1/responses"
           extractFromImageRequestMapping.count shouldBe 3
         }
       }
@@ -762,7 +798,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
           extractFromImageRequestMappings.size shouldBe 1
           extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
-          extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+          extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/responses"
           extractFromImageRequestMappings(0).count shouldBe 1
       }
 
@@ -794,8 +830,533 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
         extractFromImageRequestMappings.size shouldBe 1
         extractFromImageRequestMappings(0).mapping.method shouldBe "POST"
-        extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+        extractFromImageRequestMappings(0).mapping.url shouldBe "/v1/responses"
         extractFromImageRequestMappings(0).count shouldBe 1
+      }
+    }
+
+    "extractFromPdf" should {
+      "successfully extract a structured response from a PDF sent as one file input" in withContext { context =>
+        import context.*
+
+        val instructions        = "AI_CLIENT_SPEC_PDF_SUCCESS"
+        val pdfFileNameDeclared = "catalogue-price-list.pdf"
+
+        aiClientDataExtractionConfig.pdfModel shouldNot equal(aiClientDataExtractionConfig.imageModel)
+        aiClientDataExtractionConfig.pdfReasoningEffort shouldNot equal(
+          aiClientDataExtractionConfig.imageReasoningEffort
+        )
+
+        val aiClientDataExtraction = ZIO
+          .service[AIClientDataExtraction]
+          .provide(
+            AIClientDataExtraction.live,
+            ZLayer.succeed(aiClientDataExtractionConfig),
+            SttpTestBackend.live,
+          )
+          .zioValue
+
+        val catalogueFileAIExtract = aiClientDataExtraction
+          .extractFromPdf[CatalogueFileAIExtract](
+            pdfScannedPath(),
+            pdfFileNameDeclared,
+            instructions,
+          )
+          .zioValue
+
+        catalogueFileAIExtract shouldBe CatalogueFileAIExtract(
+          entriesIdentified = 1L,
+          entriesProcessed = 1L,
+          candidates = List(
+            CatalogueItemAIExtract(
+              name = Some(CatalogueItemName.assume("Bolt")),
+              description = None,
+              variants = List(
+                CatalogueItemVariantAIExtract(
+                  sku = Some(CatalogueItemVariantSku.assume("BOLT-1")),
+                  label = None,
+                  description = None,
+                  attributes = List(
+                    CatalogueItemVariantAttributesAIExtract(
+                      CatalogueItemVariantAttributeName.assume("Color"),
+                      CatalogueItemVariantAttributeValue.assume("Silver"),
+                    )
+                  ),
+                  price = None,
+                  sellingUnit = Some(
+                    CatalogueItemVariantSaleUnit(
+                      quantity = CatalogueItemVariantQuantity(
+                        value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
+                        unit = CatalogueItemVariantUnit.PerUnit.Piece,
+                      ),
+                      perUnit = None,
+                      unitSize = None,
+                    )
+                  ),
+                  sellingUnitInferred = false,
+                  extractionNotes = List.empty,
+                )
+              ),
+              extractionNotes = List.empty,
+            )
+          ),
+          emptyEntryRows = List.empty,
+          unidentifiedEntryRows = List.empty,
+          extractionNotes = List("The document was read in page order"),
+        )
+
+        val extractFromPdfRequestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+        extractFromPdfRequestMappings.size shouldBe 1
+        extractFromPdfRequestMappings(0).mapping.method shouldBe "POST"
+        extractFromPdfRequestMappings(0).mapping.url shouldBe "/v1/responses"
+        extractFromPdfRequestMappings(0).count shouldBe 1
+
+        val pdfInputMessage = Json.obj(
+          "type"    -> Json.fromString("message"),
+          "role"    -> Json.fromString("user"),
+          "content" -> Json.arr(
+            Json.obj(
+              "type"      -> Json.fromString("input_file"),
+              "file_data" -> Json.fromString(
+                s"data:${SupportedMediaType.PDF.mimes.head};base64,${Base64.getEncoder.encodeToString(pdfBytes)}"
+              ),
+              "filename" -> Json.fromString(pdfFileNameDeclared),
+            )
+          ),
+        )
+        val responseSchemaExpected =
+          SchemaSupport.normalizeForStrict(summon[OpenAIJsonSchema[CatalogueFileAIExtract]].schema)
+        requestBodies(wiremockClient).loneElement shouldBe Json.obj(
+          "model"        -> Json.fromString(aiClientDataExtractionConfig.pdfModel),
+          "instructions" -> Json.fromString(instructions),
+          "input"        -> Json.arr(pdfInputMessage),
+          "reasoning"    -> Json.obj("effort" -> Json.fromString(aiClientDataExtractionConfig.pdfReasoningEffort)),
+          "store"        -> Json.False,
+          "text"         -> Json.obj(
+            "format" -> Json.obj(
+              "type"   -> Json.fromString("json_schema"),
+              "name"   -> Json.fromString("ai_client_response"),
+              "strict" -> Json.True,
+              "schema" -> responseSchemaExpected,
+            )
+          ),
+        )
+      }
+
+      "send processing guidance as a second user input after the PDF" in withContext { context =>
+        import context.*
+
+        val instructions           = "AI_CLIENT_SPEC_PDF_SUCCESS"
+        val processingMessage      = "Omit optional prices"
+        val pdfFileNameDeclared    = "supplier-price-list.pdf"
+        val aiClientDataExtraction = ZIO
+          .service[AIClientDataExtraction]
+          .provide(
+            AIClientDataExtraction.live,
+            ZLayer.succeed(aiClientDataExtractionConfig),
+            SttpTestBackend.live,
+          )
+          .zioValue
+
+        val catalogueFileAIExtract = aiClientDataExtraction
+          .extractFromPdf[CatalogueFileAIExtract](
+            pdfScannedPath(),
+            pdfFileNameDeclared,
+            instructions,
+            processingMessageOpt = Some(processingMessage),
+          )
+          .zioValue
+
+        catalogueFileAIExtract shouldBe CatalogueFileAIExtract(
+          entriesIdentified = 1L,
+          entriesProcessed = 1L,
+          candidates = List(
+            CatalogueItemAIExtract(
+              name = Some(CatalogueItemName.assume("Bolt")),
+              description = None,
+              variants = List(
+                CatalogueItemVariantAIExtract(
+                  sku = Some(CatalogueItemVariantSku.assume("BOLT-1")),
+                  label = None,
+                  description = None,
+                  attributes = List(
+                    CatalogueItemVariantAttributesAIExtract(
+                      CatalogueItemVariantAttributeName.assume("Color"),
+                      CatalogueItemVariantAttributeValue.assume("Silver"),
+                    )
+                  ),
+                  price = None,
+                  sellingUnit = Some(
+                    CatalogueItemVariantSaleUnit(
+                      quantity = CatalogueItemVariantQuantity(
+                        value = CatalogueItemVariantQuantityValue.assume(BigDecimal(1)),
+                        unit = CatalogueItemVariantUnit.PerUnit.Piece,
+                      ),
+                      perUnit = None,
+                      unitSize = None,
+                    )
+                  ),
+                  sellingUnitInferred = false,
+                  extractionNotes = List.empty,
+                )
+              ),
+              extractionNotes = List.empty,
+            )
+          ),
+          emptyEntryRows = List.empty,
+          unidentifiedEntryRows = List.empty,
+          extractionNotes = List("The document was read in page order"),
+        )
+
+        val pdfInputMessage = Json.obj(
+          "type"    -> Json.fromString("message"),
+          "role"    -> Json.fromString("user"),
+          "content" -> Json.arr(
+            Json.obj(
+              "type"      -> Json.fromString("input_file"),
+              "file_data" -> Json.fromString(
+                s"data:${SupportedMediaType.PDF.mimes.head};base64,${Base64.getEncoder.encodeToString(pdfBytes)}"
+              ),
+              "filename" -> Json.fromString(pdfFileNameDeclared),
+            )
+          ),
+        )
+        val processingMessageInputMessage = Json.obj(
+          "type"    -> Json.fromString("message"),
+          "role"    -> Json.fromString("user"),
+          "content" -> Json.arr(
+            Json.obj(
+              "type" -> Json.fromString("input_text"),
+              "text" -> Json.fromString(processingMessage),
+            )
+          ),
+        )
+        val responseSchemaExpected =
+          SchemaSupport.normalizeForStrict(summon[OpenAIJsonSchema[CatalogueFileAIExtract]].schema)
+        requestBodies(wiremockClient).loneElement shouldBe Json.obj(
+          "model"        -> Json.fromString(aiClientDataExtractionConfig.pdfModel),
+          "instructions" -> Json.fromString(instructions),
+          "input"        -> Json.arr(pdfInputMessage, processingMessageInputMessage),
+          "reasoning"    -> Json.obj("effort" -> Json.fromString(aiClientDataExtractionConfig.pdfReasoningEffort)),
+          "store"        -> Json.False,
+          "text"         -> Json.obj(
+            "format" -> Json.obj(
+              "type"   -> Json.fromString("json_schema"),
+              "name"   -> Json.fromString("ai_client_response"),
+              "strict" -> Json.True,
+              "schema" -> responseSchemaExpected,
+            )
+          ),
+        )
+      }
+
+      "successfully retry a server error and eventually decode the response" in withContext { context =>
+        import context.*
+
+        val pdfFileNameDeclared    = "catalogue.pdf"
+        val aiClientDataExtraction = ZIO
+          .service[AIClientDataExtraction]
+          .provide(
+            AIClientDataExtraction.live,
+            ZLayer.succeed(aiClientDataExtractionConfig),
+            SttpTestBackend.live,
+          )
+          .zioValue
+
+        val extractedTestResult = aiClientDataExtraction
+          .extractFromPdf[ExtractedTestResult](
+            pdfScannedPath(),
+            pdfFileNameDeclared,
+            "AI_CLIENT_SPEC_PDF_RETRY_SUCCESS",
+          )
+          .zioValue
+
+        extractedTestResult shouldBe ExtractedTestResult("retried-value")
+
+        val extractFromPdfRequestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+        extractFromPdfRequestMappings.size shouldBe 3
+        extractFromPdfRequestMappings.foreach { extractFromPdfRequestMapping =>
+          extractFromPdfRequestMapping.mapping.method shouldBe "POST"
+          extractFromPdfRequestMapping.mapping.url shouldBe "/v1/responses"
+          extractFromPdfRequestMapping.count shouldBe 3
+        }
+      }
+
+      "fail with an UnexpectedError when the PDF path cannot be read before sending" in withContext { context =>
+        import context.*
+
+        val pdfFileNameDeclared    = "catalogue.pdf"
+        val aiClientDataExtraction = ZIO
+          .service[AIClientDataExtraction]
+          .provide(
+            AIClientDataExtraction.live,
+            ZLayer.succeed(aiClientDataExtractionConfig),
+            SttpTestBackend.live,
+          )
+          .zioValue
+
+        val unreadablePdfPath = FileScannedPath(Files.createTempDirectory("ai-client-spec-missing-pdf-"))
+
+        val serviceError = aiClientDataExtraction
+          .extractFromPdf[ExtractedTestResult](
+            unreadablePdfPath,
+            pdfFileNameDeclared,
+            "AI_CLIENT_SPEC_PDF_PATH_READ_FAILURE",
+          )
+          .zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError.message shouldBe "Failed to read PDF for AI extraction"
+
+        val extractFromPdfRequestMappings = wiremockClient.requestsDetails.zioValue
+
+        extractFromPdfRequestMappings shouldBe Seq.empty
+      }
+
+      "fail with an UnexpectedError when the AI service rejects the request after one attempt" in withContext {
+        context =>
+          import context.*
+
+          val pdfFileNameDeclared    = "catalogue.pdf"
+          val aiClientDataExtraction = ZIO
+            .service[AIClientDataExtraction]
+            .provide(
+              AIClientDataExtraction.live,
+              ZLayer.succeed(aiClientDataExtractionConfig),
+              SttpTestBackend.live,
+            )
+            .zioValue
+
+          val serviceError = aiClientDataExtraction
+            .extractFromPdf[ExtractedTestResult](
+              pdfScannedPath(),
+              pdfFileNameDeclared,
+              "AI_CLIENT_SPEC_PDF_BAD_REQUEST",
+            )
+            .zioError
+
+          serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+          serviceError.message shouldBe "Unable to send message to AI"
+
+          val extractFromPdfRequestMappings =
+            wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+          extractFromPdfRequestMappings.size shouldBe 1
+          extractFromPdfRequestMappings(0).mapping.method shouldBe "POST"
+          extractFromPdfRequestMappings(0).mapping.url shouldBe "/v1/responses"
+          extractFromPdfRequestMappings(0).count shouldBe 1
+      }
+
+      "fail with an UnexpectedError when the AI service keeps returning a server error after three attempts" in withContext {
+        context =>
+          import context.*
+
+          val pdfFileNameDeclared    = "catalogue.pdf"
+          val aiClientDataExtraction = ZIO
+            .service[AIClientDataExtraction]
+            .provide(
+              AIClientDataExtraction.live,
+              ZLayer.succeed(aiClientDataExtractionConfig),
+              SttpTestBackend.live,
+            )
+            .zioValue
+
+          val serviceError = aiClientDataExtraction
+            .extractFromPdf[ExtractedTestResult](
+              pdfScannedPath(),
+              pdfFileNameDeclared,
+              "AI_CLIENT_SPEC_PDF_ERROR",
+            )
+            .zioError
+
+          serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+          serviceError.message shouldBe "Unable to send message to AI"
+
+          val extractFromPdfRequestMappings =
+            wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+          extractFromPdfRequestMappings.size shouldBe 3
+          extractFromPdfRequestMappings.foreach { extractFromPdfRequestMapping =>
+            extractFromPdfRequestMapping.mapping.method shouldBe "POST"
+            extractFromPdfRequestMapping.mapping.url shouldBe "/v1/responses"
+            extractFromPdfRequestMapping.count shouldBe 3
+          }
+      }
+
+      "fail with an UnexpectedError when each response times out after three attempts" in withContext { context =>
+        import context.*
+
+        val aiClientDataExtractionConfigTimeout =
+          aiClientDataExtractionConfig.copy(requestTimeout = Duration.fromMillis(100))
+
+        val pdfFileNameDeclared    = "catalogue.pdf"
+        val aiClientDataExtraction = ZIO
+          .service[AIClientDataExtraction]
+          .provide(
+            AIClientDataExtraction.live,
+            ZLayer.succeed(aiClientDataExtractionConfigTimeout),
+            SttpTestBackend.live,
+          )
+          .zioValue
+
+        val serviceError = aiClientDataExtraction
+          .extractFromPdf[ExtractedTestResult](
+            pdfScannedPath(),
+            pdfFileNameDeclared,
+            "AI_CLIENT_SPEC_PDF_TIMEOUT",
+          )
+          .zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError.message shouldBe "Unable to send message to AI"
+
+        val extractFromPdfRequestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+        extractFromPdfRequestMappings.size shouldBe 3
+        extractFromPdfRequestMappings.foreach { extractFromPdfRequestMapping =>
+          extractFromPdfRequestMapping.mapping.method shouldBe "POST"
+          extractFromPdfRequestMapping.mapping.url shouldBe "/v1/responses"
+          extractFromPdfRequestMapping.count shouldBe 3
+        }
+      }
+
+      "fail with an UnexpectedError when the AI service returns undecodable structured-output JSON" in withContext {
+        context =>
+          import context.*
+
+          val pdfFileNameDeclared    = "catalogue.pdf"
+          val aiClientDataExtraction = ZIO
+            .service[AIClientDataExtraction]
+            .provide(
+              AIClientDataExtraction.live,
+              ZLayer.succeed(aiClientDataExtractionConfig),
+              SttpTestBackend.live,
+            )
+            .zioValue
+
+          val serviceError = aiClientDataExtraction
+            .extractFromPdf[ExtractedTestResult](
+              pdfScannedPath(),
+              pdfFileNameDeclared,
+              "AI_CLIENT_SPEC_PDF_MALFORMED",
+            )
+            .zioError
+
+          serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+          serviceError.message should startWith("Failed to parse AI response")
+
+          val extractFromPdfRequestMappings =
+            wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+          extractFromPdfRequestMappings.size shouldBe 1
+          extractFromPdfRequestMappings(0).mapping.method shouldBe "POST"
+          extractFromPdfRequestMappings(0).mapping.url shouldBe "/v1/responses"
+          extractFromPdfRequestMappings(0).count shouldBe 1
+      }
+
+      "fail with an UnexpectedError without retrying when the AI refuses to answer" in withContext { context =>
+        import context.*
+
+        val pdfFileNameDeclared    = "catalogue.pdf"
+        val aiClientDataExtraction = ZIO
+          .service[AIClientDataExtraction]
+          .provide(
+            AIClientDataExtraction.live,
+            ZLayer.succeed(aiClientDataExtractionConfig),
+            SttpTestBackend.live,
+          )
+          .zioValue
+
+        val serviceError = aiClientDataExtraction
+          .extractFromPdf[ExtractedTestResult](
+            pdfScannedPath(),
+            pdfFileNameDeclared,
+            "AI_CLIENT_SPEC_PDF_REFUSAL",
+          )
+          .zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError.message should startWith("Failed to parse AI response")
+
+        val extractFromPdfRequestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+        extractFromPdfRequestMappings.size shouldBe 1
+        extractFromPdfRequestMappings(0).mapping.method shouldBe "POST"
+        extractFromPdfRequestMappings(0).mapping.url shouldBe "/v1/responses"
+        extractFromPdfRequestMappings(0).count shouldBe 1
+      }
+
+      "fail with an UnexpectedError without retrying when the AI response is not completed" in withContext { context =>
+        import context.*
+
+        val pdfFileNameDeclared    = "catalogue.pdf"
+        val aiClientDataExtraction = ZIO
+          .service[AIClientDataExtraction]
+          .provide(
+            AIClientDataExtraction.live,
+            ZLayer.succeed(aiClientDataExtractionConfig),
+            SttpTestBackend.live,
+          )
+          .zioValue
+
+        val serviceError = aiClientDataExtraction
+          .extractFromPdf[ExtractedTestResult](
+            pdfScannedPath(),
+            pdfFileNameDeclared,
+            "AI_CLIENT_SPEC_PDF_INCOMPLETE",
+          )
+          .zioError
+
+        serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+        serviceError.message should startWith("Failed to parse AI response")
+
+        val extractFromPdfRequestMappings =
+          wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+        extractFromPdfRequestMappings.size shouldBe 1
+        extractFromPdfRequestMappings(0).mapping.method shouldBe "POST"
+        extractFromPdfRequestMappings(0).mapping.url shouldBe "/v1/responses"
+        extractFromPdfRequestMappings(0).count shouldBe 1
+      }
+
+      "fail with an UnexpectedError without retrying when the AI response has no message output" in withContext {
+        context =>
+          import context.*
+
+          val pdfFileNameDeclared    = "catalogue.pdf"
+          val aiClientDataExtraction = ZIO
+            .service[AIClientDataExtraction]
+            .provide(
+              AIClientDataExtraction.live,
+              ZLayer.succeed(aiClientDataExtractionConfig),
+              SttpTestBackend.live,
+            )
+            .zioValue
+
+          val serviceError = aiClientDataExtraction
+            .extractFromPdf[ExtractedTestResult](
+              pdfScannedPath(),
+              pdfFileNameDeclared,
+              "AI_CLIENT_SPEC_PDF_NO_MESSAGE",
+            )
+            .zioError
+
+          serviceError shouldBe a[ServiceError.InternalServerError.UnexpectedError]
+          serviceError.message should startWith("Failed to parse AI response")
+
+          val extractFromPdfRequestMappings =
+            wiremockClient.requestsDetails.zioValue.filter(_.count > 0).sortBy(_.lastCallDate)
+
+          extractFromPdfRequestMappings.size shouldBe 1
+          extractFromPdfRequestMappings(0).mapping.method shouldBe "POST"
+          extractFromPdfRequestMappings(0).mapping.url shouldBe "/v1/responses"
+          extractFromPdfRequestMappings(0).count shouldBe 1
       }
     }
 
@@ -832,7 +1393,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
         extractFromCsvRequestMappings.size shouldBe 3
         extractFromCsvRequestMappings.map(_.mapping.method).distinct shouldBe Seq("POST")
-        extractFromCsvRequestMappings.map(_.mapping.url).distinct shouldBe Seq("/v1/chat/completions")
+        extractFromCsvRequestMappings.map(_.mapping.url).distinct shouldBe Seq("/v1/responses")
         extractFromCsvRequestMappings.map(_.count).distinct shouldBe Seq(3)
       }
 
@@ -870,7 +1431,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
         extractFromCsvRequestMappings.size shouldBe 3
         extractFromCsvRequestMappings.map(_.mapping.method).distinct shouldBe Seq("POST")
-        extractFromCsvRequestMappings.map(_.mapping.url).distinct shouldBe Seq("/v1/chat/completions")
+        extractFromCsvRequestMappings.map(_.mapping.url).distinct shouldBe Seq("/v1/responses")
         extractFromCsvRequestMappings.map(_.count).distinct shouldBe Seq(3)
       }
 
@@ -912,28 +1473,64 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           ExtractedTestResult("batch-result")
         )
 
-        val csvBatchMessagesExpected = Set(
-          Seq(
-            OpenAIMessage.System(instructions),
-            OpenAIMessage.User(
-              Content.TextContent(
+        val csvBatchInputMessageFirst = Json.obj(
+          "type"    -> Json.fromString("message"),
+          "role"    -> Json.fromString("user"),
+          "content" -> Json.arr(
+            Json.obj(
+              "type" -> Json.fromString("input_text"),
+              "text" -> Json.fromString(
                 "Row Number,Full Name,Email\r\n2,Alice,alice@example.com\r\n3,Bob,bob@example.com\r\n"
-              )
-            ),
-            OpenAIMessage.User(Content.TextContent(processingMessage)),
-          ),
-          Seq(
-            OpenAIMessage.System(instructions),
-            OpenAIMessage.User(
-              Content.TextContent("Row Number,Full Name,Email\r\n4,Carol,carol@example.com\r\n")
-            ),
-            OpenAIMessage.User(Content.TextContent(processingMessage)),
+              ),
+            )
           ),
         )
-        val csvBatchMessages = requestMessages(wiremockClient)
+        val csvBatchInputMessageSecond = Json.obj(
+          "type"    -> Json.fromString("message"),
+          "role"    -> Json.fromString("user"),
+          "content" -> Json.arr(
+            Json.obj(
+              "type" -> Json.fromString("input_text"),
+              "text" -> Json.fromString("Row Number,Full Name,Email\r\n4,Carol,carol@example.com\r\n"),
+            )
+          ),
+        )
+        val processingMessageInputMessage = Json.obj(
+          "type"    -> Json.fromString("message"),
+          "role"    -> Json.fromString("user"),
+          "content" -> Json.arr(
+            Json.obj(
+              "type" -> Json.fromString("input_text"),
+              "text" -> Json.fromString(processingMessage),
+            )
+          ),
+        )
+        val responseSchemaExpected =
+          SchemaSupport.normalizeForStrict(summon[OpenAIJsonSchema[ExtractedTestResult]].schema)
+        val csvBatchRequestBodyFirstExpected = Json.obj(
+          "model"        -> Json.fromString(aiClientDataExtractionConfigSmallBatches.csvModel),
+          "instructions" -> Json.fromString(instructions),
+          "input"        -> Json.arr(csvBatchInputMessageFirst, processingMessageInputMessage),
+          "reasoning"    -> Json.obj(
+            "effort" -> Json.fromString(aiClientDataExtractionConfigSmallBatches.csvReasoningEffort)
+          ),
+          "store" -> Json.False,
+          "text"  -> Json.obj(
+            "format" -> Json.obj(
+              "type"   -> Json.fromString("json_schema"),
+              "name"   -> Json.fromString("ai_client_response"),
+              "strict" -> Json.True,
+              "schema" -> responseSchemaExpected,
+            )
+          ),
+        )
+        val csvBatchRequestBodySecondExpected = csvBatchRequestBodyFirstExpected.deepMerge(
+          Json.obj("input" -> Json.arr(csvBatchInputMessageSecond, processingMessageInputMessage))
+        )
+        val csvBatchRequestBodies = requestBodies(wiremockClient)
 
-        csvBatchMessages.size shouldBe csvBatchCountExpected
-        csvBatchMessages.toSet shouldBe csvBatchMessagesExpected
+        csvBatchRequestBodies.size shouldBe csvBatchCountExpected
+        csvBatchRequestBodies.toSet shouldBe Set(csvBatchRequestBodyFirstExpected, csvBatchRequestBodySecondExpected)
       }
 
       "keep a blank row in its batch instead of excluding it before batching" in withContext { context =>
@@ -972,7 +1569,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
         extractFromCsvRequestMappings.size shouldBe 2
         extractFromCsvRequestMappings.map(_.mapping.method).distinct shouldBe Seq("POST")
-        extractFromCsvRequestMappings.map(_.mapping.url).distinct shouldBe Seq("/v1/chat/completions")
+        extractFromCsvRequestMappings.map(_.mapping.url).distinct shouldBe Seq("/v1/responses")
         extractFromCsvRequestMappings.map(_.count).distinct shouldBe Seq(2)
       }
 
@@ -1012,18 +1609,37 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
           extractFromCsvRequestMappings.size shouldBe 1
           extractFromCsvRequestMappings(0).mapping.method shouldBe "POST"
-          extractFromCsvRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+          extractFromCsvRequestMappings(0).mapping.url shouldBe "/v1/responses"
           extractFromCsvRequestMappings(0).count shouldBe 1
 
-          requestMessages(wiremockClient) shouldBe Seq(
-            Seq(
-              OpenAIMessage.System(instructions),
-              OpenAIMessage.User(
-                Content.TextContent(
+          val csvBatchInputMessage = Json.obj(
+            "type"    -> Json.fromString("message"),
+            "role"    -> Json.fromString("user"),
+            "content" -> Json.arr(
+              Json.obj(
+                "type" -> Json.fromString("input_text"),
+                "text" -> Json.fromString(
                   "Row Number,Full Name,Email\r\n2,Alice,alice@example.com\r\n3,,\r\n4,Bob,bob@example.com\r\n"
-                )
-              ),
-            )
+                ),
+              )
+            ),
+          )
+          val responseSchemaExpected =
+            SchemaSupport.normalizeForStrict(summon[OpenAIJsonSchema[ExtractedTestResult]].schema)
+          requestBodies(wiremockClient).loneElement shouldBe Json.obj(
+            "model"        -> Json.fromString(aiClientDataExtractionConfig.csvModel),
+            "instructions" -> Json.fromString(instructions),
+            "input"        -> Json.arr(csvBatchInputMessage),
+            "reasoning"    -> Json.obj("effort" -> Json.fromString(aiClientDataExtractionConfig.csvReasoningEffort)),
+            "store"        -> Json.False,
+            "text"         -> Json.obj(
+              "format" -> Json.obj(
+                "type"   -> Json.fromString("json_schema"),
+                "name"   -> Json.fromString("ai_client_response"),
+                "strict" -> Json.True,
+                "schema" -> responseSchemaExpected,
+              )
+            ),
           )
       }
 
@@ -1057,7 +1673,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
         extractFromCsvRequestMappings.size shouldBe 1
         extractFromCsvRequestMappings(0).mapping.method shouldBe "POST"
-        extractFromCsvRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+        extractFromCsvRequestMappings(0).mapping.url shouldBe "/v1/responses"
         extractFromCsvRequestMappings(0).count shouldBe 1
       }
 
@@ -1123,36 +1739,47 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
           noteCompactionRequestMappings.size shouldBe 1
           noteCompactionRequestMappings(0).mapping.method shouldBe "POST"
-          noteCompactionRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+          noteCompactionRequestMappings(0).mapping.url shouldBe "/v1/responses"
           noteCompactionRequestMappings(0).count shouldBe 1
 
           aiClientDataExtractionConfig.noteCompactionModel shouldNot equal(aiClientDataExtractionConfig.csvModel)
           aiClientDataExtractionConfig.noteCompactionModel shouldNot equal(aiClientDataExtractionConfig.imageModel)
 
-          requestMessages(wiremockClient) shouldBe Seq(
-            Seq(
-              OpenAIMessage.System(instructions),
-              OpenAIMessage.User(
-                Content.TextContent(
+          val notesInputMessage = Json.obj(
+            "type"    -> Json.fromString("message"),
+            "role"    -> Json.fromString("user"),
+            "content" -> Json.arr(
+              Json.obj(
+                "type" -> Json.fromString("input_text"),
+                "text" -> Json.fromString(
                   """["NOTE_COMPACTION_SPEC_SUCCESS","Two rows were blank","Left out row 7, the heading \"WHOLESALE CLIENTS\",\nbecause nothing is beside it"]"""
-                )
-              ),
-            )
+                ),
+              )
+            ),
+          )
+          val responseSchemaExpected =
+            SchemaSupport.normalizeForStrict(summon[OpenAIJsonSchema[NoteCompactionOutput]].schema)
+          val requestBody = requestBodies(wiremockClient).loneElement
+
+          requestBody shouldBe Json.obj(
+            "model"        -> Json.fromString(aiClientDataExtractionConfig.noteCompactionModel),
+            "instructions" -> Json.fromString(instructions),
+            "input"        -> Json.arr(notesInputMessage),
+            "reasoning"    -> Json.obj(
+              "effort" -> Json.fromString(aiClientDataExtractionConfig.noteCompactionReasoningEffort)
+            ),
+            "store" -> Json.False,
+            "text"  -> Json.obj(
+              "format" -> Json.obj(
+                "type"   -> Json.fromString("json_schema"),
+                "name"   -> Json.fromString("ai_client_response"),
+                "strict" -> Json.True,
+                "schema" -> responseSchemaExpected,
+              )
+            ),
           )
 
-          val requestBody = requestBodies(wiremockClient).loneElement
-          requestBody.hcursor.get[String]("model").value shouldBe aiClientDataExtractionConfig.noteCompactionModel
-          requestBody.hcursor
-            .get[String]("reasoning_effort")
-            .value shouldBe aiClientDataExtractionConfig.noteCompactionReasoningEffort
-
-          val jsonSchemaCursor = requestBody.hcursor
-            .downField("response_format")
-            .downField("json_schema")
-
-          jsonSchemaCursor.get[Boolean]("strict").value shouldBe true
-
-          val responseSchemaCursor = jsonSchemaCursor.downField("schema")
+          val responseSchemaCursor = requestBody.hcursor.downField("text").downField("format").downField("schema")
           responseSchemaCursor.get[Boolean]("additionalProperties").value shouldBe false
           responseSchemaCursor.get[Set[String]]("required").value shouldBe Set("notes")
           responseSchemaCursor.downField("properties").downField("notes").get[String]("type").value shouldBe "array"
@@ -1189,7 +1816,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
         noteCompactionRequestMappings.size shouldBe aiClientDataExtractionConfig.sendMaxRetries + 1
         noteCompactionRequestMappings.foreach { noteCompactionRequestMapping =>
           noteCompactionRequestMapping.mapping.method shouldBe "POST"
-          noteCompactionRequestMapping.mapping.url shouldBe "/v1/chat/completions"
+          noteCompactionRequestMapping.mapping.url shouldBe "/v1/responses"
           noteCompactionRequestMapping.count shouldBe aiClientDataExtractionConfig.sendMaxRetries + 1
         }
       }
@@ -1219,7 +1846,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
           noteCompactionRequestMappings.size shouldBe 1
           noteCompactionRequestMappings(0).mapping.method shouldBe "POST"
-          noteCompactionRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+          noteCompactionRequestMappings(0).mapping.url shouldBe "/v1/responses"
           noteCompactionRequestMappings(0).count shouldBe 1
       }
 
@@ -1252,7 +1879,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           noteCompactionRequestMappings.size shouldBe aiClientDataExtractionConfigTimeout.sendMaxRetries + 1
           noteCompactionRequestMappings.foreach { noteCompactionRequestMapping =>
             noteCompactionRequestMapping.mapping.method shouldBe "POST"
-            noteCompactionRequestMapping.mapping.url shouldBe "/v1/chat/completions"
+            noteCompactionRequestMapping.mapping.url shouldBe "/v1/responses"
             noteCompactionRequestMapping.count shouldBe aiClientDataExtractionConfigTimeout.sendMaxRetries + 1
           }
       }
@@ -1282,7 +1909,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
 
           noteCompactionRequestMappings.size shouldBe 1
           noteCompactionRequestMappings(0).mapping.method shouldBe "POST"
-          noteCompactionRequestMappings(0).mapping.url shouldBe "/v1/chat/completions"
+          noteCompactionRequestMappings(0).mapping.url shouldBe "/v1/responses"
           noteCompactionRequestMappings(0).count shouldBe 1
       }
     }

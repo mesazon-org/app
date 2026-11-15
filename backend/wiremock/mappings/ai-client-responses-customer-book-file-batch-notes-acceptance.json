@@ -1,0 +1,25 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "contains": "Return exactly one CustomerBookFileAIExtract"
+      },
+      {
+        "contains": "json_schema"
+      },
+      {
+        "contains": "AI_CLIENT_SPEC_BATCH_NOTES"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"resp_customer_book_file_batch_notes_acceptance\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_customer_book_file_batch_notes_acceptance\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"entriesIdentified\\\":0,\\\"entriesProcessed\\\":0,\\\"individualCandidates\\\":[],\\\"businessCandidates\\\":[],\\\"emptyEntryRowIndexes\\\":[],\\\"unidentifiedEntryRowIndexes\\\":[],\\\"extractionNotes\\\":[\\\"Column Balance was ignored\\\"]}\",\"annotations\":[]}]}]}"
+  }
+}

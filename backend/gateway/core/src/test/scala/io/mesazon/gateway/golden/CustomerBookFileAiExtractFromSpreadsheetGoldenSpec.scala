@@ -89,6 +89,27 @@ class CustomerBookFileAiExtractFromSpreadsheetGoldenSpec extends ZWordSpecBase, 
           )
         }
       }
+
+      "extract no customer candidates from contact-book-spreadsheet-unrelated-1.csv" in {
+        assume(
+          apiKey.nonEmpty,
+          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+        )
+
+        val organizationID                  = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName =
+          CustomerBookFileExtractFileName.assume("contact-book-spreadsheet-unrelated-1.csv")
+        val customerBookFileExtractByteStream =
+          ZStream.fromResource(s"assets/${customerBookFileExtractFileName.value}")
+
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
+          .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
+          .zioValue
+
+        info(
+          s"${customerBookFileExtractFileName.value} response:\n${writeToString(customerBookFileAiExtractPostResponse, WriterConfig.withIndentionStep(JsonIndentionStep))}"
+        )
+      }
     }
   }
 }

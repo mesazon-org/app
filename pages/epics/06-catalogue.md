@@ -6,7 +6,7 @@ title: Catalogue
 
 ### Overview
 
-The catalogue records what an organization sells. Each item has one or more variants, and each variant describes how it is sold, its optional price, and the details that distinguish it. People can add, browse, open, update, archive, and check items, and can upload an image for an item. The backend can also extract item and variant previews from images, CSV, and Excel files without storing them; client review and submission remain separate work.
+The catalogue records what an organization sells. Each item has one or more variants, and each variant describes how it is sold, its optional price, and the details that distinguish it. People can add, browse, open, update, archive, and check items, and can upload an image for an item. The backend can also extract item and variant previews from images, PDFs, CSV, and Excel files without storing them; client review and submission remain separate work.
 
 ### Related / Out of scope
 
@@ -15,7 +15,7 @@ The catalogue records what an organization sells. Each item has one or more vari
 - **Not built yet** — Orders. Nothing places an order or decides whether an item without a price can be ordered.
 - **Not built yet** — Search, filtering, and paging. Catalogue browsing returns all non-archived items.
 - **Not built yet** — Time-based pricing and images for individual variants.
-- **Client work pending** — Reviewing and submitting catalogue candidates extracted from an image, CSV file, or Excel file. The backend preview route is implemented.
+- **Client work pending** — Reviewing and submitting catalogue candidates extracted from an image, PDF, CSV file, or Excel file. The backend preview route is implemented.
 
 ### Requirements across the epic
 
@@ -647,7 +647,7 @@ It reports inferred, missing and duplicate fields the same way as [extracting cu
 
 **Who can reach this step: an owner or admin of the organization.**
 
-- The user has catalogue information in a product photo, CSV file, or Excel file and wants a quick starting point for the catalogue.
+- The user has catalogue information in a product photo, a PDF, a CSV file, or an Excel file and wants a quick starting point for the catalogue.
 - An AI model reads the image or file and returns catalogue item candidates for review. Each candidate says which details were worked out, which are missing, and which are duplicated, and is marked when it needs attention.
 - The user fixes anything marked before sending a candidate through the normal item-add flow.
 - Nothing is stored by extraction, and an uploaded photo is not attached to an item.
@@ -656,7 +656,7 @@ It reports inferred, missing and duplicate fields the same way as [extracting cu
 
 | **Scenarios** | **Requirements** |
 | --- | --- |
-| 1. User sends an image, CSV file, or Excel file with recognizable catalogue information | - The response contains candidate items with their variants and any readable details, their inferred, missing and duplicate fields, and processing and review notes |
+| 1. User sends an image, PDF, CSV file, or Excel file with recognizable catalogue information | - The response contains candidate items with their variants and any readable details, their inferred, missing and duplicate fields, and processing and review notes |
 | 2. An item has a readable name, but some details are unclear or missing | - It is still a candidate, with a short AI note on what was unclear - Optional details that the source simply does not show never mark it as needing attention |
 | 3. An entry has no readable item name, but at least one other readable detail, and does not continue a named item | - It comes back as a candidate without a name - Its name is listed as a missing field and it is marked as needing attention - It counts as processed |
 | 4. An entry has content, but no readable detail at all | - It is not a candidate, but counts in the total - Its row number appears in the unidentified-rows info note; for an image, this is the AI's best estimate of its position |
@@ -672,7 +672,7 @@ It reports inferred, missing and duplicate fields the same way as [extracting cu
 | 14. Two variants anywhere in the same image or file have the same SKU, ignoring capital letters as adding an item does | - Each lists its SKU as a duplicate field and its candidate is marked as needing attention - Variants without a SKU are never duplicates - Never compared with variants already in the catalogue |
 | 15. The image or file has no recognizable catalogue information | - No candidates, and the first info note reads `Processed 0 of 0 entries`, or `Processed 0 of <n> entries` when the source has empty or unidentified rows - The general extraction notes explain that nothing usable was detected |
 | 16. A spreadsheet row is completely blank | - It is never a candidate, but counts in the total - Its row number appears in the empty-rows info note |
-| 17. The file name is missing, malformed, unsupported, or does not match the content | - The request is rejected before the file is sent to the AI |
+| 17. The file name is missing, malformed, unsupported, or does not match the content | - The request is rejected before the file is sent to the AI - Content that is recognisably another type, such as a photo named `.pdf`, is rejected - Content that matches no recognisable type, named `.pdf`, is sent to the AI as a PDF and fails as in scenario 31 |
 | 18. The file cannot be read as a CSV or Excel file, or is larger than 20 MB | - The request fails and no candidate result is returned |
 | 19. The AI service has a temporary failure | - The service tries again up to two more times - If every attempt fails, the request fails with no partial result |
 | 20. The AI service rejects the request or sends back an unusable answer | - The request fails without retrying that response |
@@ -685,11 +685,13 @@ It reports inferred, missing and duplicate fields the same way as [extracting cu
 | 27. The user supplies a processing message | - It takes priority over the default reading rules, within the limits of requirement 17, across the whole upload and every spreadsheet group - A detail it asks to leave out is meant to count as absent, not missing; today a dropped selling unit or currency is still reported missing ([gap 14](#14-a-detail-dropped-on-request-is-still-reported-missing)) |
 | 28. The message is empty, whitespace-only, ambiguous, or conflicts with the source | - An empty message is treated as no message - Otherwise it is applied as far as the source supports, and anything it could not settle is described in the notes - The request is not rejected only for being ambiguous |
 | 29. The processing message is longer than 2,000 characters after trimming | - The request is rejected as a bad request |
+| 30. User sends a PDF, typed or scanned, including one laid out as a table | - It is read like an image, as one whole document, so the AI can group an item that continues onto the next page - Positions are counted top to bottom through all pages, starting at 1: the 3rd entry on page 2, after 20 entries on page 1, is at 23 - It never has empty rows, and its general notes are never combined - The processing message applies as for an image |
+| 31. User sends a PDF that is password-protected, damaged, or too long for the AI service (roughly 100 pages), or whose read runs out of time | - The page count is not checked and the PDF is not opened before it is sent - The AI service cannot read it, and the request fails with a server error and no partial result, the same as any other AI failure |
 
 #### Requirements
 
-1. PNG, JPEG, and WEBP images, and genuinely readable CSV, `.xls`, and `.xlsx` files, are accepted up to 20 MB. Spreadsheet row count is not capped.
-2. The file name is required, 1–255 trimmed characters, and must have a supported extension matching the actual content, ignoring letter case.
+1. PNG, JPEG, and WEBP images, PDFs, and genuinely readable CSV, `.xls`, and `.xlsx` files, are accepted up to 20 MB. Spreadsheet row count is not capped. Typed and scanned PDFs are both read, always in the same way as an image. A PDF's pages are not counted or checked: one the AI service cannot read fails the request with a server error.
+2. The file name is required, 1–255 trimmed characters, and must have a supported extension matching the actual content, ignoring letter case. When the content matches no recognisable type, a `.pdf` name is trusted and the AI service decides (scenario 31).
 3. The response contains candidate catalogue items, system-written processing summaries in `infoNotes`, and the AI's general comments about the source in top-level `extractionNotes`. Every note the AI writes, on an item or in top-level `extractionNotes`, has at most ten words and one observation, in plain everyday words a customer would understand, never technical words such as "infer", "context", "schema" or "format codes". Separate observations appear as separate bullets and a note never contains a semicolon; a longer observation is split into separate notes or shortened, and a long list of names is summarised rather than listed, such as `Eight marketing columns were not used`.
 4. A candidate carries the details of an item added in [step 1](#1-user-adds-an-item): an optional name, an optional description and its variants. It also carries its inferred, missing and duplicate fields, whether it needs attention, and its own extraction notes. A name may be absent but is never empty when returned. A candidate is returned when its name, or at least one other detail, can be read. An entry with no readable detail is an unidentified row.
 5. A variant has an optional SKU, label, description, price, selling unit and attribute map. A variant is kept even when its selling unit cannot be read, and a price keeps its readable amount even when its currency cannot be settled. Nothing a candidate holds is checked against the add-item rules until it is added; the price amount and selling unit rules apply then. Meaningful unmapped source columns become attributes; repeated attribute names keep the last value.
@@ -704,8 +706,8 @@ It reports inferred, missing and duplicate fields the same way as [extracting cu
     - `Item variants created <count>`, only when the count differs from the number of candidates. Each candidate adds its number of variants, or 1 when it has none, so items with 1, 0 and 2 variants give 4. The line therefore appears only when some item has two or more variants.
     - `Empty rows (<count>) at [<rows>]` and `Unidentified rows (<count>) at [<rows>]`, only when they have rows.
 
-    Row numbers are the ones the person sees in their own file, where the label row is row 1. The total is processed plus empty plus unidentified entries. An image has no empty rows, and its row positions are the AI's top-to-bottom estimate, starting at 1. The AI reports the counts and rows; checking them for consistency is deferred.
-12. A candidate's extraction notes are the AI's own short observations, about the item and then about each variant in order. They are unprefixed and never de-duplicated. The system writes no candidate notes, and the AI does not repeat which fields are missing, inferred or duplicated. The general extraction notes are the AI's comments about the source as a whole. For a spreadsheet read in two or more groups, notes that say the same thing are combined into one, and every other note is kept exactly as written, in file order. If combining fails, each group's notes come back unchanged, so a note may repeat, and the read still succeeds.
+    Row numbers are the ones the person sees in their own file, where the label row is row 1. The total is processed plus empty plus unidentified entries. An image has no empty rows, and its row positions are the AI's top-to-bottom estimate, starting at 1. A PDF is treated as an image: it has no empty rows, and its positions are the AI's estimate counted straight through all its pages. The AI reports the counts and rows; checking them for consistency is deferred.
+12. A candidate's extraction notes are the AI's own short observations, about the item and then about each variant in order. They are unprefixed and never de-duplicated. The system writes no candidate notes, and the AI does not repeat which fields are missing, inferred or duplicated. The general extraction notes are the AI's comments about the source as a whole. For a spreadsheet read in two or more groups, notes that say the same thing are combined into one, and every other note is kept exactly as written, in file order. If combining fails, each group's notes come back unchanged, so a note may repeat, and the read still succeeds. An image's or a PDF's general notes are never combined, because the whole source is read at once.
 13. Nothing is stored: no item, variant, image, file, or extraction response. The normal item-add request remains the only way to create catalogue records, and its existing validation remains unchanged.
 14. Each AI attempt may take up to three minutes by default. Temporary failures are tried again up to two more times; rejected requests and unusable answers are not retried.
 15. Large spreadsheets are read in groups of up to 100 rows, with up to 4 groups at a time. Any failed group fails the whole read and returns no partial candidates.
@@ -720,15 +722,15 @@ It reports inferred, missing and duplicate fields the same way as [extracting cu
 
 #### Request / Response / Outcome
 
-One upload carries whichever source the user has — an image, a CSV file, or an Excel file — in the same request shape.
+One upload carries whichever source the user has — an image, a PDF, a CSV file, or an Excel file — in the same request shape.
 
 **Request**
 
 | **Field Name** | **Type** | **Constraint** | **Required** | **Description** |
 | --- | --- | --- | --- | --- |
 | Organization ID | `UUID` | Canonical 36-character form | ✅ | The organization whose catalogue is being prepared |
-| File | `Binary` | PNG, JPEG or WEBP; or genuinely readable as CSV or Excel (`.xls` or `.xlsx`); up to 20 MB | ✅ | The image or file to read |
-| File Name | `String` | 1–255 characters, trimmed; supported extension matching the actual content | ✅ | The source file name; it is not stored |
+| File | `Binary` | PNG, JPEG or WEBP; PDF; or genuinely readable as CSV or Excel (`.xls` or `.xlsx`); up to 20 MB | ✅ | The image or file to read |
+| File Name | `String` | 1–255 characters, trimmed; supported extension (`.png`, `.jpg`, `.jpeg`, `.webp`, `.pdf`, `.csv`, `.xls` or `.xlsx`) matching the actual content, ignoring letter case | ✅ | The source file name; it is not stored |
 | Processing Message | `String` | Single line; up to 2,000 characters, trimmed plain text | ❌ | Optional instructions for reading the uploaded source, which take priority over the default reading rules (requirement 17) |
 
 **Response — `CatalogueFileAiExtractPostResponse`**
@@ -807,7 +809,7 @@ Examples:
 | 400 | `BAD_REQUEST_ERROR` | The organization is missing, the file name is missing or malformed, the file name and content do not agree, or the processing message exceeds 2,000 characters after trimming |
 | 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
 | 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete or the person's role does not allow extraction |
-| 500 | `INTERNAL_SERVER_ERROR` | The upload cannot be read, is larger than 20 MB, is not genuinely readable as a CSV or Excel file, the person does not belong to the organization, the AI service fails, or an unexpected error occurs |
+| 500 | `INTERNAL_SERVER_ERROR` | The upload cannot be read, is larger than 20 MB, is not genuinely readable as a CSV or Excel file, the person does not belong to the organization, the AI service fails (including a PDF it cannot read because it is password-protected, damaged or too long, or because its content is not a PDF), or an unexpected error occurs |
 
 ### Known gaps and open questions
 

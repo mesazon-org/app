@@ -1,0 +1,25 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "contains": "Return exactly one CatalogueFileAIExtract JSON object"
+      },
+      {
+        "contains": "json_schema"
+      },
+      {
+        "contains": "AI_CLIENT_SPEC_CATALOGUE_FILE_RICH"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"resp_catalogue_file_rich_acceptance\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_catalogue_file_rich_acceptance\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"entriesIdentified\\\":5,\\\"entriesProcessed\\\":4,\\\"candidates\\\":[{\\\"name\\\":\\\"Bolt\\\",\\\"description\\\":null,\\\"variants\\\":[{\\\"sku\\\":\\\"AB-1\\\",\\\"label\\\":null,\\\"description\\\":null,\\\"attributes\\\":[{\\\"name\\\":\\\"Color\\\",\\\"value\\\":\\\"Silver\\\"},{\\\"name\\\":\\\"Color\\\",\\\"value\\\":\\\"Black\\\"}],\\\"price\\\":{\\\"amount\\\":12.5,\\\"currency\\\":\\\"EUR\\\",\\\"currencyInferred\\\":false},\\\"sellingUnit\\\":{\\\"quantity\\\":{\\\"value\\\":1,\\\"unit\\\":\\\"Piece\\\"},\\\"perUnit\\\":null,\\\"unitSize\\\":null},\\\"sellingUnitInferred\\\":false,\\\"extractionNotes\\\":[\\\"SKU is partly obscured\\\"]}],\\\"extractionNotes\\\":[\\\"Item photo is blurry\\\"]},{\\\"name\\\":\\\"Bolt\\\",\\\"description\\\":null,\\\"variants\\\":[{\\\"sku\\\":null,\\\"label\\\":null,\\\"description\\\":null,\\\"attributes\\\":[],\\\"price\\\":{\\\"amount\\\":3.2,\\\"currency\\\":null,\\\"currencyInferred\\\":false},\\\"sellingUnit\\\":{\\\"quantity\\\":{\\\"value\\\":1,\\\"unit\\\":\\\"Piece\\\"},\\\"perUnit\\\":null,\\\"unitSize\\\":null},\\\"sellingUnitInferred\\\":false,\\\"extractionNotes\\\":[\\\"Currency symbol could not be read\\\"]}],\\\"extractionNotes\\\":[]},{\\\"name\\\":null,\\\"description\\\":null,\\\"variants\\\":[{\\\"sku\\\":\\\"ab-1\\\",\\\"label\\\":null,\\\"description\\\":null,\\\"attributes\\\":[],\\\"price\\\":null,\\\"sellingUnit\\\":null,\\\"sellingUnitInferred\\\":false,\\\"extractionNotes\\\":[]}],\\\"extractionNotes\\\":[]},{\\\"name\\\":\\\"Washer\\\",\\\"description\\\":null,\\\"variants\\\":[],\\\"extractionNotes\\\":[]},{\\\"name\\\":\\\"bolt\\\",\\\"description\\\":null,\\\"variants\\\":[{\\\"sku\\\":\\\"NUT-5\\\",\\\"label\\\":null,\\\"description\\\":null,\\\"attributes\\\":[],\\\"price\\\":{\\\"amount\\\":4.75,\\\"currency\\\":\\\"GBP\\\",\\\"currencyInferred\\\":true},\\\"sellingUnit\\\":{\\\"quantity\\\":{\\\"value\\\":1,\\\"unit\\\":\\\"Kilogram\\\"},\\\"perUnit\\\":null,\\\"unitSize\\\":null},\\\"sellingUnitInferred\\\":true,\\\"extractionNotes\\\":[\\\"Unit taken from the product wording\\\",\\\"Currency taken from the price header\\\"]}],\\\"extractionNotes\\\":[]}],\\\"emptyEntryRows\\\":[],\\\"unidentifiedEntryRows\\\":[7],\\\"extractionNotes\\\":[\\\"One entry at the bottom could not be read\\\"]}\",\"annotations\":[]}]}]}"
+  }
+}

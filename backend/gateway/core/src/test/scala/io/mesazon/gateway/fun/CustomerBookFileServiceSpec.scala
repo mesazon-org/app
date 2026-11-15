@@ -91,7 +91,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -196,7 +196,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -276,7 +276,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -365,7 +365,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -434,7 +434,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -501,7 +501,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -527,6 +527,160 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
 
         val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
           .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
+          .zioValue
+
+        customerBookFileAiExtractPostResponse shouldBe CustomerBookFileAiExtractPostResponse(
+          individualCandidates = Nil,
+          businessCandidates = Nil,
+          infoNotes = List("Processed 0 of 0 entries"),
+          extractionNotes = Nil,
+        )
+      }
+
+      "extract candidates from a PDF without processing guidance, sending its declared file name, without note compaction" in new TestContext {
+        val customerBookFileProcessingMessageOpt: Option[CustomerBookFileProcessingMessage] = None
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName("contact-book-price-list.pdf")
+        val customerBookFileExtractByteStream = ZStream.empty
+        val fileScannerScanOutput: FileScannerScanOutput = (
+          fileScannedPath = FileScannedPath(Path.of("scanned-contact-book.pdf")),
+          supportedMediaType = SupportedMediaType.PDF,
+          fileBytesSize = FileBytesSize.assume(1L),
+        )
+        val customerFullName            = arbitrarySample[CustomerFullName]
+        val customerIndividualAIExtract = CustomerIndividualAIExtract(
+          fullName = Some(customerFullName),
+          emails = Nil,
+          phoneNumbers = Nil,
+          addresses = Nil,
+          fullNameInferred = false,
+          extractionNotes = Nil,
+        )
+        val extractionNotes           = List("Left out the page footer", "Left out the page footer")
+        val customerBookFileAIExtract = CustomerBookFileAIExtract(
+          entriesIdentified = 2L,
+          entriesProcessed = 1L,
+          individualCandidates = List(customerIndividualAIExtract),
+          businessCandidates = Nil,
+          emptyEntryRowIndexes = Nil,
+          unidentifiedEntryRowIndexes = List(23L),
+          extractionNotes = extractionNotes,
+        )
+
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              customerBookFileExtractByteStream,
+              customerBookFileExtractFileName.value,
+              SupportedMediaType.aiExtractData,
+              customerBookFileServiceConfig.extractCustomersFileBytesMax,
+            )
+            .returns(ZIO.succeed(fileScannerScanOutput))
+            .once(),
+          (aiClientDataExtractionMock
+            .extractFromPdf[CustomerBookFileAIExtract](
+              _: FileScannedPath,
+              _: String,
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              fileScannerScanOutput.fileScannedPath,
+              customerBookFileExtractFileName.value,
+              AIInstructions.extractCustomersFromPdfInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(customerBookFileAIExtract))
+            .once(),
+        )
+
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
+          .aiExtract(
+            organizationID,
+            customerBookFileExtractFileName,
+            customerBookFileProcessingMessageOpt,
+            customerBookFileExtractByteStream,
+          )
+          .zioValue
+
+        customerBookFileAiExtractPostResponse shouldBe CustomerBookFileAiExtractPostResponse(
+          individualCandidates = List(
+            CustomerIndividualCandidate(
+              fullName = Some(customerFullName),
+              emails = Nil,
+              phoneNumbers = Nil,
+              addresses = Nil,
+              inferredFields = Nil,
+              missingFields = Nil,
+              duplicateFields = Nil,
+              needsAttention = false,
+              extractionNotes = Nil,
+            )
+          ),
+          businessCandidates = Nil,
+          infoNotes = List("Processed 1 of 2 entries", "Unidentified rows (1) at [23]"),
+          extractionNotes = extractionNotes,
+        )
+      }
+
+      "forward PDF processing guidance to the PDF extraction" in new TestContext {
+        val customerBookFileProcessingMessage = CustomerBookFileProcessingMessage("Omit phone numbers")
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName("contact-book-price-list.pdf")
+        val customerBookFileExtractByteStream = ZStream.empty
+        val fileScannerScanOutput: FileScannerScanOutput = (
+          fileScannedPath = FileScannedPath(Path.of("scanned-contact-book.pdf")),
+          supportedMediaType = SupportedMediaType.PDF,
+          fileBytesSize = FileBytesSize.assume(1L),
+        )
+        val customerBookFileAIExtract = CustomerBookFileAIExtract(
+          entriesIdentified = 0L,
+          entriesProcessed = 0L,
+          individualCandidates = Nil,
+          businessCandidates = Nil,
+          emptyEntryRowIndexes = Nil,
+          unidentifiedEntryRowIndexes = Nil,
+          extractionNotes = Nil,
+        )
+
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              customerBookFileExtractByteStream,
+              customerBookFileExtractFileName.value,
+              SupportedMediaType.aiExtractData,
+              customerBookFileServiceConfig.extractCustomersFileBytesMax,
+            )
+            .returns(ZIO.succeed(fileScannerScanOutput))
+            .once(),
+          (aiClientDataExtractionMock
+            .extractFromPdf[CustomerBookFileAIExtract](
+              _: FileScannedPath,
+              _: String,
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              fileScannerScanOutput.fileScannedPath,
+              customerBookFileExtractFileName.value,
+              AIInstructions.extractCustomersFromPdfInstructions,
+              Some(customerBookFileProcessingMessage.value),
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.succeed(customerBookFileAIExtract))
+            .once(),
+        )
+
+        val customerBookFileAiExtractPostResponse = buildCustomerBookFileService
+          .aiExtract(
+            organizationID,
+            customerBookFileExtractFileName,
+            Some(customerBookFileProcessingMessage),
+            customerBookFileExtractByteStream,
+          )
           .zioValue
 
         customerBookFileAiExtractPostResponse shouldBe CustomerBookFileAiExtractPostResponse(
@@ -619,7 +773,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -845,7 +999,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -920,7 +1074,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -997,7 +1151,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -1086,7 +1240,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -1255,7 +1409,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -1379,7 +1533,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -1548,7 +1702,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -4043,7 +4197,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -4624,7 +4778,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           .expects(
             customerBookFileExtractByteStream,
             customerBookFileExtractFileName.value,
-            SupportedMediaType.extractData,
+            SupportedMediaType.aiExtractData,
             customerBookFileServiceConfig.extractCustomersFileBytesMax,
           )
           .returns(ZIO.fail(serviceErrorScan))
@@ -4653,7 +4807,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -4701,7 +4855,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -4755,7 +4909,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             .expects(
               customerBookFileExtractByteStream,
               customerBookFileExtractFileName.value,
-              SupportedMediaType.extractData,
+              SupportedMediaType.aiExtractData,
               customerBookFileServiceConfig.extractCustomersFileBytesMax,
             )
             .returns(ZIO.succeed(fileScannerScanOutput))
@@ -4783,6 +4937,53 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                 ZIO.fail(serviceErrorAI)
               }
             }
+            .once(),
+        )
+
+        val serviceError = buildCustomerBookFileService
+          .aiExtract(organizationID, customerBookFileExtractFileName, None, customerBookFileExtractByteStream)
+          .zioError
+
+        serviceError shouldBe serviceErrorAI
+      }
+
+      "fail with an UnexpectedError when PDF AI extraction fails" in new TestContext {
+        val organizationID                    = arbitrarySample[OrganizationID]
+        val customerBookFileExtractFileName   = CustomerBookFileExtractFileName("contact-book-price-list.pdf")
+        val customerBookFileExtractByteStream = ZStream.empty
+        val fileScannerScanOutput: FileScannerScanOutput = (
+          fileScannedPath = FileScannedPath(Path.of("scanned-contact-book.pdf")),
+          supportedMediaType = SupportedMediaType.PDF,
+          fileBytesSize = FileBytesSize.assume(1L),
+        )
+        val serviceErrorAI = ServiceError.InternalServerError.UnexpectedError(error = "AI extraction failed")
+
+        inSequence(
+          fileScannerMock.scan
+            .expects(
+              customerBookFileExtractByteStream,
+              customerBookFileExtractFileName.value,
+              SupportedMediaType.aiExtractData,
+              customerBookFileServiceConfig.extractCustomersFileBytesMax,
+            )
+            .returns(ZIO.succeed(fileScannerScanOutput))
+            .once(),
+          (aiClientDataExtractionMock
+            .extractFromPdf[CustomerBookFileAIExtract](
+              _: FileScannedPath,
+              _: String,
+              _: String,
+              _: Option[String],
+            )(using _: OpenAIJsonSchema[CustomerBookFileAIExtract], _: JsonValueCodec[CustomerBookFileAIExtract]))
+            .expects(
+              fileScannerScanOutput.fileScannedPath,
+              customerBookFileExtractFileName.value,
+              AIInstructions.extractCustomersFromPdfInstructions,
+              None,
+              ai.customerBookFileAIExtractOpenAIJsonSchema,
+              ai.customerBookFileAIExtractCodec,
+            )
+            .returns(ZIO.fail(serviceErrorAI))
             .once(),
         )
 
@@ -4831,7 +5032,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           .expects(
             customerBookFileExtractByteStream,
             customerBookFileExtractFileName.value,
-            SupportedMediaType.extractData,
+            SupportedMediaType.aiExtractData,
             customerBookFileServiceConfig.extractCustomersFileBytesMax,
           )
           .returns(ZIO.succeed(fileScannerScanOutput))
@@ -4894,7 +5095,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           .expects(
             customerBookFileExtractByteStream,
             customerBookFileExtractFileName.value,
-            SupportedMediaType.extractData,
+            SupportedMediaType.aiExtractData,
             customerBookFileServiceConfig.extractCustomersFileBytesMax,
           )
           .returns(ZIO.succeed(fileScannerScanOutput))
