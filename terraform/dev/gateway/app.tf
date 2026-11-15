@@ -34,7 +34,7 @@ module "gateway_core_app" {
 
   internal_ports = [8081, 8082]
 
-  readiness_port = 8082
+  health_port = 8082
 
   vpc_name_raw = "gateway-vpc"
 

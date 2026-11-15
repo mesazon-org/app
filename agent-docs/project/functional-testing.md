@@ -56,7 +56,7 @@ A method shaped like `def m[A](...)(using OpenAIJsonSchema[A], JsonValueCodec[A]
 
 A `ZStream` argument has no useful equality, so it is the one allowed `*`. Prove its contents by draining it in `.onCall` and asserting the collected elements; when the stream itself must fail (a failed spreadsheet conversion), drain it and let its error propagate: `csvRecordStream.runCollect *> ZIO.die(...)`. Write the full expectation inline in each test's `inSequence`, even when specs repeat it; do not wrap it in a `<method>Expectation` helper. See `CustomerBookFileServiceSpec`.
 
-`Mocks.AIClientDataExtractionMock` in `mock/Mocks.scala` is the earlier `Ref`-backed hand-written double; it remains only for `CatalogueFileServiceSpec` until that spec is migrated. Do not use it in new specs.
+`CatalogueFileServiceSpec` follows the same form for `AIClientDataExtraction`. The earlier `Ref`-backed hand-written double (`mock/Mocks.scala`) was deleted under issue 607; do not reintroduce one.
 
 ## Config and time
 

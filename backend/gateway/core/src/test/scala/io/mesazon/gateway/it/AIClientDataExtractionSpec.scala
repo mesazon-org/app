@@ -222,14 +222,14 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .value shouldBe true
       }
 
-      "decode catalogue candidates with attribute entries using a strict schema" in withContext { context =>
+      "decode catalogue candidates with nullable fields using a strict schema" in withContext { context =>
         import context.*
 
         val instructions             = "AI_CLIENT_SPEC_CATALOGUE_SUCCESS"
         val catalogueFileExtractJson =
           """{
-            |  "entriesIdentified": 1,
-            |  "entriesProcessed": 1,
+            |  "entriesIdentified": 2,
+            |  "entriesProcessed": 2,
             |  "candidates": [
             |    {
             |      "name": "Cotton T-Shirt",
@@ -240,20 +240,34 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
             |          "label": "Red / Medium",
             |          "description": null,
             |          "attributes": [{"name": "Color", "value": "Red"}, {"name": "Color", "value": "Red"}, {"name": "Color", "value": "Blue"}, {"name": "Size", "value": "M"}, {"name": "Size", "value": "M"}],
-            |          "price": {"amount": 12.50, "currency": "EUR"},
+            |          "price": {"amount": 12.50, "currency": "EUR", "currencyInferred": true},
             |          "sellingUnit": {
             |            "quantity": {"value": 1, "unit": "Piece"},
             |            "perUnit": null,
             |            "unitSize": null
             |          },
-            |          "missingRequiredSaleUnit": false,
-            |          "skuIsDuplicate": false,
+            |          "sellingUnitInferred": true,
             |          "extractionNotes": ["Source label is partly obscured"]
             |        }
             |      ],
-            |      "atLeastOneVariant": false,
-            |      "nameIsDuplicate": false,
             |      "extractionNotes": []
+            |    },
+            |    {
+            |      "name": null,
+            |      "description": null,
+            |      "variants": [
+            |        {
+            |          "sku": null,
+            |          "label": "Blue / Large",
+            |          "description": null,
+            |          "attributes": [],
+            |          "price": {"amount": 14.00, "currency": null, "currencyInferred": false},
+            |          "sellingUnit": null,
+            |          "sellingUnitInferred": false,
+            |          "extractionNotes": []
+            |        }
+            |      ],
+            |      "extractionNotes": ["No item name is shown"]
             |    }
             |  ],
             |  "emptyEntryRows": [],
@@ -331,11 +345,11 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .zioValue
 
         catalogueFileExtract shouldBe CatalogueFileAIExtract(
-          entriesIdentified = 1L,
-          entriesProcessed = 1L,
+          entriesIdentified = 2L,
+          entriesProcessed = 2L,
           candidates = List(
             CatalogueItemAIExtract(
-              name = CatalogueItemName.assume("Cotton T-Shirt"),
+              name = Some(CatalogueItemName.assume("Cotton T-Shirt")),
               description = Some(CatalogueItemDescription.assume("Classic crew neck")),
               variants = List(
                 CatalogueItemVariantAIExtract(
@@ -365,7 +379,11 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
                     ),
                   ),
                   price = Some(
-                    CatalogueItemVariantPrice.assume(Price(PriceAmount.assume(BigDecimal("12.50")), Currency.EUR))
+                    CatalogueItemVariantPriceAIExtract(
+                      amount = PriceAmount.assume(BigDecimal("12.50")),
+                      currency = Some(Currency.EUR),
+                      currencyInferred = true,
+                    )
                   ),
                   sellingUnit = Some(
                     CatalogueItemVariantSaleUnit(
@@ -377,15 +395,35 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
                       unitSize = None,
                     )
                   ),
-                  missingRequiredSaleUnit = false,
-                  skuIsDuplicate = false,
+                  sellingUnitInferred = true,
                   extractionNotes = List("Source label is partly obscured"),
                 )
               ),
-              atLeastOneVariant = false,
-              nameIsDuplicate = false,
               extractionNotes = List.empty,
-            )
+            ),
+            CatalogueItemAIExtract(
+              name = None,
+              description = None,
+              variants = List(
+                CatalogueItemVariantAIExtract(
+                  sku = None,
+                  label = Some(CatalogueItemVariantLabel.assume("Blue / Large")),
+                  description = None,
+                  attributes = List.empty,
+                  price = Some(
+                    CatalogueItemVariantPriceAIExtract(
+                      amount = PriceAmount.assume(BigDecimal("14.00")),
+                      currency = None,
+                      currencyInferred = false,
+                    )
+                  ),
+                  sellingUnit = None,
+                  sellingUnitInferred = false,
+                  extractionNotes = List.empty,
+                )
+              ),
+              extractionNotes = List("No item name is shown"),
+            ),
           ),
           emptyEntryRows = List.empty,
           unidentifiedEntryRows = List.empty,
@@ -421,6 +459,33 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           .downField("value")
           .get[String]("type")
           .value shouldBe "string"
+
+        val schemaDefinitionsCursor  = responseSchema.hcursor.downField("$defs")
+        val itemSchemaCursor         = schemaDefinitionsCursor.downField("CatalogueItemAIExtract")
+        val variantSchemaCursor      = schemaDefinitionsCursor.downField("CatalogueItemVariantAIExtract")
+        val variantPriceSchemaCursor = schemaDefinitionsCursor.downField("CatalogueItemVariantPriceAIExtract")
+        val nullSchema               = Json.obj("type" -> Json.fromString("null"))
+
+        itemSchemaCursor.downField("properties").downField("name").get[List[String]]("type").value shouldBe List(
+          "string",
+          "null",
+        )
+        variantSchemaCursor.downField("properties").downField("sellingUnit").get[List[Json]]("anyOf").value should
+          contain(nullSchema)
+        variantPriceSchemaCursor.downField("properties").downField("currency").get[List[Json]]("anyOf").value should
+          contain(nullSchema)
+        variantSchemaCursor.get[List[String]]("required").value should contain("sellingUnitInferred")
+        variantSchemaCursor
+          .downField("properties")
+          .downField("sellingUnitInferred")
+          .get[String]("type")
+          .value shouldBe "boolean"
+        variantPriceSchemaCursor.get[List[String]]("required").value should contain("currencyInferred")
+        variantPriceSchemaCursor
+          .downField("properties")
+          .downField("currencyInferred")
+          .get[String]("type")
+          .value shouldBe "boolean"
       }
 
       "send processing guidance after the image source content" in withContext { context =>

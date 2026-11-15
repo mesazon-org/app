@@ -42,48 +42,159 @@ object CatalogueFileService {
       aiClientDataExtraction: AIClientDataExtraction,
   ) extends CatalogueFileService[ServiceTask] {
 
-    private val singleOccurrenceCount = 1
+    private type CatalogueItemFieldsComputed = (
+        inferredFields: List[FieldInfo],
+        missingFields: List[FieldInfo],
+        duplicateFields: List[FieldInfo],
+    )
+
+    private inline val SingleOccurrenceCount = 1
+
+    private inline val NoteCompactionGroupCountMin   = 2
+    private inline val CatalogueItemVariantsCountMin = 1
+
+    private inline val NameProperty = "name"
+
+    private inline val VariantsProperty = "variants"
+
+    private inline val SkuProperty = "sku"
+
+    private inline val SellingUnitProperty = "sellingUnit"
+
+    private inline val PriceProperty = "price"
+
+    private inline val CurrencyProperty = "currency"
 
     private def mergeCatalogueFileAIExtracts(
         catalogueFileAIExtracts: NonEmptyChunk[CatalogueFileAIExtract]
     ): CatalogueFileAIExtract = {
       val catalogueFileAIExtractsList = catalogueFileAIExtracts.toList
-      val catalogueItemAIExtracts     = catalogueFileAIExtractsList.flatMap(_.candidates)
-
-      val catalogueItemNameCounts = catalogueItemAIExtracts.groupMapReduce(
-        _.name.value.toLowerCase(Locale.ROOT)
-      )(_ => singleOccurrenceCount)(_ + _)
-
-      val catalogueItemVariantSkuCounts = catalogueItemAIExtracts
-        .flatMap(_.variants.flatMap(_.sku))
-        .groupMapReduce(_.value.toLowerCase(Locale.ROOT))(_ => singleOccurrenceCount)(_ + _)
-
-      val candidates = catalogueItemAIExtracts.map { catalogueItemAIExtract =>
-        catalogueItemAIExtract.copy(
-          nameIsDuplicate = catalogueItemNameCounts
-            .get(catalogueItemAIExtract.name.value.toLowerCase(Locale.ROOT))
-            .exists(_ > singleOccurrenceCount),
-          variants = catalogueItemAIExtract.variants.map { catalogueItemVariantAIExtract =>
-            catalogueItemVariantAIExtract.copy(
-              skuIsDuplicate = catalogueItemVariantAIExtract.sku.exists(catalogueItemVariantSku =>
-                catalogueItemVariantSkuCounts
-                  .get(
-                    catalogueItemVariantSku.value.toLowerCase(Locale.ROOT)
-                  )
-                  .exists(_ > singleOccurrenceCount)
-              )
-            )
-          },
-        )
-      }
 
       CatalogueFileAIExtract(
         entriesIdentified = catalogueFileAIExtracts.map(_.entriesIdentified).sum,
         entriesProcessed = catalogueFileAIExtracts.map(_.entriesProcessed).sum,
-        candidates = candidates,
+        candidates = catalogueFileAIExtractsList.flatMap(_.candidates),
         emptyEntryRows = catalogueFileAIExtractsList.flatMap(_.emptyEntryRows),
         unidentifiedEntryRows = catalogueFileAIExtractsList.flatMap(_.unidentifiedEntryRows),
         extractionNotes = catalogueFileAIExtractsList.flatMap(_.extractionNotes),
+      )
+    }
+
+    private def computeExtractionNotesCompactedOpt(
+        extractionNotesMerged: List[String],
+        noteCompactionOutput: NoteCompactionOutput,
+    ): Option[List[String]] =
+      Option.when(
+        noteCompactionOutput.notes.nonEmpty && noteCompactionOutput.notes.size <= extractionNotesMerged.size
+      )(noteCompactionOutput.notes)
+
+    private def computeInfoNotes(catalogueFileAIExtract: CatalogueFileAIExtract): List[String] = {
+      val catalogueItemsCreatedCount        = catalogueFileAIExtract.candidates.size.toLong
+      val catalogueItemVariantsCreatedCount =
+        catalogueFileAIExtract.candidates.map(_.variants.size.max(CatalogueItemVariantsCountMin)).sum.toLong
+
+      List(
+        Some(
+          s"Processed ${catalogueFileAIExtract.entriesProcessed} of ${catalogueFileAIExtract.entriesIdentified} entries"
+        ),
+        Option
+          .when(catalogueItemsCreatedCount != catalogueFileAIExtract.entriesProcessed)(
+            s"Catalogue items created $catalogueItemsCreatedCount"
+          ),
+        Option
+          .when(catalogueItemVariantsCreatedCount != catalogueItemsCreatedCount)(
+            s"Item variants created $catalogueItemVariantsCreatedCount"
+          ),
+        Option
+          .when(catalogueFileAIExtract.emptyEntryRows.nonEmpty)(
+            s"Empty rows (${catalogueFileAIExtract.emptyEntryRows.size}) at [${catalogueFileAIExtract.emptyEntryRows.mkString(", ")}]"
+          ),
+        Option
+          .when(catalogueFileAIExtract.unidentifiedEntryRows.nonEmpty)(
+            s"Unidentified rows (${catalogueFileAIExtract.unidentifiedEntryRows.size}) at [${catalogueFileAIExtract.unidentifiedEntryRows.mkString(", ")}]"
+          ),
+      ).flatten
+    }
+
+    private def computeCatalogueItemNameCounts(
+        catalogueItemAIExtracts: List[CatalogueItemAIExtract]
+    ): Map[CatalogueItemName, Int] =
+      catalogueItemAIExtracts.flatMap(_.name).groupMapReduce(identity)(_ => SingleOccurrenceCount)(_ + _)
+
+    private def computeCatalogueItemVariantSkuCounts(
+        catalogueItemAIExtracts: List[CatalogueItemAIExtract]
+    ): Map[String, Int] =
+      catalogueItemAIExtracts
+        .flatMap(_.variants.flatMap(_.sku))
+        .groupMapReduce(_.value.toLowerCase(Locale.ROOT))(_ => SingleOccurrenceCount)(_ + _)
+
+    private def computeCatalogueItemVariantFields(
+        catalogueItemVariantAIExtract: CatalogueItemVariantAIExtract,
+        catalogueItemVariantIndex: Int,
+        catalogueItemVariantSkuCounts: Map[String, Int],
+    ): CatalogueItemFieldsComputed = {
+      lazy val sellingUnitFieldInfo =
+        FieldInfo.fromPathSegments(VariantsProperty, catalogueItemVariantIndex, SellingUnitProperty)
+      lazy val currencyFieldInfo =
+        FieldInfo.fromPathSegments(VariantsProperty, catalogueItemVariantIndex, PriceProperty, CurrencyProperty)
+      lazy val skuFieldInfo = FieldInfo.fromPathSegments(VariantsProperty, catalogueItemVariantIndex, SkuProperty)
+
+      (
+        inferredFields = Option
+          .when(
+            catalogueItemVariantAIExtract.sellingUnit.isDefined && catalogueItemVariantAIExtract.sellingUnitInferred
+          )(sellingUnitFieldInfo)
+          .toList ++ Option
+          .when(
+            catalogueItemVariantAIExtract.price.exists(catalogueItemVariantPriceAIExtract =>
+              catalogueItemVariantPriceAIExtract.currency.isDefined && catalogueItemVariantPriceAIExtract.currencyInferred
+            )
+          )(currencyFieldInfo)
+          .toList,
+        missingFields = Option.when(catalogueItemVariantAIExtract.sellingUnit.isEmpty)(sellingUnitFieldInfo).toList ++
+          Option
+            .when(catalogueItemVariantAIExtract.price.exists(_.currency.isEmpty))(currencyFieldInfo)
+            .toList,
+        duplicateFields = Option
+          .when(
+            catalogueItemVariantAIExtract.sku.exists(catalogueItemVariantSku =>
+              catalogueItemVariantSkuCounts
+                .get(catalogueItemVariantSku.value.toLowerCase(Locale.ROOT))
+                .exists(_ > SingleOccurrenceCount)
+            )
+          )(skuFieldInfo)
+          .toList,
+      )
+    }
+
+    private def computeCatalogueItemFields(
+        catalogueItemAIExtract: CatalogueItemAIExtract,
+        catalogueItemNameCounts: Map[CatalogueItemName, Int],
+        catalogueItemVariantSkuCounts: Map[String, Int],
+    ): CatalogueItemFieldsComputed = {
+      val catalogueItemVariantFieldsComputed = catalogueItemAIExtract.variants.zipWithIndex.map {
+        case (catalogueItemVariantAIExtract, catalogueItemVariantIndex) =>
+          computeCatalogueItemVariantFields(
+            catalogueItemVariantAIExtract,
+            catalogueItemVariantIndex,
+            catalogueItemVariantSkuCounts,
+          )
+      }
+
+      (
+        inferredFields = catalogueItemVariantFieldsComputed.flatMap(_.inferredFields),
+        missingFields =
+          Option.when(catalogueItemAIExtract.name.isEmpty)(FieldInfo.fromPathSegments(NameProperty)).toList ++
+            Option
+              .when(catalogueItemAIExtract.variants.isEmpty)(FieldInfo.fromPathSegments(VariantsProperty))
+              .toList ++ catalogueItemVariantFieldsComputed.flatMap(_.missingFields),
+        duplicateFields = Option
+          .when(
+            catalogueItemAIExtract.name.exists(catalogueItemName =>
+              catalogueItemNameCounts.get(catalogueItemName).exists(_ > SingleOccurrenceCount)
+            )
+          )(FieldInfo.fromPathSegments(NameProperty))
+          .toList ++ catalogueItemVariantFieldsComputed.flatMap(_.duplicateFields),
       )
     }
 
@@ -176,7 +287,33 @@ object CatalogueFileService {
                 AIInstructions.extractCatalogueItemsFromFileInstructions,
                 catalogueFileProcessingMessageOpt.map(_.value),
               )
-              .map(mergeCatalogueFileAIExtracts)
+              .flatMap { catalogueFileAIExtracts =>
+                val catalogueFileAIExtractMerged = mergeCatalogueFileAIExtracts(catalogueFileAIExtracts)
+                val extractionNotesMerged        = catalogueFileAIExtractMerged.extractionNotes
+
+                if (catalogueFileAIExtracts.size < NoteCompactionGroupCountMin || extractionNotesMerged.isEmpty)
+                  ZIO.succeed(catalogueFileAIExtractMerged)
+                else
+                  aiClientDataExtraction
+                    .noteCompaction(extractionNotesMerged, AIInstructions.compactCatalogueFileNotesInstructions)
+                    .flatMap(noteCompactionOutput =>
+                      computeExtractionNotesCompactedOpt(extractionNotesMerged, noteCompactionOutput) match {
+                        case Some(extractionNotesCompacted) => ZIO.succeed(extractionNotesCompacted)
+                        case None                           =>
+                          ZIO
+                            .logWarning(
+                              s"Note compaction returned [${noteCompactionOutput.notes.size}] notes for [${extractionNotesMerged.size}] sent, keeping the raw notes"
+                            )
+                            .as(extractionNotesMerged)
+                      }
+                    )
+                    .catchAllCause(cause =>
+                      ZIO
+                        .logWarningCause("Note compaction failed, keeping the raw notes", cause)
+                        .as(extractionNotesMerged)
+                    )
+                    .map(extractionNotes => catalogueFileAIExtractMerged.copy(extractionNotes = extractionNotes))
+              }
           case supportedMediaTypeUnexpected =>
             ZIO.fail(
               ServiceError.InternalServerError.UnexpectedError(
@@ -185,24 +322,33 @@ object CatalogueFileService {
             )
         }
 
-        candidates = catalogueFileAIExtract.candidates.map { catalogueItemAIExtract =>
-          val extractionNotesComputed = computeExtractNotes(catalogueItemAIExtract)
-          val needsAttentionComputed  = computeNeedsAttention(catalogueItemAIExtract)
-
-          val variants = catalogueItemAIExtract.variants
-            .map(
-              _.intoPartial[CatalogueItemVariantInsert]
-                .withFieldComputed(_.attributes, _.attributes.map(a => a.name -> a.value).toMap)
-                .transform
-                .asOption
-            )
-            .flatMap(_.toList)
+        catalogueItemNameCounts       = computeCatalogueItemNameCounts(catalogueFileAIExtract.candidates)
+        catalogueItemVariantSkuCounts = computeCatalogueItemVariantSkuCounts(catalogueFileAIExtract.candidates)
+        candidates                    = catalogueFileAIExtract.candidates.map { catalogueItemAIExtract =>
+          val catalogueItemFieldsComputed =
+            computeCatalogueItemFields(catalogueItemAIExtract, catalogueItemNameCounts, catalogueItemVariantSkuCounts)
 
           catalogueItemAIExtract
             .into[CatalogueItemCandidate]
-            .withFieldConst(_.variants, variants)
-            .withFieldConst(_.needsAttention, needsAttentionComputed)
-            .withFieldConst(_.extractionNotes, extractionNotesComputed)
+            .withFieldComputedFrom(_.variants.everyItem)(
+              _.variants.everyItem.attributes,
+              _.attributes
+                .map(catalogueItemVariantAttributesAIExtract =>
+                  catalogueItemVariantAttributesAIExtract.name -> catalogueItemVariantAttributesAIExtract.value
+                )
+                .toMap,
+            )
+            .withFieldConst(_.inferredFields, catalogueItemFieldsComputed.inferredFields)
+            .withFieldConst(_.missingFields, catalogueItemFieldsComputed.missingFields)
+            .withFieldConst(_.duplicateFields, catalogueItemFieldsComputed.duplicateFields)
+            .withFieldConst(
+              _.needsAttention,
+              catalogueItemFieldsComputed.missingFields.nonEmpty || catalogueItemFieldsComputed.duplicateFields.nonEmpty,
+            )
+            .withFieldConst(
+              _.extractionNotes,
+              catalogueItemAIExtract.extractionNotes ++ catalogueItemAIExtract.variants.flatMap(_.extractionNotes),
+            )
             .transform
         }
         infoNotesComputed = computeInfoNotes(catalogueFileAIExtract)
@@ -212,47 +358,6 @@ object CatalogueFileService {
         extractionNotes = catalogueFileAIExtract.extractionNotes,
       )
     )
-
-    private def computeInfoNotes(catalogueFileAIExtract: CatalogueFileAIExtract): List[String] =
-      List(
-        s"Processed ${catalogueFileAIExtract.entriesProcessed} of ${catalogueFileAIExtract.entriesIdentified} entries"
-      ) ++
-        Option
-          .when(catalogueFileAIExtract.emptyEntryRows.nonEmpty)(
-            s"Empty rows (${catalogueFileAIExtract.emptyEntryRows.size}): [${catalogueFileAIExtract.emptyEntryRows.mkString(", ")}]"
-          )
-          .toList ++
-        Option
-          .when(catalogueFileAIExtract.unidentifiedEntryRows.nonEmpty)(
-            s"Unidentified rows (${catalogueFileAIExtract.unidentifiedEntryRows.size}): [${catalogueFileAIExtract.unidentifiedEntryRows.mkString(", ")}]"
-          )
-          .toList
-
-    private def computeNeedsAttention(catalogueItemAIExtract: CatalogueItemAIExtract): Boolean =
-      catalogueItemAIExtract.atLeastOneVariant || catalogueItemAIExtract.nameIsDuplicate || catalogueItemAIExtract.variants
-        .exists(catalogueItemVariantAIExtract =>
-          catalogueItemVariantAIExtract.missingRequiredSaleUnit || catalogueItemVariantAIExtract.skuIsDuplicate || catalogueItemVariantAIExtract.sellingUnit.isEmpty
-        )
-
-    private def computeExtractNotes(catalogueItemAIExtract: CatalogueItemAIExtract): List[String] =
-      if (catalogueItemAIExtract.atLeastOneVariant)
-        Option.when(catalogueItemAIExtract.atLeastOneVariant)("At least one variant is required.").toList ++
-          Option.when(catalogueItemAIExtract.nameIsDuplicate)("Item name is duplicated in this extraction.").toList ++
-          catalogueItemAIExtract.extractionNotes
-      else
-        Option
-          .when(catalogueItemAIExtract.nameIsDuplicate)("Item name is duplicated in this extraction.")
-          .toList ++ catalogueItemAIExtract.extractionNotes ++
-          catalogueItemAIExtract.variants.zipWithIndex.flatMap { case (variant, index) =>
-            val prefix = if (catalogueItemAIExtract.variants.sizeIs > 1) s"Variant ${index + 1}: " else ""
-            Option
-              .when(variant.missingRequiredSaleUnit || variant.sellingUnit.isEmpty)(
-                prefix + "Selling unit is missing."
-              )
-              .toList ++
-              Option.when(variant.skuIsDuplicate)(prefix + "SKU is duplicated in this extraction.").toList ++
-              variant.extractionNotes.map(prefix + _)
-          }
   }
 
   def observed(service: CatalogueFileService[ServiceTask]): CatalogueFileService[TapirTask] =
