@@ -360,8 +360,12 @@ Excel is deliberately not covered (user decision), because it reaches the model 
 Canceled checks are not evidence of live-model quality or schema acceptance. Live runs remain outstanding under [acceptance gap 17](../acceptance-test-gaps.md#17-catalogue-extraction-prompts-and-note-compaction).
 
 ```sh
-sbt "gateway-core/testOnly io.mesazon.gateway.golden.CatalogueFileAiExtractGoldenSpec"
+sbt shutdown
+AI_CLIENT_DATA_EXTRACTION_API_KEY=… sbt --server "gateway-core/testOnly io.mesazon.gateway.golden.CatalogueFileAiExtractGoldenSpec"
+sbt shutdown
 ```
+
+Why the standalone `--server` form: [known issue](../known-issues.md#manual-ai-golden-check-ignores-the-api-key-given-on-the-command-line).
 
 ### Coverage boundaries
 

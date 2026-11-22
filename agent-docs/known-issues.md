@@ -231,3 +231,13 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Fix:** Start Docker, or run the same specs through `Test / testOnly`, which skips the Docker publish: `sbt "gateway-core/Test/testOnly io.mesazon.gateway.fun.CustomerBookFileServiceSpec"`.
 - **Prevention:** The `CLAUDE.md` command `gateway-core/testOnly io.mesazon.gateway.fun.*` ("no containers") needs Docker for the image publish. Use the `Test/testOnly` form when Docker is down; acceptance (`gateway-it/test`) always needs Docker.
 - **Verify:** With Docker stopped, the `Test/testOnly` command runs the spec (`CustomerBookFileServiceSpec` has 56 tests) and reports `All tests passed`.
+
+## Manual AI golden check ignores the API key given on the command line
+
+- **Status:** Workaround available (observed 2026-11-22, issue 607 slice 1)
+- **Severity:** Medium
+- **Signature:** `AI_CLIENT_DATA_EXTRACTION_API_KEY=<key> sbt "gateway-core/testOnly io.mesazon.gateway.golden.CatalogueFileAiExtractGoldenSpec"` reports every case `CANCELED` ("Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually") although the key was set. The reverse also happens: a run with no key set still uses a key from an earlier session.
+- **Cause:** sbt 2's thin client hands the command to an already-running sbt server. The forked test JVM inherits the **server's** startup environment, not the shell's, so a key set on the client command line is never seen. A server started while a key was set keeps that key until it stops.
+- **Fix:** Stop any running server, then run in one standalone process: `sbt shutdown`, then `AI_CLIENT_DATA_EXTRACTION_API_KEY=<key> sbt --server "gateway-core/testOnly io.mesazon.gateway.golden.CatalogueFileAiExtractGoldenSpec"`. The same applies to the model and effort overrides (`AI_CLIENT_DATA_EXTRACTION_*`).
+- **Prevention:** Always use the `sbt shutdown` plus `sbt --server` form for live golden runs ([AI response performance: Running](project/ai-response-performance.md#running)). After a run with a real key, run `sbt shutdown` so no server keeps it.
+- **Verify:** With a dummy key, the standalone form makes every case without a golden fail with `Golden file is missing: …` before any AI call, so nothing is sent. Without a key, all cases are canceled.

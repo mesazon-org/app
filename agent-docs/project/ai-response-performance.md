@@ -95,7 +95,7 @@ Comparison uses difflicious (`com.github.jatcwang %% difflicious-scalatest`, in 
 
 Not compared, because they are not part of the AI answer: the service's info-line text, duplicate and missing marks, `needsAttention`, and the merge of variant notes into item notes.
 
-- **Values:** each Iron newtype and enum uses a `Differ.useEquals` given: `CatalogueItemName`, `CatalogueItemDescription`, `CatalogueItemVariantSku`, `…Label`, `…Description`, `…AttributeName`, `…AttributeValue`, `PriceAmount`, `Currency`, and the selling-unit value and unit types. Text is exact `String` equality. `PriceAmount` is Scala `BigDecimal`, whose equality ignores scale, so `8.40` equals `8.4` (epic scenario 10). There is no closeness and no 70% rule.
+- **Values (user decision, slice 1):** one spec-private generic given, `differRefinedType[WrappedType](using RefinedType.Mirror[WrappedType], TypeName[WrappedType])`, covers every Iron newtype. It follows the `Mirror`-based pattern of `IronRefinedTypeArbitraries`, but stays inside the spec rather than in test-kit. It is `Differ.useEquals`: the value is shown quoted when its base type is `String`, and with `toString` otherwise. This covers `CatalogueItemName`, `CatalogueItemDescription`, `CatalogueItemVariantSku`, `…Label`, `…Description`, `…AttributeName`, `…AttributeValue`, `PriceAmount`, and `CatalogueItemVariant{Quantity,PerUnit,UnitSize}Value` (all `RefinedType[BigDecimal, Positive & LessEqual[99999]]`). The four Scala enums, `Currency`, `CatalogueItemVariantUnit`, `CatalogueItemVariantUnit.PerUnit` and `…UnitSize`, keep their own private `useEquals(_.toString)` givens. Customer Book's rebuild moves the generic given into a test-kit trait if it needs it. difflicious names every Iron newtype `RefinedType.T` (opaque alias). Value results print only the value, so that name never appears in the output. Text is exact `String` equality. `PriceAmount` is Scala `BigDecimal`, whose equality ignores scale, so `8.40` equals `8.4` (epic scenario 10; probe-verified in slice 1). There is no closeness and no 70% rule.
 - **Pairing** (`pairBy`, user decisions Q5/Q3/Q4). difflicious pairs each answer element with the first unpaired golden element that has an equal key. Leftovers are answer-only (extra) or golden-only (missing). Order is never a difference.
 
   | List | Key |
@@ -119,14 +119,18 @@ User decision Q1. difflicious's own printer renders the whole structure and mark
 - **Customer Book source assets kept without a spec (user decision Q5, deviation).** `assets-test/CustomerBookFileAiExtract{FromImage,FromPdf,FromSpreadsheet,UnrelatedContent}GoldenSpec/` stay in place for the later rebuild, although no spec reads them. This is an accepted exception to [Asset files](acceptance-testing.md#asset-files) ("one folder per spec"). The rebuilt specs must reuse these exact folder names, or move the files.
 - **Comparison rules have no AI-free proof.** The pairing keys, the walker and epic scenarios 1–10 are exercised only by live runs. The user removed the scorer's unit specs with nothing replacing them, in line with "no tests for test-only code".
 - **Note wording fails the check** (epic known gap 3, accepted).
-- **Dependency compatibility, pending first-slice proof.** difflicious 0.7.1 depends on `hearth` 0.4.2, and chimney 2.1.1 brings `hearth` 0.4.4. If derivation fails to compile or `evicted` flags a conflict, the fallback (difflicious 0.5.1, which uses magnolia) needs the user's approval.
+- **Dependency compatibility: resolved in slice 1 (2026-11-22).** difflicious 0.7.1 is built on `hearth` 0.4.2, and chimney 2.1.1 brings 0.4.4. `show gateway-core/evicted` lists `hearth_3:0.4.4 is selected over 0.4.2` among the resolved conflicts only, with nothing from difflicious, fansi or hearth among the suspected binary-incompatible ones. `gateway-core/Test/compile` derives `Differ[CatalogueFileAIExtract]` (`derivedDeep`, 15 givens, 8 `configure` paths), and the spec constructs it eagerly without error in the dummy-key run. Recheck `evicted` when chimney or difflicious is upgraded.
 
 ## Running
 
 ```sh
+sbt shutdown   # a running sbt 2 server keeps its own environment, so stop it first
 AI_CLIENT_DATA_EXTRACTION_API_KEY=… [AI_CLIENT_DATA_EXTRACTION_IMAGE_MODEL=… AI_CLIENT_DATA_EXTRACTION_IMAGE_REASONING_EFFORT=…] \
-  sbt "gateway-core/testOnly io.mesazon.gateway.golden.CatalogueFileAiExtractGoldenSpec"
-sbt "gateway-core/testOnly io.mesazon.gateway.golden.CatalogueFileAiExtractGoldenSpec -- -z \"spreadsheet-1.csv\""   # one case by name substring
+  sbt --server "gateway-core/testOnly io.mesazon.gateway.golden.CatalogueFileAiExtractGoldenSpec"
+AI_CLIENT_DATA_EXTRACTION_API_KEY=… sbt --server "gateway-core/testOnly io.mesazon.gateway.golden.CatalogueFileAiExtractGoldenSpec -- -z \"spreadsheet-2.xls\""   # one case by name substring (spreadsheet-1.csv names two cases)
+sbt shutdown   # do not leave a server holding a real key
 ```
 
-Use `gateway-core/testOnly`, not `Test/runMain`, because the forked working directory must be the module base directory for the relative paths. Live runs happen only with the user's explicit go-ahead for each run. Never commit a credential.
+Use `gateway-core/testOnly`, not `Test/runMain`, because the forked working directory must be the module base directory for the relative paths. Use the standalone `sbt --server` form after `sbt shutdown`. Through the sbt 2 thin client, the forked test JVM sees the running server's environment, not the key on the command line ([known issue](../known-issues.md#manual-ai-golden-check-ignores-the-api-key-given-on-the-command-line)).
+
+Live runs happen only with the user's explicit go-ahead for each run. Never commit a credential.
