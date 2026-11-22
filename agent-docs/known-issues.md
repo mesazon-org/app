@@ -234,12 +234,12 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 
 ## Converting an XLSX spreadsheet rewrites the source file
 
-- **Status:** Open; fix agreed (open workbooks read-only), not built yet
+- **Status:** Resolved 2026-11-23 (issue 607, slice 5S)
 - **Severity:** Low
 - **Signature:** After a run of `golden/CatalogueFileAiExtractGoldenSpec` that converts `spreadsheet-3.xlsx`, `git status` shows `backend/gateway/core/src/test/resources/assets-test/CatalogueFileAiExtractGoldenSpec/spreadsheet-3.xlsx` modified, its size changing from 6,693 to 7,030 bytes (observed 2026-11-22 in the issue 607 capture run). The CSV records read from it are unaffected, because they are read before the file is written.
-- **Cause (suspected, to be proven by the fix's red test):** `SpreadsheetTool.convertExcelToCsvFile` opens the workbook with `WorkbookFactory.create(File)`, which opens it read-write. On `workbook.close()`, Apache POI saves an XLSX package opened read-write back to its file. In production the file is the uploaded scan's temp file, so only that temp copy is rewritten, with no user-visible effect. The golden spec passes the committed asset's source-tree path straight to `SpreadsheetTool`, so it rewrites the committed asset. `SpreadsheetToolSpec` and the acceptance specs work on temp copies.
-- **Workaround until fixed:** `git checkout -- <asset>` after the run, then confirm `git status` is clean before committing.
-- **Fix (agreed):** open the workbook read-only in `SpreadsheetTool`, proven by `SpreadsheetToolSpec` checking that the `.xlsx` and `.xls` files are byte-identical after conversion.
+- **Cause (proven by the fix's red test, which failed for `.xlsx` only):** `SpreadsheetTool.convertExcelToCsvFile` opens the workbook with `WorkbookFactory.create(File)`, which opens it read-write. On `workbook.close()`, Apache POI saves an XLSX package opened read-write back to its file. In production the file is the uploaded scan's temp file, so only that temp copy is rewritten, with no user-visible effect. The golden spec passes the committed asset's source-tree path straight to `SpreadsheetTool`, so it rewrites the committed asset. `SpreadsheetToolSpec` and the acceptance specs work on temp copies.
+- **Fix:** `SpreadsheetTool` opens the workbook read-only, `WorkbookFactory.create(file, null, true)`. The `true` is positional because POI's Java overload has no parameter names (`x$0..x$2`), a stated exception to the named-Boolean rule in [Scala](standards/scala.md).
+- **Verify:** `SpreadsheetToolSpec` "leave the .xlsx/.xls workbook file unchanged after converting it" (byte-identical before and after, records unchanged); `CatalogueFileApiSpec` and `CustomerBookFileApiSpec` XLS/XLSX success cases still pass. After any golden run, `git status` shows no change under `assets-test/`.
 
 ## Manual AI golden check ignores the API key given on the command line
 

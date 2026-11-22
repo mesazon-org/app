@@ -46,7 +46,7 @@ object SpreadsheetTool {
         csvTempFile <- TempFile.createScoped(csvTempFilePrefix)
         _           <- ZIO.acquireReleaseWith(
           ZIO
-            .attemptBlocking(WorkbookFactory.create(excelFileScannedPath.value.toFile))
+            .attemptBlocking(WorkbookFactory.create(excelFileScannedPath.value.toFile, null, true))
             .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to open Excel workbook", Some(e)))
         )(workbook => ZIO.attemptBlocking(workbook.close()).ignoreLogged) { workbook =>
           ZIO.acquireReleaseWith(

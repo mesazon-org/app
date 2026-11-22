@@ -70,6 +70,50 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
 
         csvRecordValues shouldBe wellFormedCsvRecordValues
       }
+
+      "leave the .xlsx workbook file unchanged after converting it" in {
+        val spreadsheetTool = ZIO
+          .service[SpreadsheetTool]
+          .provide(SpreadsheetTool.live)
+          .zioValue
+
+        val (excelFileBytesBefore, excelFileBytesAfter, csvRecordValues) = ZIO
+          .scoped(for {
+            excelFileScannedPath <- fileScannedPath(
+              ZStream.fromResource("assets-test/SpreadsheetToolSpec/spreadsheet-1.xlsx")
+            )
+            excelFileBytesBefore <- ZStream.fromPath(excelFileScannedPath.value).runCollect.orDie
+            csvRecords           <- spreadsheetTool.convertExcelToCsv(excelFileScannedPath).runCollect
+            excelFileBytesAfter  <- ZStream.fromPath(excelFileScannedPath.value).runCollect.orDie
+          } yield (excelFileBytesBefore, excelFileBytesAfter, csvRecords.toList.map(_.asScala.toList)))
+          .zioValue
+
+        excelFileBytesAfter shouldBe excelFileBytesBefore
+
+        csvRecordValues shouldBe wellFormedCsvRecordValues
+      }
+
+      "leave the .xls workbook file unchanged after converting it" in {
+        val spreadsheetTool = ZIO
+          .service[SpreadsheetTool]
+          .provide(SpreadsheetTool.live)
+          .zioValue
+
+        val (excelFileBytesBefore, excelFileBytesAfter, csvRecordValues) = ZIO
+          .scoped(for {
+            excelFileScannedPath <- fileScannedPath(
+              ZStream.fromResource("assets-test/SpreadsheetToolSpec/spreadsheet-2.xls")
+            )
+            excelFileBytesBefore <- ZStream.fromPath(excelFileScannedPath.value).runCollect.orDie
+            csvRecords           <- spreadsheetTool.convertExcelToCsv(excelFileScannedPath).runCollect
+            excelFileBytesAfter  <- ZStream.fromPath(excelFileScannedPath.value).runCollect.orDie
+          } yield (excelFileBytesBefore, excelFileBytesAfter, csvRecords.toList.map(_.asScala.toList)))
+          .zioValue
+
+        excelFileBytesAfter shouldBe excelFileBytesBefore
+
+        csvRecordValues shouldBe wellFormedCsvRecordValues
+      }
     }
 
     "convertToCsv" should {
